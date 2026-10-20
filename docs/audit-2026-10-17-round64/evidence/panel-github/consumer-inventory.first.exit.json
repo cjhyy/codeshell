@@ -1,0 +1,1 @@
+{"argv": ["rg", "-l", "resolveGitHubPanelAppCommit|checkInstalledPanelAppUpdate|checkSelectedPanelAppUpdate|readGitHubPanelAppManifest|normalizeGitPanelAppSource", "packages/core/src", "packages/desktop/src", "packages/tui/src", "tests"], "exitCode": 0, "kind": "filename-only source navigation"}

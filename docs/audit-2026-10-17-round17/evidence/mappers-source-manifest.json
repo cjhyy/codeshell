@@ -1,0 +1,118 @@
+{
+  "baseCommit": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "scopeWarning": "Full bytes are pinned for selected source/contracts; review scope is the explicit ranges, not full-file or transitive coverage. Module-load status differs from actual function calls.",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "scope": "full instruction file",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "AGENTS.md",
+      "frozenSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesFrozen": true,
+      "scope": "full instruction alias",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "frozenSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "currentSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "matchesFrozen": true,
+      "scope": "17-125 actual mapper APIs; 144 pure re-export linkage; AskUser export not called or audited",
+      "actualFunctionsExecuted": true
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "frozenSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "currentSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "matchesFrozen": true,
+      "scope": "full pure import/export safety read; module loaded via re-export, no accumulator/collect calls",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "frozenSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "currentSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "matchesFrozen": true,
+      "scope": "1-237 and 255-267 static ordinary mapper contract examples; not executed, AskUser/reducer excluded",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/room-manager.ts",
+      "frozenSha256": "22fdb3d701f016b908edf747942421823eca20653ee2a27f9adac1be25ddf5df",
+      "currentSha256": "22fdb3d701f016b908edf747942421823eca20653ee2a27f9adac1be25ddf5df",
+      "matchesFrozen": true,
+      "scope": "276-300 RoomMessage; 699-720 append; 1143-1193 ordinary agent persistence; 1239-1251 exit; 1257-1337 user send persistence; static only, approval branches excluded",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/session-history.ts",
+      "frozenSha256": "b6912012938b8ccaee6447e64baa5ea59b4ea8fd63366cc80dc5cca6c817c9f0",
+      "currentSha256": "b6912012938b8ccaee6447e64baa5ea59b4ea8fd63366cc80dc5cca6c817c9f0",
+      "matchesFrozen": true,
+      "scope": "7-31 HistoryMessage/tail contract; 35-101 normalized history tools/prose shape; 113-164 tail ids; static only, no parser or file reader imports",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-history.ts",
+      "frozenSha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "currentSha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "matchesFrozen": true,
+      "scope": "54-96 HistoryMessage shape/grouping; 100-146 tail id forwarding; static only; summary/args helpers and old MCP-summary failure excluded",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/main/cc-room/transcript-subscriptions.ts",
+      "frozenSha256": "c7f80db29352c5af04531d222082b3a1f665b98109199b4cd902e6c0ffba343d",
+      "currentSha256": "c7f80db29352c5af04531d222082b3a1f665b98109199b4cd902e6c0ffba343d",
+      "matchesFrozen": true,
+      "scope": "1-112 dependency/contracts; 122-143,206-228 active snapshots; 486-562 history ring/ordinary tail conversion; static only",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "frozenSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "currentSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "matchesFrozen": true,
+      "scope": "949-996 mapper call locations and 1157-1193 history mapper consumer wiring only; no hook import/execution or broader hook audit",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "frozenSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "currentSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "matchesFrozen": true,
+      "scope": "37-58 local history/room contracts; 78-93 mapper consumer call wiring only; no reducer/UI import/execution or broader UI audit",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-24-cc-room-conversation-view-design.md",
+      "frozenSha256": "c3b5caf01ea25d4a0927fb9f9ff87b46d040327a083357af3b9f58e08b4c2f53",
+      "currentSha256": "c3b5caf01ea25d4a0927fb9f9ff87b46d040327a083357af3b9f58e08b4c2f53",
+      "matchesFrozen": true,
+      "scope": "1-145 historical normalization/design contract; not proof of current runtime behavior",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+      "frozenSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132",
+      "currentSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132",
+      "matchesFrozen": true,
+      "scope": "165-222 old duplicate-turn-complete exclusion only; no recreation",
+      "actualFunctionsExecuted": false
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true,
+      "scope": "used existing guarded runner; source metadata pin, not an independent full code review",
+      "actualFunctionsExecuted": false
+    }
+  ]
+}

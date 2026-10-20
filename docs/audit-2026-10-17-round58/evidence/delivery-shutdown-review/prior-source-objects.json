@@ -1,0 +1,46 @@
+{
+  "objects": [
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-source-manifest.json",
+      "bytes": 4686,
+      "sha256": "e692ced1ae9e6fababd38dc22e4b3e2db8e59e9ae6258ef02e1870ab8ced3e35",
+      "pointer": "/sources/20",
+      "row": {
+        "path": "packages/chat/src/bound-session-chat.ts",
+        "bytes": 3817,
+        "sha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+        "matchesFrozenGitBlob": true
+      },
+      "atUTC": "2026-10-17T19:30:15.726118+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-source-manifest.json",
+      "bytes": 6349,
+      "sha256": "66bb614d01d4075fb0415f482a6ecaa23b1df2a2bd9fd1c3cead648ece3a4147",
+      "pointer": "/files/8",
+      "row": {
+        "path": "packages/chat/src/bound-session-chat.ts",
+        "frozenSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+        "currentSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+        "matchesFrozen": true,
+        "bytes": 3817,
+        "lines": 99,
+        "scope": "完整源码静态选择阅读；附件限制按旧合同排除，无动态验证。"
+      },
+      "atUTC": "2026-10-17T19:30:15.727223+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-16/source-manifest.json",
+      "bytes": 2815,
+      "sha256": "9a624ccb9a02c21474a563b4b7382799a95cf7961f5ee6d2cf7f36da54c666d9",
+      "pointer": "/1",
+      "row": {
+        "path": "packages/chat/src/delivery-queue.ts",
+        "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393"
+      },
+      "atUTC": "2026-10-17T19:30:15.727664+00:00"
+    }
+  ],
+  "timing": "Post initial targeted source reading; not falsely prebody first-full gate.",
+  "scope": "Original same-version overlap only; no source-first or new global full claim."
+}

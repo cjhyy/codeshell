@@ -1,0 +1,25 @@
+{
+  "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "BufferOrUTF8LanguageFixtures": 0,
+  "StringDecoderCalls": 0,
+  "helperCalls": 0,
+  "readOutputCalls": 0,
+  "RingFileCalls": 0,
+  "shellLaunches": 0,
+  "realOutputFilesRead": 0,
+  "testsExecuted": 0,
+  "moduleImports": 0,
+  "nativeOrNetworkActions": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataFailures": [],
+  "limits": [
+    "Python source-file/text/hash/JSON/regex bookkeeping only; no tested Buffer/UTF8 product behavior was evaluated.",
+    "Official Buffer/StringDecoder docs and BashOutput tool entry were reported by Root, not independently read here.",
+    "No arbitrary invalid UTF8/NaN/fraction caps, live child, timing/TTY, ownership, journal or real task experiment.",
+    "Old failed directions remain skipped. No full suite/build/typecheck/lint."
+  ]
+}

@@ -1,0 +1,835 @@
+{
+  "createdUTC": "2026-10-17T18:30:44.176247+00:00",
+  "role": "Directed static source reviewer of explicit combined text+attachment hypothesis; target previously full same-SHA, not unread frontier",
+  "rootReportedBaselineOnly": "00c046367769349c1f5413e74c993b2c19ce8337",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/chat/src/media.ts",
+      "bytes": 9244,
+      "lines": 272,
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          198,
+          222
+        ],
+        [
+          250,
+          272
+        ]
+      ],
+      "semanticLines": 48,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          198,
+          222
+        ],
+        [
+          239,
+          272
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        9,
+        10,
+        12,
+        26,
+        50,
+        51,
+        73,
+        198,
+        202,
+        203,
+        206,
+        207,
+        208,
+        211,
+        212,
+        213,
+        215,
+        217,
+        218,
+        219,
+        222,
+        225,
+        234,
+        244,
+        246,
+        250
+      ],
+      "uniqueDisplayedLines": 68,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          9,
+          10
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          50,
+          51
+        ],
+        [
+          73,
+          73
+        ],
+        [
+          225,
+          225
+        ],
+        [
+          234,
+          234
+        ],
+        [
+          239,
+          249
+        ]
+      ],
+      "purpose": "Explicit new normal text+attachment hypothesis on old same-SHA full: outgoingAttachments validates and returns original list; normal tracker steps awaited sequentially. Remote download/address/path/custody guards and name truncation not reviewed; outgoing limits are only existing code checks, not external quota certification.",
+      "initialSemanticReadSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "finishBytes": 9244,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "priorOverlap": "Target same-SHA old full proven; all this selected read is directed overlap, no new unique target coverage. Other old overlaps unknown and not asserted absent."
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "lines": 193,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          121,
+          139
+        ],
+        [
+          143,
+          153
+        ]
+      ],
+      "semanticLines": 30,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          99,
+          154
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        3,
+        14,
+        15,
+        18,
+        22,
+        26,
+        28,
+        30,
+        32,
+        43,
+        44,
+        53,
+        55,
+        60,
+        76,
+        99,
+        101,
+        114,
+        115,
+        122,
+        125,
+        129,
+        133,
+        146,
+        147,
+        150,
+        153,
+        168,
+        170
+      ],
+      "uniqueDisplayedLines": 73,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          14,
+          15
+        ],
+        [
+          18,
+          18
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          28,
+          28
+        ],
+        [
+          30,
+          30
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          43,
+          44
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          55,
+          55
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          76,
+          76
+        ],
+        [
+          99,
+          120
+        ],
+        [
+          140,
+          142
+        ],
+        [
+          154,
+          154
+        ],
+        [
+          168,
+          168
+        ],
+        [
+          170,
+          170
+        ]
+      ],
+      "purpose": "OutgoingMessage/OutgoingAttachment fields and ordinary adapter send/atomic-combination declaration. Incoming authenticated conversation identity fields only adjacent navigation; no identity mechanism review.",
+      "initialSemanticReadSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "finishBytes": 7027,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "priorOverlap": "No new unique historical coverage claim; necessary actual normal-chain selection."
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "bytes": 12790,
+      "lines": 362,
+      "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          150,
+          170
+        ],
+        [
+          173,
+          190
+        ]
+      ],
+      "semanticLines": 39,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          150,
+          198
+        ],
+        [
+          264,
+          278
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        9,
+        22,
+        70,
+        150,
+        151,
+        153,
+        157,
+        160,
+        175,
+        269,
+        270,
+        271,
+        278
+      ],
+      "uniqueDisplayedLines": 67,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          9,
+          9
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          171,
+          172
+        ],
+        [
+          191,
+          198
+        ],
+        [
+          264,
+          278
+        ]
+      ],
+      "purpose": "Normal outgoing text/button step before attachment-map steps; per-attachment bytes/MIME/name mapped into multipart data. Timer/call/network/token implementation navigation only. Incoming text??caption source adjacent/navigation, not claimed valid simultaneous platform payload or platform grammar contract.",
+      "initialSemanticReadSha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "finishBytes": 12790,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "priorOverlap": "No new unique historical coverage claim; necessary actual normal-chain selection."
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "lines": 347,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          200,
+          202
+        ],
+        [
+          245,
+          260
+        ],
+        [
+          263,
+          265
+        ]
+      ],
+      "semanticLines": 22,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          124,
+          145
+        ],
+        [
+          178,
+          205
+        ],
+        [
+          229,
+          279
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        11,
+        42,
+        69,
+        78,
+        85,
+        90,
+        93,
+        97,
+        100,
+        130,
+        137,
+        140,
+        143,
+        156,
+        165,
+        178,
+        188,
+        191,
+        200,
+        201,
+        230,
+        233,
+        250,
+        251,
+        254,
+        256,
+        257,
+        260,
+        265
+      ],
+      "uniqueDisplayedLines": 112,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          11,
+          11
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          78,
+          78
+        ],
+        [
+          85,
+          85
+        ],
+        [
+          90,
+          90
+        ],
+        [
+          93,
+          93
+        ],
+        [
+          97,
+          97
+        ],
+        [
+          100,
+          100
+        ],
+        [
+          124,
+          145
+        ],
+        [
+          156,
+          156
+        ],
+        [
+          165,
+          165
+        ],
+        [
+          178,
+          199
+        ],
+        [
+          203,
+          205
+        ],
+        [
+          229,
+          244
+        ],
+        [
+          261,
+          262
+        ],
+        [
+          266,
+          279
+        ]
+      ],
+      "purpose": "Actual normal producer: split returned text, map all chunks to outgoing, attach supported materialized media on last, preserve order via awaited reply loop. materialization/desktop/caching/id/identity/FS/retry machinery not opened or certified; calls are data boundaries only.",
+      "initialSemanticReadSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "finishBytes": 12984,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "priorOverlap": "No new unique historical coverage claim; necessary actual normal-chain selection."
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "lines": 301,
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          108,
+          112
+        ]
+      ],
+      "semanticLines": 5,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          107,
+          118
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        18,
+        111
+      ],
+      "uniqueDisplayedLines": 13,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          18,
+          18
+        ],
+        [
+          107,
+          107
+        ],
+        [
+          113,
+          118
+        ]
+      ],
+      "purpose": "Actual context callback forwards outgoing unmodified to adapter.send(message.target,outgoing). Middleware lifecycle/authority not reviewed.",
+      "initialSemanticReadSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "finishBytes": 10429,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "priorOverlap": "No new unique historical coverage claim; necessary actual normal-chain selection."
+    },
+    {
+      "path": "packages/chat/src/telegram.test.ts",
+      "bytes": 9700,
+      "lines": 304,
+      "sha256": "5da19870067e2e5c7db973f248e86e6713d1903c38b014625b26408b3b156145",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          62,
+          79
+        ]
+      ],
+      "semanticLines": 18,
+      "sourceKind": "test-declarations",
+      "displayedLineRanges": [
+        [
+          50,
+          80
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        5,
+        7,
+        10,
+        31,
+        34,
+        35,
+        38,
+        46,
+        47,
+        50,
+        56,
+        63,
+        81,
+        87,
+        94,
+        114,
+        121,
+        128,
+        136,
+        152,
+        158,
+        181,
+        216,
+        242,
+        256,
+        284,
+        290
+      ],
+      "uniqueDisplayedLines": 55,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          5,
+          5
+        ],
+        [
+          7,
+          7
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          31,
+          31
+        ],
+        [
+          34,
+          35
+        ],
+        [
+          38,
+          38
+        ],
+        [
+          46,
+          47
+        ],
+        [
+          50,
+          61
+        ],
+        [
+          80,
+          81
+        ],
+        [
+          87,
+          87
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          114,
+          114
+        ],
+        [
+          121,
+          121
+        ],
+        [
+          128,
+          128
+        ],
+        [
+          136,
+          136
+        ],
+        [
+          152,
+          152
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          181,
+          181
+        ],
+        [
+          216,
+          216
+        ],
+        [
+          242,
+          242
+        ],
+        [
+          256,
+          256
+        ],
+        [
+          284,
+          284
+        ],
+        [
+          290,
+          290
+        ]
+      ],
+      "purpose": "One partial existing media declaration: blank text input and image attachment field/MIME/name/bytes assertions. Not a combined-caption test; fake fetch setup only navigation, no execution.",
+      "initialSemanticReadSha256": "5da19870067e2e5c7db973f248e86e6713d1903c38b014625b26408b3b156145",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "5da19870067e2e5c7db973f248e86e6713d1903c38b014625b26408b3b156145",
+      "finishBytes": 9700,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "priorOverlap": "No new unique historical coverage claim; necessary actual normal-chain selection."
+    },
+    {
+      "path": "packages/chat/src/platform-media.test.ts",
+      "bytes": 5802,
+      "lines": 159,
+      "sha256": "b7da4a3fa5a122b61cb05eb501eee4f50da6fab0d8b799dab53062305c6eba61",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          10,
+          20
+        ],
+        [
+          23,
+          49
+        ]
+      ],
+      "semanticLines": 38,
+      "sourceKind": "test-declarations",
+      "displayedLineRanges": [
+        [
+          1,
+          49
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        1,
+        11,
+        12,
+        22,
+        23,
+        34,
+        39,
+        46,
+        50,
+        69,
+        82,
+        107,
+        124,
+        129,
+        132,
+        138,
+        139,
+        142,
+        147,
+        148
+      ],
+      "uniqueDisplayedLines": 61,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          9
+        ],
+        [
+          21,
+          22
+        ],
+        [
+          50,
+          50
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          82,
+          82
+        ],
+        [
+          107,
+          107
+        ],
+        [
+          124,
+          124
+        ],
+        [
+          129,
+          129
+        ],
+        [
+          132,
+          132
+        ],
+        [
+          138,
+          139
+        ],
+        [
+          142,
+          142
+        ],
+        [
+          147,
+          148
+        ]
+      ],
+      "purpose": "Two existing declarations express simultaneous caption+image intent for Discord and Slack, with preserved caption/name/bytes expectations. Those adapters source not opened or runtime verified. Other platform titles/assertions navigation only.",
+      "initialSemanticReadSha256": "b7da4a3fa5a122b61cb05eb501eee4f50da6fab0d8b799dab53062305c6eba61",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "b7da4a3fa5a122b61cb05eb501eee4f50da6fab0d8b799dab53062305c6eba61",
+      "finishBytes": 5802,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "priorOverlap": "No new unique historical coverage claim; necessary actual normal-chain selection."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/chat/src/lifecycle.ts",
+      "bytes": 824,
+      "lines": 28,
+      "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "hash-only-unopened-body",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "uniqueDisplayedLines": 0,
+      "reason": "Filename probe found no relevant body; not opened or semantically read."
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionReadStatus": "Prior AGENTS5/CODESHELL217 actual reading carried under unchanged hashes; no new instruction body read.",
+  "totals": {
+    "semanticFiles": 7,
+    "full": 0,
+    "selected": 7,
+    "productSemanticLines": 144,
+    "testDeclarationSemanticLines": 56,
+    "semanticLines": 200,
+    "uniqueDisplayedLinesSummedAcrossFiles": 449,
+    "sourceHashOnlyFiles": 1,
+    "sourceAndInstructionPins": 10,
+    "partialExistingTestDeclarationsRead": 3,
+    "ordinaryTestTitlesNavigationOnly": 17,
+    "additionalParameterizedTitleNavigationOnly": 1,
+    "testsExecuted": 0
+  },
+  "coverageBoundary": "Display/nav/semantic separate. Full-byte hashes are not full reading. Old whole-target static reading controls new unique-coverage claims, while explicit new question permits these selected rechecks. No mixed-module download/security/source-mechanism verification."
+}

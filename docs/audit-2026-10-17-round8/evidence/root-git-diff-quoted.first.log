@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round8/evidence/root-git-diff-quoted.test.ts:
+(pass) unquoted ASCII same-file control deduplicates dirty and committed changes [0.43ms]
+(pass) Git default C-quoted UTF-8 path counts one changed file twice [0.35ms]
+(pass) quoted ASCII filename also gets two identities rather than one [0.02ms]
+(pass) distinct normal files control correctly totals two [0.05ms]
+
+ 4 pass
+ 0 fail
+ 12 expect() calls
+Ran 4 tests across 1 file. [69.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

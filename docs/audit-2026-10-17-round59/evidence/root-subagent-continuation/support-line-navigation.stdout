@@ -1,0 +1,34 @@
+packages/core/src/types.ts:8:export interface SubAgentContinuation {
+packages/core/src/types.ts:431:  subAgentContinuation?: SubAgentContinuation;
+packages/core/src/engine/engine.ts:2636:        this.sessionManager.readSubAgentContinuation(sessionId),
+packages/core/src/engine/subagent-spawner.ts:242:      | "subAgentContinuation"
+packages/core/src/engine/subagent-spawner.ts:418:            subAgentContinuation: request.continuation,
+packages/core/src/engine/subagent-spawner.ts:428:          subAgentContinuation: request.continuation,
+packages/core/src/engine/run-session-open.ts:10:import { parseSubAgentContinuation } from "../session/subagent-continuation.js";
+packages/core/src/engine/run-session-open.ts:64:    options?.subAgentContinuation === undefined
+packages/core/src/engine/run-session-open.ts:66:      : parseSubAgentContinuation(options.subAgentContinuation, getCurrentSid());
+packages/core/src/engine/run-session-open.ts:67:  if (options?.subAgentContinuation !== undefined && (!args.isSubAgent || !continuation)) {
+packages/core/src/engine/run-session-open.ts:102:      const persisted = parseSubAgentContinuation(
+packages/core/src/engine/run-session-open.ts:103:        session.state.subAgentContinuation,
+packages/core/src/engine/run-session-open.ts:108:        (session.state.subAgentContinuation !== undefined &&
+packages/core/src/tool-system/builtin/agent.ts:10:import type { ToolDefinition, StreamCallback, SubAgentContinuation } from "../../types.js";
+packages/core/src/tool-system/builtin/agent.ts:326:    continuation?: SubAgentContinuation;
+packages/core/src/tool-system/builtin/agent.ts:450:  const continuation: SubAgentContinuation | undefined = ctx.sessionId
+packages/core/src/tool-system/builtin/agent.ts:760:  continuation?: SubAgentContinuation;
+packages/core/src/tool-system/builtin/agent.ts:809:  continuation?: SubAgentContinuation;
+packages/core/src/tool-system/builtin/agent.ts:1064:    continuation?: SubAgentContinuation;
+packages/core/src/session/session-manager.ts:30:  SubAgentContinuation,
+packages/core/src/session/session-manager.ts:39:import { parseSubAgentContinuation } from "./subagent-continuation.js";
+packages/core/src/session/session-manager.ts:730:    subAgentContinuation?: SubAgentContinuation,
+packages/core/src/session/session-manager.ts:737:      subAgentContinuation === undefined
+packages/core/src/session/session-manager.ts:739:        : parseSubAgentContinuation(subAgentContinuation, parentSessionId);
+packages/core/src/session/session-manager.ts:740:    if (subAgentContinuation !== undefined && !continuation) {
+packages/core/src/session/session-manager.ts:766:      ...(continuation ? { subAgentContinuation: continuation } : {}),
+packages/core/src/session/session-manager.ts:1044:  readSubAgentContinuation(sessionId: string): SubAgentContinuation | undefined {
+packages/core/src/session/session-manager.ts:1048:        ? parseSubAgentContinuation(state.subAgentContinuation, state.parentSessionId)
+packages/core/src/tool-system/context.ts:165:  continuation?: import("../types.js").SubAgentContinuation;
+packages/core/src/tool-system/context.ts:199:  ): import("../types.js").SubAgentContinuation | undefined;
+packages/core/src/tool-system/builtin/agent-registry.ts:17:import type { SubAgentContinuation } from "../../types.js";
+packages/core/src/tool-system/builtin/agent-registry.ts:83:  continuation?: SubAgentContinuation;
+packages/core/src/engine/run-types.ts:225:  subAgentContinuation?: import("../types.js").SubAgentContinuation;
+packages/core/src/engine/run-types.ts:255:      "signal" | "onStream" | "sessionId" | "subAgentContinuation" | "toolAllowlist"

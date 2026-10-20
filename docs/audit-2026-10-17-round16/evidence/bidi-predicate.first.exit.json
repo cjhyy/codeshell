@@ -1,0 +1,16 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round16/evidence/bidi-predicate.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round16/evidence/bidi-predicate.first.raw.log",
+  "attempts": 1,
+  "reruns": 0,
+  "actualProductModuleImported": false,
+  "executionScope": "Exact frozen-source hasRTLCharacters predicate; only two TS signature annotations removed; no platform/env reads or bidi-js import."
+}

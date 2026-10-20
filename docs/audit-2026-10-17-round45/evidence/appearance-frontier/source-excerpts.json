@@ -1,0 +1,3847 @@
+{
+  "captureUTC": "2026-10-17T15:20:56.929799+00:00",
+  "captureTiming": "After displays, same source SHA; no extra semantic coverage",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "displayedRanges": [
+        [
+          1,
+          180
+        ],
+        [
+          189,
+          189
+        ],
+        [
+          211,
+          362
+        ]
+      ],
+      "semanticRanges": [
+        [
+          24,
+          50
+        ],
+        [
+          53,
+          55
+        ],
+        [
+          64,
+          94
+        ],
+        [
+          112,
+          125
+        ],
+        [
+          211,
+          211
+        ],
+        [
+          214,
+          249
+        ],
+        [
+          281,
+          328
+        ],
+        [
+          356,
+          358
+        ],
+        [
+          360,
+          362
+        ]
+      ],
+      "lines": [
+        {
+          "n": 1,
+          "text": "import React, { useEffect, useRef, useState } from \"react\";",
+          "semantic": false
+        },
+        {
+          "n": 2,
+          "text": "import { Check, FolderOpen, Loader2, Trash2, Upload } from \"lucide-react\";",
+          "semantic": false
+        },
+        {
+          "n": 3,
+          "text": "import type { ThemeImportKind } from \"../../shared/theme-packs\";",
+          "semantic": false
+        },
+        {
+          "n": 4,
+          "text": "import {",
+          "semantic": false
+        },
+        {
+          "n": 5,
+          "text": "  applyTheme,",
+          "semantic": false
+        },
+        {
+          "n": 6,
+          "text": "  applyThemePack,",
+          "semantic": false
+        },
+        {
+          "n": 7,
+          "text": "  loadTheme,",
+          "semantic": false
+        },
+        {
+          "n": 8,
+          "text": "  loadThemePackId,",
+          "semantic": false
+        },
+        {
+          "n": 9,
+          "text": "  saveTheme,",
+          "semantic": false
+        },
+        {
+          "n": 10,
+          "text": "  saveThemePackId,",
+          "semantic": false
+        },
+        {
+          "n": 11,
+          "text": "  type Theme,",
+          "semantic": false
+        },
+        {
+          "n": 12,
+          "text": "} from \"../theme\";",
+          "semantic": false
+        },
+        {
+          "n": 13,
+          "text": "import { THEME_PACKS, DEFAULT_PACK_ID, type ThemePack } from \"../theme-packs\";",
+          "semantic": false
+        },
+        {
+          "n": 14,
+          "text": "import { installedThemePacks, refreshInstalledThemes } from \"../installedThemes\";",
+          "semantic": false
+        },
+        {
+          "n": 15,
+          "text": "import { cn } from \"@/lib/utils\";",
+          "semantic": false
+        },
+        {
+          "n": 16,
+          "text": "import { useT } from \"../i18n/I18nProvider\";",
+          "semantic": false
+        },
+        {
+          "n": 17,
+          "text": "import type { TranslationKey } from \"../i18n\";",
+          "semantic": false
+        },
+        {
+          "n": 18,
+          "text": "import { Button } from \"@/components/ui/button\";",
+          "semantic": false
+        },
+        {
+          "n": 19,
+          "text": "import { useConfirm } from \"../ui/DialogProvider\";",
+          "semantic": false
+        },
+        {
+          "n": 20,
+          "text": "import { useToast } from \"../ui/ToastProvider\";",
+          "semantic": false
+        },
+        {
+          "n": 21,
+          "text": "import { ThemePackPreview } from \"./ThemePackPreview\";",
+          "semantic": false
+        },
+        {
+          "n": 22,
+          "text": "import { ThemeAudioSection } from \"./ThemeAudioSection\";",
+          "semantic": false
+        },
+        {
+          "n": 23,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 24,
+          "text": "/**",
+          "semantic": true
+        },
+        {
+          "n": 25,
+          "text": " * Builtin packs carry an i18n key in `name`; installed packs carry a plain",
+          "semantic": true
+        },
+        {
+          "n": 26,
+          "text": " * author-supplied string. Resolve to a display string for either.",
+          "semantic": true
+        },
+        {
+          "n": 27,
+          "text": " */",
+          "semantic": true
+        },
+        {
+          "n": 28,
+          "text": "function packDisplayName(pack: ThemePack, t: (key: TranslationKey) => string): string {",
+          "semantic": true
+        },
+        {
+          "n": 29,
+          "text": "  return pack.source === \"installed\" ? String(pack.name) : t(pack.name as TranslationKey);",
+          "semantic": true
+        },
+        {
+          "n": 30,
+          "text": "}",
+          "semantic": true
+        },
+        {
+          "n": 31,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 32,
+          "text": "export function AppearanceSection() {",
+          "semantic": true
+        },
+        {
+          "n": 33,
+          "text": "  const { t } = useT();",
+          "semantic": true
+        },
+        {
+          "n": 34,
+          "text": "  const THEMES: Array<{ id: Theme; label: string; description: string }> = [",
+          "semantic": true
+        },
+        {
+          "n": 35,
+          "text": "    {",
+          "semantic": true
+        },
+        {
+          "n": 36,
+          "text": "      id: \"system\",",
+          "semantic": true
+        },
+        {
+          "n": 37,
+          "text": "      label: t(\"settingsX.appearance.system\"),",
+          "semantic": true
+        },
+        {
+          "n": 38,
+          "text": "      description: t(\"settingsX.appearance.systemDesc\"),",
+          "semantic": true
+        },
+        {
+          "n": 39,
+          "text": "    },",
+          "semantic": true
+        },
+        {
+          "n": 40,
+          "text": "    {",
+          "semantic": true
+        },
+        {
+          "n": 41,
+          "text": "      id: \"light\",",
+          "semantic": true
+        },
+        {
+          "n": 42,
+          "text": "      label: t(\"settingsX.appearance.light\"),",
+          "semantic": true
+        },
+        {
+          "n": 43,
+          "text": "      description: t(\"settingsX.appearance.lightDesc\"),",
+          "semantic": true
+        },
+        {
+          "n": 44,
+          "text": "    },",
+          "semantic": true
+        },
+        {
+          "n": 45,
+          "text": "    {",
+          "semantic": true
+        },
+        {
+          "n": 46,
+          "text": "      id: \"dark\",",
+          "semantic": true
+        },
+        {
+          "n": 47,
+          "text": "      label: t(\"settingsX.appearance.dark\"),",
+          "semantic": true
+        },
+        {
+          "n": 48,
+          "text": "      description: t(\"settingsX.appearance.darkDesc\"),",
+          "semantic": true
+        },
+        {
+          "n": 49,
+          "text": "    },",
+          "semantic": true
+        },
+        {
+          "n": 50,
+          "text": "  ];",
+          "semantic": true
+        },
+        {
+          "n": 51,
+          "text": "  const confirm = useConfirm();",
+          "semantic": false
+        },
+        {
+          "n": 52,
+          "text": "  const toast = useToast();",
+          "semantic": false
+        },
+        {
+          "n": 53,
+          "text": "  const [theme, setTheme] = useState<Theme>(() => loadTheme());",
+          "semantic": true
+        },
+        {
+          "n": 54,
+          "text": "  const [packId, setPackId] = useState<string>(() => loadThemePackId());",
+          "semantic": true
+        },
+        {
+          "n": 55,
+          "text": "  const [installed, setInstalled] = useState<ThemePack[]>(() => installedThemePacks());",
+          "semantic": true
+        },
+        {
+          "n": 56,
+          "text": "  const [importing, setImporting] = useState(false);",
+          "semantic": false
+        },
+        {
+          "n": 57,
+          "text": "  const removingRef = useRef<string | null>(null);",
+          "semantic": false
+        },
+        {
+          "n": 58,
+          "text": "  const [removal, setRemoval] = useState<{ id: string; pending: boolean } | null>(null);",
+          "semantic": false
+        },
+        {
+          "n": 59,
+          "text": "  const packListRef = useRef<HTMLDivElement>(null);",
+          "semantic": false
+        },
+        {
+          "n": 60,
+          "text": "  const removalFocus = useRef<{ opener: HTMLButtonElement; removed: boolean } | null>(null);",
+          "semantic": false
+        },
+        {
+          "n": 61,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 62,
+          "text": "  const api = globalThis.window?.codeshell;",
+          "semantic": false
+        },
+        {
+          "n": 63,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 64,
+          "text": "  useEffect(() => {",
+          "semantic": true
+        },
+        {
+          "n": 65,
+          "text": "    let active = true;",
+          "semantic": true
+        },
+        {
+          "n": 66,
+          "text": "    const reload = (): void => {",
+          "semantic": true
+        },
+        {
+          "n": 67,
+          "text": "      void refreshInstalledThemes().then(() => {",
+          "semantic": true
+        },
+        {
+          "n": 68,
+          "text": "        if (active) {",
+          "semantic": true
+        },
+        {
+          "n": 69,
+          "text": "          setInstalled(installedThemePacks());",
+          "semantic": true
+        },
+        {
+          "n": 70,
+          "text": "          setPackId(loadThemePackId());",
+          "semantic": true
+        },
+        {
+          "n": 71,
+          "text": "        }",
+          "semantic": true
+        },
+        {
+          "n": 72,
+          "text": "      });",
+          "semantic": true
+        },
+        {
+          "n": 73,
+          "text": "    };",
+          "semantic": true
+        },
+        {
+          "n": 74,
+          "text": "    reload();",
+          "semantic": true
+        },
+        {
+          "n": 75,
+          "text": "    const off = api?.onThemesChanged?.(reload);",
+          "semantic": true
+        },
+        {
+          "n": 76,
+          "text": "    return () => {",
+          "semantic": true
+        },
+        {
+          "n": 77,
+          "text": "      active = false;",
+          "semantic": true
+        },
+        {
+          "n": 78,
+          "text": "      off?.();",
+          "semantic": true
+        },
+        {
+          "n": 79,
+          "text": "    };",
+          "semantic": true
+        },
+        {
+          "n": 80,
+          "text": "  }, [api]);",
+          "semantic": true
+        },
+        {
+          "n": 81,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 82,
+          "text": "  useEffect(() => {",
+          "semantic": true
+        },
+        {
+          "n": 83,
+          "text": "    const sync = () => setPackId(loadThemePackId());",
+          "semantic": true
+        },
+        {
+          "n": 84,
+          "text": "    const storage = (event: StorageEvent) => {",
+          "semantic": true
+        },
+        {
+          "n": 85,
+          "text": "      if (event.key === \"codeshell.theme-pack\" || event.key === null) sync();",
+          "semantic": true
+        },
+        {
+          "n": 86,
+          "text": "      if (event.key === \"codeshell.theme\" || event.key === null) setTheme(loadTheme());",
+          "semantic": true
+        },
+        {
+          "n": 87,
+          "text": "    };",
+          "semantic": true
+        },
+        {
+          "n": 88,
+          "text": "    window.addEventListener(\"storage\", storage);",
+          "semantic": true
+        },
+        {
+          "n": 89,
+          "text": "    window.addEventListener(\"codeshell:theme-pack-changed\", sync);",
+          "semantic": true
+        },
+        {
+          "n": 90,
+          "text": "    return () => {",
+          "semantic": true
+        },
+        {
+          "n": 91,
+          "text": "      window.removeEventListener(\"storage\", storage);",
+          "semantic": true
+        },
+        {
+          "n": 92,
+          "text": "      window.removeEventListener(\"codeshell:theme-pack-changed\", sync);",
+          "semantic": true
+        },
+        {
+          "n": 93,
+          "text": "    };",
+          "semantic": true
+        },
+        {
+          "n": 94,
+          "text": "  }, []);",
+          "semantic": true
+        },
+        {
+          "n": 95,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 96,
+          "text": "  useEffect(() => {",
+          "semantic": false
+        },
+        {
+          "n": 97,
+          "text": "    if (removal || !removalFocus.current) return;",
+          "semantic": false
+        },
+        {
+          "n": 98,
+          "text": "    const request = removalFocus.current;",
+          "semantic": false
+        },
+        {
+          "n": 99,
+          "text": "    removalFocus.current = null;",
+          "semantic": false
+        },
+        {
+          "n": 100,
+          "text": "    // Wait for the dialog's close autofocus and the re-enabled/removed card",
+          "semantic": false
+        },
+        {
+          "n": 101,
+          "text": "    // to settle. A reader who moved focus while Host worked keeps that focus.",
+          "semantic": false
+        },
+        {
+          "n": 102,
+          "text": "    const timer = window.setTimeout(() => {",
+          "semantic": false
+        },
+        {
+          "n": 103,
+          "text": "      if (document.activeElement !== document.body) return;",
+          "semantic": false
+        },
+        {
+          "n": 104,
+          "text": "      const target = request.removed",
+          "semantic": false
+        },
+        {
+          "n": 105,
+          "text": "        ? packListRef.current?.querySelector<HTMLButtonElement>('button[aria-pressed=\"true\"]')",
+          "semantic": false
+        },
+        {
+          "n": 106,
+          "text": "        : request.opener;",
+          "semantic": false
+        },
+        {
+          "n": 107,
+          "text": "      if (target?.isConnected && !target.disabled) target.focus();",
+          "semantic": false
+        },
+        {
+          "n": 108,
+          "text": "    }, 0);",
+          "semantic": false
+        },
+        {
+          "n": 109,
+          "text": "    return () => window.clearTimeout(timer);",
+          "semantic": false
+        },
+        {
+          "n": 110,
+          "text": "  }, [removal]);",
+          "semantic": false
+        },
+        {
+          "n": 111,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 112,
+          "text": "  const choose = (next: Theme): void => {",
+          "semantic": true
+        },
+        {
+          "n": 113,
+          "text": "    setTheme(next);",
+          "semantic": true
+        },
+        {
+          "n": 114,
+          "text": "    saveTheme(next);",
+          "semantic": true
+        },
+        {
+          "n": 115,
+          "text": "    applyTheme(next);",
+          "semantic": true
+        },
+        {
+          "n": 116,
+          "text": "  };",
+          "semantic": true
+        },
+        {
+          "n": 117,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 118,
+          "text": "  const choosePack = (next: string): void => {",
+          "semantic": true
+        },
+        {
+          "n": 119,
+          "text": "    setPackId(next);",
+          "semantic": true
+        },
+        {
+          "n": 120,
+          "text": "    saveThemePackId(next);",
+          "semantic": true
+        },
+        {
+          "n": 121,
+          "text": "    applyThemePack(next);",
+          "semantic": true
+        },
+        {
+          "n": 122,
+          "text": "    // `storage` only fires in OTHER windows; notify this one so a live pet",
+          "semantic": true
+        },
+        {
+          "n": 123,
+          "text": "    // sprite / preview in the same window updates immediately too.",
+          "semantic": true
+        },
+        {
+          "n": 124,
+          "text": "    window.dispatchEvent(new Event(\"codeshell:theme-pack-changed\"));",
+          "semantic": true
+        },
+        {
+          "n": 125,
+          "text": "  };",
+          "semantic": true
+        },
+        {
+          "n": 126,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 127,
+          "text": "  const importPack = async (kind: ThemeImportKind): Promise<void> => {",
+          "semantic": false
+        },
+        {
+          "n": 128,
+          "text": "    if (!api) return;",
+          "semantic": false
+        },
+        {
+          "n": 129,
+          "text": "    setImporting(true);",
+          "semantic": false
+        },
+        {
+          "n": 130,
+          "text": "    try {",
+          "semantic": false
+        },
+        {
+          "n": 131,
+          "text": "      const picked = await api.pickAndPreviewTheme(kind);",
+          "semantic": false
+        },
+        {
+          "n": 132,
+          "text": "      if (picked.cancelled) return;",
+          "semantic": false
+        },
+        {
+          "n": 133,
+          "text": "      const { preview } = picked;",
+          "semantic": false
+        },
+        {
+          "n": 134,
+          "text": "      const parts = [",
+          "semantic": false
+        },
+        {
+          "n": 135,
+          "text": "        preview.hasColors ? t(\"settingsX.appearance.pack.importColors\") : null,",
+          "semantic": false
+        },
+        {
+          "n": 136,
+          "text": "        preview.petStates.length ? t(\"settingsX.appearance.pack.importPet\") : null,",
+          "semantic": false
+        },
+        {
+          "n": 137,
+          "text": "        preview.wallpaperModes.length ? t(\"settingsX.appearance.pack.importWallpaper\") : null,",
+          "semantic": false
+        },
+        {
+          "n": 138,
+          "text": "        preview.surfaceNames?.length ? t(\"settingsX.appearance.pack.importSurfaces\") : null,",
+          "semantic": false
+        },
+        {
+          "n": 139,
+          "text": "        preview.hasFrame ? t(\"settingsX.appearance.pack.importFrame\") : null,",
+          "semantic": false
+        },
+        {
+          "n": 140,
+          "text": "        preview.soundEvents?.length ? t(\"settingsX.appearance.pack.importSounds\") : null,",
+          "semantic": false
+        },
+        {
+          "n": 141,
+          "text": "        preview.musicCount ? t(\"settingsX.appearance.pack.importMusic\") : null,",
+          "semantic": false
+        },
+        {
+          "n": 142,
+          "text": "      ].filter(Boolean);",
+          "semantic": false
+        },
+        {
+          "n": 143,
+          "text": "      const approved = await confirm({",
+          "semantic": false
+        },
+        {
+          "n": 144,
+          "text": "        title: t(\"settingsX.appearance.pack.importConfirmTitle\", { name: preview.name }),",
+          "semantic": false
+        },
+        {
+          "n": 145,
+          "text": "        message:",
+          "semantic": false
+        },
+        {
+          "n": 146,
+          "text": "          `${t(\"settingsX.appearance.pack.importConfirmBody\", {",
+          "semantic": false
+        },
+        {
+          "n": 147,
+          "text": "            version: preview.version,",
+          "semantic": false
+        },
+        {
+          "n": 148,
+          "text": "            contents: parts.join(\"、\") || t(\"settingsX.appearance.pack.importNothing\"),",
+          "semantic": false
+        },
+        {
+          "n": 149,
+          "text": "          })}` + (preview.warnings.length ? `\\n\\n⚠ ${preview.warnings.join(\"\\n\")}` : \"\"),",
+          "semantic": false
+        },
+        {
+          "n": 150,
+          "text": "        confirmLabel: t(\"settingsX.appearance.pack.importAction\"),",
+          "semantic": false
+        },
+        {
+          "n": 151,
+          "text": "      });",
+          "semantic": false
+        },
+        {
+          "n": 152,
+          "text": "      if (!approved) return;",
+          "semantic": false
+        },
+        {
+          "n": 153,
+          "text": "      const pack = await api.installTheme({ path: picked.path, reviewToken: preview.reviewToken });",
+          "semantic": false
+        },
+        {
+          "n": 154,
+          "text": "      await refreshInstalledThemes();",
+          "semantic": false
+        },
+        {
+          "n": 155,
+          "text": "      setInstalled(installedThemePacks());",
+          "semantic": false
+        },
+        {
+          "n": 156,
+          "text": "      choosePack(pack.id); // activate what was just imported",
+          "semantic": false
+        },
+        {
+          "n": 157,
+          "text": "      toast({ message: t(\"settingsX.appearance.pack.importDone\", { name: pack.name }) });",
+          "semantic": false
+        },
+        {
+          "n": 158,
+          "text": "    } catch (cause) {",
+          "semantic": false
+        },
+        {
+          "n": 159,
+          "text": "      toast({",
+          "semantic": false
+        },
+        {
+          "n": 160,
+          "text": "        message: t(\"settingsX.appearance.pack.importFailed\", {",
+          "semantic": false
+        },
+        {
+          "n": 161,
+          "text": "          error: cause instanceof Error ? cause.message : String(cause),",
+          "semantic": false
+        },
+        {
+          "n": 162,
+          "text": "        }),",
+          "semantic": false
+        },
+        {
+          "n": 163,
+          "text": "        variant: \"error\",",
+          "semantic": false
+        },
+        {
+          "n": 164,
+          "text": "      });",
+          "semantic": false
+        },
+        {
+          "n": 165,
+          "text": "    } finally {",
+          "semantic": false
+        },
+        {
+          "n": 166,
+          "text": "      setImporting(false);",
+          "semantic": false
+        },
+        {
+          "n": 167,
+          "text": "    }",
+          "semantic": false
+        },
+        {
+          "n": 168,
+          "text": "  };",
+          "semantic": false
+        },
+        {
+          "n": 169,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 170,
+          "text": "  const removePack = async (pack: ThemePack, opener: HTMLButtonElement): Promise<void> => {",
+          "semantic": false
+        },
+        {
+          "n": 171,
+          "text": "    if (!api || removingRef.current) return;",
+          "semantic": false
+        },
+        {
+          "n": 172,
+          "text": "    removingRef.current = pack.id;",
+          "semantic": false
+        },
+        {
+          "n": 173,
+          "text": "    setRemoval({ id: pack.id, pending: false });",
+          "semantic": false
+        },
+        {
+          "n": 174,
+          "text": "    let removed = false;",
+          "semantic": false
+        },
+        {
+          "n": 175,
+          "text": "    try {",
+          "semantic": false
+        },
+        {
+          "n": 176,
+          "text": "      const approved = await confirm({",
+          "semantic": false
+        },
+        {
+          "n": 177,
+          "text": "        title: t(\"settingsX.appearance.pack.removeTitle\"),",
+          "semantic": false
+        },
+        {
+          "n": 178,
+          "text": "        message: t(\"settingsX.appearance.pack.removeBody\", { name: String(pack.name) }),",
+          "semantic": false
+        },
+        {
+          "n": 179,
+          "text": "        confirmLabel: t(\"settingsX.appearance.pack.removeAction\"),",
+          "semantic": false
+        },
+        {
+          "n": 180,
+          "text": "        destructive: true,",
+          "semantic": false
+        },
+        {
+          "n": 189,
+          "text": "      if (localStorage.getItem(\"codeshell.theme-pack\") === pack.id) choosePack(DEFAULT_PACK_ID);",
+          "semantic": false
+        },
+        {
+          "n": 211,
+          "text": "  const allPacks: ThemePack[] = [...THEME_PACKS, ...installed];",
+          "semantic": true
+        },
+        {
+          "n": 212,
+          "text": "  const activePack = allPacks.find((pack) => pack.id === packId) ?? THEME_PACKS[0]!;",
+          "semantic": false
+        },
+        {
+          "n": 213,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 214,
+          "text": "  return (",
+          "semantic": true
+        },
+        {
+          "n": 215,
+          "text": "    <section className=\"mb-6 flex flex-col gap-3\">",
+          "semantic": true
+        },
+        {
+          "n": 216,
+          "text": "      <h3 className=\"m-0 text-[0.95rem] font-semibold text-foreground\">",
+          "semantic": true
+        },
+        {
+          "n": 217,
+          "text": "        {t(\"settingsX.appearance.title\")}",
+          "semantic": true
+        },
+        {
+          "n": 218,
+          "text": "      </h3>",
+          "semantic": true
+        },
+        {
+          "n": 219,
+          "text": "      <p className=\"m-0 text-xs text-muted-foreground\">{t(\"settingsX.appearance.desc\")}</p>",
+          "semantic": true
+        },
+        {
+          "n": 220,
+          "text": "      <div",
+          "semantic": true
+        },
+        {
+          "n": 221,
+          "text": "        role=\"group\"",
+          "semantic": true
+        },
+        {
+          "n": 222,
+          "text": "        aria-label={t(\"settingsX.appearance.title\")}",
+          "semantic": true
+        },
+        {
+          "n": 223,
+          "text": "        className=\"grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2\"",
+          "semantic": true
+        },
+        {
+          "n": 224,
+          "text": "      >",
+          "semantic": true
+        },
+        {
+          "n": 225,
+          "text": "        {THEMES.map((item) => (",
+          "semantic": true
+        },
+        {
+          "n": 226,
+          "text": "          <Button",
+          "semantic": true
+        },
+        {
+          "n": 227,
+          "text": "            key={item.id}",
+          "semantic": true
+        },
+        {
+          "n": 228,
+          "text": "            type=\"button\"",
+          "semantic": true
+        },
+        {
+          "n": 229,
+          "text": "            variant=\"outline\"",
+          "semantic": true
+        },
+        {
+          "n": 230,
+          "text": "            aria-pressed={theme === item.id}",
+          "semantic": true
+        },
+        {
+          "n": 231,
+          "text": "            data-theme-mode={item.id}",
+          "semantic": true
+        },
+        {
+          "n": 232,
+          "text": "            className={cn(",
+          "semantic": true
+        },
+        {
+          "n": 233,
+          "text": "              \"h-auto min-h-20 flex-col items-start gap-1 whitespace-normal p-3 text-left\",",
+          "semantic": true
+        },
+        {
+          "n": 234,
+          "text": "              theme === item.id && \"border-primary bg-primary/10 ring-1 ring-primary/30\",",
+          "semantic": true
+        },
+        {
+          "n": 235,
+          "text": "            )}",
+          "semantic": true
+        },
+        {
+          "n": 236,
+          "text": "            onClick={() => choose(item.id)}",
+          "semantic": true
+        },
+        {
+          "n": 237,
+          "text": "          >",
+          "semantic": true
+        },
+        {
+          "n": 238,
+          "text": "            <span className=\"flex w-full items-center justify-between gap-2 text-sm font-medium text-foreground\">",
+          "semantic": true
+        },
+        {
+          "n": 239,
+          "text": "              {item.label}",
+          "semantic": true
+        },
+        {
+          "n": 240,
+          "text": "              <Check",
+          "semantic": true
+        },
+        {
+          "n": 241,
+          "text": "                className={cn(\"size-3.5 shrink-0 text-primary\", theme !== item.id && \"invisible\")}",
+          "semantic": true
+        },
+        {
+          "n": 242,
+          "text": "                aria-hidden",
+          "semantic": true
+        },
+        {
+          "n": 243,
+          "text": "              />",
+          "semantic": true
+        },
+        {
+          "n": 244,
+          "text": "            </span>",
+          "semantic": true
+        },
+        {
+          "n": 245,
+          "text": "            <span className=\"text-xs text-muted-foreground\">{item.description}</span>",
+          "semantic": true
+        },
+        {
+          "n": 246,
+          "text": "          </Button>",
+          "semantic": true
+        },
+        {
+          "n": 247,
+          "text": "        ))}",
+          "semantic": true
+        },
+        {
+          "n": 248,
+          "text": "      </div>",
+          "semantic": true
+        },
+        {
+          "n": 249,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 250,
+          "text": "      <div className=\"mt-3 flex flex-wrap items-center justify-between gap-2\">",
+          "semantic": false
+        },
+        {
+          "n": 251,
+          "text": "        <h3 className=\"m-0 text-[0.95rem] font-semibold text-foreground\">",
+          "semantic": false
+        },
+        {
+          "n": 252,
+          "text": "          {t(\"settingsX.appearance.packTitle\")}",
+          "semantic": false
+        },
+        {
+          "n": 253,
+          "text": "        </h3>",
+          "semantic": false
+        },
+        {
+          "n": 254,
+          "text": "        {api && (",
+          "semantic": false
+        },
+        {
+          "n": 255,
+          "text": "          <div className=\"flex flex-wrap gap-2\">",
+          "semantic": false
+        },
+        {
+          "n": 256,
+          "text": "            <Button",
+          "semantic": false
+        },
+        {
+          "n": 257,
+          "text": "              type=\"button\"",
+          "semantic": false
+        },
+        {
+          "n": 258,
+          "text": "              variant=\"outline\"",
+          "semantic": false
+        },
+        {
+          "n": 259,
+          "text": "              size=\"sm\"",
+          "semantic": false
+        },
+        {
+          "n": 260,
+          "text": "              disabled={importing}",
+          "semantic": false
+        },
+        {
+          "n": 261,
+          "text": "              data-theme-import",
+          "semantic": false
+        },
+        {
+          "n": 262,
+          "text": "              onClick={() => void importPack(\"zip\")}",
+          "semantic": false
+        },
+        {
+          "n": 263,
+          "text": "            >",
+          "semantic": false
+        },
+        {
+          "n": 264,
+          "text": "              <Upload size={13} aria-hidden=\"true\" />",
+          "semantic": false
+        },
+        {
+          "n": 265,
+          "text": "              {t(\"settingsX.appearance.pack.import\")}",
+          "semantic": false
+        },
+        {
+          "n": 266,
+          "text": "            </Button>",
+          "semantic": false
+        },
+        {
+          "n": 267,
+          "text": "            <Button",
+          "semantic": false
+        },
+        {
+          "n": 268,
+          "text": "              type=\"button\"",
+          "semantic": false
+        },
+        {
+          "n": 269,
+          "text": "              variant=\"ghost\"",
+          "semantic": false
+        },
+        {
+          "n": 270,
+          "text": "              size=\"sm\"",
+          "semantic": false
+        },
+        {
+          "n": 271,
+          "text": "              disabled={importing}",
+          "semantic": false
+        },
+        {
+          "n": 272,
+          "text": "              data-theme-import-directory",
+          "semantic": false
+        },
+        {
+          "n": 273,
+          "text": "              onClick={() => void importPack(\"directory\")}",
+          "semantic": false
+        },
+        {
+          "n": 274,
+          "text": "            >",
+          "semantic": false
+        },
+        {
+          "n": 275,
+          "text": "              <FolderOpen size={13} aria-hidden=\"true\" />",
+          "semantic": false
+        },
+        {
+          "n": 276,
+          "text": "              {t(\"settingsX.appearance.pack.importDirectory\")}",
+          "semantic": false
+        },
+        {
+          "n": 277,
+          "text": "            </Button>",
+          "semantic": false
+        },
+        {
+          "n": 278,
+          "text": "          </div>",
+          "semantic": false
+        },
+        {
+          "n": 279,
+          "text": "        )}",
+          "semantic": false
+        },
+        {
+          "n": 280,
+          "text": "      </div>",
+          "semantic": false
+        },
+        {
+          "n": 281,
+          "text": "      <p className=\"m-0 text-xs text-muted-foreground\">{t(\"settingsX.appearance.packDesc\")}</p>",
+          "semantic": true
+        },
+        {
+          "n": 282,
+          "text": "      <div",
+          "semantic": true
+        },
+        {
+          "n": 283,
+          "text": "        ref={packListRef}",
+          "semantic": true
+        },
+        {
+          "n": 284,
+          "text": "        className=\"grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3\"",
+          "semantic": true
+        },
+        {
+          "n": 285,
+          "text": "        data-appearance-packs",
+          "semantic": true
+        },
+        {
+          "n": 286,
+          "text": "      >",
+          "semantic": true
+        },
+        {
+          "n": 287,
+          "text": "        {allPacks.map((pack) => (",
+          "semantic": true
+        },
+        {
+          "n": 288,
+          "text": "          <div",
+          "semantic": true
+        },
+        {
+          "n": 289,
+          "text": "            key={pack.id}",
+          "semantic": true
+        },
+        {
+          "n": 290,
+          "text": "            data-theme-pack={pack.id}",
+          "semantic": true
+        },
+        {
+          "n": 291,
+          "text": "            aria-busy={removal?.id === pack.id && removal.pending ? true : undefined}",
+          "semantic": true
+        },
+        {
+          "n": 292,
+          "text": "            className={cn(",
+          "semantic": true
+        },
+        {
+          "n": 293,
+          "text": "              \"group relative overflow-hidden rounded-xl border text-left\",",
+          "semantic": true
+        },
+        {
+          "n": 294,
+          "text": "              packId === pack.id",
+          "semantic": true
+        },
+        {
+          "n": 295,
+          "text": "                ? \"border-primary bg-primary/10 ring-1 ring-primary/30\"",
+          "semantic": true
+        },
+        {
+          "n": 296,
+          "text": "                : \"border-border\",",
+          "semantic": true
+        },
+        {
+          "n": 297,
+          "text": "            )}",
+          "semantic": true
+        },
+        {
+          "n": 298,
+          "text": "          >",
+          "semantic": true
+        },
+        {
+          "n": 299,
+          "text": "            <Button",
+          "semantic": true
+        },
+        {
+          "n": 300,
+          "text": "              type=\"button\"",
+          "semantic": true
+        },
+        {
+          "n": 301,
+          "text": "              variant=\"ghost\"",
+          "semantic": true
+        },
+        {
+          "n": 302,
+          "text": "              aria-pressed={packId === pack.id}",
+          "semantic": true
+        },
+        {
+          "n": 303,
+          "text": "              className=\"h-auto w-full flex-col items-stretch gap-3 rounded-xl p-2.5 text-left\"",
+          "semantic": true
+        },
+        {
+          "n": 304,
+          "text": "              onClick={() => choosePack(pack.id)}",
+          "semantic": true
+        },
+        {
+          "n": 305,
+          "text": "            >",
+          "semantic": true
+        },
+        {
+          "n": 306,
+          "text": "              <ThemePackPreview pack={pack} />",
+          "semantic": true
+        },
+        {
+          "n": 307,
+          "text": "              <span className=\"flex min-w-0 items-center gap-2 px-1 pb-1 pr-6\">",
+          "semantic": true
+        },
+        {
+          "n": 308,
+          "text": "                <span",
+          "semantic": true
+        },
+        {
+          "n": 309,
+          "text": "                  aria-hidden=\"true\"",
+          "semantic": true
+        },
+        {
+          "n": 310,
+          "text": "                  className=\"size-3 shrink-0 rounded-full border border-border/60\"",
+          "semantic": true
+        },
+        {
+          "n": 311,
+          "text": "                  style={{ backgroundColor: `hsl(${pack.swatch})` }}",
+          "semantic": true
+        },
+        {
+          "n": 312,
+          "text": "                />",
+          "semantic": true
+        },
+        {
+          "n": 313,
+          "text": "                <span className=\"min-w-0 flex-1\">",
+          "semantic": true
+        },
+        {
+          "n": 314,
+          "text": "                  <span className=\"block truncate text-sm font-medium text-foreground\">",
+          "semantic": true
+        },
+        {
+          "n": 315,
+          "text": "                    {packDisplayName(pack, t)}",
+          "semantic": true
+        },
+        {
+          "n": 316,
+          "text": "                  </span>",
+          "semantic": true
+        },
+        {
+          "n": 317,
+          "text": "                  <span className=\"block text-[11px] font-normal text-muted-foreground\">",
+          "semantic": true
+        },
+        {
+          "n": 318,
+          "text": "                    {t(",
+          "semantic": true
+        },
+        {
+          "n": 319,
+          "text": "                      pack.surfaces || pack.frame",
+          "semantic": true
+        },
+        {
+          "n": 320,
+          "text": "                        ? \"settingsX.appearance.pack.fullSkin\"",
+          "semantic": true
+        },
+        {
+          "n": 321,
+          "text": "                        : pack.wallpaper",
+          "semantic": true
+        },
+        {
+          "n": 322,
+          "text": "                          ? \"settingsX.appearance.pack.importWallpaper\"",
+          "semantic": true
+        },
+        {
+          "n": 323,
+          "text": "                          : \"settingsX.appearance.pack.importColors\",",
+          "semantic": true
+        },
+        {
+          "n": 324,
+          "text": "                    )}",
+          "semantic": true
+        },
+        {
+          "n": 325,
+          "text": "                  </span>",
+          "semantic": true
+        },
+        {
+          "n": 326,
+          "text": "                </span>",
+          "semantic": true
+        },
+        {
+          "n": 327,
+          "text": "              </span>",
+          "semantic": true
+        },
+        {
+          "n": 328,
+          "text": "            </Button>",
+          "semantic": true
+        },
+        {
+          "n": 329,
+          "text": "            {pack.source === \"installed\" && (",
+          "semantic": false
+        },
+        {
+          "n": 330,
+          "text": "              <Button",
+          "semantic": false
+        },
+        {
+          "n": 331,
+          "text": "                type=\"button\"",
+          "semantic": false
+        },
+        {
+          "n": 332,
+          "text": "                variant=\"ghost\"",
+          "semantic": false
+        },
+        {
+          "n": 333,
+          "text": "                size=\"icon\"",
+          "semantic": false
+        },
+        {
+          "n": 334,
+          "text": "                data-theme-uninstall={pack.id}",
+          "semantic": false
+        },
+        {
+          "n": 335,
+          "text": "                disabled={removal !== null}",
+          "semantic": false
+        },
+        {
+          "n": 336,
+          "text": "                aria-label={t(",
+          "semantic": false
+        },
+        {
+          "n": 337,
+          "text": "                  removal?.id === pack.id && removal.pending",
+          "semantic": false
+        },
+        {
+          "n": 338,
+          "text": "                    ? \"settingsX.appearance.pack.removingNamed\"",
+          "semantic": false
+        },
+        {
+          "n": 339,
+          "text": "                    : \"settingsX.appearance.pack.removeNamed\",",
+          "semantic": false
+        },
+        {
+          "n": 340,
+          "text": "                  { name: String(pack.name) },",
+          "semantic": false
+        },
+        {
+          "n": 341,
+          "text": "                )}",
+          "semantic": false
+        },
+        {
+          "n": 342,
+          "text": "                className=\"absolute bottom-4 right-2 h-7 w-7 rounded-lg text-muted-foreground hover:bg-status-err/10 hover:text-status-err\"",
+          "semantic": false
+        },
+        {
+          "n": 343,
+          "text": "                onClick={(event) => void removePack(pack, event.currentTarget)}",
+          "semantic": false
+        },
+        {
+          "n": 344,
+          "text": "              >",
+          "semantic": false
+        },
+        {
+          "n": 345,
+          "text": "                {removal?.id === pack.id && removal.pending ? (",
+          "semantic": false
+        },
+        {
+          "n": 346,
+          "text": "                  <Loader2",
+          "semantic": false
+        },
+        {
+          "n": 347,
+          "text": "                    size={13}",
+          "semantic": false
+        },
+        {
+          "n": 348,
+          "text": "                    className=\"animate-spin motion-reduce:animate-none\"",
+          "semantic": false
+        },
+        {
+          "n": 349,
+          "text": "                    aria-hidden",
+          "semantic": false
+        },
+        {
+          "n": 350,
+          "text": "                  />",
+          "semantic": false
+        },
+        {
+          "n": 351,
+          "text": "                ) : (",
+          "semantic": false
+        },
+        {
+          "n": 352,
+          "text": "                  <Trash2 size={13} aria-hidden=\"true\" />",
+          "semantic": false
+        },
+        {
+          "n": 353,
+          "text": "                )}",
+          "semantic": false
+        },
+        {
+          "n": 354,
+          "text": "              </Button>",
+          "semantic": false
+        },
+        {
+          "n": 355,
+          "text": "            )}",
+          "semantic": false
+        },
+        {
+          "n": 356,
+          "text": "          </div>",
+          "semantic": true
+        },
+        {
+          "n": 357,
+          "text": "        ))}",
+          "semantic": true
+        },
+        {
+          "n": 358,
+          "text": "      </div>",
+          "semantic": true
+        },
+        {
+          "n": 359,
+          "text": "      <ThemeAudioSection key={activePack.id} pack={activePack} />",
+          "semantic": false
+        },
+        {
+          "n": 360,
+          "text": "    </section>",
+          "semantic": true
+        },
+        {
+          "n": 361,
+          "text": "  );",
+          "semantic": true
+        },
+        {
+          "n": 362,
+          "text": "}",
+          "semantic": true
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+      "displayedRanges": [
+        [
+          1,
+          22
+        ],
+        [
+          33,
+          64
+        ],
+        [
+          128,
+          128
+        ],
+        [
+          140,
+          140
+        ]
+      ],
+      "semanticRanges": [
+        [
+          5,
+          20
+        ],
+        [
+          33,
+          49
+        ]
+      ],
+      "lines": [
+        {
+          "n": 1,
+          "text": "import { DEFAULT_PACK_ID, THEME_PACKS, THEME_SURFACE_NAMES, type ThemePack } from \"./theme-packs\";",
+          "semantic": false
+        },
+        {
+          "n": 2,
+          "text": "import { refreshInstalledThemes, resolveThemePack } from \"./installedThemes\";",
+          "semantic": false
+        },
+        {
+          "n": 3,
+          "text": "import { resolveThemeSurface } from \"./theme-appearance\";",
+          "semantic": false
+        },
+        {
+          "n": 4,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 5,
+          "text": "export type Theme = \"light\" | \"dark\" | \"system\";",
+          "semantic": true
+        },
+        {
+          "n": 6,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 7,
+          "text": "const KEY = \"codeshell.theme\";",
+          "semantic": true
+        },
+        {
+          "n": 8,
+          "text": "const PACK_KEY = \"codeshell.theme-pack\";",
+          "semantic": true
+        },
+        {
+          "n": 9,
+          "text": "/** id of the managed <style> holding the active pack's variable overrides. */",
+          "semantic": true
+        },
+        {
+          "n": 10,
+          "text": "const PACK_STYLE_ID = \"cs-theme-pack\";",
+          "semantic": true
+        },
+        {
+          "n": 11,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 12,
+          "text": "export function loadTheme(): Theme {",
+          "semantic": true
+        },
+        {
+          "n": 13,
+          "text": "  const raw = localStorage.getItem(KEY);",
+          "semantic": true
+        },
+        {
+          "n": 14,
+          "text": "  if (raw === \"light\" || raw === \"dark\" || raw === \"system\") return raw;",
+          "semantic": true
+        },
+        {
+          "n": 15,
+          "text": "  return \"system\";",
+          "semantic": true
+        },
+        {
+          "n": 16,
+          "text": "}",
+          "semantic": true
+        },
+        {
+          "n": 17,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 18,
+          "text": "export function saveTheme(t: Theme): void {",
+          "semantic": true
+        },
+        {
+          "n": 19,
+          "text": "  localStorage.setItem(KEY, t);",
+          "semantic": true
+        },
+        {
+          "n": 20,
+          "text": "}",
+          "semantic": true
+        },
+        {
+          "n": 21,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 22,
+          "text": "export function applyTheme(t: Theme): void {",
+          "semantic": false
+        },
+        {
+          "n": 33,
+          "text": "export function loadThemePackId(): string {",
+          "semantic": true
+        },
+        {
+          "n": 34,
+          "text": "  // Tolerate environments without Storage (SSR / mini-DOM component tests).",
+          "semantic": true
+        },
+        {
+          "n": 35,
+          "text": "  let raw: string | null = null;",
+          "semantic": true
+        },
+        {
+          "n": 36,
+          "text": "  try {",
+          "semantic": true
+        },
+        {
+          "n": 37,
+          "text": "    raw = typeof localStorage === \"undefined\" ? null : localStorage.getItem(PACK_KEY);",
+          "semantic": true
+        },
+        {
+          "n": 38,
+          "text": "  } catch {",
+          "semantic": true
+        },
+        {
+          "n": 39,
+          "text": "    raw = null;",
+          "semantic": true
+        },
+        {
+          "n": 40,
+          "text": "  }",
+          "semantic": true
+        },
+        {
+          "n": 41,
+          "text": "  if (!raw) return DEFAULT_PACK_ID;",
+          "semantic": true
+        },
+        {
+          "n": 42,
+          "text": "  // Accept a builtin id, or any id resolveThemePack can satisfy (installed).",
+          "semantic": true
+        },
+        {
+          "n": 43,
+          "text": "  if (THEME_PACKS.some((pack) => pack.id === raw)) return raw;",
+          "semantic": true
+        },
+        {
+          "n": 44,
+          "text": "  return resolveThemePack(raw).id === raw ? raw : DEFAULT_PACK_ID;",
+          "semantic": true
+        },
+        {
+          "n": 45,
+          "text": "}",
+          "semantic": true
+        },
+        {
+          "n": 46,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 47,
+          "text": "export function saveThemePackId(id: string): void {",
+          "semantic": true
+        },
+        {
+          "n": 48,
+          "text": "  localStorage.setItem(PACK_KEY, id);",
+          "semantic": true
+        },
+        {
+          "n": 49,
+          "text": "}",
+          "semantic": true
+        },
+        {
+          "n": 50,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 51,
+          "text": "function renderVars(vars: Record<string, string>): string {",
+          "semantic": false
+        },
+        {
+          "n": 52,
+          "text": "  return Object.entries(vars)",
+          "semantic": false
+        },
+        {
+          "n": 53,
+          "text": "    .map(([name, value]) => `  ${name}: ${value};`)",
+          "semantic": false
+        },
+        {
+          "n": 54,
+          "text": "    .join(\"\\n\");",
+          "semantic": false
+        },
+        {
+          "n": 55,
+          "text": "}",
+          "semantic": false
+        },
+        {
+          "n": 56,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 57,
+          "text": "/**",
+          "semantic": false
+        },
+        {
+          "n": 58,
+          "text": " * Apply a theme pack by rewriting a managed <style> that overrides the base",
+          "semantic": false
+        },
+        {
+          "n": 59,
+          "text": " * `--cs-*` variables for both modes. The rules mirror the base sheet's",
+          "semantic": false
+        },
+        {
+          "n": 60,
+          "text": " * :root / .dark selectors and are appended after it, so equal-specificity",
+          "semantic": false
+        },
+        {
+          "n": 61,
+          "text": " * overrides win while the `.dark` class keeps deciding the active mode. The",
+          "semantic": false
+        },
+        {
+          "n": 62,
+          "text": " * default pack restores the base palette and clears all optional decoration.",
+          "semantic": false
+        },
+        {
+          "n": 63,
+          "text": " */",
+          "semantic": false
+        },
+        {
+          "n": 64,
+          "text": "export function applyThemePack(",
+          "semantic": false
+        },
+        {
+          "n": 128,
+          "text": "export function initTheme(): Theme {",
+          "semantic": false
+        },
+        {
+          "n": 140,
+          "text": "  // Same-origin windows (the pet popout) share this localStorage; a `storage`",
+          "semantic": false
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/installedThemes.ts",
+      "sha256": "8df377284acfeaa9ce1fefce71e883a78daac3d65bcbfc4d6547d0423c7a58cc",
+      "displayedRanges": [
+        [
+          1,
+          25
+        ],
+        [
+          31,
+          69
+        ],
+        [
+          72,
+          72
+        ]
+      ],
+      "semanticRanges": [
+        [
+          4,
+          17
+        ],
+        [
+          31,
+          35
+        ],
+        [
+          42,
+          55
+        ]
+      ],
+      "lines": [
+        {
+          "n": 1,
+          "text": "import type { InstalledThemePack } from \"../shared/theme-packs\";",
+          "semantic": false
+        },
+        {
+          "n": 2,
+          "text": "import { getThemePack, type ThemePack } from \"./theme-packs\";",
+          "semantic": false
+        },
+        {
+          "n": 3,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 4,
+          "text": "/**",
+          "semantic": true
+        },
+        {
+          "n": 5,
+          "text": " * Renderer-side cache of installed theme packs (loaded from main via",
+          "semantic": true
+        },
+        {
+          "n": 6,
+          "text": " * window.codeshell.listInstalledThemes). Kept as a module-level snapshot so the",
+          "semantic": true
+        },
+        {
+          "n": 7,
+          "text": " * synchronous pack resolver used by applyThemePack / usePetSprite can see",
+          "semantic": true
+        },
+        {
+          "n": 8,
+          "text": " * installed packs without an async read on the hot path. `refreshInstalledThemes`",
+          "semantic": true
+        },
+        {
+          "n": 9,
+          "text": " * repopulates it (on boot and on the themes:changed event).",
+          "semantic": true
+        },
+        {
+          "n": 10,
+          "text": " */",
+          "semantic": true
+        },
+        {
+          "n": 11,
+          "text": "let installed: InstalledThemePack[] = [];",
+          "semantic": true
+        },
+        {
+          "n": 12,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 13,
+          "text": "// Subscribers re-render when the cache changes. This is what lets a hook like",
+          "semantic": true
+        },
+        {
+          "n": 14,
+          "text": "// useActiveThemePack pick up the *first* async load: initTheme calls",
+          "semantic": true
+        },
+        {
+          "n": 15,
+          "text": "// refreshInstalledThemes() on boot, which fires no window/themes:changed event,",
+          "semantic": true
+        },
+        {
+          "n": 16,
+          "text": "// so without this a component rendered before the load finishes would resolve an",
+          "semantic": true
+        },
+        {
+          "n": 17,
+          "text": "// installed active pack to the builtin default and never update.",
+          "semantic": true
+        },
+        {
+          "n": 18,
+          "text": "const listeners = new Set<() => void>();",
+          "semantic": false
+        },
+        {
+          "n": 19,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 20,
+          "text": "function notifyInstalledChanged(): void {",
+          "semantic": false
+        },
+        {
+          "n": 21,
+          "text": "  for (const cb of [...listeners]) cb();",
+          "semantic": false
+        },
+        {
+          "n": 22,
+          "text": "}",
+          "semantic": false
+        },
+        {
+          "n": 23,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 24,
+          "text": "/** Subscribe to installed-cache changes; returns an unsubscribe fn. */",
+          "semantic": false
+        },
+        {
+          "n": 25,
+          "text": "export function subscribeInstalledThemes(listener: () => void): () => void {",
+          "semantic": false
+        },
+        {
+          "n": 31,
+          "text": "  return {",
+          "semantic": true
+        },
+        {
+          "n": 32,
+          "text": "    id: pack.id,",
+          "semantic": true
+        },
+        {
+          "n": 33,
+          "text": "    name: pack.name,",
+          "semantic": true
+        },
+        {
+          "n": 34,
+          "text": "    swatch: pack.swatch,",
+          "semantic": true
+        },
+        {
+          "n": 35,
+          "text": "    colors: pack.colors,",
+          "semantic": true
+        },
+        {
+          "n": 36,
+          "text": "    ...(pack.pet ? { pet: pack.pet } : {}),",
+          "semantic": false
+        },
+        {
+          "n": 37,
+          "text": "    ...(pack.wallpaper ? { wallpaper: pack.wallpaper } : {}),",
+          "semantic": false
+        },
+        {
+          "n": 38,
+          "text": "    ...(pack.surfaces ? { surfaces: pack.surfaces } : {}),",
+          "semantic": false
+        },
+        {
+          "n": 39,
+          "text": "    ...(pack.frame ? { frame: pack.frame } : {}),",
+          "semantic": false
+        },
+        {
+          "n": 40,
+          "text": "    ...(pack.sounds ? { sounds: pack.sounds } : {}),",
+          "semantic": false
+        },
+        {
+          "n": 41,
+          "text": "    ...(pack.music ? { music: pack.music } : {}),",
+          "semantic": false
+        },
+        {
+          "n": 42,
+          "text": "    source: \"installed\",",
+          "semantic": true
+        },
+        {
+          "n": 43,
+          "text": "  };",
+          "semantic": true
+        },
+        {
+          "n": 44,
+          "text": "}",
+          "semantic": true
+        },
+        {
+          "n": 45,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 46,
+          "text": "/** Resolve an id against installed packs first, then the builtin table. */",
+          "semantic": true
+        },
+        {
+          "n": 47,
+          "text": "export function resolveThemePack(id: string): ThemePack {",
+          "semantic": true
+        },
+        {
+          "n": 48,
+          "text": "  const hit = installed.find((pack) => pack.id === id);",
+          "semantic": true
+        },
+        {
+          "n": 49,
+          "text": "  return hit ? toThemePack(hit) : getThemePack(id);",
+          "semantic": true
+        },
+        {
+          "n": 50,
+          "text": "}",
+          "semantic": true
+        },
+        {
+          "n": 51,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 52,
+          "text": "/** All packs the picker should show: builtin table first, then installed. */",
+          "semantic": true
+        },
+        {
+          "n": 53,
+          "text": "export function installedThemePacks(): ThemePack[] {",
+          "semantic": true
+        },
+        {
+          "n": 54,
+          "text": "  return installed.map(toThemePack);",
+          "semantic": true
+        },
+        {
+          "n": 55,
+          "text": "}",
+          "semantic": true
+        },
+        {
+          "n": 56,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 57,
+          "text": "/** Load installed packs from main and cache them; safe if the API is absent. */",
+          "semantic": false
+        },
+        {
+          "n": 58,
+          "text": "export async function refreshInstalledThemes(): Promise<void> {",
+          "semantic": false
+        },
+        {
+          "n": 59,
+          "text": "  const api = globalThis.window?.codeshell as",
+          "semantic": false
+        },
+        {
+          "n": 60,
+          "text": "    | { listInstalledThemes?: () => Promise<InstalledThemePack[]> }",
+          "semantic": false
+        },
+        {
+          "n": 61,
+          "text": "    | undefined;",
+          "semantic": false
+        },
+        {
+          "n": 62,
+          "text": "  if (!api?.listInstalledThemes) return;",
+          "semantic": false
+        },
+        {
+          "n": 63,
+          "text": "  try {",
+          "semantic": false
+        },
+        {
+          "n": 64,
+          "text": "    installed = await api.listInstalledThemes();",
+          "semantic": false
+        },
+        {
+          "n": 65,
+          "text": "  } catch {",
+          "semantic": false
+        },
+        {
+          "n": 66,
+          "text": "    installed = [];",
+          "semantic": false
+        },
+        {
+          "n": 67,
+          "text": "  }",
+          "semantic": false
+        },
+        {
+          "n": 68,
+          "text": "  notifyInstalledChanged();",
+          "semantic": false
+        },
+        {
+          "n": 69,
+          "text": "}",
+          "semantic": false
+        },
+        {
+          "n": 72,
+          "text": "export function __setInstalledThemes(packs: InstalledThemePack[]): void {",
+          "semantic": false
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "displayedRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          53,
+          54
+        ],
+        [
+          61,
+          61
+        ],
+        [
+          76,
+          76
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          100,
+          100
+        ],
+        [
+          116,
+          142
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          165,
+          191
+        ],
+        [
+          243,
+          245
+        ]
+      ],
+      "semanticRanges": [
+        [
+          118,
+          128
+        ],
+        [
+          141,
+          142
+        ],
+        [
+          165,
+          180
+        ],
+        [
+          243,
+          245
+        ]
+      ],
+      "lines": [
+        {
+          "n": 16,
+          "text": "export const THEME_VAR_NAMES = [",
+          "semantic": false
+        },
+        {
+          "n": 53,
+          "text": "export type CssVarName = (typeof THEME_VAR_NAMES)[number];",
+          "semantic": false
+        },
+        {
+          "n": 54,
+          "text": "export type ThemeVars = Partial<Record<CssVarName, string>>;",
+          "semantic": false
+        },
+        {
+          "n": 61,
+          "text": "export type PetSpriteState =",
+          "semantic": false
+        },
+        {
+          "n": 76,
+          "text": "export type PetSprites = Partial<Record<PetSpriteState, string>> & {",
+          "semantic": false
+        },
+        {
+          "n": 91,
+          "text": "export const THEME_SURFACE_NAMES = [",
+          "semantic": false
+        },
+        {
+          "n": 100,
+          "text": "export type ThemeSurfaceName = (typeof THEME_SURFACE_NAMES)[number];",
+          "semantic": false
+        },
+        {
+          "n": 116,
+          "text": "}",
+          "semantic": false
+        },
+        {
+          "n": 117,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 118,
+          "text": "export interface ThemePack {",
+          "semantic": true
+        },
+        {
+          "n": 119,
+          "text": "  /** Stable id persisted to localStorage. */",
+          "semantic": true
+        },
+        {
+          "n": 120,
+          "text": "  id: string;",
+          "semantic": true
+        },
+        {
+          "n": 121,
+          "text": "  /** i18n key (builtin) or plain display name (installed). */",
+          "semantic": true
+        },
+        {
+          "n": 122,
+          "text": "  name: TranslationKey | string;",
+          "semantic": true
+        },
+        {
+          "n": 123,
+          "text": "  /** Representative color (unitless HSL) for the picker swatch — the pack's primary. */",
+          "semantic": true
+        },
+        {
+          "n": 124,
+          "text": "  swatch: string;",
+          "semantic": true
+        },
+        {
+          "n": 125,
+          "text": "  colors: {",
+          "semantic": true
+        },
+        {
+          "n": 126,
+          "text": "    light: ThemeVars;",
+          "semantic": true
+        },
+        {
+          "n": 127,
+          "text": "    dark: ThemeVars;",
+          "semantic": true
+        },
+        {
+          "n": 128,
+          "text": "  };",
+          "semantic": true
+        },
+        {
+          "n": 129,
+          "text": "  /** Optional per-state pet sprites; missing states fall back to the default dog. */",
+          "semantic": false
+        },
+        {
+          "n": 130,
+          "text": "  pet?: PetSprites;",
+          "semantic": false
+        },
+        {
+          "n": 131,
+          "text": "  /** Optional background image; absent means the plain color background. */",
+          "semantic": false
+        },
+        {
+          "n": 132,
+          "text": "  wallpaper?: WallpaperSpec;",
+          "semantic": false
+        },
+        {
+          "n": 133,
+          "text": "  /** Per-area decoration; the legacy wallpaper is the window fallback. */",
+          "semantic": false
+        },
+        {
+          "n": 134,
+          "text": "  surfaces?: Partial<Record<ThemeSurfaceName, ThemeSurfaceSpec>>;",
+          "semantic": false
+        },
+        {
+          "n": 135,
+          "text": "  /** Decorative outer frame for the main app window only. */",
+          "semantic": false
+        },
+        {
+          "n": 136,
+          "text": "  frame?: ThemeFrameSpec;",
+          "semantic": false
+        },
+        {
+          "n": 137,
+          "text": "  /** Optional short UI cues, played only after the user enables theme sounds. */",
+          "semantic": false
+        },
+        {
+          "n": 138,
+          "text": "  sounds?: ThemeSounds;",
+          "semantic": false
+        },
+        {
+          "n": 139,
+          "text": "  /** Local audio assets or explicit external listening links. Never auto-played. */",
+          "semantic": false
+        },
+        {
+          "n": 140,
+          "text": "  music?: ThemeMusicTrack[];",
+          "semantic": false
+        },
+        {
+          "n": 141,
+          "text": "  /** builtin ships with the app; installed comes from ~/.code-shell/themes/. */",
+          "semantic": true
+        },
+        {
+          "n": 142,
+          "text": "  source?: \"builtin\" | \"installed\";",
+          "semantic": true
+        },
+        {
+          "n": 151,
+          "text": "export function petVisualState(activity: {",
+          "semantic": false
+        },
+        {
+          "n": 165,
+          "text": "export const DEFAULT_PACK_ID = \"default\";",
+          "semantic": true
+        },
+        {
+          "n": 166,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 167,
+          "text": "/**",
+          "semantic": true
+        },
+        {
+          "n": 168,
+          "text": " * Built-in packs. `default` overrides nothing (falls through to the base sheet,",
+          "semantic": true
+        },
+        {
+          "n": 169,
+          "text": " * i.e. the current brand orange). Accent packs recolor the primary + focus ring",
+          "semantic": true
+        },
+        {
+          "n": 170,
+          "text": " * (and its foreground for contrast) in both modes; everything else inherits the",
+          "semantic": true
+        },
+        {
+          "n": 171,
+          "text": " * neutral base so density/contrast tuning is preserved. Character themes also",
+          "semantic": true
+        },
+        {
+          "n": 172,
+          "text": " * provide their full palette, bundled surface artwork and window frame.",
+          "semantic": true
+        },
+        {
+          "n": 173,
+          "text": " */",
+          "semantic": true
+        },
+        {
+          "n": 174,
+          "text": "export const THEME_PACKS: ThemePack[] = [",
+          "semantic": true
+        },
+        {
+          "n": 175,
+          "text": "  {",
+          "semantic": true
+        },
+        {
+          "n": 176,
+          "text": "    id: \"default\",",
+          "semantic": true
+        },
+        {
+          "n": 177,
+          "text": "    source: \"builtin\",",
+          "semantic": true
+        },
+        {
+          "n": 178,
+          "text": "    name: \"settingsX.appearance.pack.default\",",
+          "semantic": true
+        },
+        {
+          "n": 179,
+          "text": "    swatch: \"19 63% 45%\",",
+          "semantic": true
+        },
+        {
+          "n": 180,
+          "text": "    colors: { light: {}, dark: {} },",
+          "semantic": true
+        },
+        {
+          "n": 181,
+          "text": "  },",
+          "semantic": false
+        },
+        {
+          "n": 182,
+          "text": "  {",
+          "semantic": false
+        },
+        {
+          "n": 183,
+          "text": "    id: \"ocean\",",
+          "semantic": false
+        },
+        {
+          "n": 184,
+          "text": "    source: \"builtin\",",
+          "semantic": false
+        },
+        {
+          "n": 185,
+          "text": "    name: \"settingsX.appearance.pack.ocean\",",
+          "semantic": false
+        },
+        {
+          "n": 186,
+          "text": "    swatch: \"210 80% 45%\",",
+          "semantic": false
+        },
+        {
+          "n": 187,
+          "text": "    colors: {",
+          "semantic": false
+        },
+        {
+          "n": 188,
+          "text": "      light: {",
+          "semantic": false
+        },
+        {
+          "n": 189,
+          "text": "        \"--cs-primary\": \"210 80% 45%\",",
+          "semantic": false
+        },
+        {
+          "n": 190,
+          "text": "        \"--cs-primary-foreground\": \"0 0% 98%\",",
+          "semantic": false
+        },
+        {
+          "n": 191,
+          "text": "        \"--cs-ring\": \"210 80% 45%\",",
+          "semantic": false
+        },
+        {
+          "n": 243,
+          "text": "export function getThemePack(id: string): ThemePack {",
+          "semantic": true
+        },
+        {
+          "n": 244,
+          "text": "  return THEME_PACKS.find((pack) => pack.id === id) ?? THEME_PACKS[0]!;",
+          "semantic": true
+        },
+        {
+          "n": 245,
+          "text": "}",
+          "semantic": true
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "displayedRanges": [
+        [
+          47,
+          47
+        ],
+        [
+          77,
+          77
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          169,
+          169
+        ],
+        [
+          176,
+          176
+        ],
+        [
+          193,
+          194
+        ],
+        [
+          201,
+          201
+        ],
+        [
+          214,
+          214
+        ],
+        [
+          382,
+          382
+        ],
+        [
+          486,
+          486
+        ],
+        [
+          774,
+          785
+        ]
+      ],
+      "semanticRanges": [
+        [
+          781,
+          781
+        ]
+      ],
+      "lines": [
+        {
+          "n": 47,
+          "text": "import { AppearanceSection } from \"./AppearanceSection\";",
+          "semantic": false
+        },
+        {
+          "n": 77,
+          "text": "export type SettingsModuleId =",
+          "semantic": false
+        },
+        {
+          "n": 106,
+          "text": "export type SettingsScope = { kind: \"user\" } | { kind: \"project\"; path: string };",
+          "semantic": false
+        },
+        {
+          "n": 169,
+          "text": "export function moduleSupportsScope(",
+          "semantic": false
+        },
+        {
+          "n": 176,
+          "text": "export function moduleUsesPageScope(module: { scopeControl?: \"page\" | \"internal\" }): boolean {",
+          "semantic": false
+        },
+        {
+          "n": 193,
+          "text": "      window.localStorage.getItem(moduleStorageKey(scope)) ??",
+          "semantic": false
+        },
+        {
+          "n": 194,
+          "text": "      (scope === \"user\" ? window.localStorage.getItem(SETTINGS_LAST_MODULE_KEY) : null);",
+          "semantic": false
+        },
+        {
+          "n": 201,
+          "text": "export function preferredModuleForScope<Id extends string>(",
+          "semantic": false
+        },
+        {
+          "n": 214,
+          "text": "export function matchesSettingsModule(query: string, label: string, groupTitle: string): boolean {",
+          "semantic": false
+        },
+        {
+          "n": 382,
+          "text": "export function SettingsPage({",
+          "semantic": false
+        },
+        {
+          "n": 486,
+          "text": "      window.localStorage.setItem(moduleStorageKey(scopeState.kind), active);",
+          "semantic": false
+        },
+        {
+          "n": 774,
+          "text": "                <GeneralSection",
+          "semantic": false
+        },
+        {
+          "n": 775,
+          "text": "                  scope={scope}",
+          "semantic": false
+        },
+        {
+          "n": 776,
+          "text": "                  activeProjectPath={scopeProjectPath ?? activeProjectPath}",
+          "semantic": false
+        },
+        {
+          "n": 777,
+          "text": "                />",
+          "semantic": false
+        },
+        {
+          "n": 778,
+          "text": "              )}",
+          "semantic": false
+        },
+        {
+          "n": 779,
+          "text": "              {active === \"computer-use\" && <ComputerUseSettings />}",
+          "semantic": false
+        },
+        {
+          "n": 780,
+          "text": "              {active === \"account\" && <CloudAccountSettings />}",
+          "semantic": false
+        },
+        {
+          "n": 781,
+          "text": "              {active === \"appearance\" && <AppearanceSection />}",
+          "semantic": true
+        },
+        {
+          "n": 782,
+          "text": "              {active === \"config\" && (",
+          "semantic": false
+        },
+        {
+          "n": 783,
+          "text": "                <>",
+          "semantic": false
+        },
+        {
+          "n": 784,
+          "text": "                  <TextConnectionsPanel",
+          "semantic": false
+        },
+        {
+          "n": 785,
+          "text": "                    scope={scope}",
+          "semantic": false
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.test.tsx",
+      "sha256": "8e4215d5becf549c8cd647bcc1fc3a3c025813f1ed998b50831bd7d61b02322a",
+      "displayedRanges": [
+        [
+          1,
+          171
+        ]
+      ],
+      "semanticRanges": [
+        [
+          78,
+          115
+        ],
+        [
+          117,
+          123
+        ],
+        [
+          134,
+          159
+        ]
+      ],
+      "lines": [
+        {
+          "n": 1,
+          "text": "import { afterEach, beforeEach, describe, expect, test } from \"bun:test\";",
+          "semantic": false
+        },
+        {
+          "n": 2,
+          "text": "import React, { act } from \"react\";",
+          "semantic": false
+        },
+        {
+          "n": 3,
+          "text": "import { createRoot, type Root } from \"react-dom/client\";",
+          "semantic": false
+        },
+        {
+          "n": 4,
+          "text": "import { ensureMiniDom, flushMicrotasks } from \"../test-utils/renderHook\";",
+          "semantic": false
+        },
+        {
+          "n": 5,
+          "text": "import { I18nProvider } from \"../i18n\";",
+          "semantic": false
+        },
+        {
+          "n": 6,
+          "text": "import { DialogProvider } from \"../ui/DialogProvider\";",
+          "semantic": false
+        },
+        {
+          "n": 7,
+          "text": "import { loadThemePackId } from \"../theme\";",
+          "semantic": false
+        },
+        {
+          "n": 8,
+          "text": "import { __setInstalledThemes } from \"../installedThemes\";",
+          "semantic": false
+        },
+        {
+          "n": 9,
+          "text": "import { AppearanceSection } from \"./AppearanceSection\";",
+          "semantic": false
+        },
+        {
+          "n": 10,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 11,
+          "text": "function wrap(node: React.ReactNode): React.ReactElement {",
+          "semantic": false
+        },
+        {
+          "n": 12,
+          "text": "  return (",
+          "semantic": false
+        },
+        {
+          "n": 13,
+          "text": "    <I18nProvider>",
+          "semantic": false
+        },
+        {
+          "n": 14,
+          "text": "      <DialogProvider>{node}</DialogProvider>",
+          "semantic": false
+        },
+        {
+          "n": 15,
+          "text": "    </I18nProvider>",
+          "semantic": false
+        },
+        {
+          "n": 16,
+          "text": "  );",
+          "semantic": false
+        },
+        {
+          "n": 17,
+          "text": "}",
+          "semantic": false
+        },
+        {
+          "n": 18,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 19,
+          "text": "function reactPropsOf(node: unknown): Record<string, any> {",
+          "semantic": false
+        },
+        {
+          "n": 20,
+          "text": "  const current = node as Record<string, any>;",
+          "semantic": false
+        },
+        {
+          "n": 21,
+          "text": "  const key = Object.keys(current).find((name) => name.startsWith(\"__reactProps$\"));",
+          "semantic": false
+        },
+        {
+          "n": 22,
+          "text": "  return key ? current[key] : {};",
+          "semantic": false
+        },
+        {
+          "n": 23,
+          "text": "}",
+          "semantic": false
+        },
+        {
+          "n": 24,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 25,
+          "text": "function findByAttr(node: unknown, attr: string): any[] {",
+          "semantic": false
+        },
+        {
+          "n": 26,
+          "text": "  const current = node as { getAttribute?: (n: string) => string | null; childNodes?: unknown[] };",
+          "semantic": false
+        },
+        {
+          "n": 27,
+          "text": "  const self = typeof current.getAttribute === \"function\" && current.getAttribute(attr) !== null;",
+          "semantic": false
+        },
+        {
+          "n": 28,
+          "text": "  return [",
+          "semantic": false
+        },
+        {
+          "n": 29,
+          "text": "    ...(self ? [current] : []),",
+          "semantic": false
+        },
+        {
+          "n": 30,
+          "text": "    ...(current.childNodes ?? []).flatMap((child) => findByAttr(child, attr)),",
+          "semantic": false
+        },
+        {
+          "n": 31,
+          "text": "  ];",
+          "semantic": false
+        },
+        {
+          "n": 32,
+          "text": "}",
+          "semantic": false
+        },
+        {
+          "n": 33,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 34,
+          "text": "function findElements(node: unknown, tagName: string): any[] {",
+          "semantic": false
+        },
+        {
+          "n": 35,
+          "text": "  const current = node as { tagName?: string; childNodes?: unknown[] };",
+          "semantic": false
+        },
+        {
+          "n": 36,
+          "text": "  return [",
+          "semantic": false
+        },
+        {
+          "n": 37,
+          "text": "    ...(current.tagName === tagName ? [current] : []),",
+          "semantic": false
+        },
+        {
+          "n": 38,
+          "text": "    ...(current.childNodes ?? []).flatMap((child) => findElements(child, tagName)),",
+          "semantic": false
+        },
+        {
+          "n": 39,
+          "text": "  ];",
+          "semantic": false
+        },
+        {
+          "n": 40,
+          "text": "}",
+          "semantic": false
+        },
+        {
+          "n": 41,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 42,
+          "text": "function installLocalStorage(): void {",
+          "semantic": false
+        },
+        {
+          "n": 43,
+          "text": "  const store = new Map<string, string>();",
+          "semantic": false
+        },
+        {
+          "n": 44,
+          "text": "  Object.defineProperty(globalThis, \"localStorage\", {",
+          "semantic": false
+        },
+        {
+          "n": 45,
+          "text": "    configurable: true,",
+          "semantic": false
+        },
+        {
+          "n": 46,
+          "text": "    writable: true,",
+          "semantic": false
+        },
+        {
+          "n": 47,
+          "text": "    value: {",
+          "semantic": false
+        },
+        {
+          "n": 48,
+          "text": "      getItem: (key: string) => store.get(key) ?? null,",
+          "semantic": false
+        },
+        {
+          "n": 49,
+          "text": "      setItem: (key: string, value: string) => void store.set(key, String(value)),",
+          "semantic": false
+        },
+        {
+          "n": 50,
+          "text": "      removeItem: (key: string) => void store.delete(key),",
+          "semantic": false
+        },
+        {
+          "n": 51,
+          "text": "      clear: () => store.clear(),",
+          "semantic": false
+        },
+        {
+          "n": 52,
+          "text": "      key: (index: number) => [...store.keys()][index] ?? null,",
+          "semantic": false
+        },
+        {
+          "n": 53,
+          "text": "      get length() {",
+          "semantic": false
+        },
+        {
+          "n": 54,
+          "text": "        return store.size;",
+          "semantic": false
+        },
+        {
+          "n": 55,
+          "text": "      },",
+          "semantic": false
+        },
+        {
+          "n": 56,
+          "text": "    } satisfies Storage,",
+          "semantic": false
+        },
+        {
+          "n": 57,
+          "text": "  });",
+          "semantic": false
+        },
+        {
+          "n": 58,
+          "text": "}",
+          "semantic": false
+        },
+        {
+          "n": 59,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 60,
+          "text": "let root: Root | null = null;",
+          "semantic": false
+        },
+        {
+          "n": 61,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 62,
+          "text": "beforeEach(() => {",
+          "semantic": false
+        },
+        {
+          "n": 63,
+          "text": "  ensureMiniDom();",
+          "semantic": false
+        },
+        {
+          "n": 64,
+          "text": "  installLocalStorage();",
+          "semantic": false
+        },
+        {
+          "n": 65,
+          "text": "  __setInstalledThemes([]);",
+          "semantic": false
+        },
+        {
+          "n": 66,
+          "text": "});",
+          "semantic": false
+        },
+        {
+          "n": 67,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 68,
+          "text": "afterEach(async () => {",
+          "semantic": false
+        },
+        {
+          "n": 69,
+          "text": "  if (root) {",
+          "semantic": false
+        },
+        {
+          "n": 70,
+          "text": "    await act(async () => {",
+          "semantic": false
+        },
+        {
+          "n": 71,
+          "text": "      root?.unmount();",
+          "semantic": false
+        },
+        {
+          "n": 72,
+          "text": "      await flushMicrotasks();",
+          "semantic": false
+        },
+        {
+          "n": 73,
+          "text": "    });",
+          "semantic": false
+        },
+        {
+          "n": 74,
+          "text": "  }",
+          "semantic": false
+        },
+        {
+          "n": 75,
+          "text": "  root = null;",
+          "semantic": false
+        },
+        {
+          "n": 76,
+          "text": "});",
+          "semantic": false
+        },
+        {
+          "n": 77,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 78,
+          "text": "describe(\"AppearanceSection theme packs\", () => {",
+          "semantic": true
+        },
+        {
+          "n": 79,
+          "text": "  test(\"renders a card per built-in pack and selecting one persists + applies it\", async () => {",
+          "semantic": true
+        },
+        {
+          "n": 80,
+          "text": "    const container = document.createElement(\"div\") as unknown as HTMLElement;",
+          "semantic": true
+        },
+        {
+          "n": 81,
+          "text": "    root = createRoot(container);",
+          "semantic": true
+        },
+        {
+          "n": 82,
+          "text": "    await act(async () => {",
+          "semantic": true
+        },
+        {
+          "n": 83,
+          "text": "      root?.render(wrap(<AppearanceSection />));",
+          "semantic": true
+        },
+        {
+          "n": 84,
+          "text": "      await flushMicrotasks();",
+          "semantic": true
+        },
+        {
+          "n": 85,
+          "text": "    });",
+          "semantic": true
+        },
+        {
+          "n": 86,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 87,
+          "text": "    const packCards = findByAttr(container, \"data-theme-pack\");",
+          "semantic": true
+        },
+        {
+          "n": 88,
+          "text": "    const ids = packCards.map((card) => card.getAttribute(\"data-theme-pack\"));",
+          "semantic": true
+        },
+        {
+          "n": 89,
+          "text": "    expect(ids).toEqual([",
+          "semantic": true
+        },
+        {
+          "n": 90,
+          "text": "      \"default\",",
+          "semantic": true
+        },
+        {
+          "n": 91,
+          "text": "      \"ocean\",",
+          "semantic": true
+        },
+        {
+          "n": 92,
+          "text": "      \"forest\",",
+          "semantic": true
+        },
+        {
+          "n": 93,
+          "text": "      \"grape\",",
+          "semantic": true
+        },
+        {
+          "n": 94,
+          "text": "      \"maki\",",
+          "semantic": true
+        },
+        {
+          "n": 95,
+          "text": "      \"miku\",",
+          "semantic": true
+        },
+        {
+          "n": 96,
+          "text": "      \"muse\",",
+          "semantic": true
+        },
+        {
+          "n": 97,
+          "text": "      \"onodera\",",
+          "semantic": true
+        },
+        {
+          "n": 98,
+          "text": "      \"misaka\",",
+          "semantic": true
+        },
+        {
+          "n": 99,
+          "text": "    ]);",
+          "semantic": true
+        },
+        {
+          "n": 100,
+          "text": "    expect(findByAttr(container, \"data-theme-preview\")).toHaveLength(ids.length);",
+          "semantic": true
+        },
+        {
+          "n": 101,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 102,
+          "text": "    // The bundled artwork theme is available without an installed-theme cache.",
+          "semantic": true
+        },
+        {
+          "n": 103,
+          "text": "    const makiCard = packCards.find((card) => card.getAttribute(\"data-theme-pack\") === \"maki\");",
+          "semantic": true
+        },
+        {
+          "n": 104,
+          "text": "    const makiButton = findElements(makiCard, \"BUTTON\")[0];",
+          "semantic": true
+        },
+        {
+          "n": 105,
+          "text": "    await act(async () => {",
+          "semantic": true
+        },
+        {
+          "n": 106,
+          "text": "      reactPropsOf(makiButton).onClick();",
+          "semantic": true
+        },
+        {
+          "n": 107,
+          "text": "      await flushMicrotasks();",
+          "semantic": true
+        },
+        {
+          "n": 108,
+          "text": "    });",
+          "semantic": true
+        },
+        {
+          "n": 109,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 110,
+          "text": "    // Persisted to localStorage and reflected in the managed override style.",
+          "semantic": true
+        },
+        {
+          "n": 111,
+          "text": "    expect(loadThemePackId()).toBe(\"maki\");",
+          "semantic": true
+        },
+        {
+          "n": 112,
+          "text": "    expect(document.getElementById(\"cs-theme-pack\")?.textContent).toContain(",
+          "semantic": true
+        },
+        {
+          "n": 113,
+          "text": "      \"--cs-primary: 349 72% 43%;\",",
+          "semantic": true
+        },
+        {
+          "n": 114,
+          "text": "    );",
+          "semantic": true
+        },
+        {
+          "n": 115,
+          "text": "  });",
+          "semantic": true
+        },
+        {
+          "n": 116,
+          "text": "",
+          "semantic": false
+        },
+        {
+          "n": 117,
+          "text": "  test(\"shows installed packs after the builtins with an uninstall control\", async () => {",
+          "semantic": true
+        },
+        {
+          "n": 118,
+          "text": "    __setInstalledThemes([",
+          "semantic": true
+        },
+        {
+          "n": 119,
+          "text": "      {",
+          "semantic": true
+        },
+        {
+          "n": 120,
+          "text": "        id: \"acme-neon\",",
+          "semantic": true
+        },
+        {
+          "n": 121,
+          "text": "        name: \"Acme Neon\",",
+          "semantic": true
+        },
+        {
+          "n": 122,
+          "text": "        swatch: \"310 80% 50%\",",
+          "semantic": true
+        },
+        {
+          "n": 123,
+          "text": "        colors: { light: { \"--cs-primary\": \"310 80% 50%\" }, dark: {} },",
+          "semantic": true
+        },
+        {
+          "n": 124,
+          "text": "        pet: { idle: \"cstheme://acme-neon/.cs-theme-assets/pet-idle.png\" },",
+          "semantic": false
+        },
+        {
+          "n": 125,
+          "text": "        surfaces: {",
+          "semantic": false
+        },
+        {
+          "n": 126,
+          "text": "          chat: {",
+          "semantic": false
+        },
+        {
+          "n": 127,
+          "text": "            light: \"cstheme://acme-neon/.cs-theme-assets/surface-chat-light.png\",",
+          "semantic": false
+        },
+        {
+          "n": 128,
+          "text": "            dark: \"cstheme://acme-neon/.cs-theme-assets/surface-chat-dark.png\",",
+          "semantic": false
+        },
+        {
+          "n": 129,
+          "text": "            fit: \"contain\",",
+          "semantic": false
+        },
+        {
+          "n": 130,
+          "text": "            position: \"right\",",
+          "semantic": false
+        },
+        {
+          "n": 131,
+          "text": "            opacity: 0.3,",
+          "semantic": false
+        },
+        {
+          "n": 132,
+          "text": "          },",
+          "semantic": false
+        },
+        {
+          "n": 133,
+          "text": "        },",
+          "semantic": false
+        },
+        {
+          "n": 134,
+          "text": "        frame: { width: 2, light: \"310 80% 50%\" },",
+          "semantic": true
+        },
+        {
+          "n": 135,
+          "text": "        source: \"installed\",",
+          "semantic": true
+        },
+        {
+          "n": 136,
+          "text": "      },",
+          "semantic": true
+        },
+        {
+          "n": 137,
+          "text": "    ]);",
+          "semantic": true
+        },
+        {
+          "n": 138,
+          "text": "    const container = document.createElement(\"div\") as unknown as HTMLElement;",
+          "semantic": true
+        },
+        {
+          "n": 139,
+          "text": "    root = createRoot(container);",
+          "semantic": true
+        },
+        {
+          "n": 140,
+          "text": "    await act(async () => {",
+          "semantic": true
+        },
+        {
+          "n": 141,
+          "text": "      root?.render(wrap(<AppearanceSection />));",
+          "semantic": true
+        },
+        {
+          "n": 142,
+          "text": "      await flushMicrotasks();",
+          "semantic": true
+        },
+        {
+          "n": 143,
+          "text": "    });",
+          "semantic": true
+        },
+        {
+          "n": 144,
+          "text": "",
+          "semantic": true
+        },
+        {
+          "n": 145,
+          "text": "    const ids = findByAttr(container, \"data-theme-pack\").map((c) =>",
+          "semantic": true
+        },
+        {
+          "n": 146,
+          "text": "      c.getAttribute(\"data-theme-pack\"),",
+          "semantic": true
+        },
+        {
+          "n": 147,
+          "text": "    );",
+          "semantic": true
+        },
+        {
+          "n": 148,
+          "text": "    expect(ids).toEqual([",
+          "semantic": true
+        },
+        {
+          "n": 149,
+          "text": "      \"default\",",
+          "semantic": true
+        },
+        {
+          "n": 150,
+          "text": "      \"ocean\",",
+          "semantic": true
+        },
+        {
+          "n": 151,
+          "text": "      \"forest\",",
+          "semantic": true
+        },
+        {
+          "n": 152,
+          "text": "      \"grape\",",
+          "semantic": true
+        },
+        {
+          "n": 153,
+          "text": "      \"maki\",",
+          "semantic": true
+        },
+        {
+          "n": 154,
+          "text": "      \"miku\",",
+          "semantic": true
+        },
+        {
+          "n": 155,
+          "text": "      \"muse\",",
+          "semantic": true
+        },
+        {
+          "n": 156,
+          "text": "      \"onodera\",",
+          "semantic": true
+        },
+        {
+          "n": 157,
+          "text": "      \"misaka\",",
+          "semantic": true
+        },
+        {
+          "n": 158,
+          "text": "      \"acme-neon\",",
+          "semantic": true
+        },
+        {
+          "n": 159,
+          "text": "    ]);",
+          "semantic": true
+        },
+        {
+          "n": 160,
+          "text": "    // Only the installed pack exposes an uninstall control.",
+          "semantic": false
+        },
+        {
+          "n": 161,
+          "text": "    const uninstall = findByAttr(container, \"data-theme-uninstall\");",
+          "semantic": false
+        },
+        {
+          "n": 162,
+          "text": "    expect(uninstall.map((b) => b.getAttribute(\"data-theme-uninstall\"))).toEqual([\"acme-neon\"]);",
+          "semantic": false
+        },
+        {
+          "n": 163,
+          "text": "    const preview = findByAttr(container, \"data-theme-preview\").find(",
+          "semantic": false
+        },
+        {
+          "n": 164,
+          "text": "      (node) => node.getAttribute(\"data-theme-preview\") === \"acme-neon\",",
+          "semantic": false
+        },
+        {
+          "n": 165,
+          "text": "    );",
+          "semantic": false
+        },
+        {
+          "n": 166,
+          "text": "    expect(findElements(preview, \"IMG\").map((node) => reactPropsOf(node).src)).toEqual([",
+          "semantic": false
+        },
+        {
+          "n": 167,
+          "text": "      \"cstheme://acme-neon/.cs-theme-assets/surface-chat-light.png\",",
+          "semantic": false
+        },
+        {
+          "n": 168,
+          "text": "      \"cstheme://acme-neon/.cs-theme-assets/surface-chat-dark.png\",",
+          "semantic": false
+        },
+        {
+          "n": 169,
+          "text": "    ]);",
+          "semantic": false
+        },
+        {
+          "n": 170,
+          "text": "  });",
+          "semantic": false
+        },
+        {
+          "n": 171,
+          "text": "});",
+          "semantic": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+{
+  "canonicalDocument": "docs/audit-2026-10-17-round43/evidence/draft-frontier/source-manifest.json",
+  "canonicalDocumentSha256": "f710b18a9a76a4ecc526d0b6f94c91d206b5e87c43446e15d591196b347cf2c4",
+  "rawPriorChatViewRow": {
+    "path": "packages/desktop/src/renderer/ChatView.tsx",
+    "bytes": 106169,
+    "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+    "lineCount": 2622,
+    "coverage": "selected",
+    "selectedLineRanges": [
+      [
+        134,
+        153
+      ],
+      [
+        250,
+        258
+      ],
+      [
+        454,
+        475
+      ],
+      [
+        483,
+        489
+      ],
+      [
+        601,
+        601
+      ],
+      [
+        614,
+        617
+      ],
+      [
+        639,
+        640
+      ],
+      [
+        783,
+        799
+      ],
+      [
+        801,
+        821
+      ],
+      [
+        827,
+        838
+      ],
+      [
+        873,
+        894
+      ],
+      [
+        936,
+        946
+      ],
+      [
+        1077,
+        1111
+      ],
+      [
+        1133,
+        1159
+      ],
+      [
+        1172,
+        1188
+      ],
+      [
+        1193,
+        1223
+      ],
+      [
+        1341,
+        1440
+      ],
+      [
+        2228,
+        2277
+      ],
+      [
+        2288,
+        2293
+      ]
+    ],
+    "semanticLineCount": 414,
+    "displayedLineRanges": [
+      [
+        130,
+        153
+      ],
+      [
+        250,
+        263
+      ],
+      [
+        454,
+        475
+      ],
+      [
+        480,
+        491
+      ],
+      [
+        598,
+        624
+      ],
+      [
+        636,
+        640
+      ],
+      [
+        783,
+        840
+      ],
+      [
+        870,
+        896
+      ],
+      [
+        936,
+        948
+      ],
+      [
+        1076,
+        1112
+      ],
+      [
+        1130,
+        1224
+      ],
+      [
+        1240,
+        1280
+      ],
+      [
+        1315,
+        1446
+      ],
+      [
+        2225,
+        2300
+      ]
+    ],
+    "displayedLineCount": 583,
+    "role": "ordinary-composer-data",
+    "beforeCurrentSemanticReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+    "pinUTC": "2026-10-17T14:32:07.696865+00:00",
+    "pinOrigin": "direct-current-initial-pin",
+    "firstEverSemanticReadClaim": false,
+    "finishUTC": "2026-10-17T14:39:15.296276+00:00",
+    "finishSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+    "unchanged": true,
+    "scopeLimits": "Ordinary frontend draft/text/selection only; displayed native/staging/authority/model adjacency excluded, no execution"
+  },
+  "currentOverlap": {
+    "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/source-manifest.json",
+    "pointer": "/files/0",
+    "sameSha256": true,
+    "ranges": [
+      [
+        783,
+        784
+      ],
+      [
+        1341,
+        1407
+      ],
+      [
+        2230,
+        2233
+      ],
+      [
+        2253,
+        2258
+      ]
+    ],
+    "lines": 79,
+    "scope": "At least this exact prior selected overlap; not an exhaustive claim of prior consumer coverage."
+  },
+  "noFirstEverConsumerReadingClaim": true
+}

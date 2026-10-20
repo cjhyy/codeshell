@@ -1,5 +1,5 @@
 /* Native geometry regression. Run with Node; source and Tailwind compile in memory. */
-/* global document, window, getComputedStyle */
+/* global document, window, getComputedStyle, requestAnimationFrame */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile } from "node:fs/promises";
@@ -72,7 +72,10 @@ const css = compiled.build([
   ...scanner.scan(),
   ...scanner.scanFiles([{ content: source, extension: "tsx" }]),
 ]);
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: process.env.CODESHELL_TEST_CHROMIUM || undefined,
+});
 const reports = [];
 try {
   for (const width of [390, 820]) {
@@ -99,7 +102,20 @@ try {
           await page.keyboard.press("ArrowRight");
           const submenu = page.locator('[role="menu"][aria-label="Provider models"]');
           await submenu.waitFor();
-          await page.waitForTimeout(180); // Finish the menu's CSS entrance animation.
+          // A loaded runner can start the CSS animation after a fixed delay has
+          // elapsed. Its transform temporarily contains the fixed submenu and
+          // changes the parent's scroll geometry; measure the completed menus.
+          await page.waitForFunction(() =>
+            [...document.querySelectorAll('[role="menu"]')].every((element) =>
+              element
+                .getAnimations()
+                .every((animation) => ["finished", "idle"].includes(animation.playState)),
+            ),
+          );
+          await page.evaluate(
+            () =>
+              new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+          );
           const boxes = await page.locator('[role="menu"]').evaluateAll((elements) =>
             elements.map((element) => ({
               label: element.getAttribute("aria-label"),

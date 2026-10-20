@@ -1,0 +1,97 @@
+{
+  "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "bytes": 8725,
+      "sha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-assemble.py",
+      "bytes": 7967,
+      "sha256": "4cd7e844f111bb67163ba8534f3925a6c861f57c89e47f240199a8fc29469c09"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-candidates.json",
+      "bytes": 619,
+      "sha256": "a32342826e081d2ab2f02e92c5989dfaee4988afa1a2689c7bd4905b615bab57"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "bytes": 97782,
+      "sha256": "ca2678b930210ebf86f42eb40839c0edc51e472f0da03c8d5c841f7567e45d21"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.py",
+      "bytes": 2600,
+      "sha256": "8164c44c6888f7f473105d2757ea89389998f8eda8318b6ed4d8387233eea9d9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.log",
+      "bytes": 3166,
+      "sha256": "d77108a3dd1a57611c4729ee552aa8e141ea6f6d040442f9f403b2c4e1c0f611"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.receipt.json",
+      "bytes": 498,
+      "sha256": "0470bf8ef623c9589cab6f9e883105f1a0507e76b135604ecf7a525d6d72feea"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts",
+      "bytes": 4809,
+      "sha256": "32dbfd5f232bff93c5b794f88d968085e773b1eaddf534ecb5c522f89e32f098"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.log",
+      "bytes": 2145,
+      "sha256": "35338aa219a51a1b42bdfea45878b472515510b888bc2a1c8eb4e8333b8782d8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.receipt.json",
+      "bytes": 609,
+      "sha256": "96d80690cf806d3b8c8b123e5d97693b7107579c9eebf5e66c6616b7014bce72"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-external-sources.json",
+      "bytes": 1236,
+      "sha256": "421e630327e84d210ecc4015d4c1efea3eed0b132076fc363c3a24b55fce9c00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-findings.json",
+      "bytes": 1395,
+      "sha256": "3f70b944a5af6e8610e958faa704f0bb65e18fc98ce06dbea53a1293fc8dddb4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-metadata-notes.md",
+      "bytes": 2841,
+      "sha256": "8baca131c23dc3d52329f318f1288567fd2396567c86977f797671694d10ec8a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-related.json",
+      "bytes": 926,
+      "sha256": "f7b947146718442719af8925433b7c032b6a0dd9c3a06db6d92a24f2f76f77f9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+      "bytes": 5916,
+      "sha256": "1fd8abbcfdd4740d27d6f279f1b5bb7415685836c34483b745db0b5b0707c39b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-validation.json",
+      "bytes": 5581,
+      "sha256": "65bf14bb17dc98c40f902c7a03c7096427e3ea5329309158cad2d0f21f263685"
+    }
+  ],
+  "selfExcluded": true,
+  "policy": "Receipts and source manifests only; no test rerun."
+}

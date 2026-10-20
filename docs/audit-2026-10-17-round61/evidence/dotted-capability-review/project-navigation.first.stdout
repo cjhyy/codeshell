@@ -1,0 +1,30 @@
+29:    const inPreset = defaults.has(t.name);
+31:      id: `builtin:${t.name}`,
+33:      name: t.name,
+35:      enabled: on.has(t.name),
+40:            token: t.name,
+45:            token: t.name,
+54: * descriptor — including unconnected ones — driven by the mcpServers config;
+57:export function projectMcp(input: {
+58:  mcpServers: Record<string, MCPServerConfig>;
+66:  return Object.entries(input.mcpServers).map(([serverName, cfg]) => {
+69:      id: `mcp:${serverName}`,
+71:      name: serverName,
+75:        settingsKey: "mcpServers" as const,
+99:      id: `skill:${s.name}`,
+101:      name: s.name,
+103:      enabled: !disabled.has(s.name),
+107:        token: s.name,
+130:      id: `agent:${a.name}`,
+132:      name: a.name,
+134:      enabled: !disabled.has(a.name),
+138:        token: a.name,
+146: * the bare plugin name is the substring before the last `@` and matches the
+154:  const names = new Set<string>();
+157:    names.add(at > 0 ? key.slice(0, at) : key);
+159:  return [...names].map((name) => ({
+160:    id: `plugin:${name}`,
+162:    name,
+164:    enabled: !disabled.has(name),
+168:      token: name,
+170:    origin: { pluginName: name },

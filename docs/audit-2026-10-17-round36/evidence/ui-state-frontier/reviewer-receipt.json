@@ -1,0 +1,134 @@
+{
+  "frozenUTC": "2026-10-17T12:42:08.501042+00:00",
+  "directory": "/tmp/codeshell-audit-round36-ui-state-frontier",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "additional-pins.json",
+      "bytes": 1317,
+      "sha256": "10e446bf308afb2045719332e40662b7367053b2142331c2b013c33f2404846c"
+    },
+    {
+      "path": "consumer-pins.json",
+      "bytes": 1583,
+      "sha256": "7d0f9211f7ef26f9dd2ec5715a58e25afb001a86e9f8785d1e8ecf57b68279ad"
+    },
+    {
+      "path": "display-pins.json",
+      "bytes": 1279,
+      "sha256": "dc744db72b1d2370fb7d46b9226863f9b5c642bc10e2462dc4e22997a0737b05"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3780,
+      "sha256": "bdf845f6231c795f2fe109a0dcbb07a3e41e0f6a8ca9e2879c24b46d564c00e0"
+    },
+    {
+      "path": "history-supplement.json",
+      "bytes": 38581,
+      "sha256": "a828400d3e825f2fb7c3c9cebfb727c244f777e947bdd33c055acc549b1ac4b7"
+    },
+    {
+      "path": "history.json",
+      "bytes": 665855,
+      "sha256": "78944dd0083659666c4661031965bfee049c890d977eb9c39119416105e94d32"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1487,
+      "sha256": "77d9794ae6f80058ef75fe013fc81725db5b05ade5f0790e52e633d9c2becd0d"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4860,
+      "sha256": "a516fab53cb19b4e472c67dcd00e7280ee3954f9e02e8fa17e5b78cc2e290600"
+    },
+    {
+      "path": "source-excerpts.txt",
+      "bytes": 47336,
+      "sha256": "e586cc5dd7cd2fabe335c3d61156059e06c4e27f9bfb2dd6a227f596d7376f08"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 16514,
+      "sha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 3050,
+      "sha256": "2b126b8d7dac017e7fa1af847b283a7eb41ebb0d7ab80b6cddd8a988099373a8"
+    }
+  ],
+  "fileCountExcludingSelf": 11,
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "sourceSemanticRows": 10,
+  "sourceProductAndTestRows": 9,
+  "productLines": 627,
+  "testDeclarationLines": 350,
+  "oldReportLines": 17,
+  "sourcePins": 14,
+  "productExecution": 0,
+  "gitCommands": 0,
+  "reportLinks": [
+    {
+      "label": "initial pins",
+      "target": "initial-pins.json",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "history gate",
+      "target": "history.json",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "方法",
+      "target": "history-method.py",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "Source manifest",
+      "target": "source-manifest.json",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "consumer pins",
+      "target": "consumer-pins.json",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "additional pins",
+      "target": "additional-pins.json",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "display pins",
+      "target": "display-pins.json",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "source excerpts",
+      "target": "source-excerpts.txt",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "supplement",
+      "target": "history-supplement.json",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "validation",
+      "target": "validation.json",
+      "existsOrSelfReceipt": true
+    },
+    {
+      "label": "reviewer receipt",
+      "target": "reviewer-receipt.json",
+      "existsOrSelfReceipt": true
+    }
+  ],
+  "limits": "Prep only; parent-reported frozen Round33 context retained. No repository edit or Git binding performed. Do not reclassify metadata copies as new semantic reads."
+}

@@ -1,0 +1,101 @@
+{
+  "frozenUTC": "2026-10-17T17:53:35.132966+00:00",
+  "root": "/tmp/codeshell-audit-round107-trace-history",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 1484,
+      "sha256": "9498baef46a6b3aee671f4c3476ca434a73c666a714827efd7358830b1a76b28"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 619,
+      "sha256": "b3fe256c4b113fff73b76081e4d8536ea7badafa7ef9587b6f6cec9543207ac6"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 59072,
+      "sha256": "39cfd311d338a3e267606939f9d3b4a93ae86a08e1f3a30825dacf6b0c09959c"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 2242,
+      "sha256": "dd05fbf90e4aaa0e3a9ac5e47e998af50b2492648f0b04a3642a89aec67906b0"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2479,
+      "sha256": "59f9bac7000aed2948741f87f2f3924257c5e2ca90731cef29cf47cc8c4a4fd4"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 12419,
+      "sha256": "76c88b297b8bed790b7b161b5032147c1d77180c345311ebef9e48724cef793e"
+    },
+    {
+      "path": "first-diagnostic.json",
+      "bytes": 1026,
+      "sha256": "668259550069c374586bfbdb9f0cf1681d368d2ba3ad86f3acf28f6a3bf2941f"
+    },
+    {
+      "path": "freeze-checks.json",
+      "bytes": 4560,
+      "sha256": "7c34eef0fc1725085664cc558cfab8c2c69563a73c1c92168bba4c280f842b83"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 31128,
+      "sha256": "df1964ac19e3d3422aa2c6ec255ce84531bfaefe39cd47b0b7e23e7a05d13103"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 191666,
+      "sha256": "f355cf0eb97c47cddc373d4d6931311e566fda9c0cebd4980cdf9c6c313af93f"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3819,
+      "sha256": "23a4a7ca051756f064c2eb9690abe01febe58f5af343d6f192f30bebad590f15"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1146780,
+      "sha256": "81a059a0cde93841c9a9ae55087fd5ba88580be5229421f230b28e5a0f97f13c"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 991,
+      "sha256": "f81aeb6cf683f3809e1590c4839d489ad4c5b83a66f2ba80527eaedb59181f6c"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5996,
+      "sha256": "39dc729934f4377d4e7acb04224efa1fe0168a8cde639d33582ffc2236464015"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 30299,
+      "sha256": "14dd881d9a1068dc06a952c9dd779a6c82ba4fd413edae902430366e18e3bfba"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 11040,
+      "sha256": "665b3ed432568948338fb341f3b7cf311631668a9c95cb99b25492adc1fbca57"
+    },
+    {
+      "path": "support-initial-pins.json",
+      "bytes": 796,
+      "sha256": "3ea7850b026667c8e1c515a9d820ed205ebb3332b102368f58d58ef55265d19d"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1537,
+      "sha256": "7aa0fbaf77475fc2d8855b9b22d80f77c7262d82f72343f01edb2b81fd56485d"
+    }
+  ],
+  "fileCountExcludingReceipt": 18,
+  "role": "prep107 finite ordinary static source review; own-author freeze metadata",
+  "productRunCount": 0,
+  "GitOperationCount": 0
+}

@@ -1,0 +1,34 @@
+{
+  "baseline": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "runs": [
+    {
+      "id": "attachment-shared-path",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts"
+      ],
+      "log": "evidence/attachment-shared-path.first.log",
+      "exit": "evidence/attachment-shared-path.first-exit.json",
+      "attempt": 1,
+      "exitCode": 0,
+      "passedTests": 1,
+      "expectations": 11,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "guardedCompleted": true,
+      "scope": "Real attachment service in owned temporary FS with public now parameter; current defect assertions plus independent-path sent control, no real UI/native/network/account."
+    }
+  ],
+  "totals": {
+    "productAttempts": 1,
+    "passedTests": 1,
+    "expectations": 11,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "productReruns": 0
+  },
+  "mode": "Source audit plus one first guarded attachment reproduction. No product fixes or broad build/test/lint certification."
+}

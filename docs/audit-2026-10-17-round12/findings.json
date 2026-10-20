@@ -1,0 +1,185 @@
+{
+  "baseline": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "count": 4,
+  "priorities": {
+    "P3": 4
+  },
+  "findings": [
+    {
+      "id": "TUI-R12-01",
+      "priority": "P3",
+      "title": "modifyOtherKeys 将非 Ctrl 大写文本降为小写",
+      "source": "packages/tui/src/render/parse-keypress.ts",
+      "line": 539,
+      "report": "tui-input.md",
+      "reportLine": 5,
+      "log": "evidence/tui-key-events.first.log",
+      "details": {
+        "id": "TUI-R12-01",
+        "severity": "P3",
+        "title": "modifyOtherKeys 将非 Ctrl 大写文本降为小写",
+        "file": "packages/tui/src/render/parse-keypress.ts",
+        "line": 539,
+        "related": [
+          {
+            "file": "packages/tui/src/render/events/input-event.ts",
+            "line": 133
+          },
+          {
+            "file": "packages/tui/src/ui/components/TextInput.tsx",
+            "line": 205
+          }
+        ],
+        "trigger": "合法 modifyOtherKeys 字符编码 ESC[27;2;65~（Shift+A）；以及 ESC[27;4;81~（Alt+Shift+Q）。仅 Shift 的首例进入常规文本输入。",
+        "expected": "字符码 65 的非 Ctrl 文本 input 保留 A；Ctrl 快捷键可继续采用归一化小写名称。",
+        "actual": "真实 parseMultipleKeypresses→InputEvent 返回 a；81 的独立控制返回 q；shift/meta 位保持正确。",
+        "contract": "xterm 官方定义第三项是字符的十进制码；use-input.ts:20 回调交付用户输入，TextInput.tsx:205–213 插入非 ctrl/meta input；现有 Ctrl+Shift 测试小写合同不覆盖非 Ctrl 输入。",
+        "evidenceLevel": "actual parser and InputEvent constructor, static useInput/TextInput consumer trace",
+        "fixture": "tui-key-events.test.ts",
+        "log": "tui-key-events.first.log",
+        "controls": "raw A/a、编码小写、/、空格均保留；未执行 React/TextInput/App/终端。",
+        "limits": "没有运行终端或 Ink；没有声称所有终端都发送该编码；输入遵照公开 xterm 协议。",
+        "dedup": "all docs/bugs MD/JSON/TXT 1725 files, 95 hits; no same root cause found"
+      },
+      "evidenceLevel": "actual parser and InputEvent constructor, static useInput/TextInput consumer trace",
+      "status": "confirmed-at-frozen-source-baseline",
+      "runtimeRetested": false
+    },
+    {
+      "id": "TUI-R12-02",
+      "priority": "P3",
+      "title": "KeyboardEvent 未将编码可打印键还原为字面字符",
+      "source": "packages/tui/src/render/events/keyboard-event.ts",
+      "line": 50,
+      "report": "tui-input.md",
+      "reportLine": 13,
+      "log": "evidence/tui-key-events.first.log",
+      "details": {
+        "id": "TUI-R12-02",
+        "severity": "P3",
+        "title": "KeyboardEvent 未将编码可打印键还原为字面字符",
+        "file": "packages/tui/src/render/events/keyboard-event.ts",
+        "line": 50,
+        "related": [
+          {
+            "file": "packages/tui/src/render/components/Button.tsx",
+            "line": 96
+          },
+          {
+            "file": "packages/tui/src/render/components/App.tsx",
+            "line": 514
+          }
+        ],
+        "trigger": "合法 Alt+Space 的 ESC[27;3;32~ 或 CSI 32;3u；标准 ESC 前缀 Alt+z。",
+        "expected": "KeyboardEvent 自身显式合同要求 printable key 为字面字符：空格为单字符 U+0020，Alt+z 为 z，modifier 独立保存。",
+        "actual": "真实 parseMultipleKeypresses→KeyboardEvent 空格 key=\"space\"（长度 5）；Alt+z key 包含 ESC 前缀。对应 InputEvent 已分别得到正确空格及 z。",
+        "contract": "keyboard-event.ts:7–10 明确 literal character 和 key.length===1；Button.tsx:96 按 key===literal-space 处理激活，App.tsx 静态将同一 ParsedKey 交给该 constructor。",
+        "evidenceLevel": "actual parser and KeyboardEvent/InputEvent constructors, static DOM dispatcher/Button trace",
+        "fixture": "tui-key-events.test.ts",
+        "log": "tui-key-events.first.log",
+        "controls": "raw space/z/3/slash、arrow/return、Ctrl+C 的 key 和 flags 正常。",
+        "limits": "没有执行 dispatcher、Button、Ink 或真实 key/TTY/PTY；Button 影响仅静态分支推导。",
+        "dedup": "all docs/bugs MD/JSON/TXT 1725 files, 95 hits; no same root cause found"
+      },
+      "evidenceLevel": "actual parser and KeyboardEvent/InputEvent constructors, static DOM dispatcher/Button trace",
+      "status": "confirmed-at-frozen-source-baseline",
+      "runtimeRetested": false
+    },
+    {
+      "id": "DESKTOP-R12-01",
+      "priority": "P3",
+      "title": "工具卡摘要截断拆开 Unicode 代理对",
+      "source": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "line": 13,
+      "report": "desktop.md",
+      "reportLine": 7,
+      "log": "evidence/desktop-display-contracts.first.log",
+      "details": {
+        "id": "DESKTOP-R12-01",
+        "priority": "P3",
+        "title": "工具卡摘要截断拆开 Unicode 代理对",
+        "file": "packages/desktop/src/renderer/tool-cards/utils.ts",
+        "line": 13,
+        "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+        "evidenceLevel": "Actual production pure helper with valid Unicode input and real positive card limits; UI consumption source-only",
+        "trigger": "Valid supplementary Unicode character straddles max-1 UTF-16 boundary at existing 70/80/90 card limits",
+        "expected": "Truncated summaries remain well-formed Unicode text",
+        "actual": "Returned text contains a lone high surrogate; standard UTF-8 roundtrip yields U+FFFD",
+        "controls": "Short Unicode, complete emoji boundary, ASCII and BMP truncation",
+        "limitations": "No UI mount, Electron, actual tool execution or file open; raw arguments remain intact",
+        "relatedHistory": [
+          "CHD02: Chat attachment label implementation",
+          "HL-02: Host GitHub selection label implementation"
+        ],
+        "report": "docs/audit-2026-10-17-round12/desktop.md",
+        "fixture": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts",
+        "rawLog": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.log"
+      },
+      "evidenceLevel": "Actual production pure helper with valid Unicode input and real positive card limits; UI consumption source-only",
+      "status": "confirmed-at-frozen-source-baseline",
+      "runtimeRetested": false
+    },
+    {
+      "id": "PATCH-R12-01",
+      "priority": "P3",
+      "title": "首个 Update chunk 省略可选 @@ 时丢失显式空白 context",
+      "source": "packages/coding/src/tools/apply-patch/parser.ts",
+      "line": 149,
+      "report": "patch.md",
+      "reportLine": 5,
+      "log": "evidence/patch-leading-context.first.log",
+      "details": {
+        "id": "PATCH-R12-01",
+        "priority": "P3",
+        "title": "首个 Update chunk 省略可选 @@ 时丢失显式空白 context",
+        "file": "packages/coding/src/tools/apply-patch/parser.ts",
+        "line": 149,
+        "endLine": 152,
+        "normalTrigger": "Documented first Update chunk without @@ begins with a space-prefixed empty or whitespace-only context line.",
+        "expected": "Keep all marked context content in oldLines/newLines, equivalent to explicit @@.",
+        "actual": "Outer trim-based blank skip drops initial marked whitespace context before parseUpdateChunk.",
+        "normalProducerContract": [
+          "parser.ts:14 context marker + text grammar",
+          "parser.ts:19 optional first @@",
+          "index.ts:37 optional anchor and :53-54 enough unique context"
+        ],
+        "executedEvidence": [
+          "Actual parsePatch AST loses marked empty/tab context",
+          "Actual seekSequence returns 0 for lost-context AST and 2 for explicit-@@ control on same in-memory line list"
+        ],
+        "staticConsumerTrace": [
+          "index.ts:72 parsePatch lenient",
+          "index.ts:87 pass parsed.hunks to applier",
+          "applier.ts:217-219 chunk.oldLines -> seekSequence",
+          "applier.ts:236 schedule replacement"
+        ],
+        "controls": [
+          "same blank/tab context with explicit @@",
+          "first ordinary nonblank context without @@",
+          "interior marked empty context",
+          "literal Add content bytes"
+        ],
+        "dedup": "Distinct from May 30 findings.json $[117]: unmarked blank acceptance in parseUpdateChunk. This is marked initial context loss in parseOneHunk.",
+        "evidence": [
+          "evidence/patch-leading-context.test.ts",
+          "evidence/patch-leading-context.first.log",
+          "evidence/patch-leading-context.first.exit.json"
+        ],
+        "limitations": [
+          "No applier or ApplyPatch tool execution",
+          "No actual filesystem mutation or persisted wrong edit claimed",
+          "No full Engine or model run"
+        ],
+        "suggestedFix": "Distinguish chunk separators from marked context before skipping whitespace.",
+        "dedupCorpusFiles": 1658,
+        "dedupIncludesAllDocsBugsMarkdownAndParsedJson": true
+      },
+      "evidenceLevel": [
+        "Actual parsePatch AST loses marked empty/tab context",
+        "Actual seekSequence returns 0 for lost-context AST and 2 for explicit-@@ control on same in-memory line list"
+      ],
+      "status": "confirmed-at-frozen-source-baseline",
+      "runtimeRetested": false
+    }
+  ]
+}

@@ -34,8 +34,7 @@ import type {
   BrowserWaitCondition,
 } from "../browser-bridge.js";
 import { renderElementList } from "../browser-bridge.js";
-import { capabilitiesFor } from "../../llm/capabilities/index.js";
-import type { ProviderKindName } from "../../llm/provider-kinds.js";
+import { capabilitiesForConfig } from "../../llm/capabilities/index.js";
 import type { ContentBlock } from "../../types.js";
 
 const NO_BROWSER = "Error: browser automation runtime is not available in this host session.";
@@ -133,9 +132,7 @@ function renderObservationWarnings(warnings?: string[]): string {
 /** Vision gate: only show images to a vision-capable model. Mirrors view_image —
  *  no vision → never read pixels into context (your rule: 不支持就不给看). */
 function modelSupportsVision(ctx?: ToolContext): boolean {
-  if (!ctx?.llmConfig) return false;
-  const kind = (ctx.llmConfig.providerKind ?? ctx.llmConfig.provider) as ProviderKindName;
-  return capabilitiesFor(kind, ctx.llmConfig.model).supportsVision;
+  return capabilitiesForConfig(ctx?.llmConfig).supportsVision;
 }
 
 /** Wrap captured image data into a vision ContentBlock (or null if not usable). */

@@ -1,0 +1,7 @@
+144:export function setDottedSetting(
+552:      setDottedSetting(current, key, value);
+572:  saveProjectSetting(key: string, value: unknown, cwd: string): void {
+582:      setDottedSetting(current, key, value);
+600:      setDottedSetting(current, key, value);
+650:  deleteProjectSetting(key: string, cwd: string): void {
+669:    // Must be YAML-aware, symmetric with saveProjectSetting: a project with only

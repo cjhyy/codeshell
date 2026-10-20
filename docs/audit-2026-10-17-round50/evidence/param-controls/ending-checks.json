@@ -1,0 +1,147 @@
+{
+  "capturedUTC": "2026-10-17T17:03:39.880704+00:00",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.719746+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.720611+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "bytes": 3183,
+      "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.721927+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+      "bytes": 2402,
+      "sha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.723069+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConnectionInstanceCard.tsx",
+      "bytes": 7376,
+      "sha256": "05320244bcb035a92c23e7fa9699edff74b8d9dc84f4c8e2f6265c13bdb4c466",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.724419+00:00"
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102370,
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.726300+00:00"
+    },
+    {
+      "path": "packages/core/src/model-catalog/types.ts",
+      "bytes": 5401,
+      "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.727004+00:00"
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.ts",
+      "bytes": 2112,
+      "sha256": "df069d199a8baafa07502cab0f4577eb523e27e4d085ce0ede8fe01b410e8391",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.727549+00:00"
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.test.ts",
+      "bytes": 3057,
+      "sha256": "9bff9fc073f4101adf59ca651c57a4b8566aa154be4ca42028ab54d841081495",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.728029+00:00"
+    },
+    {
+      "path": "packages/core/src/model-catalog/builtin.ts",
+      "bytes": 23756,
+      "sha256": "ee8205a9970758c7ac1eef0f762f0d382d13e69ea33a0157a985271033e72d35",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.728600+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/TextConnectionsPanel.tsx",
+      "bytes": 8889,
+      "sha256": "05229ff4405261230ca97076d60588e9adb8a458dcdd96d49a041954a5388356",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.729736+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useModelConnections.ts",
+      "bytes": 14636,
+      "sha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.739977+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/textConnections.ts",
+      "bytes": 8807,
+      "sha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.741364+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/input.tsx",
+      "bytes": 648,
+      "sha256": "cdf74059418d587217b808c9bafe47cd8c830a8616f44b685766ba9e81f25394",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.742776+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/button.tsx",
+      "bytes": 2115,
+      "sha256": "c49a019df145d3a28aa938095cd3a83970e61dc473230336beaf75f2b60bbfff",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.743923+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/connUi.tsx",
+      "bytes": 3656,
+      "sha256": "7239fdbb620eba31a00ac410b5bd07a4dc9ab1e9f05adf05e5560a9d4d2417e5",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.745068+00:00"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.746009+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "bytes": 1037,
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:03:37.747314+00:00"
+    }
+  ],
+  "allSourcesUnchanged": true,
+  "history": {
+    "initialFiles": 4693,
+    "endingIncludedPaths": 4693,
+    "sameIncludedPathSet": true,
+    "changed": [],
+    "missing": [],
+    "addedIncludedPaths": [],
+    "removedIncludedPaths": [],
+    "excludedAudit50PlusPaths": [
+      "docs/audit-2026-10-17-round50/evidence/integration-before.json",
+      "docs/audit-2026-10-17-round50/evidence/integration-plan.json",
+      "docs/audit-2026-10-17-round50/evidence/worktrees-before.json"
+    ],
+    "initialInventoryRetained": true
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "capturedUTC": "2026-10-17T18:10:35.351737+00:00",
+  "files": [
+    {
+      "path": "packages/link/src/operations.ts",
+      "bytes": 17020,
+      "lines": 584,
+      "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "targetBodyStillUnread": true,
+  "fallbackBodyUnread": true
+}

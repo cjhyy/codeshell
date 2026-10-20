@@ -1,0 +1,36 @@
+bun test v1.3.11 (af24e281)
+
+tests/cost-tracker.test.ts:
+(pass) CostTracker > should not double-bill cache tokens [0.45ms]
+(pass) CostTracker > estimateForTokens should also subtract cache from input [0.11ms]
+(pass) CostTracker > should handle zero cache tokens without error [0.02ms]
+(pass) CostTracker > should clamp uncached input to zero if cache exceeds prompt [0.03ms]
+
+packages/core/src/cost-tracker.test.ts:
+(pass) CostTracker cost math (over extracted MODEL_PRICING) > estimateForTokens uses the data-layer price (devstral-medium = $0.5/$1.5 per 1M) [0.03ms]
+(pass) CostTracker cost math (over extracted MODEL_PRICING) > uses DEFAULT_PRICING ($3/$15) for an unknown model and flags it [0.01ms]
+(pass) CostTracker cost math (over extracted MODEL_PRICING) > getEstimatedCost subtracts cache tokens from input to avoid double-billing [0.01ms]
+(pass) CostTracker cost math (over extracted MODEL_PRICING) > canonicalizes vendor-prefixed + date-suffixed ids to the same price [0.25ms]
+(pass) CostTracker cost math (over extracted MODEL_PRICING) > accumulates recorded usage into total tokens and cost [0.09ms]
+
+packages/core/src/session/usage.test.ts:
+(pass) foldRunUsage > adds the current run's usage onto the session baseline [0.17ms]
+(pass) foldRunUsage > is idempotent per boundary: same baseline + same run total = same result [0.02ms]
+(pass) foldRunUsage > treats a fresh session (undefined cache baseline) as zero
+(pass) foldRunUsage > accumulates across runs when the folded result is fed back as the next baseline [0.02ms]
+(pass) cumulative prompt-cache usage > monotonically adds prompt/cache counters across recorded usages [0.11ms]
+(pass) cumulative prompt-cache usage > does not reset when the legacy turn/run accumulator is reset [0.02ms]
+(pass) single-turn prompt-cache usage > reflects only the current turn after the turn accumulator resets [0.02ms]
+(pass) foreground cache accounting migration > rebuilds complete legacy history from foreground purposes without changing bills [0.10ms]
+(pass) foreground cache accounting migration > starts known foreground usage at zero when historical coverage is unknown
+(pass) foreground cache accounting migration > starts known foreground usage at zero when historical coverage is unknown [0.02ms]
+(pass) foreground cache accounting migration > starts known foreground usage at zero when historical coverage is unknown
+(pass) foreground cache accounting migration > starts known foreground usage at zero when historical coverage is unknown
+(pass) foreground cache accounting migration > starts known foreground usage at zero when historical coverage is unknown
+(pass) foreground cache accounting migration > keeps migrated counters independent of future or reset billing snapshots
+
+ 23 pass
+ 0 fail
+ 54 expect() calls
+Ran 23 tests across 3 files. [77.00ms]
+Completed Bun shard: 23 tests, 0 skipped; 0 failures.

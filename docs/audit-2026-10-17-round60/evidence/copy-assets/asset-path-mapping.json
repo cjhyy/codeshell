@@ -1,0 +1,75 @@
+{
+  "kind": "static filename/path comparison only; not simulated or executed build",
+  "mappings": [
+    {
+      "sourcePattern": "packages/core/src/prompt/sections/*.md",
+      "destinationFolder": "packages/core/dist/prompt/sections",
+      "filenames": [
+        "tone.md",
+        "harness-base.md",
+        "context-notes.md",
+        "base.md",
+        "browser.md",
+        "orchestration.md"
+      ],
+      "runtime": "section-loader.ts:12,15–22"
+    },
+    {
+      "sourcePattern": "packages/core/src/data/*.json",
+      "destinationFolder": "packages/core/dist/data",
+      "filenames": [
+        "zai-models.json",
+        "deepseek-models.json",
+        "openai-models.json",
+        "openrouter-models.json",
+        "constrained-process-seccomp.json",
+        "model-metadata.json",
+        "gemini-models.json"
+      ],
+      "runtime": "static-catalogs.ts:38–41 selected representative readers; not exhaustive catalog consumers"
+    },
+    {
+      "sourcePattern": "packages/core/src/data/*.txt",
+      "destinationFolder": "packages/core/dist/data",
+      "filenames": [
+        "constrained-process-seccomp.NOTICE.txt",
+        "constrained-process-seccomp.LICENSE.txt"
+      ],
+      "runtime": "License/notice copy targets, no runtime license reader claimed"
+    },
+    {
+      "sourcePattern": "packages/coding/src/prompt/*.md",
+      "destinationFolder": "packages/coding/dist/prompt",
+      "filenames": [
+        "coding.md"
+      ],
+      "runtime": "index.capability.ts:321"
+    },
+    {
+      "sourcePattern": "packages/coding/src/tools/apply-patch/NOTICE.md + LICENSE-codex",
+      "destinationFolder": "packages/coding/dist/tools/apply-patch",
+      "filenames": [
+        "NOTICE.md",
+        "LICENSE-codex"
+      ],
+      "runtime": "Explicit plain-file distribution assets, no runtime license reader claimed"
+    },
+    {
+      "sourcePattern": "packages/tui/src/cli/commands/builtin/init/templates (directory)",
+      "destinationFolder": "packages/tui/dist/cli/commands/builtin/init/templates",
+      "filenames": [
+        "empty.md",
+        "create.md",
+        "migrate.md",
+        "improve.md",
+        "rules-scaffold-suffix.md"
+      ],
+      "runtime": "init/index.ts:25–33"
+    }
+  ],
+  "listedMatchedAssetFiles": 23,
+  "contentsSemanticallyRead": false,
+  "directoriesOrSymlinkCustodyCertified": false,
+  "assetBodiesHashedOrVersionCertified": false,
+  "scope": "Filename inventories as observed; no actual source asset content, dist state or copy result read. Known source files match the documented simple suffix/plain directory contracts."
+}

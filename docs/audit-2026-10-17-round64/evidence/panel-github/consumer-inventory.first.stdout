@@ -1,0 +1,10 @@
+packages/core/src/index.ts
+packages/core/src/panel-apps/installer.ts
+packages/core/src/panel-apps/update-check.test.ts
+packages/core/src/panel-apps/index.ts
+packages/core/src/panel-apps/update-check.ts
+packages/core/src/panel-apps/source.ts
+packages/core/src/panel-apps/github-manifest.ts
+packages/core/src/panel-apps/github-ref.test.ts
+packages/core/src/panel-apps/github-ref.ts
+packages/desktop/src/main/panel-app-update-service.ts

@@ -1,0 +1,47 @@
+{
+  "capturedUTC": "2026-10-17T14:20:00.112897+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lineCount": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lineCount": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "lineCount": 1571,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "lineCount": 445,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "lineCount": 928,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "capturedUTC": "2026-10-17T12:07:22.578987+00:00",
+  "path": "packages/desktop/src/preload/session-transcript-api.ts",
+  "bytes": 1032,
+  "lineCount": 19,
+  "sha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+  "timing": "Before direct read; filename/symbol inventory only"
+}

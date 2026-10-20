@@ -55,6 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { SessionWorkspace, SessionWorkspaceAuthority } from "../preload/types";
 import { TrustGate } from "./workspace-trust/TrustGate";
+import { formatModifierShortcut } from "./keyboardShortcutHints";
 
 interface SidebarProps {
   projects: TrackedProject[];
@@ -89,6 +90,7 @@ interface SidebarProps {
   onNavigate: (mode: ViewMode) => void;
   onOpenProjectConfig: (id: string) => void;
   onOpenSettingsPage: () => void;
+  onOpenAccountSettings: () => void;
   onOpenPetPage: () => void;
   onTogglePetWidget: () => void;
   onLoadMoreSessionHistory: () => void;
@@ -158,6 +160,7 @@ export function Sidebar({
   onNavigate,
   onOpenProjectConfig,
   onOpenSettingsPage,
+  onOpenAccountSettings,
   onOpenPetPage,
   onTogglePetWidget,
   onLoadMoreSessionHistory,
@@ -169,6 +172,7 @@ export function Sidebar({
 }: SidebarProps) {
   const { t } = useT();
   const sidebarRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [pendingPrimary, setPendingPrimary] = useState<{
@@ -212,6 +216,27 @@ export function Sidebar({
     const subscribe = window.codeshell.onWorkspaceChanged;
     if (typeof subscribe !== "function") return;
     return subscribe((event) => setWorkspaceChange(event));
+  }, []);
+
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content || typeof ResizeObserver === "undefined") return;
+    const ensureFocusedVisible = (): void => {
+      const focused = document.activeElement;
+      if (!(focused instanceof HTMLElement) || !content.contains(focused)) return;
+      const bounds = content.getBoundingClientRect();
+      const target = focused.getBoundingClientRect();
+      if (bounds.height <= 0) return;
+      if (target.top < bounds.top) content.scrollTop += target.top - bounds.top;
+      else if (target.bottom > bounds.bottom) content.scrollTop += target.bottom - bounds.bottom;
+    };
+    const observer = new ResizeObserver(ensureFocusedVisible);
+    observer.observe(content);
+    content.addEventListener("focusin", ensureFocusedVisible);
+    return () => {
+      observer.disconnect();
+      content.removeEventListener("focusin", ensureFocusedVisible);
+    };
   }, []);
 
   // No-repo conversations live under the bottom 对话 section.
@@ -338,169 +363,182 @@ export function Sidebar({
   return (
     <aside
       ref={sidebarRef}
-      className="flex h-full w-60 max-w-full shrink-0 flex-col border-r border-border/70"
+      className="flex h-full min-h-0 w-[var(--cs-sidebar-width,15rem)] max-w-full shrink-0 flex-col overflow-hidden border-r border-border/70"
       data-theme-surface="sidebar"
     >
-      <nav className="flex flex-col gap-1 px-3 pb-3 pt-2">
-        <PetSidebarEntry
-          active={
-            viewMode === "pet" ||
-            viewMode === "pet_settings" ||
-            viewMode === "pet_personalization" ||
-            viewMode === "pet_memory"
-          }
-          pendingCount={petPendingCount}
-          runningCount={petRunningCount}
-          onOpen={onOpenPetPage}
-        />
-        <div className="my-1 border-t border-border/60" aria-hidden="true" />
-        <SidebarItem
-          label={t("sidebar.newConversation")}
-          Icon={PenSquare}
-          onClick={onNewConversation}
-          active={false}
-          prominent
-        />
-        <SidebarItem
-          label={t("sidebar.search")}
-          Icon={Search}
-          onClick={onOpenSearch}
-          active={false}
-        />
-        {/* NOTE: this list used to be hardcoded; the GLOBAL pending-approvals
+      <div
+        ref={contentRef}
+        role="region"
+        aria-label={t("sidebar.navigation")}
+        tabIndex={0}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
+      >
+        <nav className="flex flex-col gap-1 px-2 pb-2 pt-2">
+          <div className="[&>button]:rounded-lg [&>button]:px-2 [&>button]:text-[13px]">
+            <PetSidebarEntry
+              active={
+                viewMode === "pet" ||
+                viewMode === "pet_settings" ||
+                viewMode === "pet_personalization" ||
+                viewMode === "pet_memory"
+              }
+              pendingCount={petPendingCount}
+              runningCount={petRunningCount}
+              onOpen={onOpenPetPage}
+            />
+          </div>
+          <div className="my-1 border-t border-border/70" aria-hidden="true" />
+          <SidebarItem
+            label={t("sidebar.newConversation")}
+            Icon={PenSquare}
+            onClick={onNewConversation}
+            active={false}
+            prominent
+          />
+          <SidebarItem
+            label={t("sidebar.search")}
+            Icon={Search}
+            onClick={onOpenSearch}
+            active={false}
+          />
+          {/* NOTE: this list used to be hardcoded; the GLOBAL pending-approvals
             badge history note from the automation item still applies — the
             per-session asking dot + dock badge (setBadgeCount) cover it. */}
-        {navPages.map((entry) => (
-          <SidebarItem
-            key={entry.key}
-            label={pageEntryTitle(entry, (key) => t(key as never))}
-            Icon={entry.icon}
-            onClick={() => onNavigate(entry.nav!.target)}
-            active={entry.nav!.isActive(viewMode)}
-          />
-        ))}
-      </nav>
-
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between px-4 pb-1 pt-2">
-          <span className="text-[11px] font-semibold tracking-wide text-muted-foreground">
-            {t("sidebar.projects")}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7 text-muted-foreground"
-            onClick={onAddProject}
-            aria-label={t("sidebar.addProject")}
-            title={t("sidebar.addProject")}
-          >
-            <Plus size={16} strokeWidth={2.25} />
-          </Button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-          {orderedProjects.length === 0 && noRepoSessions.length === 0 && (
-            <div className="mt-1 rounded-xl border border-dashed border-border bg-card/60 px-3 py-5 text-center">
-              <FolderOpen className="mx-auto size-5 text-muted-foreground" aria-hidden />
-              <p className="mt-2 text-xs font-medium text-foreground">{t("sidebar.emptyTitle")}</p>
-              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                {t("sidebar.emptyHint")}
-              </p>
-              <div className="mt-3 flex flex-col gap-1.5">
-                <Button type="button" size="sm" variant="outline" onClick={onAddProject}>
-                  <Plus className="size-3.5" aria-hidden />
-                  {t("sidebar.addProject")}
-                </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={onNewConversation}>
-                  <MessageSquare className="size-3.5" aria-hidden />
-                  {t("sidebar.emptyNewChat")}
-                </Button>
-              </div>
-            </div>
-          )}
-          {orderedProjects.map((project) => (
-            <ProjectGroup
-              key={project.id}
-              project={project}
-              localRuntime={cloudProjectId !== project.id}
-              index={sessions[project.id]}
-              collapsed={collapsedProjects.has(project.id)}
-              isActiveProject={activeProjectId === project.id}
-              activeSessionId={activeSessionId}
-              revealedSessionId={revealedSessionIds?.[project.id]}
-              statusFor={(sid) => sessionStatuses?.[bucketKey(project.id, sid)]}
-              onToggle={() => onToggleProject(project.id)}
-              onSelectProject={() => onSelectProject(project.id)}
-              onSelectSession={(sid) => onSelectSession(project.id, sid)}
-              onMenuClick={(x, y) => setMenu({ kind: "project", x, y, project })}
-              onNewChat={() => onNewConversationForProject(project.id)}
-              onProjectContextMenu={(e) => {
-                e.preventDefault();
-                setMenu({ kind: "project", x: e.clientX, y: e.clientY, project });
-              }}
-              onSessionContextMenu={(e, s) => {
-                e.preventDefault();
-                setMenu({
-                  kind: "session",
-                  x: e.clientX,
-                  y: e.clientY,
-                  projectId: project.id,
-                  session: s,
-                });
-              }}
-              onPinSession={(sid, pinned) => onPinSession(project.id, sid, pinned)}
-              onArchiveSession={(sid) => onArchiveSession(project.id, sid, true)}
-              workspaceChange={workspaceChange}
+          {navPages.map((entry) => (
+            <SidebarItem
+              key={entry.key}
+              label={pageEntryTitle(entry, (key) => t(key as never))}
+              Icon={entry.icon}
+              onClick={() => onNavigate(entry.nav!.target)}
+              active={entry.nav!.isActive(viewMode)}
             />
           ))}
+        </nav>
 
-          {noRepoSessions.length > 0 && (
-            <NoRepoSection
-              sessions={noRepoSessions}
-              activeSessionId={activeProjectId === null ? activeSessionId : null}
-              statusFor={(sid) => sessionStatuses?.[bucketKey(null, sid)]}
-              onSelectSession={(sid) => onSelectSession(null, sid)}
-              onSessionContextMenu={(e, s) => {
-                e.preventDefault();
-                setMenu({
-                  kind: "session",
-                  x: e.clientX,
-                  y: e.clientY,
-                  projectId: null,
-                  session: s,
-                });
-              }}
-              onPinSession={(sid, pinned) => onPinSession(null, sid, pinned)}
-              onArchiveSession={(sid) => onArchiveSession(null, sid, true)}
-            />
-          )}
-
-          {(sessionHistoryLoading || hasMoreSessionHistory) && (
+        <div>
+          <div className="flex items-center justify-between px-4 pb-1 pt-2">
+            <span className="text-[11px] font-semibold tracking-wide text-muted-foreground">
+              {t("sidebar.projects")}
+            </span>
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="my-2 w-full gap-1.5 text-muted-foreground disabled:cursor-wait"
-              onClick={onLoadMoreSessionHistory}
-              disabled={sessionHistoryLoading}
+              size="icon"
+              className="size-7 text-muted-foreground"
+              onClick={onAddProject}
+              aria-label={t("sidebar.addProject")}
+              title={t("sidebar.addProject")}
             >
-              {sessionHistoryLoading && <Loader2 size={12} className="animate-spin" />}
-              {t(
-                sessionHistoryLoading
-                  ? "sidebar.loadingSessionHistory"
-                  : "sidebar.loadSessionHistory",
-              )}
+              <Plus size={16} strokeWidth={2.25} />
             </Button>
-          )}
+          </div>
+
+          <div className="px-2 pb-2">
+            {orderedProjects.length === 0 && noRepoSessions.length === 0 && (
+              <div className="mt-1 rounded-xl border border-dashed border-border bg-card/60 px-3 py-5 text-center">
+                <FolderOpen className="mx-auto size-5 text-muted-foreground" aria-hidden />
+                <p className="mt-2 text-xs font-medium text-foreground">
+                  {t("sidebar.emptyTitle")}
+                </p>
+                <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                  {t("sidebar.emptyHint")}
+                </p>
+                <div className="mt-3 flex flex-col gap-1.5">
+                  <Button type="button" size="sm" variant="outline" onClick={onAddProject}>
+                    <Plus className="size-3.5" aria-hidden />
+                    {t("sidebar.addProject")}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={onNewConversation}>
+                    <MessageSquare className="size-3.5" aria-hidden />
+                    {t("sidebar.emptyNewChat")}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {orderedProjects.map((project) => (
+              <ProjectGroup
+                key={project.id}
+                project={project}
+                localRuntime={cloudProjectId !== project.id}
+                index={sessions[project.id]}
+                collapsed={collapsedProjects.has(project.id)}
+                isActiveProject={activeProjectId === project.id}
+                activeSessionId={activeSessionId}
+                revealedSessionId={revealedSessionIds?.[project.id]}
+                statusFor={(sid) => sessionStatuses?.[bucketKey(project.id, sid)]}
+                onToggle={() => onToggleProject(project.id)}
+                onSelectProject={() => onSelectProject(project.id)}
+                onSelectSession={(sid) => onSelectSession(project.id, sid)}
+                onMenuClick={(x, y) => setMenu({ kind: "project", x, y, project })}
+                onNewChat={() => onNewConversationForProject(project.id)}
+                onProjectContextMenu={(e) => {
+                  e.preventDefault();
+                  setMenu({ kind: "project", x: e.clientX, y: e.clientY, project });
+                }}
+                onSessionContextMenu={(e, s) => {
+                  e.preventDefault();
+                  setMenu({
+                    kind: "session",
+                    x: e.clientX,
+                    y: e.clientY,
+                    projectId: project.id,
+                    session: s,
+                  });
+                }}
+                onPinSession={(sid, pinned) => onPinSession(project.id, sid, pinned)}
+                onArchiveSession={(sid) => onArchiveSession(project.id, sid, true)}
+                workspaceChange={workspaceChange}
+              />
+            ))}
+
+            {noRepoSessions.length > 0 && (
+              <NoRepoSection
+                sessions={noRepoSessions}
+                activeSessionId={activeProjectId === null ? activeSessionId : null}
+                statusFor={(sid) => sessionStatuses?.[bucketKey(null, sid)]}
+                onSelectSession={(sid) => onSelectSession(null, sid)}
+                onSessionContextMenu={(e, s) => {
+                  e.preventDefault();
+                  setMenu({
+                    kind: "session",
+                    x: e.clientX,
+                    y: e.clientY,
+                    projectId: null,
+                    session: s,
+                  });
+                }}
+                onPinSession={(sid, pinned) => onPinSession(null, sid, pinned)}
+                onArchiveSession={(sid) => onArchiveSession(null, sid, true)}
+              />
+            )}
+
+            {(sessionHistoryLoading || hasMoreSessionHistory) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="my-2 w-full gap-1.5 text-muted-foreground disabled:cursor-wait"
+                onClick={onLoadMoreSessionHistory}
+                disabled={sessionHistoryLoading}
+              >
+                {sessionHistoryLoading && <Loader2 size={12} className="animate-spin" />}
+                {t(
+                  sessionHistoryLoading
+                    ? "sidebar.loadingSessionHistory"
+                    : "sidebar.loadSessionHistory",
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="border-t border-border/70 bg-card/40 px-3 py-2">
+      <div className="shrink-0 border-t border-border/70 bg-card/40 px-2 py-2">
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1">
             <AccountSidebarEntry
               onOpenSettingsPage={onOpenSettingsPage}
+              onOpenAccountSettings={onOpenAccountSettings}
               onNavigate={onNavigate}
               taskInboxEnabled={taskInboxEnabled}
               optimizationLabEnabled={optimizationLabEnabled}
@@ -754,7 +792,7 @@ function SidebarItem({
       variant="ghost"
       size="sm"
       className={cn(
-        "h-8 w-full justify-start gap-2.5 rounded-lg px-2.5 text-[13px] font-normal transition-colors",
+        "h-8 w-full justify-start gap-2 rounded-lg px-2 text-[13px] font-normal transition-colors",
         prominent
           ? "mb-1 h-9 bg-primary font-medium text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground"
           : active
@@ -1001,7 +1039,7 @@ export function ProjectGroup({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 min-w-0 flex-1 justify-start gap-2 px-1.5 text-[13px] hover:bg-transparent"
+          className="h-8 min-w-0 flex-1 justify-start gap-2 px-1 text-[13px] hover:bg-transparent"
           aria-expanded={!collapsed}
           onClick={() => {
             setShowMore(false);
@@ -1011,9 +1049,9 @@ export function ProjectGroup({
           }}
         >
           {collapsed ? (
-            <Folder size={13} className="shrink-0 text-muted-foreground" />
+            <Folder size={14} className="shrink-0 text-muted-foreground" />
           ) : (
-            <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
+            <FolderOpen size={14} className="shrink-0 text-muted-foreground" />
           )}
           <span className="flex-1 truncate text-left font-medium">{projectLabel(project)}</span>
           {project.pinned && (
@@ -1058,7 +1096,7 @@ export function ProjectGroup({
       {!collapsed && (
         <>
           {live.length > 0 && (
-            <ul className="ml-3 mt-1 space-y-0.5 border-l border-border/60 pl-2">
+            <ul className="ml-3 mt-1 space-y-0.5 border-l border-border/70 pl-2">
               {visibleLive.map((s, i) => {
                 const sessionWorkspace =
                   localRuntime && s.engineSessionId
@@ -1176,7 +1214,7 @@ function NoRepoSection({
   if (sessions.length === 0) return null;
   return (
     <div className="mt-2">
-      <div className="px-1 pb-2 pt-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
+      <div className="px-2 pb-2 pt-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
         {t("sidebar.conversations")}
       </div>
       <ul className="space-y-0.5">
@@ -1488,7 +1526,11 @@ const SessionRow = React.memo(
                     the slot width. */}
                 {showKbd ? (
                   <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
-                    ⌘{kbdIndex}
+                    {formatModifierShortcut(
+                      globalThis.window?.codeshell?.platform,
+                      String(kbdIndex),
+                      "symbol",
+                    )}
                   </kbd>
                 ) : (
                   <span className="text-[10px] text-muted-foreground">

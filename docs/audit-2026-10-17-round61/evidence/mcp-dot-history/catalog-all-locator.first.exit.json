@@ -1,0 +1,1 @@
+{"command": ["rg", "--files", "docs", "-g", "recorded-findings-catalog.json"], "exitCode": 0}

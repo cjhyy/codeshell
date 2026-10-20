@@ -1,0 +1,14 @@
+{
+  "rootReportedContext": "c3a9ece2e6f183671b00e07322a9722fad6bda54; no own Git verification",
+  "purpose": "before exact history full/scope/cause gate; no product body",
+  "files": [
+    {
+      "path": "packages/chat/src/adapter-factory.ts",
+      "bytes": 10201,
+      "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "lineCount": 313,
+      "pinUTC": "2026-10-17T15:43:03.153772+00:00",
+      "semanticRead": false
+    }
+  ]
+}

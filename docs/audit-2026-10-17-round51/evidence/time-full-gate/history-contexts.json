@@ -1,0 +1,2252 @@
+{
+  "capPerQuery": 100,
+  "queryPatterns": {
+    "exact-path": "packages/desktop/src/renderer/messages/time\\.ts",
+    "message-time-basename": "messages/time(?:\\.test)?\\.ts",
+    "current-sha": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+    "time-format-old-cause": "(?:formatDuration|formatTimestamp|formatElapsed|formatRelativeTime|relative time|时间戳|耗时).{0,180}(?:毫秒|秒|minute|hour|小时|unit|格式|negative|负数|overflow)"
+  },
+  "totalMatches": {
+    "time-format-old-cause": 24,
+    "exact-path": 66,
+    "message-time-basename": 95,
+    "current-sha": 37
+  },
+  "retainedCounts": {
+    "exact-path": 66,
+    "message-time-basename": 95,
+    "current-sha": 37,
+    "time-format-old-cause": 24
+  },
+  "actualHumanRead": "pending; machine scan not semantic reading",
+  "contexts": {
+    "exact-path": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "locator": "/source_inventory/1571",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+        "locator": "/files/11/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "locator": "/files/41/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "locator": "/workerSourceChecks/29/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "locator": "/files/707/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "locator": "/files/2800/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11217/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11217/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11218/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11218/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11219/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11219/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "locator": "/files/3121/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "locator": "/files/3121/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "locator": "/unknownPaths/2859",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "locator": "/files/3122/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "locator": "/files/20/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+        "locator": "/files/6/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/1/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/3/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/5/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+        "locator": "/products/20/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/13/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/15/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/17/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/27/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/52/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/194/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/195/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/196/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/258/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/288/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/318/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/58/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/74/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/75/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/76/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/79/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/80/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/83/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/84/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/110/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/111/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/112/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/165/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/166/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/485/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/486/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/487/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/488/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/489/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/490/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/491/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/492/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/493/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/661/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/662/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/721/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/722/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/762/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/811/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/812/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "locator": "/files/20/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+        "locator": "/packets/3/manifestRangeChecks/20/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/51/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/hashOnlyChecks/24/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      }
+    ],
+    "message-time-basename": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "locator": "/source_inventory/1571",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "locator": "/hits/49/text",
+        "kind": "json-recursive-value",
+        "excerpt": "补充选择性阅读 `packages/web/app/HubSessions.tsx:1–260`（历史页状态/焦点/请求身份）、`HubFiles.tsx:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。",
+        "excerptStart": 0,
+        "excerptEnd": 391,
+        "originalChars": 391,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "locator": "/hits/76/text",
+        "kind": "json-recursive-value",
+        "excerpt": "补充选择性阅读 `packages/web/app/HubSessions.tsx:1–260`（历史页状态/焦点/请求身份）、`HubFiles.tsx:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。",
+        "excerptStart": 0,
+        "excerptEnd": 391,
+        "originalChars": 391,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+        "locator": "/files/11/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+        "locator": "/files/12/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "locator": "/files/40/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "locator": "/files/41/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "locator": "/workerSourceChecks/29/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "locator": "/workerSourceChecks/30/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "locator": "/files/706/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "locator": "/files/707/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "locator": "/files/2799/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "locator": "/files/2800/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/agent-group-history.json",
+        "locator": "/hits/7/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "x:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。",
+        "excerptStart": 0,
+        "excerptEnd": 315,
+        "originalChars": 315,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/agent-group-history.json",
+        "locator": "/hits/16/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "x:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。",
+        "excerptStart": 0,
+        "excerptEnd": 315,
+        "originalChars": 315,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/agent-group-history.json",
+        "locator": "/hits/18/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "x:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。",
+        "excerptStart": 0,
+        "excerptEnd": 315,
+        "originalChars": 315,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/agent-group-history.json",
+        "locator": "/hits/128/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "x:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。",
+        "excerptStart": 0,
+        "excerptEnd": 315,
+        "originalChars": 315,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11213/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11213/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11214/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11214/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11215/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11215/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11216/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11216/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11217/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11217/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11218/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11218/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11219/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11219/directSourcePathsInObject/0",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "locator": "/files/3120/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "locator": "/files/3121/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "locator": "/files/3120/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "locator": "/files/3121/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "locator": "/unknownPaths/2858",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "locator": "/unknownPaths/2859",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "locator": "/files/3121/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "locator": "/files/3122/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "locator": "/files/20/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+        "locator": "/files/6/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/1/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/3/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/5/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+        "locator": "/products/20/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/13/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/15/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/17/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/27/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/52/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/194/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/195/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/196/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/258/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/288/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/318/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/58/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/74/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/75/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/76/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/79/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/80/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/83/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/84/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/110/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/111/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/112/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/165/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/166/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/485/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/486/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/487/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/488/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/489/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/490/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/491/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/492/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/493/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/661/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/662/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/721/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/722/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/762/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/811/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+        "locator": "/locators/812/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+        "locator": "paragraph/7",
+        "kind": "markdown-paragraph",
+        "excerpt": " | 103 | hash only |\n| 4 | `messages/GoalProgressView.tsx` | 130 | scope unconfirmed |\n| 5 | `messages/ContextBoundaryView.tsx` | 103 | scope unconfirmed |\n| 6 | `chat/ContextRing.tsx` | 247 | scope unconfirmed |\n| 7 | `messages/time.ts` | 107 | scope unconfirmed |\n| 8 | `messages/agentGroup.ts` | 133 | scope unconfirmed |\n| 9 | `app/panelResize.ts` | 138 | scope unconfirmed |\n| 10 | `settings/ThemePackPreview.tsx` | 121 | hash only |\n| 11 | `settings/ShortcutsSection.tsx` | 110 | hash only |\n| 12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `b",
+        "excerptStart": 262,
+        "excerptEnd": 1198,
+        "originalChars": 1889,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "locator": "/files/20/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+        "locator": "/packets/3/manifestRangeChecks/20/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/51/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/hashOnlyChecks/24/path",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.ts",
+        "excerptStart": 0,
+        "excerptEnd": 46,
+        "originalChars": 46,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "locator": "/hits/83/matches/4/text",
+        "kind": "json-recursive-value",
+        "excerpt": "补充选择性阅读 `packages/web/app/HubSessions.tsx:1–260`（历史页状态/焦点/请求身份）、`HubFiles.tsx:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。",
+        "excerptStart": 0,
+        "excerptEnd": 391,
+        "originalChars": 391,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17/desktop-data.md",
+        "locator": "paragraph/19",
+        "kind": "markdown-paragraph",
+        "excerpt": "补充选择性阅读 `packages/web/app/HubSessions.tsx:1–260`（历史页状态/焦点/请求身份）、`HubFiles.tsx:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。",
+        "excerptStart": 0,
+        "excerptEnd": 391,
+        "originalChars": 391,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "locator": "/130/file",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "locator": "/groups/1/rawLogs/130/file",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "locator": "/logs/271/file",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/desktop/src/renderer/messages/time.test.ts",
+        "excerptStart": 0,
+        "excerptEnd": 51,
+        "originalChars": 51,
+        "excerptTruncated": false
+      }
+    ],
+    "current-sha": [
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+        "locator": "/files/11/frozenSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+        "locator": "/files/11/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "locator": "/files/41/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+        "locator": "/workerSourceChecks/29/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "locator": "/files/707/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "locator": "/files/707/claims/0/sourceSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "locator": "/files/2800/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11218/sourceHashFields/frozenSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11218/sourceHashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "locator": "/claims/11219/sourceHashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "locator": "/files/3121/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "locator": "/files/3121/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "locator": "/files/3122/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "locator": "/files/20/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+        "locator": "/files/20/oldInventoryRow/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+        "locator": "/files/6/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/1/association/hashFields/frozenSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/1/association/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/3/association/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+        "locator": "/rows/5/association/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+        "locator": "/products/20/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/13/hashFields/frozenSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/13/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/15/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/17/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/27/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/52/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/258/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/288/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+        "locator": "/claims/318/hashFields/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "locator": "/files/20/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+        "locator": "/files/20/endingSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+        "locator": "/packets/3/manifestRangeChecks/20/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/51/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/51/currentSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/files/51/mainSha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+        "locator": "/hashOnlyChecks/24/sha256",
+        "kind": "json-recursive-value",
+        "excerpt": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+        "excerptStart": 0,
+        "excerptEnd": 64,
+        "originalChars": 64,
+        "excerptTruncated": false
+      }
+    ],
+    "time-format-old-cause": [
+      {
+        "document": "docs/archive/browser-cookie-export-design-2026-06-14.md",
+        "locator": "paragraph/65",
+        "kind": "markdown-paragraph",
+        "excerpt": "坑：\n- Electron `expirationDate` 历史上有精度 bug（[electron/electron#5438](https://github.com/electron/electron/issues/5438)），生成时间戳时验证\n- 首行 header 必须有，否则 yt-dlp 报格式错\n- cookie 键或值含换行/制表符的跳过，不合规 cookie yt-dlp 吃不了\n- 换行符 Node 写文件自动按 OS 处理",
+        "excerptStart": 0,
+        "excerptEnd": 226,
+        "originalChars": 226,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/evidence/cross-review-diagnostics.md",
+        "locator": "paragraph/6",
+        "kind": "markdown-paragraph",
+        "excerpt": "rray.from` 在此有限迭代序列上的完全求值足以显示当前 cap 放置过晚。对生产 HTMLCollection 的推广属于源码推导，而非已执行真实浏览器；当前报告和 findings/validation 均做了这一区分。\n- 两个观察均读 20,000 项但只输出 1 个 node、`truncated:true`；4-child 对照完整输出 root 与 children 且非 truncated。报告没有利用 VM 测试耗时来宣称真实页面延迟、内存峰值、8 秒超时、卡死或安全影响。\n- Desktop `browser-inspector.ts:9–10` 与 `puppeteer-browser-driver.ts:624–631` 确有当前消费者接线；只读接线不证明整条 Desktop/真实浏览器工具链运行，报告亦未外推。",
+        "excerptStart": 264,
+        "excerptEnd": 640,
+        "originalChars": 640,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+        "locator": "/hits/interval_conversion/74/context",
+        "kind": "json-recursive-value",
+        "excerpt": "t type { TranslationKey } from \"../i18n/dict\";\n\ntype T = (k: TranslationKey, o?: Record<string, unknown>) => string;\n\n/** Relative time for cron next/last run — \"约 3 小时后\" / \"2 小时前\". `now` is\n *  injectable for testing. Returns \"—\" for null. Keys resolved via t(). */\nexport function fmtRelative(ms: number | null, t: T, now = Date.now()): string {\n  if (ms == null) return \"—\";\n  const diff = ms - now;\n  const future = diff >= 0;\n  const abs = Math.abs(diff",
+        "excerptStart": 0,
+        "excerptEnd": 458,
+        "originalChars": 458,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+        "locator": "/hits/timezone/40/context",
+        "kind": "json-recursive-value",
+        "excerpt": "cted: FAIL（无模块）。\n\n- [ ] **Step 3: 实现 fmtRelative**\n\nCreate `relativeTime.ts`:\n\n```typescript\nimport type { TranslationKey } from \"../i18n/dict\";\n\ntype T = (k: TranslationKey, o?: Record<string, unknown>) => string;\n\n/** Relative time for cron next/last run — \"约 3 小时后\" / \"2 小时前\". `now` is\n *  injectable for testing. Returns \"—\"",
+        "excerptStart": 103,
+        "excerptEnd": 431,
+        "originalChars": 431,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+        "locator": "/hits/timezone/41/context",
+        "kind": "json-recursive-value",
+        "excerpt": "cted: FAIL（无模块）。\n\n- [ ] **Step 3: 实现 fmtRelative**\n\nCreate `relativeTime.ts`:\n\n```typescript\nimport type { TranslationKey } from \"../i18n/dict\";\n\ntype T = (k: TranslationKey, o?: Record<string, unknown>) => string;\n\n/** Relative time for cron next/last run — \"约 3 小时后\" / \"2 小时前\". `now` is\n *  injectable for testing. Returns \"—\" for null. Keys resolved vi",
+        "excerptStart": 80,
+        "excerptEnd": 435,
+        "originalChars": 435,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/review-aggregate.md",
+        "locator": "paragraph/4",
+        "kind": "markdown-paragraph",
+        "excerpt": "有把这些失败中 “Ran 1 test” 计入成功覆盖。\n- Utils 和 Web 的失败均为自有 fixture 相对 import 多上一级，目标源模块和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source-only 已变化状态与本批 bug/candidate/related 分账，runtimeRetested=false。旧实验或其他任务的 UI/native 验收没有被借算为本批证据。\n- 根 source-manifest 的 **62 个唯一 source/contract pins**逐条重新从冻结 Git blob读取：bytes、SHA-256 和当前文件相符，0 错误。它明确是选定 source ",
+        "excerptStart": 364,
+        "excerptEnd": 1317,
+        "originalChars": 1828,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "locator": "/hits/identity_cache/18/context",
+        "kind": "json-recursive-value",
+        "excerpt": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+        "excerptStart": 0,
+        "excerptEnd": 436,
+        "originalChars": 436,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "locator": "/contexts/exact-source/6/context",
+        "kind": "json-recursive-value",
+        "excerpt": "有把这些失败中 “Ran 1 test” 计入成功覆盖。\n- Utils 和 Web 的失败均为自有 fixture 相对 import 多上一级，目标源模块和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的",
+        "excerptStart": 355,
+        "excerptEnd": 771,
+        "originalChars": 771,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "locator": "/contexts/room-page-contract/40/context",
+        "kind": "json-recursive-value",
+        "excerpt": "有把这些失败中 “Ran 1 test” 计入成功覆盖。\n- Utils 和 Web 的失败均为自有 fixture 相对 import 多上一级，目标源模块和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的",
+        "excerptStart": 355,
+        "excerptEnd": 771,
+        "originalChars": 771,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "locator": "/hits/format_contract/41/context",
+        "kind": "json-recursive-value",
+        "excerpt": "有把这些失败中 “Ran 1 test” 计入成功覆盖。\n- Utils 和 Web 的失败均为自有 fixture 相对 import 多上一级，目标源模块和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source-only 已变化状态与本批 bug/candidate/related 分账，runtimeRetested=false。旧实验或其他任务的 UI/native 验收没有被借算为本批证据。\n- 根 source-manifest 的 **62 个唯一 source/contract pins**逐条重新从冻结 Git blob读取：bytes、SHA-256 和当前文件相符，",
+        "excerptStart": 130,
+        "excerptEnd": 1064,
+        "originalChars": 1064,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+        "locator": "/hits/format_contract/156/context",
+        "kind": "json-recursive-value",
+        "excerpt": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+        "excerptStart": 0,
+        "excerptEnd": 436,
+        "originalChars": 436,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+        "locator": "/hits/toolDisplay/8/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "- Utils 和 Web 的失败均为自有 fixture 相对 import 多上一级，目标源模块和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。",
+        "excerptStart": 0,
+        "excerptEnd": 282,
+        "originalChars": 282,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+        "locator": "/hits/toolDisplay/63/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+        "excerptStart": 0,
+        "excerptEnd": 436,
+        "originalChars": 436,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+        "locator": "/hits/toolDisplay/95/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "有把这些失败中 “Ran 1 test” 计入成功覆盖。\n- Utils 和 Web 的失败均为自有 fixture 相对 import 多上一级，目标源模块和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的",
+        "excerptStart": 16,
+        "excerptEnd": 432,
+        "originalChars": 432,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+        "locator": "/hits/toolDisplay/96/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "有把这些失败中 “Ran 1 test” 计入成功覆盖。\n- Utils 和 Web 的失败均为自有 fixture 相对 import 多上一级，目标源模块和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的",
+        "excerptStart": 16,
+        "excerptEnd": 432,
+        "originalChars": 432,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+        "locator": "/hits/toolDisplay/110/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "有把这些失败中 “Ran 1 test” 计入成功覆盖。\n- Utils 和 Web 的失败均为自有 fixture 相对 import 多上一级，目标源模块和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source-only 已变化状态与本批 bug/candidate/related 分账，r",
+        "excerptStart": 16,
+        "excerptEnd": 801,
+        "originalChars": 801,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+        "locator": "/hits/toolDisplay/115/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+        "excerptStart": 0,
+        "excerptEnd": 436,
+        "originalChars": 436,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-review/history.json",
+        "locator": "/hits/0-path/7/context",
+        "kind": "json-recursive-value",
+        "excerpt": "ings/validation 均做了这一区分。\n- 两个观察均读 20,000 项但只输出 1 个 node、`truncated:true`；4-child 对照完整输出 root 与 children 且非 truncated。报告没有利用 VM 测试耗时来宣称真实页面延迟、内存峰值、8 秒超时、卡死或安全影响。\n- Desktop `browser-inspector.ts:9–10` 与 `puppeteer-browser-driver.ts:624–631` 确有当前消费者接线；只读接线不证明整条 Desktop/真实浏览器工具链运行，报告亦未外推。\n\n## 查重与材料核对\n\n- 已读历史搜索结果及 round3 报告。`CDP-R3-03` 是在 `visibility:hidden` 祖先处提前剪枝导致可见后代丢失；本项是 eager collection materialization，触发、根因和影响不同。现有历史命中没有相同 eager children 枚举上限缺陷。\n- 两个首次日志各为 5 pass、0 fail、0 skip，expect 分别 20、24；合计 10 pass / 44 expect，与 validation 一致，均有 guarded completion 和 exit 0。观察断言通过未被描述成产品修复。\n- 13 个 manifest 文件的 frozen Git blob SHA、当前文件 SHA，以及 fixture/log/exit receipt SHA 均重新只读核对通过。未执行任何产品或测试代码",
+        "excerptStart": 0,
+        "excerptEnd": 692,
+        "originalChars": 692,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/source-excerpts.json",
+        "locator": "/files/0/ranges/0/text",
+        "kind": "json-recursive-value",
+        "excerpt": " \"failed\" || message.status === \"denied\"\n        ? \"err\"\n        : message.status === \"succeeded\"\n          ? \"ok\"\n          : message.status === \"cancelled\"\n            ? \"warn\"\n            : \"idle\";\n  const duration = formatDuration(message.durationMs);\n  return (\n    <div\n      data-tool-card=\"\"\n      data-selected={selected || undefined}\n      className={\n        \"min-w-0 rounded-md border text-xs [overflow-wrap:anywhere] \" +\n        (selected\n          ? \"border-primary/40 bg-accent/40\"\n          : open\n            ? \"border-border/50 bg-card\"\n            : \"border-transparent bg-card hover:border-border/40\")\n      }\n      onClick={() => onSelect?.(message)}\n    >\n      <div className=\"flex min-w-0 items-center\">\n        <button\n          type=\"button\"\n          data-tool-heading=\"\"\n          className=\"flex min-h-8 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 rounded-md px-2 py-1.5 text-left leading-5 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/60 [&>svg]:shrink-0\"\n          onClick={(e) => {\n            e.stop",
+        "excerptStart": 2138,
+        "excerptEnd": 3252,
+        "originalChars": 5192,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/review-2026-10-12/notification-quality-round14.md",
+        "locator": "paragraph/18",
+        "kind": "markdown-paragraph",
+        "excerpt": "clock/sleep 接口是生产依赖 seam，fixture 没有改小速率窗口或 limit，也没有把普通通知的等待伪造为通知永久挂起。本次单一 blocker 的被测等待为 10 秒；真实时延取决于剩余窗口、此前耗时和前方积压，不能把“最多 10 秒”当成全局上界，也不能声称会无限等待。",
+        "excerptStart": 0,
+        "excerptEnd": 147,
+        "originalChars": 147,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-terminal-lifecycle-round14/notification-audit.md",
+        "locator": "paragraph/18",
+        "kind": "markdown-paragraph",
+        "excerpt": "clock/sleep 接口是生产依赖 seam，fixture 没有改小速率窗口或 limit，也没有把普通通知的等待伪造为通知永久挂起。本次单一 blocker 的被测等待为 10 秒；真实时延取决于剩余窗口、此前耗时和前方积压，不能把“最多 10 秒”当成全局上界，也不能声称会无限等待。",
+        "excerptStart": 0,
+        "excerptEnd": 147,
+        "originalChars": 147,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/superpowers/plans/2026-07-01-automation-cron-delivery-and-detail-ui.md",
+        "locator": "paragraph/239",
+        "kind": "markdown-paragraph",
+        "excerpt": "/** Relative time for cron next/last run — \"约 3 小时后\" / \"2 小时前\". `now` is\n *  injectable for testing. Returns \"—\" for null. Keys resolved via t(). */\nexport function fmtRelative(ms: number | null, t: T, now = Date.now()): string {\n  if (ms == null) return \"—\";\n  const diff = ms - now;\n  const future = diff >= 0;\n  const abs = Math.abs(diff);\n  const min = Math.round(abs / 60_000);\n  const hr = Math.round(abs / 3_600_000);\n  const day = Math.round(abs / 86_400_000);\n  if (min < 1) return t(\"auto.rel.now\" as TranslationKey);\n  if (min < 60) return t((future ? \"auto.rel.inMinutes\" : \"auto.rel.minutesAgo\") as TranslationKey, { n: min });\n  if (hr < 24) return t((future ? \"auto.rel.inHours\" : \"auto.rel.hoursAgo\") as TranslationKey, { n: hr });\n  return t((",
+        "excerptStart": 0,
+        "excerptEnd": 760,
+        "originalChars": 846,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/todo/operation-ledger-retention-delivery.md",
+        "locator": "paragraph/22",
+        "kind": "markdown-paragraph",
+        "excerpt": "每次最终组合验收生成 `native-receipt.json`，记录实际 Node 路径／hash／版本、父子 PID、\n容量矩阵字节、七次桶内容读取、所有 SIGKILL 边界与锁内耗时。崩溃后等待原 10 秒 stale 的时间\n不算锁内耗时；guard 保持单次锁内小于 5 秒，不放宽原 stale。实际恢复正文矩阵为\n536,870,912 B／768 槽／384 ID，无稀疏文件或正文删除。旧源码验收日志中的\n`repairRequired:true` 仅描述修复前的 verification 提交窗口，最终组合要求该安全覆盖窗口可恢复。\n实测耗时不代表任意硬件的延迟 SLA。",
+        "excerptStart": 0,
+        "excerptEnd": 298,
+        "originalChars": 298,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/todo/pet-work-reliability-audit-2026-09-20.md",
+        "locator": "paragraph/12",
+        "kind": "markdown-paragraph",
+        "excerpt": "| ID | 具体问题与证据 | 分类 / 确定性 | 修复与验收 | 状态 |\n| --- | --- | --- | --- | --- |\n| R1 | MCP 固定 15 秒握手期限。9 月 19 日相关失败约 17.02–17.10 秒（包含清理）；旧任务成功约 6.78 秒，另一普通工作目录成功约 3.48 秒。 | 代码期限和失败已确认；当时为什么慢不能唯一归因。 | 可配置期限；记录 spawn/首响应/握手阶段与耗时；仅对初始化超时有界重试，清理完成后才重试。覆盖恢复、非超时不重试、取消和进程清理。 | 已实现，回归验证见下文 |\n| R2 | 本地插件使用 `npx -y …@latest`，运行目录继承项目 cwd。当前离线依赖扫描在本项目约 2.35 秒、空项目约 0.005 秒；历史 npm 日志已轮转。 | 冷启动与依赖扫描是风险因素，不能当作历史 17 秒的唯一原因。 | 文档给出固定版本、预安装及直接入口建议；不自动改用户全局插件、不把 Chrome 特例写入 core。 | 部署建议已记录；本机全局插件保持原配置 |\n| R3 | MCP 失败只发 notification；模型继续运行却缺少可用能力故障原因。Skill 可返回正常教程，易让模型误以为对应工具在线。 | 已确认。 | 当前 run 注入受控故障摘要；Skill/发现工具读取当前 scope 健康状态，恢复后清空；不输出敏感 stderr/env/URL。 | 已实现，回归验证见下文 |\n| R4 | 会话候选主要提供初始标题。旧任务标题仍是早期目标，虽已长期执行同一飞书操作，被 Mimi 当作另一任务。此次委派前没有进一步读取相关旧会话。 | 代码和轨迹已确认。 | 候选补最近真实用户目标和结果；标明标题可能陈旧；重试/续办先查询、描述，再决定复用。摘要有界且属于不可信数据。 | 已实现，回归验证见下文 |\n| R5 | 自动收尾公开空 reusableSessions，拒绝复用，并不传 targetSessionId；因此第一任务部分完成后第二任务必然新建。续跑参数缺证据时还会静默丢弃 session_id，Host 错误分支也退回新建。 | 已确认的核心衔接缺陷。 | 自动续办绑定原任务 sessionId/workspace；保留原始目标、约束和最新 checkpoint。显式续跑无效必须返回错误，不准静默新建。覆盖不存在/忙碌/跨工作区/启动失败反馈。 | 已实现，回归验证见下文 |\n| R6 | 首次新任务到 100 轮，被系统要求只能写最终总结；",
+        "excerptStart": 0,
+        "excerptEnd": 1098,
+        "originalChars": 1791,
+        "excerptTruncated": true
+      }
+    ]
+  }
+}

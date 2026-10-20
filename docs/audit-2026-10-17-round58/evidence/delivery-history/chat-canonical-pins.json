@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-10-17T19:28:00.580534+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round11/findings.json",
+      "bytes": 1542,
+      "sha256": "623dceaf7d194fb747529ffdd59994416111d78f5ba43925a505c8a7d93a1aa8",
+      "beforeRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-findings.json",
+      "bytes": 3130,
+      "sha256": "b5867052aeb00ce829b4ba4c2244d2abcebdf36f9acf669a6e255b5ec898f06b",
+      "beforeRead": true
+    }
+  ],
+  "productFiles": []
+}

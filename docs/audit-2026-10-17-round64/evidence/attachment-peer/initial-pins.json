@@ -1,0 +1,47 @@
+{
+  "rootReportedBaseline": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "GitCertified": false,
+  "instructionReuse": "CODESHELL and AGENTS sameSHA previously read; no new instruction body",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinnedAtUTC": "2026-10-17T21:11:31.333540+00:00",
+      "timing": "before own prep176 body/navigation"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinnedAtUTC": "2026-10-17T21:11:31.334363+00:00",
+      "timing": "before own prep176 body/navigation"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+      "bytes": 3358,
+      "sha256": "abcae4504ba63806cdcdac1d1395d8dbd882a1b9e535d18936c8d3652dcd5185",
+      "lines": 87,
+      "pinnedAtUTC": "2026-10-17T21:11:31.334647+00:00",
+      "timing": "before own prep176 body/navigation"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log",
+      "bytes": 517,
+      "sha256": "7f7c6c3006954a915d44611977ec8a19b365ecd4f4936c26b416509a2e2add69",
+      "lines": 11,
+      "pinnedAtUTC": "2026-10-17T21:11:31.337249+00:00",
+      "timing": "before own prep176 body/navigation"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first-exit.json",
+      "bytes": 343,
+      "sha256": "12dbce4fbd1fce26b41b983ce5d739ba7c1c1814179bbc1b9d70f1065c4bf7d9",
+      "lines": 13,
+      "pinnedAtUTC": "2026-10-17T21:11:31.339234+00:00",
+      "timing": "before own prep176 body/navigation"
+    }
+  ]
+}

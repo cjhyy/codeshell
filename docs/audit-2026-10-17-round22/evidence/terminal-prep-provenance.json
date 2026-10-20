@@ -1,0 +1,55 @@
+{
+  "provenance": [
+    {
+      "source": "/tmp/codeshell-audit-round22-terminal-ui-frontier/proposal.json",
+      "copy": "evidence/terminal-prep-proposal.json",
+      "bytes": 6048,
+      "sha256": "206a579cd89c2c1ef487b6f8565b3ca425d3c8267c0b784ae8340d8bf648ca8d",
+      "copyModified": false
+    },
+    {
+      "source": "/tmp/codeshell-audit-round22-terminal-ui-frontier/sources.json",
+      "copy": "evidence/terminal-prep-sources.json",
+      "bytes": 2900,
+      "sha256": "4c23e045b584aaf7bcc3617db782b4077e6324c707f5be83c274e4d3da7a90d5",
+      "copyModified": false
+    },
+    {
+      "source": "/tmp/codeshell-audit-round22-terminal-ui-frontier/selected-history.json",
+      "copy": "evidence/terminal-prep-selected-history.json",
+      "bytes": 2198,
+      "sha256": "36c7adee8ea4a386d913ef156b67b03e75801088ef648ae73e2a95b47fba32cb",
+      "copyModified": false
+    }
+  ],
+  "oldSource": "docs/archive/review-2026-05-30/findings.json",
+  "oldSourceSha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+  "selectedRecords": [
+    {
+      "location": "$[161]",
+      "value": {
+        "file": "packages/tui/src/cli/output/terminal-ui.ts",
+        "line": "157-178",
+        "category": "simplify",
+        "severity": "low",
+        "confidence": "high",
+        "title": "Duplicate formatToolArgs function definition",
+        "detail": "terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.",
+        "fix": "Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module."
+      }
+    },
+    {
+      "location": "$[207]",
+      "value": {
+        "file": "packages/tui/src/ui/components/CodeBlock.tsx",
+        "line": "28,41",
+        "category": "correctness",
+        "severity": "medium",
+        "confidence": "high",
+        "title": "Inconsistent border width calculations in code block",
+        "detail": "Line 28 creates a top border with `Math.max(0, 40 - language.length)` padding to aim for ~40 characters, but line 41 creates the bottom border with a hardcoded `44` repeat count. These don't align—the borders won't be the same width, especially when language names are longer. The top border is also too short to align with the bottom.",
+        "fix": "Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width."
+      }
+    }
+  ]
+}

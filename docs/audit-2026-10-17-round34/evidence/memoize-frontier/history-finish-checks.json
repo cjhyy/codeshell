@@ -1,0 +1,12 @@
+{
+  "checkedUTC": "2026-10-17T12:24:05.436695+00:00",
+  "firstHistoryStartedUTC": "2026-10-17T12:22:00.956017+00:00",
+  "firstHistoryCompletedUTC": "2026-10-17T12:22:10.600156+00:00",
+  "inventoryRows": 2988,
+  "unchangedRows": 2988,
+  "changed": [],
+  "firstSnapshotUnmodified": true,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "note": "Byte comparison only. First dated history is not overwritten. Release document drift, if present, requires separate first diagnostic and dated delta, not a silently refreshed baseline."
+}

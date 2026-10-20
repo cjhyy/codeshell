@@ -303,6 +303,7 @@ export function MemoryStoreView({
   presentation = "default",
   onDirtyChange,
   onSavingChange,
+  confirmDialog,
 }: {
   level: MemoryLevel;
   cwd?: string;
@@ -310,8 +311,10 @@ export function MemoryStoreView({
   presentation?: "default" | "profile";
   onDirtyChange?: (dirty: boolean) => void;
   onSavingChange?: (saving: boolean) => void;
+  confirmDialog?: ReturnType<typeof useConfirm>;
 }) {
-  const confirm = useConfirm();
+  const defaultConfirm = useConfirm();
+  const confirm = confirmDialog ?? defaultConfirm;
   const { t } = useT();
   const [scope, setScope] = useState<MemoryScope>("user");
   // Seed from the last-loaded snapshot (settingsCache) so a remount (tab
@@ -332,6 +335,7 @@ export function MemoryStoreView({
   const [draftBaseline, setDraftBaseline] = useState<SaveMemoryInput | null>(null);
   const [saving, setSaving] = useState(false);
   const saveLock = React.useRef(false);
+  const storeGeneration = React.useRef(0);
   const refreshGeneration = React.useRef(0);
   const entryReadGeneration = React.useRef(0);
   const [error, setError] = useState<string | null>(null);
@@ -410,6 +414,7 @@ export function MemoryStoreView({
     setCleanupReviewOpen(false);
     setCleanupSelected(new Set());
     return () => {
+      storeGeneration.current += 1;
       refreshGeneration.current += 1;
       entryReadGeneration.current += 1;
     };
@@ -510,6 +515,7 @@ export function MemoryStoreView({
   const startEdit = async (): Promise<void> => {
     if (!selected) return;
     if (!(await confirmDiscardDraft())) return;
+    entryReadGeneration.current += 1;
     setPromotion(null);
     const next = buildEditDraft(selected, level, scope, cwd, profileName);
     setDrafting(true);
@@ -678,6 +684,9 @@ export function MemoryStoreView({
   /** Pin/unpin = re-save with the flag flipped (content fetched on demand). */
   const togglePin = async (entry: RendererMemoryEntry): Promise<void> => {
     if (saving) return;
+    // Complete the original pin, but keep its UI effects within this store visit.
+    const generation = storeGeneration.current;
+    const selectionGeneration = entryReadGeneration.current;
     setError(null);
     try {
       const full = await window.codeshell.readMemory(level, scope, entry.name, cwd, profileName);
@@ -685,9 +694,17 @@ export function MemoryStoreView({
       await window.codeshell.saveMemory(
         buildPinSaveInput(full, !entry.pinned, level, scope, cwd, profileName),
       );
+      if (generation !== storeGeneration.current) return;
       await refresh();
-      if (selected?.name === entry.name) await openEntry(entry.name);
+      if (generation !== storeGeneration.current) return;
+      if (
+        !drafting &&
+        selectionGeneration === entryReadGeneration.current &&
+        selected?.name === entry.name
+      )
+        await openEntry(entry.name);
     } catch (e: unknown) {
+      if (generation !== storeGeneration.current) return;
       setError(String(e instanceof Error ? e.message : e));
     }
   };
@@ -905,6 +922,7 @@ export function MemoryStoreView({
         {/* min-h-0 + the bounded grid height above let this list scroll on its own
             instead of growing the whole panel (which left it without a scrollbar). */}
         <ul
+          data-dialog-scroll={profilePresentation ? true : undefined}
           className={cn(
             "flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2",
             profilePresentation && "rounded-xl border-border/70 bg-muted/10 p-2.5",
@@ -1003,6 +1021,7 @@ export function MemoryStoreView({
         </ul>
 
         <div
+          data-dialog-scroll={profilePresentation ? true : undefined}
           className={cn(
             "min-h-0 overflow-y-auto rounded-md border p-3",
             profilePresentation && "rounded-xl border-border/70 bg-background p-4",
@@ -1020,7 +1039,10 @@ export function MemoryStoreView({
             <ViewEntry
               entry={selected}
               onEdit={() => void startEdit()}
-              onClose={() => setSelected(null)}
+              onClose={() => {
+                entryReadGeneration.current += 1;
+                setSelected(null);
+              }}
               onPin={() => void togglePin(selected)}
               onDelete={() => void removeEntry(selected.name)}
               onPromote={

@@ -1,0 +1,572 @@
+{
+  "startedUTC": "2026-10-17T15:21:23.210093+00:00",
+  "finishedUTC": "2026-10-17T15:21:26.307781+00:00",
+  "inventoryCount": 4088,
+  "scopeInheritedFrom": "history.json",
+  "method": "Literal ASCII query terms over lowercased MD and recursive JSON string values; keys not searched; cap30; bounded snippets not semantic exhaustiveness",
+  "queries": {
+    "shell-epoch": {
+      "hits": 33,
+      "cap": 30,
+      "retained": 30
+    },
+    "shell-summary": {
+      "hits": 29,
+      "cap": 30,
+      "retained": 29
+    },
+    "activity-latch": {
+      "hits": 0,
+      "cap": 30,
+      "retained": 0
+    }
+  },
+  "driftFromInitial": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "initialSha256": "f654cd5e3acdacf39eb2156514322d048d5ea1d548daad46fd9504060d7f470e",
+      "querySha256": "1ae146ac477f14887a403e670128521c15ee47b23e7f97ab1148c7fcca0a05f3",
+      "initialBytes": 212262,
+      "queryBytes": 219241
+    }
+  ],
+  "parseErrors": [],
+  "hits": {
+    "shell-epoch": [
+      {
+        "path": "docs/architecture/11-feature-inventory.md",
+        "locator": "markdown-text",
+        "valueChars": 41296,
+        "contextStart": 12019,
+        "contextEnd": 13089,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "/hits/file_byte_label/8/snippet",
+        "valueChars": 372,
+        "contextStart": 138,
+        "contextEnd": 372,
+        "text": "oolCard`, `AgentToolCard`, `GenericToolCard`):\n\n- [ ] Open the file. Locate the `Props` interface (or `interface Props { ... }` definition).\n- [ ] Add `turnEpoch?: number;` to Props.\n- [ ] Locate where it instantiates `<ToolCardShell ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "/hits/file_byte_label/10/snippet",
+        "valueChars": 372,
+        "contextStart": 0,
+        "contextEnd": 372,
+        "text": "te the function signature and ToolCardShell call (line 14 and lines 86-94):\n\n```tsx\nexport function FileToolCard({ message, onSelect, selected, variant, turnEpoch }: Props) {\n  // ... existing logic unchanged ...\n  return (\n    <ToolCardShell\n      message={message}\n      summary={summary}\n      details={details}\n      onSelect={onSelect}\n      selected={selected}\n     ",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "locator": "/hits/0/text",
+        "valueChars": 290,
+        "contextStart": 19,
+        "contextEnd": 290,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "locator": "/hits/130/text",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/exact/47/excerpt",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/0/excerpt",
+        "valueChars": 290,
+        "contextStart": 19,
+        "contextEnd": 290,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/18/excerpt",
+        "valueChars": 290,
+        "contextStart": 19,
+        "contextEnd": 290,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/44/excerpt",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/45/excerpt",
+        "valueChars": 396,
+        "contextStart": 26,
+        "contextEnd": 396,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/191/excerpt",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/192/excerpt",
+        "valueChars": 396,
+        "contextStart": 26,
+        "contextEnd": 396,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+        "locator": "/hits/aggregation-snapshot/27/context",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+        "locator": "/hits/aggregation-snapshot/131/context",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+        "locator": "/hits/aggregation-snapshot/27/excerpt",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/26/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/31/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/32/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/33/excerpt",
+        "valueChars": 396,
+        "contextStart": 26,
+        "contextEnd": 396,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/34/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/35/excerpt",
+        "valueChars": 396,
+        "contextStart": 26,
+        "contextEnd": 396,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/36/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/37/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/38/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/45/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+        "locator": "/chatview/0/text",
+        "valueChars": 1300,
+        "contextStart": 594,
+        "contextEnd": 1300,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "locator": "/hits/source_path/0/context",
+        "valueChars": 1092,
+        "contextStart": 544,
+        "contextEnd": 1092,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `p",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "locator": "/hits/source_path/1/context",
+        "valueChars": 1092,
+        "contextStart": 495,
+        "contextEnd": 1092,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`p",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "locator": "/hits/source_filename/0/context",
+        "valueChars": 1062,
+        "contextStart": 514,
+        "contextEnd": 1062,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `p",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+        "locator": "/hits/source_filename/1/context",
+        "valueChars": 1062,
+        "contextStart": 465,
+        "contextEnd": 1062,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`p",
+        "wholeValueIncluded": false
+      }
+    ],
+    "shell-summary": [
+      {
+        "path": "docs/architecture/11-feature-inventory.md",
+        "locator": "markdown-text",
+        "valueChars": 41296,
+        "contextStart": 12019,
+        "contextEnd": 13089,
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "/hits/file_byte_label/10/snippet",
+        "valueChars": 372,
+        "contextStart": 0,
+        "contextEnd": 372,
+        "text": "te the function signature and ToolCardShell call (line 14 and lines 86-94):\n\n```tsx\nexport function FileToolCard({ message, onSelect, selected, variant, turnEpoch }: Props) {\n  // ... existing logic unchanged ...\n  return (\n    <ToolCardShell\n      message={message}\n      summary={summary}\n      details={details}\n      onSelect={onSelect}\n      selected={selected}\n     ",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+        "locator": "/hits/130/text",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "locator": "/hits/steering_queue/87/context",
+        "valueChars": 506,
+        "contextStart": 185,
+        "contextEnd": 506,
+        "text": "240–278验证动作终结与NEEDS_HUMAN，当前candidate仅补idle status和真实Panel反馈；不会重复已有保护。\n- Session删除清runtime/grants，childexit只清childscope；macOS窗口关闭后App活着、普通task还可以后台继续，不能只据主窗口关闭就要求全部parenttarget销毁。\n- BrowserToolCard的非runningsummary虽用“已…”，ToolCardShell对failed有errorbadge和展开结果，未把单句summary当独立问题。\n\n**未验证候选，不计finding：** parent原生Stop会settle Core",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "locator": "/hits/steering_queue/96/context",
+        "valueChars": 506,
+        "contextStart": 185,
+        "contextEnd": 506,
+        "text": "240–278验证动作终结与NEEDS_HUMAN，当前candidate仅补idle status和真实Panel反馈；不会重复已有保护。\n- Session删除清runtime/grants，childexit只清childscope；macOS窗口关闭后App活着、普通task还可以后台继续，不能只据主窗口关闭就要求全部parenttarget销毁。\n- BrowserToolCard的非runningsummary虽用“已…”，ToolCardShell对failed有errorbadge和展开结果，未把单句summary当独立问题。\n\n**未验证候选，不计finding：** parent原生Stop会settle Core",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/exact/47/excerpt",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/44/excerpt",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/45/excerpt",
+        "valueChars": 396,
+        "contextStart": 26,
+        "contextEnd": 396,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/191/excerpt",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "locator": "/matches/grouping/192/excerpt",
+        "valueChars": 396,
+        "contextStart": 26,
+        "contextEnd": 396,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+        "locator": "/hits/aggregation-snapshot/27/context",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+        "locator": "/hits/aggregation-snapshot/131/context",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+        "locator": "/hits/aggregation-snapshot/27/excerpt",
+        "valueChars": 476,
+        "contextStart": 106,
+        "contextEnd": 476,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/26/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/31/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/32/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/33/excerpt",
+        "valueChars": 396,
+        "contextStart": 26,
+        "contextEnd": 396,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/34/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/35/excerpt",
+        "valueChars": 396,
+        "contextStart": 26,
+        "contextEnd": 396,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/36/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/37/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/38/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "locator": "/hits/envelope-contract/45/excerpt",
+        "valueChars": 409,
+        "contextStart": 39,
+        "contextEnd": 409,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/browser-lifecycle-round21.md",
+        "locator": "markdown-text",
+        "valueChars": 9674,
+        "contextStart": 8206,
+        "contextEnd": 9276,
+        "text": "240–278验证动作终结与NEEDS_HUMAN，当前candidate仅补idle status和真实Panel反馈；不会重复已有保护。\n- Session删除清runtime/grants，childexit只清childscope；macOS窗口关闭后App活着、普通task还可以后台继续，不能只据主窗口关闭就要求全部parenttarget销毁。\n- BrowserToolCard的非runningsummary虽用“已…”，ToolCardShell对failed有errorbadge和展开结果，未把单句summary当独立问题。\n\n**未验证候选，不计finding：** parent原生Stop会settle Core pending browser request，而Main既派发的异步Browser dispatch没有per-request AbortSignal。尚未通过正式cancel/Host路由证明Stop后仍产生用户应被停止的实际动作，也未排除动作已提交、合法保留tasktarget以及人为Hostawait造成不可达时序。因此只留源码边界，不给优先级，不与B21-1合并。\n\n最终 `git status --short --untracked-files=no` 为空，未修改任何产品代码；未触碰父审主报告/automation/goal。本项已由主审正式收录R80/P3；下述原作者/子审记录保留候选阶段语境。\n\n## 主审双基线复现与收录\n\n作者latest的3/40运行不重复累计。主审复制冻结同源fixture至84740与a66f两个独立工作区，分别guarded执行 **1文件3测试40个Bun expect、Completed、0fail/skip**。两个源码SHA256均为上述ef376b42…；实际网络/子进程调用均0。通用增量1文件3测试，累计81文件243测试。只增加R80/P3，当前正式80=1P1/51P2/28P3。\n\n初始基线日志见[便携最终日志](reproductions/browser-lifecycle-round21/browser-lifecycle.test.tsx.log)，新快照见[独立归档日志](validation/latest-a66f4ef2/repro__browser-lifecycle-round21__browser-lifecycle.test.tsx.log)，双基线机器核对见[结果](validation",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-lifecycle-round21/codeshell-review-20261012-browser-lifecycle-round21-feasibility.md",
+        "locator": "markdown-text",
+        "valueChars": 1941,
+        "contextStart": 708,
+        "contextEnd": 1778,
+        "text": "S_HUMAN，禁止静默回落到另一目标；旧grant/epoch队列被拒绝已有tests。Panel按状态撤销/授权且action失败toast可见。\n- Chrome queued revoke/expire/disconnect/reconnect已有tests240–278，具体由实际action调用isCurrentGrant触发清理；不将已有阻断再算新缺陷。\n- BrowserToolCard虽使用“已操作”summary，但ToolCardShell failed状态有error badge，展开可读结果/错误；未据单句summary构造新问题。\n\n## 可行最小候选：idle Native断线仍显示“正在使用”\n\nChromeBackend.status150–173调用liveGrant550–564，仅TTL到期清grant；返回connected:false时仍返回granted，无error。实际ChromeNativeServer close166–174清client/拒绝pending，未通知Backend。extension service-worker65–75断线revokeAll，重连hello225–239也清grant；isCurrentGrant491–509明确将disconnected视为grant ended，因此不是断线仍可继续使用的设计。\n\nBrowserPanel618–623依据granted显示实际文案（i18n/panels201）“Browser Runtime 正在使用已登录的 Chrome 标签：{title}”，未读connected；按钮575–580仅给撤销。无新hello、无browser动作、TTL未过时，正常2秒status轮询不消除矛盾。显式撤销→连接→extension新授权可恢复，动作时会正确阻断，暂只建议窄P3候选，非安全越权/永久故障。\n\n最小fixture计划：实际ChromeBackend + 实际BrowserPanel/React/MiniDOM + actual preload及未改的Main status/begin/revoke回调；Native transport、窗口owner目录及Electron IPC为owned内存边界。正常从按钮生成code，再合法pairing.grant；idle transport断线后等实际轮询，断言DOM/实际status；对照显式撤销→新hello→按钮重新配对",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-lifecycle-round21/codeshell-review-20261012-browser-lifecycle-round21.md",
+        "locator": "markdown-text",
+        "valueChars": 8609,
+        "contextStart": 7997,
+        "contextEnd": 8609,
+        "text": "240–278验证动作终结与NEEDS_HUMAN，当前candidate仅补idle status和真实Panel反馈；不会重复已有保护。\n- Session删除清runtime/grants，childexit只清childscope；macOS窗口关闭后App活着、普通task还可以后台继续，不能只据主窗口关闭就要求全部parenttarget销毁。\n- BrowserToolCard的非runningsummary虽用“已…”，ToolCardShell对failed有errorbadge和展开结果，未把单句summary当独立问题。\n\n**未验证候选，不计finding：** parent原生Stop会settle Core pending browser request，而Main既派发的异步Browser dispatch没有per-request AbortSignal。尚未通过正式cancel/Host路由证明Stop后仍产生用户应被停止的实际动作，也未排除动作已提交、合法保留tasktarget以及人为Hostawait造成不可达时序。因此只留源码边界，不给优先级，不与B21-1合并。\n\n最终 `git status --short --untracked-files=no` 为空，未修改任何产品代码；未触碰父审主报告/automation/goal。本候选编号和最终计数由父审决定。\n",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "locator": "markdown-text",
+        "valueChars": 53854,
+        "contextStart": 675,
+        "contextEnd": 1745,
+        "text": " the last user message to the end (including subagent `toolCalls`) to build `FileEditEntry[]`. `applyStreamEvent`'s `turn_complete` branch appends a new `FilesChangedSummaryMessage` and increments `turnEpoch`. Existing `ToolCardShell` and `ToolGroupCard` accept a `turnEpoch` prop and reset their `open` state via `useEffect` when it changes. No engine/core/IPC touched.\n\n**Tech Stack:** React 18 + TypeScript, `bun:test` for unit tests, `react-dom/server.renderToStaticMarkup` for renderer snapshot tests, esbuild + Vite for the desktop build, `lucide-react` icons (ChevronRight/Down already in use).\n\n**Spec reference:** `docs/superpowers/specs/2026-05-28-electron-turn-summary-design.md`\n\n**Working directory assumption:** All paths are relative to repo root `/Users/admin/Documents/个人学习/代码学习/codeshell`. Run all commands from there.\n\n---\n\n## Task 1: Empty-message guard in MessageStream\n\n**Files:**\n- Modify: `packages/desktop/src/renderer/MessageStream.tsx:92-106`\n- Test: `packages/desktop/src/renderer/MessageStream.test.tsx` (new — does not exist yet; create it)",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-28-electron-turn-summary-design.md",
+        "locator": "markdown-text",
+        "valueChars": 9562,
+        "contextStart": 574,
+        "contextEnd": 1644,
+        "text": "folded card at the end of each turn (\"已编辑 13 个文件 +1,328 -98\") with per-file rows. We have nothing equivalent — the user has to scroll a long tool-bubble run to know what changed.\n3. **Tool cards stay expanded forever**. ToolCardShell defaults to collapsed, but once the user expands a card during streaming, it stays open across turns. Past-turn details bury the current conversation.\n\nAll three are renderer-only fixes. No engine/core changes.\n\n## Goals\n\n- Hide empty streaming assistant messages until the first `text_delta` arrives.\n- After each `turn_complete`, append a single Codex-style \"files changed\" card summarizing this turn's `Edit` / `Write` / `NotebookEdit` calls (including those made by subagents).\n- After each `turn_complete`, force-collapse every `ToolCard` and `ToolGroupCard` so prior detail folds back out of the way.\n\n## Non-Goals\n\n- Source-of-truth file diffs. We estimate `+X -Y` from tool args (line counts of `new_string` vs `old_string` etc.), not `git diff`. Approximate is fine — matches Codex behavior.\n- Per-turn diffing across the whole",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "locator": "markdown-text",
+        "valueChars": 219135,
+        "contextStart": 86967,
+        "contextEnd": 88037,
+        "text": "bined image/Unicode shard passes 65 tests/163 assertions across seven\nfiles, and Desktop build plus all 14 workspace typechecks pass again on the\ncombined source. That command named a nonexistent Shell test; the actual\n`ToolCardShell.test.tsx` runs separately and is not counted in its 65. Neither\nUnicode unit checks nor the previous CI10 native screenshots are a native\nverification of this new summary change. Web and legacy Mobile use separate\nrenderers and do not import this helper. Original audit rounds remain frozen;\nother recorded findings are not included in these repairs.\n\nArtifacts are downloaded as ZIPs under the private operation evidence root,\nwith individual reports inspected directly. First-failure Main logs missing from\nthe early Ubuntu memory artifact were a coverage gap; subsequent runs explicitly\nretain them. A later successful launch does not classify that earlier GC failure.\n\nRun `39008016212` has finished with a failed overall matrix, separate from its\npassing Web/macOS jobs. The Web ZIP's child-state and annotation receipts bind\nclean",
+        "wholeValueIncluded": false
+      }
+    ],
+    "activity-latch": []
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "objects": [
+    {
+      "historyPath": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "pointer": "/files/10",
+      "role": "same-SHA primary full exclusion",
+      "historyInventoryBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "bytes": 6963,
+        "sha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d"
+      },
+      "dedicatedMetadataReadUTC": "2026-10-17T16:17:01.784198+00:00",
+      "currentDocumentBytes": 6963,
+      "currentDocumentSha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+      "matchesBeforeReadInventoryPin": true,
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+      "pointer": "/files/1",
+      "role": "same-SHA fallback canonical full exclusion",
+      "historyInventoryBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+        "bytes": 4134,
+        "sha256": "27902497dc9dcf82db3500c77d63e84b371c9161ef7af9ed028de4b100915a41"
+      },
+      "dedicatedMetadataReadUTC": "2026-10-17T16:17:01.786395+00:00",
+      "currentDocumentBytes": 4134,
+      "currentDocumentSha256": "27902497dc9dcf82db3500c77d63e84b371c9161ef7af9ed028de4b100915a41",
+      "matchesBeforeReadInventoryPin": true,
+      "object": {
+        "path": "packages/server/src/mobile-remote/mobile-history.ts",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            41
+          ]
+        ],
+        "lineCount": 41,
+        "bytes": 1458,
+        "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+        "frozenSha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+        "matchesFrozen": true,
+        "note": "Actual zero-runtime-import leaf under owned callbacks only."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "pointer": "/files/12",
+      "role": "same-SHA fallback corroborating Root full",
+      "historyInventoryBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "bytes": 12586,
+        "sha256": "25cde34c621c86dbe1f4b7f1ff40934e09fd47a864b6f4d3b59c24c36c443dae"
+      },
+      "dedicatedMetadataReadUTC": "2026-10-17T16:17:01.787136+00:00",
+      "currentDocumentBytes": 12586,
+      "currentDocumentSha256": "25cde34c621c86dbe1f4b7f1ff40934e09fd47a864b6f4d3b59c24c36c443dae",
+      "matchesBeforeReadInventoryPin": true,
+      "object": {
+        "path": "packages/server/src/mobile-remote/mobile-history.ts",
+        "bytes": 1458,
+        "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+        "scope": "Full initial static by Root; Room lane owns ordinary reader projection controls.",
+        "lineCount": 41,
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "pointer": "/sources/5",
+      "role": "old-SHA whole-file control, does not bind current by itself",
+      "historyInventoryBeforeReadPin": {
+        "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "bytes": 5677,
+        "sha256": "a58f1b00f628f3304ad3cfca03b95bc287d061b15b9402a3ef9f8d8181abb07a"
+      },
+      "dedicatedMetadataReadUTC": "2026-10-17T16:17:01.787919+00:00",
+      "currentDocumentBytes": 5677,
+      "currentDocumentSha256": "a58f1b00f628f3304ad3cfca03b95bc287d061b15b9402a3ef9f8d8181abb07a",
+      "matchesBeforeReadInventoryPin": true,
+      "object": {
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "matchesFrozenGitBlobAtAudit": true,
+        "review": "whole-file"
+      }
+    }
+  ],
+  "scope": "Exact prior manifest objects, not current product body read. Source path and current source hashes were pinned before any product body; current product body remains zero."
+}

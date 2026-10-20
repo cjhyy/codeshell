@@ -1,0 +1,1 @@
+{"files": 3869, "stats": {"markdownFiles": 1391, "jsonFiles": 2478, "stringLeaves": 1255894, "scalarLeaves": 1896731}, "occurrenceCounts": {"dataset-editor": 13, "plugin-draft": 18, "active-ref-draft": 8}, "parseErrors": 0, "added": 96, "changed": 0, "removed": 0, "productRuns": 0}

@@ -1,0 +1,100 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "disposition": "bounded-negative-no-new-normal-root/init-contract-counterexample-established",
+  "normalChain": [
+    {
+      "source": "packages/coding/src/index.capability.ts",
+      "ranges": [
+        [
+          190,
+          199
+        ]
+      ],
+      "fact": "Definition registered to lspTool; adjacent enforcement flags excluded."
+    },
+    {
+      "source": "packages/coding/src/tools/lsp.ts",
+      "ranges": [
+        [
+          66,
+          91
+        ]
+      ],
+      "fact": "ctx.cwd determines manager; relative file resolves against cwd; extension chooses configured server; file URI uses pathToFileURL."
+    },
+    {
+      "source": "packages/coding/src/lsp/manager.ts",
+      "ranges": [
+        [
+          26,
+          32
+        ],
+        [
+          72,
+          83
+        ],
+        [
+          211,
+          234
+        ],
+        [
+          244,
+          278
+        ]
+      ],
+      "fact": "Per-root manager with its own server map; same root URI converted to client cwd and passed to initialize; lookup refreshes recency; deletion/teardown is explicit."
+    },
+    {
+      "source": "packages/coding/src/lsp/client.ts",
+      "ranges": [
+        [
+          68,
+          86
+        ]
+      ],
+      "fact": "initialize sends rootUri then initialized notification."
+    }
+  ],
+  "counterevidence": [
+    "rootUriToPath uses fileURLToPath; encoded-space root regression already fixed/normal in old R4, not a new URI bug.",
+    "Manager state is per-cwd, not one shared process-global client across workspaces. Same-root reuse/different-root isolation and recency/cap/deletion have explicit registry logic.",
+    "Tool invocation supplies cwd; ambiguous no-argument registry fallback is not this normal consumer.",
+    "Passive registry tests do not start a real server and therefore do not validate process initialization, readiness or active eviction."
+  ],
+  "oldCauseExclusions": [
+    {
+      "id": "CODING-R4-01",
+      "cause": "Encoded Location output formatter, distinct from already-fixed manager rootUri conversion; not rereported."
+    },
+    {
+      "id": "CODING-R4-02",
+      "cause": "Repeated diagnostics didOpen without didChange/didClose; not expanded or rerun."
+    },
+    {
+      "id": "C4 / N15",
+      "cause": "Failed startup/client ownership; old confirmed cause not rereported."
+    },
+    {
+      "id": "C5 / N16",
+      "cause": "Dead client isAlive and fixed 2-second concurrent readiness wait; old confirmed cause not rereported."
+    },
+    {
+      "id": "R4 static languageId candidate",
+      "cause": "JS/JSX/SCSS/LESS mapped to configured language; kept old candidate, no promotion or real server claim."
+    }
+  ],
+  "permanentSkip": "N12/old failed startup/readiness/native fixtures remain skipped; static source reading is not a substituted dynamic verification.",
+  "limitations": [
+    "No actual server availability/init/exit/shutdown/clock or platform operation was exercised.",
+    "No claim of overall correct LSP lifecycle, authority, executable resolution or filesystem custody.",
+    "Old and incidental source overlap is retained; full/selected here records this reading, not unique first-time review.",
+    "No independent enforcement chain audited; registration flags are not permission conclusions."
+  ]
+}

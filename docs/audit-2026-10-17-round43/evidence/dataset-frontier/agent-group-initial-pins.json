@@ -1,0 +1,26 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "bytes": 4292,
+      "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "lineCount": 133,
+      "pinTimeUTC": "2026-10-17T14:32:07.696078+00:00",
+      "coverage": "hash-only metadata choice before body read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/agentGroup.test.ts",
+      "bytes": 3226,
+      "sha256": "24772e53362679c111fa2112109f9dc28a95dbc28a86a1739d5fdb90d3a401d3",
+      "lineCount": 96,
+      "pinTimeUTC": "2026-10-17T14:32:07.696078+00:00",
+      "coverage": "hash-only metadata choice before body read"
+    }
+  ],
+  "priorMetadataExclusions": [
+    "toolDisplay oldR14related/unused-fixture boundary",
+    "cron-expr currentSHA R23explicitfull/TIME1",
+    "tool-output-budget R21existingrelated plus full displayed",
+    "notes and patch-orphaned-tools originalR4 review=full overrides R28pin-only label"
+  ]
+}

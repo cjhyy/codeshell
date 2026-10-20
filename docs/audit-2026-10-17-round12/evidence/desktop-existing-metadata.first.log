@@ -1,0 +1,36 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/renderer/keyboardShortcutHints.test.ts:
+(pass) platform keyboard shortcut labels > formats darwin text and compact session hints
+(pass) platform keyboard shortcut labels > formats win32 text and compact session hints
+(pass) platform keyboard shortcut labels > formats linux text and compact session hints
+(pass) platform keyboard shortcut labels > uses Control when the host does not advertise macOS
+
+packages/desktop/src/renderer/tool-cards/utils.test.ts:
+(pass) parsedArgs > prefers argsLive over the empty tool_use_start snapshot (live view) [0.09ms]
+(pass) parsedArgs > falls back to parsing message.args when no argsLive (replay) [0.05ms]
+(pass) parsedArgs > returns {} for an unparseable args string [0.24ms]
+(pass) classifyBashLines (desktop copy) > plain stdout is not error
+(pass) classifyBashLines (desktop copy) > Exit code status line is error, body normal [0.15ms]
+(pass) classifyBashLines (desktop copy) > Killed-by-signal line is error
+(pass) classifyBashLines (desktop copy) > STDERR marker starts a sticky error region
+(pass) classifyBashLines (desktop copy) > a line merely containing STDERR: is not a marker
+(pass) classifyBashLines (desktop copy) > text is preserved verbatim
+
+packages/desktop/src/renderer/diff/reviewScope.test.ts:
+(pass) isRangeScope > committed and branch are range scopes [0.27ms]
+(pass) isRangeScope > working-tree scopes are not range scopes [0.03ms]
+(pass) isStaged / isUnstaged > staged X-slot [0.01ms]
+(pass) isStaged / isUnstaged > unstaged Y-slot (untracked counts)
+(pass) filterByScope > all → everything [0.02ms]
+(pass) filterByScope > staged → only X-slot changes [0.05ms]
+(pass) filterByScope > unstaged → only Y-slot changes (incl untracked) [0.01ms]
+(pass) filterByScope > turn → only the caller's files (real status codes preserved) [0.06ms]
+(pass) filterByScope > turn with ./ and trailing-slash normalization
+(pass) filterByScope > turn with empty file set → falls back to all (don't show nothing)
+
+ 23 pass
+ 0 fail
+ 39 expect() calls
+Ran 23 tests across 3 files. [53.00ms]
+Completed Bun shard: 23 tests, 0 skipped; 0 failures.

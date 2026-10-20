@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T17:32:43.217557+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "bytes": 910,
+      "lines": 26,
+      "sha256": "433814c6c51d8deebbf17d985ca2009a6bab10930a21929e64594c7c646f21b1",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

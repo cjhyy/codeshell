@@ -1,0 +1,19 @@
+1150:     const hasAnchors = anchors.length > 0;
+1151:     const hasLocalFiles = localFilePaths.length > 0;
+1152:     if (!text && !hasImages && !hasAnchors && !hasLocalFiles && remoteFiles.length === 0) return;
+1153:     const compactCommand = slashCommands.find(
+1154:       (command): command is Extract<SlashCommandItem, { kind: "builtin" }> =>
+1155:         command.kind === "builtin" && command.name === "/compact",
+1156:     );
+1157:     if (text === "/compact" && !hasImages && !hasAnchors && !hasLocalFiles && compactCommand) {
+1158:       executeSlashCommand(compactCommand);
+1159:       return;
+1160:     }
+1161:     // Block send when there are images but the active model can't accept
+1162:     // them. The UI shows an inline banner with options (switch model /
+1163:     // remove images) so this branch is just a safety net.
+1164:     if (hasImages && !activeSupportsVision) {
+1165:       setAttachmentError(t("chat.composer.visionUnsupportedSend"));
+1166:       return;
+1167:     }
+1168:     if (hasImages && attachments.some((img) => !img.path)) {

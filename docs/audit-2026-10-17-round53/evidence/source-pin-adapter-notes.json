@@ -1,0 +1,20 @@
+{
+  "missingDeclaredByteCounts": [],
+  "nonReadingGateAssertions": [
+    {
+      "manifest": "web-format-gate/source-manifest.json",
+      "path": "packages/web/src/lib/format.ts",
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "note": "109 duplicate old-full decision bound to explicit hash-only row and empty current semantic files. No newProductSemanticLines field existed; not fabricated or counted as an additional source reading."
+    },
+    {
+      "manifest": "web-format-gate/source-manifest.json",
+      "path": "packages/web/src/lib/userMessageDisplay.ts",
+      "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+      "note": "109 duplicate old-full decision bound to explicit hash-only row and empty current semantic files. No newProductSemanticLines field existed; not fabricated or counted as an additional source reading."
+    }
+  ],
+  "unboundNavigationReferences": [],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows.",
+  "productRuns": 0
+}

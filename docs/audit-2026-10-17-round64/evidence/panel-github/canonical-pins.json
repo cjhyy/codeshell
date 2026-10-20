@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pinnedAtUTC": "2026-10-17T21:08:10.541090+00:00",
+      "timing": "before own object parsing"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/source-manifest.json",
+      "bytes": 21325,
+      "sha256": "eb2b52b21f7a9402be3a879a3cfd5a168e5eaf2ebb09ad33c25b25793e7eebed",
+      "pinnedAtUTC": "2026-10-17T21:08:17.044424+00:00",
+      "timing": "before own object parsing"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "pinnedAtUTC": "2026-10-17T21:08:17.047598+00:00",
+      "timing": "before own object parsing"
+    }
+  ]
+}

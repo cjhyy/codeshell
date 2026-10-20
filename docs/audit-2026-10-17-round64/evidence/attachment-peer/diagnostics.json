@@ -1,0 +1,64 @@
+{
+  "ownMetadataFailures": 0,
+  "ownProductFailures": 0,
+  "sourceDisplayTruncations": [
+    {
+      "sourceDisplays": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "toolOriginalTokens": 2244,
+      "toolOutputLines": 203,
+      "savedRawDisplaysBeforePrint": true,
+      "clippedArea": "preload source-display10 one declaration line946; independently recaptured941–946 as source-display13 before reporting",
+      "note": "All displayed source files saved before print; all other submitted target text visible in original. Not a product run/retry."
+    }
+  ],
+  "filenameInventoryScope": "Initial desktop/evidence inventory did not contain server attachment-service; subsequent packages filename inventory found canonical service/test. No missing-path execution or guessed source read.",
+  "notReadOrRun": "Filename-only fixture/browser test paths incidentally listed; their bodies not read or executed. No read of author mutable report or author scripts.",
+  "metadataNormalization": {
+    "atUTC": "2026-10-17T21:15:14.624606+00:00",
+    "trigger": "Root requested task-created uncommitted64 validation evidence separated from ordinary source files",
+    "firstArtifactsPreserved": [
+      {
+        "path": "source-manifest.first.json",
+        "bytes": 34234,
+        "sha256": "cea90d7619cf68580bbc1ca2d5a60d31e4adb7a9a6997126b52c9b2e4474d2c9"
+      },
+      {
+        "path": "ending-checks.first.json",
+        "bytes": 5220,
+        "sha256": "55b756de970f67357bcd3aa97a77b284b38faf113298e31d42125ed061e2e8e9"
+      },
+      {
+        "path": "report.first.md",
+        "bytes": 3394,
+        "sha256": "bf099f62c7a979207d46e5d54bdc4f578ebe2a6febb6e52ff0b19521b3cde4a6"
+      },
+      {
+        "path": "metadata-checks.first.json",
+        "bytes": 599,
+        "sha256": "d9d59af33678877f41ceee8f3b523b335e8c23110ceefccd53abf9d6e4637c47"
+      },
+      {
+        "path": "diagnostics.first.json",
+        "bytes": 978,
+        "sha256": "03b1581a15e1156db98ab6d6aa21dd69ce9e256f206cd608859b9dc95dca1282"
+      },
+      {
+        "path": "reviewer-receipt.first.json",
+        "bytes": 8231,
+        "sha256": "1f6eedc4ae37ee4fd64a5f58c58b90786dc144084c98499ecbdb33e8d6dfa041"
+      },
+      {
+        "path": "finalize-metadata.first.py",
+        "bytes": 14369,
+        "sha256": "0f657feee55fd8c000e1c5afc1222f42fffdabc72cea3195b54976942fd8859c"
+      }
+    ],
+    "scope": "No product/candidate/source range or observed runtime change; own first metadata used explicit evidence-inspection rows but mixed files list, now validationArtifactInputs separate",
+    "productRereadOrRerun": 0
+  }
+}

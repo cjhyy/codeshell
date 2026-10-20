@@ -1,0 +1,68 @@
+[
+  {
+    "command": [
+      "rg",
+      "-n",
+      "filePath|cwd|getLSPManager|root|resolve|detectLSPServer|register|inputSchema",
+      "packages/coding/src/tools/lsp.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "6:import { getLSPManager } from \"../lsp/manager.js\";\n7:import { detectLSPServer } from \"../lsp/servers.js\";\n9:import { isAbsolute, resolve } from \"node:path\";\n40:  inputSchema: {\n73:  const cwd = ctx?.cwd ?? process.cwd();\n74:  const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);\n79:  const manager = getLSPManager(cwd);\n83:  const serverConfig = detectLSPServer(filePath);\n84:  if (!serverConfig) return `Error: No language server configured for ${filePath}`;\n91:  const uri = pathToFileURL(filePath).href;\n136:        const text = readFileSync(filePath, \"utf-8\");\n138:        const diagnostics = await new Promise<LspDiagnostic[] | undefined>((resolveWait) => {\n145:            resolveWait(value);\n188:        return `Symbols in ${filePath}:\\n${lines.join(\"\\n\")}`;\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "constructor|initialize|rootUri|workspace|shutdown|^  async|^  private",
+      "packages/coding/src/lsp/client.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "25:  private process: ChildProcess | undefined;\n26:  private nextId = 1;\n27:  private pending = new Map<\n36:  private buffer = Buffer.alloc(0);\n37:  private contentLength = -1;\n38:  private initialized = false;\n40:  constructor(\n48:  async start(): Promise<void> {\n68:  async initialize(rootUri: string): Promise<unknown> {\n69:    const result = await this.request(\"initialize\", {\n71:      rootUri,\n80:        workspace: {\n85:    await this.notify(\"initialized\", {});\n86:    this.initialized = true;\n90:  async request(method: string, params?: Record<string, unknown>): Promise<unknown> {\n122:  async notify(method: string, params?: Record<string, unknown>): Promise<void> {\n130:  async shutdown(): Promise<void> {\n133:      await this.request(\"shutdown\", {});\n151:    return this.initialized;\n158:  private handleData(data: Buffer): void {\n214:  private rejectAll(error: Error): void {\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "LSP|lsp|cwd",
+      "packages/coding/src/index.capability.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "13:import { lspTool, lspToolDef } from \"./tools/lsp.js\";\n158:        resolve: (args, cwd) => {\n163:            resolve(cwd, hunk.path),\n164:            ...(hunk.kind === \"update\" && hunk.movePath ? [resolve(cwd, hunk.movePath)] : []),\n192:      ...lspToolDef,\n199:    lspTool,\n202:      defaultPermissionRules: [{ tool: \"LSP\", decision: \"allow\" }],\n234:        \"lsp\",\n254:        ? [\"ApplyPatch\", \"Bash\", \"Read\", \"Grep\", \"LSP\", \"Glob\", \"Edit\", \"NotebookEdit\"]\n324:function notebookMutationTargets(args: Record<string, unknown>, cwd: string): readonly string[] {\n328:    ? [resolve(cwd, args.file_path)]\n335:    resolveTargets: (args: Record<string, unknown>, cwd: string) =>\n336:      typeof args.patch === \"string\" ? patchBackupTargets(args.patch, cwd) : [],\n337:    resolveDiffTargets: (args: Record<string, unknown>, cwd: string) =>\n338:      typeof args.patch === \"string\" ? patchDiffTargets(args.patch, cwd) : [],\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "^describe|^  (it|test)|getLSPManager|initializeLSPManager|shutdown",
+      "packages/coding/src/lsp/manager.test.ts"
+    ],
+    "exitCode": 1,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "^describe|^  (it|test)|getLSPManager|initializeLSPManager|shutdown",
+      "packages/coding/src/lsp/manager-lifecycle.test.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "4:// `initializeLSPManager()` — which NO host ever called. The `LSP` tool was\n5:// registered and advertised to the agent, but its first act is `getLSPManager()`,\n17:  getLSPManager,\n18:  initializeLSPManager,\n19:  shutdownAllLSPManagers,\n20:  shutdownLSPManager,\n31:  await shutdownAllLSPManagers();\n35:describe(\"LSP manager registry\", () => {\n36:  test(\"getLSPManager creates one on first use instead of returning undefined\", async () => {\n38:    // initializeLSPManager().\n40:    expect(getLSPManager(root, { create: false })).toBeUndefined();\n41:    expect(getLSPManager(root)).toBeDefined();\n44:  test(\"the same root reuses one manager\", () => {\n46:    const first = getLSPManager(root);\n48:    expect(getLSPManager(root)).toBe(first!);\n49:    expect(initializeLSPManager(root)).toBe(first!);\n52:  test(\"different roots get different managers\", () => {\n56:    expect(getLSPManager(a)).not.toBe(getLSPManager(b));\n59:  test(\"create:false observes without spawning\", () => {\n61:    expect(getLSPManager(root, { create: false })).toBeUndefined();\n63:    expect(getLSPManager(root, { create: false })).toBeUndefined();\n66:  test(\"shutdown forgets the workspace so a later call builds a fresh one\", async () => {\n68:    const first = getLSPManager(root);\n69:    await shutdownLSPManager(root);\n70:    expect(getLSPManager(root, { create: false })).toBeUndefined();\n71:    expect(getLSPManager(root)).not.toBe(first);\n74:  test(\"shutting down an unknown workspace is a no-op\", async () => {\n75:    await shutdownLSPManager(join(tmpdir(), \"never-registered\"));\n78:  test(\"the no-argument form resolves only when unambiguous\", async () => {\n80:    expect(getLSPManager()).toBeUndefined();\n81:    const only = getLSPManager(workspace());\n82:    expect(getLSPManager()).toBe(only);\n84:    getLSPManager(workspace());\n85:    expect(getLSPManager()).toBeUndefined();\n88:  test(\"the live workspace set is bounded — oldest are evicted\", () => {\n93:    for (const root of roots) getLSPManager(root);\n95:    const live = roots.filter((root) => getLSPManager(root, { create: false }) !== undefined);\n98:    expect(getLSPManager(roots[5]!, { create: false })).toBeDefined();\n99:    expect(getLSPManager(roots[0]!, { create: false })).toBeUndefined();\n102:  test(\"recency is refreshed on read, so an active workspace is not evicted\", () => {\n104:    for (const root of roots) getLSPManager(root);\n108:    expect(getLSPManager(keepAlive, { create: false })).toBeDefined();\n109:    getLSPManager(workspace());\n110:    getLSPManager(workspace());\n114:    expect(getLSPManager(keepAlive, { create: false })).toBeDefined();\n117:  test(\"an evicted workspace simply rebuilds on next use\", () => {\n119:    for (const root of roots) getLSPManager(root);\n121:    expect(getLSPManager(evicted, { create: false })).toBeUndefined();\n123:    expect(getLSPManager(evicted)).toBeDefined();\n126:  test(\"a fresh manager reports its servers as stopped, not connected\", () => {\n127:    const manager = getLSPManager(workspace())!;\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "^describe|^  (it|test)|rootUriToPath",
+      "packages/coding/src/lsp/root-path.test.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "3:import { rootUriToPath } from \"./root-path.js\";\n10:describe(\"coding rootUriToPath\", () => {\n11:  test(\"round-trips a posix path through file:// URL\", () => {\n13:    expect(rootUriToPath(pathToFileURL(p).href)).toBe(p);\n16:  test(\"decodes percent-encoded spaces (replace() would leave %20)\", () => {\n20:    expect(rootUriToPath(uri)).toBe(p);\n23:  test(\"differs from the naive replace() on a percent-encoded path\", () => {\n30:    expect(rootUriToPath(uri)).toBe(p); // fixed: decoded, equals original\n31:    expect(rootUriToPath(uri)).not.toBe(naive);\n",
+    "stderr": ""
+  }
+]

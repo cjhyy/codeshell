@@ -1,0 +1,398 @@
+{
+  "scope": "Metadata-only keys/scope/review/inspectionScope/readScope/ranges. Text fields omitted at gate; no product body displayed.",
+  "rows": [
+    {
+      "index": 0,
+      "path": "docs/audit-2026-10-17-round11/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/5",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentMatchesFrozen",
+        "coverage"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+      }
+    },
+    {
+      "index": 1,
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "jsonPointer": "/files/34",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57"
+      }
+    },
+    {
+      "index": 2,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/153",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256",
+        "status",
+        "currentFullClaimVariants",
+        "currentSelectedClaimVariants",
+        "currentSelectedUnionLines",
+        "currentSelectedUnionRanges",
+        "priorVersionClaimVariants",
+        "currentPinOnlyVariants",
+        "claimVariants",
+        "claims"
+      ],
+      "metadata": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "lines": 36,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "status": "current-sha-pin-only-no-semantic-coverage"
+      }
+    },
+    {
+      "index": 3,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/163",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256",
+        "status",
+        "currentFullClaimVariants",
+        "currentSelectedClaimVariants",
+        "currentSelectedUnionLines",
+        "currentSelectedUnionRanges",
+        "priorVersionClaimVariants",
+        "currentPinOnlyVariants",
+        "claimVariants",
+        "claims"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "lines": 97,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "status": "current-sha-pin-only-no-semantic-coverage"
+      }
+    },
+    {
+      "index": 4,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "jsonPointer": "/rankedCandidates/221",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256",
+        "coverageStatus",
+        "currentFullClaimVariants",
+        "currentSelectedUnionLines",
+        "priorVersionClaimVariants",
+        "claimVariants",
+        "runtimeImportLines",
+        "typeOnlyImportLineCount",
+        "requiresRootSourceReadAndBoundaryReview"
+      ],
+      "metadata": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "lines": 36,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc"
+      }
+    },
+    {
+      "index": 5,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/319",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256"
+      ],
+      "metadata": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "lines": 36,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc"
+      }
+    },
+    {
+      "index": 6,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/331",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "lines": 97,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57"
+      }
+    },
+    {
+      "index": 7,
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/629",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "status",
+        "currentExplicitFullClaimIds",
+        "currentExplicitSelectedClaimIds",
+        "currentSelectedUnionLines",
+        "claimIds",
+        "claimKindCounts"
+      ],
+      "metadata": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "lines": 36,
+        "status": "historical-object-no-current-explicit-semantic-coverage"
+      }
+    },
+    {
+      "index": 8,
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/641",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "status",
+        "currentExplicitFullClaimIds",
+        "currentExplicitSelectedClaimIds",
+        "currentSelectedUnionLines",
+        "claimIds",
+        "claimKindCounts"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "lines": 97,
+        "status": "historical-object-no-current-explicit-semantic-coverage"
+      }
+    },
+    {
+      "index": 9,
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/629",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines"
+      ],
+      "metadata": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "lines": 36
+      }
+    },
+    {
+      "index": 10,
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/641",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "lines": 97
+      }
+    },
+    {
+      "index": 11,
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/629",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "initial49ShaMatches",
+        "blockedBy49EndingOverlay",
+        "coverageStatus"
+      ],
+      "metadata": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "lines": 36
+      }
+    },
+    {
+      "index": 12,
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/641",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "initial49ShaMatches",
+        "blockedBy49EndingOverlay",
+        "coverageStatus"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+        "lines": 97
+      }
+    },
+    {
+      "index": 13,
+      "path": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+      "jsonPointer": "/files/16",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobSha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57"
+      }
+    },
+    {
+      "index": 14,
+      "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "jsonPointer": "/files/32",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57"
+      }
+    },
+    {
+      "index": 15,
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/7",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "worktreeMatchesFrozen",
+        "coverage"
+      ],
+      "metadata": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+        "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+      }
+    },
+    {
+      "index": 16,
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-source-manifest.json",
+      "jsonPointer": "/files/13",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "readScope",
+        "frozenBlobSha256",
+        "frozenBlobBytes",
+        "frozenLines",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "readScope": "1-115"
+      }
+    },
+    {
+      "index": 17,
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "jsonPointer": "/files/5",
+      "sourcePath": "packages/core/src/colorizer.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "metadata": {
+        "path": "packages/core/src/colorizer.ts",
+        "bytes": 1045,
+        "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc"
+      }
+    },
+    {
+      "index": 18,
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "jsonPointer": "/files/6",
+      "sourcePath": "packages/core/src/composition/resolve-preset.ts",
+      "rowKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "metadata": {
+        "path": "packages/core/src/composition/resolve-preset.ts",
+        "bytes": 3951,
+        "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57"
+      }
+    }
+  ]
+}

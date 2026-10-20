@@ -1,0 +1,18 @@
+{
+  "baseline": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "files": [
+    {
+      "path": "packages/chat/src/media.ts",
+      "bytes": 9244,
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "frozenBlobVerified": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-mediakind.test.ts",
+      "bytes": 2295,
+      "sha256": "c9f5e0cc3885ed87d8825dda7dbada0447bdb639bae9531aa90ca1f8daad6962"
+    }
+  ],
+  "metadataOnly": true,
+  "scope": "Full mixed module statically read for top-level imports/definitions; only mediaKind called. Type imports plus node:net builtin; deny-fetch before dynamic import. No resolver/dependency-position guess."
+}

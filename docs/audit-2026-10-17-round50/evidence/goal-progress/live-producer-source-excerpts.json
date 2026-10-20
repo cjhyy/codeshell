@@ -1,0 +1,71 @@
+{
+  "atUTC": "2026-10-17T17:05:12.282532+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "displayedLineRanges": [
+        [
+          900,
+          919
+        ],
+        [
+          2574,
+          2584
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 900,
+          "end": 919,
+          "text": "900:   // streamingAssistantId flips it on once stream_request_start arrives; but on\n901:   // the \"打断接力\" path (stop → re-send queued input) the new turn is busy with\n902:   // its user bubble appended BEFORE stream_request_start, and the killed turn's\n903:   // streaming id was cleared by turn_end. So also light up while busy with the\n904:   // last message being the just-sent user message — closing the gap that left\n905:   // the relayed turn with no thinking indicator. (interrupt-relay fix)\n906:   const lastMessage = state.messages[state.messages.length - 1];\n907:   const liveTurnActive =\n908:     (busy && (state.streamingAssistantId !== null || lastMessage?.kind === \"user\")) ||\n909:     // 引导打断 gap: turn cancelled, merged re-send pending on the next tick.\n910:     // Keep the indicator lit so the user sees work is still happening. (#3)\n911:     relayingBuckets.has(activeBucket);\n912: \n913:   const markViewedPetCompletions = useCallback(\n914:     (sessionId?: string): void => {\n915:       const projection = petState.projection;\n916:       if (!projection) return;\n917:       try {\n918:         const current =\n919:           parsePetWidgetReceiptState(localStorage.getItem(PET_WIDGET_RECEIPTS_KEY)) ??"
+        },
+        {
+          "start": 2574,
+          "end": 2584,
+          "text": "2574:                     historyLoading={historyLoading}\n2575:                     historyFailed={historyFailed}\n2576:                     historyLimitReached={historyLimitReached}\n2577:                     onLoadEarlierHistory={loadEarlierHistory}\n2578:                     turnEpoch={state.turnEpoch}\n2579:                     engineSessionId={state.sessionId ?? engineSessionIdForActive()}\n2580:                     liveTurnActive={liveTurnActive}\n2581:                     onContextPackageCreated={(result, options) =>\n2582:                       handleContextPackageCreated(result, activeBucket, options)\n2583:                     }\n2584:                     contextSelectionRequest={contextSelectionRequest}"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "displayedLineRanges": [
+        [
+          542,
+          618
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 542,
+          "end": 618,
+          "text": "542:     { type: \"session_started\" | \"stream_request_start\" | \"turn_complete\" }\n543:   >,\n544:   timestamp: number | undefined,\n545: ): Message[] {\n546:   // Keep the same boundaries as the process fold: a steer (including legacy\n547:   // id-less steers) cannot take timing away from an unfinished run. A wakeup\n548:   // after a terminal run opens a new segment.\n549:   let index = -1;\n550:   let legacyAssistantDone = false;\n551:   let runningTool = false;\n552:   let ended = false;\n553:   for (let i = 0; i < messages.length; i++) {\n554:     const message = messages[i]!;\n555:     if (message.kind === \"user\" && !message.pending && !message.steerId) {\n556:       const anchor = messages[index];\n557:       const timing = anchor?.kind === \"user\" ? anchor.turnTiming : undefined;\n558:       const completed =\n559:         ended ||\n560:         (timing\n561:           ? timing.completed === true || timing.completedAt !== undefined\n562:           : legacyAssistantDone && !runningTool);\n563:       const injected = message.injected === true || isSystemReminderText(message.text);\n564:       if (!injected || index < 0 || completed) {\n565:         index = i;\n566:         legacyAssistantDone = false;\n567:         runningTool = false;\n568:         ended = false;\n569:       }\n570:     } else if (message.kind === \"assistant\") legacyAssistantDone = message.done;\n571:     else if (\n572:       message.kind === \"tool\" &&\n573:       (message.status === \"running\" || message.status === \"queued\")\n574:     )\n575:       runningTool = true;\n576:     else if (message.kind === \"turn_end\") ended = true;\n577:   }\n578:   const user = messages[index];\n579:   if (!user || user.kind !== \"user\") return messages;\n580:   const previous = user.turnTiming;\n581:   let timing: NonNullable<UserMessage[\"turnTiming\"]>;\n582:   if (event.type === \"session_started\") {\n583:     timing = { startedAt: validTimestamp(event.startedAt) ?? validTimestamp(timestamp) };\n584:   } else if (event.type === \"stream_request_start\") {\n585:     if (previous) return messages;\n586:     timing = { startedAt: validTimestamp(user.createdAt) ?? validTimestamp(timestamp) };\n587:   } else {\n588:     const startedAt =\n589:       validTimestamp(event.startedAt) ??\n590:       validTimestamp(previous?.startedAt) ??\n591:       validTimestamp(user.createdAt);\n592:     const completedAt =\n593:       validTimestamp(event.completedAt) ??\n594:       validTimestamp(previous?.completedAt) ??\n595:       validTimestamp(timestamp);\n596:     timing = {\n597:       startedAt,\n598:       completedAt,\n599:       durationMs:\n600:         validTime(event.durationMs) ??\n601:         previous?.durationMs ??\n602:         (startedAt !== undefined && completedAt !== undefined\n603:           ? Math.max(0, completedAt - startedAt)\n604:           : undefined),\n605:       completed: true,\n606:       completedCleanly: event.reason === \"completed\",\n607:     };\n608:   }\n609:   const next = messages.slice();\n610:   next[index] = {\n611:     ...user,\n612:     ...(event.type === \"session_started\" && event.runId\n613:       ? { sourceEventId: user.sourceEventId ?? event.runId }\n614:       : {}),\n615:     turnTiming: timing,\n616:   };\n617:   return next;\n618: }"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "displayedLineRanges": [
+        [
+          1050,
+          1059
+        ],
+        [
+          1555,
+          1568
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1050,
+          "end": 1059,
+          "text": "1050:               \"Do NOT call any tools. Summarize what you have accomplished and list any remaining work.</system-reminder>\",\n1051:           });\n1052:         }\n1053: \n1054:         // Goal mode: announce once when nearing EITHER stop ceiling (turns or\n1055:         // stop-blocks) so the UI can offer a \"再续\" button while still live.\n1056:         this.maybeAnnounceApproachingLimit();\n1057: \n1058:         // Keep recent pixel evidence within the bounded history window before\n1059:         // context management. Fresh input always gets its first model request."
+        },
+        {
+          "start": 1555,
+          "end": 1568,
+          "text": "1555:               status: \"not_met\",\n1556:               round: this.stopBlockCount,\n1557:               gaps: goalVerdict?.gaps || undefined,\n1558:             });\n1559:             // The streak just grew — we may now be nearing the stop-block cap.\n1560:             // Announce here (before the next turn's top check) so the \"再续\"\n1561:             // button shows up against the limit that's actually about to bite.\n1562:             this.maybeAnnounceApproachingLimit();\n1563:             const injection = wrapHookMessages(stopHook.messages);\n1564:             if (injection) {\n1565:               this.appendContextReminder(messages, injection, true);\n1566:             } else {\n1567:               // No guidance from the handler — inject a generic nudge so the\n1568:               // model knows it must keep going rather than re-emitting the"
+        }
+      ]
+    }
+  ]
+}

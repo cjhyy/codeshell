@@ -1,0 +1,79 @@
+{
+  "atUTC": "2026-10-17T11:06:14.342216+00:00",
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round27/compose-report.md",
+      "bytes": 6524,
+      "sha256": "f4edf5d90a7e12322a7d9ce9faa7dc5f0ef410a6b61ac8eee4ac05b93c84b9f0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-candidates.json",
+      "bytes": 4904,
+      "sha256": "2fcdc68ad7c76ddbe02a61373cd902d753c49370b0dd583aa0a3e606a886d6bc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "bytes": 680539,
+      "sha256": "226823312cb097744fe027d284ed45a94f9413036e307291da6d2ed133da6ba4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.py",
+      "bytes": 3932,
+      "sha256": "2cd3ca434d961d5c0fba23890b3e993a03e84c54b559cec5a61bc407c7fb4e3c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-findings.json",
+      "bytes": 93,
+      "sha256": "abb7c17440f9c35a19b797f27001a9eb89ba046162427979960f42a28031aff4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-history-decisions.json",
+      "bytes": 2392,
+      "sha256": "013349381eb50037a834a00ac6327ea3372e9acc6bb94f601ef822dd59bf1489"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-initial-source-pins.json",
+      "bytes": 1864,
+      "sha256": "5431fef6756cd7399a26351952f5d0020f23e2b2f6919369b66eec8f8065bc98"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-metadata-check.json",
+      "bytes": 3621,
+      "sha256": "ec4515579b3bfaa34ed1052d04b167bcad2728990d710a26f098783bf82827bd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-metadata-notes.json",
+      "bytes": 926,
+      "sha256": "df88325e64b40490aa84b34a4502371b1a827379a467a81f14dd770b05aedb60"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep-copy-receipt.json",
+      "bytes": 1557,
+      "sha256": "95876d0efc6f017d254a1e39560e5cbd2c3170f4888c7897406e15d46e6cc896"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-related.json",
+      "bytes": 240,
+      "sha256": "349a9e625ff0faef8a8f27c78d7c2647f7f575ddd7d2412ee2c200cd1b93c5b4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-source-manifest.json",
+      "bytes": 6296,
+      "sha256": "0f063e5e3fa8c2be87b7e98458fb6f908322bc2ca437988de60f733566e90686"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-validation.json",
+      "bytes": 1656,
+      "sha256": "4fc1ce7a784e1555a411433764a647c4eb98fa16a3aa29c9e6f5b6c0378740ba"
+    }
+  ],
+  "fileCount": 13,
+  "copiedPrepFilesCount": 4,
+  "copiedPrepReceipt": "evidence/compose-prep-copy-receipt.json",
+  "selfExcluded": true,
+  "productTestsRunByAuthor": 0,
+  "gitCommandsByAuthor": 0,
+  "rootAttemptNotCountedAsAuthor": true,
+  "note": "Owned final13 artifact byte hashes; prep4 verbatim copies checked separately. Receipt is metadata and never proves product correctness."
+}

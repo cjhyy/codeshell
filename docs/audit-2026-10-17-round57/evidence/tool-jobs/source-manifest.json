@@ -1,0 +1,1007 @@
+{
+  "createdUTC": "2026-10-17T19:00:01.979103+00:00",
+  "role": "Independent static actual lifecycle source review, not runtime verifier or first-ever unique coverage claim",
+  "rootReportedBaselineOnly": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/server/src/panels/tool-jobs.ts",
+      "bytes": 36053,
+      "lines": 963,
+      "sha256": "6588b4f61611b9cc09a88642b162e00de8c4e3b29f79a7d856cc73c112f622b2",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          70,
+          159
+        ],
+        [
+          281,
+          341
+        ],
+        [
+          378,
+          450
+        ],
+        [
+          469,
+          495
+        ],
+        [
+          536,
+          885
+        ],
+        [
+          887,
+          963
+        ]
+      ],
+      "semanticLines": 678,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          159
+        ],
+        [
+          281,
+          885
+        ],
+        [
+          887,
+          963
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 841,
+      "displayCountKind": "Exact union of fully captured visible body blocks plus later bounded locators; lower bound of all activity because earlier truncated navigation is excluded.",
+      "displayCoverageComplete": false,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          69
+        ],
+        [
+          342,
+          377
+        ],
+        [
+          451,
+          468
+        ],
+        [
+          496,
+          535
+        ]
+      ],
+      "purpose": "Actual admission/preparation reservation, duplicate waiter, queued publish abort fence, serial scheduler, running/active bookkeeping, execute resolve/reject/abort terminal commit, cancel/retry/project cancellation and shutdown. authorize/package/ownership helper bodies only boundaries where not selected, no complete permission/custody certification. Old R30 final storage-write failure expressly excluded, not repaired or experimentally retried.",
+      "initialSemanticReadSha256": "6588b4f61611b9cc09a88642b162e00de8c4e3b29f79a7d856cc73c112f622b2",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "6588b4f61611b9cc09a88642b162e00de8c4e3b29f79a7d856cc73c112f622b2",
+      "finishBytes": 36053,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-jobs-storage.ts",
+      "bytes": 6995,
+      "lines": 193,
+      "sha256": "42b534c5aeadbb9299bc892c79154ffa7b3b9357a3effc1adf4c460ef34a6c01",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          122,
+          145
+        ],
+        [
+          187,
+          193
+        ]
+      ],
+      "semanticLines": 31,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          116,
+          193
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        20,
+        21,
+        22,
+        23,
+        27,
+        66,
+        95,
+        122,
+        146,
+        155,
+        178,
+        187
+      ],
+      "uniqueDisplayedLines": 85,
+      "displayCountKind": "Exact union of fully captured visible body blocks plus later bounded locators; lower bound of all activity because earlier truncated navigation is excluded.",
+      "displayCoverageComplete": false,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          20,
+          23
+        ],
+        [
+          27,
+          27
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          95,
+          95
+        ],
+        [
+          116,
+          121
+        ],
+        [
+          146,
+          186
+        ]
+      ],
+      "purpose": "Actual write await/sync/rename completion and capacity-removal API. Root ownership/lock/custody and close178–185 only navigation, no real storage opened. Full atomic durability across OS/failures not certified.",
+      "initialSemanticReadSha256": "42b534c5aeadbb9299bc892c79154ffa7b3b9357a3effc1adf4c460ef34a6c01",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "42b534c5aeadbb9299bc892c79154ffa7b3b9357a3effc1adf4c460ef34a6c01",
+      "finishBytes": 6995,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/shared-tool-jobs.ts",
+      "bytes": 3868,
+      "lines": 85,
+      "sha256": "f762637c6ab5d43f6b5502d74655229405060d2ef347a43e4829322d31680566",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          16,
+          28
+        ],
+        [
+          44,
+          67
+        ],
+        [
+          82,
+          84
+        ]
+      ],
+      "semanticLines": 40,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          85
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 85,
+      "displayCountKind": "Exact union of fully captured visible body blocks plus later bounded locators; lower bound of all activity because earlier truncated navigation is excluded.",
+      "displayCoverageComplete": false,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          15
+        ],
+        [
+          29,
+          43
+        ],
+        [
+          68,
+          81
+        ],
+        [
+          85,
+          85
+        ]
+      ],
+      "purpose": "Actual immutable shared binding forwards fixed scope plus request/signal; activeCount/invalidate forwarding. Cookie account grants and permission selection29–40/68–79 displayed only navigation. Full display is not all-mechanism certification.",
+      "initialSemanticReadSha256": "f762637c6ab5d43f6b5502d74655229405060d2ef347a43e4829322d31680566",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "f762637c6ab5d43f6b5502d74655229405060d2ef347a43e4829322d31680566",
+      "finishBytes": 3868,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/runtime.ts",
+      "bytes": 95157,
+      "lines": 2276,
+      "sha256": "ca4967fc5531b17780c12fb25d02ca3b8f7ae1194c9959a7941f66809fa9fc2a",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          757,
+          784
+        ],
+        [
+          787,
+          838
+        ],
+        [
+          925,
+          983
+        ]
+      ],
+      "semanticLines": 139,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          589,
+          670
+        ],
+        [
+          757,
+          839
+        ],
+        [
+          925,
+          984
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        20,
+        39,
+        41,
+        42,
+        43,
+        97,
+        255,
+        536,
+        572,
+        573,
+        574,
+        577,
+        600,
+        624,
+        625,
+        638,
+        645,
+        757,
+        776,
+        777,
+        778,
+        779,
+        780,
+        781,
+        782,
+        783,
+        784,
+        786,
+        905,
+        909,
+        925,
+        926,
+        928,
+        970,
+        983,
+        1179,
+        1269,
+        1272,
+        1301,
+        1313,
+        1377,
+        1539,
+        1942,
+        1943,
+        1987,
+        1991,
+        1995,
+        2008
+      ],
+      "uniqueDisplayedLines": 252,
+      "displayCountKind": "Exact union of fully captured visible body blocks plus later bounded locators; lower bound of all activity because earlier truncated navigation is excluded.",
+      "displayCoverageComplete": false,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          20,
+          20
+        ],
+        [
+          39,
+          39
+        ],
+        [
+          41,
+          43
+        ],
+        [
+          97,
+          97
+        ],
+        [
+          255,
+          255
+        ],
+        [
+          536,
+          536
+        ],
+        [
+          572,
+          574
+        ],
+        [
+          577,
+          577
+        ],
+        [
+          589,
+          670
+        ],
+        [
+          785,
+          786
+        ],
+        [
+          839,
+          839
+        ],
+        [
+          905,
+          905
+        ],
+        [
+          909,
+          909
+        ],
+        [
+          984,
+          984
+        ],
+        [
+          1179,
+          1179
+        ],
+        [
+          1269,
+          1269
+        ],
+        [
+          1272,
+          1272
+        ],
+        [
+          1301,
+          1301
+        ],
+        [
+          1313,
+          1313
+        ],
+        [
+          1377,
+          1377
+        ],
+        [
+          1539,
+          1539
+        ],
+        [
+          1942,
+          1943
+        ],
+        [
+          1987,
+          1987
+        ],
+        [
+          1991,
+          1991
+        ],
+        [
+          1995,
+          1995
+        ],
+        [
+          2008,
+          2008
+        ]
+      ],
+      "purpose": "Actual normal tasks.start request/signal and cancel/retry mapping, and real createPanelToolExecutor factory composed into service. Authorization/consent/package callbacks are actual ports only, no complete enforcement claim. Wrong initial locator589–670 produced credential/legacy setup source, excluded from semantics. Truncated first757–858 display counted only known-visible757–839; untracked tail not captured.",
+      "initialSemanticReadSha256": "ca4967fc5531b17780c12fb25d02ca3b8f7ae1194c9959a7941f66809fa9fc2a",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "ca4967fc5531b17780c12fb25d02ca3b8f7ae1194c9959a7941f66809fa9fc2a",
+      "finishBytes": 95157,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "bytes": 27329,
+      "lines": 666,
+      "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          284,
+          438
+        ],
+        [
+          549,
+          609
+        ],
+        [
+          648,
+          666
+        ]
+      ],
+      "semanticLines": 235,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          284,
+          461
+        ],
+        [
+          549,
+          666
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        52,
+        193,
+        196,
+        199,
+        200,
+        206,
+        213,
+        214,
+        216,
+        220,
+        227,
+        238,
+        245,
+        251,
+        259,
+        262,
+        269,
+        271,
+        272,
+        280,
+        281,
+        284,
+        286,
+        289,
+        300,
+        304,
+        310,
+        311,
+        334,
+        341,
+        345,
+        346,
+        347,
+        362,
+        365,
+        390,
+        416,
+        429,
+        437,
+        440,
+        455,
+        461,
+        464,
+        470,
+        471,
+        472,
+        480,
+        481,
+        482,
+        483,
+        484,
+        492,
+        493,
+        499,
+        510,
+        511,
+        515,
+        516,
+        521,
+        524,
+        525,
+        536,
+        538,
+        549,
+        558,
+        560,
+        567,
+        572,
+        574,
+        591,
+        596,
+        597,
+        598,
+        599,
+        601,
+        605,
+        608,
+        609,
+        610,
+        612,
+        628,
+        648,
+        650,
+        653,
+        656,
+        662
+      ],
+      "uniqueDisplayedLines": 338,
+      "displayCountKind": "Exact union of fully captured visible body blocks plus later bounded locators; lower bound of all activity because earlier truncated navigation is excluded.",
+      "displayCoverageComplete": false,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          52,
+          52
+        ],
+        [
+          193,
+          193
+        ],
+        [
+          196,
+          196
+        ],
+        [
+          199,
+          200
+        ],
+        [
+          206,
+          206
+        ],
+        [
+          213,
+          214
+        ],
+        [
+          216,
+          216
+        ],
+        [
+          220,
+          220
+        ],
+        [
+          227,
+          227
+        ],
+        [
+          238,
+          238
+        ],
+        [
+          245,
+          245
+        ],
+        [
+          251,
+          251
+        ],
+        [
+          259,
+          259
+        ],
+        [
+          262,
+          262
+        ],
+        [
+          269,
+          269
+        ],
+        [
+          271,
+          272
+        ],
+        [
+          280,
+          281
+        ],
+        [
+          439,
+          461
+        ],
+        [
+          464,
+          464
+        ],
+        [
+          470,
+          472
+        ],
+        [
+          480,
+          484
+        ],
+        [
+          492,
+          493
+        ],
+        [
+          499,
+          499
+        ],
+        [
+          510,
+          511
+        ],
+        [
+          515,
+          516
+        ],
+        [
+          521,
+          521
+        ],
+        [
+          524,
+          525
+        ],
+        [
+          536,
+          536
+        ],
+        [
+          538,
+          538
+        ],
+        [
+          610,
+          647
+        ]
+      ],
+      "purpose": "Real executor parsing/result/error/progress state, output reconciliation, abort stop, start waiter capture, stdin completion, exit wait, failure/result gate and finally cleanup. Authorization timers/credential materialization/artifact capture helpers outside selected ranges remain boundaries. No process/clock/tool execution.",
+      "initialSemanticReadSha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "finishBytes": 27329,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "bytes": 44502,
+      "lines": 1136,
+      "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          854,
+          887
+        ],
+        [
+          898,
+          916
+        ],
+        [
+          977,
+          1065
+        ]
+      ],
+      "semanticLines": 142,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          854,
+          922
+        ],
+        [
+          977,
+          1065
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        43,
+        95,
+        315,
+        326,
+        331,
+        742,
+        791,
+        805,
+        820,
+        835,
+        840,
+        854,
+        859,
+        873,
+        874,
+        882,
+        884,
+        909,
+        977,
+        1019,
+        1044,
+        1053,
+        1054,
+        1057,
+        1061,
+        1062,
+        1063,
+        1104,
+        1105,
+        1121,
+        1127
+      ],
+      "uniqueDisplayedLines": 173,
+      "displayCountKind": "Exact union of fully captured visible body blocks plus later bounded locators; lower bound of all activity because earlier truncated navigation is excluded.",
+      "displayCoverageComplete": false,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          43,
+          43
+        ],
+        [
+          95,
+          95
+        ],
+        [
+          315,
+          315
+        ],
+        [
+          326,
+          326
+        ],
+        [
+          331,
+          331
+        ],
+        [
+          742,
+          742
+        ],
+        [
+          791,
+          791
+        ],
+        [
+          805,
+          805
+        ],
+        [
+          820,
+          820
+        ],
+        [
+          835,
+          835
+        ],
+        [
+          840,
+          840
+        ],
+        [
+          888,
+          897
+        ],
+        [
+          917,
+          922
+        ],
+        [
+          1104,
+          1105
+        ],
+        [
+          1121,
+          1121
+        ],
+        [
+          1127,
+          1127
+        ]
+      ],
+      "purpose": "Actual child close waits termination before finishExit/process.exit; cancellation/waiter and stdin write/end settlement paths. Source enforces real-close boundary for inspected normal path. authorize/ownership callbacks, process spawn/kill-group implementation, actual OS/native and permissions not executed or fully certified.",
+      "initialSemanticReadSha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "finishBytes": 44502,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-jobs.test.ts",
+      "bytes": 31610,
+      "lines": 748,
+      "sha256": "5a69a680c113eb70b0742741b1675ebdf070d60967382cc20bcd1a30e7400932",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          484,
+          524
+        ],
+        [
+          574,
+          593
+        ]
+      ],
+      "semanticLines": 61,
+      "sourceKind": "test-declarations",
+      "displayedLineRanges": [
+        [
+          484,
+          524
+        ],
+        [
+          574,
+          593
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        87,
+        131,
+        157,
+        191,
+        209,
+        234,
+        276,
+        313,
+        337,
+        359,
+        370,
+        402,
+        429,
+        445,
+        484,
+        511,
+        542,
+        574,
+        594,
+        611,
+        642,
+        669,
+        700,
+        720
+      ],
+      "uniqueDisplayedLines": 82,
+      "displayCountKind": "Exact union of fully captured visible body blocks plus later bounded locators; lower bound of all activity because earlier truncated navigation is excluded.",
+      "displayCoverageComplete": false,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          87,
+          87
+        ],
+        [
+          131,
+          131
+        ],
+        [
+          157,
+          157
+        ],
+        [
+          191,
+          191
+        ],
+        [
+          209,
+          209
+        ],
+        [
+          234,
+          234
+        ],
+        [
+          276,
+          276
+        ],
+        [
+          313,
+          313
+        ],
+        [
+          337,
+          337
+        ],
+        [
+          359,
+          359
+        ],
+        [
+          370,
+          370
+        ],
+        [
+          402,
+          402
+        ],
+        [
+          429,
+          429
+        ],
+        [
+          445,
+          445
+        ],
+        [
+          542,
+          542
+        ],
+        [
+          594,
+          594
+        ],
+        [
+          611,
+          611
+        ],
+        [
+          642,
+          642
+        ],
+        [
+          669,
+          669
+        ],
+        [
+          700,
+          700
+        ],
+        [
+          720,
+          720
+        ]
+      ],
+      "purpose": "Three existing partial declarations: queued vs active cancellation waits controlled executor, shutdown waits, and nonretryable/manual failure. Fake/deferred/throw inputs are test intent only, not manufactured product bug evidence, no tests run.",
+      "initialSemanticReadSha256": "5a69a680c113eb70b0742741b1675ebdf070d60967382cc20bcd1a30e7400932",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "5a69a680c113eb70b0742741b1675ebdf070d60967382cc20bcd1a30e7400932",
+      "finishBytes": 31610,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionStatus": "Prior actual AGENTS5/CODESHELL217 reading carried unchanged; hash not new semantic reading.",
+  "totals": {
+    "semanticFiles": 7,
+    "full": 0,
+    "selected": 7,
+    "productSemanticLines": 1265,
+    "testDeclarationSemanticLines": 61,
+    "semanticLines": 1326,
+    "uniqueDisplayedLinesKnownLowerBound": 1856,
+    "sourceAndInstructionPins": 9,
+    "partialExistingTestDeclarationsRead": 3,
+    "boundedFinalTestTitlesNavigationOnly": 24,
+    "testsExecuted": 0
+  },
+  "overlapBoundary": "Old R30 already read exact final-write/active cleanup chain; no new unique claim from revisiting it. Other old overlap unknown, not absence of prior reading.",
+  "truncationBoundary": "Three wide outputs truncated; primary semantic blocks are fully visible and metadata counts exact for those selections. Display total is a declared lower bound, not all generated locator lines."
+}

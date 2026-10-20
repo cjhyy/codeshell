@@ -1,0 +1,7 @@
+{
+  "reference": "coverage-current/unified-current-index.json",
+  "sourcePaths": 4643,
+  "changedPaths": [],
+  "scope": "Hash/byte rebind only of original121 TS/TSX inventory; no semantic increment adapter, no nonTS coverage, no new current-unfixed assertion.",
+  "productRuns": 0
+}

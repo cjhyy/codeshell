@@ -10,9 +10,6 @@ breaking.
 
 ### Added
 
-- Add `@cjhyy/code-shell-host`, a Core-only HostRuntime foundation with capability
-  registration, adapter lifecycle and a shared worker request interceptor used by
-  Desktop, serve and Panel task hosts.
 - Share Host skill inventory, bounded MCP probes and safe session file metadata
   between Desktop and Hub. MCP SDK connections remain behind a narrow Core
   internal interface; adapters keep authorization, DTOs and cache policy.
@@ -23,6 +20,169 @@ breaking.
   retaining its compatibility entry and Core clients. Core model listing and
   Desktop model metadata retain their existing behavior. Output replay remains
   deferred until both journal cursor and stateVersion resumptions exist.
+
+### Fixed
+
+- Keep successful MCP POST probes usable after optional GET/SSE diagnostics,
+  preserve Desktop launcher-banner and structured-logger compatibility, and
+  redact explicit credentials at any length plus longer private env/argv values
+  without corrupting ordinary short launcher/env values or protocol text.
+- Retry ordinary session-state atomic replacements only in lists, retain strict
+  authorization reads, and expose a narrow Host storage entry. Desktop catalog
+  state over 2 MiB now emits a safe diagnostic when omitted.
+- Reject mismatched external accounting references with actionable Native recovery
+  guidance while preserving historical costs and keeping a healthy CLI retryable.
+- Avoid a second renderer failure terminal/toast after the current run has already
+  streamed its terminal, including cancellation from another client.
+- Keep Link account menus visible in scrolling dialogs, give authorized Figma
+  files clear names and open actions, and separate alternative connections and
+  authorization-service diagnostics from everyday account management.
+
+## [0.9.45] - 2026-10-16
+
+### Added
+
+- Record local model calls with available prompts, responses, transport attempts,
+  token usage and timings, including auxiliary and reviewed Panel/native calls.
+  Browse recorded calls by conversation and execution in Desktop and Web, with
+  recording and retention controls and explicit limits on external CLI coverage.
+- Classify recorded calls by execution, subtask, Panel, auxiliary or media purpose,
+  with type filters. Distinguish runtime input snapshots from provider requests
+  and label System instructions, user-role input, history and tool results.
+- Add portable Link operation contracts and persisted connection recipes, with
+  immutable operation validation, resource authority and Host-derived routing.
+- Open installed Panel Apps in separate windows and provide a Panel launcher from
+  the new-tab button.
+
+### Changed
+
+- Move cloud account management into a dedicated Settings page opened directly
+  from the sidebar, with separate profile, login and authorization sections.
+- Group configured models by provider in a simpler model picker while preserving
+  connection identity, complete labels and keyboard navigation.
+- Manage Link applications and their connections in dedicated dialogs, with
+  clearer account authorization, provider discovery and connection status.
+- Keep Task center search and advanced filters compact in narrow and short windows.
+- Use the file panel's available width for readable previews and keyboard-visible
+  actions, with a return path to the file list on small screens.
+- Add a return-to-latest control and new-output count to Web conversations while
+  preserving the reader's position during streaming.
+- Keep Web sidebar navigation and account controls reachable in short windows.
+
+### Fixed
+
+- Avoid a source import cycle between credential metadata and MCP tool execution
+  that could prevent the Host from starting.
+- Verify wrapped Figma MCP account identities while rejecting explicit failures
+  and conflicting identities before saving the connection.
+- Ship the Link provider bootstrap with packaged Desktop workers so provider
+  execution remains available outside development checkouts.
+- Keep independent Link grants separate, preserve shared credential custody, and
+  reject stale connection creation after account changes. Retain bounded status
+  receipts and diagnostics when remote actions fail or are cancelled.
+- Show consumed follow-up messages between activity cards and keep them visible
+  when activity is collapsed, without leaving an empty card body.
+- Show recoverable file-loading errors and prevent stale directory responses from
+  replacing the current location in Desktop and Web.
+- Keep composer suggestion accessibility targets synchronized with their actual
+  options and provide a stable input name.
+- Preserve the selected theme when removal fails, report the error, and restore
+  keyboard focus without interrupting another control.
+- Preserve Context settings drafts through read/save/reset failures and support
+  normal numeric editing with named keyboard-accessible sliders.
+- Close suggestions after accepted submissions and cancel stale composer caret
+  restoration when the reader edits, changes focus or switches conversations.
+- Recover failed update-status reads and actions with visible errors and retries;
+  keep newer pushed state and contain long diagnostics on small screens.
+- Make inline questions keyboard accessible, preserve answers through failed
+  submissions, and keep questions and approvals usable in short chat panes.
+- Wrap complete question-answer receipts and long tool identities while keeping
+  approval risk, execution status and action controls visible.
+- Keep Desktop navigation, sessions and account controls reachable in short
+  windows, including keyboard focus after resizing.
+- Keep long drafts and queued messages within the main chat pane while retaining
+  visible conversation output and access to input and Stop.
+- Preserve Settings search and navigation focus through clearing, result
+  selection, responsive layouts, zoom and closing navigation popups.
+- Keep search results and full search-mode labels usable in short windows.
+- Keep complete run usage, session history and recovery actions reachable in
+  short panes, preserving rename drafts and the user's current focus.
+- Preserve search-connection drafts and persisted defaults through failed or
+  delayed operations, and keep connection cards within narrow Settings panes.
+- Make MCP tool and error details keyboard-operable dialogs with visible Close
+  controls, complete scrollable content and focus return to their opener.
+- Keep cloud project status and long errors within a keyboard-scrollable region
+  while preserving visible conversation output, draft input and status actions.
+- Bring Web model editors into view, return focus after cancel/discard, and keep
+  failed-save drafts editable without interrupting focus moved elsewhere.
+- Keep cloud project dialogs within short windows and recover owned failed
+  operations without interrupting another control, account or project.
+- Keep digital-human editing, memory and switch review dialogs usable in short
+  windows, retaining visible actions and safe focus return through asynchronous
+  previews, nested confirmations and rapid reopening.
+- Preserve Web skill-editor drafts and focus through delayed loads, cancellation
+  and failed saves without interrupting another control.
+- Keep Web model defaults, deletion errors and MCP edit/removal recovery visible
+  in short windows, including refreshed entries that have disappeared elsewhere.
+- Support keyboard navigation and selection in the Desktop model picker, keep
+  complete names readable, and close an open picker when selection is disabled.
+- Make the conversation permission picker keyboard accessible and close stale
+  options when selection becomes unavailable.
+- Show project-trust read and save failures with retries, keep trust choices
+  visible in short windows, and ignore results belonging to an earlier project.
+- Point the empty model picker to model connections in Settings.
+- Keep Web history errors and focused actions visible, preserve rename drafts
+  and restore/open intent through refreshes, and recover failed pagination.
+- Support keyboard navigation in the project picker, preserve deliberate list
+  scrolling, and return focus through project selection and adding a project.
+- Keep Link management errors and actions inside short dialogs, retain failed
+  edit drafts, and avoid stealing focus after delayed operations.
+- Preserve the current control's focus when the Web sidebar collapses, while
+  retaining focus return after deliberate mobile navigation and closing it.
+- Return focus after staying on a page with unsaved edits in development mode,
+  without overriding a newer focus choice or navigation.
+- Keep account-device actions and complete errors visible in short windows,
+  recover failed reads, and preserve focus and authentication behavior through
+  delayed operations and closing the dialog.
+
+## [0.9.44] - 2026-10-15
+
+### Changed
+
+- Refine forwarding selected conversation turns into a new session, including
+  selection controls, progress and error states, and transferred-context details.
+
+### Fixed
+
+- Use the currently selected model's configured vision capability consistently
+  across provider requests, image input, Browser, ViewImage and MCP image results.
+- Refresh auxiliary clients when model settings change, and retain the selected
+  model identity and capability when resolving pooled connections.
+- Refresh active model settings after saving, deleting or restoring model
+  catalog entries.
+
+## [0.9.43] - 2026-10-15
+
+### Added
+
+- Read Figma nodes, exported images and image-fill assets through Link with
+  on-demand content loading, bounded responses and account authorization guidance.
+- Open sub-agent conversations in the side dock while keeping the parent chat
+  available.
+- Add `@cjhyy/code-shell-host`, a Core-only HostRuntime foundation with capability
+  registration, adapter lifecycle and a shared worker request interceptor used by
+  Desktop, serve and Panel task hosts. Larger service migrations remain pending.
+
+### Changed
+
+- Unify themed dropdowns across Desktop and keep theme music local, including
+  imported MP3/WAV tracks and playback that continues outside Appearance settings.
+- Improve Quick Chat layout and composer usability in short panels.
+- Refresh the curated OpenRouter model catalog.
+- Return a reusable `agent_id` with synchronous Agent reports and guide related
+  follow-up work through `AgentSendInput` using saved context and incremental input.
+- Persist sub-agent role scopes for continuation after restart. Legacy sessions
+  without saved scope metadata require a new Agent after restarting.
 - Extract protocol request dispatch and ingress validation without changing the
   legacy wire contract; reduce the AgentServer architecture budget to 4,949 lines.
 - Reserve tool names beginning with `__` for internal host loopbacks, including
@@ -40,17 +200,16 @@ breaking.
 
 ### Fixed
 
-- Keep successful MCP POST probes usable after optional GET/SSE diagnostics,
-  preserve Desktop launcher-banner and structured-logger compatibility, and
-  redact explicit credentials at any length plus longer private env/argv values
-  without corrupting ordinary short launcher/env values or protocol text.
-- Retry ordinary session-state atomic replacements only in lists, retain strict
-  authorization reads, and expose a narrow Host storage entry. Desktop catalog
-  state over 2 MiB now emits a safe diagnostic when omitted.
-- Reject mismatched external accounting references with actionable Native recovery
-  guidance while preserving historical costs and keeping a healthy CLI retryable.
-- Avoid a second renderer failure terminal/toast after the current run has already
-  streamed its terminal, including cancellation from another client.
+- Preserve external runtime output across restarts, adopted cost snapshots and
+  turn timing; keep reopened autocomplete suggestions focused.
+- Make GitHub data access opt-in at sign-in and distinguish local logout from
+  unconfirmed remote revocation.
+- Expose verified Node runtime fallbacks to Panel CLIs.
+- Track resumed sub-agents as running, route further input to their existing
+  runtime, and preserve cancellation until that runtime fully exits, including
+  across the automatic background threshold.
+- Enforce sub-agent role tool allowlists at execution time on both initial and
+  resumed runs, while retaining parent-disabled tools and the flat agent hierarchy.
 - Keep the bundled Host package in Desktop devDependencies, and derive the
   production workspace packaging guard from predist's actual materialization list.
 - Include a unique JSON-RPC id in Desktop unsupported-loopback replies so Core

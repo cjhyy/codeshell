@@ -1,0 +1,25 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "passed": true,
+  "sourceBytePinsChecked": 12,
+  "sourceManifest": "docs/audit-2026-10-17-round21/evidence/jsonoutput-source-manifest.json",
+  "fixture": "docs/audit-2026-10-17-round21/evidence/jsonoutput-focused.test.ts",
+  "fixtureSha256": "926e318c1b01f2834e39b01e9165039572b6eabcf090c8a4e62e1e6898f3b07c",
+  "absoluteLeafImport": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/output/renderer.ts",
+  "exactPreimportMocks": [
+    "@cjhyy/code-shell-core/internal",
+    "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/ui/truncate.ts"
+  ],
+  "mockImplementation": "unused Text-only function exports increment a counter and throw if called; zero Core barrel/real truncation imports",
+  "realDependency": "chalk remains real; no guessed node_modules existence check; resolution occurs only in upcoming guarded shard",
+  "runtimeScope": "Actual JsonRenderer, JsonlRenderer, StreamJsonRenderer and createRenderer JSON branches; process.stdout.write spy limited to child test process, restored in finally",
+  "excluded": [
+    "TextRenderer invocation",
+    "mixed existing renderer.test.ts",
+    "old A12 child/fallback mechanism",
+    "old JSON-summary/sliceAnsi/TUI Diff/i18n failed directions",
+    "colliding meta fields or arbitrary malformed event inputs",
+    "real CLI/model/provider/network/native/PTY/userdata/security/custody/permission experiments"
+  ],
+  "firstRunPolicy": "Persist combined raw+exit before inspection; any failure skips complete JSON-renderer dynamic direction with no edits/retry/alternate validation."
+}

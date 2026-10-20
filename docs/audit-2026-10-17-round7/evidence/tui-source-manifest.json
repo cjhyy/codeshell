@@ -1,0 +1,236 @@
+{
+  "sourceCommit": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "sources": [
+    {
+      "path": "packages/tui/src/ui/components/DiffLine.tsx",
+      "sha256": "009549d55f613c7c9538dae9e6126c305758ce241f85a987666cc92496dc63ba",
+      "bytes": 3774,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/DiffView.tsx",
+      "sha256": "60e2409133c8a670b062210cebfa699f1adafb94910b6c8a21510fe29f52517a",
+      "bytes": 1467,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/StructuredDiff.tsx",
+      "sha256": "bf3f907692114babe9096c504da410215e5ef17da2fcb07d102d0612e4c9908a",
+      "bytes": 3376,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/CodeBlock.tsx",
+      "sha256": "3119547355ec28ec0dafbc4afc671fdff107a35c81280cc5eee1762469a81224",
+      "bytes": 1558,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "bytes": 13567,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/MessageRow.tsx",
+      "sha256": "b2bd3b71c5e3eda13d0b07f4517040b474de3d03f08714993e17cf9e15f32a93",
+      "bytes": 3035,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/store.ts",
+      "sha256": "2bfaa003f88b5bf3f53d845f660b8491b9f9280fee066f169766feb4ff647744",
+      "bytes": 6412,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/slice-anchor.ts",
+      "sha256": "21d34784fc03582d2fde09f854da8333a343ae97e41b6fafce2b0c5452e51d97",
+      "bytes": 3040,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/truncate.ts",
+      "sha256": "a94eed8773b5e2f2f847ca2603df015a4e253bb1f748bca5e450768eda4a04b4",
+      "bytes": 5747,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/render/wrap-text.ts",
+      "sha256": "52c0fa9622efb87026ef9e89d62332ef32be664692eeb571736fdefdf9addbed",
+      "bytes": 1820,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/render/measure-text.ts",
+      "sha256": "0445f5365140b17a93cd6b9aa3b4414079b6f79b92052c81f4c72807d5c400ab",
+      "bytes": 1138,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "bytes": 11321,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/model-display.ts",
+      "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+      "bytes": 1001,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/AgentBlock.tsx",
+      "sha256": "dfca0e4f7341eebf6eb878d9fdf64000c5c1afedbb8d902b9e1bc0ab47fcd718",
+      "bytes": 3403,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/AgentDock.tsx",
+      "sha256": "6e798147a85168b0e87c44c905d0e519c99d90bcf6a2bded670b5470c1fa9677",
+      "bytes": 7827,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "bytes": 2357,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useCostSummary.ts",
+      "sha256": "5713fcd431d446c85569d3520d050d9084ce18b2274dbe468b90b76170e1bdce",
+      "bytes": 669,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/stream-attempt.ts",
+      "sha256": "342f7dd7cebd31a067aa6149d06e623ec74eb45b3604681fb3475a7658a1de69",
+      "bytes": 1103,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/MessageContent.test.ts",
+      "sha256": "adca1208b657133172a62e7af089791920162c81329858ab8a63ab9f80ff27a3",
+      "bytes": 2617,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.test.tsx",
+      "sha256": "1c7a6fb1c8d8ea505ab7d5c63b354d2043c924433bd05cdb242dd418d1f88939",
+      "bytes": 1838,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "sha256": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "bytes": 3330,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/store-notify.test.ts",
+      "sha256": "86a304dcd0ee1ebe15357058c31f996aedc49713c3e16763dd79c442876447ca",
+      "bytes": 1803,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/stream-attempt.test.ts",
+      "sha256": "e114d71595adee6af6cc46a98a206a13d2a8b31dd68bcf71383477b79f4a8d99",
+      "bytes": 1688,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "tests/ui/store-commit-interrupted.test.ts",
+      "sha256": "330e784435e5a4a9a38b48fe9ba9ea86dc1705f6fdac5b6f535b1ed144a117ab",
+      "bytes": 1925,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "tests/slice-anchor.test.ts",
+      "sha256": "fe029717ff0cb804736e3b63e449ba7973afea39ab2b5ad42a770ab2d67bdb15",
+      "bytes": 6614,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "tests/message-row-memo.test.ts",
+      "sha256": "b0ca242daf66de45d5237e7aeae6e6eb7081ca272448095e347fbcbbb32f3ab7",
+      "bytes": 2855,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "tests/render-fixtures.ts",
+      "sha256": "151bf695855051b7530f7e40d279b472387d0115741a0238af6609799204d2a6",
+      "bytes": 4094,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-diff.ts",
+      "sha256": "e7911fbfac9eed287d5ed3a461c45e481e83195a364f25b0ed10657c50f0cddf",
+      "bytes": 1273,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "full"
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "bytes": 11173,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "selected; output excerpt or truncated"
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useVirtualScroll.ts",
+      "sha256": "137b1ea5e744f5be417e42fc59a1e928b25d23b46696f49d5dbeeac62c9c7724",
+      "bytes": 36193,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "selected; output excerpt or truncated"
+    },
+    {
+      "path": "packages/tui/src/render/stringWidth.ts",
+      "sha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "bytes": 7186,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "selected; output excerpt or truncated"
+    },
+    {
+      "path": "packages/tui/src/render/index.ts",
+      "sha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "bytes": 2454,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "selected; output excerpt or truncated"
+    },
+    {
+      "path": "tests/ui/agent-dock.test.tsx",
+      "sha256": "791bede0408b44b9fcc42a46b679cbe858cd32e2e7f7bc1f01c5e22c915d6692",
+      "bytes": 8985,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "readScope": "selected; output excerpt or truncated"
+    }
+  ]
+}

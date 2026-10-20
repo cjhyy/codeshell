@@ -1,0 +1,554 @@
+{
+  "capturedUTC": "2026-10-17T16:33:36.380334+00:00",
+  "role": "Targeted counterevidence source review, not blind;known remote-empty-singleton hypothesis withdrawn;no new unread-frontier claim",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lines": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "beforeBody": true,
+      "firstPinArtifact": "initial-pins.json",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          13,
+          13
+        ],
+        [
+          54,
+          64
+        ],
+        [
+          70,
+          74
+        ],
+        [
+          76,
+          83
+        ],
+        [
+          118,
+          124
+        ],
+        [
+          177,
+          188
+        ],
+        [
+          192,
+          197
+        ],
+        [
+          200,
+          207
+        ]
+      ],
+      "coveredLineCount": 60,
+      "displayedLineRanges": [
+        [
+          7,
+          17
+        ],
+        [
+          32,
+          125
+        ],
+        [
+          174,
+          212
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        132,
+        133,
+        143,
+        151,
+        156,
+        161,
+        164,
+        215,
+        218,
+        219,
+        221,
+        226,
+        246,
+        247,
+        255,
+        258,
+        262
+      ],
+      "displayedLineCountIncludingNav": 161,
+      "scope": "Actual explicit repl and default no-task CLI routes, shared mode options and LLMapi base-url label. API credential/permission flag details, stdin/bootstrap/link/native internals display/nav only, not executed.",
+      "finishFilesystemSHA": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "finishEqualsInitial": true,
+      "captureAtUTC": "2026-10-17T16:33:36.380334+00:00",
+      "captureTiming": "After actual source display;firstpins before body/nav, not retroactive pre-read snapshot.",
+      "kind": "product"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "bytes": 13991,
+      "lines": 349,
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "beforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "entry-initial-pins.json",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          3,
+          6
+        ],
+        [
+          10,
+          17
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          42,
+          54
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          214,
+          223
+        ],
+        [
+          227,
+          235
+        ],
+        [
+          257,
+          258
+        ],
+        [
+          267,
+          271
+        ],
+        [
+          280,
+          281
+        ],
+        [
+          322,
+          331
+        ]
+      ],
+      "coveredLineCount": 66,
+      "displayedLineRanges": [
+        [
+          3,
+          6
+        ],
+        [
+          10,
+          22
+        ],
+        [
+          41,
+          75
+        ],
+        [
+          213,
+          243
+        ],
+        [
+          257,
+          282
+        ],
+        [
+          322,
+          333
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        1,
+        2,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        36,
+        37,
+        38,
+        137,
+        148,
+        152,
+        168,
+        187,
+        198,
+        210,
+        211,
+        212,
+        295,
+        299,
+        342,
+        344
+      ],
+      "displayedLineCountIncludingNav": 147,
+      "scope": "Ordinary option shape/client/server/runtime/tracker reference flow. Settings I/O, credentials, model/sandbox/MCP setup, goal disk callbacks and cleanup are excluded; no actual setup or connection.",
+      "finishFilesystemSHA": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "finishEqualsInitial": true,
+      "captureAtUTC": "2026-10-17T16:33:36.380334+00:00",
+      "captureTiming": "After actual source display;firstpins before body/nav, not retroactive pre-read snapshot.",
+      "kind": "product"
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "lines": 159,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "beforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "binding-initial-pins.json",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          18,
+          26
+        ],
+        [
+          54,
+          60
+        ]
+      ],
+      "coveredLineCount": 16,
+      "displayedLineRanges": [
+        [
+          18,
+          30
+        ],
+        [
+          49,
+          62
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        38,
+        39
+      ],
+      "displayedLineCountIncludingNav": 29,
+      "scope": "Constructor option/ref binding only: same costTracker binds runtime usageLedger. Ledger lock/persist/identity/lifetime internals not followed.",
+      "finishFilesystemSHA": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "finishEqualsInitial": true,
+      "captureAtUTC": "2026-10-17T16:33:36.380334+00:00",
+      "captureTiming": "After actual source display;firstpins before body/nav, not retroactive pre-read snapshot.",
+      "kind": "product"
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "bytes": 4514,
+      "lines": 122,
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "beforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "binding-initial-pins.json",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          21,
+          27
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          67,
+          79
+        ]
+      ],
+      "coveredLineCount": 21,
+      "displayedLineRanges": [
+        [
+          19,
+          27
+        ],
+        [
+          42,
+          46
+        ],
+        [
+          65,
+          81
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        10,
+        35
+      ],
+      "displayedLineCountIncludingNav": 33,
+      "scope": "Actual client prop forwarding to App only. Public client option alone is not proof of a supported remote CLI. Renderer/history/timer bodies displayed boundary only, no React/timer execution.",
+      "finishFilesystemSHA": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "finishEqualsInitial": true,
+      "captureAtUTC": "2026-10-17T16:33:36.380334+00:00",
+      "captureTiming": "After actual source display;firstpins before body/nav, not retroactive pre-read snapshot.",
+      "kind": "product"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "lines": 817,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "beforeBody": true,
+      "firstPinArtifact": "initial-pins.json",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          5,
+          7
+        ],
+        [
+          89,
+          104
+        ]
+      ],
+      "coveredLineCount": 19,
+      "displayedLineRanges": [
+        [
+          1,
+          8
+        ],
+        [
+          89,
+          132
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        199,
+        225,
+        277,
+        289,
+        301,
+        325,
+        433,
+        457,
+        468,
+        485,
+        495,
+        505,
+        507,
+        510,
+        517,
+        637,
+        649,
+        669,
+        671,
+        691,
+        694,
+        729,
+        797,
+        798
+      ],
+      "displayedLineCountIncludingNav": 76,
+      "scope": "Exact /cost singleton import and early bound-summary/empty-request branch. Other commands, stats/detail full contract and provider/remote actions not audited.",
+      "finishFilesystemSHA": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "finishEqualsInitial": true,
+      "captureAtUTC": "2026-10-17T16:33:36.380334+00:00",
+      "captureTiming": "After actual source display;firstpins before body/nav, not retroactive pre-read snapshot.",
+      "kind": "product"
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "lines": 391,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "beforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "entry-initial-pins.json",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          90,
+          97
+        ],
+        [
+          159,
+          162
+        ],
+        [
+          371,
+          371
+        ]
+      ],
+      "coveredLineCount": 13,
+      "displayedLineRanges": [
+        [
+          88,
+          100
+        ],
+        [
+          156,
+          164
+        ],
+        [
+          371,
+          385
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        7,
+        8,
+        9,
+        127,
+        128,
+        145,
+        190,
+        191,
+        207,
+        208,
+        302,
+        303,
+        332
+      ],
+      "displayedLineCountIncludingNav": 50,
+      "scope": "Ordinary ledger bind/query/request projection and exported singleton only. Standalone estimation/model normalization oldCOST-R9-01, crypto/store/actual accounting mechanisms not reviewed.",
+      "finishFilesystemSHA": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "finishEqualsInitial": true,
+      "captureAtUTC": "2026-10-17T16:33:36.380334+00:00",
+      "captureTiming": "After actual source display;firstpins before body/nav, not retroactive pre-read snapshot.",
+      "kind": "product"
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "lines": 2318,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "beforeBody": true,
+      "firstPinArtifact": "initial-pins.json",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          143,
+          149
+        ],
+        [
+          157,
+          167
+        ],
+        [
+          355,
+          361
+        ]
+      ],
+      "coveredLineCount": 25,
+      "displayedLineRanges": [
+        [
+          134,
+          149
+        ],
+        [
+          175,
+          184
+        ],
+        [
+          355,
+          361
+        ],
+        [
+          155,
+          173
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        4,
+        29,
+        30,
+        31,
+        191,
+        306,
+        402,
+        405,
+        406,
+        475,
+        524,
+        695,
+        698,
+        1134,
+        1381,
+        1382,
+        1447,
+        1448,
+        1564,
+        1628,
+        1720
+      ],
+      "displayedLineCountIncludingNav": 73,
+      "scope": "Required real client prop and useSessionUsage→formatUsageCost call only. Hook internals, actual async fetching/stale result behavior, permissions/cancel/native not opened.",
+      "finishFilesystemSHA": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "finishEqualsInitial": true,
+      "captureAtUTC": "2026-10-17T16:33:36.380334+00:00",
+      "captureTiming": "After actual source display;firstpins before body/nav, not retroactive pre-read snapshot.",
+      "kind": "product"
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/core/src/protocol/chat-session-manager.ts",
+      "bytes": 29543,
+      "lines": 740,
+      "sha256": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "beforeBodyAndLineNavigation": true,
+      "firstPinArtifact": "binding-initial-pins.json",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        594
+      ],
+      "displayedLineCountIncludingNav": 1,
+      "finishFilesystemSHA": "62aa974609ffa6643a071daeb1f26d0aace143133a80db1c513b7f7aa1d612dd",
+      "finishEqualsInitial": true,
+      "scope": "startInkRepl filename hit is only a cleanup comment, not another UI entry/call. Actual cleanup/native mechanisms not followed."
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBody": true,
+      "firstPinArtifact": "initial-pins.json"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBody": true,
+      "firstPinArtifact": "initial-pins.json"
+    }
+  ],
+  "instructionStatus": "CurrentCODESHELL217read71carriedunchanged; repeatpins no new semantic reading81.",
+  "semanticFileCount": 7,
+  "fullFileCount": 0,
+  "selectedFileCount": 7,
+  "semanticProductLines": 220,
+  "semanticTestLines": 0,
+  "displayedLineUnionSumIncludingNav": 570,
+  "testDeclarationsRead": 0,
+  "testsExecuted": 0,
+  "productionCallInventory": "6227a7 packages+scripts startInkRepl filename results:repl actual call,ui/index definition,ui/index.test filename not read,Corechat-manager594comment only.",
+  "rootReportedContextOnly": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684 last supply;ownGit0",
+  "oldFullAllowedScope": "This is a specific hypothesis selected recheck; prior whole-source labels do not imply absence of this bug, nor do these reads claim first-ever coverage."
+}

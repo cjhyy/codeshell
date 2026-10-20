@@ -49,5 +49,7 @@ export interface LocalLinkProviderSpec {
   tokenLabel: string;
   tokenPlaceholder: string;
   validate(context: Omit<LocalLinkActionContext, "params">): Promise<LocalLinkIdentity>;
-  actions: LocalLinkActionSpec[];
+  actions: readonly LocalLinkActionSpec[];
+  /** Explicit actions enabled by a validated provider credential; excludes other auth channels. */
+  credentialActionIds?: readonly string[];
 }

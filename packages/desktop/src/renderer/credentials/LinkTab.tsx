@@ -10,15 +10,12 @@ import {
   Github,
   HardDrive,
   MessageCircleMore,
-  MessageSquareText,
   MessagesSquare,
-  NotebookPen,
   RefreshCw,
   Search,
   Settings2,
   ShieldCheck,
   SquareTerminal,
-  Sparkles,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -42,11 +39,24 @@ import {
   type LinkExecutionRuntime,
   type LinkIntegration,
 } from "./link-catalog";
-import { RemoteLinkSection, remoteLinkProviders, useRemoteLinkSnapshot } from "./RemoteLinkSection";
+import { RemoteProviderSection, useRemoteLinkSnapshot } from "./RemoteLinkSection";
+import { LinkConnectionRow, LinkProviderCard } from "./LinkProviderCard";
+import { linkCredentialProvider, mergeLinkDirectoryProviders } from "./linkDirectory";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import { LinkConnectionDialog } from "./LinkConnectionDialog";
+import { FigmaConnectionCard } from "./FigmaConnectionCard";
+import {
+  LinkAccountMenu,
+  LinkConnectionOption,
+  LinkPresentationContext,
+  useLinkPrimaryAction,
+} from "./LinkPresentation";
+import { selectPrimaryLinkOption } from "./linkPrimaryConnection";
+import { useCloudAccountStatus } from "./useCloudAccountStatus";
+import { localLinkProvider, localLinkSnapshot } from "./linkLocalPresentation";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
+import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
 import type {
   ImGatewayChannel,
   ImGatewayChannelCapabilities,
@@ -164,20 +174,8 @@ export function gatewayToolNames(
 
 type IntegrationFilter = "all" | "connected" | "planned";
 
-const INTEGRATION_ICONS: Record<LinkIntegration["icon"], LucideIcon> = {
-  github: Github,
-  figma: Figma,
-  notes: NotebookPen,
-  conversation: MessageSquareText,
-};
-
-function linkCredentialProvider(credential: MaskedCredentialView): string | undefined {
-  if (credential.meta?.linkProvider) return credential.meta.linkProvider;
-  if (credential.meta?.oauthProvider) return credential.meta.oauthProvider;
-  const suffix = "-oauth";
-  return credential.id.endsWith(suffix)
-    ? credential.id.slice(0, -suffix.length) || undefined
-    : undefined;
+function integrationIcon(providerId: string): LucideIcon {
+  return providerId === "github" ? Github : providerId === "figma" ? Figma : Cable;
 }
 
 function linkCredentialRuntime(credential: MaskedCredentialView): LinkExecutionRuntime | undefined {
@@ -224,14 +222,25 @@ export interface CliLiveness {
   account?: string;
 }
 
+interface CliProbe {
+  command: string;
+  pending: boolean;
+  status: CliLinkStatusView | null;
+}
+
 /** A failed probe is a network/service failure, not proof of a signed-out account. */
 export function resolveCliLiveness(
-  status: { installed: boolean; authenticated: boolean; account?: string } | null,
+  status: {
+    installed: boolean;
+    authenticated: boolean;
+    accountId?: string;
+    account?: string;
+  } | null,
   expectedAccountId: string | undefined,
 ): Exclude<CliLivenessState, "checking"> {
   if (!status || !status.installed || !status.authenticated) return "unknown";
-  if (!expectedAccountId || !status.account) return "unknown";
-  return status.account === expectedAccountId ? "ok" : "mismatch";
+  if (!expectedAccountId || !status.accountId) return "unknown";
+  return status.accountId === expectedAccountId ? "ok" : "mismatch";
 }
 
 interface LinkMethodEntry {
@@ -239,6 +248,7 @@ interface LinkMethodEntry {
   method: LinkConnectionMethod;
   credential?: MaskedCredentialView;
   preferredRuntime: LinkExecutionRuntime | null;
+  available?: boolean;
 }
 
 export function buildCliLinkConnectionRequest(input: {
@@ -355,216 +365,313 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [localMetadataReady, setLocalMetadataReady] = useState(false);
+  const loadGeneration = useRef(0);
+  const loadMounted = useRef(false);
+  const loadCwd = useRef(cwd);
+  loadCwd.current = cwd;
   const [loadError, setLoadError] = useState<string | null>(null);
   const [providerViews, setProviderViews] = useState<LocalLinkProviderView[]>([]);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<IntegrationFilter>("all");
-  const remote = useRemoteLinkSnapshot(cwd);
-  const remoteConnections =
-    remote.snapshot?.connections.filter((connection) => connection.authSource === "remote-link") ??
-    [];
-  const hasRemote = Boolean(remote.snapshot?.capabilities.remoteAuth || remoteConnections.length);
-  const remoteMatches =
-    (hasRemote || Boolean(remote.error)) &&
-    filter !== "planned" &&
-    (filter !== "connected" ||
-      remoteConnections.some((connection) => connection.status === "connected")) &&
-    `${
-      remote.snapshot?.providers
-        .filter((provider) => provider.authModes?.some((mode) => mode.id === "remote-link"))
-        .map((provider) => `${provider.displayName} ${provider.description[lang]}`)
-        .join(" ") ?? ""
-    } ${t("ext.link.remoteDescription")} ${remoteConnections.map((connection) => `${connection.label} ${connection.account?.label ?? ""} ${connection.account?.resources.join(" ") ?? ""}`).join(" ")}`
-      .toLocaleLowerCase()
-      .includes(query.trim().toLocaleLowerCase());
+  const [category, setCategory] = useState("all");
+  const remote = useRemoteLinkSnapshot(cwd, { automatic: false });
+  const account = useCloudAccountStatus();
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  useEffect(() => {
+    // Present one coherent first directory, rather than sorting partial account
+    // and provider results in front of the user. Later refreshes keep the cards.
+    if (localMetadataReady && !remote.loading && !account.loading) setInitialLoadComplete(true);
+  }, [localMetadataReady, remote.loading, account.loading]);
+  const initialLoading = !initialLoadComplete;
+  const cloudAvailable = Boolean(
+    account.status?.state === "signed-in" && account.status.origin && account.status.account?.id,
+  );
+  const visibleSnapshot = useMemo(
+    () => (cloudAvailable ? remote.snapshot : localLinkSnapshot(remote.snapshot)),
+    [cloudAvailable, remote.snapshot],
+  );
+  const visibleCredentials = useMemo(
+    () =>
+      cloudAvailable
+        ? credentials
+        : credentials.filter(
+            (credential) =>
+              linkCredentialRuntime(credential) === "local" &&
+              credential.meta?.linkExecutionBackend !== "remote",
+          ),
+    [cloudAvailable, credentials],
+  );
+  const accountIdentity = cloudAvailable
+    ? `${account.status!.origin}\n${account.status!.account!.id}`
+    : "";
+  const previousAccountIdentity = useRef(accountIdentity);
+  useEffect(() => {
+    if (previousAccountIdentity.current === accountIdentity) return;
+    previousAccountIdentity.current = accountIdentity;
+    void remote.reload();
+  }, [accountIdentity, remote.reload]);
   const [localDialog, setLocalDialog] = useState<{
     item: LinkIntegration;
     method: LinkConnectionMethod;
     credential?: MaskedCredentialView;
   } | null>(null);
-  const [cliLiveness, setCliLiveness] = useState<Record<string, CliLiveness>>({});
-  const [livenessNonce, setLivenessNonce] = useState(0);
+  const [cliProbes, setCliProbes] = useState<Record<string, CliProbe>>({});
+  const loadData = useRef<{
+    cwd: string;
+    credentials: MaskedCredentialView[];
+    providers: LocalLinkProviderView[];
+  }>({ cwd, credentials: [], providers: [] });
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshPending = useRef<
+    | {
+        cwd: string;
+        forceCatalog: boolean;
+        promise: Promise<void>;
+      }
+    | undefined
+  >(undefined);
 
   const load = useCallback(async () => {
+    if (!loadMounted.current || loadCwd.current !== cwd) return;
+    const generation = ++loadGeneration.current;
+    const current = () =>
+      loadMounted.current && generation === loadGeneration.current && loadCwd.current === cwd;
     setLoading(true);
     try {
-      const [all, providers] = await Promise.all([
+      const [all, providers] = await Promise.allSettled([
         window.codeshell.credentials.list(cwd),
         window.codeshell.links.listLocalProviders(),
       ]);
-      setCredentials(
-        all.filter((credential) => credential.type === "oauth" || credential.type === "link"),
+      if (!current()) return;
+      const previous = loadData.current.cwd === cwd ? loadData.current : undefined;
+      const nextCredentials =
+        all.status === "fulfilled"
+          ? all.value.filter(
+              (credential) => credential.type === "oauth" || credential.type === "link",
+            )
+          : (previous?.credentials ?? []);
+      const nextProviders =
+        providers.status === "fulfilled" ? providers.value : (previous?.providers ?? []);
+      loadData.current = { cwd, credentials: nextCredentials, providers: nextProviders };
+      setCredentials(nextCredentials);
+      setProviderViews(nextProviders);
+      setLocalMetadataReady(true);
+
+      // Probe each provider once. Stable account IDs are compared independently
+      // for each saved binding below; labels never identify the approved account.
+      const commands = new Map<string, string>();
+      for (const provider of nextProviders) {
+        const method = provider.connectionMethods.find(
+          (candidate) => candidate.quickAuth?.kind === "cli-session",
+        );
+        if (method?.quickAuth) commands.set(provider.id, method.quickAuth.command);
+      }
+      const providerIds = new Set(
+        nextCredentials.flatMap((credential) =>
+          credential.hasSecret &&
+          credential.meta?.linkExecutionBackend === "cli" &&
+          credential.meta.linkProvider &&
+          commands.has(credential.meta.linkProvider)
+            ? [credential.meta.linkProvider]
+            : [],
+        ),
       );
-      setProviderViews(providers);
+      const statusLoader = window.codeshell.links.cliStatus;
+      const targets = typeof statusLoader === "function" ? [...providerIds] : [];
+      setCliProbes(
+        Object.fromEntries(
+          targets.map((providerId) => [
+            providerId,
+            {
+              command: commands.get(providerId)!,
+              pending: true,
+              status: null,
+            },
+          ]),
+        ),
+      );
+      await Promise.all(
+        targets.map(async (providerId) => {
+          let status: CliLinkStatusView | null;
+          try {
+            status = await statusLoader(providerId, cwd);
+          } catch {
+            status = null;
+          }
+          if (!current()) return;
+          setCliProbes((probes) => ({
+            ...probes,
+            [providerId]: {
+              command: status?.command || commands.get(providerId)!,
+              pending: false,
+              status,
+            },
+          }));
+        }),
+      );
+      if (!current()) return;
+      const failure = [all, providers].find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
       setLoadError(null);
     } catch (error) {
+      if (!current()) return;
       const message = error instanceof Error ? error.message : String(error);
       setLoadError(message);
       throw error;
     } finally {
-      setLoading(false);
+      if (current()) {
+        setLocalMetadataReady(true);
+        setLoading(false);
+      }
     }
   }, [cwd]);
 
-  useEffect(() => {
-    void load().catch(() => undefined);
-  }, [load]);
-
-  // Saved CLI connections carry only a local binding marker, so the stored card
-  // cannot show whether the provider CLI is still signed in to that account.
-  // Probe once per provider on entry and on manual refresh, never on a timer.
-  const cliConnections = useMemo(() => {
-    const byProvider = new Map<string, string | undefined>();
-    for (const credential of credentials) {
-      const meta = credential.meta;
-      if (!meta?.linkProvider || meta.linkExecutionBackend !== "cli") continue;
-      if (!credential.hasSecret) continue;
-      if (!byProvider.has(meta.linkProvider)) {
-        byProvider.set(meta.linkProvider, meta.linkAccountId);
+  const refresh = useCallback(
+    (forceCatalog = false) => {
+      if (!loadMounted.current || loadCwd.current !== cwd) return Promise.resolve();
+      const active = refreshPending.current;
+      if (active?.cwd === cwd) {
+        active.forceCatalog ||= forceCatalog;
+        return active.promise;
       }
-    }
-    return Array.from(byProvider, ([providerId, accountId]) => ({ providerId, accountId }));
-  }, [credentials]);
-
-  const cliCommands = useMemo(() => {
-    const commands = new Map<string, string>();
-    for (const provider of providerViews) {
-      for (const method of provider.connectionMethods) {
-        if (method.quickAuth?.kind === "cli-session") {
-          commands.set(provider.id, method.quickAuth.command);
-          break;
-        }
-      }
-    }
-    return commands;
-  }, [providerViews]);
-
-  useEffect(() => {
-    const statusLoader = window.codeshell.links?.cliStatus;
-    const targets = cliConnections.filter(({ providerId }) => cliCommands.has(providerId));
-    if (!statusLoader || targets.length === 0) {
-      setCliLiveness({});
-      return;
-    }
-    let cancelled = false;
-    setCliLiveness(
-      Object.fromEntries(
-        targets.map(({ providerId }) => [
-          providerId,
-          { state: "checking" as const, command: cliCommands.get(providerId) ?? "" },
-        ]),
-      ),
-    );
-    for (const { providerId, accountId } of targets) {
-      const command = cliCommands.get(providerId) ?? "";
-      void statusLoader(providerId, cwd)
-        .then((status) => {
-          if (cancelled) return;
-          setCliLiveness((current) => ({
-            ...current,
-            [providerId]: {
-              state: resolveCliLiveness(status, accountId),
-              command: status.command || command,
-              account: status.account,
-            },
-          }));
+      const entry = { cwd, forceCatalog, promise: Promise.resolve() };
+      entry.promise = Promise.resolve()
+        .then(async () => {
+          do {
+            if (!loadMounted.current || loadCwd.current !== cwd || refreshPending.current !== entry)
+              return;
+            const force = entry.forceCatalog;
+            entry.forceCatalog = false;
+            await Promise.allSettled([load(), remote.reload(force)]);
+          } while (entry.forceCatalog);
         })
-        .catch(() => {
-          if (cancelled) return;
-          setCliLiveness((current) => ({
-            ...current,
-            [providerId]: { state: "unknown", command },
-          }));
+        .finally(() => {
+          if (refreshPending.current !== entry) return;
+          refreshPending.current = undefined;
+          if (loadMounted.current && loadCwd.current === cwd) setRefreshing(false);
         });
-    }
+      refreshPending.current = entry;
+      setRefreshing(true);
+      return entry.promise;
+    },
+    [cwd, load, remote.reload],
+  );
+
+  useEffect(() => {
+    loadMounted.current = true;
+    void refresh();
+    const onFocus = () => void refresh();
+    window.addEventListener("focus", onFocus);
     return () => {
-      cancelled = true;
+      loadMounted.current = false;
+      loadGeneration.current++;
+      refreshPending.current = undefined;
+      window.removeEventListener("focus", onFocus);
     };
-  }, [cliCommands, cliConnections, cwd, livenessNonce]);
+  }, [refresh]);
+
+  const cliLiveness = useMemo(() => {
+    const bindings: Record<string, CliLiveness> = {};
+    for (const credential of credentials) {
+      if (credential.meta?.linkExecutionBackend !== "cli" || !credential.meta.linkProvider)
+        continue;
+      const probe = cliProbes[credential.meta.linkProvider];
+      if (!probe) continue;
+      bindings[credential.id] = {
+        state: probe.pending
+          ? "checking"
+          : resolveCliLiveness(probe.status, credential.meta.linkAccountId),
+        command: probe.command,
+        account: probe.status?.account,
+      };
+    }
+    return bindings;
+  }, [credentials, cliProbes]);
 
   const catalog = useMemo(
     () =>
-      buildLinkCatalog(remote.snapshot?.providers ?? providerViews, lang === "zh" ? "zh" : "en"),
-    [lang, providerViews, remote.snapshot?.providers],
+      buildLinkCatalog(
+        mergeLinkDirectoryProviders(
+          cloudAvailable ? providerViews : providerViews.map(localLinkProvider),
+          visibleSnapshot?.providers,
+          visibleCredentials,
+          visibleSnapshot?.connections,
+        ),
+        lang === "zh" ? "zh" : "en",
+      ),
+    [lang, providerViews, visibleCredentials, visibleSnapshot, cloudAvailable],
   );
-  const byMethod = useMemo(() => {
-    const map = new Map<string, MaskedCredentialView>();
-    for (const credential of credentials) {
-      if (credential.meta?.linkExecutionBackend === "remote") continue;
-      const provider = linkCredentialProvider(credential);
-      const runtime = linkCredentialRuntime(credential);
-      if (!provider || !runtime) continue;
-      const methodId = credential.meta?.linkConnectionMethod;
-      const key = methodId ? `${provider}:${runtime}:${methodId}` : `${provider}:${runtime}`;
-      if (!map.has(key)) {
-        map.set(key, credential);
-      }
-    }
-    return map;
-  }, [credentials]);
-
   const entries = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase();
     const result: Record<LinkExecutionRuntime, LinkMethodEntry[]> = { local: [], server: [] };
-    for (const category of catalog) {
+    for (const category of catalog)
       for (const item of category.items) {
-        const remoteProvider = remote.snapshot?.providers.find(
+        const remoteProvider = visibleSnapshot?.providers.find(
           (provider) => provider.id === item.id,
-        );
-        const hasAvailableRemoteOAuth = remoteProvider?.authModes?.some(
-          (mode) =>
-            mode.id === "remote-link" &&
-            mode.available &&
-            remoteProvider.connectionMethods.some(
-              (method) =>
-                method.id === mode.methodId &&
-                method.executionRuntime === "server" &&
-                method.secretLocation === "server" &&
-                method.authKind === "oauth",
-            ),
         );
         for (const method of item.connectionMethods) {
           if (
+            method.id === "mcp" ||
             remoteProvider?.authModes?.some(
               (mode) => mode.id === "remote-link" && mode.methodId === method.id,
             )
           )
             continue;
-          const credential =
-            byMethod.get(linkMethodStateKey(item.id, method)) ??
-            byMethod.get(`${item.id}:${method.executionRuntime}`);
-          const isRemoteOAuthPlaceholder =
-            hasAvailableRemoteOAuth &&
-            method.executionRuntime === "server" &&
-            method.secretLocation === "server" &&
-            method.authKind === "oauth" &&
-            method.availability === "coming-soon" &&
-            !method.oauthProfileId &&
-            !method.browserAuth &&
-            !method.quickAuth &&
-            !credential;
-          if (isRemoteOAuthPlaceholder) continue;
-          const available =
-            method.availability === "available" &&
-            (method.authKind === "token" || Boolean(method.oauthProfileId));
-          if (filter === "connected" && !linkCredentialIsUsable(credential)) continue;
-          if (filter === "planned" && (credential || available)) continue;
-          if (needle) {
-            const haystack = `${item.name} ${method.displayName} ${item.description} ${t(category.titleKey)}`;
-            if (!haystack.toLocaleLowerCase().includes(needle)) continue;
-          }
-          result[method.executionRuntime].push({
-            item,
-            method,
-            credential,
-            preferredRuntime: resolvePreferredLinkRuntime(credentials, item.id),
+          const matching = visibleCredentials.filter((credential) => {
+            if (
+              ["remote", "mcp"].includes(credential.meta?.linkExecutionBackend ?? "") ||
+              linkCredentialProvider(credential) !== item.id ||
+              linkCredentialRuntime(credential) !== method.executionRuntime
+            )
+              return false;
+            const explicitMethod = credential.meta?.linkConnectionMethod;
+            if (explicitMethod) return explicitMethod === method.id;
+            // A saved record without a method marker appears once, without
+            // treating its display name as authority or choosing between accounts.
+            const choices = item.connectionMethods.filter(
+              (candidate) =>
+                candidate.executionRuntime === method.executionRuntime &&
+                candidate.id !== "mcp" &&
+                !remoteProvider?.authModes?.some(
+                  (mode) => mode.id === "remote-link" && mode.methodId === candidate.id,
+                ),
+            );
+            const choice =
+              choices.find((candidate) => candidate.id === credential.id) ?? choices[0];
+            return choice?.id === method.id;
           });
+          const candidates = matching.length ? matching : [undefined];
+          for (const credential of candidates) {
+            // Managed browser authorization owns this capability; an unavailable
+            // catalog must never resurrect a misleading "coming soon" placeholder.
+            if (
+              method.executionRuntime === "server" &&
+              method.authKind === "oauth" &&
+              !method.oauthProfileId &&
+              method.availability !== "available" &&
+              !credential
+            )
+              continue;
+            result[method.executionRuntime].push({
+              item,
+              method,
+              credential,
+              preferredRuntime: resolvePreferredLinkRuntime(visibleCredentials, item.id),
+              available:
+                method.executionRuntime === "local"
+                  ? Boolean(
+                      remoteProvider?.authModes?.some(
+                        (mode) => mode.methodId === method.id && mode.available,
+                      ),
+                    )
+                  : Boolean(method.oauthProfileId && method.availability === "available"),
+            });
+          }
         }
       }
-    }
     return result;
-  }, [byMethod, catalog, credentials, filter, query, t, remote.snapshot?.providers]);
+  }, [catalog, visibleCredentials, visibleSnapshot?.providers]);
 
   /**
    * 旧版通用表单创建的 type:"link" 凭据没有 linkProvider/oauthProvider meta，
@@ -572,21 +679,11 @@ export function LinkTab({ cwd }: { cwd: string }) {
    */
   const legacyCredentials = useMemo(
     () =>
-      credentials.filter(
+      visibleCredentials.filter(
         (credential) => credential.type === "link" && !linkCredentialProvider(credential),
       ),
-    [credentials],
+    [visibleCredentials],
   );
-
-  const localConnectedCount = credentials.filter(
-    (credential) =>
-      linkCredentialRuntime(credential) === "local" && linkCredentialIsUsable(credential),
-  ).length;
-  const serverConnectedCount = credentials.filter(
-    (credential) =>
-      linkCredentialRuntime(credential) === "server" && linkCredentialIsUsable(credential),
-  ).length;
-  const connectedCount = localConnectedCount + serverConnectedCount;
 
   const run = async (
     item: LinkIntegration,
@@ -682,118 +779,136 @@ export function LinkTab({ cwd }: { cwd: string }) {
     }
   };
 
-  const noMatches = entries.local.length === 0 && entries.server.length === 0 && !remoteMatches;
+  const directory = catalog
+    .flatMap((group) =>
+      group.items.map((item) => ({ item, categoryId: group.id, categoryTitle: t(group.titleKey) })),
+    )
+    .map(({ item, categoryId, categoryTitle }) => {
+      const accounts =
+        visibleSnapshot?.connections.filter((connection) => connection.providerId === item.id) ??
+        [];
+      const stored = visibleCredentials.filter(
+        (credential) => linkCredentialProvider(credential) === item.id,
+      );
+      const provider = visibleSnapshot?.providers.find((candidate) => candidate.id === item.id);
+      const visibleStored = stored.filter(
+        (credential) => !accounts.some((account) => account.id === credential.id),
+      );
+      const usableAccounts = accounts.filter((account) => account.status === "connected");
+      const connected =
+        usableAccounts.length +
+        visibleStored.filter(
+          (credential) =>
+            !["remote", "mcp"].includes(credential.meta?.linkExecutionBackend ?? "") &&
+            linkCredentialIsUsable(credential),
+        ).length;
+      const saved = accounts.length + visibleStored.length;
+      const available =
+        provider?.authModes?.some((mode) => mode.available) ||
+        item.connectionMethods.some(
+          (method) => method.availability === "available" && Boolean(method.oauthProfileId),
+        );
+      const needsAttention = saved > 0 && connected === 0;
+      const accountNames = [
+        ...new Set([
+          ...accounts.map((account) => account.account?.label ?? account.label),
+          ...visibleStored.map(
+            (credential) => credential.meta?.linkAccountLabel ?? credential.label,
+          ),
+        ]),
+      ];
+      return {
+        item,
+        categoryId,
+        categoryTitle,
+        provider,
+        accounts,
+        stored,
+        connected,
+        saved,
+        available,
+        needsAttention,
+        accountNames,
+      };
+    })
+    .sort(
+      (left, right) =>
+        Number(right.connected > 0) - Number(left.connected > 0) ||
+        Number(right.needsAttention) - Number(left.needsAttention) ||
+        left.item.name.localeCompare(right.item.name),
+    );
+  const needle = query.trim().toLocaleLowerCase();
+  const visibleProviders = directory.filter(
+    ({ item, categoryId, connected, available, needsAttention, accountNames }) =>
+      (needle || category === "all" || categoryId === category) &&
+      (filter !== "connected" || connected > 0) &&
+      (filter !== "planned" || needsAttention || !available) &&
+      `${item.name} ${item.description} ${item.id === "figma" ? t("ext.link.directory.figmaDescription") : ""} ${accountNames.join(" ")} ${item.connectionMethods.map((method) => method.displayName).join(" ")}`
+        .toLocaleLowerCase()
+        .includes(needle),
+  );
+  const visibleProviderIds = new Set(visibleProviders.map(({ item }) => item.id));
+  const noMatches = !initialLoading && visibleProviders.length === 0;
+  const discoveryUnavailable = ["unavailable", "stale"].includes(
+    visibleSnapshot?.remoteCatalog?.state ?? "",
+  );
+  const stateReadError = loadError || remote.error;
+  const directoryError =
+    stateReadError || (discoveryUnavailable ? t("ext.link.directory.catalogUnavailable") : "");
 
   return (
     <div className="space-y-5" data-link-page>
-      <section className="link-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm">
-              <Cable className="size-6" aria-hidden />
-            </div>
-            <div className="min-w-0 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                  {t("ext.link.eyebrow")}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
-                  <ShieldCheck className="size-3" aria-hidden />
-                  {t("ext.link.localFirst")}
-                </span>
-              </div>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
-                {t("ext.link.overviewTitle")}
-              </h2>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                {t("ext.link.intro")}
-              </p>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-3 gap-2 lg:min-w-72">
-            <LinkStat value={connectedCount} label={t("ext.link.connectedCount")} />
-            <LinkStat value={localConnectedCount} label={t("ext.link.localConnectedCount")} />
-            <LinkStat value={serverConnectedCount} label={t("ext.link.serverConnectedCount")} />
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="rounded-2xl border border-status-ok/20 bg-status-ok/[0.045] p-4 sm:p-5"
-        aria-labelledby="link-routing-title"
-      >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-status-ok/10 text-status-ok">
-              <ShieldCheck className="size-4.5" aria-hidden />
-            </div>
-            <div>
-              <h3 id="link-routing-title" className="text-sm font-semibold">
-                {t("ext.link.routingTitle")}
-              </h3>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-                {t("ext.link.routingDescription")}
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-[11px] font-medium">
-            <HardDrive className="size-3.5 text-status-ok" aria-hidden />
-            {t("ext.link.localRuntime")}
-            <span aria-hidden>·</span>
-            <Cloud className="size-3.5 text-sky-600 dark:text-sky-400" aria-hidden />
-            {t("ext.link.serverRuntime")}
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4" aria-labelledby="link-apps-title">
-        <div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" aria-hidden />
-            <h3 id="link-apps-title" className="text-base font-semibold tracking-tight">
-              {t("ext.link.appsTitle")}
-            </h3>
-          </div>
-          <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-            {t("ext.link.appsDescriptionDual")}
+      <header className="flex flex-wrap items-center gap-5 pb-1">
+        <div className="min-w-0 flex-1 basis-80">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+            {t("ext.link.overviewTitle")}
+          </h2>
+          <p className="mt-2 max-w-xl text-xs leading-5 text-muted-foreground">
+            {t("ext.link.directory.description")}
           </p>
         </div>
+        <div className="relative w-full shrink-0 sm:w-64" role="search">
+          <Search
+            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            ref={searchRef}
+            value={query}
+            type="search"
+            className="h-10 rounded-xl border-border/60 bg-card pl-10 pr-9 [&::-webkit-search-cancel-button]:appearance-none"
+            placeholder={t("ext.link.searchPlaceholder")}
+            aria-label={t("ext.link.searchPlaceholder")}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          {query ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1 size-8 text-muted-foreground"
+              aria-label={t("ext.link.clearSearch")}
+              onClick={() => {
+                setQuery("");
+                searchRef.current?.focus();
+              }}
+            >
+              <X className="size-3.5" aria-hidden />
+            </Button>
+          ) : null}
+        </div>
+      </header>
 
-        <div className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-2.5 lg:flex-row lg:items-center">
-          <div className="relative min-w-0 flex-1" role="search">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              ref={searchRef}
-              value={query}
-              type="search"
-              className="h-9 border-transparent bg-muted/55 pl-9 pr-9 focus-visible:bg-background [&::-webkit-search-cancel-button]:appearance-none"
-              placeholder={t("ext.link.searchPlaceholder")}
-              aria-label={t("ext.link.searchPlaceholder")}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            {query ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0.5 top-0.5 size-8 text-muted-foreground"
-                aria-label={t("ext.link.clearSearch")}
-                onClick={() => {
-                  setQuery("");
-                  searchRef.current?.focus();
-                }}
-              >
-                <X className="size-3.5" aria-hidden />
-              </Button>
-            ) : null}
-          </div>
+      <section
+        aria-label={t("ext.link.appsTitle")}
+        aria-busy={initialLoading}
+        className="grid gap-6 md:grid-cols-[224px_minmax(0,1fr)]"
+      >
+        <aside className="flex min-w-0 flex-col gap-5 rounded-2xl bg-muted/35 p-3 md:self-start md:p-4">
           <div
-            className="flex min-w-0 flex-wrap items-center gap-1 rounded-lg bg-muted/55 p-1"
             role="group"
             aria-label={t("ext.link.filterAria")}
+            className="flex gap-1 md:flex-col"
           >
             {(["all", "connected", "planned"] as IntegrationFilter[]).map((value) => (
               <Button
@@ -802,112 +917,407 @@ export function LinkTab({ cwd }: { cwd: string }) {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "h-7 flex-1 px-2.5 sm:flex-none",
+                  "h-9 min-w-0 flex-1 justify-between gap-2 rounded-lg px-3 md:flex-none",
                   filter === value && "bg-background text-foreground shadow-sm",
                 )}
+                aria-label={t(`ext.link.filter.${value}`)}
                 aria-pressed={filter === value}
                 onClick={() => setFilter(value)}
               >
-                {t(`ext.link.filter.${value}`)}
+                <span className="min-w-0 truncate">{t(`ext.link.filter.${value}`)}</span>
+                <span
+                  aria-hidden
+                  className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
+                >
+                  {initialLoading
+                    ? "—"
+                    : value === "all"
+                      ? directory.length
+                      : value === "connected"
+                        ? directory.filter((entry) => entry.connected > 0).length
+                        : directory.filter((entry) => entry.needsAttention || !entry.available)
+                            .length}
+                </span>
               </Button>
             ))}
           </div>
-        </div>
-
-        {loadError ? (
           <div
-            role="alert"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/30 bg-status-err/5 px-4 py-3"
+            className="min-w-0 space-y-2 border-t border-border/50 pt-4"
+            role="group"
+            aria-label={t("ext.link.directory.categories")}
           >
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-status-err">{t("ext.link.loadFailed")}</p>
-              <p className="mt-0.5 break-words text-xs text-muted-foreground">{loadError}</p>
+            <p className="px-3 text-[11px] font-medium text-muted-foreground">
+              {t("ext.link.directory.categories")}
+            </p>
+            <div className="flex min-w-0 gap-1 overflow-x-auto md:block md:overflow-visible">
+              {[
+                {
+                  id: "all",
+                  title: t("ext.link.directory.allCategories"),
+                  count: directory.length,
+                },
+                ...catalog.map((group) => ({
+                  id: group.id,
+                  title: t(group.titleKey),
+                  count: group.items.length,
+                })),
+              ].map((group) => (
+                <Button
+                  key={group.id}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={group.title}
+                  aria-pressed={(needle ? "all" : category) === group.id}
+                  className={cn(
+                    "h-9 shrink-0 justify-between gap-3 rounded-lg px-3 font-normal md:w-full md:min-w-0",
+                    (needle ? "all" : category) === group.id &&
+                      "bg-background text-foreground shadow-sm",
+                  )}
+                  onClick={() => {
+                    setCategory(group.id);
+                    setQuery("");
+                  }}
+                >
+                  <span className="min-w-0 truncate">{group.title}</span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                    {group.count}
+                  </span>
+                </Button>
+              ))}
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={loading}
-              onClick={() => {
-                setLivenessNonce((value) => value + 1);
-                void load().catch(() => undefined);
-              }}
+          </div>
+          <p className="hidden items-center gap-2 border-t border-border/50 px-2 pt-4 text-[11px] leading-5 text-muted-foreground md:flex">
+            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-status-ok" />
+            {t("ext.link.directory.connectedSummary", {
+              connected: directory.filter((entry) => entry.connected > 0).length,
+              total: directory.length,
+            })}
+          </p>
+          {!account.loading && !cloudAvailable && (
+            <div
+              role="status"
+              data-link-local-only
+              className="space-y-1.5 border-t border-border/50 px-2 pt-4 text-xs leading-5 text-muted-foreground"
             >
-              <RefreshCw className={cn("size-3.5", loading && "animate-spin")} aria-hidden />
-              {t("ext.link.retry")}
-            </Button>
-          </div>
-        ) : loading ? (
-          <div
-            className="rounded-xl border border-border/70 bg-card px-4 py-3 text-xs text-muted-foreground"
-            aria-live="polite"
-          >
-            {t("ext.link.loadingConnections")}
-          </div>
-        ) : null}
-
-        {noMatches ? (
-          <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center">
-            <p className="text-sm font-medium text-foreground">{t("ext.link.noMatches")}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("ext.link.noMatchesDescription")}
+              <p className="flex items-center gap-1.5 font-medium text-foreground">
+                <HardDrive aria-hidden className="size-3.5" />
+                {t("ext.link.directory.localOnly")}
+              </p>
+              <p>{t("ext.link.directory.localOnlyHint")}</p>
+            </div>
+          )}
+        </aside>
+        <div className="min-w-0 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <p role="status" className="min-h-5 text-xs leading-5 text-muted-foreground">
+              {initialLoading
+                ? t("ext.link.loadingConnections")
+                : t("ext.link.directory.results", { count: visibleProviders.length })}
             </p>
             <Button
               type="button"
-              variant="link"
               size="sm"
-              className="mt-2"
-              onClick={() => {
-                setQuery("");
-                setFilter("all");
-                searchRef.current?.focus();
-              }}
+              variant="ghost"
+              className="h-8 text-xs text-muted-foreground"
+              disabled={refreshing || loading || remote.loading}
+              onClick={() => void refresh(true)}
             >
-              {t("ext.link.resetFilters")}
+              <RefreshCw
+                className={cn(
+                  "size-3.5",
+                  (refreshing || loading || remote.loading) && "animate-spin",
+                )}
+                aria-hidden
+              />
+              {t("ext.link.refreshConnections")}
             </Button>
           </div>
-        ) : null}
-        <div hidden={noMatches} className="grid gap-4 xl:grid-cols-2 xl:items-start">
-          <RuntimeLinkSection
-            runtime="local"
-            cliLiveness={cliLiveness}
-            entries={entries.local}
-            busyId={busyId}
-            errors={errors}
-            onLocalConnect={openLocalDialog}
-            onLocalDisconnect={disconnectLocal}
-            onServerLogin={onServerLogin}
-            onServerRefresh={onServerRefresh}
-            onServerLogout={onServerLogout}
-          />
-          <RuntimeLinkSection
-            runtime="server"
-            cliLiveness={cliLiveness}
-            entries={entries.server}
-            busyId={busyId}
-            errors={errors}
-            onLocalConnect={openLocalDialog}
-            onLocalDisconnect={disconnectLocal}
-            onServerLogin={onServerLogin}
-            onServerRefresh={onServerRefresh}
-            onServerLogout={onServerLogout}
-            extraCount={remoteMatches ? remoteLinkProviders(remote.snapshot).size : 0}
-          >
-            <div hidden={!remoteMatches}>
-              {hasRemote || remote.error ? (
-                <RemoteLinkSection
-                  key={cwd}
-                  cwd={cwd}
-                  snapshot={remote.snapshot}
-                  loadError={remote.error}
-                  reload={remote.reload}
-                  onChanged={() => {
-                    void load().catch(() => undefined);
-                  }}
-                />
-              ) : null}
+          {!initialLoading && directoryError ? (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/30 bg-status-err/5 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-status-err">
+                  {t(
+                    stateReadError
+                      ? "ext.link.loadFailed"
+                      : "ext.link.directory.catalogUnavailableTitle",
+                  )}
+                </p>
+                <p className="mt-0.5 break-words text-xs text-muted-foreground">{directoryError}</p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={loading}
+                onClick={() => void refresh(true)}
+              >
+                <RefreshCw className={cn("size-3.5", loading && "animate-spin")} aria-hidden />
+                {t("ext.link.retry")}
+              </Button>
             </div>
-          </RuntimeLinkSection>
+          ) : null}
+
+          {initialLoading && (
+            <div
+              data-link-loading
+              aria-hidden
+              className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-4"
+            >
+              {Array.from({ length: 6 }, (_, index) => (
+                <div
+                  key={index}
+                  className="h-[230px] space-y-5 rounded-2xl border border-border/65 bg-card p-5"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="size-12 rounded-xl bg-muted" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3.5 w-2/3 rounded bg-muted" />
+                      <div className="h-3 w-1/3 rounded bg-muted/60" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-full rounded bg-muted/60" />
+                    <div className="h-3 w-4/5 rounded bg-muted/60" />
+                  </div>
+                  <div className="h-3 w-1/2 rounded bg-muted/60" />
+                  <div className="h-8 w-24 rounded-lg bg-muted" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {noMatches ? (
+            <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center">
+              <p className="text-sm font-medium text-foreground">{t("ext.link.noMatches")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("ext.link.noMatchesDescription")}
+              </p>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  setQuery("");
+                  setFilter("all");
+                  setCategory("all");
+                  searchRef.current?.focus();
+                }}
+              >
+                {t("ext.link.resetFilters")}
+              </Button>
+            </div>
+          ) : null}
+          <div
+            hidden={initialLoading || noMatches}
+            data-link-directory
+            className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] items-start gap-4"
+          >
+            {directory.map(
+              ({
+                item,
+                categoryTitle,
+                provider,
+                accounts,
+                connected,
+                saved,
+                available,
+                needsAttention,
+                accountNames,
+              }) => {
+                const methodEntries = [...entries.local, ...entries.server].filter(
+                  (entry) => entry.item.id === item.id,
+                );
+                const methods = methodEntries.map((entry) => (
+                  <LinkConnectionOption
+                    key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
+                    optionId={`method:${entry.method.id}:${entry.credential?.id ?? "new"}`}
+                  >
+                    <LinkMethodCard
+                      key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
+                      entry={entry}
+                      liveness={entry.credential ? cliLiveness[entry.credential.id] : undefined}
+                      busy={busyId === linkMethodStateKey(item.id, entry.method)}
+                      error={errors[linkMethodStateKey(item.id, entry.method)]}
+                      onLocalConnect={() => openLocalDialog(entry)}
+                      onLocalDisconnect={() => disconnectLocal(entry)}
+                      onServerLogin={(credential) => onServerLogin(item, entry.method, credential)}
+                      onServerRefresh={(credential) =>
+                        onServerRefresh(item, entry.method, credential)
+                      }
+                      onServerLogout={(credential) =>
+                        onServerLogout(item, entry.method, credential)
+                      }
+                    />
+                  </LinkConnectionOption>
+                ));
+                const hasRemote = Boolean(
+                  provider?.authModes?.some((mode) => mode.id === "remote-link") ||
+                  accounts.some((connection) => connection.authSource === "remote-link"),
+                );
+                const hasMcp =
+                  item.id === "figma" &&
+                  Boolean(
+                    provider?.authModes?.some((mode) => mode.id === "mcp-oauth") ||
+                    accounts.some((connection) => connection.authSource === "mcp-oauth"),
+                  );
+                const primaryOption = selectPrimaryLinkOption({
+                  provider,
+                  connections: accounts,
+                  options: [
+                    ...(hasRemote
+                      ? [
+                          {
+                            id: "remote-link",
+                            methodId:
+                              provider?.authModes?.find((mode) => mode.id === "remote-link")
+                                ?.methodId ?? "remote-link",
+                            available: provider?.authModes?.some(
+                              (mode) => mode.id === "remote-link" && mode.available,
+                            ),
+                          },
+                        ]
+                      : []),
+                    ...(hasMcp
+                      ? [
+                          {
+                            id: "mcp-oauth",
+                            methodId: "mcp",
+                            available: provider?.authModes?.some(
+                              (mode) => mode.id === "mcp-oauth" && mode.available,
+                            ),
+                          },
+                        ]
+                      : []),
+                    ...methodEntries.map((entry) => ({
+                      id: `method:${entry.method.id}:${entry.credential?.id ?? "new"}`,
+                      methodId: entry.method.id,
+                      credentialId: entry.credential?.id,
+                      usable: linkCredentialIsUsable(entry.credential),
+                      available:
+                        entry.available ??
+                        (entry.method.availability === "available" &&
+                          (entry.method.authKind === "token" ||
+                            Boolean(entry.method.oauthProfileId))),
+                    })),
+                  ],
+                });
+                const missingAccounts = visibleCredentials.filter(
+                  (credential) =>
+                    linkCredentialProvider(credential) === item.id &&
+                    ["remote", "mcp"].includes(credential.meta?.linkExecutionBackend ?? "") &&
+                    !visibleSnapshot?.connections.some((account) => account.id === credential.id),
+                );
+                return (
+                  <LinkProviderCard
+                    key={`${cwd}:${item.id}`}
+                    id={item.id}
+                    hidden={!visibleProviderIds.has(item.id)}
+                    name={item.name}
+                    category={categoryTitle}
+                    icon={integrationIcon(item.id)}
+                    brandClass={item.brandClass}
+                    brandText={item.brandText}
+                    primaryOption={primaryOption}
+                    hasConnections={saved > 0}
+                    connectionCount={saved}
+                    localOnly={!cloudAvailable}
+                    description={
+                      item.id === "figma"
+                        ? t("ext.link.directory.figmaDescription")
+                        : item.description
+                    }
+                    accounts={[
+                      accountNames.join(" · "),
+                      saved ? t("ext.link.directory.connectionCount", { count: saved }) : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    status={
+                      remote.loading && missingAccounts.length
+                        ? t("ext.link.directory.checking")
+                        : needsAttention
+                          ? t("ext.link.directory.needsAttention")
+                          : connected
+                            ? t("ext.link.remoteAvailable")
+                            : saved
+                              ? t("ext.link.directory.unavailable")
+                              : available
+                                ? t("ext.link.directory.notConnected")
+                                : t("ext.link.directory.unavailable")
+                    }
+                    tone={
+                      remote.loading && missingAccounts.length
+                        ? "neutral"
+                        : needsAttention
+                          ? "warning"
+                          : connected
+                            ? "ready"
+                            : "neutral"
+                    }
+                  >
+                    {missingAccounts.map((credential) => (
+                      <LinkConnectionRow
+                        key={credential.id}
+                        data-link-saved-unavailable={credential.id}
+                        title={credential.meta?.linkAccountLabel ?? credential.label}
+                        description={t(
+                          remote.loading
+                            ? "ext.link.loadingConnections"
+                            : "ext.link.directory.savedUnavailable",
+                        )}
+                        status={t(
+                          remote.loading
+                            ? "ext.link.directory.checking"
+                            : "ext.link.directory.serviceUnavailable",
+                        )}
+                        tone={remote.loading ? "neutral" : "warning"}
+                        actions={
+                          <Button size="sm" variant="outline" onClick={() => void refresh(true)}>
+                            {t("ext.link.retry")}
+                          </Button>
+                        }
+                      />
+                    ))}
+                    {item.id === "figma" ? (
+                      <FigmaConnectionCard
+                        cwd={cwd}
+                        snapshot={visibleSnapshot}
+                        loadError={remote.error}
+                        loading={remote.loading}
+                        reload={remote.reload}
+                        onChanged={() => void load().catch(() => undefined)}
+                        localApi={methods}
+                      />
+                    ) : (
+                      <>
+                        {hasRemote && (
+                          <LinkConnectionOption optionId="remote-link">
+                            <RemoteProviderSection
+                              cwd={cwd}
+                              snapshot={visibleSnapshot}
+                              loadError={remote.error}
+                              loading={remote.loading}
+                              reload={remote.reload}
+                              onChanged={() => void load().catch(() => undefined)}
+                              providerId={item.id}
+                              provider={provider}
+                              embedded
+                            />
+                          </LinkConnectionOption>
+                        )}
+                        {methods}
+                      </>
+                    )}
+                  </LinkProviderCard>
+                );
+              },
+            )}
+          </div>
         </div>
       </section>
 
@@ -965,7 +1375,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
           key={`${cwd}:${localDialog.item.id}:${localDialog.method.id}:${localDialog.credential?.id ?? "new"}`}
           cwd={cwd}
           providerName={localDialog.item.name}
-          icon={INTEGRATION_ICONS[localDialog.item.icon]}
+          icon={integrationIcon(localDialog.item.id)}
           brandClass={localDialog.item.brandClass}
           input={{
             providerId: localDialog.item.id,
@@ -978,7 +1388,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
               : null,
           }}
           modes={
-            remote.snapshot?.providers
+            visibleSnapshot?.providers
               .find((item) => item.id === localDialog.item.id)
               ?.authModes?.filter((mode) => mode.methodId === localDialog.method.id) ?? []
           }
@@ -1193,47 +1603,14 @@ export function ChatGatewayTab() {
 
   return (
     <div className="space-y-5" data-channel-page>
-      <section className="credential-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 shadow-sm dark:text-emerald-400">
-              <MessagesSquare className="size-6" aria-hidden />
-            </div>
-            <div className="min-w-0 max-w-2xl">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
-                {t("ext.link.gatewayEyebrow")}
-              </span>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
-                {t("ext.link.gatewayTitle")}
-              </h2>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                {t("ext.link.gatewayHeroDescription")}
-              </p>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-2 gap-2 lg:min-w-56">
-            <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-              <div className="text-lg font-semibold leading-none tabular-nums text-foreground">
-                {enabledCount}
-              </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
-                {t("ext.link.gatewayConfiguredCount")}
-              </div>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-              <div
-                className="truncate text-sm font-semibold leading-none text-foreground"
-                title={statusLabel}
-              >
-                {statusLabel}
-              </div>
-              <div className="mt-1.5 text-[10px] text-muted-foreground">
-                {t("ext.link.gatewayStateLabel")}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <CredentialsSectionHeader
+        title={t("ext.link.gatewayTitle")}
+        description={t("ext.link.gatewayHeroDescription")}
+        stats={[
+          { label: t("ext.link.gatewayConfiguredCount"), value: enabledCount },
+          { label: t("ext.link.gatewayStateLabel"), value: statusLabel },
+        ]}
+      />
 
       <section className="space-y-4" aria-labelledby="link-channels-title">
         <div className="flex items-start gap-2.5">
@@ -1640,132 +2017,6 @@ export function ChatGatewayTab() {
   );
 }
 
-function LinkStat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-      <div className="text-lg font-semibold leading-none tabular-nums text-foreground">{value}</div>
-      <div className="mt-1 truncate text-[10px] text-muted-foreground" title={label}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
-interface RuntimeLinkSectionProps {
-  children?: React.ReactNode;
-  extraCount?: number;
-  cliLiveness: Record<string, CliLiveness>;
-  runtime: LinkExecutionRuntime;
-  entries: LinkMethodEntry[];
-  busyId: string | null;
-  errors: Record<string, string>;
-  onLocalConnect: (entry: LinkMethodEntry) => void;
-  onLocalDisconnect: (entry: LinkMethodEntry) => void;
-  onServerLogin: (
-    item: LinkIntegration,
-    method: LinkConnectionMethod,
-    credential?: MaskedCredentialView,
-  ) => void;
-  onServerRefresh: (
-    item: LinkIntegration,
-    method: LinkConnectionMethod,
-    credential: MaskedCredentialView,
-  ) => void;
-  onServerLogout: (
-    item: LinkIntegration,
-    method: LinkConnectionMethod,
-    credential: MaskedCredentialView,
-  ) => void;
-}
-
-function RuntimeLinkSection(props: RuntimeLinkSectionProps) {
-  const { t } = useT();
-  const local = props.runtime === "local";
-  const RuntimeIcon = local ? HardDrive : Cloud;
-
-  return (
-    <section
-      data-link-runtime-section={props.runtime}
-      className={cn(
-        "space-y-3 rounded-2xl border p-3 sm:p-4",
-        local ? "border-status-ok/20 bg-status-ok/[0.025]" : "border-sky-500/20 bg-sky-500/[0.025]",
-      )}
-      aria-labelledby={`link-runtime-${props.runtime}`}
-    >
-      <div className="flex items-start justify-between gap-3 px-1 py-0.5">
-        <div className="flex min-w-0 items-start gap-3">
-          <div
-            className={cn(
-              "flex size-9 shrink-0 items-center justify-center rounded-xl",
-              local
-                ? "bg-status-ok/10 text-status-ok"
-                : "bg-sky-500/10 text-sky-600 dark:text-sky-400",
-            )}
-          >
-            <RuntimeIcon className="size-4" aria-hidden />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h4 id={`link-runtime-${props.runtime}`} className="text-sm font-semibold">
-                {t(local ? "ext.link.localSection" : "ext.link.serverSection")}
-              </h4>
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-medium",
-                  local
-                    ? "border border-status-ok/25 bg-status-ok/8 text-status-ok"
-                    : "border border-sky-500/20 bg-sky-500/8 text-sky-600 dark:text-sky-400",
-                )}
-              >
-                {t(local ? "ext.link.defaultPreferred" : "ext.link.managedRuntime")}
-              </span>
-            </div>
-            <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-              {t(local ? "ext.link.localSectionDescription" : "ext.link.serverSectionDescription")}
-            </p>
-          </div>
-        </div>
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {props.entries.length + (props.extraCount ?? 0)}
-        </span>
-      </div>
-
-      {props.children}
-      {props.entries.length === 0 && !props.extraCount ? (
-        <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-4 py-8 text-center text-xs text-muted-foreground">
-          {t("ext.link.runtimeEmpty")}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {props.entries.map((entry) => {
-            const key = linkMethodStateKey(entry.item.id, entry.method);
-            return (
-              <LinkMethodCard
-                key={`${entry.item.id}:${entry.method.id}`}
-                entry={entry}
-                liveness={props.cliLiveness[entry.item.id]}
-                busy={props.busyId === key}
-                error={props.errors[key]}
-                onLocalConnect={() => props.onLocalConnect(entry)}
-                onLocalDisconnect={() => props.onLocalDisconnect(entry)}
-                onServerLogin={(credential) =>
-                  props.onServerLogin(entry.item, entry.method, credential)
-                }
-                onServerRefresh={(credential) =>
-                  props.onServerRefresh(entry.item, entry.method, credential)
-                }
-                onServerLogout={(credential) =>
-                  props.onServerLogout(entry.item, entry.method, credential)
-                }
-              />
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
-
 function LinkMethodCard({
   entry,
   liveness,
@@ -1788,8 +2039,7 @@ function LinkMethodCard({
   onServerLogout: (credential: MaskedCredentialView) => void;
 }) {
   const { t } = useT();
-  const { item, method, credential, preferredRuntime } = entry;
-  const Icon = INTEGRATION_ICONS[item.icon];
+  const { item, method, credential } = entry;
   const local = method.executionRuntime === "local";
   const usable = linkCredentialIsUsable(credential);
   const state =
@@ -1810,87 +2060,59 @@ function LinkMethodCard({
               ? t("ext.link.oauthStatusInvalid")
               : t("ext.link.oauthStatusMissing");
   const available =
-    method.availability === "available" &&
-    (method.authKind === "token" || Boolean(method.oauthProfileId));
-  const preferred = Boolean(credential) && preferredRuntime === method.executionRuntime && usable;
+    entry.available ??
+    (method.availability === "available" &&
+      (method.authKind === "token" || Boolean(method.oauthProfileId)));
+  const primary = useLinkPrimaryAction(`method:${method.id}:${credential?.id ?? "new"}`, {
+    onClick: local ? onLocalConnect : () => onServerLogin(credential),
+    disabled: busy || !available,
+  });
+  const presentation = React.useContext(LinkPresentationContext);
+  const showTechnical = !primary || Boolean(presentation?.advanced);
 
   return (
-    <article
-      data-link-integration={item.id}
+    <LinkConnectionRow
+      data-link-method-provider={item.id}
       data-link-runtime={method.executionRuntime}
-      className={cn(
-        "link-card group flex min-h-48 min-w-0 flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all",
-        item.featured &&
-          local &&
-          "border-status-ok/20 bg-gradient-to-br from-status-ok/[0.045] via-card to-card",
-      )}
+      title={
+        primary
+          ? (credential?.meta?.linkAccountLabel ?? credential?.label ?? item.name)
+          : method.displayName
+      }
+      technical={
+        showTechnical ? t(local ? "ext.link.localRuntime" : "ext.link.serverRuntime") : undefined
+      }
+      status={
+        credential
+          ? status
+          : available
+            ? t("ext.link.directory.notConnected")
+            : t("ext.link.directory.unavailable")
+      }
+      tone={credential && usable ? "ready" : credential ? "warning" : "neutral"}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <div
-            className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-xl",
-              item.brandClass,
-            )}
-          >
-            <Icon className="size-4.5" aria-hidden />
-            <span className="sr-only">{item.brandText}</span>
-          </div>
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h5 className="min-w-0 break-words text-sm font-semibold tracking-tight text-foreground [overflow-wrap:anywhere]">
-                {item.name}
-              </h5>
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-medium",
-                  usable
-                    ? "bg-status-ok/10 text-status-ok"
-                    : credential && state !== "missing"
-                      ? "bg-status-err/10 text-status-err"
-                      : available
-                        ? "bg-status-running/10 text-status-running"
-                        : "bg-muted text-muted-foreground",
-                )}
-              >
-                {credential
-                  ? status
-                  : available
-                    ? t("ext.link.availableStatus")
-                    : t("ext.link.comingSoon")}
-              </span>
-            </div>
-            <p className="mt-1 text-[11px] font-medium text-muted-foreground">
-              {method.displayName}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap justify-end gap-1.5">
-          {preferred ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary">
-              <Cable className="size-3" aria-hidden />
-              {t(local ? "ext.link.activePreferred" : "ext.link.activeFallback")}
-            </span>
-          ) : null}
-        </div>
-      </div>
-
       <div className="mt-3 min-w-0 flex-1">
-        <p className="text-xs leading-5 text-muted-foreground">{item.description}</p>
-
         {credential ? (
-          <div className="mt-3 rounded-xl border border-border/60 bg-background/65 px-3 py-2 text-[11px] text-muted-foreground">
-            <div className="truncate font-medium text-foreground" title={credential.label}>
+          <div className="mt-3 rounded-xl border border-border/60 bg-background/65 px-3 py-2 text-xs text-muted-foreground">
+            <div
+              hidden={primary}
+              className="truncate font-medium text-foreground"
+              title={credential.label}
+            >
               {credential.label}
             </div>
-            <div className="mt-0.5 truncate font-mono" title={credential.id}>
+            <div
+              hidden={!showTechnical}
+              className="mt-0.5 truncate font-mono"
+              title={credential.id}
+            >
               {credential.id}
               {credential.oauthStatus?.expiresAt
                 ? ` · ${new Date(credential.oauthStatus.expiresAt).toLocaleString()}`
                 : ""}
             </div>
             {local && usable && credential.meta?.linkAccountLabel ? (
-              <div className="mt-1 truncate text-muted-foreground">
+              <div hidden={!showTechnical} className="mt-1 truncate text-muted-foreground">
                 {t("ext.link.localCredentialVerified", {
                   account: credential.meta.linkAccountLabel,
                 })}
@@ -1936,7 +2158,7 @@ function LinkMethodCard({
             usable &&
             credential.meta?.linkExecutionBackend === "cli" &&
             method.quickAuth ? (
-              <div className="mt-1 text-[10px] text-muted-foreground">
+              <div hidden={!showTechnical} className="mt-1 text-xs text-muted-foreground">
                 {t("ext.link.connectedViaCli", { command: method.quickAuth.command })}
               </div>
             ) : null}
@@ -1945,21 +2167,21 @@ function LinkMethodCard({
             ) : null}
             {local && usable && credential.meta?.linkResourceLabels?.length ? (
               <div className="mt-2" data-link-resource-preview={item.id}>
-                <div className="text-[10px] font-medium text-muted-foreground">
+                <div className="text-xs font-medium text-muted-foreground">
                   {t("ext.link.resourcePreview")}
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {credential.meta.linkResourceLabels.slice(0, 6).map((resource) => (
                     <span
                       key={resource}
-                      className="max-w-full truncate rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-foreground"
+                      className="max-w-full truncate rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 font-mono text-xs text-foreground"
                       title={resource}
                     >
                       {resource}
                     </span>
                   ))}
                   {credential.meta.linkResourceLabels.length > 6 ? (
-                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                       +{credential.meta.linkResourceLabels.length - 6}
                     </span>
                   ) : null}
@@ -1977,7 +2199,10 @@ function LinkMethodCard({
       </div>
 
       <div className="mt-4 flex min-h-8 flex-wrap items-center justify-between gap-2 border-t border-border/55 pt-3">
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+        <div
+          hidden={!showTechnical}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+        >
           {local ? (
             <>
               <HardDrive className="size-3.5 text-status-ok" aria-hidden />
@@ -1993,41 +2218,63 @@ function LinkMethodCard({
         <div className="flex shrink-0 flex-wrap items-center gap-1">
           {local && credential ? (
             <>
-              <Button variant="secondary" size="sm" onClick={onLocalConnect} disabled={busy}>
-                {t("ext.link.localReconnect")}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onLocalDisconnect} disabled={busy}>
-                {t("ext.link.localDisconnect")}
-              </Button>
+              {(!primary || !usable) && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onLocalConnect}
+                  disabled={busy || !available}
+                >
+                  {t("ext.link.localReconnect")}
+                </Button>
+              )}
+              <LinkAccountMenu>
+                {primary && usable && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onLocalConnect}
+                    disabled={busy || !available}
+                  >
+                    {t("ext.link.localReconnect")}
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={onLocalDisconnect} disabled={busy}>
+                  {t("ext.link.localDisconnect")}
+                </Button>
+              </LinkAccountMenu>
             </>
           ) : !local && credential ? (
             <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  primaryAction === "login"
-                    ? onServerLogin(credential)
-                    : onServerRefresh(credential)
-                }
-                disabled={busy}
-              >
-                {busy ? <RefreshCw className="size-3.5 animate-spin" aria-hidden /> : null}
-                {primaryAction === "login"
-                  ? t("ext.link.oauthRelogin")
-                  : t("ext.link.oauthRefresh")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onServerLogout(credential)}
-                disabled={busy}
-              >
-                {t("ext.link.oauthLogout")}
-              </Button>
+              <LinkAccountMenu>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    primaryAction === "login"
+                      ? onServerLogin(credential)
+                      : onServerRefresh(credential)
+                  }
+                  disabled={busy}
+                >
+                  {busy ? <RefreshCw className="size-3.5 animate-spin" aria-hidden /> : null}
+                  {primaryAction === "login"
+                    ? t("ext.link.oauthRelogin")
+                    : t("ext.link.oauthRefresh")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onServerLogout(credential)}
+                  disabled={busy}
+                >
+                  {t("ext.link.oauthLogout")}
+                </Button>
+              </LinkAccountMenu>
             </>
           ) : (
             <Button
+              hidden={primary}
               variant={available ? "default" : "outline"}
               size="sm"
               onClick={local ? onLocalConnect : () => onServerLogin()}
@@ -2036,11 +2283,11 @@ function LinkMethodCard({
             >
               {available
                 ? t(local ? "ext.link.connectLocal" : "ext.link.connectServer")
-                : t("ext.link.comingSoon")}
+                : t("ext.link.directory.unavailable")}
             </Button>
           )}
         </div>
       </div>
-    </article>
+    </LinkConnectionRow>
   );
 }

@@ -1,0 +1,589 @@
+{
+  "stage": "frozen-independent-metadata-review",
+  "files": [],
+  "inputPins": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+      "bytes": 9769,
+      "sha256": "9bdf32fd9a5ccc35e0defc082fb53ab44367376125a95496afc97d5810a26d79",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:24:50.448804+00:00"
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round6/skills-agents.md",
+      "bytes": 9203,
+      "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:24:50.451520+00:00"
+    }
+  ],
+  "firstMetadataDiagnostic": {
+    "utc": "2026-10-17T16:25:27.517438+00:00",
+    "toolChunkId": "13199a",
+    "observedExitCode": 1,
+    "raw": "metadata-first-output.txt",
+    "error": "IndexError from audit selected-line printer requesting44–63 when report has fewer lines.",
+    "actualReportLineCount": 53,
+    "effect": "Two canonical metadata objects printed/read; report block failed while join evaluated, before its line text output. No product body or code executed.",
+    "repair": "Read actual report line extent, not assumed range; no product/test retry."
+  },
+  "prep77InputPins": [
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/artifact-checks.json",
+      "bytes": 1641,
+      "sha256": "e82d4b5f9501402c91b7f1c463b2d2bcd91374abeac7d17e5524188a16861e4b",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.190749+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/coverage-gate-detail.json",
+      "bytes": 1258,
+      "sha256": "9b66bf29e0bd232219b8d48625f163f70fd9f846fd24a255a0465f13124d236d",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.192693+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/coverage-gate-objects.json",
+      "bytes": 42360,
+      "sha256": "a75a58422eb1188e806c752f77a3088498eb5c4a69ab8305a6799ca8df8dcf32",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.193725+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/ending-checks.json",
+      "bytes": 2573,
+      "sha256": "ec453db128c5d8c80a4bd33305b8d8c5e4c077cbbf3c8a0ad28da913d1ab89e3",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.194528+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/gate-decisions.json",
+      "bytes": 1576,
+      "sha256": "ba2f999ab8d9964d98038351df7fe956c91b023dca81a55cc3f0a6587daeecbd",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.195500+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/history-contexts.json",
+      "bytes": 372237,
+      "sha256": "3d4cc3c5b5ac3d5b48460599699275a98a4aa408151db06d746b84aa1cc5c0ce",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.196927+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/history-method.py",
+      "bytes": 3928,
+      "sha256": "ec080818b12f9cc6b3d48374790f93dc7921277f0cc10960776363e732669de0",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.197631+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/history.json",
+      "bytes": 994434,
+      "sha256": "35e3313beea8bd7c1a21f05f797631ebebbe4d85f431ad54bbd2436539ced52f",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.199101+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/initial-pins.json",
+      "bytes": 1195,
+      "sha256": "be7f7b9357169f77838c02e84f4a36a2430a5080cba338c94a9abe10beccb068",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.199758+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/metadata-notes.json",
+      "bytes": 1109,
+      "sha256": "ee24a57137c0f745f06e13337d5d60a089897fdd7d487c6ffcceac5e23192342",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.200339+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/old-reviewmode-objects.json",
+      "bytes": 1412,
+      "sha256": "a11aceaeacbd66a19bd7c4fb460228ee60c1b5a3b775c89770ef278427668b23",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.200849+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/old-scope-selected.json",
+      "bytes": 130,
+      "sha256": "6eab69736095acdea419cf215a37eb9854d5db4f354702afd6991f13957fbb6b",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.201573+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/report.md",
+      "bytes": 4285,
+      "sha256": "7ade2f8a1f75cfa5cf4f1f315763610aab4a6b5485428606eae3fcd222f860bd",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.202219+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/reviewer-receipt.json",
+      "bytes": 4332,
+      "sha256": "b78eb468ea51d4aebc9c10e0c7d4c5baca1d3a8657b54bda46e338981dd11282",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.202892+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/source-manifest.json",
+      "bytes": 2735,
+      "sha256": "34a3c70fb3ccb06f67fe6cddd207d921e77770b04f0b23e8c75dadb696659248",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.203462+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/validation.json",
+      "bytes": 874,
+      "sha256": "06f190dc30e896571df1bec754caf0f6de25fe48c0d8742e29c57e775b4f270c",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:25:45.204147+00:00"
+    }
+  ],
+  "hashOnlyProducts": [
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "bytes": 6078,
+      "lines": 147,
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "hashOnlyCheckedUTC": "2026-10-17T16:26:05.669392+00:00",
+      "bodyDisplay": false,
+      "semanticLines": 0,
+      "matchesCanonical": true,
+      "endingBytes": 6078,
+      "endingSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "bytes": 4696,
+      "lines": 124,
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "hashOnlyCheckedUTC": "2026-10-17T16:26:05.671259+00:00",
+      "bodyDisplay": false,
+      "semanticLines": 0,
+      "matchesCanonical": true,
+      "endingBytes": 4696,
+      "endingSha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "unchanged": true
+    }
+  ],
+  "createdUTC": "2026-10-17T16:27:13.941691+00:00",
+  "role": "Independent metadata gate reviewer of77, not77/71 author, not product-source/root-cause/runtime reviewer. No general classifier or old index modified.",
+  "canonicalGate": {
+    "document": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+    "documentSha256": "9bdf32fd9a5ccc35e0defc082fb53ab44367376125a95496afc97d5810a26d79",
+    "rows": [
+      {
+        "pointer": "/files/4",
+        "canonicalObject": {
+          "path": "packages/core/src/agent/agent-definition.ts",
+          "bytes": 6078,
+          "lines": 147,
+          "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+          "frozenSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+          "matchesFrozen": true,
+          "reviewMode": "complete"
+        },
+        "uniqueDirectPath": true,
+        "uniqueSourceDigestValue": true,
+        "sourceHashFields": [
+          "sha256",
+          "frozenSha256"
+        ],
+        "completeExactLabel": true,
+        "hasSelectedOrNegativeQualifier": false,
+        "qualifierAssessment": "Exact row has no selected/range/not-read/partial clause; independent manual interpretation, not a universal regex rule.",
+        "currentBytesLinesShaMatch": true,
+        "77CopiedObjectEqualsCanonical": true,
+        "decision": "sufficient same-SHA old complete primary-module gate before new body; do not downgrade to selected solely from caller citations or old runtime SKIP"
+      },
+      {
+        "pointer": "/files/5",
+        "canonicalObject": {
+          "path": "packages/core/src/agent/agent-definition-registry.ts",
+          "bytes": 4696,
+          "lines": 124,
+          "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+          "frozenSha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+          "matchesFrozen": true,
+          "reviewMode": "complete"
+        },
+        "uniqueDirectPath": true,
+        "uniqueSourceDigestValue": true,
+        "sourceHashFields": [
+          "sha256",
+          "frozenSha256"
+        ],
+        "completeExactLabel": true,
+        "hasSelectedOrNegativeQualifier": false,
+        "qualifierAssessment": "Exact row has no selected/range/not-read/partial clause; independent manual interpretation, not a universal regex rule.",
+        "currentBytesLinesShaMatch": true,
+        "77CopiedObjectEqualsCanonical": true,
+        "decision": "sufficient same-SHA old complete primary-module gate before new body; do not downgrade to selected solely from caller citations or old runtime SKIP"
+      }
+    ],
+    "reportMetadataActualReadRanges": [
+      [
+        1,
+        53
+      ]
+    ],
+    "reportLine11": "Agent files use YAML frontmatter with required nonempty name/description and a Markdown system prompt; serializer omits unset fields and runtime metadata (`packages/core/src/agent/agent-definition.ts:85–146`). Registry recursion is deterministic; later directories win and record shadowed sources; malformed files produce warnings; disabled names are removed after merging (`packages/core/src/agent/agent-definition-registry.ts:36–81,104–124`). Current engine policy is user → plugin → project, making project highest priority (`packages/core/src/engine/engine.ts:268–294`), despite a stale adjacent overview comment. The Agent tool lists the loaded definitions and constructs its name enum (`packages/core/src/tool-system/builtin/agent.ts:141–194`); Desktop lists the same registry and renders returned summaries (`packages/desktop/src/main/agents-service.ts:67–96`, `packages/desktop/src/renderer/settings/AgentsSection.tsx:139–144,223–234`). These are caller/source observations, not executed Engine or Desktop flows.",
+    "reportLine53": "[skills-source-manifest.json](evidence/skills-source-manifest.json) contains byte counts, line counts, SHA-256 and frozen-commit comparison receipts for **26 source/contract/test files; all 26 match the frozen commit**. Review modes distinguish complete primary modules from selected caller/contract excerpts. [skills-artifact-receipt.json](evidence/skills-artifact-receipt.json) records the audit artifacts and their hashes. No product edits or git mutations were made by this worker.",
+    "reportRuntimeSkipRanges": [
+      [
+        21,
+        23
+      ],
+      [
+        36,
+        43
+      ]
+    ],
+    "reportRuntimeSkipText": [
+      {
+        "line": 21,
+        "text": "Raw stdout and stderr were redirected together to [skills-metadata-first.log](evidence/skills-metadata-first.log) before inspecting the result; [skills-metadata-first.exit](evidence/skills-metadata-first.exit) is `1`. Bun reports **13 pass, 1 fail, 1 unhandled error, 26 assertions, 14 tests across 4 files**. The three existing pure parser/serializer files completed. The new [skills-metadata.test.ts](evidence/skills-metadata.test.ts) failed during import because its direct `yaml` dependency does not resolve from `docs/`; none of its five declared cases or observations ran. Core's own tests resolve that package from Core. This is a fixture location/dependency failure, not a product defect."
+      },
+      {
+        "line": 23,
+        "text": "The whole shard failed. Following the requested first-failure rule, the fixture and raw log remain unchanged, both candidate experiments are **SKIP**, and there was no repair, retry, alternate execution, install, or build. The 13 passing cases are partial results within a failed shard, not a successful validation gate. See [skills-validation.json](evidence/skills-validation.json)."
+      },
+      {
+        "line": 36,
+        "text": "### S-C2 — provisional P3: CRLF agent Markdown may disappear from the registry"
+      },
+      {
+        "line": 41,
+        "text": "- Source-predicted behavior: the parser requires the literal opening `---\\n`, so CRLF would take the missing-frontmatter branch; the registry would omit that role and retain a warning. Desktop's summary mapper does not forward registry warnings. Missing roles would also be absent from the Agent tool's available names."
+      },
+      {
+        "line": 42,
+        "text": "- Impact and limits: custom role discovery/unavailability for that newline format. Serializer-generated files use LF. No claim of restart, lost restrictions, fallback execution, real Windows behavior, or rendered UI observation. The pure CRLF and owned-directory registry cases **did not execute**."
+      },
+      {
+        "line": 43,
+        "text": "- Validation: **SKIP — first fixture dependency failure**, no workaround."
+      },
+      {
+        "line": 49,
+        "text": "The historical `docs/review-remaining-2026-10-12/core.md` C3 / findings N09 cold child continuation restriction loss was read for dedup only and was not reproduced. Installed-plugin/Panel acquisition and installation, isolated instruction runs, native applications/process experiments, permission/security/hooks/injection exercises, real user data, models, paid APIs and network were excluded. Old failed CLI/recorder/summary/Discord/memoryTTL experiments were not revived. No additional source issue was promoted from documented cache behavior, required field validation, recursive registry loading, merge precedence, or runtime-only metadata omission."
+      }
+    ],
+    "reviewModeVariantsContextOnly": [
+      "caller-contract-or-selected-excerpts",
+      "complete",
+      "complete in-scope local-discovery/cache/metadata branches; installed plugin/panel branch wiring read only"
+    ],
+    "allOtherReviewModeRowsActivated": false,
+    "overallCoverageCountsChanged": false,
+    "interpretation": "Complete primary modules vs selected callers distinction is explicit in old report53. Statement line49 excludes mechanisms/runtime tests and does not certify them; it does not attach a partial-source qualifier to these two primary rows. Old S-C2 remains SKIP after first fixture failure."
+  },
+  "prep77Integrity": {
+    "artifacts": 16,
+    "receiptRows": 15,
+    "checks": [
+      {
+        "path": "artifact-checks.json",
+        "bytes": 1641,
+        "sha256": "e82d4b5f9501402c91b7f1c463b2d2bcd91374abeac7d17e5524188a16861e4b",
+        "matches": true
+      },
+      {
+        "path": "coverage-gate-detail.json",
+        "bytes": 1258,
+        "sha256": "9b66bf29e0bd232219b8d48625f163f70fd9f846fd24a255a0465f13124d236d",
+        "matches": true
+      },
+      {
+        "path": "coverage-gate-objects.json",
+        "bytes": 42360,
+        "sha256": "a75a58422eb1188e806c752f77a3088498eb5c4a69ab8305a6799ca8df8dcf32",
+        "matches": true
+      },
+      {
+        "path": "ending-checks.json",
+        "bytes": 2573,
+        "sha256": "ec453db128c5d8c80a4bd33305b8d8c5e4c077cbbf3c8a0ad28da913d1ab89e3",
+        "matches": true
+      },
+      {
+        "path": "gate-decisions.json",
+        "bytes": 1576,
+        "sha256": "ba2f999ab8d9964d98038351df7fe956c91b023dca81a55cc3f0a6587daeecbd",
+        "matches": true
+      },
+      {
+        "path": "history-contexts.json",
+        "bytes": 372237,
+        "sha256": "3d4cc3c5b5ac3d5b48460599699275a98a4aa408151db06d746b84aa1cc5c0ce",
+        "matches": true
+      },
+      {
+        "path": "history-method.py",
+        "bytes": 3928,
+        "sha256": "ec080818b12f9cc6b3d48374790f93dc7921277f0cc10960776363e732669de0",
+        "matches": true
+      },
+      {
+        "path": "history.json",
+        "bytes": 994434,
+        "sha256": "35e3313beea8bd7c1a21f05f797631ebebbe4d85f431ad54bbd2436539ced52f",
+        "matches": true
+      },
+      {
+        "path": "initial-pins.json",
+        "bytes": 1195,
+        "sha256": "be7f7b9357169f77838c02e84f4a36a2430a5080cba338c94a9abe10beccb068",
+        "matches": true
+      },
+      {
+        "path": "metadata-notes.json",
+        "bytes": 1109,
+        "sha256": "ee24a57137c0f745f06e13337d5d60a089897fdd7d487c6ffcceac5e23192342",
+        "matches": true
+      },
+      {
+        "path": "old-reviewmode-objects.json",
+        "bytes": 1412,
+        "sha256": "a11aceaeacbd66a19bd7c4fb460228ee60c1b5a3b775c89770ef278427668b23",
+        "matches": true
+      },
+      {
+        "path": "old-scope-selected.json",
+        "bytes": 130,
+        "sha256": "6eab69736095acdea419cf215a37eb9854d5db4f354702afd6991f13957fbb6b",
+        "matches": true
+      },
+      {
+        "path": "report.md",
+        "bytes": 4285,
+        "sha256": "7ade2f8a1f75cfa5cf4f1f315763610aab4a6b5485428606eae3fcd222f860bd",
+        "matches": true
+      },
+      {
+        "path": "source-manifest.json",
+        "bytes": 2735,
+        "sha256": "34a3c70fb3ccb06f67fe6cddd207d921e77770b04f0b23e8c75dadb696659248",
+        "matches": true
+      },
+      {
+        "path": "validation.json",
+        "bytes": 874,
+        "sha256": "06f190dc30e896571df1bec754caf0f6de25fe48c0d8742e29c57e775b4f270c",
+        "matches": true
+      }
+    ],
+    "allMatch": true,
+    "selfExcludedCorrect": false,
+    "exactArtifactSetMatchesReceiptPlusSelf": true,
+    "reportLinkChecks": [
+      {
+        "target": "initial-pins.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "old-reviewmode-objects.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "coverage-gate-detail.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "gate-decisions.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "history.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "old-scope-selected.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "metadata-notes.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "source-manifest.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "validation.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "ending-checks.json",
+        "exists": true,
+        "inside77": true
+      },
+      {
+        "target": "reviewer-receipt.json",
+        "exists": true,
+        "inside77": true
+      }
+    ],
+    "reportLinks": 11,
+    "allLinksExist": true,
+    "copiedTwoCanonicalRowsExact": true,
+    "firstScopeZeroOriginal": {
+      "rows": [],
+      "count": 0,
+      "scope": "Original metadata fields inspected before body; derived claims not semantic evidence"
+    },
+    "notes77": {
+      "observations": [
+        {
+          "toolChunk": "714f9d",
+          "exitCode": 0,
+          "kind": "wide metadata display truncation",
+          "note": "Combined MD path windows exceeded output budget; not claimed fully read. Narrow canonical reviewMode objects/report opening separately inspected.",
+          "originalTokenCount": 10211,
+          "requestedMaxOutputTokens": 4500,
+          "preservedFirstResult": "Original tool result714f9d remains in transcript; raw history-contexts and initial count0 scope artifact remain unchanged. No claim an untruncated full-output file exists."
+        },
+        {
+          "toolChunk": "016305",
+          "exitCode": 0,
+          "kind": "initial scope-field reader limitation",
+          "firstArtifact": "old-scope-selected.json count0 remains unchanged",
+          "note": "Initial whitelist covered scope/coverage/review/readScope/inspectionScope but omitted reviewMode. Zero printed rows was not evidence of no old reading. Canonical follow-up c27104 found2complete rows; active gate usesold-reviewmode-objects.json."
+        }
+      ],
+      "productFailuresOrRetries": 0,
+      "productBodyReadAtDiagnostic": false
+    },
+    "notesVerificationBoundary": "First count0 artifact and frozen metadata notes examined. Author wide truncation original tool transcript not independently replayed; no claim a full untruncated stdout file exists. Metadata methods/history/large context artifacts only opaque hashes, no execution or fresh history rescan."
+  },
+  "endingInputChecks": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+      "bytes": 9769,
+      "sha256": "9bdf32fd9a5ccc35e0defc082fb53ab44367376125a95496afc97d5810a26d79",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round6/skills-agents.md",
+      "bytes": 9203,
+      "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/artifact-checks.json",
+      "bytes": 1641,
+      "sha256": "e82d4b5f9501402c91b7f1c463b2d2bcd91374abeac7d17e5524188a16861e4b",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/coverage-gate-detail.json",
+      "bytes": 1258,
+      "sha256": "9b66bf29e0bd232219b8d48625f163f70fd9f846fd24a255a0465f13124d236d",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/coverage-gate-objects.json",
+      "bytes": 42360,
+      "sha256": "a75a58422eb1188e806c752f77a3088498eb5c4a69ab8305a6799ca8df8dcf32",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/ending-checks.json",
+      "bytes": 2573,
+      "sha256": "ec453db128c5d8c80a4bd33305b8d8c5e4c077cbbf3c8a0ad28da913d1ab89e3",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/gate-decisions.json",
+      "bytes": 1576,
+      "sha256": "ba2f999ab8d9964d98038351df7fe956c91b023dca81a55cc3f0a6587daeecbd",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/history-contexts.json",
+      "bytes": 372237,
+      "sha256": "3d4cc3c5b5ac3d5b48460599699275a98a4aa408151db06d746b84aa1cc5c0ce",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/history-method.py",
+      "bytes": 3928,
+      "sha256": "ec080818b12f9cc6b3d48374790f93dc7921277f0cc10960776363e732669de0",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/history.json",
+      "bytes": 994434,
+      "sha256": "35e3313beea8bd7c1a21f05f797631ebebbe4d85f431ad54bbd2436539ced52f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/initial-pins.json",
+      "bytes": 1195,
+      "sha256": "be7f7b9357169f77838c02e84f4a36a2430a5080cba338c94a9abe10beccb068",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/metadata-notes.json",
+      "bytes": 1109,
+      "sha256": "ee24a57137c0f745f06e13337d5d60a089897fdd7d487c6ffcceac5e23192342",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/old-reviewmode-objects.json",
+      "bytes": 1412,
+      "sha256": "a11aceaeacbd66a19bd7c4fb460228ee60c1b5a3b775c89770ef278427668b23",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/old-scope-selected.json",
+      "bytes": 130,
+      "sha256": "6eab69736095acdea419cf215a37eb9854d5db4f354702afd6991f13957fbb6b",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/report.md",
+      "bytes": 4285,
+      "sha256": "7ade2f8a1f75cfa5cf4f1f315763610aab4a6b5485428606eae3fcd222f860bd",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/reviewer-receipt.json",
+      "bytes": 4332,
+      "sha256": "b78eb468ea51d4aebc9c10e0c7d4c5baca1d3a8657b54bda46e338981dd11282",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/source-manifest.json",
+      "bytes": 2735,
+      "sha256": "34a3c70fb3ccb06f67fe6cddd207d921e77770b04f0b23e8c75dadb696659248",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round77-agent-definitions/validation.json",
+      "bytes": 874,
+      "sha256": "06f190dc30e896571df1bec754caf0f6de25fe48c0d8742e29c57e775b4f270c",
+      "unchanged": true
+    }
+  ],
+  "all18InputsUnchanged": true,
+  "all2ProductsUnchanged": true,
+  "productSourceSemanticReads": 0,
+  "productSourceDisplayLines": 0,
+  "oldReportMetadataLinesRead": 53,
+  "canonicalProductMetadataObjectsRead": 2,
+  "execution": {
+    "productHelperFunctionCalls": 0,
+    "productImports": 0,
+    "testsFixturesRun": 0,
+    "authorOrRepositoryMethodsRun": 0,
+    "ReactClockModelNativeNetwork": 0,
+    "Git": 0
+  },
+  "newClassification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0,
+    "supportedPreBodyOldCompleteGates": 2
+  },
+  "diagnosticTotals": {
+    "reviewerMetadataExecutionErrors": 1,
+    "reviewerOutputTruncations": 0,
+    "authorNotesCountZeroAndTruncationPreserved": true,
+    "productFailuresOrRetries": 0
+  }
+}

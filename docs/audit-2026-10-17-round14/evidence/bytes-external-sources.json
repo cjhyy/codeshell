@@ -1,0 +1,13 @@
+{
+  "capturedUtcDate": "2026-10-17",
+  "mechanism": "web search/open/find; brief tool-response metadata transcription, not a downloaded PDF or full raw fetch",
+  "sources": [
+    {
+      "url": "https://www.w3.org/Graphics/JPEG/itu-t81.pdf",
+      "title": "CCITT Rec. T.81 (1992 E) / ISO/IEC 10918-1 standard text hosted by W3C",
+      "inspected": "PDF extracted text: B.1.1.3 Table B.1 SOF3; B.2.4.1 Table B.4 lossless column; B.2.4.2 DHT table syntax",
+      "toolObservation": "open returned 186 pages, 6984 extracted lines; find returned SOF3 at extracted lines 1692-1700 and Table B.4 lossless Undefined fields at lines 2114-2125",
+      "scope": "Format contract only; not a product codec support promise, decoder run, fixture validity certificate or image download."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-10-17T19:18:42.238375+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/remote-relay/connector.ts",
+      "bytes": 10024,
+      "lines": 280,
+      "sha256": "1ba87d2d8e966bd53556307c86e326be4d6353ed20154597a70816eeecce12a9",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/remote-relay/relay.native.test.ts",
+      "bytes": 2068,
+      "lines": 51,
+      "sha256": "fe16ab39620c81de8702e46f48859dae020067a0f260cb7a0f60b57a751b2899",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "docs/device-relay.md",
+      "bytes": 9706,
+      "lines": 163,
+      "sha256": "d6f7d5db6fd6d8299fd51560e6fee0e57bd6e376a2aa622a1a477e92f50c2ebd",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

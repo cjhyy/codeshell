@@ -1,0 +1,77 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.test.ts",
+      "bytes": 709,
+      "lines": 20,
+      "sha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "firstSemanticReadSha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:11:29.035201+00:00"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.test.ts",
+      "bytes": 5287,
+      "lines": 162,
+      "sha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "firstSemanticReadSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:11:29.037544+00:00"
+    },
+    {
+      "path": "packages/core/src/plugins/gitOps.ts",
+      "bytes": 9285,
+      "lines": 208,
+      "sha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "firstSemanticReadSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:11:29.038518+00:00"
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "lines": 236,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "firstSemanticReadSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:11:29.039469+00:00"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/installFromSource.ts",
+      "bytes": 2888,
+      "lines": 67,
+      "sha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "firstSemanticReadSha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:11:29.040406+00:00"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+      "bytes": 20113,
+      "lines": 500,
+      "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "firstSemanticReadSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:11:29.041482+00:00"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/plugin.ts",
+      "bytes": 3576,
+      "lines": 107,
+      "sha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "firstSemanticReadSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:11:29.042393+00:00"
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "lines": 612,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "firstSemanticReadSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:11:29.043695+00:00"
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "frozenHead": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "formalFindings": 1,
+  "findingIds": [
+    "PROFILE-R5-01"
+  ],
+  "tests": 90,
+  "filesTested": 8,
+  "assertions": 228,
+  "failures": 0,
+  "skips": 0,
+  "firstAttemptLogsPreserved": true,
+  "reruns": 0,
+  "fixtureFailures": [],
+  "sourceFilesVerified": 25,
+  "allSourcesMatchFrozen": true,
+  "dedupArtifactsScanned": 810,
+  "artifactHashes": [
+    {
+      "path": "docs/audit-2026-10-17-round5/profile.md",
+      "sha256": "05f479af313df97df33f391d86d393ad3d851ba1f23615366482ef8d07fe59d4",
+      "bytes": 10402
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-baseline.first.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-baseline.first.log",
+      "sha256": "6314fe6d166ff6561e1d5869163663daaa52dd2611a099163f279303078b7ff3",
+      "bytes": 9170
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-baseline.receipt.json",
+      "sha256": "63cc4edc7e35de6af4463a739ba35a067d3edff0f0984b00d5ee4b4dc2737334",
+      "bytes": 655
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-catalog-data.first.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-catalog-data.first.log",
+      "sha256": "df9561dd183eb2908dc15b20cf5e071abce16e278d25bc4030c38568ee162220",
+      "bytes": 1165
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-catalog-data.receipt.json",
+      "sha256": "371c155cb7ec7cdf0592c05081e7010080edf838a75e8f7fc15af0437c2ee04e",
+      "bytes": 381
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-catalog-data.test.ts",
+      "sha256": "cada8e8c903fc1e64d4802ac620645fd25ee5098859c22e0b9b9b792dfe11e97",
+      "bytes": 5646
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-dedup.json",
+      "sha256": "e76baf8e63b9dc8722445ca912c24aa5aa4e4e43c49b3b8ab436c736c8f6706f",
+      "bytes": 282559
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-findings.json",
+      "sha256": "36a54d35a103edabe4d4df5605b23be52e95e57097c1307dffc8def4734af891",
+      "bytes": 2507
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-source-manifest.json",
+      "sha256": "846b73a17037299a131795cb80ce11afe04d00fa9b62bc5cc20be6c4c7640771",
+      "bytes": 8960
+    }
+  ],
+  "excludedExecution": [
+    "addHumanRepo",
+    "clone/update",
+    "dependency install",
+    "network",
+    "models",
+    "credentials",
+    "real user data",
+    "native apps"
+  ],
+  "documentationChecks": [
+    "all report artifact links resolve",
+    "finding JSON parses",
+    "source hashes match frozen commit",
+    "first log and exit assertions agree"
+  ]
+}

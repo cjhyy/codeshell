@@ -1,0 +1,66 @@
+{
+  "capturedUTC": "2026-10-17T15:42:50.411753+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "bytes": 8637,
+      "sha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+      "bytes": 1377,
+      "sha256": "f533483096e0e77418d86da1348fbb8bb048b851fa6381d77b9d8e3970e42c27"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/prior-source-claims.json",
+      "bytes": 191013,
+      "sha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json",
+      "bytes": 59260,
+      "sha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "bytes": 20671,
+      "sha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-review/source-manifest.json",
+      "bytes": 7039,
+      "sha256": "89121f8407ec4f1dee0366ff798e39fb78c4fbdd5e8a8674fa31beabf57767d0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/market-frontier/source-manifest.json",
+      "bytes": 18315,
+      "sha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/market-review/source-manifest.json",
+      "bytes": 10723,
+      "sha256": "85bcddb4af3e95f19b61810a1f1adbabea103ac569f31be32a0ea0579c658cd8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+      "bytes": 13696,
+      "sha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "bytes": 11255,
+      "sha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.json",
+      "bytes": 25735,
+      "sha256": "69de34a23a8d07d2688e092688fef8d3cae6c762ac4d09dcda4ea5cfe7461fd5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+      "bytes": 15265,
+      "sha256": "54dcdc4529366c3eaa277604835046dd52ef79baf2601b5727613f071c4349fa"
+    }
+  ],
+  "scope": "Canonical metadata pointer documents only, no product source"
+}

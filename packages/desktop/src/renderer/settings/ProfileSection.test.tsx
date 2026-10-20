@@ -96,7 +96,7 @@ describe("ProfileSection", () => {
       expect(recovery).toBeDefined();
       expect(previews).toEqual([null]);
       await act(async () => {
-        reactPropsOf(recovery).onClick();
+        reactPropsOf(recovery).onClick({ currentTarget: recovery });
         await flushMicrotasks();
       });
       // Opening recovery always takes a fresh review; neither query adopts.
@@ -264,7 +264,7 @@ describe("ProfileSection", () => {
     );
     expect(activateButton).toBeDefined();
     await act(async () => {
-      reactPropsOf(activateButton).onClick();
+      reactPropsOf(activateButton).onClick({ currentTarget: activateButton });
       await flushMicrotasks();
       await flushMicrotasks();
     });

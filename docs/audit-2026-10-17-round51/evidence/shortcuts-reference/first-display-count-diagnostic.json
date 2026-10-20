@@ -1,0 +1,14 @@
+{
+  "capturedUTC": "2026-10-17T17:27:41.790069+00:00",
+  "firstReportSha256": "f1468e1ada46c7cbcb8c5c63eb2743a9ebae327d03497b75681faa2571781d29",
+  "firstReportDisplayLines": 509,
+  "activeCanonicalManifestProductDisplayLines": 342,
+  "activeCanonicalManifestTestDisplayLines": 67,
+  "correctTotalDisplayLines": 409,
+  "productSemanticLinesUnchanged": 214,
+  "testDeclarationLinesUnchanged": 67,
+  "cause": "Manual arithmetic in pre-freeze report prose was100too high; computed canonical per-file union manifest and checks already342+67=409.",
+  "observedValidatorOutputToolChunk": "f3488d",
+  "correction": "Preserve first report/script bytes; update active report/prepared metadata script literal only; no source re-read, product rerun or changed range.",
+  "activeFirstArtifactsNotEvidenceOfAdditionalReading": true
+}

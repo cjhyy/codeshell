@@ -25,6 +25,7 @@ import { backgroundShellManager } from "../../runtime/background-shell.js";
 import type { ToolDefinition, ToolResult } from "../../types.js";
 import type { SandboxBackend } from "../sandbox/index.js";
 import type { ToolExecutionResult, ToolFailure } from "./index.js";
+import { createNativeModelTraceCollector } from "../../model-traces/context.js";
 
 /** UI 标记:这次 Bash 走没走沙箱 + 网络策略。off 也带(显式标「未隔离」)。 */
 function sandboxMark(backend: SandboxBackend): NonNullable<ToolResult["sandbox"]> {
@@ -58,14 +59,27 @@ export const bashToolDef: ToolDefinition = {
           "Run the command in the background instead of blocking. Use for BOTH long-lived services " +
           "(a dev server like `npm run dev`) AND slow one-shot tasks that would otherwise block for a " +
           "long time (a download, a long build/test run). Returns immediately with a shell_id. " +
-          "When the command FINISHES you are automatically notified and woken to continue — so do NOT " +
-          "sleep, poll, or repeatedly BashOutput to wait for it. Just end your turn (or do other work); " +
-          "the system wakes you on completion. Use BashOutput(shell_id) only to check on a still-running " +
-          "process on demand, KillShell(shell_id) to stop one before restarting it, ListShells() to enumerate. " +
+          "Explicitly set background_behavior for EVERY background launch: continue for a service " +
+          "or when you have other work to do; wait_for_exit only when the next step requires a finite " +
+          "command to finish. When the command FINISHES you are automatically notified and woken to " +
+          "continue — do NOT sleep, poll, or repeatedly BashOutput to wait for completion. A service " +
+          "that stays running never produces that exit notification; check its readiness separately. " +
+          "Use BashOutput(shell_id) to inspect startup logs on demand, KillShell(shell_id) to stop one " +
+          "before restarting it, ListShells() to enumerate. " +
           "Prefer KillShell over raw kill/pkill for managed background tasks so intentional stops " +
           "are tracked correctly and their whole process group is terminated. The process is " +
-          "killed when the session/app exits. (A never-exiting service like a dev server simply never " +
-          "fires that completion wakeup — that's expected.)",
+          "killed when the session/app exits.",
+      },
+      background_behavior: {
+        type: "string",
+        enum: ["continue", "wait_for_exit"],
+        description:
+          "With run_in_background=true, explicitly choose this for every new launch. continue: " +
+          "keep the current turn running after launch so you can inspect service readiness, use its " +
+          "UI, or do independent work; it does not automatically pause the turn. wait_for_exit: " +
+          "pause this turn until the finite command exits and its completion notification wakes " +
+          "you. Never use wait_for_exit for a dev server, watcher, tunnel, or GUI that stays open. " +
+          "Omitting this retains wait_for_exit for compatibility with existing callers.",
       },
     },
     required: ["command"],
@@ -107,21 +121,33 @@ export async function bashTool(
     error: string,
     details: Pick<ToolFailure, "exitCode" | "signal" | "stderr"> = {},
   ): ToolExecutionResult => ({ ok: false, error, sandbox, ...details });
+  if (
+    args.background_behavior !== undefined &&
+    args.background_behavior !== "continue" &&
+    args.background_behavior !== "wait_for_exit"
+  ) {
+    return fail("background_behavior must be 'continue' or 'wait_for_exit'.");
+  }
   // Project localEnvironment.env (ctx.shellEnv) layers on top of either the
   // full passthrough (off) or the hardened allowlist (sandboxed) — see
   // mergeShellEnv. Background mode merges the same way inside the manager.
   const baseEnv = backend.name === "off" ? { ...process.env } : buildSandboxEnv();
-  const env = { ...mergeShellEnv(baseEnv, ctx?.shellEnv), ...workspaceWriteShellEnv };
+  const env: NodeJS.ProcessEnv = {
+    ...mergeShellEnv(baseEnv, ctx?.shellEnv),
+    ...workspaceWriteShellEnv,
+  };
 
-  // Background mode: spawn a detached, long-lived process and return a
-  // shell_id immediately (design §5.1). Fire-and-forget — the turn is never
-  // blocked, and Engine.run's wait-for-background loop never waits on it
-  // (§难点5: that loop only looks at asyncAgentRegistry).
+  // Process lifetime and turn continuation are separate: a service must leave
+  // the model free to check readiness and use it while it is still running.
+  // Preserve the historical exit-wait boundary for callers that omit the mode.
   if (args.run_in_background === true) {
+    const backgroundBehavior = args.background_behavior ?? "wait_for_exit";
     const backgroundResult = runInBackground(command, ctx);
     if (backgroundResult.startsWith("Error:")) return fail(backgroundResult);
-    ctx?.runYield?.request("background_notification");
-    return mark(backgroundResult);
+    if (backgroundBehavior === "wait_for_exit") {
+      ctx?.runYield?.request("background_notification");
+    }
+    return mark(`${backgroundResult}\nbackground_behavior: ${backgroundBehavior}`);
   }
 
   // A6: lifecycle (spawn, kill cascade, IO drain, byte cap, abort/timeout)
@@ -131,6 +157,12 @@ export async function bashTool(
   // "aborted before starting" message; SafeSpawn collapses both pre- and
   // mid-flight abort to aborted=true.
   const wasAbortedBeforeStart = ctx?.signal?.aborted === true;
+  const diagnosticPipe = createNativeModelTraceCollector({
+    workspacePath: cwd,
+    sessionId: ctx?.sessionId,
+  });
+  delete env.CODESHELL_MODEL_TRACE_FD;
+  if (diagnosticPipe) env.CODESHELL_MODEL_TRACE_FD = "3";
   const result = await safeSpawnShell(command, {
     cwd,
     env,
@@ -139,6 +171,7 @@ export async function bashTool(
     sandbox: backend,
     shell,
     signal: ctx?.signal,
+    diagnosticPipe,
   });
 
   if (result.aborted) {
@@ -203,12 +236,18 @@ function runInBackground(command: string, ctx?: ToolContext): string {
     return "Error: run_in_background requires a session context (no sessionId available).";
   }
   const mgr = ctx?.backgroundShells ?? backgroundShellManager;
+  const diagnosticPipe = createNativeModelTraceCollector({ workspacePath: ctx?.cwd, sessionId });
   const r = mgr.spawnBackground({
     command,
     cwd: ctx?.cwd ?? process.cwd(),
     sessionId,
     sandbox: ctx?.sandbox,
-    shellEnv: { ...ctx?.shellEnv, ...workspaceWriteShellEnv },
+    shellEnv: {
+      ...ctx?.shellEnv,
+      ...workspaceWriteShellEnv,
+      CODESHELL_MODEL_TRACE_FD: diagnosticPipe ? "3" : "",
+    },
+    diagnosticPipe,
   });
   if (!r.ok) {
     return `Error: ${r.error}`;

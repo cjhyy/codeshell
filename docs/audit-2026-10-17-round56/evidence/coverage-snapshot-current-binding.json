@@ -1,0 +1,7 @@
+{
+  "reference": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+  "sourcePaths": 4643,
+  "changedPaths": [],
+  "scope": "Hash-only of original dated TS inventory, no semantic increment or nonTS denominator.",
+  "productRuns": 0
+}

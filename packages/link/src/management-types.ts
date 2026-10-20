@@ -102,13 +102,27 @@ export interface LinkAuthorizationResponse {
   input?: Record<string, string | string[] | boolean>;
 }
 
+export interface LinkConnectionState {
+  authorization: { state: "authorized" | "reauthorization_required" | "unknown" };
+  compatibility: { state: "unknown" | "compatible" | "upgrade_required" | "unsupported" };
+  /** A live operation observation, never inferred from credential verification or refresh. */
+  observation: {
+    state: "unchecked" | "succeeded" | "failed";
+    checkedAt?: string;
+    action?: string;
+    resource?: string;
+  };
+}
+
 export interface MaskedLinkConnection {
   id: string;
   providerId: string;
   methodId: string;
   label: string;
   runtime: "local" | "server";
-  authSource: "manual-token" | "cli-session" | "browser-oauth" | "remote-link";
+  authSource: "manual-token" | "cli-session" | "browser-oauth" | "mcp-oauth" | "remote-link";
+  recipeId?: import("./operation-types.js").LinkRecipeId;
+  connectionState?: LinkConnectionState;
   status: "connected" | "expired" | "invalid" | "unavailable";
   account?: {
     id?: string;
@@ -138,6 +152,14 @@ export interface LinkSnapshot {
     browserHandoff?: 1;
   };
   remoteServer?: { issuer: string };
+  /** Discovery health is independent of saved account/grant state. */
+  remoteCatalog?: {
+    state: "unconfigured" | "unknown" | "ready" | "unavailable" | "stale";
+    checkedAt?: string;
+    lastSuccessAt?: string;
+    errorCode?: "network_error" | "http_error" | "invalid_response" | "response_too_large";
+    httpStatus?: number;
+  };
   /** Count only; retired secrets never leave the Host. Retried after restart with backoff. */
   remoteCleanupPending?: number;
   revision: string;
@@ -150,7 +172,8 @@ export interface LinkConnectionInput {
   label: string;
   connectionId?: string;
   expectedRevision: string | null;
-  /** User-pasted Figma file URL/key. Existing files are recovered by the Host, never this input. */
+  /** One user-pasted Figma file for initial or existing-account authorization.
+   * Previously authorized files are recovered by the Host, never this input. */
   resourceUrl?: string;
 }
 
@@ -194,4 +217,42 @@ export interface LinkAuthorization {
   previousGrantRevocationPending?: boolean;
   connection?: MaskedLinkConnection;
   errorCode?: LinkErrorCode;
+  failure?: LinkAuthorizationFailure;
+}
+
+/** Fixed Host diagnostics only: never upstream messages, response bodies, or credentials. */
+export interface LinkAuthorizationFailure {
+  code:
+    | "invalid_request"
+    | "access_denied"
+    | "timeout"
+    | "network_error"
+    | "server_error"
+    | "protocol_error";
+  stage:
+    | "validation"
+    | "authorization"
+    | "discovery_registration"
+    | "authorization_callback"
+    | "token_exchange"
+    | "credential_verification";
+  verificationStage?:
+    | "credential_binding"
+    | "mcp_initialize"
+    | "tool_discovery"
+    | "account_verification"
+    | "capability_verification";
+  reason?:
+    | "binding_mismatch"
+    | "cancelled"
+    | "network_error"
+    | "http_error"
+    | "protocol_error"
+    | "tool_unavailable"
+    | "invalid_pagination"
+    | "response_too_large"
+    | "account_tool_error"
+    | "account_identity_unavailable"
+    | "no_read_capabilities";
+  httpStatus?: number;
 }

@@ -1,0 +1,450 @@
+{
+  "targetPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1374",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2531/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10142/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10142/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10143/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10143/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/2850/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/2850/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/2623",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/2851/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    }
+  ],
+  "targetSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2531/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10143/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/2850/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/2850/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/2851/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "completeScalar": true
+    }
+  ],
+  "targetFilename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1374",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2531/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/source-excerpts.json",
+      "pointer": "/snapshots/13/text",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "                  )}\n                </ComposerSuggestions>\n              )}\n              <Textarea\n                ref={textareaRef}\n                aria-label={t(\"chat.composer.inputLabel\")}\n                aria-autocomplete=\"list\"\n                aria-haspopup=\"listbox\"\n                value={draft}\n                onBeforeInput={(e) => captureMentionEditSelection(e.currentTarget)}\n                onCut={(e) => captureMentionEditSelection(e.currentTarget)}\n                onChange={(e) => {\n                  const value = e.target.value;\n                  const selection = mentionEditSelection.current;\n                  mentionEditSelection.current = null;\n                  setMentionReferences((current) =>\n                    reconcileMentionReferences(\n                      reconcileMentionReferences(current, draft),\n                      value,\n                      selection?.draft === draft\n                        ? {\n                 ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10142/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10142/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10143/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10143/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/2850/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/2850/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/2623",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/2851/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1374",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2531/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/source-excerpts.json",
+      "pointer": "/snapshots/13/text",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "                  )}\n                </ComposerSuggestions>\n              )}\n              <Textarea\n                ref={textareaRef}\n                aria-label={t(\"chat.composer.inputLabel\")}\n                aria-autocomplete=\"list\"\n                aria-haspopup=\"listbox\"\n                value={draft}\n                onBeforeInput={(e) => captureMentionEditSelection(e.currentTarget)}\n                onCut={(e) => captureMentionEditSelection(e.currentTarget)}\n                onChange={(e) => {\n                  const value = e.target.value;\n                  const selection = mentionEditSelection.current;\n                  mentionEditSelection.current = null;\n                  setMentionReferences((current) =>\n                    reconcileMentionReferences(\n                      reconcileMentionReferences(current, draft),\n                      value,\n                      selection?.draft === draft\n                        ? {\n                 ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/source-manifest.json",
+      "pointer": "/scope",
+      "kind": "json-value-scalar",
+      "offset": 36,
+      "context": "Future47 bounded Desktop controlled-composer/draft/keyboard state source review, oldexact R04/D5 excluded",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10142/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10142/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10143/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/10143/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/2850/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/2850/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/2623",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/2851/path",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/141/text",
+      "kind": "json-value-scalar",
+      "offset": 4457,
+      "context": "\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M12 19V5m-6 6 6-6 6 6\\\"></path></svg></button></div></footer><div class=\\\"composer-caption\\\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>\",",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/142/text",
+      "kind": "json-value-scalar",
+      "offset": 4432,
+      "context": "\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M12 19V5m-6 6 6-6 6 6\\\"></path></svg></button></div></footer><div class=\\\"composer-caption\\\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>\",",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/202/text",
+      "kind": "json-value-scalar",
+      "offset": 4457,
+      "context": "\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M12 19V5m-6 6 6-6 6 6\\\"></path></svg></button></div></footer><div class=\\\"composer-caption\\\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>\",",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/203/text",
+      "kind": "json-value-scalar",
+      "offset": 4432,
+      "context": "\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M12 19V5m-6 6 6-6 6 6\\\"></path></svg></button></div></footer><div class=\\\"composer-caption\\\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>\",",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/336/text",
+      "kind": "json-value-scalar",
+      "offset": 4457,
+      "context": "\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M12 19V5m-6 6 6-6 6 6\\\"></path></svg></button></div></footer><div class=\\\"composer-caption\\\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>\",",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/337/text",
+      "kind": "json-value-scalar",
+      "offset": 4432,
+      "context": "\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M12 19V5m-6 6 6-6 6 6\\\"></path></svg></button></div></footer><div class=\\\"composer-caption\\\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>\",",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/cli-recovery-round15.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4359,
+      "context": "过权限，也不声称 A 的点击新启动了一个未经批准的 bypass 进程。问题是 A 报告 default 却继续向既存 bypass agent 发送。\n\n### 动态证据及保护\n\n[takeover-mode.test.tsx](reproductions/cli-recovery-round15/takeover-mode.test.tsx) / [最终日志](validation/original-cli-recovery-round15/takeover-mode.log)：**2 pass / 53 expect / 0 fail/skip**。\n\n- 使用真实临时 ProjectStore 与 `requireRendererProjectPath`、真实磁盘 Claude identity resolver（owned 临时 claudeHome）、真实 RoomManager。三个 Main 回调均 AST 提取自目标 `index.ts` 并执行其真实 helper。实际 CCRoomView 与 CCConversationView 挂载，A 的接管、header、composer 和 Enter 发送均调用组件真实 handler。\n- B 的两次操作与恢复采用实际 Main callback 调用，UI mode-picker 接线只读核对；**没有将 B 的完整窗口点击或恢复步骤包装成已跑完整 UI**。A 的 openRequest 从组件边界进入，外部链接 producer/bucket 的接线只读核对；没有真实 DriveAgent/model 运行。\n- Agent factory 是 `RoomAgent` 接口的内存替身，记录创建时 mode、stop 次数与收到的文本。确认 takeover 不创建/停止 agent，并继续调用 bypass 实例。生产 Main factory [index.ts:1152](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts:1152) 将 mode 固定传给 ResidentAgentProcess，而 [resident-agent.ts:185](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/mobile-remote/resident-agent.ts:185) 仅在 spawn 时写入 `--permission-mode`；因此 metadata 改写不可能动态调整该 CLI。**本轮未启动任何真实 CLI 或原生 agent 进程，未证明真实 CLI 免审批执行了某项工具。**\n- 冷接管创建 default agent，已有 default agent 的重复接管保持幂等；不存在 transcript 的 session、未注册 cwd 均拒绝，未额外创建 agent。观察导航 probeCalls=0。\n\n### 恢复应如何表述\n\n1. **同模式 default 重开不能立即修复**：A takeover 已先把 metada",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "pointer": "/observations/0/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 4136,
+      "context": "s=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button></div></footer><div class=\"composer-caption\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "pointer": "/observations/1/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 4111,
+      "context": "s=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button></div></footer><div class=\"composer-caption\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+      "pointer": "/observations/0/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 4136,
+      "context": "s=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button></div></footer><div class=\"composer-caption\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+      "pointer": "/observations/1/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 4111,
+      "context": "s=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button></div></footer><div class=\"composer-caption\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-cli-recovery-round15/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4379,
+      "context": "pass 进程。问题是 A 报告 default 却继续向既存 bypass agent 发送。\n\n### 动态证据及保护\n\n[takeover-mode.test.tsx](/tmp/codeshell-review-20261012-cli-recovery-round15/takeover-mode.test.tsx) / [最终日志](/tmp/codeshell-review-20261012-cli-recovery-round15/takeover-mode.log)：**2 pass / 53 expect / 0 fail/skip**。\n\n- 使用真实临时 ProjectStore 与 `requireRendererProjectPath`、真实磁盘 Claude identity resolver（owned 临时 claudeHome）、真实 RoomManager。三个 Main 回调均 AST 提取自目标 `index.ts` 并执行其真实 helper。实际 CCRoomView 与 CCConversationView 挂载，A 的接管、header、composer 和 Enter 发送均调用组件真实 handler。\n- B 的两次操作与恢复采用实际 Main callback 调用，UI mode-picker 接线只读核对；**没有将 B 的完整窗口点击或恢复步骤包装成已跑完整 UI**。A 的 openRequest 从组件边界进入，外部链接 producer/bucket 的接线只读核对；没有真实 DriveAgent/model 运行。\n- Agent factory 是 `RoomAgent` 接口的内存替身，记录创建时 mode、stop 次数与收到的文本。确认 takeover 不创建/停止 agent，并继续调用 bypass 实例。生产 Main factory [index.ts:1152](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts:1152) 将 mode 固定传给 ResidentAgentProcess，而 [resident-agent.ts:185](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/mobile-remote/resident-agent.ts:185) 仅在 spawn 时写入 `--permission-mode`；因此 metadata 改写不可能动态调整该 CLI。**本轮未启动任何真实 CLI 或原生 agent 进程，未证明真实 CLI 免审批执行了某项工具。**\n- 冷接管创建 default agent，已有 default agent 的重复接管保持幂等；不存在 transcript 的 session、未注册 cwd 均拒绝，未额外创建 agent。观察导航 probeCalls=0。\n\n### 恢复应如何表述\n\n1. **同模式 default 重开不能立即修复**：A takeover 已先把 metada",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+      "pointer": "/observations/0/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 4136,
+      "context": "s=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button></div></footer><div class=\"composer-caption\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+      "pointer": "/observations/1/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 4111,
+      "context": "s=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button></div></footer><div class=\"composer-caption\"><span>任务在桌面工作区执行</span><span>Enter 发送 · Shift + Enter 换行</span></div></div></section></main></div>",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/memory-redesign-eval.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12613,
+      "context": "lete()` 是软删，会移到 `memory-trash`，适合做用户批准后的批量清理。见 `packages/core/src/session/memory.ts:296` 到 `:316`。\n\n推荐迁移策略：\n\n- P0：不迁移，先把新 extractor 输出从 user 切走。\n- P0.5：设置页加一个针对当前项目 user scope 的“review auto clutter”视图，默认筛选 `origin:auto && !pinned`，按相似 name/description 分组，用户确认后软删。现有 cleanupAuto 可以作为底层 delete 循环，但不要继续做全量不分组删除。\n- P1：dream 生成结构化 cleanup suggestions，例如 `{ location, scope:\"user\", names, reason }`，UI 展示 diff，用户批准后调用现有 delete。不要让 dream 直接删 user。\n- 对 `codeshell-todo-verification-*` 这类明显过程态重复，可以让 cleanup suggestion 默认选中；不要把它们批量迁移到 dream，因为它们多数没有未来价值，迁移只是换个地方堆。\n\n## 7. 更简单替代方案对比\n\n### A. 只在 extractor 加去重/合并，仍写 user\n\n优点：改动最小，主要改 `buildExtractionPrompt()` 和 `MemoryOrchestrator` 保存前查重。\n\n缺点：治标不治本。自动写入仍污染用户拥有区，dream 仍不能自动整理 user。现有 prompt 已有 “Do not duplicate existing memories”，见 `packages/core/src/services/extract-memories.ts:63`，真实数据说明仅靠 prompt 不够。保存层按 slug/name 覆盖只能处理同名，daily verification 这种日期变体会绕过。见 `packages/core/src/session/memory.ts:171` 到 `:173`。\n\n判定：不推荐作为主方案。可作为 P0 的辅助去重，但不能替代改向。\n\n### B. 在 user 区加 `tier:auto|curated`\n\n优点：保留现有 user 注入路径和 pending 思路，迁移成本比新 scope 小。\n\n缺点：会把权限语义搞复杂。要么 dream 仍不能删 user auto tier，堆积问题还在；要么给 background 特权删 user auto tier，又打破“user 区用户拥有”的简单模型。现有 permission 和 dream dispatch 都是按 scope 判断，不按 tier。见 `packages/core/src/services/dream-consolidation.ts:183` 到 `:191` 和 `packages/core/src/engine/engine.ts:2977` 到 `:2993`。\n\n判定：不推荐。它比改向更难解释，也更容易留下例外路径。\n\n### C. 关闭 autoExtract\n\n优点：已经有设置项和 U",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12851,
+      "context": "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |\n| Web mobile composer                        | Resize immediately before Enter could submit using stale wide-layout state.                                                                                                                                                                                        | Read the current media query at the key event.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |\n| Web questions                              | Choice labels/descriptions and options-only constraints were not rendered; opt",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 152297,
+      "context": "e rejected save commits zero times and leaves A's complete hash unchanged. Read/save timing and one error are controlled. `native-memory-pin/receipt.json` records source `a396d1656`, compiled-source hashes, zero worker/network attempts and renderer errors, Main exit 0/no signal, 21 observed process incarnations cleaned/zero remaining, and HOME removal. No Engine, provider or account is used.                                                                                                 |\n| `e2e-composer-reference-operations.mjs` | Nine real native keyboard/mouse/clipboard/file-chooser sequences through ChatView/App, preload and Main. Unicode/space mentions retain visible metadata; delete/suffix/paste edits revoke it for ordinary send, queue and force. Explicit picker files and production-staged pasted images remain; actual image bytes match both metadata SHA256s and decode to 8×8. Main captures and answers run/control requests before the Engine; its model catalog and owned chooser selection are controlled. File/root authorization, staging and session persistence remain production handlers. `native-composer-reference-final/report.json` records 11 run, 2 steer, 2 unsteer and 4 cancel requests, zero workers/pending/errors, Main exit 0/no signal, 37 observed incarnations cleaned/zero remaining, and HOME removal. This proves submitted metadata, not Engine consumption. |\n| `test-service-worker-browser.mjs`       | Eleven actual Chromium Service",
+      "completeScalar": false
+    }
+  ]
+}

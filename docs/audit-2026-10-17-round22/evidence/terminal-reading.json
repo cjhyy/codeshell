@@ -1,0 +1,128 @@
+{
+  "reads": [
+    {
+      "path": "CODESHELL.md",
+      "readScope": "full instruction read",
+      "selectedRanges": [],
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639
+    },
+    {
+      "path": "packages/tui/src/cli/output/terminal-ui.ts",
+      "readScope": "full static source",
+      "selectedRanges": [
+        [
+          1,
+          235
+        ]
+      ],
+      "sha256": "f274a3b1dd282503cc6aa7ae745b76069631d062c0b7edf7965c9e5b96e308ec",
+      "bytes": 7091
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "readScope": "full static source",
+      "selectedRanges": [
+        [
+          1,
+          163
+        ]
+      ],
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "bytes": 5744
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "readScope": "selected static source",
+      "selectedRanges": [
+        [
+          1,
+          27
+        ],
+        [
+          225,
+          280
+        ]
+      ],
+      "sha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "bytes": 13137
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "readScope": "selected historical report",
+      "selectedRanges": [
+        [
+          99,
+          110
+        ]
+      ],
+      "sha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "bytes": 14642
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/tui.md",
+      "readScope": "full historical report",
+      "selectedRanges": [
+        [
+          1,
+          31
+        ]
+      ],
+      "sha256": "fa13450f37f50c6d6f1aff1c2389657805e67de0878a33d00e40162daa94fba1",
+      "bytes": 5777
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "readScope": "full historical report",
+      "selectedRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "sha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "bytes": 8725
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "readScope": "full historical report",
+      "selectedRanges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "bytes": 6276
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/json-output.md",
+      "readScope": "full historical report",
+      "selectedRanges": [
+        [
+          1,
+          27
+        ]
+      ],
+      "sha256": "568c22bee1843f385ee30f6e7a60e4155d7b6b12ec855830b4d11bfe83d8ccbc",
+      "bytes": 4915
+    }
+  ],
+  "selectedParsedJSONRecords": {
+    "path": "docs/archive/review-2026-05-30/findings.json",
+    "locations": [
+      "$[161]",
+      "$[207]"
+    ],
+    "savedAt": "evidence/terminal-prep-provenance.json"
+  },
+  "metadataReadMethods": [
+    "cat CODESHELL.md",
+    "Python pathlib reads and line-numbered selected source/report output",
+    "Python json.loads parsed value inspection",
+    "rg --files / rg -n navigation",
+    "git rev-parse HEAD / git status --short / git show frozen:path"
+  ],
+  "sourceCoverageLimitation": "Two Core type source pins are hash-only and not source-read coverage. No module imported or product stdout captured.",
+  "errors": []
+}

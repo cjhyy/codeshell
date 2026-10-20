@@ -1,0 +1,11 @@
+{
+  "toolChunk": "1dbe83",
+  "exitCode": 1,
+  "kind": "Root documentation generator here-document Python parse failure",
+  "stderrTranscript": "  File \"<stdin>\", line 51\n    Root实际读六包报告、候选完整链与范围清单。132/136同一PET-R132-C1提升为PET-R57-01 P3，只计一次；原作者包仍0formal/1candidate。Root另对dispatch/controller/default closure reader/locate/transcript五个实际源码所列选段作前置pin后交叉核对，见pet-root-before-pins.json；这和author/reviewer重叠，不是第三份新增覆盖。\n               ^\nSyntaxError: invalid character '、' (U+3001)\n",
+  "stdoutTranscript": "",
+  "rawScriptArchived": false,
+  "limitation": "Original stdin command remains in tool transcript; no fabricated full raw file. Parsing failed before any statement, target document script not created.",
+  "cause": "Nested triple-single-quoted generator text closed the outer generator string.",
+  "nextAction": "Write a standalone metadata script via quoted shell heredoc, then execute it. No product/test rerun."
+}

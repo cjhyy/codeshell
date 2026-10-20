@@ -1,0 +1,104 @@
+{
+  "frozenUTC": "2026-10-17T16:52:57.115246+00:00",
+  "kind": "author artifact receipt; metadata-only selection, not source semantic review",
+  "authorRole": "Previous73/76 source packets and82 metadata packet are frozen; this new task only finite metadata selection. No author methods executed.",
+  "root": "/tmp/codeshell-audit-round87-frontier-selection",
+  "fileCountExcludingThisReceipt": 18,
+  "files": [
+    {
+      "path": "candidate-initial-pins.json",
+      "bytes": 18899,
+      "sha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f"
+    },
+    {
+      "path": "candidates.json",
+      "bytes": 60480,
+      "sha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830"
+    },
+    {
+      "path": "canonical-metadata-read.json",
+      "bytes": 80272,
+      "sha256": "2307d5fcbdc9132500a523f1f0842da9857a9da3193f52009bbeae91e6b1014b"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 4061,
+      "sha256": "ada25085bb54648828bc953917fd39108357601166e481ba1af551477f3b9478"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 9399,
+      "sha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 16299,
+      "sha256": "beecd042e17369a5f2ddd8b5e9a7e2b6fea9a4692b56e9c46fef9f23529c27c3"
+    },
+    {
+      "path": "first-reader-diagnostic.json",
+      "bytes": 844,
+      "sha256": "8685fa915baf9b03b2cb3690311a6e664fbc97c7b6035504fcd296207db870b9"
+    },
+    {
+      "path": "first-reader-stderr.txt",
+      "bytes": 692,
+      "sha256": "016a50bbf0c22caf73c2cdcd109519f9e251bfcfddda5331df80d0ccb876d295"
+    },
+    {
+      "path": "first-reader.py",
+      "bytes": 430,
+      "sha256": "42e41cb0b753e4a3460c77467306aa96e0586f2c89a0d84ebcdd2f1fe353ab1e"
+    },
+    {
+      "path": "history-claims.json",
+      "bytes": 317268,
+      "sha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6"
+    },
+    {
+      "path": "history-initial-inventory.json",
+      "bytes": 940029,
+      "sha256": "3ba7dbb7d148145a0cbd864a61a43e705d973183d9d663beabc9197777360cc4"
+    },
+    {
+      "path": "history-inventory-command.json",
+      "bytes": 234,
+      "sha256": "d529c9bcb268ca0f8b8f61c6b0a3497420dc89ede1591ffe417f0c8239ea2ce8"
+    },
+    {
+      "path": "history-locators.json",
+      "bytes": 260887,
+      "sha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316"
+    },
+    {
+      "path": "history-summary.json",
+      "bytes": 1005,
+      "sha256": "091f780ef53634408c3c0c6c24e9b0d378698096da7b76d4f33fb035180b6331"
+    },
+    {
+      "path": "report.md",
+      "bytes": 6283,
+      "sha256": "48d768e61c46481db1b5e8309f489d34abd651b3ee3633c9a844de8fa3205064"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5977,
+      "sha256": "7d4b6e92b651a1e03b7ace342fba017daacdb55c09fd493cc532aca97edbf8e8"
+    },
+    {
+      "path": "selection-input-pins.json",
+      "bytes": 907,
+      "sha256": "4006c6c8c4910bba6de52d024a113cfeb29fd933aab212b7448a87a983a9481d"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 17425,
+      "sha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9"
+    }
+  ],
+  "selfExcluded": true,
+  "sourceSemanticReads": 0,
+  "productExecutions": 0,
+  "GitOperations": 0,
+  "firstMetadataFailureRetained": "first-reader.py + first-reader-diagnostic.json + observed first-reader-stderr.txt; printed records also remain in history-claims.json, not regenerated raw stdout"
+}

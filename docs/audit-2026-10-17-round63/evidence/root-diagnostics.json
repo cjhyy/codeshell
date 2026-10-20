@@ -1,0 +1,12 @@
+{
+  "sourceSemanticRuns": 0,
+  "productRuns": 0,
+  "inspectionPresentation": [
+    {
+      "detail": "Combined tool return for catalog and script inspection exceeded outer output budget; subsequent bounded views and separate catalog peer used. No captured script stdout/stderr replaced or inferred."
+    }
+  ],
+  "preparedMethodCorrectionsBeforeFirstExecution": [
+    "Removed literal patch plus prefixes in document generator; corrected through62 provenance and announced anchor count12."
+  ]
+}

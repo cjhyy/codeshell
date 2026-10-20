@@ -1,0 +1,441 @@
+{
+  "totalContexts": 62,
+  "windowCapCharacters": 650,
+  "records": [
+    {
+      "index": 0,
+      "document": "docs/archive/core-modules/context.md",
+      "location": "110",
+      "window": " type). `recordActualUsage` improves accuracy by anchoring on the last real API count and only estimating messages added since.\n- **`microcompact` only clears whitelisted tools** (`COMPACTABLE_TOOL_NAMES` — Read/Glob/Bash/...). Orchestration results (TaskCreate/Agent/etc.) are left intact and do",
+      "originalContextCharacters": 2076
+    },
+    {
+      "index": 1,
+      "document": "docs/archive/subagent-design-comparison-2026-05-27.md",
+      "location": "35",
+      "window": " session 内，背景/team 另有机制 | `agents.max_depth`（默认 1，禁深层嵌套） | 通过 `permission.task` glob 限制 | 硬禁止嵌套 |\n| **并发控制** | — | `agents.max_threads`（默认 6） | — | ❌ 无上限 |\n| **结果回传** | 返回 summary 文本 | 等全部完成后**合并**返回；批处理用 `report_agent_job_result` | 返回结果 | 同步=文本/后台=XML 通知 |\n|",
+      "originalContextCharacters": 1283
+    },
+    {
+      "index": 3,
+      "document": "docs/audit-2026-10-17-round10/evidence/diagnostics-static-lookup-failures.json",
+      "location": "/failures/0/command",
+      "window": "e: \"dom\"' packages/core/src/browser packages/desktop/src/browser-library docs --glob '*.md' --glob '*.ts' --glob '!audit-2026-10-17-round10/**' --max-count 20",
+      "originalContextCharacters": 226
+    },
+    {
+      "index": 4,
+      "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "/records/5/matches/0/match",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146567
+    },
+    {
+      "index": 5,
+      "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "/records/5/matches/0/context",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146947
+    },
+    {
+      "index": 6,
+      "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "/records/9/matches/0/match",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146567
+    },
+    {
+      "index": 7,
+      "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "/records/9/matches/0/context",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146947
+    },
+    {
+      "index": 8,
+      "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "/records/13/matches/0/match",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146567
+    },
+    {
+      "index": 9,
+      "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "/records/13/matches/0/context",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146947
+    },
+    {
+      "index": 10,
+      "document": "docs/audit-2026-10-17-round19/coverage.md",
+      "location": "11",
+      "window": "Root、timing、reviewprompt、simplediff 构成只读交叉复核环，分别核源字节、raw/exit、夹具、计数与声明边界；最终聚合另核全部 artifact/source/index/链接。原始 raw 永远不规范化。Root 猜错旧文档名、timing 不存在 glob、publisher 范围描述、只读输出截断和 reviewprompt 补齐静态中间转发链均有显式 metadata 记录；没有产品修复或再次验证。",
+      "originalContextCharacters": 223
+    },
+    {
+      "index": 11,
+      "document": "docs/audit-2026-10-17-round19/evidence/review-aggregate.md",
+      "location": "13",
+      "window": "四个 scope reviews 的计数、运行边界与本次聚合相符。Reviewprompt 补齐 TuiControlSurface 静态转发、timing publisher 范围修订/不存在 glob、root 文档导航及 README metadata patch/只读输出截断、frontier capacity 调度失败均有单独记录；没有用它们触发产品重",
+      "originalContextCharacters": 257
+    },
+    {
+      "index": 12,
+      "document": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "location": "/matches/cronMechanism/115/excerpt",
+      "window": "、`chat/src/integration.ts`、`chat/src/pet-bridge.ts`），另一个 `runtime/*automation*` glob 无匹配；这不是实验或产品行为证据，均未修支架或执行测试。随后只用已有源码中的明确符号完成静态接线检视。Slack 小写 URL 直接读取失败如上记录；没有真实平台请求",
+      "originalContextCharacters": 240
+    },
+    {
+      "index": 13,
+      "document": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "location": "/matches/cronMechanism/244/excerpt",
+      "window": "四个 scope reviews 的计数、运行边界与本次聚合相符。Reviewprompt 补齐 TuiControlSurface 静态转发、timing publisher 范围修订/不存在 glob、root 文档导航及 README metadata patch/只读输出截断、frontier capacity 调度失败均有单独记录；没有用它们触发产品重",
+      "originalContextCharacters": 257
+    },
+    {
+      "index": 14,
+      "document": "docs/audit-2026-10-17-round25/evidence/output-metadata-notes.json",
+      "location": "/metadataCorrections/0/correction",
+      "window": "Concurrent reviewer wrote two output-static-* files during receipt glob. Exclude foreign reviewer files explicitly; author artifact count is18 plus self-excluded receipt. No reviewer bytes modified, no test/fixture/ra",
+      "originalContextCharacters": 232
+    },
+    {
+      "index": 15,
+      "document": "docs/audit-2026-10-17-round25/evidence/root-prep/simple-diff-history.json",
+      "location": "/5/hits/0/context",
+      "window": "终文件/链接总数。最终 staged/blob/primary fast-forward 验证尚属 Root 后续步骤。\n\n四个 scope reviews 的计数、运行边界与本次聚合相符。Reviewprompt 补齐 TuiControlSurface 静态转发、timing publisher 范围修订/不存在 glob、root 文档导航及 README metadata patch/只读输出截断、frontier capacity 调度失败均有单独记录；没有用它们触发产品重",
+      "originalContextCharacters": 961
+    },
+    {
+      "index": 16,
+      "document": "docs/audit-2026-10-17-round25/evidence/root-prep/simple-diff-history.json",
+      "location": "/16/hits/0/context",
+      "window": "四个 scope reviews 的计数、运行边界与本次聚合相符。Reviewprompt 补齐 TuiControlSurface 静态转发、timing publisher 范围修订/不存在 glob、root 文档导航及 README metadata patch/只读输出截断、frontier capacity 调度失败均有单独记录；没有用它们触发产品重",
+      "originalContextCharacters": 257
+    },
+    {
+      "index": 17,
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/matches/user-display/77/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 18,
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/matches/user-display/78/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 19,
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/matches/user-display/79/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 20,
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/matches/user-display/80/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 21,
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/matches/user-display/81/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 22,
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/matches/user-display/82/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 23,
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/matches/user-display/149/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 220729
+    },
+    {
+      "index": 24,
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/matches/user-display/153/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 220729
+    },
+    {
+      "index": 25,
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/matches/user-display/157/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 220729
+    },
+    {
+      "index": 26,
+      "document": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+      "location": "/contexts/scope/83/excerpt",
+      "window": "四个 scope reviews 的计数、运行边界与本次聚合相符。Reviewprompt 补齐 TuiControlSurface 静态转发、timing publisher 范围修订/不存在 glob、root 文档导航及 README metadata patch/只读输出截断、frontier capacity 调度失败均有单独记录；没有用它们触发产品重",
+      "originalContextCharacters": 257
+    },
+    {
+      "index": 27,
+      "document": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+      "location": "/contexts/mechanism/94/excerpt",
+      "window": "四个 scope reviews 的计数、运行边界与本次聚合相符。Reviewprompt 补齐 TuiControlSurface 静态转发、timing publisher 范围修订/不存在 glob、root 文档导航及 README metadata patch/只读输出截断、frontier capacity 调度失败均有单独记录；没有用它们触发产品重",
+      "originalContextCharacters": 257
+    },
+    {
+      "index": 28,
+      "document": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+      "location": "/hits/exact-inspector/39/context",
+      "window": "e: \"dom\"' packages/core/src/browser packages/desktop/src/browser-library docs --glob '*.md' --glob '*.ts' --glob '!audit-2026-10-17-round10/**' --max-count 20",
+      "originalContextCharacters": 226
+    },
+    {
+      "index": 29,
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "location": "/hits/plugin-input/23/context",
+      "window": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "originalContextCharacters": 859
+    },
+    {
+      "index": 30,
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "location": "/hits/github-suffix/4/context",
+      "window": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "originalContextCharacters": 868
+    },
+    {
+      "index": 31,
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "location": "/hits/source-normalization/13/context",
+      "window": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "originalContextCharacters": 963
+    },
+    {
+      "index": 32,
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/selected-history-contexts.json",
+      "location": "/matches/36/context",
+      "window": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "originalContextCharacters": 963
+    },
+    {
+      "index": 33,
+      "document": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "location": "/hits/plugin-input/23/context",
+      "window": " 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a patter",
+      "originalContextCharacters": 749
+    },
+    {
+      "index": 34,
+      "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "location": "/hits/targets/49/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 116543
+    },
+    {
+      "index": 35,
+      "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "location": "/hits/targets/56/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 116543
+    },
+    {
+      "index": 36,
+      "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "location": "/hits/targets/63/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 116543
+    },
+    {
+      "index": 37,
+      "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "location": "/hits/targets/95/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 116543
+    },
+    {
+      "index": 38,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/6/object/match",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146567
+    },
+    {
+      "index": 39,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/6/object/context",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146947
+    },
+    {
+      "index": 40,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/7/object/match",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146567
+    },
+    {
+      "index": 41,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/7/object/context",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146947
+    },
+    {
+      "index": 42,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/8/object/match",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146567
+    },
+    {
+      "index": 43,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/8/object/context",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 146947
+    },
+    {
+      "index": 44,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/9/object/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 45,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/10/object/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 46,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/11/object/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 47,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/12/object/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 48,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/13/object/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 49,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/14/object/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 145360
+    },
+    {
+      "index": 50,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/17/object/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 220729
+    },
+    {
+      "index": 51,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/21/object/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 220729
+    },
+    {
+      "index": 52,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/25/object/excerpt",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 220729
+    },
+    {
+      "index": 53,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/50/object/text",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 222261
+    },
+    {
+      "index": 54,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/54/object/text",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 222261
+    },
+    {
+      "index": 55,
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "location": "/objects/58/object/text",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 222261
+    },
+    {
+      "index": 56,
+      "document": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/logs/3/text",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 222261
+    },
+    {
+      "index": 57,
+      "document": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/settings-navigation/3/text",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 222261
+    },
+    {
+      "index": 58,
+      "document": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "/hits/sidebar-projection/11/text",
+      "window": "y\": \"low\", \"confidence\": \"medium\", \"title\": \"Inconsistent output formatting for glob results over 200 matches\", \"detail\": \"When matches.length > 200, the result contains only the first 200 formatted files plus a note about more files (line 89), but NO header line like 'N files matched:' (which only appears in the else branch at line 91). This creates inconsistent",
+      "originalContextCharacters": 222261
+    },
+    {
+      "index": 59,
+      "document": "docs/audit-2026-10-17-round6/evidence/tasks-dedup.json",
+      "location": "/markdownMatches/7/matches/0/text",
+      "window": "`microcompact` only clears whitelisted tools** (`COMPACTABLE_TOOL_NAMES` — Read/Glob/Bash/...). Orchestration results (TaskCreate/Agent/etc.) are left intact and don't count toward the keep-recent window.",
+      "originalContextCharacters": 208
+    },
+    {
+      "index": 65,
+      "document": "docs/audit-2026-10-17/evidence/quality-final-review.md",
+      "location": "54",
+      "window": "、`chat/src/integration.ts`、`chat/src/pet-bridge.ts`），另一个 `runtime/*automation*` glob 无匹配；这不是实验或产品行为证据，均未修支架或执行测试。随后只用已有源码中的明确符号完成静态接线检视。Slack 小写 URL 直接读取失败如上记录；没有真实平台请求",
+      "originalContextCharacters": 240
+    },
+    {
+      "index": 66,
+      "document": "docs/core-deep-dive/02-engine-turn-loop.md",
+      "location": "84",
+      "window": "留最新、旧的换成\"已被取代\"标记;浏览器观察快照只留最新一份。\n- **Tier 1 — microcompact**:零成本、无损。对可重取的工具(Read/Glob/Grep/Bash/WebFetch 等)清掉较老的 `tool_result` **内容**,留一行指纹 `[Old tool result cleared — ...]`。带状态的工具(TodoWrite/Agent/Skill)原样保留。\n- **Tier 2 — summarize**:超过约 0.85 占比时,让 aux 模型做**滚动**摘要(在上一版摘要上合并,而非从头重摘,所以细节是缓慢侵蚀的)。连续失败 3 次回退到同步的 snip/window 路径。\n- **Tier 3 — window 紧急压缩**",
+      "originalContextCharacters": 574
+    },
+    {
+      "index": 67,
+      "document": "docs/todo/multi-folder-local-project-plan.md",
+      "location": "280",
+      "window": "- `cwd` 永远等于 Session main root（或其 worktree）。\n- 对 secondary 用绝对路径；Glob/Grep 的 `path` 参数已可接受绝对路径（`builtin/grep.ts:126-129`），不新增 `rootId`。\n- runtime header（`prompt/composer.ts:261-276`）多 roots 时列出目录及角色，并注明“相对路径相对 primary”。\n- `Bash` 从 p",
+      "originalContextCharacters": 263
+    }
+  ],
+  "limitation": "Bounded actual window review only; no claim of reading each original huge scalar or paragraph in full"
+}

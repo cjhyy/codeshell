@@ -1,0 +1,6 @@
+52:import { startPanelResize } from "./panelResize";
+749:    const cleanup = startPanelResize({
+753:      minWidth: PANEL_MIN,
+754:      maxWidth: () => Math.max(PANEL_MIN, Math.floor(window.innerWidth * PANEL_MAX_FRAC)),
+755:      onCommit: (next) => {
+759:      onFinish: () => {

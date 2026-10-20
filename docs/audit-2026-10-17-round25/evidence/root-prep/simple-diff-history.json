@@ -1,0 +1,670 @@
+[
+  {
+    "path": "docs/architecture/04-protocol-and-sessions.md",
+    "hits": [
+      {
+        "at": "$",
+        "context": "shot supersedes the undone turn, and `redoLatestTurn()` reapplies the stashed post-turn files and clears `undone` (`packages/core/src/session/undo-target.ts:124`, `packages/core/src/session/file-history.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`).\n\n## 9. Runtime ownership\n\nCore no longer exposes a process-wide `state.ts` bag. Session/cwd/usage authority is explicit: durable session fields belong to `SessionManager`, run usage belongs to the injected engine runtime/cost tracker, and TUI interaction state stays inside the TUI renderer. This prevents one worker process from silently sharing mutable session identity or accounting across concurrent sessions.\n\n## 10. Where to read next\n\n- What the server ultimately drives: [01 · Engine & turn loop](01-engine-and-turn-loop.md)\n- Tools, permissions, and approvals behind `ApprovalRequest`"
+      },
+      {
+        "at": "$",
+        "context": "tTurn()` reapplies the stashed post-turn files and clears `undone` (`packages/core/src/session/undo-target.ts:124`, `packages/core/src/session/file-history.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`).\n\n## 9. Runtime ownership\n\nCore no longer exposes a process-wide `state.ts` bag. Session/cwd/usage authority is explicit: durable session fields belong to `SessionManager`, run usage belongs to the injected engine runtime/cost tracker, and TUI interaction state stays inside the TUI renderer. This prevents one worker process from silently sharing mutable session identity or accounting across concurrent sessions.\n\n## 10. Where to read next\n\n- What the server ultimately drives: [01 · Engine & turn loop](01-engine-and-turn-loop.md)\n- Tools, permissions, and approvals behind `ApprovalRequest`: [02 · Tool system](02-tool-system.md)\n- Long-"
+      }
+    ]
+  },
+  {
+    "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+    "hits": [
+      {
+        "at": "$",
+        "context": "ession 职责定位\n\nSession 层负责“当前对话发生了什么”和“如何恢复”。\n\n关键文件:\n\n| 文件 | 角色 |\n|---|---|\n| `session/session-manager.ts` | session 目录、state.json、create/resume/list/fork。 |\n| `session/transcript.ts` | JSONL 事件日志和 `toMessages()` 转换。 |\n| `session/file-history.ts` | Write/Edit/ApplyPatch 前快照,支持 undo/redo。 |\n| `session/simple-diff.ts`、`undo-target.ts` | undo 目标和 diff 辅助。 |\n| `types.ts` | SessionState、TranscriptEvent、Message、ToolResult 等共享类型。 |\n\n### 5.2 Transcript 是事件日志,不是聊天数组\n\n`Transcript` 存的是事件:\n\n- `session_meta`\n- `message`\n- `tool_use`\n- `tool_result`\n- `turn_boundary`\n- `summary`\n- `error`\n\n`toMessages()` 才把事件日志转换成 LLM 所需的 `Message[]`。\n\n为什么这样做:\n\n- 事件日志可以保留比模型输入更丰富的信息,例如 turn boundary、error、summary。\n- 模型输入可以过滤掉不该重放的事件。\n- resume/fork/list/preview 可以各取所需,不用把聊天数组当数据库。\n\n### 5.3 SessionManager 的安全边界\n\n`assertSafeSessionId()` 会拒绝路径分隔符、`..`、异常字符和超长 id。原因是 public entry points 会把 sessionId join 到 session dir,必须防止路径逃逸。\n\n好处:\n\n- protocol client、persisted state、explicitSessionId"
+      }
+    ]
+  },
+  {
+    "path": "docs/archive/core-modules/session.md",
+    "hits": [
+      {
+        "at": "$",
+        "context": " turn-tagged undo/redo material, restore. Defines `FileSnapshot` / `RedoRecord` / `CreatedMarker`. |\n| `undo-target.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-manager home/origin/parent/readcwd, memory maxage, undo target/integration, simple-diff). |\n\n## 公开接口 / Public API\n\nRe-exported from the package root (`packages/core/src/index.ts`).\n\n```ts\n// session-manager.ts\ninterface SessionBundle { state: SessionState; transcript: Transcript; }\ntype SessionListEntry = SessionState & { preview?: string; lastActiveAt: number };\n\nclass SessionManager {\n "
+      },
+      {
+        "at": "$",
+        "context": "tedMarker`. |\n| `undo-target.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-manager home/origin/parent/readcwd, memory maxage, undo target/integration, simple-diff). |\n\n## 公开接口 / Public API\n\nRe-exported from the package root (`packages/core/src/index.ts`).\n\n```ts\n// session-manager.ts\ninterface SessionBundle { state: SessionState; transcript: Transcript; }\ntype SessionListEntry = SessionState & { preview?: string; lastActiveAt: number };\n\nclass SessionManager {\n  constructor(storageDir?: string); // default: <codeShellHome()>/sessions\n  create(cwd: strin"
+      },
+      {
+        "at": "$",
+        "context": "diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-manager home/origin/parent/readcwd, memory maxage, undo target/integration, simple-diff). |\n\n## 公开接口 / Public API\n\nRe-exported from the package root (`packages/core/src/index.ts`).\n\n```ts\n// session-manager.ts\ninterface SessionBundle { state: SessionState; transcript: Transcript; }\ntype SessionListEntry = SessionState & { preview?: string; lastActiveAt: number };\n\nclass SessionManager {\n  constructor(storageDir?: string); // default: <codeShellHome()>/sessions\n  create(cwd: string, model: string, provider: string,\n         explicitSessionId?: string,\n         parentSessionId?: string | null,\n         origin?: SessionOrigin): SessionBundle;\n  exists(sessionId: string): boolean;            // cheap stat probe (false on bad id)\n  "
+      },
+      {
+        "at": "$",
+        "context": "apshots: FileSnapshot[]): FileSnapshot | null;\nfunction earliestSnapshotsPerFile(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestRedoTargets(redoRecords: RedoRecord[], snapshots: FileSnapshot[]): RedoRecord[];\n\n// simple-diff.ts\nfunction diffLines(from: string, to: string): DiffLine[];\nfunction renderDiffPreview(from: string, to: string, context?: number): string;\n\n// memory.ts\nclass MemoryManager {\n  constructor(options?: MemoryManagerOptions | string); // string arg == { projectDir }\n  save(entry: Omit<MemoryEntry, \"fileName\" | \"scope\">): string;\n  getMemoryDir(): string; getScope(): MemoryScope;\n}\nfunction filterByAge(entries: MemoryEntry[], maxAgeDays?: number, now?: number): MemoryEntry[];\nfunction resolveMemoryBaseDir(override?: string): string;\ntype MemoryScope = \"user\" | \"dream\";\ninterface MemoryEntry { name; description; type; content; fileName; scope; u"
+      },
+      {
+        "at": "$",
+        "context": "napshots: FileSnapshot[]): FileSnapshot[];\nfunction latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestRedoTargets(redoRecords: RedoRecord[], snapshots: FileSnapshot[]): RedoRecord[];\n\n// simple-diff.ts\nfunction diffLines(from: string, to: string): DiffLine[];\nfunction renderDiffPreview(from: string, to: string, context?: number): string;\n\n// memory.ts\nclass MemoryManager {\n  constructor(options?: MemoryManagerOptions | string); // string arg == { projectDir }\n  save(entry: Omit<MemoryEntry, \"fileName\" | \"scope\">): string;\n  getMemoryDir(): string; getScope(): MemoryScope;\n}\nfunction filterByAge(entries: MemoryEntry[], maxAgeDays?: number, now?: number): MemoryEntry[];\nfunction resolveMemoryBaseDir(override?: string): string;\ntype MemoryScope = \"user\" | \"dream\";\ninterface MemoryEntry { name; description; type; content; fileName; scope; updatedAt?; pinned?; origin?; }\n```\n\n## 怎么用 / How to use\n\nThe engine is the primary consu"
+      },
+      {
+        "at": "$",
+        "context": "ry.saveSnapshot(path, turnSeq) === null && turnSeq !== undefined) {\n  fileHistory.recordCreated(path, turnSeq);\n}\n\n// a /undo command (TUI or desktop host): preview then revert the latest turn\nconst targets = latestTurnUndoTargets(fileHistory.getSnapshots(somePath)); // or full list\nconst preview = renderDiffPreview(currentOnDisk, fs.readFileSync(targets[0].backupPath, \"utf8\"));\nconst results = fileHistory.undoLatestTurn(targets);\n```\n\n## 注意 / Gotchas\n\n- **Every public ID goes through `assertSafeSessionId` before a path `join`.** `create(explicitSessionId)`, `resume`, `saveState(state.sessionId)`, `fork`, `exists`, `readCwd` all validate (allow-list `[A-Za-z0-9_.-]`, max 128, no `..`/separators) — IDs come from protocol clients and on-disk state and could be traversal-shaped. `exists`/`readCwd` swallow a bad id as \"not present\" rather than throwing.\n- **`resume` throws, `exists`/`readCwd` don't.** Use `exists()` (one cheap stat) to branch between resume"
+      },
+      {
+        "at": "$",
+        "context": "adCwd` return `undefined` on any IO error. Memory deletes are SOFT (moved to `memory-trash/`), not removed.\n- **`saveState` is atomic (tmp + rename); `Transcript.append` is a plain `appendFileSync`.** State writes survive concurrent writers; transcript appends do not lock.\n- **`undo-target.ts` and `simple-diff.ts` are deliberately fs-free and pure** so the \"what to undo\" decision is unit-testable and shared across hosts. Keep them that way — read files in the caller, pass content/snapshot lists in.\n- **`turnSeq`-tagged snapshots vs. legacy.** Undo is turn-level (`one user message = one turn`). Snapshots written before the feature have no `turnSeq`, share the `undefined` (smallest) bucket, and degrade to whole-session behavior. `undone` snapshots/markers are kept on disk (not deleted) so redo has material — selectors skip them.\n- **`CODE_SHELL_HOME` overrides `~/.code-shell`** for both sessions (`codeShellHome()`) and memory (`resolveMemoryBaseDir`"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-16/inventory.json",
+    "hits": [
+      {
+        "at": "$.source_inventory[569]",
+        "context": "packages/core/src/session/simple-diff.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/README.md",
+    "hits": [
+      {
+        "at": "$",
+        "context": "，没有运行命令或模型。通过的两个 characterization 测试断言当前错误行为，不表示修复。\n\n围栏和 UTF-16 上限截断分别关联旧 `R2-03`、`DESKTOP-R12-01`，只记录 builder 中的静态上下文，没有新增测试、重复计数或宣称旧修复覆盖此处。其余分区在有限纯函数对照下未建立可登记缺陷，不据零项宣称无 bug。\n\n第一组合 raw 与 exit 均先保存再检查；本批没有产品失败或重跑。导航猜测、source 范围及只读输出截断等 metadata 事项单独保留。旧 recorder、TUI Diff、parser/dependency 等失败方向继续跳过；simple-diff 已知 O(n*m) 方向完全排除。详见 [coverage](coverage.md)、[validation](validation.json)、[findings](findings.json)、[related](related.json)、[evidence index](evidence-index.json)。\n\n全历史查重覆盖本批外 prior docs/bugs（含 archives）**2,050 文件 = 1,161 MD + 889 parsed JSON，260,970 字符串叶 / 363,859 scalar 叶，0 parse errors**。总计数与 capped 上下文分开；这是读取当时的库存，关键词不证明全仓语义完备，最终 main 的并发文档变化也不会回写为旧库存验证。\n\n结束前刷新 origin 并将任务分支快进到并发 main `40141406c1314510a9ed6d6fbd851e1822e6530f`；两条外部提交仅变更 release 文档，已选产品源码仍等于冻结字节。初始与最终合并前 primary 快照分别保存，原有删除及四个未跟踪文件的字节未变。详见 [integration plan](evidence/integration-plan.json)。没有 push、build、typecheck、lint、full suite、E2E、真实模型/账户/网络/native/用户数据或权限类实验。\n\n本批是持续全仓审查"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/evidence/review-aggregate.md",
+    "hits": [
+      {
+        "at": "$",
+        "context": "不声称它们是最终文件/链接总数。最终 staged/blob/primary fast-forward 验证尚属 Root 后续步骤。\n\n四个 scope reviews 的计数、运行边界与本次聚合相符。Reviewprompt 补齐 TuiControlSurface 静态转发、timing publisher 范围修订/不存在 glob、root 文档导航及 README metadata patch/只读输出截断、frontier capacity 调度失败均有单独记录；没有用它们触发产品重跑。旧 recorder、TUI Diff、parser/dependency 失败方向继续跳过，simple-diff O(n*m) 方向完全排除。\n\n全历史 2,050 文件、260,970 string leaves / 363,859 scalar leaves 与 worker 去重记录一致，且总命中数和 contexts cap 分开。外部 main 只前进两条提交，Git 元数据确认唯一变化路径为 `docs/todo/release-real-operations-2026-10-16.md`；42 个已选 source pins 仍等于冻结字节。prior inventory 是读取当时快照，没有要求 release 文档当前 SHA 必须与旧库存一致，也没有新旧修复验证结论。\n\nintegration plan 与初始/合并前快照对应：HEAD 从冻结点变为并发 main，其余 dirty status、tracked/staged diff hash 和四个 untracked 文件的 path/bytes/SHA 全相同。计划只允许 incoming 本批 docs 且最终 HEAD/dirty 快照再次匹配时 fast-forward；未宣称已集成，未修改 primary。旧 bugs 文件在 primary 的预先删除应继续保留；本次链接检查是在独占审查 worktree 上进行。\n\n## 本次只读 metadata 错误与修订\n\n首次辅助批读正确读出 `integration-before.json`、`integration-premerge.json` 后，误猜第"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/evidence/root-dedup.json",
+    "hits": [
+      {
+        "at": "$.hits.undo_selectors[4].context",
+        "context": "ot supersedes the undone turn, and `redoLatestTurn()` reapplies the stashed post-turn files and clears `undone` (`packages/core/src/session/undo-target.ts:124`, `packages/core/src/session/file-history.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`).\n\n## 9. Runtime ownership\n\nCore no longer exposes a process-wide `state.ts` bag. Sessi"
+      },
+      {
+        "at": "$.hits.undo_selectors[4].context",
+        "context": "tTurn()` reapplies the stashed post-turn files and clears `undone` (`packages/core/src/session/undo-target.ts:124`, `packages/core/src/session/file-history.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`).\n\n## 9. Runtime ownership\n\nCore no longer exposes a process-wide `state.ts` bag. Sessi"
+      },
+      {
+        "at": "$.hits.undo_selectors[5].context",
+        "context": ".ts` | JSONL 事件日志和 `toMessages()` 转换。 |\n| `session/file-history.ts` | Write/Edit/ApplyPatch 前快照,支持 undo/redo。 |\n| `session/simple-diff.ts`、`undo-target.ts` | undo 目标和 diff 辅助。 |\n| `types.ts` | SessionState、TranscriptEvent、Message、ToolResult 等共享类型。 |\n\n### 5.2 Transcript 是事件日志,不是聊天数组\n\n`Transcript` 存的是事件:\n\n- `session_meta`\n- `message`\n- `tool_use`\n- `tool_result`\n- `turn_boundary`\n- `summary`\n- `error`\n\n`toMessages()` 才把事件日志转换成 LLM 所需的 `Message[]`。\n\n"
+      },
+      {
+        "at": "$.hits.undo_selectors[6].context",
+        "context": " turn-tagged undo/redo material, restore. Defines `FileSnapshot` / `RedoRecord` / `CreatedMarker`. |\n| `undo-target.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `mem"
+      },
+      {
+        "at": "$.hits.undo_selectors[6].context",
+        "context": "tedMarker`. |\n| `undo-target.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `mem"
+      },
+      {
+        "at": "$.hits.undo_selectors[7].context",
+        "context": "t` / `RedoRecord` / `CreatedMarker`. |\n| `undo-target.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMe"
+      },
+      {
+        "at": "$.hits.undo_selectors[7].context",
+        "context": "tedMarker`. |\n| `undo-target.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMe"
+      },
+      {
+        "at": "$.hits.undo_selectors[8].context",
+        "context": "`CreatedMarker`. |\n| `undo-target.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts"
+      },
+      {
+        "at": "$.hits.undo_selectors[8].context",
+        "context": "tedMarker`. |\n| `undo-target.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts"
+      },
+      {
+        "at": "$.hits.undo_selectors[9].context",
+        "context": "arget.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-m"
+      },
+      {
+        "at": "$.hits.undo_selectors[9].context",
+        "context": "arget.ts` | Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-m"
+      },
+      {
+        "at": "$.hits.undo_selectors[10].context",
+        "context": ") selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-manager home/origin/pa"
+      },
+      {
+        "at": "$.hits.undo_selectors[10].context",
+        "context": ") selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-manager home/origin/pa"
+      },
+      {
+        "at": "$.hits.undo_selectors[13].context",
+        "context": "apshots: FileSnapshot[]): FileSnapshot | null;\nfunction earliestSnapshotsPerFile(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestRedoTargets(redoRecords: RedoRecord[], snapshots: FileSnapshot[]): RedoRecord[];\n\n// simple-diff.ts\nfunction diffLines(from: string, to: string): DiffLine[];\nfunctio"
+      },
+      {
+        "at": "$.hits.undo_selectors[14].context",
+        "context": "apshots: FileSnapshot[]): FileSnapshot | null;\nfunction earliestSnapshotsPerFile(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestRedoTargets(redoRecords: RedoRecord[], snapshots: FileSnapshot[]): RedoRecord[];\n\n// simple-diff.ts\nfunction diffLines(from: string, to: string): DiffLine[];\nfunction renderDiffPreview(from: string, to: string, context?: number): string;\n\n/"
+      },
+      {
+        "at": "$.hits.undo_selectors[14].context",
+        "context": "napshots: FileSnapshot[]): FileSnapshot[];\nfunction latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestRedoTargets(redoRecords: RedoRecord[], snapshots: FileSnapshot[]): RedoRecord[];\n\n// simple-diff.ts\nfunction diffLines(from: string, to: string): DiffLine[];\nfunction renderDiffPreview(from: string, to: string, context?: number): string;\n\n/"
+      },
+      {
+        "at": "$.hits.undo_selectors[15].context",
+        "context": "hotsPerFile(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestRedoTargets(redoRecords: RedoRecord[], snapshots: FileSnapshot[]): RedoRecord[];\n\n// simple-diff.ts\nfunction diffLines(from: string, to: string): DiffLine[];\nfunction renderDiffPreview(from: string, to: string, context?: number): string;\n\n// memory.ts\nclass MemoryManager {\n  constructor(options?: MemoryManager"
+      },
+      {
+        "at": "$.hits.undo_selectors[15].context",
+        "context": "napshots: FileSnapshot[]): FileSnapshot[];\nfunction latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestRedoTargets(redoRecords: RedoRecord[], snapshots: FileSnapshot[]): RedoRecord[];\n\n// simple-diff.ts\nfunction diffLines(from: string, to: string): DiffLine[];\nfunction renderDiffPreview(from: string, to: string, context?: number): string;\n\n// memory.ts\nclass MemoryManager {\n  constructor(options?: MemoryManager"
+      },
+      {
+        "at": "$.hits.undo_selectors[16].context",
+        "context": " fileHistory.recordCreated(path, turnSeq);\n}\n\n// a /undo command (TUI or desktop host): preview then revert the latest turn\nconst targets = latestTurnUndoTargets(fileHistory.getSnapshots(somePath)); // or full list\nconst preview = renderDiffPreview(currentOnDisk, fs.readFileSync(targets[0].backupPath, \"utf8\"));\nconst results = fileHistory.undoLatestTurn(targets);\n```\n\n## 注意 / Gotchas\n\n- **Every public ID goes through `assertSafeSessionId` before a path `joi"
+      },
+      {
+        "at": "$.hits.undo_selectors[17].context",
+        "context": "+ rename); `Transcript.append` is a plain `appendFileSync`.** State writes survive concurrent writers; transcript appends do not lock.\n- **`undo-target.ts` and `simple-diff.ts` are deliberately fs-free and pure** so the \"what to undo\" decision is unit-testable and shared across hosts. Keep them that way — read files in the caller, pass content/snapshot lists in.\n- **`turnSeq`-tagged snapshots vs. legacy.** Undo is turn-level (`one user message = o"
+      },
+      {
+        "at": "$.hits.early_input[22].context",
+        "context": "d](coding.md) |\n| LSP startup/failed initialize/dead child/旧 failed fixtures | 历史已记录或已失败方向排除，没有重跑、安装真实语言服务器或绕过 | [coding.md](coding.md) |\n| earlyInput escape parser、simple-diff O(n*m) | 前者未找到当前启动调用；后者仅静态成本，无压力证据，不计 bug | [root.md](root.md) |\n\n失败收据是审查夹具/环境现象，不是已确认产品 bug。独立 logger retention 验证与跳过的 CLI log 命令/dev recorder 日期实验属于不同函数和行为，没有以另一种方法重试后两者。\n"
+      },
+      {
+        "at": "$.hits.early_input[23].context",
+        "context": "-files/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。\n\n## 独立 dev recorder 日期候选：首跑失败后跳过\n\n`packages/core/src/logging/session-recorder.ts:145–147` 按 sid 缓存路径并在判断当前日期之前返回。一个开启 dev recorder 的长回合跨 UTC 午夜后，可能继续写入旧日期目录；`recordSessionEnd` 清缓存，下一回合才能重新选日期。仅诊断文件分桶候选，不是"
+      },
+      {
+        "at": "$.hits.early_input[23].context",
+        "context": "-files/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。\n\n## 独立 dev recorder 日期候选：首跑失败后跳过\n\n`packages/core/src/logging/session-recorder.ts:145–147` 按 sid 缓存路径并在判断当前日期之前返回。一个开启 dev recorder 的长回合跨 UTC 午夜后，可能继续写入旧日期目录；`recordSessionEnd` 清缓存，下一回合才能重新选日期。仅诊断文件分桶候选，不是"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/evidence/simplediff-dedup.json",
+    "hits": [
+      {
+        "at": "$.patterns.exact_simple_diff",
+        "context": "renderDiffPreview|diffLines|simple-diff(?:\\.ts)?"
+      },
+      {
+        "at": "$.patterns.exact_simple_diff",
+        "context": "renderDiffPreview|diffLines|simple-diff(?:\\.ts)?"
+      },
+      {
+        "at": "$.patterns.known_lcs_cost",
+        "context": "(?:simple[- ]diff|renderDiffPreview|LCS).{0,120}(?:O\\(n|quadratic|平方|成本|内存)"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[0].context",
+        "context": "ry.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`)."
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[0].context",
+        "context": "ry.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`)."
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[1].context",
+        "context": " with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`)."
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[1].context",
+        "context": " with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`)."
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[2].context",
+        "context": "| `session/simple-diff.ts`、`undo-target.ts` | undo 目标和 diff 辅助。 |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[3].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[3].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[4].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[4].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[5].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[5].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[6].context",
+        "context": "` | Unit tests (session-manager home/origin/parent/readcwd, memory maxage, undo target/integration, simple-diff). |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[7].context",
+        "context": "// simple-diff.ts"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[9].context",
+        "context": "function renderDiffPreview(from: string, to: string, context?: number): string;"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[10].context",
+        "context": "const preview = renderDiffPreview(currentOnDisk, fs.readFileSync(targets[0].backupPath, \"utf8\"));"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[11].context",
+        "context": "- **`undo-target.ts` and `simple-diff.ts` are deliberately fs-free and pure** so the \"what to undo\" decision is unit-testable and shared across hosts. Keep them that way — read files in the caller, pass content/snapshot "
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[12].context",
+        "context": "packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[13].context",
+        "context": "| earlyInput escape parser、simple-diff O(n*m) | 前者未找到当前启动调用；后者仅静态成本，无压力证据，不计 bug | [root.md](root.md) |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[14].context",
+        "context": "les/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[14].context",
+        "context": "les/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[15].context",
+        "context": "ming/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[15].context",
+        "context": "ming/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[16].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[16].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[17].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[17].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[18].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.exact_simple_diff[18].context",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.contexts.known_lcs_cost[0].context",
+        "context": "| earlyInput escape parser、simple-diff O(n*m) | 前者未找到当前启动调用；后者仅静态成本，无压力证据，不计 bug | [root.md](root.md) |"
+      },
+      {
+        "at": "$.contexts.known_lcs_cost[1].context",
+        "context": "les/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      },
+      {
+        "at": "$.contexts.known_lcs_cost[1].context",
+        "context": "les/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/evidence/simplediff-normal.first.exit.json",
+    "hits": [
+      {
+        "at": "$.command[4]",
+        "context": "packages/core/src/session/simple-diff.test.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/evidence/simplediff-preflight.json",
+    "hits": [
+      {
+        "at": "$.runtimeImports[0]",
+        "context": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.proposalRevalidatedAgainstRound19Frozen[0].path",
+        "context": "packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.proposalRevalidatedAgainstRound19Frozen[1].path",
+        "context": "packages/core/src/session/simple-diff.test.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/evidence/simplediff-source-manifest.json",
+    "hits": [
+      {
+        "at": "$.files[0].path",
+        "context": "packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.files[1].path",
+        "context": "packages/core/src/session/simple-diff.test.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/evidence/simplediff-validation.json",
+    "hits": [
+      {
+        "at": "$.runs[0].command[4]",
+        "context": "packages/core/src/session/simple-diff.test.ts"
+      },
+      {
+        "at": "$.excludedDirections[0].direction",
+        "context": "simple-diff O(n*m) LCS cost"
+      },
+      {
+        "at": "$.scope",
+        "context": "Actual zero-import diffLines/renderDiffPreview with small owned strings; 7 existing leaf tests and 10 focused tests in one first guarded shard. TUI consumer static only."
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/evidence/timing-dedup.json",
+    "hits": [
+      {
+        "at": "$.contexts.exact_leaf[1].context",
+        "context": "s、loop/list-files/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      },
+      {
+        "at": "$.contexts.exact_leaf[1].context",
+        "context": "s、loop/list-files/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/simplediff.md",
+    "hits": [
+      {
+        "at": "$",
+        "context": "# Core simple diff：撤销前预览的文本不变量\n\n冻结源码：`5f5cf69df8526470700712a4dc2d5ae6bd2da132`。本方向 **0 项新增确认缺陷、0 项新增候选、0 项旧问题关联**。首次 guarded Bun 分组通过 **17 个测试、57 次断言、0 失败、0 跳过**，包括现有 7 个测试和新增 10 个聚焦测试。这只覆盖下述叶函数，不代表 `/undo` 完整流程已验证。\n\n## 范围与普通合同\n\n实际运行 [`simple-diff.ts`](../../packages/core/src/session/simple-diff.ts:19) 的 `diffLines`、[`renderDiffPreview`](../../packages/core/src/session/simple-diff.ts:61)。模块没有 runtime imports，fixture 直接用经预检的绝对路径导入；没有加载 Core barrel 或 mock 产品依赖。全部输入是少量自有字符串，其中一项投影用例使用 12 个文本对；单份现有用例最多 30 行，没有性能、压力、内存或大输入实验。\n\n源码 [说明](../../packages/core/src/session/simple-diff.ts:1) 明确是给人看的当前文本 → 恢复目标文本预览，不是 patch generator。合同包含 [CRLF → LF](../../packages/core/src/session/simple-diff.ts:20) 的刻意归一化、保留行标记、[相同内容返回空字符串](../../packages/core/src/session/simple-diff.ts:63) 和 [省略远处未变上下文](../../packages/core/src/session/simple-diff.ts:65)。本批没有要求 hunk headers、行号、no-newline 标记或可供 patch 应用的字节精确表示。\n\n普"
+      },
+      {
+        "at": "$",
+        "context": "# Core simple diff：撤销前预览的文本不变量\n\n冻结源码：`5f5cf69df8526470700712a4dc2d5ae6bd2da132`。本方向 **0 项新增确认缺陷、0 项新增候选、0 项旧问题关联**。首次 guarded Bun 分组通过 **17 个测试、57 次断言、0 失败、0 跳过**，包括现有 7 个测试和新增 10 个聚焦测试。这只覆盖下述叶函数，不代表 `/undo` 完整流程已验证。\n\n## 范围与普通合同\n\n实际运行 [`simple-diff.ts`](../../packages/core/src/session/simple-diff.ts:19) 的 `diffLines`、[`renderDiffPreview`](../../packages/core/src/session/simple-diff.ts:61)。模块没有 runtime imports，fixture 直接用经预检的绝对路径导入；没有加载 Core barrel 或 mock 产品依赖。全部输入是少量自有字符串，其中一项投影用例使用 12 个文本对；单份现有用例最多 30 行，没有性能、压力、内存或大输入实验。\n\n源码 [说明](../../packages/core/src/session/simple-diff.ts:1) 明确是给人看的当前文本 → 恢复目标文本预览，不是 patch generator。合同包含 [CRLF → LF](../../packages/core/src/session/simple-diff.ts:20) 的刻意归一化、保留行标记、[相同内容返回空字符串](../../packages/core/src/session/simple-diff.ts:63) 和 [省略远处未变上下文](../../packages/core/src/session/simple-diff.ts:65)。本批没有要求 hunk headers、行号、no-newline 标记或可供 patch 应用的字节精确表示。\n\n普通 TUI consumer 仅静态选读 [`utility-commands.ts:41-159"
+      },
+      {
+        "at": "$",
+        "context": "前预览的文本不变量\n\n冻结源码：`5f5cf69df8526470700712a4dc2d5ae6bd2da132`。本方向 **0 项新增确认缺陷、0 项新增候选、0 项旧问题关联**。首次 guarded Bun 分组通过 **17 个测试、57 次断言、0 失败、0 跳过**，包括现有 7 个测试和新增 10 个聚焦测试。这只覆盖下述叶函数，不代表 `/undo` 完整流程已验证。\n\n## 范围与普通合同\n\n实际运行 [`simple-diff.ts`](../../packages/core/src/session/simple-diff.ts:19) 的 `diffLines`、[`renderDiffPreview`](../../packages/core/src/session/simple-diff.ts:61)。模块没有 runtime imports，fixture 直接用经预检的绝对路径导入；没有加载 Core barrel 或 mock 产品依赖。全部输入是少量自有字符串，其中一项投影用例使用 12 个文本对；单份现有用例最多 30 行，没有性能、压力、内存或大输入实验。\n\n源码 [说明](../../packages/core/src/session/simple-diff.ts:1) 明确是给人看的当前文本 → 恢复目标文本预览，不是 patch generator。合同包含 [CRLF → LF](../../packages/core/src/session/simple-diff.ts:20) 的刻意归一化、保留行标记、[相同内容返回空字符串](../../packages/core/src/session/simple-diff.ts:63) 和 [省略远处未变上下文](../../packages/core/src/session/simple-diff.ts:65)。本批没有要求 hunk headers、行号、no-newline 标记或可供 patch 应用的字节精确表示。\n\n普通 TUI consumer 仅静态选读 [`utility-commands.ts:41-159`](../../packages/tui/src/cli/commands/bu"
+      },
+      {
+        "at": "$",
+        "context": "da132`。本方向 **0 项新增确认缺陷、0 项新增候选、0 项旧问题关联**。首次 guarded Bun 分组通过 **17 个测试、57 次断言、0 失败、0 跳过**，包括现有 7 个测试和新增 10 个聚焦测试。这只覆盖下述叶函数，不代表 `/undo` 完整流程已验证。\n\n## 范围与普通合同\n\n实际运行 [`simple-diff.ts`](../../packages/core/src/session/simple-diff.ts:19) 的 `diffLines`、[`renderDiffPreview`](../../packages/core/src/session/simple-diff.ts:61)。模块没有 runtime imports，fixture 直接用经预检的绝对路径导入；没有加载 Core barrel 或 mock 产品依赖。全部输入是少量自有字符串，其中一项投影用例使用 12 个文本对；单份现有用例最多 30 行，没有性能、压力、内存或大输入实验。\n\n源码 [说明](../../packages/core/src/session/simple-diff.ts:1) 明确是给人看的当前文本 → 恢复目标文本预览，不是 patch generator。合同包含 [CRLF → LF](../../packages/core/src/session/simple-diff.ts:20) 的刻意归一化、保留行标记、[相同内容返回空字符串](../../packages/core/src/session/simple-diff.ts:63) 和 [省略远处未变上下文](../../packages/core/src/session/simple-diff.ts:65)。本批没有要求 hunk headers、行号、no-newline 标记或可供 patch 应用的字节精确表示。\n\n普通 TUI consumer 仅静态选读 [`utility-commands.ts:41-159`](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:41)：[整会话预览](../../pa"
+      },
+      {
+        "at": "$",
+        "context": "core/src/session/simple-diff.ts:19) 的 `diffLines`、[`renderDiffPreview`](../../packages/core/src/session/simple-diff.ts:61)。模块没有 runtime imports，fixture 直接用经预检的绝对路径导入；没有加载 Core barrel 或 mock 产品依赖。全部输入是少量自有字符串，其中一项投影用例使用 12 个文本对；单份现有用例最多 30 行，没有性能、压力、内存或大输入实验。\n\n源码 [说明](../../packages/core/src/session/simple-diff.ts:1) 明确是给人看的当前文本 → 恢复目标文本预览，不是 patch generator。合同包含 [CRLF → LF](../../packages/core/src/session/simple-diff.ts:20) 的刻意归一化、保留行标记、[相同内容返回空字符串](../../packages/core/src/session/simple-diff.ts:63) 和 [省略远处未变上下文](../../packages/core/src/session/simple-diff.ts:65)。本批没有要求 hunk headers、行号、no-newline 标记或可供 patch 应用的字节精确表示。\n\n普通 TUI consumer 仅静态选读 [`utility-commands.ts:41-159`](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:41)：[整会话预览](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:86)、[最近一轮预览](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:131) 均把当前文本作为 `from`、backup 作为 `to`，省略 `context` 使用默认 3。首次源码读取也"
+      },
+      {
+        "at": "$",
+        "context": "e-diff.ts:61)。模块没有 runtime imports，fixture 直接用经预检的绝对路径导入；没有加载 Core barrel 或 mock 产品依赖。全部输入是少量自有字符串，其中一项投影用例使用 12 个文本对；单份现有用例最多 30 行，没有性能、压力、内存或大输入实验。\n\n源码 [说明](../../packages/core/src/session/simple-diff.ts:1) 明确是给人看的当前文本 → 恢复目标文本预览，不是 patch generator。合同包含 [CRLF → LF](../../packages/core/src/session/simple-diff.ts:20) 的刻意归一化、保留行标记、[相同内容返回空字符串](../../packages/core/src/session/simple-diff.ts:63) 和 [省略远处未变上下文](../../packages/core/src/session/simple-diff.ts:65)。本批没有要求 hunk headers、行号、no-newline 标记或可供 patch 应用的字节精确表示。\n\n普通 TUI consumer 仅静态选读 [`utility-commands.ts:41-159`](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:41)：[整会话预览](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:86)、[最近一轮预览](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:131) 均把当前文本作为 `from`、backup 作为 `to`，省略 `context` 使用默认 3。首次源码读取也显示该文件其他 utility 命令，但没有审查或执行它们。没有运行命令、FileHistory、文件读写、undo、patch applier、Markdown/终端 renderer 或原生 Git。\n\n## 首次"
+      },
+      {
+        "at": "$",
+        "context": "ock 产品依赖。全部输入是少量自有字符串，其中一项投影用例使用 12 个文本对；单份现有用例最多 30 行，没有性能、压力、内存或大输入实验。\n\n源码 [说明](../../packages/core/src/session/simple-diff.ts:1) 明确是给人看的当前文本 → 恢复目标文本预览，不是 patch generator。合同包含 [CRLF → LF](../../packages/core/src/session/simple-diff.ts:20) 的刻意归一化、保留行标记、[相同内容返回空字符串](../../packages/core/src/session/simple-diff.ts:63) 和 [省略远处未变上下文](../../packages/core/src/session/simple-diff.ts:65)。本批没有要求 hunk headers、行号、no-newline 标记或可供 patch 应用的字节精确表示。\n\n普通 TUI consumer 仅静态选读 [`utility-commands.ts:41-159`](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:41)：[整会话预览](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:86)、[最近一轮预览](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:131) 均把当前文本作为 `from`、backup 作为 `to`，省略 `context` 使用默认 3。首次源码读取也显示该文件其他 utility 命令，但没有审查或执行它们。没有运行命令、FileHistory、文件读写、undo、patch applier、Markdown/终端 renderer 或原生 Git。\n\n## 首次验证\n\n[聚焦 fixture](evidence/simplediff-focused.test.ts)、[原始 combined stdout/std"
+      },
+      {
+        "at": "$",
+        "context": "或大输入实验。\n\n源码 [说明](../../packages/core/src/session/simple-diff.ts:1) 明确是给人看的当前文本 → 恢复目标文本预览，不是 patch generator。合同包含 [CRLF → LF](../../packages/core/src/session/simple-diff.ts:20) 的刻意归一化、保留行标记、[相同内容返回空字符串](../../packages/core/src/session/simple-diff.ts:63) 和 [省略远处未变上下文](../../packages/core/src/session/simple-diff.ts:65)。本批没有要求 hunk headers、行号、no-newline 标记或可供 patch 应用的字节精确表示。\n\n普通 TUI consumer 仅静态选读 [`utility-commands.ts:41-159`](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:41)：[整会话预览](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:86)、[最近一轮预览](../../packages/tui/src/cli/commands/builtin/utility-commands.ts:131) 均把当前文本作为 `from`、backup 作为 `to`，省略 `context` 使用默认 3。首次源码读取也显示该文件其他 utility 命令，但没有审查或执行它们。没有运行命令、FileHistory、文件读写、undo、patch applier、Markdown/终端 renderer 或原生 Git。\n\n## 首次验证\n\n[聚焦 fixture](evidence/simplediff-focused.test.ts)、[原始 combined stdout/stderr](evidence/simplediff-normal.first.raw.log) 和 [退出回执](evidence/"
+      },
+      {
+        "at": "$",
+        "context": "nce/simplediff-focused.test.ts)、[原始 combined stdout/stderr](evidence/simplediff-normal.first.raw.log) 和 [退出回执](evidence/simplediff-normal.first.exit.json) 保留首次字节与退出结果；raw 和 exit 均先落盘，再检查内容。只有一次执行，没有失败后修复、重试或替代验证。\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session/simple-diff.test.ts docs/audit-2026-10-17-round19/evidence/simplediff-focused.test.ts\n```\n\n| 实际覆盖 | 观察与限度 |\n| --- | --- |\n| 现有 7 个叶测试 | 相同文本、增删改和 context 省略；13 次断言。现有 30 行用例只是固定小样本，不是压力结果。 |\n| 12 个普通文本对 | 从实际 diff rows 分别保留非 `+` / 非 `-` 行，重组为归一化后的 from / to；含重复行、换序、Unicode、空文本、空行及尾换行；24 次断言。此投影检查不把输出作为 patch 执行。 |\n| CRLF 与普通换行 | 两个方向的纯换行风格差异均产生空预览；含实际文本变更时上下文和 `-/+` 标记归一化后正确；5 次断言。 |\n| 空内容、尾换行、内部空行 | 空内容保持空预览；非空与空内容互换、单个尾换行增删、内部空行增删均有显式 split-token 行标记；8 次断言。 |\n| context 0 / 1 / 默认 3 | 保留每个变更，只省略未变行；两个变更的 context 1 分开、context 2 合并，不重复行；5 次断言。这些有限整数参数只在叶函数调用中验证，实际 TUI 使用默认值。 |\n| 字面 `⋯` | 内容中的该字符仍带 ` ` 或 `-` 行标记，与单独 gap marker 区分；2 次断言。 |\n\n首次输出为 `17 pass "
+      },
+      {
+        "at": "$",
+        "context": "root.md:26) 与 [旧线索表](../audit-2026-10-17-round4/candidates-and-skips.md:16)：`O(n*m)` LCS 成本先前仅静态观察，本批整条方向排除，没有重复验证或新增计数。空行/尾换行和围栏 pattern 分别为 8 / 15 命中，多为其他 preview、ApplyPatch 或旧 Markdown export 记录；它们不作为当前 leaf 的动态证据。没有运行 Markdown renderer 来建立或重复围栏问题。关键词索引不是全历史语义完备证明。\n\n预提案基于前一冻结点，本批已针对当前冻结 SHA 重新核对 simple-diff source、现有 test、普通 TUI consumer 的三项 pin；见 [预检](evidence/simplediff-preflight.json)。全部 6 个选定文件（含 instructions/runner 的元数据 pin）当前字节均等于冻结 Git blob，详见 [source manifest](evidence/simplediff-source-manifest.json)。文件 pin 不等于整个 utility 文件或传递依赖已审查。\n\n计数与排除见 [validation](evidence/simplediff-validation.json)。没有导航、依赖或 fixture 失败；没有恢复旧 TUI Diff、recorder 或其他已跳过方向。只写本报告与 `evidence/simplediff-*`，未修改产品、依赖或 dist，未执行 Git 写操作。\n"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/source-manifest.json",
+    "hits": [
+      {
+        "at": "$.files[20].path",
+        "context": "packages/core/src/session/simple-diff.test.ts"
+      },
+      {
+        "at": "$.files[21].path",
+        "context": "packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.workerSourceChecks[30].path",
+        "context": "packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.workerSourceChecks[31].path",
+        "context": "packages/core/src/session/simple-diff.test.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/validation.json",
+    "hits": [
+      {
+        "at": "$.runs[3].command[4]",
+        "context": "packages/core/src/session/simple-diff.test.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+    "hits": [
+      {
+        "at": "$.matches.cronMechanism[244].excerpt",
+        "context": "四个 scope reviews 的计数、运行边界与本次聚合相符。Reviewprompt 补齐 TuiControlSurface 静态转发、timing publisher 范围修订/不存在 glob、root 文档导航及 README metadata patch/只读输出截断、frontier capacity 调度失败均有单独记录；没有用它们触发产品重跑。旧 recorder、TUI Diff、parser/dependency 失败方向继续跳过，simple-diff O(n*m) 方向完全排除。"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round4/candidates-and-skips.md",
+    "hits": [
+      {
+        "at": "$",
+        "context": "n range | 当前 client 未广告对应能力；未把非当前协商形状当作缺陷 | [coding.md](coding.md) |\n| LSP per-extension languageId | 静态候选，没有特定 server 行为证据 | [coding.md](coding.md) |\n| LSP startup/failed initialize/dead child/旧 failed fixtures | 历史已记录或已失败方向排除，没有重跑、安装真实语言服务器或绕过 | [coding.md](coding.md) |\n| earlyInput escape parser、simple-diff O(n*m) | 前者未找到当前启动调用；后者仅静态成本，无压力证据，不计 bug | [root.md](root.md) |\n\n失败收据是审查夹具/环境现象，不是已确认产品 bug。独立 logger retention 验证与跳过的 CLI log 命令/dev recorder 日期实验属于不同函数和行为，没有以另一种方法重试后两者。\n"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round4/root.md",
+    "hits": [
+      {
+        "at": "$",
+        "context": "ope；可能显示错误的 user-level context.maxTokens | 静态，user 配置/control fixture 未执行。与本轮 Settings YAML writer 问题不同，仍仅列候选 |\n\n未启动真实 Ink/PTY、浏览器、模型、外部 CLI 或账户。额外阅读了 CLI run/runs/input/renderers/options、loop/list-files/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。\n\n## 独立 dev recorder 日期候选：首跑失败后跳过\n\n`packages/core/src/logging/session-recorder.ts:145–147` 按 sid 缓存路径并在判断当前日期之前返回。一个开启 dev recorder 的长回合跨 UTC 午夜后，可能继续写入旧日期目录；`recordSessionEnd` 清缓存，下一回合才能重新选日期。仅诊断文件分桶候选，不是用户会话/Transcript 数据损失。\n\n[独立夹具](evidence/root-recorder-day.test.ts) 采用既有 session-recorder 测试的逐字节临时副本方式，确保 `import.meta.url` 与输出根都在自有 tmp，使用受控时钟；[首次原始日志](evidence/root-recorder-day.first.log) 在第25行输出根控制断言失败：fixture 的 `/var/...` 与 Bun import.meta 的 `/private/var/...` 路径字符串不同。**0 pass / 1 fail / 2 expect / exit 1 / 无 "
+      },
+      {
+        "at": "$",
+        "context": "ter 问题不同，仍仅列候选 |\n\n未启动真实 Ink/PTY、浏览器、模型、外部 CLI 或账户。额外阅读了 CLI run/runs/input/renderers/options、loop/list-files/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。\n\n## 独立 dev recorder 日期候选：首跑失败后跳过\n\n`packages/core/src/logging/session-recorder.ts:145–147` 按 sid 缓存路径并在判断当前日期之前返回。一个开启 dev recorder 的长回合跨 UTC 午夜后，可能继续写入旧日期目录；`recordSessionEnd` 清缓存，下一回合才能重新选日期。仅诊断文件分桶候选，不是用户会话/Transcript 数据损失。\n\n[独立夹具](evidence/root-recorder-day.test.ts) 采用既有 session-recorder 测试的逐字节临时副本方式，确保 `import.meta.url` 与输出根都在自有 tmp，使用受控时钟；[首次原始日志](evidence/root-recorder-day.first.log) 在第25行输出根控制断言失败：fixture 的 `/var/...` 与 Bun import.meta 的 `/private/var/...` 路径字符串不同。**0 pass / 1 fail / 2 expect / exit 1 / 无 Completed**。仅完成源码字节相等和该路径控制两次断言，尚未写入事件，不能用该收据证明跨日行为；临时目录、时钟和 env 在 finally 恢复。没有改成 realpath、修支架"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+    "hits": [
+      {
+        "at": "$.matches[81].text",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "at": "$.matches[81].text",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      }
+    ]
+  },
+  {
+    "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+    "hits": [
+      {
+        "at": "$.observations[0].preStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[0].postStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[0].afterEnable.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[1].directSettled.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[2].normal.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[2].afterIdleStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.final.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+    "hits": [
+      {
+        "at": "$.observations[0].preStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[0].postStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[0].afterEnable.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[1].directSettled.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[2].normal.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[2].afterIdleStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.final.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+    "hits": [
+      {
+        "at": "$.snapshot.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+    "hits": [
+      {
+        "at": "$.observations[0].preStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[0].postStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[0].afterEnable.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[1].directSettled.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[2].normal.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[2].afterIdleStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.final.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+    "hits": [
+      {
+        "at": "$.snapshot.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+    "hits": [
+      {
+        "at": "$.observations[0].preStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[0].postStop.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[0].afterEnable.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.observations[1].directSettled.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "at": "$.snapshot.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+    "hits": [
+      {
+        "at": "$.snapshot.loadedWorkspaceModules[412]",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/simple-diff.ts"
+      }
+    ]
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+    "hits": [
+      {
+        "at": "$.modules[30].productionFiles[7]",
+        "context": "session/simple-diff.ts"
+      }
+    ]
+  }
+]

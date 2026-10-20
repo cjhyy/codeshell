@@ -1,0 +1,71 @@
+{
+  "frozenUtc": "2026-10-17T12:31:06.576385+00:00",
+  "parentReportedContext": "Frozen Round32 reported by Root as short646f at prep start; no full baseline SHA independently inspected. Root later reported33 integrated40d79ff2; original prep context/exclusions are retained.",
+  "formalRound34Baseline": null,
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "reviewerClassification": {
+    "newFormalFindings": 0,
+    "newCandidates": 0,
+    "newRelatedEntries": 0,
+    "unclassifiedAdjacentStaticLeads": 1
+  },
+  "helperDisposition": "Negative for complete valid UTF8 buffer and actual positive integer16384 cap.",
+  "helperProof": "At a boundary, cut stays at cap; if cap points into continuation bytes, backtracking reaches the character lead. Valid UTF8 needs at most3 bytes of backtracking, so fixed16384 cap cannot reach zero under this ordinary aligned-complete premise. Caller advances by exactly the returned raw byte cut. No execution performed.",
+  "adjacentLead": {
+    "name": "incomplete live tail decoded before all bytes arrive",
+    "source": [
+      "background-shell.ts328-342",
+      "ring-file.ts write/slice methods",
+      "background-shell.ts479-498"
+    ],
+    "staticCause": "Raw Buffer data events are appended unchanged to authoritative in-memory ring. When unread bytes are <=cap, readOutput skips safeCut, converts current bytes to string, and advances cursor by every available byte. The active paths do not use the initialized per-stream StringDecoders.",
+    "ordinaryScenario": "A valid logical UTF8 output stream is delivered in byte chunks that end before a multibyte character completes, and an on-demand incremental read occurs before remaining bytes arrive. This is a conditional normal stream prefix, not arbitrary invalid input.",
+    "missingObservation": "No current host byte chunk/peek timing was observed or simulated. No Buffer/language fixture, shell, output file, StringDecoder or readOutput invocation.",
+    "independentDisposition": "Unclassified strong static adjacent lead only; Root owns final candidate classification. No separate item duplication.",
+    "RootReportedClassification": "Root proposes UTF8-R34-C1 strong static candidate; actual builtin entry/docs verification was reported by Root outside reviewer scope.",
+    "impactLimit": "Potential returned-text replacement/cursor continuity loss only; no process, file, persisted stream loss, actual decoded output or real runtime behavior claimed."
+  },
+  "history": {
+    "freshFiles": 3063,
+    "markdownFiles": 1313,
+    "jsonFiles": 1750,
+    "stringLeaves": 674397,
+    "scalarLeaves": 1000414,
+    "includesFrozen32": true,
+    "excluded": [
+      "mutable Round33",
+      "future Round34"
+    ],
+    "baseOccurrenceCounts": {
+      "utf8-cut": 38,
+      "stream-utf8": 215,
+      "byte-boundary": 378
+    },
+    "baseRetainedCounts": {
+      "utf8-cut": 38,
+      "stream-utf8": 100,
+      "byte-boundary": 100
+    },
+    "baseContextCapEach": 100,
+    "targetedSupplementCounts": {
+      "exact-helper-sha": 2,
+      "cursor-utf8": 0,
+      "background-partial": 0
+    },
+    "targetedSupplementRetainedCounts": {
+      "exact-helper-sha": 2,
+      "cursor-utf8": 0,
+      "background-partial": 0
+    },
+    "baseInspectedPrefix": 25,
+    "additionalTargetedContextsInspected": 16,
+    "exactShaValuesInspected": 2,
+    "parseErrors": 0,
+    "preciseOldPartialTailCauseFound": false,
+    "sameShaFullSemanticReceiptEstablished": false,
+    "limits": "No exact old partial-tail decode+advance hit in targeted bounded patterns; not semantic history exhaustion. Helper SHA hits and prior imports are not full-read evidence. Original33/34 exclusion remains despite later33 integration."
+  },
+  "productAttempts": 0
+}

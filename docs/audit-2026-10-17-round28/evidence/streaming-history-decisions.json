@@ -1,0 +1,66 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "priorCorpus": {
+    "files": 2677,
+    "markdown": 1262,
+    "json": 1415,
+    "stringLeaves": 506929,
+    "scalarLeaves": 740424,
+    "archivePaths": 169,
+    "parseErrors": 0
+  },
+  "directedMatches": {
+    "leaf-and-consumer": 35,
+    "blank-fence-chunks": 67,
+    "code-chunk-bug": 2,
+    "old-parser-boundary": 3
+  },
+  "retainedContexts": {
+    "leaf-and-consumer": 35,
+    "blank-fence-chunks": 67,
+    "code-chunk-bug": 2,
+    "old-parser-boundary": 3
+  },
+  "exactSplitIntoChunksInCompleteLeafConsumerContexts": 0,
+  "decisions": [
+    {
+      "source": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "ranges": [
+        [
+          126,
+          155
+        ]
+      ],
+      "decision": "Existing explanation of fence-aware leaf and memo chunks, not a recorded internal closed-fence re-split defect. No runtime evidence borrowed."
+    },
+    {
+      "source": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "ranges": [
+        [
+          600,
+          627
+        ]
+      ],
+      "decision": "C4 suggests memo chunks by blank line; C1 requires closed/self-contained fenced blocks. Current second split fails their combined contract. C2 reference-link/footnote split is expressly known and not claimed."
+    },
+    {
+      "source": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "ranges": [
+        [
+          15,
+          19
+        ]
+      ],
+      "decision": "R19-R1/R2 fixed prompt-fence and UTF16 families excluded. Current renderer splits a valid existing fenced block into documents; it does not interpolate user source into an outer fixed prompt fence."
+    },
+    {
+      "source": "docs/audit-2026-10-17-round15/evidence/docinput-preflight-skip.md",
+      "decision": "Old parseDocument guessed-dependency metadata assertion is still SKIP; not rerun or repaired. New source-only renderer consumer does not import/execute parseDocument."
+    },
+    {
+      "subject": "Other chunk whitespace/list/indent possibilities",
+      "decision": "No independent ordinary-producer proof sought; not a second bug/candidate. No security/HTML/url or Thinking/TUI experiment."
+    }
+  ],
+  "limitations": "Keyword matches and selected parent inspection do not establish all-history semantic exhaustion."
+}

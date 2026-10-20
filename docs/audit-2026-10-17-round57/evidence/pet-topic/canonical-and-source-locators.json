@@ -1,0 +1,55 @@
+[
+  {
+    "command": [
+      "rg",
+      "--files",
+      "packages/pet/src",
+      "-g",
+      "*segment*",
+      "-g",
+      "*conversation-session-route*"
+    ],
+    "exitCode": 0,
+    "stderr": "",
+    "files": [
+      "packages/pet/src/segment-closure.test.ts",
+      "packages/pet/src/topic-segment.test.ts",
+      "packages/pet/src/segment-closure.ts",
+      "packages/pet/src/conversation-session-route.test.ts",
+      "packages/pet/src/conversation-session-route.ts",
+      "packages/pet/src/topic-segment.ts"
+    ]
+  },
+  {
+    "command": [
+      "rg",
+      "-l",
+      "-F",
+      "packages/pet/src/topic-segment.ts",
+      "docs",
+      "bugs"
+    ],
+    "exitCode": 0,
+    "stderr": "",
+    "files": [
+      "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "docs/audit-2026-10-17-round10/source-manifest.json",
+      "docs/audit-2026-10-17/evidence/pet-source-manifest.json",
+      "docs/audit-2026-10-16/inventory.json",
+      "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "docs/superpowers/plans/2026-07-17-mimi-session-archival.md",
+      "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+      "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "docs/todo/mimi-architecture-review-2026-09-05.md",
+      "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json"
+    ]
+  }
+]

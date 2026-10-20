@@ -1,0 +1,23 @@
+{
+  "baseline": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "count": 2,
+  "sourceChanges": [
+    {
+      "id": "DESKTOP-R12-01",
+      "source": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "changeCommit": "9925b3282",
+      "disposition": "Other-task source repair of surrogate boundary inspected; not retested here",
+      "oldFrozenReport": "docs/audit-2026-10-17-round12/desktop.md"
+    },
+    {
+      "id": "ATT-R9-01",
+      "source": "packages/desktop/src/renderer/tool-cards/attachments.ts",
+      "changeCommit": "3d6a1ec35",
+      "disposition": "Other-task source repair preserves complete generated-image tail inspected; not retested here",
+      "oldFrozenReport": "docs/audit-2026-10-17-round9/attachments.md"
+    }
+  ],
+  "runtimeRetested": false,
+  "report": "baseline-refresh.md",
+  "note": "Source-change status separate from new confirmed/candidate/related counts."
+}

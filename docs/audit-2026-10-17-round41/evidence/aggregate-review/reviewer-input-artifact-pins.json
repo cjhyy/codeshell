@@ -1,0 +1,121 @@
+{
+  "freezeAuthority": "Both Root and reviewer explicitly confirmed freeze before this metadata content read",
+  "capturedAtUTC": "2026-10-17T14:18:00.706050+00:00",
+  "artifacts": [
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/artifact-receipt.first.json",
+      "bytes": 4351,
+      "sha256": "877368d747ade60f3fa82ec09381546ca8a4bf5a5ef731d56148f07a4255f0a9"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/artifact-receipt.json",
+      "bytes": 5069,
+      "sha256": "8ca64a34150bd23356011c1cc9e79b58b28b24b99d5c44e64377b27ade243d78"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/author-input-pins.json",
+      "bytes": 3472,
+      "sha256": "9e2e1f796afe183a8a34cc76ecaa390a99505b732f670328d0fee46e241523d1"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/author-metadata-checks.json",
+      "bytes": 8016,
+      "sha256": "4875dfaa23e17ae9a2231e9cd82cede1eaf573184e8bf10bea20caca6324e306"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/classification.json",
+      "bytes": 1494,
+      "sha256": "3344a1d5762bd1816da9eefca2a828ff7b41e2c5d8cfafc9259a1b729ddcd4eb"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/freeze-first-diagnostic.json",
+      "bytes": 3122,
+      "sha256": "ccff3581b8cc8b410089c7cdc81367439e94738d1dd46041c611545424825da7"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/history-contexts.json",
+      "bytes": 10484,
+      "sha256": "a8373b1abf84b3255cc80532cb3793036cff03860d33f57aa556da09cb46eb0f"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/history-decisions.json",
+      "bytes": 1909,
+      "sha256": "dd92a257caa8fd10d225caaffeb6db3b491b52932b9f902cee26832586bc8278"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/history-delta.json",
+      "bytes": 17259,
+      "sha256": "e98ce04af0ef8fb3eb1a2e3ffbaccfd698f43e49983fd725b0f58313ebdbb518"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/history-finish-check.json",
+      "bytes": 1267077,
+      "sha256": "55ed51bb285eeab3d120fd8b3c45343305052e2261aaf45e32f5a3ee708af335"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/history-initial-pins.json",
+      "bytes": 793209,
+      "sha256": "806e7277e44d5e4fa9f2e878c7be85532b46262d55a857c33d5dfc044d862361"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/history-inventory.raw.txt",
+      "bytes": 235935,
+      "sha256": "c6264d170144113998b9a489912e8b4b27fad57ad5294eb92679dea921cb85d9"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/history-selected-contexts.json",
+      "bytes": 5985,
+      "sha256": "1d3a9066c769e46d86f9b8f77df60f8034618bb732c9d32ffa3abb206ce8a46d"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/history.json",
+      "bytes": 785172,
+      "sha256": "27aaab521e379df514a6dc79be3627c9213916dc35ef3e6225e8c7bda7187e5e"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/initial-pins.json",
+      "bytes": 609,
+      "sha256": "df5144d6a00f65b4c689dc223de62201d75f400cd48b9e6356008c5c5aaa637a"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/links-check.first.json",
+      "bytes": 3073,
+      "sha256": "04f2463c002c6a3e2a6803383475c3f740e6c2372d849c5444c32cc500d535b1"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/links-check.json",
+      "bytes": 3441,
+      "sha256": "092e81defe4a1fd729a941a93be63c8f7f019428aec45772df4e8169708eada8"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/metadata-notes.json",
+      "bytes": 1780,
+      "sha256": "68342755938c87d780e2e17862dbcf21009fbe71b8cf98682362c843e41292ad"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/producer-consumer-initial-pins.json",
+      "bytes": 719,
+      "sha256": "7f019c1ee5cae65b1146ff588cfe41af1f4f4d6a337c566f359391e49b6a2da5"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/review.md",
+      "bytes": 5594,
+      "sha256": "e12005ed9f8024d69b0c134ac86afb781836084c137a92c92c194170de9a17b3"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/scan-history.py",
+      "bytes": 5590,
+      "sha256": "bf5f475f74642cc7f705aefcb874f9c567b988d5d0b7af8b9d056ccaf2a9878b"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/source-manifest.json",
+      "bytes": 7861,
+      "sha256": "26efe22f5cbeb19f19f2e88965be1a8cdcb651b2bfabd1bd44df1f19f2bbb8f5"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round43-process-state-review/validation.json",
+      "bytes": 1755,
+      "sha256": "a0d402ad76394544912f74a77ddee059dd13b75b27aa58bed57a57b7383ab333"
+    }
+  ]
+}

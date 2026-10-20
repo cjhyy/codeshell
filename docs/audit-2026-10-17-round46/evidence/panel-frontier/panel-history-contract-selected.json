@@ -1,0 +1,41 @@
+{
+  "scope": "All non-filename ordinary panel-tab keyword context windows displayed; remaining filename hits are metadata locators, not full body evidence.",
+  "contexts": [
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "jsonPointer": "/hits/156/matches/1/text",
+      "line": 1,
+      "needle": "panel tab",
+      "context": "原报告已识别的 Desktop 保护继续成立：`packages/desktop/src/renderer/cc-room/CCConversationView.tsx:159-182` 将审批监听独立于 transcript 的 active 状态，PanelArea 保持非当前 tab 挂载；单纯在已挂载 Desktop Panel tab 间切换不会丢请求。实际卸载 / 返回列表 / 重开才暴露无 snapshot 的边界，不应泛称所有 tab 切换。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+    },
+    {
+      "path": "docs/review-2026-10-12/approval-quality-round10.md",
+      "jsonPointer": null,
+      "line": 33,
+      "needle": "panel tab",
+      "context": "界：bridge 默认 5 分钟自动拒绝并 publish resolution（`:42,75-79`），关闭 room 会拒绝全部等待（`:109-127`），`onResolve` 抛错也不会阻塞 resolver（`:132-137`）。因此不是无限服务器悬挂，影响是当前可见客户端无法在剩余等待期恢复决定，最后自动拒绝原工具。另一个仍持有卡的客户端可以回答。\n\n原报告已识别的 Desktop 保护继续成立：`packages/desktop/src/renderer/cc-room/CCConversationView.tsx:159-182` 将审批监听独立于 transcript 的 active 状态，PanelArea 保持非当前 tab 挂载；单纯在已挂载 Desktop Panel tab 间切换不会丢请求。实际卸载 / 返回列表 / 重开才暴露无 snapshot 的边界，不应泛称所有 tab 切换。\n\n## R11：建议降 P3，排除“已经离线仍可点击”的原宽泛触发\n\n根因仍是 `packages/web/src/hooks/useRemoteApp.ts:1450-1452`：CC 回复不检查 `socket.send` 返回值，随后立即删卡。\n\n但当前实际入口 `packages/desktop/src/mobile/main.tsx:4,14` 挂载 `DesktopApp`；`packages/web/app/DesktopControls.tsx:306` 的 handler 在 app.status 非 online 时直接返回，`:343,361,401,405` 所有答复按钮均禁用。旧 mobile/App 不应用来扩大当前入口的影响。新实际组件负向对照将 WS 关闭并 flush 到 offline 后，允许按钮 disabled=true；即使直接调用其 handler，也不发送、不删卡，resident 仍等待。原 fixture “close 后直接 hook.respondCcApproval”不能证明 UI 可达，原 P2 离线点击表述不成立。\n\n剩余限定条件：底层 readyState 已进入 CLOSING/CLOSED，或者 send 抛错，而 onclose / React 更新尚未把可见卡的 app.status 从 online 改掉。`packages/web/src/hooks/useRemoteSocket.ts",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "f525ea372cfcc72d9b78fb365d10e9b0d91713f7735bae848cd48eb6a6ac76f0"
+    },
+    {
+      "path": "docs/review-2026-10-12/panels-round6.md",
+      "jsonPointer": null,
+      "line": 57,
+      "needle": "panel tab",
+      "context": "rrent 仍通过。\n3. `panel-app-bridge.ts:1060–1063` 识别首个真实 session ID 已变并永久置 sensitiveSessionRevoked。后续实际 `call(\"automations.list\")` 和 `call(\"agent.submitPrompt\")` 均在 `:1284–1287`、`:1783–1786` 返回 `SESSION_CHANGED: Panel session changed; reopen the panel`，没有调 Host list 第二次，也没有派发 run。\n4. 项目级 storage 写入继续成功。fresh guest 绑定当前 ID 后 `automations.list` 正常，说明关闭该 Panel tab 后重新打开可恢复。\n5. 现代 `UI ID == engine ID` 的正向对照做相同模型选择，scope 相同、sensitiveSessionRevoked 未置位，automation list 正常。\n\n保护与呈现边界：`/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/preload/panel-app.ts:94–104` 会保留结构化 code/message，并抛给 guest；Host `PanelAppHost.tsx:109–115` 只处理 bind 成败，此处 bind 成功，因此不显示自己的 failed/retry UI。**这不证明 guest 没有呈现重开指引。** 未运行冻结的具体 guest action UI，不声称用户看不到错误，也不声称切回模型一定自动恢复。可作为未来“路由 Session ID 改变时主动重开 guest”的体验改进线索，当前不增加审查计数。\n\n## 正常与恢复路径的保护证据\n\n### 会话、项目和 worktree\n\n`SessionPanelDock.tsx:161–185` 为每个 bucket 单独渲染 `key={panelBucket}` 的 PanelArea；`PanelArea.tsx:457–468` 保留各自 tab body。普通 A→B→A 会话切换只改变可见性，不能推论同 guest 被改绑 B。`PanelAppHost.tsx:55–82` 的 prepare 依",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c2edc10152417249f841168110b9aad9cf7cf42f25ada6263d2f5e7c3b7a997f"
+    },
+    {
+      "path": "docs/review-2026-10-12/server-round1.md",
+      "jsonPointer": null,
+      "line": 69,
+      "needle": "panel tab",
+      "context": "work guard. Case 1: card present → select another session → reopen original room + replay approval history → no card while server promise remains unsettled and `respond` still succeeds. Entire file: 2 pass, 14 expects.\n- Desktop nuance: inactive PanelArea tabs stay mounted and their lightweight listeners are retained, so merely switching a mounted panel tab is covered. Unmounting a CC conversation (back to session list / renderer reload) still lacks a pending snapshot, but mobile switching is independently reproduced.\n- Gap: reconnect/session-replay tests preserve Core approvals, while CC approvals have no pending-state recovery coverage.\n- Suggested direction: retain pending payloads in ApprovalBridge and expose an authenticated per-room snapshot/replay; merge it on room activation and reconnect.\n- Confidence: high.\n\n## S7 [P3] CC approval is dropped if transport fails before the UI leaves its online state\n\n- Primary: `packages/web/src/hooks/useRemoteApp.ts:1450–1452`, which ignores `socket.send=false` and immediately removes the card.\n- Actu",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8"
+    }
+  ]
+}

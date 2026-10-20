@@ -1,0 +1,478 @@
+packages/core/src/types.ts:1–35
+1: /**
+2:  * Core type definitions for the code-shell orchestration framework.
+3:  */
+4: 
+5: import type { GoalConfig, GoalLifecycleV1, GoalTerminal } from "./goal/lifecycle.js";
+6: 
+7: /** Trusted lifecycle metadata; never accepted from an Agent tool's model input. */
+8: export interface SubAgentContinuation {
+9:   version: 1;
+10:   parentSessionId: string;
+11:   /** null explicitly records an ephemeral agent, independent of later role defaults. */
+12:   agentType: string | null;
+13:   name?: string;
+14:   description: string;
+15:   maxTurns: number;
+16:   model?: string;
+17:   toolAllowlist?: string[];
+18:   skillAllowlist?: string[];
+19:   sandboxMode?: import("./tool-system/sandbox/index.js").SandboxMode;
+20:   mcpAllowlist?: string[];
+21:   appendSystemPrompt?: string;
+22:   readOnlySession: boolean;
+23: }
+24: 
+25: // ─── Content & Messages ───────────────────────────────────────────
+26: 
+27: export interface ContentBlock {
+28:   type: "text" | "tool_use" | "tool_result" | "image" | "reasoning";
+29:   text?: string;
+30:   id?: string;
+31:   name?: string;
+32:   input?: Record<string, unknown>;
+33:   content?: string | ContentBlock[];
+34:   tool_use_id?: string;
+35:   /**
+
+packages/core/src/tool-system/builtin/agent.ts:350–490
+350:    * calls leave undefined; engine.ts falls back to `spawner.parentStream`
+351:    * (the parent UI), preserving the inline rendering of synchronous
+352:    * sub-agents.
+353:    */
+354:   streamOverride?: StreamCallback,
+355: ): Promise<string> {
+356:   const { agentId, name, description, agentType } = opts;
+357:   const startEndSink = uiStream ?? spawner.parentStream;
+358: 
+359:   safeEmit(startEndSink, { type: "agent_start", agentId, name, description, agentType });
+360:   emitSubAgentHook(opts.hooks, "subagent_start", { agentId, description });
+361: 
+362:   // `resetPlanMode` / `restorePlanMode` operated on a module-level singleton
+363:   // that no longer exists. The child Engine is a fresh instance; plan-mode
+364:   // isolation between parent and child is enforced via separate Engine
+365:   // instances (finalized in T6).
+366:   const { text, usage } = await spawner.spawn({ ...opts, streamOverride });
+367:   if (usage) opts.recordBilledUsage?.(usage);
+368:   const finalText = text || `Agent completed but produced no text output.`;
+369:   safeEmit(startEndSink, {
+370:     type: "agent_end",
+371:     agentId,
+372:     name,
+373:     description,
+374:     text: finalText,
+375:     agentType,
+376:   });
+377:   emitSubAgentHook(opts.hooks, "subagent_finish", { agentId, description, text: finalText });
+378:   return finalText;
+379: }
+380: 
+381: function createAgentProgressTracker(agentId: string): {
+382:   current: () => ProgressPayload;
+383:   onEvent: (event: Parameters<StreamCallback>[0]) => void;
+384:   onRuntime: NonNullable<import("../../engine/run-types.js").EngineRunOptions["onAgentProgress"]>;
+385: } {
+386:   let progress = initialAgentProgress();
+387:   return {
+388:     current: () => progress,
+389:     onEvent: (event) => {
+390:       progress = reduceAgentProgress(progress, event);
+391:       asyncAgentRegistry.updateProgress(agentId, progress);
+392:     },
+393:     onRuntime: (event) => {
+394:       progress =
+395:         event.type === "usage"
+396:           ? applyAgentProgressUsage(progress, event.usage)
+397:           : applyAgentProgressPhase(progress, event.phase, Date.now(), event.toolName);
+398:       asyncAgentRegistry.updateProgress(agentId, progress);
+399:     },
+400:   };
+401: }
+402: 
+403: export async function agentTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
+404:   const prompt = args.prompt as string;
+405:   const description = (args.description as string) || "sub-agent";
+406:   const rawName = (args.name as string | undefined)?.trim();
+407:   // Resolved below: when the model omits `name`, fall back to the resolved
+408:   // kind name so the dock shows a meaningful label instead of bare "Agent".
+409:   let name = rawName && rawName.length > 0 ? rawName : undefined;
+410:   if (!prompt) return "Error: prompt is required";
+411: 
+412:   if (!ctx?.subAgentSpawner) {
+413:     return "Error: Agent tool is not configured (no subAgentSpawner in ctx).";
+414:   }
+415:   // Belt-and-suspenders: the spawner already strips Agent / AgentStatus /
+416:   // AgentCancel from a child Engine's tool pool (see engine.ts spawn()), so
+417:   // a sub-agent's LLM should never see this tool. If it does call it anyway
+418:   // (registry regression, custom-tools injection, future refactor), refuse
+419:   // here — no grandchildren. Matches Claude Code's flat-hierarchy rule.
+420:   if (ctx.isSubAgent === true) {
+421:     return "Error: nested agents are not supported. Sub-agents cannot spawn their own sub-agents. Complete the task directly using your available tools.";
+422:   }
+423:   const spawner = ctx.subAgentSpawner;
+424: 
+425:   const parentSignal = args.__signal as AbortSignal | undefined;
+426:   if (parentSignal?.aborted) {
+427:     return "Agent aborted before starting.";
+428:   }
+429: 
+430:   const agentType = (args.agent_type as string | undefined)?.trim() || undefined;
+431:   let overrides: AgentTypeOverrides;
+432:   try {
+433:     overrides = resolveAgentTypeOverrides(agentType, ctx?.agentDefinitions);
+434:   } catch (err) {
+435:     return `Error: ${(err as Error).message}`;
+436:   }
+437: 
+438:   // Dock label fallback: an omitted `name` defaults to the resolved kind
+439:   // (e.g. "explorer") so background agents are identifiable in the dock even
+440:   // when the model didn't pass an explicit label. True ephemeral agents
+441:   // (empty registry, no resolvedType) keep name undefined → dock shows "Agent".
+442:   if (name === undefined && overrides.resolvedType) {
+443:     name = overrides.resolvedType;
+444:   }
+445: 
+446:   const maxTurns = (args.max_turns as number) || overrides.maxTurns || 15;
+447:   const runInBackground = args.run_in_background === true;
+448:   const agentId = nanoid(8);
+449:   const parentStream = spawner.parentStream;
+450:   const continuation: SubAgentContinuation | undefined = ctx.sessionId
+451:     ? structuredClone({
+452:         version: 1,
+453:         parentSessionId: ctx.sessionId,
+454:         agentType: overrides.resolvedType ?? null,
+455:         name,
+456:         description,
+457:         maxTurns,
+458:         model: overrides.model,
+459:         toolAllowlist: overrides.toolAllowlist,
+460:         skillAllowlist: overrides.skillAllowlist,
+461:         sandboxMode: overrides.sandboxMode,
+462:         mcpAllowlist: overrides.mcpAllowlist,
+463:         appendSystemPrompt: overrides.appendSystemPrompt,
+464:         readOnlySession:
+465:           overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
+466:       })
+467:     : undefined;
+468: 
+469:   const autoBgMs = resolveAutoBgMs();
+470: 
+471:   // ─── Background path ───────────────────────────────────────────
+472:   // Register the agent, kick off execution detached from the current turn,
+473:   // return immediately with the agent_id. Parent abort does NOT cascade
+474:   // (background agents survive the spawning turn). Cancellation goes
+475:   // through AgentCancel(agent_id).
+476:   if (runInBackground) {
+477:     if (asyncAgentRegistry.runningCount() >= MAX_BACKGROUND_AGENTS) {
+478:       return (
+479:         `Error: too many background agents running (limit ${MAX_BACKGROUND_AGENTS}). ` +
+480:         `Wait for some to finish or cancel one with AgentCancel(agent_id) before launching more.`
+481:       );
+482:     }
+483:     const controller = new AbortController();
+484:     const runtimeGeneration = asyncAgentRegistry.allocateRuntimeGeneration(agentId);
+485:     const progressTracker = createAgentProgressTracker(agentId);
+486:     let liveLease: ChildWriterLease | undefined;
+487:     asyncAgentRegistry.register({
+488:       agentId,
+489:       name,
+490:       agentType: overrides.resolvedType,
+
+packages/core/src/session/session-manager.ts:730–780
+730:     subAgentContinuation?: SubAgentContinuation,
+731:   ): SessionBundle {
+732:     // External callers may pass any string; nanoid output is trusted. Either
+733:     // way the ID gets joined into a filesystem path, so the public entry
+734:     // point validates before that join.
+735:     if (explicitSessionId !== undefined) assertSafeSessionId(explicitSessionId);
+736:     const continuation =
+737:       subAgentContinuation === undefined
+738:         ? undefined
+739:         : parseSubAgentContinuation(subAgentContinuation, parentSessionId);
+740:     if (subAgentContinuation !== undefined && !continuation) {
+741:       throw new SessionError("Invalid sub-agent continuation metadata or parent ownership");
+742:     }
+743:     const sessionId = explicitSessionId ?? nanoid(16);
+744:     const state: SessionState = {
+745:       sessionId,
+746:       kind,
+747:       stateRevision: 0,
+748:       cwd,
+749:       workspace: { root: cwd, kind: "main" },
+750:       startedAt: Date.now(),
+751:       model,
+752:       provider,
+753:       tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+754:       cacheUsageVersion: 1,
+755:       cumulativePromptTokens: 0,
+756:       cumulativeCacheReadTokens: 0,
+757:       cumulativeCacheCreationTokens: 0,
+758:       turnCount: 0,
+759:       invokedSkills: [],
+760:       status: "active",
+761:       // Always write the key: a sub-agent gets its parent sid; a top-level
+762:       // session gets explicit null. This lets the desktop disk-rebuild tell a
+763:       // new top-level session (key present, null) apart from a legacy session
+764:       // (key absent) and from a sub-agent (key present, non-empty string).
+765:       parentSessionId: parentSessionId ?? null,
+766:       ...(continuation ? { subAgentContinuation: continuation } : {}),
+767:       ...(ephemeral || sessionId.startsWith("qchat-") ? { ephemeral: true } : {}),
+768:       ...(origin ? { origin } : {}),
+769:     };
+770: 
+771:     if (isEphemeralSessionState(state)) {
+772:       if (this.processLocalBundle(sessionId)) {
+773:         throw new SessionError(`Session already exists: ${sessionId}`);
+774:       }
+775:       const transcript = Transcript.inMemory(sessionId);
+776:       transcript.append("session_meta", {
+777:         sessionId,
+778:         cwd,
+779:         model,
+780:         provider,
+
+packages/core/src/session/session-manager.ts:1038–1061
+1038:     } catch {
+1039:       return undefined;
+1040:     }
+1041:   }
+1042: 
+1043:   /** Validated frozen child scope. Missing/corrupt snapshots cannot authorize resume. */
+1044:   readSubAgentContinuation(sessionId: string): SubAgentContinuation | undefined {
+1045:     try {
+1046:       const state = this.readSessionState(sessionId);
+1047:       return state
+1048:         ? parseSubAgentContinuation(state.subAgentContinuation, state.parentSessionId)
+1049:         : undefined;
+1050:     } catch {
+1051:       return undefined;
+1052:     }
+1053:   }
+1054: 
+1055:   /**
+1056:    * Workspace pointer reader. Legacy sessions written before
+1057:    * `workspace` existed are treated as main-workspace sessions rooted at
+1058:    * `state.cwd`; the read is intentionally non-mutating.
+1059:    */
+1060:   getSessionWorkspace(sessionId: string): SessionWorkspace | undefined {
+1061:     try {
+
+packages/core/src/engine/engine.ts:2600–2660
+2600:       sessionProfileOverrides,
+2601:       profileMemoryDir,
+2602:       getSession,
+2603:       reportResult,
+2604:     } = args;
+2605: 
+2606:     // Resolve before constructing the child spawner: a parent sandbox may come
+2607:     // solely from project/user settings rather than config.sandbox, while a
+2608:     // child intentionally skips project settings. Passing the complete
+2609:     // effective config is what makes undefined role sandbox mean inherit.
+2610:     const sandboxRun = { cwd, workspaceContext, sandboxMode: options?.sandboxMode };
+2611:     const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(sandboxRun);
+2612: 
+2613:     // Build the per-Engine ToolContext that will be threaded through every
+2614:     // tool call. Replaces the old module-level singleton setters used by
+2615:     // built-ins and product capabilities.
+2616:     const subAgentSpawner = createSubAgentSpawner({
+2617:       parentConfig: {
+2618:         ...this.config,
+2619:         usageLedger: this.usageLedger,
+2620:         ...(options?.allowBackgroundShells === false ? { allowBackgroundShells: false } : {}),
+2621:       },
+2622:       getParentSessionId: () => getSession().state.sessionId,
+2623:       parentSandbox: sandboxConfig,
+2624:       presetName: this.preset.name,
+2625:       cwd,
+2626:       workspaceContext,
+2627:       permissionMode: runPermissionMode,
+2628:       modelPool: this.modelPool,
+2629:       parentStream: options?.onStream,
+2630:       appendParentSubagent: (agentId, description) => {
+2631:         getSession().transcript.appendSubagent(agentId, undefined, description);
+2632:       },
+2633:       sessionExists: (sessionId) => this.sessionManager.exists(sessionId),
+2634:       getSessionParentId: (sessionId) => this.sessionManager.readParentSessionId(sessionId),
+2635:       getSessionContinuation: (sessionId) =>
+2636:         this.sessionManager.readSubAgentContinuation(sessionId),
+2637:       childRunner: {
+2638:         createChild: (config) => new Engine(config),
+2639:         runChild: async (config, childTask, childOptions) => {
+2640:           const child = new Engine(config);
+2641:           try {
+2642:             return await child.run(childTask, childOptions);
+2643:           } finally {
+2644:             await child.dispose();
+2645:           }
+2646:         },
+2647:       },
+2648:     });
+2649: 
+2650:     // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
+2651:     // per standard §S4. resolveSandboxBackend throws when an explicit
+2652:     // mode is unavailable on this host; we let it propagate. The
+2653:     // previous behavior — catching the throw inside the hot turn and
+2654:     // silently downgrading to "off" — was the leak A2 closes. The
+2655:     // `auto` mode handles its own downgrade with a one-time warning
+2656:     // inside resolveSandboxBackend; explicit modes do not.
+2657:     //
+2658:     // Backend is cached per runtime/engine so the capability probe runs once
+2659:     // per (mode, cwd) instead of every turn.
+2660:     const sandboxBackend = await this.runEnvironmentResolver.resolveSandbox(sandboxRun);
+
+packages/core/src/engine/run-session-open.ts:1–155
+1: /**
+2:  * Session open — create-or-resume phase of Engine.runExclusive: the three
+3:  * valid session shapes, clientMessageId claiming (duplicate submits return
+4:  * early), user-message append, cold-start summary and the turnSeq bump.
+5:  */
+6: import { getCurrentSid, logger } from "../logging/logger.js";
+7: import { isDeepStrictEqual } from "node:util";
+8: import type { Message, SessionKind, SessionProjectBinding } from "../types.js";
+9: import type { SessionBundle, SessionManager } from "../session/session-manager.js";
+10: import { parseSubAgentContinuation } from "../session/subagent-continuation.js";
+11: import { SessionError } from "../exceptions.js";
+12: import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
+13: import type { ParsedTask } from "./parse-task.js";
+14: import type { buildRunUserMessageContent } from "./run-image-input.js";
+15: import type { EngineConfig, EngineResult } from "./types.js";
+16: import type { EngineRunOptions } from "./run-types.js";
+17: 
+18: export interface OpenRunSessionArgs {
+19:   sessionManager: SessionManager;
+20:   options: EngineRunOptions | undefined;
+21:   parsedTask: ParsedTask;
+22:   taskText: string;
+23:   userMessageContent: ReturnType<typeof buildRunUserMessageContent>;
+24:   cwd: string;
+25:   sessionKind: SessionKind;
+26:   sessionWorkspaceProfile: string | undefined;
+27:   projectBinding?: SessionProjectBinding;
+28:   /** Standing brief resent by the host each turn until the Session persists it. */
+29:   sessionBrief?: string;
+30:   llmModel: string;
+31:   llmProvider: string;
+32:   isSubAgent: boolean;
+33:   origin: EngineConfig["origin"];
+34:   costStore: EngineConfig["costStore"];
+35:   cachedCompactedMessages: Message[] | undefined;
+36:   onAgentDirectionsDelivered:
+37:     | ((envelopeIds: NonNullable<EngineRunOptions["agentDirection"]>["envelopeIds"]) => void)
+38:     | undefined;
+39: }
+40: 
+41: export interface OpenedRunSession {
+42:   session: SessionBundle;
+43:   /** Existing transcript user-message event that opened this run. */
+44:   runId: string;
+45:   previousRunId?: string;
+46:   messages: Message[];
+47:   freshImageMessage: Message | undefined;
+48:   resumedFromDisk: boolean;
+49:   claimClientMessageId: (
+50:     bundle: SessionBundle,
+51:     clientMessageId: string | undefined,
+52:     source: "submit" | "steer",
+53:   ) => boolean;
+54:   releaseClientMessageId: (clientMessageId: string) => void;
+55: }
+56: 
+57: export type OpenRunSessionResult =
+58:   | { ok: true; opened: OpenedRunSession }
+59:   | { ok: false; result: EngineResult };
+60: 
+61: export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
+62:   const { options } = args;
+63:   const continuation =
+64:     options?.subAgentContinuation === undefined
+65:       ? undefined
+66:       : parseSubAgentContinuation(options.subAgentContinuation, getCurrentSid());
+67:   if (options?.subAgentContinuation !== undefined && (!args.isSubAgent || !continuation)) {
+68:     throw new SessionError("Invalid sub-agent continuation metadata or parent ownership");
+69:   }
+70:   const claimedClientMessageIds = new Set<string>();
+71: 
+72:   let session: SessionBundle;
+73:   let messages: Message[];
+74:   let freshImageMessage: Message | undefined;
+75:   let resumedFromDisk = false;
+76:   let runId: string;
+77:   const claimClientMessageId = (
+78:     bundle: SessionBundle,
+79:     clientMessageId: string | undefined,
+80:     source: "submit" | "steer",
+81:   ): boolean => {
+82:     if (!clientMessageId) return true;
+83:     if (
+84:       claimedClientMessageIds.has(clientMessageId) ||
+85:       bundle.transcript.hasClientMessageId(clientMessageId)
+86:     ) {
+87:       logger.info("engine.client_message.duplicate_ignored", {
+88:         sessionId: bundle.state.sessionId,
+89:         clientMessageId,
+90:         source,
+91:       });
+92:       return false;
+93:     }
+94:     claimedClientMessageIds.add(clientMessageId);
+95:     return true;
+96:   };
+97: 
+98:   if (options?.sessionId && args.sessionManager.exists(options.sessionId)) {
+99:     resumedFromDisk = true;
+100:     session = args.sessionManager.resumeForRun(options.sessionId);
+101:     if (continuation) {
+102:       const persisted = parseSubAgentContinuation(
+103:         session.state.subAgentContinuation,
+104:         session.state.parentSessionId,
+105:       );
+106:       if (
+107:         session.state.parentSessionId !== continuation.parentSessionId ||
+108:         (session.state.subAgentContinuation !== undefined &&
+109:           (!persisted || !isDeepStrictEqual(persisted, continuation)))
+110:       ) {
+111:         throw new SessionError("Sub-agent continuation cannot change its parent or frozen scope");
+112:       }
+113:       // Legacy same-process callers may hold a trusted scope without a durable
+114:       // snapshot. Do not invent or replace persisted authority on resume.
+115:     }
+116:     if (!session.state.project && args.projectBinding) {
+117:       args.sessionManager.saveStateOrUpdateFields(session.state, { project: args.projectBinding });
+118:     }
+119:     const cachedCompacted = args.cachedCompactedMessages;
+120:     messages = cachedCompacted ? [...cachedCompacted] : session.transcript.toMessages();
+121:     // If the previous run was Ctrl+C'd or crashed between an assistant
+122:     // tool_use and the matching tool_result being persisted, the
+123:     // loaded sequence is invalid for OpenAI (which 400s on dangling
+124:     // tool_calls). Patch synthetic tool_results so the next API call
+125:     // doesn't fail before the turn even starts.
+126:     const patched = patchOrphanedToolUses(messages);
+127:     if (patched.gapsPatched > 0) {
+128:       logger.warn("engine.resume.patched_orphaned_tool_uses", {
+129:         sessionId: options.sessionId,
+130:         gaps: patched.gapsPatched,
+131:         toolResults: patched.toolResultsInjected,
+132:       });
+133:     }
+134:     // Restore cost state from previous session, if the caller injected a store
+135:     if (session.state.costState && args.costStore) {
+136:       const cost = session.state.costState;
+137:       const legacy = cost.kind === "usage-ledger" ? cost.legacyStore : cost;
+138:       if (legacy !== undefined) args.costStore.restore(legacy);
+139:     }
+140:     // Append new user message
+141:     const userMsg: Message = { role: "user", content: args.userMessageContent };
+142:     if (!claimClientMessageId(session, options?.clientMessageId, "submit")) {
+143:       const replayed = options?.clientMessageId
+144:         ? session.transcript.findRunResultByClientMessageId(options.clientMessageId)
+145:         : undefined;
+146:       if (replayed) {
+147:         logger.info("engine.client_message.result_replayed", {
+148:           sessionId: session.state.sessionId,
+149:           clientMessageId: options?.clientMessageId,
+150:         });
+151:         return { ok: false, result: replayed };
+152:       }
+153:       const usage = session.state.tokenUsage ?? {
+154:         promptTokens: 0,
+155:         completionTokens: 0,

@@ -1,0 +1,54 @@
+{
+  "capturedUTC": "2026-10-17T19:04:44.610457+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/mobile/index.html",
+      "bytes": 439,
+      "lines": 14,
+      "sha256": "d787813704d1d2e79f43e34ec729a0b2b9688b8322b0805aa5c59d09ff36e49c",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/main.tsx",
+      "bytes": 706,
+      "lines": 17,
+      "sha256": "effc599f30214112e15c0ee4fc26ce9149055997227f964b78e7dcfe230673e9",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/App.tsx",
+      "bytes": 11542,
+      "lines": 325,
+      "sha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/styles.css",
+      "bytes": 4489,
+      "lines": 152,
+      "sha256": "5ba86fe857141999a19f726aeaef434029fdb636ca2fa9ac9d0381679cbcc3cd",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/web/app/public/manifest.webmanifest",
+      "bytes": 381,
+      "lines": 15,
+      "sha256": "923a5ce08545a048e0a7497200566885eefdc1f14cd4eb13e565da6d5bf412cc",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/web/app/public/sw.js",
+      "bytes": 1787,
+      "lines": 48,
+      "sha256": "3566b7ecf5db7811c6916a09651ca7f82a2ad86694fdb87243af4628c92b7319",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.test.ts",
+      "bytes": 7555,
+      "lines": 181,
+      "sha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

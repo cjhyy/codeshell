@@ -1,13 +1,24 @@
-import React, { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { CircleOff, Plus, Maximize2, Minimize2, PanelsTopLeft, LoaderCircle } from "lucide-react";
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  CircleOff,
+  Plus,
+  Maximize2,
+  Minimize2,
+  PanelsTopLeft,
+  LoaderCircle,
+  AppWindow,
+  LayoutGrid,
+} from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import type { Anchor } from "../chat/anchors";
 import { useT } from "../i18n/I18nProvider";
@@ -31,6 +42,11 @@ import {
 } from "./DesktopBuiltinPanelApp";
 import { PanelTabStrip } from "./PanelTabStrip";
 import { useReviewAvailability } from "./useReviewAvailability";
+import type { SubagentSelection } from "../subagents/SubagentNavigation";
+import { useToast } from "../ui/ToastProvider";
+import type { PanelAppStateChange } from "./PanelAppHost";
+import { PanelLauncher } from "./PanelLauncher";
+import { PANEL_LAUNCHER_KIND } from "./panelLauncherKind";
 
 export interface OpenTab {
   id: string;
@@ -91,6 +107,7 @@ interface Props {
   openUrl?: { url: string; nonce: number };
   /** DriveAgent external CLI conversation to open directly. */
   openCliSession?: OpenCliSessionRequest;
+  subagentSelection?: SubagentSelection;
   /** Parent-owned one-shot consumption for DriveAgent deep-link requests. */
   onOpenCliSessionConsumed?: (nonce: number) => void;
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
@@ -153,6 +170,7 @@ function ResolvedPanelArea({
   onRevealConsumed,
   openUrl,
   openCliSession,
+  subagentSelection,
   onOpenCliSessionConsumed,
   engineSessionId,
   busy = false,
@@ -175,6 +193,7 @@ function ResolvedPanelArea({
   workspace,
 }: Props & { workspace: PanelWorkspaceState }) {
   const { t } = useT();
+  const toast = useToast();
   const panelDomId = useId();
   const panelRegistryRevision = useSyncExternalStore(
     PANEL_REGISTRY.subscribe,
@@ -191,7 +210,7 @@ function ResolvedPanelArea({
   );
   // A saved turn diff remains useful after a repository is removed. It may
   // open from its chat card, without exposing Git actions in the panel launcher.
-  const hasReviewSnapshot = Boolean(reviewDiff?.trim());
+  const hasReviewSnapshot = reviewDiff !== undefined;
   const enabledPanels = useMemo(
     () =>
       getEnabledPanelEntries({
@@ -214,6 +233,10 @@ function ResolvedPanelArea({
     () => new Set(enabledPanels.map((entry) => entry.key)),
     [enabledPanels],
   );
+  const pickerPanels = useMemo(
+    () => enabledPanels.filter((entry) => !entry.internalOnly),
+    [enabledPanels],
+  );
   // Fresh, collision-proof tab id. The module counter resets to 0 on a renderer
   // reload, but tabs are persisted per bucket; bump past ids already present in
   // this bucket so restored tabs and newly-opened tabs don't collide.
@@ -234,7 +257,9 @@ function ResolvedPanelArea({
   const seenTabIds = new Set<string>();
   const activeTabs = tabs.filter((tb) => {
     if (
-      (!enabledPanelIds.has(tb.kind) && !(tb.kind === "review" && hasReviewSnapshot)) ||
+      (tb.kind !== PANEL_LAUNCHER_KIND &&
+        !enabledPanelIds.has(tb.kind) &&
+        !(tb.kind === "review" && hasReviewSnapshot)) ||
       seenTabIds.has(tb.id)
     )
       return false;
@@ -246,10 +271,151 @@ function ResolvedPanelArea({
     candidateActiveId && activeTabs.some((tb) => tb.id === candidateActiveId)
       ? candidateActiveId
       : (activeTabs[0]?.id ?? null);
+  const activeTab = activeTabs.find((tab) => tab.id === visibleActiveId);
+  const pendingTabFocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hidden && pendingTabFocus.current === visibleActiveId) {
+      document.getElementById(`${panelDomId}-tab-${visibleActiveId}`)?.focus();
+      pendingTabFocus.current = null;
+    }
+  }, [hidden, panelDomId, visibleActiveId]);
+  const activeEntry = activeTab
+    ? getPanelEntry(activeTab.kind, {
+        projectPath,
+        cwd,
+        engineSessionId: engineSessionId ?? null,
+      })
+    : undefined;
+  const canOpenWindow = activeEntry?.owner.kind === "panel-app" && !activeEntry.internalOnly;
+  const pendingWindows = useRef(
+    new Map<string, { appDescriptorId: string; tabId: string; bucket: string; opening: boolean }>(),
+  );
+  const readyWindowTabs = useRef(new Set<string>());
+  const sourceWindowErrors = useRef(new Map<string, string>());
+  const [readyWindowTabIds, setReadyWindowTabIds] = useState<ReadonlySet<string>>(new Set());
+  const [openingWindowTabIds, setOpeningWindowTabIds] = useState<ReadonlySet<string>>(new Set());
+  const openingActiveWindow = Boolean(activeTab && openingWindowTabIds.has(activeTab.id));
+  const activeWindowReady = Boolean(activeTab && readyWindowTabIds.has(activeTab.id));
+  const finishWindowRequest = useCallback((tabId: string) => {
+    pendingWindows.current.delete(tabId);
+    setOpeningWindowTabIds(new Set(pendingWindows.current.keys()));
+  }, []);
+  const failWindowRequest = (tabId: string, detail: string) => {
+    if (!pendingWindows.current.has(tabId)) return;
+    finishWindowRequest(tabId);
+    toast({ message: t("panels.area.openWindowFailed"), detail, variant: "error" });
+  };
+  const failWindowRequestRef = useRef(failWindowRequest);
+  failWindowRequestRef.current = failWindowRequest;
+
+  const openBoundWindow = async (tabId: string): Promise<void> => {
+    const intent = pendingWindows.current.get(tabId);
+    if (!intent || intent.opening || !readyWindowTabs.current.has(tabId)) return;
+    intent.opening = true;
+    try {
+      await window.codeshell.openPanelAppWindow({
+        appDescriptorId: intent.appDescriptorId,
+        tabId,
+        bucket: intent.bucket,
+      });
+    } catch (error) {
+      if (pendingWindows.current.get(tabId) === intent)
+        failWindowRequestRef.current(tabId, error instanceof Error ? error.message : String(error));
+    } finally {
+      if (pendingWindows.current.get(tabId) === intent) finishWindowRequest(tabId);
+    }
+  };
+  const openBoundWindowRef = useRef(openBoundWindow);
+  openBoundWindowRef.current = openBoundWindow;
+  const onPanelAppStateChange = useCallback<PanelAppStateChange>((tabId, state, error) => {
+    const wasReady = readyWindowTabs.current.has(tabId);
+    if (state === "ready") {
+      readyWindowTabs.current.add(tabId);
+      sourceWindowErrors.current.delete(tabId);
+    } else {
+      readyWindowTabs.current.delete(tabId);
+      // An error removes the guest view, whose cleanup can also report loading.
+      // Keep its failure until a successful retry proves this source is ready.
+      if (state === "error")
+        sourceWindowErrors.current.set(tabId, error ?? "Panel App source failed to load.");
+    }
+    if (wasReady !== (state === "ready")) setReadyWindowTabIds(new Set(readyWindowTabs.current));
+    if (state === "ready") void openBoundWindowRef.current(tabId);
+    else if (state === "error")
+      failWindowRequestRef.current(tabId, error ?? "Panel App source failed to load.");
+  }, []);
+  const requestWindow = (tab: OpenTab) => {
+    if (pendingWindows.current.has(tab.id)) return;
+    pendingWindows.current.set(tab.id, {
+      appDescriptorId: tab.kind,
+      tabId: tab.id,
+      bucket,
+      opening: false,
+    });
+    setOpeningWindowTabIds(new Set(pendingWindows.current.keys()));
+    const sourceError = sourceWindowErrors.current.get(tab.id);
+    if (sourceError) failWindowRequestRef.current(tab.id, sourceError);
+    else void openBoundWindowRef.current(tab.id);
+  };
+  const openActiveWindow = () => {
+    if (canOpenWindow && activeTab && readyWindowTabs.current.has(activeTab.id))
+      requestWindow(activeTab);
+  };
+  const openingWindowKinds = new Set(
+    [...pendingWindows.current.values()].map((intent) => intent.appDescriptorId),
+  );
+  useEffect(() => {
+    const liveIds = new Set(activeTabs.map((tab) => tab.id));
+    let changed = false;
+    for (const id of pendingWindows.current.keys()) {
+      if (!liveIds.has(id)) {
+        pendingWindows.current.delete(id);
+        changed = true;
+      }
+    }
+    for (const id of sourceWindowErrors.current.keys())
+      if (!liveIds.has(id)) sourceWindowErrors.current.delete(id);
+    if (changed) setOpeningWindowTabIds(new Set(pendingWindows.current.keys()));
+  }, [tabs, enabledPanelIds]);
+  const sourceScope = JSON.stringify([bucket, projectPath, engineSessionId]);
+  const sourceScopeRef = useRef(sourceScope);
+  const sourceCwdRef = useRef(cwd);
+  useEffect(() => {
+    const rootChanged = sourceCwdRef.current !== null && sourceCwdRef.current !== cwd;
+    sourceCwdRef.current = cwd;
+    if (sourceScopeRef.current === sourceScope && !rootChanged) return;
+    sourceScopeRef.current = sourceScope;
+    pendingWindows.current.clear();
+    readyWindowTabs.current.clear();
+    sourceWindowErrors.current.clear();
+    setOpeningWindowTabIds(new Set());
+    setReadyWindowTabIds(new Set());
+  }, [sourceScope, cwd]);
+  useEffect(
+    () => () => {
+      pendingWindows.current.clear();
+      readyWindowTabs.current.clear();
+      sourceWindowErrors.current.clear();
+    },
+    [],
+  );
 
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
   // 2.4). Resets each open (local) — chat/composer state lives in App.
   const [maximized, setMaximized] = useState(false);
+  const [launcherFocusRequest, setLauncherFocusRequest] = useState(0);
+
+  const openLauncher = (): void => {
+    setLauncherFocusRequest((request) => request + 1);
+    const existing = activeTabs.find((tab) => tab.kind === PANEL_LAUNCHER_KIND);
+    if (existing) {
+      setActiveId(existing.id);
+      return;
+    }
+    const tab = { id: mkId(PANEL_LAUNCHER_KIND), kind: PANEL_LAUNCHER_KIND };
+    setTabs((prev) => [...prev, tab]);
+    setActiveId(tab.id);
+  };
 
   const addTab = (kind: PanelTab): void => {
     const entry = getPanelEntry(kind, {
@@ -257,22 +423,70 @@ function ResolvedPanelArea({
       cwd,
       engineSessionId: engineSessionId ?? null,
     });
-    if (!entry || !enabledPanelIds.has(kind)) return;
+    if (!entry || entry.internalOnly || !enabledPanelIds.has(kind)) return;
+    const launcherId = activeTab?.kind === PANEL_LAUNCHER_KIND ? activeTab.id : null;
     if (entry.singleton) {
       const existing = activeTabs.find((candidate) => candidate.kind === kind);
       if (existing) {
+        if (launcherId) setTabs((prev) => prev.filter((tab) => tab.id !== launcherId));
+        pendingTabFocus.current = existing.id;
         setActiveId(existing.id);
         return;
       }
     }
     const tab = { id: mkId(kind), kind };
-    setTabs((prev) => [...prev, tab]);
+    pendingTabFocus.current = tab.id;
+    setTabs((prev) =>
+      launcherId
+        ? prev.map((existing) => (existing.id === launcherId ? tab : existing))
+        : [...prev, tab],
+    );
+    setActiveId(tab.id);
+  };
+
+  const openLauncherWindow = (kind: string): void => {
+    const entry = getPanelEntry(kind, {
+      projectPath,
+      cwd,
+      engineSessionId: engineSessionId ?? null,
+    });
+    if (
+      !entry ||
+      entry.owner.kind !== "panel-app" ||
+      entry.internalOnly ||
+      !enabledPanelIds.has(kind)
+    )
+      return;
+    const pending = [...pendingWindows.current.values()].find(
+      (intent) => intent.appDescriptorId === kind,
+    );
+    if (pending) {
+      setActiveId(pending.tabId);
+      return;
+    }
+    const existing = activeTabs.find((tab) => tab.kind === kind);
+    const tab = existing ?? { id: mkId(kind), kind };
+    requestWindow(tab);
+    const launcherId = activeTab?.kind === PANEL_LAUNCHER_KIND ? activeTab.id : null;
+    if (!existing) {
+      setTabs((previous) =>
+        launcherId
+          ? previous.map((candidate) => (candidate.id === launcherId ? tab : candidate))
+          : [...previous, tab],
+      );
+    } else if (launcherId)
+      setTabs((previous) => previous.filter((candidate) => candidate.id !== launcherId));
+    pendingTabFocus.current = tab.id;
     setActiveId(tab.id);
   };
 
   const closeTab = (id: string): void => {
     const idx = activeTabs.findIndex((t) => t.id === id);
     if (idx === -1) return;
+    if (pendingWindows.current.has(id)) finishWindowRequest(id);
+    readyWindowTabs.current.delete(id);
+    sourceWindowErrors.current.delete(id);
+    setReadyWindowTabIds(new Set(readyWindowTabs.current));
     const next = activeTabs.filter((t) => t.id !== id);
     setTabs((prev) => prev.filter((t) => t.id !== id));
     if (next.length === 0) {
@@ -333,19 +547,20 @@ function ResolvedPanelArea({
             right: 0,
             bottom: 0,
             width,
+            maxWidth: "100%",
             opacity: 0,
             pointerEvents: "none",
           }
       : { display: "none" }
     : maximized
       ? undefined
-      : { width };
+      : { width, maxWidth: "100%" };
 
   return (
     <div
       className={cn(
         "relative flex min-h-0 min-w-0 flex-col",
-        maximized ? "absolute inset-0 z-30 shrink" : "shrink-0 border-l border-border",
+        maximized ? "absolute inset-0 z-30 shrink" : "shrink-0 border-l border-border/70",
       )}
       // Closed docks use display:none so BrowserPanel may idle-evict. Temporary
       // full-page views keep the dock invisible but laid out enough for webview
@@ -371,7 +586,7 @@ function ResolvedPanelArea({
         />
       )}
       {/* Tab strip */}
-      <div className="flex min-w-0 shrink-0 items-center gap-1 border-b border-border/80 bg-muted/35 px-1.5 py-0.5">
+      <div className="flex h-[var(--cs-titlebar-height,2.75rem)] min-w-0 shrink-0 items-center gap-1 border-b border-border/70 bg-muted/35 px-1.5">
         {activeTabs.length > 0 ? (
           <PanelTabStrip
             tabs={activeTabs.map((tab) => {
@@ -382,10 +597,15 @@ function ResolvedPanelArea({
               });
               return {
                 id: tab.id,
-                label: entry
-                  ? panelEntryTitle(entry, (key) => t(key as never))
-                  : t("panels.area.unavailable"),
-                icon: entry?.icon ?? CircleOff,
+                label:
+                  tab.kind === PANEL_LAUNCHER_KIND
+                    ? t("panels.area.launcherTitle")
+                    : tab.kind === "subagent" && subagentSelection?.label
+                      ? subagentSelection.label
+                      : entry
+                        ? panelEntryTitle(entry, (key) => t(key as never))
+                        : t("panels.area.unavailable"),
+                icon: tab.kind === PANEL_LAUNCHER_KIND ? LayoutGrid : (entry?.icon ?? CircleOff),
               };
             })}
             activeId={visibleActiveId}
@@ -406,38 +626,43 @@ function ResolvedPanelArea({
 
         <div className="flex shrink-0 items-center gap-0.5 border-l border-border/70 pl-1.5">
           {/* Dock actions stay visible when the tab list overflows. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                aria-label={t("panels.area.newTab")}
-                title={t("panels.area.newTab")}
-                data-panel-action="new-tab"
-                size="icon"
-                variant="ghost"
-                className="size-8 shrink-0 rounded-lg text-muted-foreground"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-48">
-              {enabledPanels.map((entry) => {
-                const Icon = entry.icon;
-                return (
-                  <DropdownMenuItem
-                    key={entry.key}
-                    data-panel-menu-kind={entry.key}
-                    onSelect={() => addTab(entry.key)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    <span className="flex-1">
-                      {panelEntryTitle(entry, (key) => t(key as never))}
-                    </span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            type="button"
+            onClick={openLauncher}
+            aria-label={t("panels.area.newTab")}
+            title={t("panels.area.newTab")}
+            data-panel-action="new-tab"
+            size="icon"
+            variant="ghost"
+            className="size-8 shrink-0 rounded-lg text-muted-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+          {canOpenWindow && (
+            <Button
+              type="button"
+              onClick={() => void openActiveWindow()}
+              disabled={openingActiveWindow || !activeWindowReady}
+              aria-label={t("panels.area.openWindow")}
+              title={
+                activeWindowReady
+                  ? t("panels.area.openWindow")
+                  : t("panels.area.openWindowPreparing")
+              }
+              aria-busy={openingActiveWindow || undefined}
+              data-panel-action="popout"
+              size="sm"
+              variant="ghost"
+              className="h-8 shrink-0 gap-1.5 rounded-lg px-2 text-muted-foreground"
+            >
+              {openingActiveWindow ? (
+                <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
+              ) : (
+                <AppWindow className="size-4" />
+              )}
+              <span>{t("panels.area.openWindowShort")}</span>
+            </Button>
+          )}
           <Button
             type="button"
             onClick={() => setMaximized((v) => !v)}
@@ -459,9 +684,37 @@ function ResolvedPanelArea({
           one mounted PanelArea per bucket, so no body here ever changes owner
           during a session switch. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {activeTabs.length === 0 && <PanelLanding entries={enabledPanels} onPick={addTab} />}
+        {activeTabs.length === 0 && (
+          <PanelLauncher
+            entries={pickerPanels}
+            onPick={addTab}
+            onOpenWindow={openLauncherWindow}
+            openingWindowKinds={openingWindowKinds}
+            active={!hidden}
+          />
+        )}
         {activeTabs.map((panelTab) => {
           const activeTab = panelTab.id === visibleActiveId;
+          if (panelTab.kind === PANEL_LAUNCHER_KIND) {
+            return (
+              <Slot
+                key={panelTab.id}
+                active={activeTab}
+                panelId={PANEL_LAUNCHER_KIND}
+                id={`${panelDomId}-body-${panelTab.id}`}
+                labelledBy={`${panelDomId}-tab-${panelTab.id}`}
+              >
+                <PanelLauncher
+                  entries={pickerPanels}
+                  onPick={addTab}
+                  onOpenWindow={openLauncherWindow}
+                  openingWindowKinds={openingWindowKinds}
+                  active={activeTab && !hidden}
+                  focusRequest={launcherFocusRequest}
+                />
+              </Slot>
+            );
+          }
           const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });
           const workspacePresentation = panelWorkspacePresentation(workspace);
           return (
@@ -510,11 +763,13 @@ function ResolvedPanelArea({
                     onRevealConsumed={onRevealConsumed}
                     openUrl={openUrl}
                     openCliSession={openCliSession}
+                    subagentSelection={subagentSelection}
                     onOpenCliSessionConsumed={onOpenCliSessionConsumed}
                     onAttachImage={onAttachImage}
                     onRemoveBrowserAnchor={onRemoveBrowserAnchor}
                     onUpdateBrowserAnchor={onUpdateBrowserAnchor}
                     builtinPanelAppHost={builtinPanelAppHost}
+                    onPanelAppStateChange={onPanelAppStateChange}
                   />
                 )}
               </DesktopPanelLifecycleBoundary>
@@ -530,55 +785,6 @@ function ResolvedPanelArea({
             </Slot>
           );
         })}
-      </div>
-    </div>
-  );
-}
-
-/** Empty-dock landing: a card grid to open one of the registered panels. */
-function PanelLanding({
-  entries,
-  onPick,
-}: {
-  entries: ReturnType<typeof getEnabledPanelEntries>;
-  onPick: (k: PanelTab) => void;
-}) {
-  const { t } = useT();
-  return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-muted/15 px-5 py-7">
-      <div className="mx-auto my-auto w-full max-w-lg">
-        <div className="mb-6">
-          <div className="mb-4 flex size-11 items-center justify-center rounded-2xl border border-border/80 bg-background text-primary shadow-sm">
-            <PanelsTopLeft className="size-5" />
-          </div>
-          <h2 className="text-base font-semibold tracking-tight text-foreground">
-            {t("panels.area.title")}
-          </h2>
-          <p className="mt-2 max-w-sm text-xs leading-relaxed text-muted-foreground">
-            {t("panels.area.landingHint")}
-          </p>
-        </div>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2.5">
-          {entries.map((entry) => {
-            const Icon = entry.icon;
-            return (
-              <Button
-                key={entry.key}
-                type="button"
-                onClick={() => onPick(entry.key)}
-                variant="outline"
-                className="group flex h-auto min-w-0 flex-col items-start gap-4 whitespace-normal rounded-xl bg-background px-4 py-4 text-left shadow-sm hover:border-primary/35 hover:bg-primary/5"
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
-                  <Icon className="size-4" />
-                </span>
-                <span className="break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]">
-                  {panelEntryTitle(entry, (key) => t(key as never))}
-                </span>
-              </Button>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
@@ -601,6 +807,7 @@ function PanelBody({
   onRevealConsumed,
   openUrl,
   openCliSession,
+  subagentSelection,
   onOpenCliSessionConsumed,
   engineSessionId,
   modelKey,
@@ -612,6 +819,7 @@ function PanelBody({
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
   builtinPanelAppHost,
+  onPanelAppStateChange,
 }: {
   tab: OpenTab;
   bucket: string;
@@ -629,6 +837,7 @@ function PanelBody({
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  subagentSelection?: SubagentSelection;
   onOpenCliSessionConsumed?: (nonce: number) => void;
   engineSessionId?: string | null;
   modelKey: string | null;
@@ -640,6 +849,7 @@ function PanelBody({
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
   builtinPanelAppHost?: DesktopBuiltinPanelAppHost;
+  onPanelAppStateChange?: PanelAppStateChange;
 }) {
   const entry = getPanelEntry(tab.kind, {
     projectPath,
@@ -674,6 +884,7 @@ function PanelBody({
     onRevealConsumed,
     openUrl,
     openCliSession,
+    subagentSelection,
     onOpenCliSessionConsumed,
     engineSessionId: engineSessionId ?? null,
     onAttachImage,
@@ -681,6 +892,7 @@ function PanelBody({
     onRemoveBrowserAnchor,
     onUpdateBrowserAnchor,
     builtinPanelAppHost,
+    onPanelAppStateChange,
   });
 }
 

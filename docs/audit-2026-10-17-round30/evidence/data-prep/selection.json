@@ -1,0 +1,45 @@
+{
+  "selectedUtc": "2026-10-17T11:41:59.577612+00:00",
+  "parentReportedWorkingContext": "Round29 branch b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0; prep before Round30 task branch",
+  "sourceMetadata": [
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-index.json",
+      "bytes": 1891704,
+      "sha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "lines": 193,
+      "firstFilesystemSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "coverageMetadataStatus": "current-sha-pin-only-no-semantic-coverage",
+      "intendedReadScope": "Full leaf source first; ordinary string/data producer and consumer ranges only after actual source inventory. No product execution.",
+      "semanticReadAtSelection": false,
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.ts",
+      "bytes": 811,
+      "lines": 29,
+      "firstFilesystemSha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+      "coverageMetadataStatus": "current-sha-pin-only-no-semantic-coverage",
+      "intendedReadScope": "Full leaf source first; ordinary string/data producer and consumer ranges only after actual source inventory. No product execution.",
+      "semanticReadAtSelection": false,
+      "gitBlobCompared": false
+    }
+  ],
+  "limits": [
+    "Selection from dated structured metadata only; pin-only/no-row is not historical unread proof.",
+    "Current files match inventory SHA; purity/ordinary contract not established by filename or regex. Read source statically before deciding.",
+    "No module/helper invocation, product/test/import/VM/native/network/model/Git action. Exclude old failed directions and current room/stop/runtime/output recovery."
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

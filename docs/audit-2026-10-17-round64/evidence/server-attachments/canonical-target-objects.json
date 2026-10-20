@@ -1,0 +1,54 @@
+{
+  "objects": [
+    {
+      "metadataPath": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+      "jsonPointer": "/files/2",
+      "originalObject": {
+        "path": "packages/server/src/image-byte-probe.ts",
+        "frozenSha256": "e744a050a06249ea20f04d6b0bdf37c00e9c317ec024341d1530214b8b0bd133",
+        "sha256": "e744a050a06249ea20f04d6b0bdf37c00e9c317ec024341d1530214b8b0bd133",
+        "frozenBytes": 12022,
+        "currentEqualsFrozen": true
+      }
+    },
+    {
+      "metadataPath": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+      "jsonPointer": "/files/3",
+      "originalObject": {
+        "path": "packages/server/src/attachment-service.ts",
+        "frozenSha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+        "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+        "frozenBytes": 27944,
+        "currentEqualsFrozen": true
+      }
+    },
+    {
+      "metadataPath": "docs/audit-2026-10-17-round17/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/2",
+      "originalObject": {
+        "path": "packages/server/src/client-message-id.ts",
+        "bytes": 257,
+        "sha256": "ed31c575dd7ee8c5b5cfa98d9476f39efa98b44bafc0df047e7aabc88f552f17",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "scope": "full source read; six actual pure helper tests in one first shard"
+      }
+    }
+  ],
+  "oldCandidate": {
+    "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+    "candidates": [
+      {
+        "id": "BYTES-R14-C1",
+        "title": "JPEG SOF3 识别与全局 DQT 前提可能不一致",
+        "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+        "file": "packages/server/src/image-byte-probe.ts",
+        "line": 119,
+        "report": "docs/audit-2026-10-17-round14/bytes.md",
+        "evidenceLevel": "Real pure probe rejection of self-built SOF3 marker sequence; format source read; candidate only",
+        "reason": "Recognized SOF set includes lossless SOF3, but EOI requires DQT independently of frame coding mode.",
+        "limits": "No independent pixel-decoder proof of sample validity or normal downstream lossless JPEG support/contract; no stage/upload/file/native/runtime/network/UI exercised. No severity or confirmed bug claim."
+      }
+    ]
+  }
+}

@@ -1,0 +1,230 @@
+{
+  "prepOnly": true,
+  "rootSuppliedContextShort": "42683054",
+  "formalBaseline": null,
+  "gitBindingPerformed": false,
+  "finishedAtUTC": "2026-10-17T13:39:03.667930+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+      "bytes": 3885,
+      "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "totalLines": 101,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          101
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 101,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+        "bytes": 3885,
+        "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+        "totalLines": 101,
+        "pinTimeUTC": "2026-10-17T13:36:33.501792+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeThisPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 3885,
+        "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+        "timeUTC": "2026-10-17T13:39:03.667930+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "bytes": 4376,
+      "sha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+      "totalLines": 107,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          107
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 107,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+        "bytes": 4376,
+        "sha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+        "totalLines": 107,
+        "pinTimeUTC": "2026-10-17T13:36:33.501792+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeThisPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 4376,
+        "sha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+        "timeUTC": "2026-10-17T13:39:03.667930+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+      "bytes": 48293,
+      "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+      "totalLines": 1237,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          237,
+          258
+        ],
+        [
+          571,
+          594
+        ],
+        [
+          1080,
+          1158
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        25,
+        317
+      ],
+      "declaredReadLineCount": 127,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+        "bytes": 48293,
+        "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+        "totalLines": 1237,
+        "pinTimeUTC": "2026-10-17T13:37:14.776159+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeThisPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 48293,
+        "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+        "timeUTC": "2026-10-17T13:39:03.667930+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+      "bytes": 3130,
+      "sha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "totalLines": 78,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          38,
+          66
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 29,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+        "bytes": 3130,
+        "sha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+        "totalLines": 78,
+        "pinTimeUTC": "2026-10-17T13:37:14.776159+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeThisPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 3130,
+        "sha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+        "timeUTC": "2026-10-17T13:39:03.667930+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+      "bytes": 21013,
+      "sha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+      "totalLines": 523,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          140,
+          150
+        ],
+        [
+          400,
+          409
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 21,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+        "bytes": 21013,
+        "sha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+        "totalLines": 523,
+        "pinTimeUTC": "2026-10-17T13:37:14.776159+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeThisPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 21013,
+        "sha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+        "timeUTC": "2026-10-17T13:39:03.667930+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    }
+  ],
+  "hashOnlyExcludedLeafFiles": [
+    {
+      "path": "packages/desktop/src/renderer/markdown/stripMarkdown.ts",
+      "bytes": 1799,
+      "sha256": "461ef4477c3a2b94d424a5f3dd9238d96603cdbe6b0a1d495b9c5490b4314881",
+      "totalLines": 53,
+      "pinTimeUTC": "2026-10-17T13:35:46.195742+00:00",
+      "coverage": "hash-only before current prep semantic read",
+      "currentSemanticReadLines": 0,
+      "exclusion": "Exact known R2-05 cause found before source reading; no retry/reopen"
+    }
+  ],
+  "instructionCarryForward": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "instruction carry-forward hash-only",
+      "newSemanticReadLines": 0,
+      "dedicatedBeforeCurrentPrepReadPin": null,
+      "hashCheckTimeUTC": "2026-10-17T13:39:03.667930+00:00",
+      "matchesPriorFullReadInstructionSha": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "instruction carry-forward hash-only",
+      "newSemanticReadLines": 0,
+      "dedicatedBeforeCurrentPrepReadPin": null,
+      "hashCheckTimeUTC": "2026-10-17T13:39:03.667930+00:00",
+      "matchesPriorFullReadInstructionSha": true
+    }
+  ],
+  "counts": {
+    "semanticProductTestPins": 5,
+    "fullPins": 2,
+    "selectedPins": 3,
+    "sourceReadLinesIncludingNavigation": 385,
+    "hashOnlyExcludedLeafPins": 1,
+    "existingTestDeclarationsRead": 13,
+    "testsExecuted": 0,
+    "newInstructionSemanticLines": 0
+  },
+  "allSemanticInitialFinishStable": true,
+  "coverageLimits": [
+    "Only projectOptions leaf and necessary ordinary display/select DTO consumer, current no-project predicate and locale label segments.",
+    "No unique first-ever semantic coverage claim; naming documents show prior attention even without a structured full source row.",
+    "No automation lifecycle, real project registry admission, backend project/root resolution, path canonicalization across all platforms, or any real UI action is audited.",
+    "Adjacent permission/type/identity field names visible in consumer source are not an authority or identity mechanism review."
+  ]
+}

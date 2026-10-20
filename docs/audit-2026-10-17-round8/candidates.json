@@ -1,0 +1,18 @@
+{
+  "baseline": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "count": 2,
+  "candidates": [
+    {
+      "id": "Q-R8-C1",
+      "report": "questions.md",
+      "status": "source-candidate-SKIP-contract-unproven",
+      "reason": "Mobile fixture import failed; hosts may ignore additive hints, no explicit Mobile multiSelect acceptance contract established."
+    },
+    {
+      "id": "Q-R8-C2",
+      "report": "questions.md",
+      "status": "source-candidate-SKIP-control-not-established",
+      "reason": "Batched and flushed TUI fixture cases both failed; no batch-specific observed defect. No timing repair/retry/alternate validation."
+    }
+  ]
+}

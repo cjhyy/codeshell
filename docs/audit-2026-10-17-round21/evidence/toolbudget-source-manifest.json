@@ -1,0 +1,143 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "files": [
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "frozenSha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "currentSha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "matchesFrozen": true,
+      "bytes": 6990,
+      "lineCount": 173,
+      "ranges": [
+        "1-173 (full source)"
+      ],
+      "kind": "actual runtime leaf, no mock/extraction"
+    },
+    {
+      "path": "packages/core/src/context/token-counter.ts",
+      "frozenSha256": "f11e4c6175922b1396f2eb622d6e98a62cfc63801c2cd96750339879b5f01328",
+      "currentSha256": "f11e4c6175922b1396f2eb622d6e98a62cfc63801c2cd96750339879b5f01328",
+      "matchesFrozen": true,
+      "bytes": 3978,
+      "lineCount": 133,
+      "ranges": [
+        "1-133 (full source)"
+      ],
+      "kind": "actual runtime dependency; only estimateStringTokens called by audit/helper, no provider tokenizer"
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.test.ts",
+      "frozenSha256": "3ca5e4ce83fbcc8e4a2d86b17ab46d16b09d36505abed8eb89228c4f95a44b5c",
+      "currentSha256": "3ca5e4ce83fbcc8e4a2d86b17ab46d16b09d36505abed8eb89228c4f95a44b5c",
+      "matchesFrozen": true,
+      "bytes": 6024,
+      "lineCount": 134,
+      "ranges": [
+        "1-134 (full source)"
+      ],
+      "kind": "existing 8 pure leaf tests; fixed default-cap CJK case about29k chars, no pressure/stress experiment"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "currentSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "matchesFrozen": true,
+      "bytes": 50794,
+      "lineCount": 1306,
+      "ranges": [
+        "1-120"
+      ],
+      "kind": "selected type-only ContentBlock/ToolResult contracts; runtime erased"
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "frozenSha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "currentSha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "matchesFrozen": true,
+      "bytes": 34508,
+      "lineCount": 867,
+      "ranges": [
+        "1-105",
+        "786-829",
+        "407 (call-site rg)",
+        "535 (call-site rg)",
+        "683 (call-site rg)"
+      ],
+      "kind": "selected ordinary default budget/caller static only; not imported"
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "frozenSha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "currentSha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "matchesFrozen": true,
+      "bytes": 43905,
+      "lineCount": 1184,
+      "ranges": [
+        "727-803"
+      ],
+      "kind": "selected ordinary aggregate backstop and positive600chars/200tokens budget static only; not imported"
+    },
+    {
+      "path": "packages/core/src/context/tool-result-storage.ts",
+      "frozenSha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+      "currentSha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+      "matchesFrozen": true,
+      "bytes": 19859,
+      "lineCount": 493,
+      "ranges": [
+        "180-220",
+        "330-420"
+      ],
+      "kind": "selected preview/persistence budget caller static only; not imported/no storage operation"
+    },
+    {
+      "path": "packages/core/src/context/tool-result-budget.test.ts",
+      "frozenSha256": "4828bc58f5cfa763f9981eefb58b27a6b574c84da2c3e96ba926f8053037da24",
+      "currentSha256": "4828bc58f5cfa763f9981eefb58b27a6b574c84da2c3e96ba926f8053037da24",
+      "matchesFrozen": true,
+      "bytes": 2673,
+      "lineCount": 60,
+      "ranges": [
+        "1-60 (full source)"
+      ],
+      "kind": "existing aggregate/old magic-200 regression static only; never imported or executed"
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-results.ts",
+      "frozenSha256": "48b3b032fa3ecd9d1938aa7c3d32ace779193ed7b5021c7797fe4306220786aa",
+      "currentSha256": "48b3b032fa3ecd9d1938aa7c3d32ace779193ed7b5021c7797fe4306220786aa",
+      "matchesFrozen": true,
+      "bytes": 3225,
+      "lineCount": 97,
+      "ranges": [
+        "1-97 (full source)"
+      ],
+      "kind": "auxiliary response shape inspection static only; no MCP import/network/size enforcement execution"
+    },
+    {
+      "path": "packages/core/src/tool-system/registry.ts",
+      "frozenSha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "currentSha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "matchesFrozen": true,
+      "bytes": 10363,
+      "lineCount": 296,
+      "ranges": [
+        "250-270"
+      ],
+      "kind": "selected contentBlocks forwarding static only; not imported or executed"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "frozenSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "currentSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesFrozen": true,
+      "bytes": 108774,
+      "lineCount": 2412,
+      "ranges": [
+        "240-260"
+      ],
+      "kind": "selected toolResultToBlock forwarding static only; not imported or executed"
+    }
+  ],
+  "limitations": "Only tool-output-budget and token-counter actual leaf logic execute. All other selected sources are static only; no ContextManager/compaction/storage/Engine/provider subsystem runtime coverage."
+}

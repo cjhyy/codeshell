@@ -1,0 +1,21 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts:
+(pass) round17 panel catalog pure projection > uses the connection id for the explicit default and the matching preset label [0.98ms]
+(pass) round17 panel catalog pure projection > keeps configured order and does not use an auxiliary default as the text default [0.05ms]
+(pass) round17 panel catalog pure projection > custom configured model ids need not be catalog presets [0.04ms]
+(pass) round17 panel catalog pure projection > non-text and missing catalog connections remain excluded [0.03ms]
+(pass) round17 panel catalog pure projection > retains the first repeated exact connection id [0.03ms]
+(pass) round17 panel catalog pure projection > candidate default: a configured text connection without defaults.text yields no default [0.53ms]
+(pass) round17 panel catalog pure projection > candidate default: a stale default yields no default while an exact default is retained [0.32ms]
+(pass) round17 panel catalog pure projection > candidate identity: the real UI helpers preserve a catalog id with surrounding spaces [0.14ms]
+(pass) round17 panel catalog pure projection > candidate identity control: an ordinary unpadded catalog id stays equal to its picker key
+(pass) round17 panel catalog pure projection > candidate identity: normalization can collapse two distinct configured ids [0.07ms]
+(pass) round17 panel catalog pure projection > candidate identity: a UI-created padded model value is rewritten before preset lookup [0.02ms]
+(pass) round17 panel catalog pure projection > ordinary Unicode labels and frozen inputs survive projection without mutation [0.06ms]
+
+ 12 pass
+ 0 fail
+ 36 expect() calls
+Ran 12 tests across 1 file. [59.00ms]
+Completed Bun shard: 12 tests, 0 skipped; 0 failures.

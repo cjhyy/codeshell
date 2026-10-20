@@ -1,0 +1,16 @@
+{
+  "capturedUTC": "2026-10-17T17:31:01.835622+00:00",
+  "targetExplicitSameSHAFullFound": false,
+  "exactObjectCompactViewsRead": 40,
+  "rawCanonicalAndOriginalObjectsRead": 7,
+  "distinctMDFilenameContextsRead": 2,
+  "canonicalLimits": "R28 inventory, R44 incidental/unknown, R50 original candidate/source row explicitly hash-only; no readScope/reviewMode/inspectionScope/full. R50 report scope-unconfirmed; mobile TODO is a suggestion to reuse module, no current full claim.",
+  "oldCause": {
+    "matches": 132,
+    "retained": 100,
+    "cap": 100,
+    "allContextsRead": false
+  },
+  "decision": "Continue ordinary bounded activity classification/count/label source and actual contracts. Unknown/no-row/pin-only not proof of never read.",
+  "firstEverReadClaimed": false
+}

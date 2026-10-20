@@ -1,0 +1,1 @@
+{"command": ["rg", "--files", "packages/core/src/model-catalog"], "exitCode": 0}

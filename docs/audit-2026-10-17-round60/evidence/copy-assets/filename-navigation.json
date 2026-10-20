@@ -1,0 +1,12 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "scripts"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "selectedFilenameOnly": [
+    "scripts/copy-assets.mjs"
+  ]
+}

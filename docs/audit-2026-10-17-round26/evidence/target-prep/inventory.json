@@ -1,0 +1,78 @@
+{
+  "readAtUTC": "2026-10-17T10:31:14.728550+00:00",
+  "actualReviewPaths": [
+    "packages/coding/src/review/review-target.test.ts",
+    "packages/coding/src/review/review-prompt.test.ts",
+    "packages/coding/src/review/review-prompt.ts",
+    "packages/coding/src/review/review-target.ts"
+  ],
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "readTimeFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "gitBlobVerified": false,
+      "scope": "inventory/hash only until explicit readScope in proposal"
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "bytes": 220,
+      "lines": 5,
+      "readTimeFilesystemSha256": "d48ac031afd8a3c9196d410d4029286ccae89eac7f9efdf0310758a3a6a291dc",
+      "gitBlobVerified": false,
+      "scope": "inventory/hash only until explicit readScope in proposal"
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "bytes": 6380,
+      "lines": 138,
+      "readTimeFilesystemSha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "gitBlobVerified": false,
+      "scope": "inventory/hash only until explicit readScope in proposal"
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.ts",
+      "bytes": 7390,
+      "lines": 151,
+      "readTimeFilesystemSha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "gitBlobVerified": false,
+      "scope": "inventory/hash only until explicit readScope in proposal"
+    },
+    {
+      "path": "packages/coding/src/review/review-target.test.ts",
+      "bytes": 12207,
+      "lines": 280,
+      "readTimeFilesystemSha256": "9f3e7b5cb180b6eb3e74c0fcc8a09f9a7bdd5f643bccab9d359388dd78e1ac80",
+      "gitBlobVerified": false,
+      "scope": "inventory/hash only until explicit readScope in proposal"
+    },
+    {
+      "path": "packages/coding/src/review/review-target.ts",
+      "bytes": 15379,
+      "lines": 406,
+      "readTimeFilesystemSha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "gitBlobVerified": false,
+      "scope": "inventory/hash only until explicit readScope in proposal"
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.ts",
+      "bytes": 14224,
+      "lines": 377,
+      "readTimeFilesystemSha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "gitBlobVerified": false,
+      "scope": "inventory/hash only until explicit readScope in proposal"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "bytes": 8173,
+      "lines": 262,
+      "readTimeFilesystemSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "gitBlobVerified": false,
+      "scope": "inventory/hash only until explicit readScope in proposal"
+    }
+  ],
+  "parentReportedCommitPrefix": "d9d2",
+  "gitCommandsExecuted": 0,
+  "gitBlobVerified": false
+}

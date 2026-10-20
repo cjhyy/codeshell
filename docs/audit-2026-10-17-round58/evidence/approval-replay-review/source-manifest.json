@@ -1,0 +1,925 @@
+{
+  "atUTC": "2026-10-17T19:25:55.385691+00:00",
+  "role": "Independent targeted nonblind source reviewer of existing APPROVAL-R141-C1, not runtime verifier",
+  "rootReportedBaselineOnly": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.ts",
+      "bytes": 2448,
+      "lines": 69,
+      "sha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "semanticLines": 69,
+      "displayedLineRanges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "knownCapturedDisplayLines": 69,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Cache observe/resolve/replay and explicit worker setter, directed overlap with frozen author141 full69; not new unique coverage.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "finishSha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lines": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1824,
+          1843
+        ],
+        [
+          2094,
+          2107
+        ],
+        [
+          2127,
+          2133
+        ],
+        [
+          6957,
+          6967
+        ]
+      ],
+      "semanticLines": 52,
+      "displayedLineRanges": [
+        [
+          1818,
+          1850
+        ],
+        [
+          2085,
+          2140
+        ],
+        [
+          6950,
+          6970
+        ]
+      ],
+      "knownCapturedDisplayLines": 110,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1818,
+          1823
+        ],
+        [
+          1844,
+          1850
+        ],
+        [
+          2085,
+          2093
+        ],
+        [
+          2108,
+          2126
+        ],
+        [
+          2134,
+          2140
+        ],
+        [
+          6950,
+          6956
+        ],
+        [
+          6968,
+          6970
+        ]
+      ],
+      "purpose": "Actual outbound/native/Pet sampling and unconditional normal-init Pet start; other Pet approval/OS/custody code only navigation.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "finishSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+      "bytes": 18225,
+      "lines": 434,
+      "sha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          124,
+          125
+        ],
+        [
+          245,
+          268
+        ],
+        [
+          332,
+          344
+        ],
+        [
+          366,
+          367
+        ]
+      ],
+      "semanticLines": 41,
+      "displayedLineRanges": [
+        [
+          100,
+          130
+        ],
+        [
+          245,
+          268
+        ],
+        [
+          328,
+          368
+        ]
+      ],
+      "knownCapturedDisplayLines": 96,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          100,
+          123
+        ],
+        [
+          126,
+          130
+        ],
+        [
+          328,
+          331
+        ],
+        [
+          345,
+          365
+        ],
+        [
+          368,
+          368
+        ]
+      ],
+      "purpose": "Local snapshot callback, direct cache replay/resolution and callback wiring. Authority, credentials and disk session lookup implementations excluded.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "finishSha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "bytes": 25666,
+      "lines": 666,
+      "sha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          236,
+          250
+        ],
+        [
+          282,
+          315
+        ],
+        [
+          567,
+          590
+        ]
+      ],
+      "semanticLines": 73,
+      "displayedLineRanges": [
+        [
+          233,
+          319
+        ],
+        [
+          563,
+          592
+        ]
+      ],
+      "knownCapturedDisplayLines": 117,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          233,
+          235
+        ],
+        [
+          251,
+          281
+        ],
+        [
+          316,
+          319
+        ],
+        [
+          563,
+          566
+        ],
+        [
+          591,
+          592
+        ]
+      ],
+      "purpose": "Normal session.select/sync replay path and recovery/external interception call boundaries; not complete authentication/permission enforcement.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "finishSha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/agent-bridge.ts",
+      "bytes": 102778,
+      "lines": 2648,
+      "sha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          435,
+          476
+        ],
+        [
+          478,
+          479
+        ],
+        [
+          1145,
+          1166
+        ],
+        [
+          1738,
+          1748
+        ],
+        [
+          1781,
+          1783
+        ],
+        [
+          1816,
+          1818
+        ],
+        [
+          2014,
+          2021
+        ],
+        [
+          2312,
+          2325
+        ],
+        [
+          2333,
+          2337
+        ]
+      ],
+      "semanticLines": 110,
+      "displayedLineRanges": [
+        [
+          420,
+          490
+        ],
+        [
+          1140,
+          1170
+        ],
+        [
+          1734,
+          1755
+        ],
+        [
+          1775,
+          1785
+        ],
+        [
+          1810,
+          1820
+        ],
+        [
+          2010,
+          2025
+        ],
+        [
+          2310,
+          2340
+        ]
+      ],
+      "knownCapturedDisplayLines": 193,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          420,
+          434
+        ],
+        [
+          477,
+          477
+        ],
+        [
+          480,
+          490
+        ],
+        [
+          1140,
+          1144
+        ],
+        [
+          1167,
+          1170
+        ],
+        [
+          1734,
+          1737
+        ],
+        [
+          1749,
+          1755
+        ],
+        [
+          1775,
+          1780
+        ],
+        [
+          1784,
+          1785
+        ],
+        [
+          1810,
+          1815
+        ],
+        [
+          1819,
+          1820
+        ],
+        [
+          2010,
+          2013
+        ],
+        [
+          2022,
+          2025
+        ],
+        [
+          2310,
+          2311
+        ],
+        [
+          2326,
+          2332
+        ],
+        [
+          2338,
+          2340
+        ]
+      ],
+      "purpose": "Exit/started callbacks, renderer/Pet publication, local snapshot/context and subscribe boundary. Core worker process/respawn, all observers and OS behavior not audited.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "finishSha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "bytes": 12268,
+      "lines": 321,
+      "sha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          189,
+          198
+        ],
+        [
+          245,
+          253
+        ],
+        [
+          272,
+          280
+        ]
+      ],
+      "semanticLines": 28,
+      "displayedLineRanges": [
+        [
+          189,
+          211
+        ],
+        [
+          240,
+          280
+        ]
+      ],
+      "knownCapturedDisplayLines": 64,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          199,
+          211
+        ],
+        [
+          240,
+          244
+        ],
+        [
+          254,
+          271
+        ]
+      ],
+      "purpose": "Existing socket object guard, raw notification dispatch and normal visible-page resync boundary, not connection/auth mechanism certification.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "finishSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "bytes": 73050,
+      "lines": 1831,
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          521,
+          533
+        ],
+        [
+          735,
+          753
+        ],
+        [
+          1251,
+          1289
+        ],
+        [
+          1291,
+          1295
+        ],
+        [
+          1349,
+          1378
+        ]
+      ],
+      "semanticLines": 106,
+      "displayedLineRanges": [
+        [
+          510,
+          545
+        ],
+        [
+          705,
+          775
+        ],
+        [
+          1251,
+          1310
+        ],
+        [
+          1340,
+          1378
+        ]
+      ],
+      "knownCapturedDisplayLines": 206,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          510,
+          520
+        ],
+        [
+          534,
+          545
+        ],
+        [
+          705,
+          734
+        ],
+        [
+          754,
+          775
+        ],
+        [
+          1290,
+          1290
+        ],
+        [
+          1296,
+          1310
+        ],
+        [
+          1340,
+          1348
+        ]
+      ],
+      "purpose": "Raw approval callback, selected epoch/terminal clearing and active-session resync; called approval helper/reducer internals not audited, no whole-client filtering absence claim.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "finishSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-im-decisions.ts",
+      "bytes": 12417,
+      "lines": 332,
+      "sha256": "a8e8009b08ad0e07666714c795fdc0c3bfda7bc1db460195fa8bd1f89c1756ef",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          121,
+          148
+        ],
+        [
+          156,
+          163
+        ]
+      ],
+      "semanticLines": 36,
+      "displayedLineRanges": [
+        [
+          100,
+          163
+        ]
+      ],
+      "knownCapturedDisplayLines": 64,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          100,
+          120
+        ],
+        [
+          149,
+          155
+        ]
+      ],
+      "purpose": "Options.read, start immediate tick + 5000ms interval and tick initial read; no IM send/approve/publish or timer execution.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "a8e8009b08ad0e07666714c795fdc0c3bfda7bc1db460195fa8bd1f89c1756ef",
+      "finishSha256": "a8e8009b08ad0e07666714c795fdc0c3bfda7bc1db460195fa8bd1f89c1756ef",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/output-recovery.ts",
+      "bytes": 10821,
+      "lines": 279,
+      "sha256": "1f8fafdb6d3a1fb0de0d9a5908e38c50ba1deb0e635622503739ab0c54ab35f9",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          138,
+          154
+        ],
+        [
+          174,
+          185
+        ]
+      ],
+      "semanticLines": 29,
+      "displayedLineRanges": [
+        [
+          1,
+          130
+        ],
+        [
+          138,
+          190
+        ]
+      ],
+      "knownCapturedDisplayLines": 183,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          130
+        ],
+        [
+          155,
+          173
+        ],
+        [
+          186,
+          190
+        ]
+      ],
+      "purpose": "Selected event classification and accepted recovery reply boundary. Earlier broad displayed mirror/authorization code is navigation only, not full authority/journal certification.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "1f8fafdb6d3a1fb0de0d9a5908e38c50ba1deb0e635622503739ab0c54ab35f9",
+      "finishSha256": "1f8fafdb6d3a1fb0de0d9a5908e38c50ba1deb0e635622503739ab0c54ab35f9",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/external-runtime-commands.ts",
+      "bytes": 10924,
+      "lines": 267,
+      "sha256": "7188cabf3ae2de925cb2caa26e345df97dc8d3037102635849abedf1d1c9ceff",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          9,
+          18
+        ],
+        [
+          56,
+          87
+        ],
+        [
+          91,
+          102
+        ]
+      ],
+      "semanticLines": 54,
+      "displayedLineRanges": [
+        [
+          1,
+          145
+        ]
+      ],
+      "knownCapturedDisplayLines": 145,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          8
+        ],
+        [
+          19,
+          55
+        ],
+        [
+          88,
+          90
+        ],
+        [
+          103,
+          145
+        ]
+      ],
+      "purpose": "Persisted native/external route classification and selection boundary; authority calls/real external runtime execution not audited.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "7188cabf3ae2de925cb2caa26e345df97dc8d3037102635849abedf1d1c9ceff",
+      "finishSha256": "7188cabf3ae2de925cb2caa26e345df97dc8d3037102635849abedf1d1c9ceff",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/SessionSnapshotStore.ts",
+      "bytes": 9305,
+      "lines": 234,
+      "sha256": "d4b3f3841058ef82c1d4320a0cbd7ee29fc4816a68cde667e264713fd6680dca",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          68,
+          68
+        ],
+        [
+          179,
+          205
+        ],
+        [
+          207,
+          217
+        ]
+      ],
+      "semanticLines": 39,
+      "displayedLineRanges": [
+        [
+          62,
+          74
+        ],
+        [
+          178,
+          225
+        ]
+      ],
+      "knownCapturedDisplayLines": 61,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          62,
+          67
+        ],
+        [
+          69,
+          74
+        ],
+        [
+          178,
+          178
+        ],
+        [
+          206,
+          206
+        ],
+        [
+          218,
+          225
+        ]
+      ],
+      "purpose": "Main-lifetime epoch, snapshot fields and onWorkerExit only marking owned run idle; persistence implementation excluded.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "d4b3f3841058ef82c1d4320a0cbd7ee29fc4816a68cde667e264713fd6680dca",
+      "finishSha256": "d4b3f3841058ef82c1d4320a0cbd7ee29fc4816a68cde667e264713fd6680dca",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "bytes": 51155,
+      "lines": 1175,
+      "sha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          966,
+          989
+        ],
+        [
+          1054,
+          1083
+        ]
+      ],
+      "semanticLines": 54,
+      "displayedLineRanges": [
+        [
+          963,
+          992
+        ],
+        [
+          1050,
+          1095
+        ]
+      ],
+      "knownCapturedDisplayLines": 76,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          963,
+          965
+        ],
+        [
+          990,
+          992
+        ],
+        [
+          1050,
+          1053
+        ],
+        [
+          1084,
+          1095
+        ]
+      ],
+      "purpose": "Native mount restore and worker lifecycle clear of renderer Core cards; not a proof of synchronous Main cache clearing or all native effects.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "finishSha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/pet/PetStateProvider.tsx",
+      "bytes": 39246,
+      "lines": 1070,
+      "sha256": "f12a0eefbebbcf8923940e0d3025d983023ca9a4a8b7d49b852ae5bc578c5c35",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          523,
+          532
+        ]
+      ],
+      "semanticLines": 10,
+      "displayedLineRanges": [
+        [
+          520,
+          544
+        ]
+      ],
+      "knownCapturedDisplayLines": 25,
+      "displayCountIsLowerBound": true,
+      "displayCoverageComplete": false,
+      "additionalNavigationSnippetLines": [],
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          520,
+          522
+        ],
+        [
+          533,
+          544
+        ]
+      ],
+      "purpose": "Existing renderer lifecycle callback applies worker-exit projection; no all-Pet callback guarantee.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "f12a0eefbebbcf8923940e0d3025d983023ca9a4a8b7d49b852ae5bc578c5c35",
+      "finishSha256": "f12a0eefbebbcf8923940e0d3025d983023ca9a4a8b7d49b852ae5bc578c5c35",
+      "finishMatchesInitial": true
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/desktop/src/main/mobile-remote/output-recovery-authority.ts",
+      "bytes": 5632,
+      "lines": 145,
+      "sha256": "9e0af19016596a3a43390aa07a16e77daca1b301fb7e6c8892e60ee3d2fb86ce",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "navigation-only",
+      "knownNavigationLines": [
+        20,
+        38,
+        105
+      ],
+      "bodyRead": false,
+      "purpose": "Only original rg snippets, not authority implementation review."
+    },
+    {
+      "path": "packages/desktop/src/main/main-output-publisher.ts",
+      "bytes": 5900,
+      "lines": 135,
+      "sha256": "1a6a7e7c1135664ed157305a66f7949e24589e1a86d4f19ae8db0431eb6ff737",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "navigation-only",
+      "knownNavigationLines": [
+        123
+      ],
+      "bodyRead": false,
+      "purpose": "Only original rg snippet, no publisher implementation audit."
+    }
+  ],
+  "instructionHashOnlyFiles": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructions": "Prior actual AGENTS5/CODESHELL217 reading carried under same SHA; no new semantic instruction read.",
+  "totals": {
+    "semanticFiles": 13,
+    "full": 1,
+    "selected": 12,
+    "productSemanticLines": 701,
+    "testDeclarationSemanticLines": 0,
+    "knownCapturedDisplayLineLowerBound": 1409,
+    "displayCoverageComplete": false,
+    "newUniqueCoverageClaim": false,
+    "navigationOnlyFiles": 2,
+    "instructionHashOnly": 2
+  },
+  "displayLimitation": "One broad navigation output was truncated. Only clear bounded body display ranges counted; navigation not exhaustively reconstructed. Counts are display lower bound, not complete displayed union. All selected semantic ranges were fully visible later.",
+  "coverageOverlap": "Author141 frozen pending file full69 and selected callers are prior overlap; original older canonical R10 describes setter/restore selected. Directed hypothesis reread is not new unique coverage.",
+  "mechanismLimits": "Permission/identity/native worker spawning/authority/journal custody/real connection correctness not certified."
+}

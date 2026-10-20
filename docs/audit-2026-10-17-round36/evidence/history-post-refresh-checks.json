@@ -1,0 +1,20 @@
+{
+  "inventoryFiles": 3263,
+  "changed": [
+    {
+      "before": {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "bytes": 177252,
+        "sha256": "6d6d93ccacf72a6c6a87555b660b81ee10ba1d389b323db97ccab27220876bbf"
+      },
+      "after": {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "bytes": 189803,
+        "sha256": "c8cdef20f7d9fcf62b330ef6167fea725d6738e511ac65bb6384c3a6d37842ba"
+      }
+    }
+  ],
+  "mainHead": "cecd79dc876da244bf7dd3277774e82d3d3866db",
+  "productRuns": 0,
+  "note": "Dated historical snapshot unchanged. Main refresh occurs after prior ending check; new release text is not silently substituted into old scan."
+}

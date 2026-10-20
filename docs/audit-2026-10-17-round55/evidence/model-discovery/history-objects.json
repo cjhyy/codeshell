@@ -1,0 +1,73 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "pointer": "/files/176",
+    "object": {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bytes": 3492,
+      "lines": 99,
+      "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/907",
+    "object": {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "rangeBoundsValidForCurrent": false,
+      "sourcePathIncludesLocator": false,
+      "origin": "list-scalar",
+      "claimId": "C000908"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/908",
+    "object": {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "rangeBoundsValidForCurrent": false,
+      "sourcePathIncludesLocator": false,
+      "origin": "object-scalar-field",
+      "claimId": "C000909"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "pointer": "/files/485",
+    "object": {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bytes": 3492,
+      "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "lines": 99,
+      "status": "historical-object-no-current-explicit-semantic-coverage",
+      "currentSelectedUnionLines": 0
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "pointer": "/files/485",
+    "object": {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bytes": 3492,
+      "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "lines": 99
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "pointer": "/files/485",
+    "object": {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bytes": 3492,
+      "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "lines": 99,
+      "initial49ShaMatches": true,
+      "blockedBy49EndingOverlay": false,
+      "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+    }
+  }
+]

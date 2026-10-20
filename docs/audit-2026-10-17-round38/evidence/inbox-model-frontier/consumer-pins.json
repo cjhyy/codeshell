@@ -1,0 +1,37 @@
+{
+  "capturedUTC": "2026-10-17T13:08:44.706311+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.test.ts",
+      "bytes": 10711,
+      "lineCount": 315,
+      "sha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "initialSemanticReadSha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "timing": "before source content lookup/read; filename locator only preceded pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx",
+      "bytes": 23775,
+      "lineCount": 597,
+      "sha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "initialSemanticReadSha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "timing": "before source content lookup/read; filename locator only preceded pin"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/hosts.md",
+      "bytes": 16168,
+      "lineCount": 84,
+      "sha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "initialSemanticReadSha256": null,
+      "timing": "history excerpt before dedicated pin; direct reading is subsequent"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-hosts-report.md",
+      "bytes": 15692,
+      "lineCount": 84,
+      "sha256": "978ee8e2c95fe68f2b7c45463b0e51d122df884ad590bdb95d2e70d90f594b32",
+      "initialSemanticReadSha256": null,
+      "timing": "history excerpt before dedicated pin; direct reading is subsequent"
+    }
+  ]
+}

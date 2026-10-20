@@ -1,0 +1,68 @@
+{
+  "exactShaQueries": [
+    {
+      "query": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "command": [
+        "rg",
+        "-l",
+        "-F",
+        "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+        "docs",
+        "bugs",
+        "-g",
+        "*.json"
+      ],
+      "exitCode": 0,
+      "files": [
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json"
+      ],
+      "stderr": "",
+      "scope": "Exact SHA filename navigation supplement to capped shared path hits; no semantic full inference."
+    },
+    {
+      "query": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "command": [
+        "rg",
+        "-l",
+        "-F",
+        "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+        "docs",
+        "bugs",
+        "-g",
+        "*.json"
+      ],
+      "exitCode": 0,
+      "files": [
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json"
+      ],
+      "stderr": "",
+      "scope": "Exact SHA filename navigation supplement to capped shared path hits; no semantic full inference."
+    }
+  ],
+  "round5MarkdownFilenames": {
+    "command": [
+      "rg",
+      "--files",
+      "docs/audit-2026-10-17-round5",
+      "-g",
+      "*.md"
+    ],
+    "exitCode": 0,
+    "stdout": "docs/audit-2026-10-17-round5/profile.md\ndocs/audit-2026-10-17-round5/integration-context.md\ndocs/audit-2026-10-17-round5/coverage.md\ndocs/audit-2026-10-17-round5/quality-profile.md\ndocs/audit-2026-10-17-round5/quality-prompt.md\ndocs/audit-2026-10-17-round5/README.md\ndocs/audit-2026-10-17-round5/chat-text.md\ndocs/audit-2026-10-17-round5/quality-root.md\ndocs/audit-2026-10-17-round5/root-web.md\ndocs/audit-2026-10-17-round5/prompt.md\ndocs/audit-2026-10-17-round5/candidates-and-skips.md\ndocs/audit-2026-10-17-round5/quality-chat.md\ndocs/audit-2026-10-17-round5/evidence/prompt-receipt-assembly-note.md\n",
+    "stderr": ""
+  }
+}

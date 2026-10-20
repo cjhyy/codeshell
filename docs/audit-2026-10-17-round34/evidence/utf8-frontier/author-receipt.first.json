@@ -1,0 +1,53 @@
+{
+  "selfExcluded": true,
+  "artifacts": [
+    {
+      "path": "consumer-initial-pin.json",
+      "bytes": 446,
+      "sha256": "f3b25c23a71c7d88ea83a645972ccbb67888c4455383acf6ef5c0fe90775ede0"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 2298,
+      "sha256": "71172901e852b404cab9fd2ba9154016674491b39d386ee0bef831666fea87c4"
+    },
+    {
+      "path": "external-sources.json",
+      "bytes": 1030,
+      "sha256": "b21055d33579d1ae016646bc9d447a1733077e57185577f2dba62329c390a334"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 646,
+      "sha256": "dd1f157a6d260148d89ed606dc38c2d90e29949b9f284c560e211ffe0b00ea17"
+    },
+    {
+      "path": "proposal.md",
+      "bytes": 2444,
+      "sha256": "6c7a4d8c46065ca5d8175766aeaa420d9c8e89e3eeff25130534a1a4ce66f4e7"
+    },
+    {
+      "path": "ring-initial-pin.json",
+      "bytes": 252,
+      "sha256": "0af819de1d107c886f8407ef30ba33183b199e0558aa8ee2d942a5b589a4e54d"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 3551,
+      "sha256": "034e393e24e10e759c6d3319f9c3c7842073ce99f7b1e110c322dcabf690a464"
+    },
+    {
+      "path": "tool-entry-initial-pin.json",
+      "bytes": 277,
+      "sha256": "7f4d8fb4af21576794fd38fbac03122d92fd27ea418d6cfc86d385e6dc561b62"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 136,
+      "sha256": "3265c767f2fa18917b74ecc540bdf092aab88c09c5a6bea44e1605d5c1f75f1c"
+    }
+  ],
+  "candidateCount": 1,
+  "formalCount": 0,
+  "productRuns": 0
+}

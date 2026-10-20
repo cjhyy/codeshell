@@ -1,0 +1,636 @@
+{
+  "capturedUTC": "2026-10-17T15:43:45.216338+00:00",
+  "historyPathSet": "history-initial-pins.json, same dated 4255 included files; no excluded/future material added",
+  "literalCasefoldedTerms": {
+    "old_tracker": [
+      "cost-r9-01"
+    ],
+    "context_scope": [
+      "cost-ledger/context",
+      "cost context",
+      "usage context"
+    ],
+    "old_budget": [
+      "budget-threshold",
+      "budget threshold",
+      "429错误",
+      "429 error"
+    ]
+  },
+  "capPerGroup": 100,
+  "totals": {
+    "old_tracker": 10,
+    "context_scope": 64,
+    "old_budget": 0
+  },
+  "retained": {
+    "old_tracker": 10,
+    "context_scope": 64,
+    "old_budget": 0
+  },
+  "jsonStringValues": 1765237,
+  "jsonScalarValues": 2662013,
+  "driftSinceInitial": [],
+  "parseErrors": [],
+  "hits": {
+    "old_tracker": [
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/root-dedup.json",
+        "jsonPointer": "/hits/addressed_old_sources/8/context",
+        "line": 6,
+        "needle": "cost-r9-01",
+        "context": "另保留 **1 个 API 契约候选**与 2 个未升级的附件静态观察。只记录，没有修产品；全仓持续审查仍未完成。\n\n| ID | 问题 | 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对",
+        "sha256": "d38307bd081e82a3acf8ddae2fcd725ca2dc794a02772d420b5a5b3352c745ef"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/README.md",
+        "jsonPointer": null,
+        "line": 107,
+        "needle": "cost-r9-01",
+        "context": "ngs.json) | 根项目不能匹配后代cwd |\n| P3 | [WEB-R8-02](../audit-2026-10-17-round8/findings.json) | image/jpg alias提前返回跳过客户端每图大小检查 |\n| P3 | [ATT-R9-01](../audit-2026-10-17-round9/findings.json) | 空格工作区中的完整产物路径被截断成错误附件路径 |\n| P3 | [COST-R9-01](../audit-2026-10-17-round9/findings.json) | 独立CostTracker记录丢失完整模型标识并采用错误估价 |\n| P3 | [SESSION-R9-01](../audit-2026-10-17-round9/findings.json) | 超工具调用上限的完成会话留下未配对持久化调用并阻断full fork |\n| P3 | [DIAG-R10-01](../audit-2026-10-17-round10/findings.json) | DOM bounded traversal eagerly enumerates complete child collections before queue cap |\n| P3 | [PET-R10-01](../audit-2026-10-17-round10/findings.json) | 并发搜索超过默认结果上限后静默丢行 |\n| P3 | [PET-R10-02](../audit-2026-10-17-round10/findings.json) | Unicode 小写扩长后 snippet 不含命中词 |\n| P3 | [CHAT-R11-01](../audit-2026",
+        "sha256": "6cc4f774436dd79b2beefbe05fa6397503ab3261579888c3fa13306cc37e3309"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/catalog-review/checks.json",
+        "jsonPointer": "/canonicalMetadataDocuments/8/idsInOriginalOrder/1",
+        "line": 1,
+        "needle": "cost-r9-01",
+        "context": "COST-R9-01",
+        "sha256": "f1b2c6d5f696ca5affb719c71e72e2c95488c1ab3a0cda128318ca106108a0bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+        "jsonPointer": "/findings/86/id",
+        "line": 1,
+        "needle": "cost-r9-01",
+        "context": "COST-R9-01",
+        "sha256": "6e9e8a286a6e07a1306e7d007bad8935f15e202a9d1e44878b9589b9a6cf6075"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/README.md",
+        "jsonPointer": null,
+        "line": 8,
+        "needle": "cost-r9-01",
+        "context": "另保留 **1 个 API 契约候选**与 2 个未升级的附件静态观察。只记录，没有修产品；全仓持续审查仍未完成。\n\n| ID | 问题 | 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对调用并阻断 full fork | 实际 Facade/TurnLoop/Transcript/SessionManager + fake client/executor；25 调用对照正常，排除 resume/send 必失败 |\n\n[工具目录报告](tools.md)保留同名 definition-only 注册继续使用旧 executor 的候选。fake executor 能复现组合，但没有“省略 executor 必须清理旧实现”的明确替换契约，当前所读生产调用又显式传 executor，所以不计为确认。附件 Windows 兼容、目录深度与 truncated 标志也仅作静态观察。\n\n**首次验证：9 个 clean guarded shards，123 pass、431 expect、0 fail、0 skipped；106 项既有 baseli",
+        "sha256": "2d4dfef0d761842c4a2cfc07e3941d8eeccfe0017ed8b0394f704dae42d38ede"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/cross-review-usage.md",
+        "jsonPointer": null,
+        "line": 3,
+        "needle": "cost-r9-01",
+        "context": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone record 后累计 token/cost 的 API。完整 ID 的支持不是从外部服务或潜在 TODO 推断出来的。\n\n实际实现先用完整 ID 检查 known，再在 `cost-tracker.ts:115` 仅保存 canonical 名称；`:148` 累计时重新按保存的名称定价。冻结 snapshot 的 `google/gemini-4-argon` input/output 正是 2",
+        "sha256": "938e496163ebc6bb421847619151e7389b3dafcfbc613f7f14a97ee59f22ee91"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "jsonPointer": "/assessment/confirmedNewRootCause",
+        "line": 1,
+        "needle": "cost-r9-01",
+        "context": "COST-R9-01 full OpenRouter identity lost after record: no matching earlier bug found. Keyword search is bounded record evidence, not semantic proof of exhaustive novelty.",
+        "sha256": "f150475dff2e64d60cc5c43970136372b133e2525af2c605ae45143a93758da2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-findings.json",
+        "jsonPointer": "/0/id",
+        "line": 1,
+        "needle": "cost-r9-01",
+        "context": "COST-R9-01",
+        "sha256": "ee0d491286fe68ed663717a64fafb8c4208056b2de0757b40f18720209f01d8a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/findings.json",
+        "jsonPointer": "/findings/1/id",
+        "line": 1,
+        "needle": "cost-r9-01",
+        "context": "COST-R9-01",
+        "sha256": "4f0210d1447e2c2d69d6b87eb484115e20134194eca4c01de0737e6e86abc389"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/usage.md",
+        "jsonPointer": null,
+        "line": 5,
+        "needle": "cost-r9-01",
+        "context": "# 统计数据与独立 CostTracker 审查\n\n冻结源：`248d091202869c07274adedf4fd50403105f1b1f`。本方向 **1 项确认 P3、0 个候选**。2 个首次 guarded shard 共 **28 pass、79 expect、0 fail、0 skipped**，其中新增 5 项，既有纯数据基线 23 项。只记录，不修产品。\n\n## COST-R9-01：独立 CostTracker 记录后丢失完整模型标识，累计估价错误（P3）\n\n`packages/core/src/cost-tracker.ts:115` 把 `record(model, ...)` 的完整标识替换成 canonical 名称。后续 `getEstimatedCost()`（`:148`）再按已截断的名称查价。完整 OpenRouter `vendor/model` 名称属于明确支持的输入：本模块 `:36–46` 说明完整标识优先查 snapshot，`data/model-metadata.ts:103–105` 说明此类名称从 snapshot 定价；`CostTracker` 仍在公共 SDK `index.ts:759` 导出。\n\n[实际 fixture](evidence/root-usage-contracts.test.ts) 使用冻结仓库自带 `openrouter-models.json` 的 `google/gemini-4-argon`，不改数据、不查外部价格。该条目 input/output 为 2/10，且 canonical 名称没有 direct metadata。对 1M input + 1M output，`estimateF",
+        "sha256": "bbf83d716fbf1c0b5c72cc89130bf2d389a9d1110faa8525d30a92975f93280e"
+      }
+    ],
+    "context_scope": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/203",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/789",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/176/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/361/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1610/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1610/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1611/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1611/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1612/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1612/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1613/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1613/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1614/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/1614/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/2848/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "jsonPointer": "/claims/3209/directSourcePathsInObject/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "jsonPointer": "/files/671/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "jsonPointer": "/files/671/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "jsonPointer": "/unknownPaths/622",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "jsonPointer": "/files/671/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+        "jsonPointer": "/files/16/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/540/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "sha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/540/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/607/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "sha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/607/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/609/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "sha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/609/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/619/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "sha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/619/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/692/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "sha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/692/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/694/specifier",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "../cost-ledger/context.js",
+        "sha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/694/resolved",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "jsonPointer": "/files/10/path",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "packages/core/src/cost-ledger/context.ts",
+        "sha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/6",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/context.ts",
+        "sha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+        "jsonPointer": "/modules/7/productionFiles/0",
+        "line": 1,
+        "needle": "cost-ledger/context",
+        "context": "cost-ledger/context.ts",
+        "sha256": "e633c7a607420e27750c2d2f2bba294a405728d93ddf6310c2aefa6e62634bb9"
+      }
+    ],
+    "old_budget": []
+  },
+  "notSemanticExhaustion": true,
+  "productAttempts": 0
+}

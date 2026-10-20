@@ -1,0 +1,40 @@
+{
+  "frozenSource": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "confirmed": 2,
+  "candidates": 1,
+  "cleanCompletedShards": 1,
+  "cleanTestsPassed": 7,
+  "cleanExpectCalls": 31,
+  "failedShards": 0,
+  "skippedTests": 0,
+  "shards": [
+    {
+      "fixture": "history-characterization.test.ts",
+      "firstRawLog": "history-characterization.first.log",
+      "firstExit": "history-characterization.first.exit.json",
+      "exitCode": 0,
+      "passes": 7,
+      "expectCalls": 31,
+      "kind": "focused ordinary history characterizations and pure helper controls"
+    }
+  ],
+  "existingTestsExecuted": 0,
+  "reruns": 0,
+  "productChanged": false,
+  "isolation": {
+    "environmentVariablesReassigned": [],
+    "homedirOverride": "node:os mock only homedir() returns mockedHome under owned mkdtemp root; other os exports preserved",
+    "realFilesystem": "owned temporary root only; removed after pending ticks drained",
+    "scope": "actual history module imports, actual fs, real nextTick; static UI consumer evidence only"
+  },
+  "notRun": [
+    "actual operator HOME/history",
+    "existing sensitive-command test",
+    "React/Ink/TUI/TTY/PTY",
+    "models/providers/network",
+    "native apps",
+    "full build/typecheck/lint/suite",
+    "disk history reload after undo"
+  ],
+  "metadataDiagnostic": "history-navigation-note.md"
+}

@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-10-17T16:57:39.994767+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "sha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "bytes": 10530,
+      "lines": 279,
+      "beforeCurrentLineNavigationAndBody": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "bytes": 37921,
+      "lines": 928,
+      "beforeCurrentLineNavigationAndBody": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "bytes": 93752,
+      "lines": 2479,
+      "beforeCurrentLineNavigationAndBody": true
+    }
+  ]
+}

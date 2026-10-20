@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { MessageSquarePlus, ChevronRight, ChevronDown, ExternalLink } from "lucide-react";
 import { parseUnifiedDiff, type DiffFile } from "./parseUnifiedDiff";
+import { groupReviewSnapshot } from "./reviewSnapshot";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
 import { openFileTarget } from "../chat/openWith";
@@ -88,6 +89,9 @@ function loadedFiles(
 }
 
 function absoluteReviewPath(repoRoot: string, file: string): string {
+  // Turn snapshots can name files in an external worktree. Their authoritative
+  // absolute target must not be reinterpreted under the current chat's cwd.
+  if (file.startsWith("/") || /^[A-Za-z]:[\\/]/.test(file) || file.startsWith("\\\\")) return file;
   const separator = repoRoot.includes("\\") ? "\\" : "/";
   return `${repoRoot.replace(/[\\/]+$/, "")}${separator}${file.replace(/^\.\//, "")}`;
 }
@@ -112,7 +116,7 @@ export function UnifiedDiffViewer({
     let cancelled = false;
     if (diffText !== undefined) {
       setDiff({
-        files: loadedFiles({ rootId: "snapshot", repoRoot: cwd }, diffText),
+        files: loadedFiles({ rootId: "snapshot", repoRoot: cwd }, groupReviewSnapshot(diffText)),
         errors: [],
       });
       setError(null);
@@ -230,15 +234,26 @@ export function UnifiedDiffViewer({
  *  single file. A per-line table past this size blocks the main thread. */
 const MAX_RENDERED_LINES = 2000;
 
-/** Keep whole files from the front of the diff until adding the next one would
- *  exceed the line budget. Always returns at least the first file so something
- *  shows. */
-function capFiles(diff: LoadedDiffFile[], budget: number): LoadedDiffFile[] {
+/** Keep the first files/lines within the budget, including a single file whose
+ * merged edit hunks exceed it. The source snapshot and stats stay complete. */
+export function capFiles(diff: LoadedDiffFile[], budget: number): LoadedDiffFile[] {
   const out: LoadedDiffFile[] = [];
   let used = 0;
   for (const loaded of diff) {
     const lines = loaded.file.hunks.reduce((m, h) => m + h.lines.length, 0);
-    if (out.length > 0 && used + lines > budget) break;
+    if (used >= budget) break;
+    if (used + lines > budget) {
+      let remaining = budget - used;
+      const hunks = [] as DiffFile["hunks"];
+      for (const hunk of loaded.file.hunks) {
+        if (remaining <= 0) break;
+        const kept = hunk.lines.slice(0, remaining);
+        hunks.push({ ...hunk, lines: kept });
+        remaining -= kept.length;
+      }
+      out.push({ ...loaded, file: { ...loaded.file, hunks } });
+      break;
+    }
     out.push(loaded);
     used += lines;
   }
@@ -352,7 +367,7 @@ function DiffFileBlock({
       </Button>
       {!collapsed &&
         file.hunks.map((h, i) => (
-          <div key={h.header || i} className="overflow-x-auto border-b last:border-b-0">
+          <div key={`${i}:${h.header}`} className="overflow-x-auto border-b last:border-b-0">
             <div className="border-b bg-muted/40 px-3 py-1 font-mono text-xs text-muted-foreground">
               {h.header}
             </div>

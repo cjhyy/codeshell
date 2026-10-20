@@ -1,0 +1,57 @@
+{
+  "createdAt": "2026-10-17T18:08:16.909149+00:00",
+  "purpose": "Original MD gate qualifiers only; no source body execution or new semantic product coverage",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round29/root-report.md",
+      "bytes": 3525,
+      "sha256": "70c60a8e2d4bc2117ff7ee637a9dce32cb23be606b71d007f872993f52b63aae",
+      "selectedLineRanges": [
+        [
+          5,
+          5
+        ]
+      ],
+      "selectedLines": [
+        {
+          "line": 5,
+          "text": "[outputCoverage.ts](../../packages/web/src/lib/outputCoverage.ts) 168行与 [mobileOutputRecovery.ts](../../packages/web/src/lib/mobileOutputRecovery.ts) 161行完整阅读。coverage 的有界输入集合溢出会保留 incomplete 屏障，copy 独立复制集合；带游标事件不会自行消除历史屏障。这里遇到的身份、epoch和journal字段仅静态核对，不做权限、身份、认证或持久化实验，也不声称已经验证整个协议。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/review-root-runtime.md",
+      "bytes": 6760,
+      "sha256": "f9b89fc25bc1adfa402c4dc2a10f231064ecdc77f88940e34738ff7a273313b6",
+      "selectedLineRanges": [
+        [
+          11,
+          11
+        ]
+      ],
+      "selectedLines": [
+        {
+          "line": 11,
+          "text": "- [outputCoverage.ts](../../../packages/web/src/lib/outputCoverage.ts) 全文 168 行：copy 新建实例并逐项复制输入 Set；128 条/32 KiB 上限触发 discard 后维持 overflow/incomplete。cursor 观察不清除旧 blocked barrier。这里只认可显式边界存在，没有实验 cursor、身份或 journal 协议。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/root-metadata.md",
+      "bytes": 4033,
+      "sha256": "85293596049364a1b941e7e68be4b393f2a97e2d7bca14776ce34aecd01b2e75",
+      "selectedLineRanges": [
+        [
+          11,
+          11
+        ]
+      ],
+      "selectedLines": [
+        {
+          "line": 11,
+          "text": "读取了 `packages/desktop/src/renderer/i18n/translate.ts`、`I18nProvider.tsx`、现有 translate/dict 测试、`uiLanguage.ts`、`dict.ts` 的 namespace 组装入口，以及 Web 的 `i18n/translate.ts`、`lib/uiLanguage.ts` 和 mobile 的选定条目。插值使用 callback 返回字面字符串，普通 `$` 替换 token 不会在这一层被再次解释；fallback 顺序从源码可见。没有据此断言所有文案、placeholder、组件 caller 或语言切换行为正确。"
+        }
+      ]
+    }
+  ]
+}

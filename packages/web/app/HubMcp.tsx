@@ -28,7 +28,80 @@ interface Props {
 type Save = (
   operation: (signal: AbortSignal) => Promise<HubMcpConfiguration>,
   message?: string,
+  onError?: (cause: unknown) => void,
 ) => Promise<boolean>;
+
+interface McpFocusLease {
+  source: HTMLElement;
+  cancelled: boolean;
+}
+
+/** Native disabling may leave BODY focused; an explicit handoff cancels recovery. */
+function useMcpOperationFocus() {
+  const live = React.useRef(false);
+  const leases = React.useRef(new Set<McpFocusLease>());
+  React.useLayoutEffect(() => {
+    live.current = true;
+    const handoff = (event: Event) => {
+      const target =
+        event instanceof FocusEvent && event.type === "focusout"
+          ? event.relatedTarget
+          : event.target;
+      if (!(target instanceof Node) || (target === document.body && event.type !== "pointerdown"))
+        return;
+      for (const lease of leases.current) {
+        if (!lease.source.contains(target)) lease.cancelled = true;
+      }
+    };
+    const blur = () => {
+      for (const lease of leases.current) lease.cancelled = true;
+    };
+    document.addEventListener("focusin", handoff, true);
+    document.addEventListener("focusout", handoff, true);
+    document.addEventListener("pointerdown", handoff, true);
+    window.addEventListener("blur", blur);
+    return () => {
+      live.current = false;
+      blur();
+      leases.current.clear();
+      document.removeEventListener("focusin", handoff, true);
+      document.removeEventListener("focusout", handoff, true);
+      document.removeEventListener("pointerdown", handoff, true);
+      window.removeEventListener("blur", blur);
+    };
+  }, []);
+  const capture = React.useCallback((scope: HTMLElement | null): McpFocusLease | null => {
+    const source = document.activeElement;
+    if (!(source instanceof HTMLElement) || source === document.body || !scope?.contains(source))
+      return null;
+    const lease = { source, cancelled: false };
+    leases.current.add(lease);
+    return lease;
+  }, []);
+  const discard = React.useCallback((lease: McpFocusLease | null) => {
+    if (!lease) return;
+    lease.cancelled = true;
+    leases.current.delete(lease);
+  }, []);
+  const finish = React.useCallback(
+    (lease: McpFocusLease | null, target: HTMLElement | null) => {
+      const active = document.activeElement;
+      const owned =
+        live.current &&
+        lease &&
+        !lease.cancelled &&
+        (active === document.body || active === lease.source || !active?.isConnected);
+      discard(lease);
+      if (owned && target?.isConnected && !target.matches(":disabled")) {
+        target.focus();
+        if (target.classList.contains("hub-mcp-operation-error"))
+          target.scrollIntoView({ block: "center", inline: "nearest" });
+      }
+    },
+    [discard],
+  );
+  return { capture, discard, finish };
+}
 const sourceLabels: Record<HubMcpServer["scope"], string> = {
   local: "工作区本地",
   project: "工作区配置",
@@ -72,6 +145,27 @@ export function HubMcp({
   const revision = React.useRef(0);
   const refreshQueued = React.useRef(false);
   const previousVersion = React.useRef(configurationVersion);
+  const focus = useMcpOperationFocus();
+  const scope = React.useRef<HTMLDivElement>(null);
+  const addButton = React.useRef<HTMLButtonElement>(null);
+  const searchInput = React.useRef<HTMLInputElement>(null);
+  const editorOpener = React.useRef<HTMLButtonElement | null>(null);
+  const editorOpenerName = React.useRef<string | null>(null);
+  const editButtons = React.useRef(new Map<string, HTMLButtonElement>());
+  const editorInitialFocus = React.useRef<McpFocusLease | null>(null);
+  const editorReturnFocus = React.useRef<McpFocusLease | null>(null);
+  const removeOpener = React.useRef<HTMLButtonElement | null>(null);
+  const removeInitialFocus = React.useRef<McpFocusLease | null>(null);
+  const removeReturnFocus = React.useRef<McpFocusLease | null>(null);
+  const cancelRemoval = React.useRef<HTMLButtonElement>(null);
+  const removalErrorRef = React.useRef<HTMLParagraphElement>(null);
+  const removalPending = React.useRef(false);
+  const [removalError, setRemovalError] = React.useState("");
+  const [removalFinished, setRemovalFinished] = React.useState<{
+    lease: McpFocusLease | null;
+    name: string;
+    ok: boolean;
+  } | null>(null);
 
   React.useEffect(() => {
     callbacks.current.onDirtyChange?.(draftDirty || busy);
@@ -129,7 +223,11 @@ export function HubMcp({
     return () => controller.abort();
   }, [reload, report]);
 
-  const save: Save = async (operation, message = "MCP 设置已保存，任务进程会加载新的配置。") => {
+  const save: Save = async (
+    operation,
+    message = "MCP 设置已保存，任务进程会加载新的配置。",
+    onError,
+  ) => {
     if (writeController.current || probeController.current) return false;
     readController.current?.abort();
     const current = ++revision.current;
@@ -149,7 +247,10 @@ export function HubMcp({
       callbacks.current.onConfigurationChange?.();
       return true;
     } catch (cause) {
-      if (mounted.current && !controller.signal.aborted) report(cause);
+      if (mounted.current && !controller.signal.aborted) {
+        if (onError && !(cause instanceof ApiError && cause.status === 401)) onError(cause);
+        else report(cause);
+      }
       return false;
     } finally {
       if (writeController.current === controller) writeController.current = null;
@@ -157,6 +258,7 @@ export function HubMcp({
         setBusy(false);
         if (refreshQueued.current) {
           refreshQueued.current = false;
+          setLoading(true);
           setReload((value) => value + 1);
         }
       }
@@ -217,6 +319,78 @@ export function HubMcp({
     }
   };
   const disabled = busy || loading || probing !== null;
+  React.useEffect(() => {
+    if (
+      deleting &&
+      configuration &&
+      !configuration.servers.some((server) => server.name === deleting)
+    )
+      setDeleting(null);
+  }, [configuration, deleting]);
+  React.useLayoutEffect(() => {
+    if (disabled) return;
+    if (editing === null && editorReturnFocus.current) {
+      const target = editorOpener.current?.isConnected
+        ? editorOpener.current
+        : editorOpenerName.current
+          ? editButtons.current.get(editorOpenerName.current)
+          : null;
+      focus.finish(
+        editorReturnFocus.current,
+        target?.isConnected && !target.disabled
+          ? target
+          : (addButton.current ?? searchInput.current),
+      );
+      editorReturnFocus.current = null;
+    }
+    if (deleting && removeInitialFocus.current) {
+      focus.finish(removeInitialFocus.current, cancelRemoval.current);
+      removeInitialFocus.current = null;
+    }
+    if (!deleting && removeReturnFocus.current) {
+      const target = removeOpener.current;
+      focus.finish(
+        removeReturnFocus.current,
+        target?.isConnected && !target.disabled ? target : searchInput.current,
+      );
+      removeReturnFocus.current = null;
+    }
+    if (removalFinished) {
+      const targetGone = !configuration?.servers.some(
+        (server) => server.name === removalFinished.name,
+      );
+      // A queued refresh can remove the old card. Let its confirmation cleanup
+      // mount the local receipt before consuming this operation's focus lease.
+      if (!removalFinished.ok && targetGone && deleting === removalFinished.name) return;
+      setRemovalFinished(null);
+      removalPending.current = false;
+      if (deleting !== removalFinished.name && !(targetGone && deleting === null))
+        focus.discard(removalFinished.lease);
+      else if (removalFinished.ok) {
+        removeReturnFocus.current = removalFinished.lease;
+        setDeleting(null);
+      } else
+        focus.finish(
+          removalFinished.lease,
+          removalErrorRef.current ?? cancelRemoval.current ?? searchInput.current,
+        );
+    }
+  }, [configuration, deleting, disabled, editing, focus, removalFinished]);
+  const openEditor = (next: NonNullable<typeof editing>, opener: HTMLButtonElement) => {
+    editorOpener.current = opener;
+    editorOpenerName.current = next.kind === "edit" ? next.name : null;
+    focus.discard(editorInitialFocus.current);
+    editorInitialFocus.current = focus.capture(scope.current);
+    setEditing(next);
+  };
+  const closeEditor = (lease: McpFocusLease | null) => {
+    editorReturnFocus.current = lease;
+    setEditing(null);
+  };
+  const editorReady = (target: HTMLElement | null) => {
+    focus.finish(editorInitialFocus.current, target);
+    editorInitialFocus.current = null;
+  };
   const needle = query.trim().toLocaleLowerCase();
   const available = [...(configuration?.servers ?? [])];
   // An external deletion must not unmount an editor and discard unsaved secret fields.
@@ -232,11 +406,12 @@ export function HubMcp({
     editing?.kind === "edit" ? available.find((server) => server.name === editing.name) : undefined;
 
   return (
-    <div className="hub-mcp">
+    <div ref={scope} className="hub-mcp">
       <div className="config-section-heading hub-mcp-toolbar">
         <label className="config-search">
           <span aria-hidden="true">⌕</span>
           <input
+            ref={searchInput}
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -253,9 +428,10 @@ export function HubMcp({
             刷新 MCP
           </button>
           <button
+            ref={addButton}
             className="config-button"
             disabled={disabled || editing !== null}
-            onClick={() => setEditing({ kind: "new" })}
+            onClick={(event) => openEditor({ kind: "new" }, event.currentTarget)}
           >
             ＋ 添加服务
           </button>
@@ -264,6 +440,17 @@ export function HubMcp({
       {error && (
         <p className="config-message config-error" role="alert">
           {error}
+        </p>
+      )}
+      {!deleting && removalError && (
+        <p
+          ref={removalErrorRef}
+          className="config-message config-error hub-mcp-operation-error"
+          role="alert"
+          tabIndex={0}
+          aria-label="移除 MCP 服务失败"
+        >
+          {removalError}
         </p>
       )}
       {notice && (
@@ -287,7 +474,9 @@ export function HubMcp({
           <McpEditor
             disabled={disabled}
             save={save}
-            onDone={() => setEditing(null)}
+            focus={focus}
+            onReady={editorReady}
+            onDone={closeEditor}
             onProbe={(name) => void probe(name)}
             onDirtyChange={setDraftDirty}
           />
@@ -342,7 +531,9 @@ export function HubMcp({
                 server={edited}
                 disabled={disabled}
                 save={save}
-                onDone={() => setEditing(null)}
+                focus={focus}
+                onReady={editorReady}
+                onDone={closeEditor}
                 onProbe={(name) => void probe(name)}
                 onDirtyChange={setDraftDirty}
               />
@@ -390,11 +581,18 @@ export function HubMcp({
                   )}
                   {server.editable && (
                     <button
+                      ref={(node) => {
+                        if (node) editButtons.current.set(server.name, node);
+                        else editButtons.current.delete(server.name);
+                      }}
                       className="config-button config-button-quiet"
                       disabled={disabled || editing !== null}
-                      onClick={() => {
+                      onClick={(event) => {
                         setDeleting(null);
-                        setEditing({ kind: "edit", name: server.name, original: server });
+                        openEditor(
+                          { kind: "edit", name: server.name, original: server },
+                          event.currentTarget,
+                        );
                       }}
                     >
                       编辑
@@ -418,20 +616,41 @@ export function HubMcp({
                     <button
                       className="config-button config-button-quiet hub-mcp-remove"
                       disabled={disabled || editing !== null}
-                      onClick={() => setDeleting(server.name)}
+                      onClick={(event) => {
+                        removeOpener.current = event.currentTarget;
+                        removeInitialFocus.current = focus.capture(scope.current);
+                        setRemovalError("");
+                        setDeleting(server.name);
+                      }}
                     >
                       移除
                     </button>
                   )}
                 </div>
                 {deleting === server.name && (
-                  <div className="hub-mcp-delete" role="alert">
+                  <div className="hub-mcp-delete" role={removalError ? undefined : "alert"}>
                     <span>从当前工作区移除 {server.name}？其他工作区的配置不受影响。</span>
+                    {removalError && (
+                      <p
+                        ref={removalErrorRef}
+                        className="config-message config-error hub-mcp-operation-error"
+                        role="alert"
+                        tabIndex={0}
+                        aria-label="移除 MCP 服务失败"
+                      >
+                        {removalError}
+                      </p>
+                    )}
                     <div>
                       <button
+                        ref={cancelRemoval}
                         className="config-button config-button-quiet"
                         disabled={disabled}
-                        onClick={() => setDeleting(null)}
+                        onClick={() => {
+                          removeReturnFocus.current = focus.capture(scope.current);
+                          setDeleting(null);
+                          setRemovalError("");
+                        }}
                       >
                         取消
                       </button>
@@ -439,13 +658,19 @@ export function HubMcp({
                         className="config-button hub-mcp-remove"
                         disabled={disabled}
                         onClick={async () => {
-                          if (
-                            await save(
-                              (signal) => deleteMcpServer(server.name, signal),
-                              "已从当前工作区移除服务。",
-                            )
-                          )
-                            setDeleting(null);
+                          if (disabled || removalPending.current) return;
+                          removalPending.current = true;
+                          const lease = focus.capture(scope.current);
+                          setRemovalError("");
+                          const ok = await save(
+                            (signal) => deleteMcpServer(server.name, signal),
+                            "已从当前工作区移除服务。",
+                            (cause) =>
+                              setRemovalError(
+                                cause instanceof Error ? cause.message : "MCP 操作失败，请重试。",
+                              ),
+                          );
+                          if (mounted.current) setRemovalFinished({ lease, name: server.name, ok });
                         }}
                       >
                         确认移除
@@ -498,6 +723,8 @@ function McpEditor({
   server,
   disabled,
   save,
+  focus,
+  onReady,
   onDone,
   onProbe,
   onDirtyChange,
@@ -505,12 +732,33 @@ function McpEditor({
   server?: HubMcpServer;
   disabled: boolean;
   save: Save;
-  onDone: () => void;
+  focus: ReturnType<typeof useMcpOperationFocus>;
+  onReady: (target: HTMLElement | null) => void;
+  onDone: (lease: McpFocusLease | null) => void;
   onProbe: (name: string) => void;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   // Preserve the editing baseline across external refreshes so untouched fields never overwrite another device's changes.
   const original = React.useRef(server).current;
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const nameRef = React.useRef<HTMLInputElement>(null);
+  const commandRef = React.useRef<HTMLInputElement>(null);
+  const urlRef = React.useRef<HTMLInputElement>(null);
+  const errorRef = React.useRef<HTMLParagraphElement>(null);
+  const live = React.useRef(false);
+  const pending = React.useRef(false);
+  const [finished, setFinished] = React.useState<{
+    lease: McpFocusLease | null;
+    ok: boolean;
+    testAfter: boolean;
+  } | null>(null);
+  React.useLayoutEffect(() => {
+    live.current = true;
+    onReady(original ? (commandRef.current ?? urlRef.current) : nameRef.current);
+    return () => {
+      live.current = false;
+    };
+  }, []);
   const [draft, setDraft] = React.useState(() => makeMcpDraft(original));
   const baseline = React.useRef(JSON.stringify(draft)).current;
   const dirty = JSON.stringify(draft) !== baseline;
@@ -523,21 +771,47 @@ function McpEditor({
     setDraft((previous) => ({ ...previous, [field]: value }));
   const reuse = needsMcpSecretReuse(draft, original);
   const stdio = draft.transport === "stdio";
+  React.useLayoutEffect(() => {
+    if (disabled || !finished) return;
+    setFinished(null);
+    pending.current = false;
+    if (finished.ok) {
+      onDone(finished.lease);
+      if (finished.testAfter) onProbe(draft.name.trim());
+    } else
+      focus.finish(
+        finished.lease,
+        errorRef.current ?? commandRef.current ?? urlRef.current ?? nameRef.current,
+      );
+  }, [disabled, draft.name, finished, focus, onDone, onProbe]);
   return (
     <form
+      ref={formRef}
       className="hub-mcp-editor"
       onSubmit={async (event) => {
         event.preventDefault();
+        if (disabled || pending.current) return;
+        pending.current = true;
+        const lease = focus.capture(formRef.current);
         setError("");
         const testAfter =
           (event.nativeEvent as SubmitEvent).submitter?.getAttribute("data-probe") === "true";
         try {
-          if (await save((signal) => saveMcpServer(draft, original, signal))) {
-            onDone();
-            if (testAfter) onProbe(draft.name.trim());
-          }
+          const ok = await save(
+            (signal) => saveMcpServer(draft, original, signal),
+            undefined,
+            (cause) => {
+              if (live.current)
+                setError(cause instanceof Error ? cause.message : "请检查填写内容。");
+            },
+          );
+          if (live.current) setFinished({ lease, ok, testAfter });
+          else focus.discard(lease);
         } catch (cause) {
-          setError(cause instanceof Error ? cause.message : "请检查填写内容。");
+          if (live.current) {
+            setError(cause instanceof Error ? cause.message : "请检查填写内容。");
+            setFinished({ lease, ok: false, testAfter });
+          } else focus.discard(lease);
         }
       }}
     >
@@ -549,6 +823,7 @@ function McpEditor({
           <label>
             <span>服务名称</span>
             <input
+              ref={nameRef}
               required
               readOnly={!!original}
               maxLength={128}
@@ -575,6 +850,7 @@ function McpEditor({
               <label className="config-full-width">
                 <span>启动命令</span>
                 <input
+                  ref={commandRef}
                   required
                   aria-label="启动命令"
                   value={draft.command}
@@ -616,6 +892,7 @@ function McpEditor({
             <label className="config-full-width">
               <span>MCP 接口地址</span>
               <input
+                ref={urlRef}
                 type="url"
                 aria-label="MCP 接口地址"
                 required
@@ -739,12 +1016,22 @@ function McpEditor({
           </label>
         )}
         {error && (
-          <p className="config-error config-message" role="alert">
+          <p
+            ref={errorRef}
+            className="config-error config-message hub-mcp-operation-error"
+            role="alert"
+            tabIndex={0}
+            aria-label="保存 MCP 配置失败"
+          >
             {error}
           </p>
         )}
         <div className="config-form-actions">
-          <button type="button" className="config-button config-button-quiet" onClick={onDone}>
+          <button
+            type="button"
+            className="config-button config-button-quiet"
+            onClick={() => onDone(focus.capture(formRef.current))}
+          >
             取消
           </button>
           <button type="submit" data-probe="true" className="config-button">

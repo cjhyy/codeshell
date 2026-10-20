@@ -1,0 +1,16 @@
+{
+  "capturedUTC": "2026-10-17T17:01:08.732086+00:00",
+  "toolChunk": "2f7ff0",
+  "kind": "Metadata display truncation",
+  "exitCode": 0,
+  "originalTokenCount": 18240,
+  "maxOutputTokens": 8000,
+  "sourceBodyHadNotBeenRead": true,
+  "retainedInputArtifactsUnmodified": [
+    "history.json",
+    "history-contexts.json",
+    "coverage-gate-objects.json",
+    "old-cause-focused-windows.json"
+  ],
+  "correction": "Do not claim all37 selected windows were read from truncated display. Use separate bounded exact follow-up queries and small outputs. Not a product or fixture failure."
+}

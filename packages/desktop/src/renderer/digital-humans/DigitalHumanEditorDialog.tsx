@@ -44,6 +44,7 @@ import {
 } from "./types";
 import { DigitalHumanRequirementsEditor } from "./DigitalHumanRequirementsEditor";
 import { parseSourceAccessDraft } from "./sourceAccessEditor";
+import { useDialogFocus } from "../ui/useDialogFocus";
 import {
   normalizeDigitalHumanRequirements,
   replaceDigitalHumanSkillSourceDraft,
@@ -71,6 +72,7 @@ function CharacterCount({ value, max }: { value: string; max: number }) {
 
 interface Props {
   open: boolean;
+  opener?: HTMLElement | null;
   profile?: DigitalHumanProfileEntry;
   existingIds: string[];
   skills: DigitalHumanSkillEntry[];
@@ -88,6 +90,7 @@ interface Props {
 
 export function DigitalHumanEditorDialog({
   open,
+  opener,
   profile,
   existingIds,
   skills,
@@ -100,7 +103,10 @@ export function DigitalHumanEditorDialog({
   onSave,
 }: Props) {
   const { t } = useT();
-  const confirm = useConfirm();
+  const dialogFocus = useDialogFocus(open, opener);
+  const confirmDialog = useConfirm();
+  const confirm: typeof confirmDialog = (options) =>
+    dialogFocus.withNestedFocus(() => confirmDialog(options));
   const toast = useToast();
   const [id, setId] = React.useState("");
   const [label, setLabel] = React.useState("");
@@ -534,29 +540,43 @@ export function DigitalHumanEditorDialog({
   return (
     <Dialog open={open} onOpenChange={requestClose}>
       <DialogContent
-        className="flex max-h-[90vh] max-w-4xl flex-col gap-0 overflow-y-auto p-0"
-        showClose={!operationBusy}
+        ref={dialogFocus.contentRef}
+        data-dialog-focus-owner={dialogFocus.focusOwnerId}
+        onCloseAutoFocus={dialogFocus.onCloseAutoFocus}
+        className="flex h-[min(48rem,90dvh,calc(100dvh-2rem))] max-h-[calc(100dvh-2rem)] min-w-0 max-w-4xl flex-col gap-0 overflow-hidden p-0"
+        showClose={false}
       >
-        <DialogHeader className="shrink-0 border-b border-border/70 bg-muted/25 px-6 py-5 pr-12">
-          <div className="flex items-start gap-3.5">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-sm font-semibold text-primary shadow-sm">
+        <DialogHeader className="shrink-0 flex-row items-start justify-between gap-3 space-y-0 border-b border-border/70 bg-muted/25 px-6 py-5 [@media(max-height:32rem)]:px-4 [@media(max-height:32rem)]:py-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3.5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-sm font-semibold text-primary shadow-sm [@media(max-height:32rem)]:hidden">
               {previewInitials}
             </span>
             <div className="min-w-0">
-              <DialogTitle className="text-xl">
+              <DialogTitle className="text-xl [@media(max-height:32rem)]:text-base [@media(max-height:32rem)]:leading-6">
                 {profile
                   ? t("digitalHumans.editor.titleEdit")
                   : t("digitalHumans.editor.titleCreate")}
               </DialogTitle>
-              <DialogDescription className="mt-1.5 max-w-2xl leading-5">
+              <DialogDescription className="mt-1.5 max-w-2xl leading-5 [@media(max-height:32rem)]:sr-only">
                 {t("digitalHumans.editor.description")}
               </DialogDescription>
             </div>
           </div>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8 shrink-0"
+            aria-label={t("digitalHumans.close")}
+            aria-disabled={operationBusy}
+            onClick={() => requestClose(false)}
+          >
+            <X size={16} aria-hidden="true" />
+          </Button>
         </DialogHeader>
 
         <form
-          className="flex min-h-64 flex-1 flex-col"
+          className="flex min-h-0 flex-1 flex-col"
           onSubmit={(event) => {
             event.preventDefault();
             submit();
@@ -564,7 +584,8 @@ export function DigitalHumanEditorDialog({
         >
           <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[210px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
             <nav
-              className="min-h-0 overflow-y-auto border-b border-border/70 bg-muted/15 p-3 md:border-b-0 md:border-r md:p-4"
+              data-dialog-scroll
+              className="min-h-0 overflow-y-auto border-b border-border/70 bg-muted/15 p-3 md:border-b-0 md:border-r md:p-4 [@media(max-height:32rem)]:p-1.5"
               aria-label={t("digitalHumans.editor.navigationLabel")}
             >
               <div className="grid grid-cols-4 gap-1 md:flex md:flex-col">
@@ -573,7 +594,7 @@ export function DigitalHumanEditorDialog({
                     key={item.id}
                     type="button"
                     className={cn(
-                      "group flex min-w-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors",
+                      "group flex min-w-0 flex-col items-center gap-1 rounded-lg px-1 py-1.5 text-center transition-colors md:flex-row md:gap-2.5 md:px-3 md:py-2.5 md:text-left",
                       section === item.id
                         ? "bg-primary/10 text-foreground shadow-[inset_0_0_0_1px_hsl(var(--cs-primary)/0.12)]"
                         : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -583,14 +604,16 @@ export function DigitalHumanEditorDialog({
                   >
                     <span
                       className={cn(
-                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border/70 bg-background",
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border/70 bg-background [@media(max-height:32rem)]:hidden",
                         section === item.id && "border-primary/20 text-primary",
                       )}
                     >
                       <item.Icon size={14} aria-hidden="true" />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-medium">{item.title}</span>
+                    <span className="w-full min-w-0 md:flex-1">
+                      <span className="block truncate text-[10px] font-medium md:text-xs">
+                        {item.title}
+                      </span>
                       <span className="mt-0.5 hidden truncate text-[10px] text-muted-foreground md:block">
                         {item.complete
                           ? t("digitalHumans.editor.sectionComplete")
@@ -633,7 +656,20 @@ export function DigitalHumanEditorDialog({
               </div>
             </nav>
 
-            <div className="min-h-0 overflow-y-auto p-5 sm:p-6">
+            <div
+              data-dialog-scroll
+              role="region"
+              tabIndex={0}
+              aria-label={
+                profile
+                  ? t("digitalHumans.editor.titleEdit")
+                  : t("digitalHumans.editor.titleCreate")
+              }
+              className="min-h-0 min-w-0 overflow-y-auto overscroll-contain p-5 sm:p-6 [@media(max-height:32rem)]:p-2 [@media(max-height:32rem)]:[container-type:size] [@media(max-height:32rem)]:[&_textarea]:min-h-0 [@media(max-height:32rem)]:[&_textarea]:max-h-[max(3rem,65cqh)]"
+            >
+              <p className="mb-4 hidden text-xs leading-5 text-muted-foreground [@media(max-height:32rem)]:block">
+                {t("digitalHumans.editor.description")}
+              </p>
               {section === "identity" ? (
                 <section className="mx-auto max-w-2xl space-y-5">
                   <EditorSectionHeader
@@ -989,7 +1025,10 @@ export function DigitalHumanEditorDialog({
                         {t("digitalHumans.editor.noSkills")}
                       </div>
                     ) : (
-                      <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                      <div
+                        data-dialog-scroll
+                        className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2"
+                      >
                         {visibleSkills.map((skill) => {
                           const selected = selectedSkills.has(skill.name);
                           const missing = missingSkillNameSet.has(skill.name);
@@ -1184,13 +1223,13 @@ export function DigitalHumanEditorDialog({
             </div>
           </div>
 
-          <DialogFooter className="shrink-0 border-t border-border/70 bg-background px-5 py-3.5 sm:items-center sm:justify-between sm:px-6">
+          <DialogFooter className="shrink-0 border-t border-border/70 bg-background px-5 py-3.5 sm:items-center sm:justify-between sm:px-6 [@media(max-height:32rem)]:px-3 [@media(max-height:32rem)]:py-2">
             <p className="hidden text-xs text-muted-foreground sm:block">
               {dirty
                 ? t("digitalHumans.editor.unsavedChanges")
                 : t("digitalHumans.editor.allChangesSaved")}
             </p>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -1199,7 +1238,13 @@ export function DigitalHumanEditorDialog({
               >
                 {t("common.cancel")}
               </Button>
-              <Button type="submit" variant="solid" disabled={!canSave}>
+              <Button
+                type="submit"
+                variant="solid"
+                disabled={!canSave && !operationBusy}
+                aria-disabled={!canSave}
+                aria-busy={operationBusy}
+              >
                 {operationBusy
                   ? t(
                       installing || installingRequirements

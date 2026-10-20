@@ -1,0 +1,27 @@
+23: export interface GitHubPanelAppArchiveSource {
+24:   url: string;
+25:   ref?: string;
+26: }
+27: 
+28: function githubArchiveUrl(source: GitHubPanelAppArchiveSource): URL {
+29:   const parsed = new URL(source.url);
+30:   const parts = parsed.pathname.replace(/^\/+|\/+$/g, "").split("/");
+31:   const owner = parts[0];
+32:   const repository = parts[1]?.replace(/\.git$/i, "");
+33:   if (!owner || !repository) {
+34:     throw new PanelAppInstallError("GitHub Panel App source is invalid");
+35:   }
+36:   const ref = source.ref || "HEAD";
+37:   const encodedRef = ref
+38:     .split("/")
+39:     .map((segment) => encodeURIComponent(segment))
+40:     .join("/");
+41:   return new URL(
+42:     `https://codeload.github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/zip/${encodedRef}`,
+43:   );
+44: }
+45: 
+46: /**
+47:  * Download one atomic GitHub source snapshot with bounded memory and disk use.
+48:  * Codeload avoids the smart-Git checkout path that can strand git-remote-https
+49:  * helpers on poor networks. The caller selectively extracts the requested

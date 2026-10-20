@@ -1,0 +1,410 @@
+{
+  "parentReportedFreeze": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "inventorySource": "aggregator-dedup.json",
+  "inventoryFiles": 2596,
+  "archivesIncluded": true,
+  "archivePathCount": 174,
+  "stringLeaves": 468104,
+  "scalarLeaves": 676635,
+  "parseErrors": [],
+  "patterns": {
+    "worktree-open": "(?:worktree|工作树|隔离).{0,120}(?:openFileTarget|FilesChangedCard|fileChangeAggregator|打开.{0,15}(?:错|文件)|(?:文件|path).{0,30}(?:丢|归并|合并|冲突))|(?:openFileTarget|FilesChangedCard|fileChangeAggregator).{0,120}(?:worktree|工作树|隔离)",
+    "external-path-loss": "(?:external|DriveAgent|外部).{0,100}(?:cwd|path|路径).{0,100}(?:丢|strip|lost|打开|openFile|父目录|parent|身份|identity)|displayExternalPath|identityForToolPath",
+    "empty-external-preview": "(?:external|DriveAgent|外部).{0,120}(?:sessionDiffs|snapshot|快照|authoritative|空diff|空预览)|sessionDiffs.{0,120}(?:external|unknown|未知|empty|空)"
+  },
+  "matchCounts": {
+    "worktree-open": 7,
+    "external-path-loss": 17,
+    "empty-external-preview": 50
+  },
+  "retainedContexts": {
+    "worktree-open": 7,
+    "external-path-loss": 17,
+    "empty-external-preview": 50
+  },
+  "contextCapPerGroup": 120,
+  "matches": {
+    "worktree-open": [
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$[\"matches\"][79][\"hits\"][0][\"text\"]",
+        "excerpt": "- `revealFile` 的路径继续相对 resolved cwd 解析（当前 `FilesPanel.tsx:138-150`），这样 session worktree 内的聊天路径链接会打开正确文件。"
+      },
+      {
+        "path": "docs/review-2026-10-12/project-recovery-round16.md",
+        "location": "34",
+        "excerpt": "5. **scope**：fixture 是两根项目、缺失的原 secondary、本地普通 session、cold Main，目标 healthy primary。未测试真实媒体卷断连、Windows、worktree 用户文件、迁移中的活跃工具/模型或完整重启。不能据此声称所有文件夹修改都失败或有历史丢失。"
+      },
+      {
+        "path": "docs/review-2026-10-12/quality-round14.md",
+        "location": "22",
+        "excerpt": "常，PNG点击落 `images:readDataUrl` 的 project-path gate；primary和registeredsecondary正常，任意未注册root拒绝，补sessionId仍在cwd gate前失败。与PTY门禁缺少Session authority是同类已报告边界，不增加编号。普通当前worktree图片点击/刷新不自动调用single-file。恢复限定**切回main后显式打开原worktree绝对文件链接**，使文件落在当前根外再走显式单文件授权；README现已补此前提，不能解读为留在worktree内重点击绝对链接即可恢复。其他图片组件调用只静态核对，没有附加未运行组件的动态声明。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-project-recovery-round16/report.md",
+        "location": "34",
+        "excerpt": "5. **scope**：fixture 是两根项目、缺失的原 secondary、本地普通 session、cold Main，目标 healthy primary。未测试真实媒体卷断连、Windows、worktree 用户文件、迁移中的活跃工具/模型或完整重启。不能据此声称所有文件夹修改都失败或有历史丢失。"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-09-mobile-remote-tunnel-impl.md",
+        "location": "132",
+        "excerpt": "worktree 内单 subagent 串行做 1→6 最稳(避免同文件 index.ts/preload 冲突);1/2/3 若并行则各自独立新文件不冲突。"
+      },
+      {
+        "path": "docs/todo/project-cloud-runtime-v2-plan.md",
+        "location": "327",
+        "excerpt": "| P1 新会话隔离闭环   | 发布最小模板、固定 SourceSnapshot、独占卷／HOME、基础 fencing、异步准备、原生 run/approve/cancel/history、客户端 outbox 与执行侧 inbox | 同项目两条会话文件及分支隔离；关客户端继续；首创与 turn 丢 ACK 均不重复运行                  |"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+        "location": "128",
+        "excerpt": "- `revealFile` 的路径继续相对 resolved cwd 解析（当前 `FilesPanel.tsx:138-150`），这样 session worktree 内的聊天路径链接会打开正确文件。"
+      }
+    ],
+    "external-path-loss": [
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"diff_parser\"][21][\"snippet\"]",
+        "excerpt": "首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"diff_parser\"][23][\"snippet\"]",
+        "excerpt": "首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplac"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"pipe_subject\"][17][\"context\"]",
+        "excerpt": "首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"pipe_subject\"][18][\"context\"]",
+        "excerpt": "首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplac"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"pipe_subject\"][33][\"context\"]",
+        "excerpt": "来自报告所列官方文档，本交叉复核没有另行抓取真实 Git 输出。影响仅限摘要多计，不能扩大为已验证的 Desktop UI、删除判断或原生 worktree 行为。\n\n去重复核：A03 是另一 Git status parser 首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的 SHA256 "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"pipe_subject\"][43][\"context\"]",
+        "excerpt": " October 16 A04 与 May 30 记录排除。\n\n[root-git-diff-dedup.json](evidence/root-git-diff-dedup.json) 在同一语料补查 changedFiles/quote/重复和 unquoteGitPath，只命中与 Desktop Review/外部 CLI 元数据有关的旧说明，未找到本 union 两种路径身份的同根因项。语法/词项检索不证明所有历史语义穷尽。\n\n独立现有纯基线 `packages/coding/src/git/parse-log.test."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"pipe_subject\"][44][\"context\"]",
+        "excerpt": " Git 输出。影响仅限摘要多计，不能扩大为已验证的 Desktop UI、删除判断或原生 worktree 行为。\n\n去重复核：A03 是另一 Git status parser 首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplac"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"git-parse\"][33][\"excerpt\"]",
+        "excerpt": "on) 在同一语料补查 changedFiles/quote/重复和 unquoteGitPath，只命中与 Desktop Review/外部 CLI 元数据有关的旧说明，未找到本 union 两种路径身份的同根因项。语法/词项检索不证明所有历史语义穷尽。\n\n独立现有纯基线 `packages/coding/src/git/parse-log.test."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/cross-review-questions.md",
+        "location": "12",
+        "excerpt": "去重复核：A03 是另一 Git status parser 首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/root-git.md",
+        "location": "21",
+        "excerpt": "[root-git-diff-dedup.json](evidence/root-git-diff-dedup.json) 在同一语料补查 changedFiles/quote/重复和 unquoteGitPath，只命中与 Desktop Review/外部 CLI 元数据有关的旧说明，未找到本 union 两种路径身份的同根因项。语法/词项检索不证明所有历史语义穷尽。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$[\"hits\"][\"tokenizer\"][8][\"snippet\"]",
+        "excerpt": " Git 输出。影响仅限摘要多计，不能扩大为已验证的 Desktop UI、删除判断或原生 worktree 行为。\n\n去重复核：A03 是另一 Git status parser 首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplac"
+      },
+      {
+        "path": "docs/research/driveagent-worktree-cwd-visibility-gap.md",
+        "location": "15",
+        "excerpt": "| (c) 从 DriveAgent 卡片“跳转到 CLI session” | **Codex 普通自建 worktree：通常 NO；真实 transcript/cwd 迁移：部分/YES** | 跳转绕过 session picker，直接用 job 的 `externalSessionId + 快照 cwd + owner sessionId`。**推断**：Codex thread 的索引 cwd 仍是启动 cwd，所以普通 `cd`/`git worktree` 后通常能打开；但房间会继续以旧 cwd resume。若 transcript 已迁到 worktree，旧 cwd 会使历史定位/订阅失败或 resume 到错误目录。 |"
+      },
+      {
+        "path": "docs/review-2026-10-12/fresh-project-quality-round18.md",
+        "location": "13",
+        "excerpt": "MobileExternalRuntimeCommands [56](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/mobile-remote/external-runtime-commands.ts:56)保留正确保护：已持久化native会话若无当前viewer accepted selection，分类到受保护路径，prepare拒绝；已经退休的external producer身份也不因磁盘删除回落native。唯有newlyMintedNative && !exists的fresh例外可以不要求旧viewer grant；chat handler传sessionId===st.sessionId正好满足这个例外。生产测试external-runtime-commands.test.ts:394同时断言existing native需当前selection、fresh-device-native仍开放；本轮只读该测试，未声称重跑。"
+      },
+      {
+        "path": "docs/todo/mobile-external-output-journal-receipt.json",
+        "location": "$[\"boundaries\"][3]",
+        "excerpt": "Existing external Runtime cwd/start restrictions remain; worktree identity fencing does not add external worktree startup support."
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/driveagent-jump-to-cli-session.md",
+        "location": "17",
+        "excerpt": "4. main 的 `packages/desktop/src/main/index.ts:2740-2749` 调用 `roomManager.openForSession(externalSessionId, cwd, mode, kind)`。因此真正打开一个 room 至少需要：外部 session/thread ID、cwd、CLI kind 和 permission mode。"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/driveagent-jump-to-cli-session.md",
+        "location": "24",
+        "excerpt": "- 只有确认为 DriveAgent 且同时具备有效外部会话 ID、CLI kind、cwd 的任务显示“打开 Claude Code/Codex 会话”按钮。"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/driveagent-jump-to-cli-session.md",
+        "location": "138",
+        "excerpt": "- `packages/desktop/src/main/mobile-remote/room-manager.ts`：增加 `openLinkedSession()`。按 external ID + kind（并校验 cwd 绑定）查找已有 room；找到则按其持久化 mode 调用 `open()`，未找到则以 `default` 创建/打开。逻辑放在 RoomManager 内，避免 desktop IPC 与 mobile handler 各自复制查找规则。"
+      }
+    ],
+    "empty-external-preview": [
+      {
+        "path": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+        "location": "5",
+        "excerpt": "> Codex 对照基线：仓库现有外部 Runtime 的生成绑定为 `codex-cli 0.145.0`；官方在线文档按审计日期快照核对"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "location": "$[136][\"reason\"]",
+        "excerpt": "nce to the internal array, which is technically exposing an implementation detail. However, actual code analysis shows: (1) the method is only used with useSyncExternalStore, which treats the snapshot immutably; (2) all direct usages of the returned entries only perform read-only operations (.filter(), iteration, property access); (3) no code in the codebase attempts to mutate the returned array; (4) the store updates are all done through proper public methods (append, setEntries, update) that create new arrays and notify subscribers. The architectural design is sound for the useSyncExternalStore pattern, and the theoretical issue never materializes in practice."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "location": "$[136][\"note\"]",
+        "excerpt": "ing (which violates encapsulation principle), in practical terms it's not a real bug because: (1) no actual mutations occur in the codebase, (2) React's useSyncExternalStore design pattern expects snapshots to be treated immutably by consumers, and (3) the store correctly manages updates through its public API. If stricter encapsulation is desired, returning a copy would be a good defensive practice, but the current code is functionally correct."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/baseline-refresh.md",
+        "location": "9",
+        "excerpt": "启动时 primary HEAD 和原有未提交字节保留在 [初始快照](evidence/integration-before.json)。主分支外部推进后重新保存 [集成前快照](evidence/integration-premerge.json)，只比较并保留原有 dirty/untracked 内容；不恢复他人 HEAD 或修改。所有审查写入仅属于本批 docs 目录。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"steering_queue\"][153][\"context\"]",
+        "excerpt": "Mimi 的 admission/steer/unsteer 调度；`session.reply` 事件 + ReportToMimi 去重；visit receipt；过期降级；`Sessions` 在 IM 回合隐藏 `sessionId`；archived/worktree 严校验。\n- **Phase 2**：外部 runtime 的持久 next-turn 队列；附件；审批/AskUser 的 pending 态与一次性 token；`context_token` 等待态；selection snapshot（如仍需要）。\n- **Phase 3**：群聊策略；Telegram/Slack 原生按钮；Session 卡片自然语言进入。\n\n## 5. 验收标准补充\n\n在草案 §10 基础上增加：\n\n- `/mimi` 之后该 Session 的完成回告仍能到达同一微信会话。\n- 退出"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/mappers.md",
+        "location": "17",
+        "excerpt": "普通触发假设是用户在外部工具调用尚未产出结果时打开/重新订阅正在跟随的会话。静态 follower `subscribe()` 的现有记录分支（135–140）和初次分支（217–225）会返回 `active: true` 的历史 snapshot，未在这些段落要求工具全部结束。`HistoryMessage.tools` 当前不带原始 ID，`ccHistoryToEvents`（112–123）因此给历史工具生成 `cc-hist-${i}-${t}`，并在每条 assistant 历史后生成 completed 边界。后来 tail 结果则经 follower 的 `tailEventToRoomMessage`（551–557）保留 `event.id`，`roomMsgToEvent`（54–59）继续透传该真实 toolId。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round19/README.md",
+        "location": "20",
+        "excerpt": "结束前刷新 origin 并将任务分支快进到并发 main `40141406c1314510a9ed6d6fbd851e1822e6530f`；两条外部提交仅变更 release 文档，已选产品源码仍等于冻结字节。初始与最终合并前 primary 快照分别保存，原有删除及四个未跟踪文件的字节未变。详见 [integration plan](evidence/integration-plan.json)。没有 push、build、typecheck、lint、full suite、E2E、真实模型/账户/网络/native/用户数据或权限类实验。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/README.md",
+        "location": "20",
+        "excerpt": "结束前已刷新 origin；合并前 main 仍为冻结点，没有外部新增提交。原有删除和四个未跟踪文件的 status/字节 hash 与初始快照相同，只允许本批 docs disjoint fast-forward，见 [integration plan](evidence/integration-plan.json)。没有 push、build/typecheck/lint/full suite/E2E，保留独占工作树继续全仓审查。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"old_alias\"][3][\"context\"]",
+        "excerpt": "控回归测试源码，没有执行新增测试、图片解码、上传或 UI；因此仅标为其他任务已修改源码，不能据此声称本轮验证修复。此状态记录不计入本批 4 个新候选或 1 个旧候选关联。\n\n启动时 primary HEAD 和原有未提交字节保留在 [初始快照](evidence/integration-before.json)。主分支外部推进后重新保存 [集成前快照](evidence/integration-premerge.json)，只比较并保留原有 dirty/untracked "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/README.md",
+        "location": "20",
+        "excerpt": "结束前已刷新origin；合并前main仍是冻结点，0外部新增提交。初始/premerge快照的原有删除、status、tracked/staged diff和4个untracked bytes一致；仅允许本批docs disjoint fast-forward，见 [integration plan](evidence/integration-plan.json)。没有push、共享deps/dist重建、build/typecheck/lint/full suite/E2E或全仓完成声明；保留工作树继续审查。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "location": "$[\"hits\"][\"all_429\"][76][\"context\"]",
+        "excerpt": "UI，本次没有运行。服务错误 JSON 没有成功 export 的 attachment header，也没有成功 toast；仅看缺少 Hub 内 toast 不足以确认一个新的错误反馈缺陷。\n- 读取 state/transcript 与随后 title await 不是跨文件事务。源码提供有界前缀快照，不保证任意外部 writer 的全局原子快照；没有把这种一般并发可能性或 R76 已知 running 缺口扩成历史损坏。\n- 未运行浏览器真实下载、取消、native DownloadItem、HTTP/WS、完整 App/worker/Engine 或模型；没有借静态 source 与已有测试源码声称本轮动态通过。\n\n## 5. 双基线一致性\n\n只用 Python 标准库 read_bytes/hash 比较：HubSes"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/README.md",
+        "location": "20",
+        "excerpt": "分支为 `codex/audit/product-cron-room-parsers-round23-20261017`，复用独占已附 worktree。初始与结束刷新 main 均为冻结点 c1d007ed，origin/main 仍 02d5d9a9，无外部新增提交/路径；初始/集成前主 checkout 快照完全相同，保留原有删除及 4 个未跟踪文件。见 [初始快照](evidence/integration-before.json)、[集成计划](evidence/integration-plan.json)、[source manifest](source-manifest.json)、[source status](addressed-sources.json)、[作者完整性](worker-integrity.json)。源码 pin 含历史/配置及仅 hash 的 prep 文件，不能作为全文件、传递依赖或运行时覆盖数。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+        "location": "$[\"matches\"][\"cronMechanism\"][225][\"excerpt\"]",
+        "excerpt": "Mimi 的 admission/steer/unsteer 调度；`session.reply` 事件 + ReportToMimi 去重；visit receipt；过期降级；`Sessions` 在 IM 回合隐藏 `sessionId`；archived/worktree 严校验。\n- **Phase 2**：外部 runtime 的持久 next-turn 队列；附件；审批/AskUser 的 pending 态与一次性 token；`context_token` 等待态；selection snapshot（如仍需要）。\n- **Phase 3**：群聊策略；Telegram/Slack 原生按钮；Session 卡片自然语言进入。\n\n## 5. 验收标准补充\n\n在草案 §10 基础上增加：\n\n- `/mimi` 之后该 Session 的完成回告仍能到达同一微信会话。\n- 退出"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/review-aggregate.md",
+        "location": "13",
+        "excerpt": "initialPrimary 与 primaryBefore 保存的完整快照逐键完全相等，包括HEAD、statusHex、tracked/staged diff hash及4个untracked文件的path/bytes/hash。计划的baseline/refreshedMain与当前main均为c1d007ed，外部新增commit/path均0。这里独立核的是已存快照与Git元数据，不替代Root最终FF前后的重新状态核验，也没有读取用户历史或操作其原有dirty内容。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/review-product.md",
+        "location": "9",
+        "excerpt": "久 snapshot 交给 runner；EngineRunner:187、249 分别把 run.cwd 送入 EngineConfig 和 client.run options。review 选读 context 构造与 execute 调用，普通 manager 没有从工厂 runtime 恢复 cwd 的注入。外部 context.engineConfigOverrides 的确可以覆盖部分 EngineConfig，但这既不能恢复已经错误的 submit snapshot，也不是这两个普通 factory 的补偿接线。报告没有把 static 配置传递扩大为实际工具、FS、MCP、模型、权限或安全边界行为，P3 的影响描述足够窄。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-qc.md",
+        "location": "9",
+        "excerpt": "初始fetch确认session82277运行后使用同handle读至exit0；结束fetch42617同样按原handle完成0。origin/main未变，本地主main仍c1d007ed，0外部commit/path。initial与premerge快照完全相同，包括status、tracked/staged diffs及4untracked内容hash；最终集成前后仍由finalizer重新核对。只对本批新目录做暂存与commit，现有删除/本地资料不归本任务。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/review-aggregate.md",
+        "location": "15",
+        "excerpt": "integration-plan的initialPrimary与primaryBefore在8b快照**完全相同**，包含HEAD/status/diff与四个untracked文件bytes/hash，externalMainCommits/Paths为空；这里只核保存快照，最终实际暂存/commit/FF与dirty保全仍归Root收据。10:24时77个已存在Markdown本地目标/行号检查无误，仅README待创建本报告的链接暂缺。首index63原集合无缺失，RootQC追加导致其hash待刷新，review-output是预期新增；本报告随后新增，Root将统一重建，未故意执行过期verify。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/root-prep/simple-diff-history.json",
+        "location": "$[4][\"hits\"][0][\"context\"]",
+        "excerpt": "parse errors**。总计数与 capped 上下文分开；这是读取当时的库存，关键词不证明全仓语义完备，最终 main 的并发文档变化也不会回写为旧库存验证。\n\n结束前刷新 origin 并将任务分支快进到并发 main `40141406c1314510a9ed6d6fbd851e1822e6530f`；两条外部提交仅变更 release 文档，已选产品源码仍等于冻结字节。初始与最终合并前 primary 快照分别保存，原有删除及四个未跟踪文件的字节未变。详见 [integration plan](evidence/integration-plan.json)。没有 push、build、typecheck、lint、full suite、E2E、真实模型/账户/网络/native/用户数据或权限类实验。\n\n本批是持续全仓审查"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/renderer-history-decisions.json",
+        "location": "$[\"selectedHistory\"][0][\"excerpts\"][0][\"text\"]",
+        "excerpt": "交正文，证明渲染器能显示该内容；这只是渲染正常对照，**不代表现有菜单提供恢复按钮或自动备份**。完整 ReviewPanel 下拉交互和 Electron Main 本轮未挂载，正式菜单接线静态核对，动态范围是实际 service + viewer。\n\n影响仅首提交差异无法从该菜单查看，历史和文件保留，后续提交正常。外部 `git show --root` 可查看；若恰有对应的 turn snapshot，也可能走已有快照查看，但不保证每个历史 root commit 都有快照。建议 P3。修复应对 root commit 使用 empty-tree 或等价 `git show --root`，并让失败 range 显式返回错误，避免把失败显示为成功无变化。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/questions-dedup-inventory.json",
+        "location": "$[\"hits\"][677][\"excerpt\"]",
+        "excerpt": "- **Phase 2**：外部 runtime 的持久 next-turn 队列；附件；审批/AskUser 的 pending 态与一次性 token；`context_token` 等待态；selection snapshot（如仍需要）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/final-quality.md",
+        "location": "13",
+        "excerpt": "Primary preservation uses both the original and final preintegration snapshots. The initial CI dirty change was committed externally during this batch, so restoring the old snapshot would overwrite other work. Integration must preserve the refreshed current porcelain, tracked/staged diff hashes, and all four initial untracked file byte hashes. The existing bug-report deletion remains user-owned. A postintegration receipt is saved outside the repository, avoiding a self-referential commit identifier."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$[\"hits\"][293][\"matches\"][3][\"text\"]",
+        "excerpt": "- 读取 state/transcript 与随后 title await 不是跨文件事务。源码提供有界前缀快照，不保证任意外部 writer 的全局原子快照；没有把这种一般并发可能性或 R76 已知 running 缺口扩成历史损坏。"
+      },
+      {
+        "path": "docs/refactor/_archive/goal-persistence-redesign-codex.md",
+        "location": "499",
+        "excerpt": "3. 任意年龄的外部程序/手工脚本持续把旧 whole-state snapshot 覆盖回来；"
+      },
+      {
+        "path": "docs/refactor/goal-persistence-final-design.md",
+        "location": "513",
+        "excerpt": "alias 压过 terminal guard。若外部旧 writer 用更早、完全没有 lifecycle 的 snapshot 整体覆盖新"
+      },
+      {
+        "path": "docs/research/driveagent-worktree-cwd-visibility-gap.md",
+        "location": "13",
+        "excerpt": "| (a) `backgroundJobRegistry` 中的 DriveAgent job | **NO（默认 session 查询）/ 部分（显式 cwd 查询）** | job 以 `jobId` 为 Map key，另存 owner `sessionId` 和一次性 `cwd` 快照。Codex 后续在别处工作不会改 job。`DriveAgentJobs(action:\"list\")` 不带 cwd 时按当前 CodeShell session 查，因此仍能找到 running job；带新 worktree cwd 时会漏掉，因为它只匹配旧快照。完成后的 job 还需 `status:\"all\"`。 |"
+      },
+      {
+        "path": "docs/research/driveagent-worktree-cwd-visibility-gap.md",
+        "location": "13",
+        "excerpt": "kgroundJobRegistry` 中的 DriveAgent job | **NO（默认 session 查询）/ 部分（显式 cwd 查询）** | job 以 `jobId` 为 Map key，另存 owner `sessionId` 和一次性 `cwd` 快照。Codex 后续在别处工作不会改 job。`DriveAgentJobs(action:\"list\")` 不带 cwd 时按当前 CodeShell session 查，因此仍能找到 running job；带新 worktree cwd 时会漏掉，因为它只匹配旧快照。完成后的 job 还需 `status:\"all\"`。 |"
+      },
+      {
+        "path": "docs/research/driveagent-worktree-cwd-visibility-gap.md",
+        "location": "15",
+        "excerpt": "| (c) 从 DriveAgent 卡片“跳转到 CLI session” | **Codex 普通自建 worktree：通常 NO；真实 transcript/cwd 迁移：部分/YES** | 跳转绕过 session picker，直接用 job 的 `externalSessionId + 快照 cwd + owner sessionId`。**推断**：Codex thread 的索引 cwd 仍是启动 cwd，所以普通 `cd`/`git worktree` 后通常能打开；但房间会继续以旧 cwd resume。若 transcript 已迁到 worktree，旧 cwd 会使历史定位/订阅失败或 resume 到错误目录。 |"
+      },
+      {
+        "path": "docs/research/driveagent-worktree-cwd-visibility-gap.md",
+        "location": "19",
+        "excerpt": "1. 显式 `DriveAgentJobs(action:\"list\", cwd:<新 worktree>)` 只匹配 job 的启动 cwd 快照，会返回空；"
+      },
+      {
+        "path": "docs/research/driveagent-worktree-cwd-visibility-gap.md",
+        "location": "159",
+        "excerpt": "2. protocol 把它映射成 `externalSessionId`，并携带 job 快照 cwd 与 owner session：`packages/core/src/tool-system/builtin/background-work.ts:212-231`；"
+      },
+      {
+        "path": "docs/review-2026-10-12/model-switch-quality-round18.md",
+        "location": "7",
+        "excerpt": "主审核对switchActiveModel.native→native不写session summary model，fixture的setSessionIndices空函数没有人为丢掉正常备份；该setter只在external→native绑定修复分支使用，本项不走external。App:344实际activeModelKey与useRunController:206/403均优先bucket override、否则全局default，没有从Session disk model回填该偏好；host/snapshot/disk import也没有setModelOverrides恢复路径。runAfterModelSwitch动态只证明下一调用adapter收到fallback参数，未实际运行Core/model、计费或文件编辑，因此结论只到选择持久丢失及发送参数，不称真实付费模型误用。"
+      },
+      {
+        "path": "docs/review-2026-10-12/panels-round6.md",
+        "location": "80",
+        "excerpt": "`panel-app-bridge.ts:3103–3111` 在 external initialContext await 后、ensure 后分别检查 session；`:3125–3135` 在原生 agent/run 派发边界检查并使用快照 bucket。现有 fixture 在 await 期间 rebind，断言没有 ensure/send 或 worker dispatch。没有真实模型调用。"
+      },
+      {
+        "path": "docs/review-2026-10-12/plugin-quality-round9.md",
+        "location": "5",
+        "excerpt": "本轮只读两个快照的代码与交付材料，没有修改产品或主报告、没有 build、没有真实模型/账号/外部服务。已先读 CODESHELL.md。重点读取主报告 R51–R53、`plugins-round7.md`、最终便携 fixture，以及旧/新快照各自最终日志。已有七项不再重跑；仅对新增恢复边界运行一个隔离 HOME 的目标测试。"
+      },
+      {
+        "path": "docs/review-2026-10-12/terminal-review-quality-round13.md",
+        "location": "39",
+        "excerpt": "外部 `git show --root <hash>` 可以检查真实首提交；若该次 Agent turn 原本有保存的 turnDiff snapshot，其既有“本轮改动”通道可正常展示，但不能保证每一个 root commit 都有这种快照，也不应把该测试的手动 diffText 注入称为产品内普遍恢复路径。"
+      },
+      {
+        "path": "docs/review-2026-10-12/terminal-review-round13.md",
+        "location": "31",
+        "excerpt": "影响仅首提交差异无法从该菜单查看，历史和文件保留，后续提交正常。外部 `git show --root` 可查看；若恰有对应的 turn snapshot，也可能走已有快照查看，但不保证每个历史 root commit 都有快照。建议 P3。修复应对 root commit 使用 empty-tree 或等价 `git show --root`，并让失败 range 显式返回错误，避免把失败显示为成功无变化。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-model-switch-round18/quality-audit.md",
+        "location": "7",
+        "excerpt": "主审核对switchActiveModel.native→native不写session summary model，fixture的setSessionIndices空函数没有人为丢掉正常备份；该setter只在external→native绑定修复分支使用，本项不走external。App:344实际activeModelKey与useRunController:206/403均优先bucket override、否则全局default，没有从Session disk model回填该偏好；host/snapshot/disk import也没有setModelOverrides恢复路径。runAfterModelSwitch动态只证明下一调用adapter收到fallback参数，未实际运行Core/model、计费或文件编辑，因此结论只到选择持久丢失及发送参数，不称真实付费模型误用。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-session-continuation-round26/hub-export-static.md",
+        "location": "42",
+        "excerpt": "- 读取 state/transcript 与随后 title await 不是跨文件事务。源码提供有界前缀快照，不保证任意外部 writer 的全局原子快照；没有把这种一般并发可能性或 R76 已知 running 缺口扩成历史损坏。"
+      },
+      {
+        "path": "docs/review-2026-10-12/web-round2.md",
+        "location": "23",
+        "excerpt": "- 实测：完整认证 Hub（真实配置门禁）先后接受两次写入；两端 UI 都显示“设置已保存”；最终为 `{text:one,auxText:three}`，A 已保存的对话模型被 B 没有操作过的旧字段静默回滚。反过来的写入顺序会回滚 B 的辅助模型。`DefaultModels` 的外部刷新保留逻辑能处理已到达的快照，但无法改写已经发出的旧请求。"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+        "location": "39",
+        "excerpt": "  const n = useSyncExternalStore(store.subscribe, store.getSnapshot);"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+        "location": "843",
+        "excerpt": "| 136 | `const [isRunning, setIsRunning] = useState(false);` | `const queryGuard = useRef(new QueryGuard()).current;` + `const isRunning = useSyncExternalStore(queryGuard.subscribe, queryGuard.getSnapshot);` |"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-02-automation-lightweight.md",
+        "location": "496",
+        "excerpt": "- [ ] **Step 1: AgentBridge 暴露外部事件入口(测试:append 进快照可被 getSnapshot 取回)**"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-06-02-automation-lightweight.md",
+        "location": "551",
+        "excerpt": "automation 在 main 进程内跑,事件经 AgentBridge.ingestExternalEvent 进同一快照+转发,"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-plugin-contribution-points.md",
+        "location": "606",
+        "excerpt": "  useSyncExternalStore(PAGE_REGISTRY.subscribe, PAGE_REGISTRY.snapshot, PAGE_REGISTRY.snapshot);"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-plugin-contribution-points.md",
+        "location": "813",
+        "excerpt": "  React.useSyncExternalStore(PAGE_REGISTRY.subscribe, PAGE_REGISTRY.snapshot, PAGE_REGISTRY.snapshot);"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-20-pet-external-codex-sessions.md",
+        "location": "507",
+        "excerpt": "外部会话是与 disk/live 并列的第三源：worker 断连/回收不影响它（它不依赖 worker），`getSnapshot` 的 disconnected 覆盖层不得把外部会话改写成 unknown。"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-llm-ui-decoupling-design.md",
+        "location": "341",
+        "excerpt": "2. **`useSyncExternalStore` third argument (SSR snapshot)** — not provided. codeshell is TUI; React 19 + bun verified compatible via the existing render reconciler usage."
+      },
+      {
+        "path": "docs/superpowers/specs/2026-09-01-local-task-center-design.md",
+        "location": "149",
+        "excerpt": "3. 接入 live registry / external runtime 快照；"
+      },
+      {
+        "path": "docs/todo/2026-07-22-codex-tasks.md",
+        "location": "193",
+        "excerpt": "- 项目增删不触发外部会话 reconcile(快照到重启,T5-M1);`touchesExternalSessionVisibility`"
+      },
+      {
+        "path": "docs/todo/agent-module-resolved-composition-design.md",
+        "location": "63",
+        "excerpt": "9. 不设过渡兼容层：所有 host 与产品模块在一次 cutover 中切换并删除旧接口，`@cjhyy/code-shell-core` 以 breaking 版本发布。所有消费方都在本仓库内，没有需要长期兼容的外部用户；迁移前后行为一致由 Phase A 先行落库的 golden snapshot 证明。"
+      },
+      {
+        "path": "docs/todo/external-agent-runtime-tool-bridge-design.md",
+        "location": "1202",
+        "excerpt": "`SessionToolHost` 持有该 external session 当前的 `planMode` 快照。切换 Plan Mode 时："
+      },
+      {
+        "path": "docs/todo/mimi-im-session-bridge-review-2026-09-03.md",
+        "location": "150",
+        "excerpt": "- **Phase 2**：外部 runtime 的持久 next-turn 队列；附件；审批/AskUser 的 pending 态与一次性 token；`context_token` 等待态；selection snapshot（如仍需要）。"
+      }
+    ]
+  },
+  "initialInventoryBytesRechecked": true,
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "gitCommands": 0,
+  "limitation": "Keyword search and selected parent inspection do not establish semantic exhaustion; this is a second value-scalar scan of exactly the prior hashed2596-path snapshot."
+}

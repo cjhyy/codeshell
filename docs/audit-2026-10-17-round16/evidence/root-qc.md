@@ -1,0 +1,13 @@
+# Root evidence review and integration requirements
+
+The four read-only lane reviews accept 0 formal findings, 6 bounded candidates and no newly revalidated related issue. All four first guarded logs/exits reconcile to 40 pass / 111 expectations, all focused, 0 failures/skips. Seven are source-extracted predicate tests; the other 33 invoke actual pure helpers. No full Bidi module/platform/library, UI/Engine, terminal, scanner/loader or broad suite result follows.
+
+The initial Bidi double-slash interpretation is disproved by raw bytes, not treated as a bug. Primary Unicode references were independently checked as directional/display background, without converting the font/display responsibility into a mandatory code-point substitution claim. Root independently verified exact frozen extraction hashes without compiling or calling the predicate again.
+
+Source manifests pin 36 unique selected paths with 49 per-worker checks.40 worker artifact bytes/hashes match. Reports distinguish real helper observations from static writer arithmetic, hand-built inside-grapheme styles, incomplete noise heuristic/input transport contracts and source-only mirroring. Metadata navigation and collector errors have labeled first-response transcriptions and do not imply product/dependency failure or recovered old failed dynamics.
+
+The metadata-only check script compares index bytes/SHA, frozen/current source pins, worker receipts and local Markdown file/line references. Final index refresh must include final review and integration-plan materials. Exact staged paths/Git blobs, full and non-log whitespace checks are required before the documentation-only commit. Post-commit integration receipt outside this directory records their results, primary dirty preservation and a clean owned worktree. No product tests are rerun for report/index corrections.
+
+Root's final semantic line check identified one report link to column initialization at21 instead of22. The author corrected only that report link/label and refreshed its artifact receipt; candidates already pointed to22. No source, fixture or raw changed. Aggregate review also transcribes its metadata-only collection assertion on an older index after the known integration-plan addition. Final index/hash checks use all current materials after these corrections; neither event is a product failure or runtime retry.
+
+Other tasks advanced main by CI/document commits; initial and refreshed primary snapshots preserve that HEAD history. Dirty tracked/untracked bytes remain unchanged and incoming paths must stay disjoint. This is an active whole-repository audit checkpoint, not exhaustive completion.

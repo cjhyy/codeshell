@@ -1,0 +1,97 @@
+{
+  "baselineReportedByRoot": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "copiedUtc": "2026-10-17T12:08:08.180345+00:00",
+  "preservedPrepParent": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "copyCount": 11,
+  "files": [
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/author-receipt.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/author-receipt.json",
+      "bytes": 2840,
+      "sha256": "e389abbb57ace0fcb2eea93660c7e65f2d363e32a34797c6f2a5d809080d2fba",
+      "sha": "e389abbb57ace0fcb2eea93660c7e65f2d363e32a34797c6f2a5d809080d2fba",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/consumer-initial-pins.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/consumer-initial-pins.json",
+      "bytes": 2190,
+      "sha256": "17a048a1c95d3c24a51c3cb12c2ee87429a36842f07322baa9f3d504558402bc",
+      "sha": "17a048a1c95d3c24a51c3cb12c2ee87429a36842f07322baa9f3d504558402bc",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/decisions.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/decisions.json",
+      "bytes": 2625,
+      "sha256": "c9462610113631cdb870cf8612b1278f9a7ba30f604df178e5fcfe60d781ede9",
+      "sha": "c9462610113631cdb870cf8612b1278f9a7ba30f604df178e5fcfe60d781ede9",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/finish-hash-checks.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/finish-hash-checks.json",
+      "bytes": 1901,
+      "sha256": "e31dd5246a63070b0c77e5e272eb81583077073f51d29c704df48f16bd52022b",
+      "sha": "e31dd5246a63070b0c77e5e272eb81583077073f51d29c704df48f16bd52022b",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/history.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+      "bytes": 803921,
+      "sha256": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91",
+      "sha": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/history.py",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.py",
+      "bytes": 3107,
+      "sha256": "eb7f34da0581b9b81a9c742ae2c33f1190664db10b39b2ec3300acb0e26acf7b",
+      "sha": "eb7f34da0581b9b81a9c742ae2c33f1190664db10b39b2ec3300acb0e26acf7b",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/initial-pins.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/initial-pins.json",
+      "bytes": 722,
+      "sha256": "8d7b535ec7f41fa75436f4457be50a256bbb5c81f39ca3e48242c7ed6df5ddae",
+      "sha": "8d7b535ec7f41fa75436f4457be50a256bbb5c81f39ca3e48242c7ed6df5ddae",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/proposal.md",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/proposal.md",
+      "bytes": 3689,
+      "sha256": "d79622e2b6793a49641031a683e74002705f437e0fe5061aa190b53c33771aea",
+      "sha": "d79622e2b6793a49641031a683e74002705f437e0fe5061aa190b53c33771aea",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/reviewed-contexts.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/reviewed-contexts.json",
+      "bytes": 5315,
+      "sha256": "433e9efdf63d72c69242574a3de512050fbd528df3efcf36cb7da349f5c46bef",
+      "sha": "433e9efdf63d72c69242574a3de512050fbd528df3efcf36cb7da349f5c46bef",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/source-manifest.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/source-manifest.json",
+      "bytes": 5840,
+      "sha256": "e4530cc1718ac2a2168acfc43e0318876507567225f66df5ab7072c2e550334d",
+      "sha": "e4530cc1718ac2a2168acfc43e0318876507567225f66df5ab7072c2e550334d",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-taskparse-frontier/validation.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/validation.json",
+      "bytes": 1018,
+      "sha256": "1563f5c3064fa1b135824e95ba6f7ab46ab21c55c5a4cbc0e53550e4fde401f9",
+      "sha": "1563f5c3064fa1b135824e95ba6f7ab46ab21c55c5a4cbc0e53550e4fde401f9",
+      "byteIdentical": true
+    }
+  ],
+  "meaning": "Exact 11 prep files including original self-excluded10-artifact author receipt. Original parent/time/history2921 exclusions and per-source pin timing retained unchanged."
+}

@@ -1,0 +1,79 @@
+{
+  "capturedUTC": "2026-10-17T14:45:57.152313+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "bytes": 7842,
+      "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "matchesManifest": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "bytes": 20235,
+      "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "matchesManifest": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemeAudioSection.tsx",
+      "bytes": 9413,
+      "sha256": "7e2ebf2d0e85a736ac43d17ceb75a6cabd1bd51a0e3f4092dada5801cb71725a",
+      "matchesManifest": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+      "bytes": 2718,
+      "sha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+      "matchesManifest": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+      "bytes": 9977,
+      "sha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+      "matchesManifest": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+      "bytes": 8445,
+      "sha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+      "matchesManifest": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/ExtensionsPage.tsx",
+      "bytes": 3628,
+      "sha256": "a532030f03846f7b261f73dd89e15a2a38d2519a85ab3b5f3b48c5892de71ee7",
+      "matchesManifest": true
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "matchesManifest": true
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.test.ts",
+      "bytes": 5693,
+      "sha256": "5a01d7838157270678ef5dc0a4b425de94fe33989bba7bd7b5e89d434172169b",
+      "matchesManifest": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "matchesManifest": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesManifest": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesManifest": true
+    }
+  ],
+  "allMatch": true,
+  "semanticReadExpanded": false
+}

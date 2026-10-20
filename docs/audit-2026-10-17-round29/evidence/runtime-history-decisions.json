@@ -1,0 +1,173 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "prepDecisionsSource": "evidence/runtime-prep/history-decisions.json",
+  "sameSemanticNegativeConclusions": [
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "ranges": [
+        [
+          24,
+          46
+        ],
+        [
+          66,
+          101
+        ]
+      ],
+      "observation": "FIFO/pendingSet/active membership is mirrored; queued cancel removes both array+set. Executor invocation is inside Promise.resolve().then so synchronous throw and rejected promise both reach finally slot release. Existing4 tests only read. No invalid concurrency/pressure claim."
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "ranges": [
+        [
+          315,
+          352
+        ],
+        [
+          527,
+          577
+        ],
+        [
+          648,
+          674
+        ],
+        [
+          719,
+          780
+        ]
+      ],
+      "observation": "Ordinary startup reload checks queued+AbortSignal before running. Cancellation mutates terminal status; late executor/evaluator completion rechecks AbortSignal/latest running before final transition. No ordinary startup/cancel/late-finish gap established in selected source."
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "ranges": [
+        [
+          44,
+          109
+        ],
+        [
+          150,
+          207
+        ]
+      ],
+      "observation": "Dedicated and assistant tool starts are idempotent via starts; out-of-order finish synthesizes a start from a known-tool preindex. Durable subagent anchors are recorded, not running; replay returns idle except persisted error. It explicitly does not derive current liveness."
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "ranges": [
+        [
+          327,
+          366
+        ],
+        [
+          463,
+          500
+        ],
+        [
+          588,
+          613
+        ]
+      ],
+      "observation": "tool result marks done or buffers orphan; assistant_message seals live assistant; main/subagent completion have distinct run-state scope; recorded subagent is explicit."
+    },
+    {
+      "path": "packages/web/app/chat.ts",
+      "ranges": [
+        [
+          44,
+          67
+        ]
+      ],
+      "observation": "Actual snapshot caller first replays durable history, then live events and authoritative running flag; no assumption historical replay alone must reconstruct current execution."
+    }
+  ],
+  "sameOldBoundaries": [
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "ranges": [
+        [
+          35,
+          49
+        ]
+      ],
+      "decision": "RunQueue concurrency0 intentionally never-drains test mode was already rejected as a bug; do not reopen it."
+    },
+    {
+      "path": "docs/audit-2026-10-17/operations-memory.md",
+      "ranges": [
+        [
+          60,
+          71
+        ]
+      ],
+      "decision": "Phase1 no persistence/cold queued recovery boundary and SDK start already recorded; no recovery/SDK/test rerun."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "ranges": [
+        [
+          1,
+          36
+        ]
+      ],
+      "decision": "userMessageDisplay XML projection focused fixture failed before import; keep whole dynamic direction skipped. Read existing transcript replay tests as source does not recover its runtime or re-report old candidate."
+    },
+    {
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "ranges": [
+        [
+          38,
+          51
+        ]
+      ],
+      "decision": "Ordinary submit/queued/run lifecycle contract only; no broad all-run correctness claim."
+    }
+  ],
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "currentPriorCorpus": {
+    "files": 2765,
+    "markdown": 1275,
+    "json": 1490,
+    "stringLeaves": 562917,
+    "scalarLeaves": 833428,
+    "archivePaths": 169,
+    "parseErrors": 0
+  },
+  "currentMatchCounts": {
+    "queue": 445,
+    "replay": 140,
+    "ordinary-projection": 156,
+    "old-failed-display": 20
+  },
+  "currentRetainedContexts": {
+    "queue": 80,
+    "replay": 80,
+    "ordinary-projection": 80,
+    "old-failed-display": 20
+  },
+  "currentIncludesFrozenRound28Files": 88,
+  "priorPrepCorpus": {
+    "files": 2677,
+    "markdown": 1262,
+    "json": 1415,
+    "stringLeaves": 506929,
+    "scalarLeaves": 740424,
+    "archivePaths": 169,
+    "parseErrors": 0
+  },
+  "priorPrepExcluded": [
+    "docs/audit-2026-10-17-round28/**",
+    "docs/audit-2026-10-17-round29/**"
+  ],
+  "differentMetadataSnapshotNotProductRerun": true,
+  "noNewSemanticSourceReads": true,
+  "notClaimed": [
+    "No verified new bug, fix or runtime test pass.",
+    "No new failing example, unknown-state/malformed-event inference, ID/auth/key collision or real task/locks.",
+    "No user-display attachments/XML, SDK/barrel, native process, real timers, filesystem write/recovery or network/model.",
+    "No historical semantic exhaustion or all-source correctness."
+  ],
+  "limitation": "Current metadata includes frozen28 but original prep remains unchanged at its earlier read-time/exclusion boundary. Both are keyword navigation and no semantic-exhaustion claim."
+}

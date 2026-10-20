@@ -1,0 +1,138 @@
+[
+  {
+    "path": "docs/archive/review-2026-05-30/backlog.json",
+    "location": "$[35]",
+    "value": {
+      "file": "packages/core/src/product/define.ts",
+      "line": "156-157",
+      "category": "correctness",
+      "severity": "medium",
+      "confidence": "high",
+      "title": "Redundant tool disable list passed to RunManager",
+      "detail": "Lines 92-94 already filter enabledSet by removing tools from adapter?.disableTools. Then line 156 passes the filtered enabledSet as enabledBuiltinTools, AND line 157 passes the original adapter?.disableTools as disabledBuiltinTools. This double-application could cause RunManager to apply disable rules twice or create conflicting instructions about which tools are enabled.",
+      "fix": "Either pass only the filtered enabledSet (remove line 157), or pass the original baseTools with disabledBuiltinTools list and let RunManager handle the filtering once. Choose one approach consistently.",
+      "pkg": "core"
+    }
+  },
+  {
+    "path": "docs/archive/review-2026-05-30/backlog.json",
+    "location": "$[36]",
+    "value": {
+      "file": "packages/core/src/product/define.ts",
+      "line": "158-159",
+      "category": "correctness",
+      "severity": "medium",
+      "confidence": "medium",
+      "title": "Ambiguous system prompt precedence not enforced",
+      "detail": "Lines 158-159 pass both customSystemPrompt (from presetDef.customPrompt) and appendSystemPrompt to RunManager. The ProductPreset interface allows both customPrompt and sections to be defined. The comment at lines 38-41 of types.ts documents that customPrompt should take precedence, but this function does not validate or enforce that — it could pass both sections and customPrompt to RunManager, causing ambiguity about which takes effect.",
+      "fix": "Add validation: if presetDef.customPrompt is defined, do not build agentPreset.promptSections (set to empty array or undefined). Only pass one system prompt approach to RunManager.",
+      "pkg": "core"
+    }
+  },
+  {
+    "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+    "location": "$[46]",
+    "value": {
+      "pkg": "core",
+      "file": "packages/core/src/product/define.ts",
+      "line": "158-159",
+      "category": "correctness",
+      "severity": "low",
+      "title": "Ambiguous system prompt precedence not enforced",
+      "detail": "Lines 158-159 pass both customSystemPrompt (from presetDef.customPrompt) and appendSystemPrompt to RunManager. The ProductPreset interface allows both customPrompt and sections to be defined. The comment at lines 38-41 of types.ts documents that customPrompt should take precedence, but this function does not validate or enforce that — it could pass both sections and customPrompt to RunManager, causing ambiguity about which takes effect.",
+      "fix": "Add validation: if presetDef.customPrompt is defined, do not build agentPreset.promptSections (set to empty array or undefined). Only pass one system prompt approach to RunManager.",
+      "verify_note": "This is a real contract violation: the documented behavior (customPrompt takes precedence) is not implemented. Both the custom system prompt and the default sections appear in the final system prompt, which may confuse users who expect customPrompt to replace the default behavior entirely. However, this doesn't cause crashes or incorrect tool execution — it only results in both prompt contents being present, which is suboptimal but not catastrophic. The fix suggested by the reviewer (check if customPrompt is defined and exclude promptSections) is sound and straightforward.",
+      "verify_reason": "The code at define.ts lines 158-159 passes both customSystemPrompt and promptSections to RunManager/Engine. In composer.ts, the PromptComposer unconditionally includes both a \"custom_system\" section (if customSystemPrompt exists, lines 141-146) and a \"behavior\" section (always, lines 166-172) that loads the promptSections. According to types.ts lines 38-41, customPrompt should \"take precedence\" over sections, but the implementation doesn't enforce this — both are included in the final system prompt. Additionally, define.ts line 113 sets promptSections to default [\"base\", \"orchestration\"] even when customPrompt is defined, as long as sections isn't explicitly set to undefined."
+    }
+  },
+  {
+    "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+    "location": "$[35]",
+    "value": {
+      "file": "packages/core/src/product/define.ts",
+      "line": "156-157",
+      "category": "correctness",
+      "severity": "medium",
+      "confidence": "high",
+      "title": "Redundant tool disable list passed to RunManager",
+      "detail": "Lines 92-94 already filter enabledSet by removing tools from adapter?.disableTools. Then line 156 passes the filtered enabledSet as enabledBuiltinTools, AND line 157 passes the original adapter?.disableTools as disabledBuiltinTools. This double-application could cause RunManager to apply disable rules twice or create conflicting instructions about which tools are enabled.",
+      "fix": "Either pass only the filtered enabledSet (remove line 157), or pass the original baseTools with disabledBuiltinTools list and let RunManager handle the filtering once. Choose one approach consistently.",
+      "pkg": "core",
+      "_id": 35
+    }
+  },
+  {
+    "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+    "location": "$[36]",
+    "value": {
+      "file": "packages/core/src/product/define.ts",
+      "line": "158-159",
+      "category": "correctness",
+      "severity": "medium",
+      "confidence": "medium",
+      "title": "Ambiguous system prompt precedence not enforced",
+      "detail": "Lines 158-159 pass both customSystemPrompt (from presetDef.customPrompt) and appendSystemPrompt to RunManager. The ProductPreset interface allows both customPrompt and sections to be defined. The comment at lines 38-41 of types.ts documents that customPrompt should take precedence, but this function does not validate or enforce that — it could pass both sections and customPrompt to RunManager, causing ambiguity about which takes effect.",
+      "fix": "Add validation: if presetDef.customPrompt is defined, do not build agentPreset.promptSections (set to empty array or undefined). Only pass one system prompt approach to RunManager.",
+      "pkg": "core",
+      "_id": 36
+    }
+  },
+  {
+    "path": "docs/archive/review-2026-05-30/findings.json",
+    "location": "$[73]",
+    "value": {
+      "file": "packages/core/src/product/define.ts",
+      "line": "156-157",
+      "category": "correctness",
+      "severity": "medium",
+      "confidence": "high",
+      "title": "Redundant tool disable list passed to RunManager",
+      "detail": "Lines 92-94 already filter enabledSet by removing tools from adapter?.disableTools. Then line 156 passes the filtered enabledSet as enabledBuiltinTools, AND line 157 passes the original adapter?.disableTools as disabledBuiltinTools. This double-application could cause RunManager to apply disable rules twice or create conflicting instructions about which tools are enabled.",
+      "fix": "Either pass only the filtered enabledSet (remove line 157), or pass the original baseTools with disabledBuiltinTools list and let RunManager handle the filtering once. Choose one approach consistently."
+    }
+  },
+  {
+    "path": "docs/archive/review-2026-05-30/findings.json",
+    "location": "$[74]",
+    "value": {
+      "file": "packages/core/src/product/define.ts",
+      "line": "158-159",
+      "category": "correctness",
+      "severity": "medium",
+      "confidence": "medium",
+      "title": "Ambiguous system prompt precedence not enforced",
+      "detail": "Lines 158-159 pass both customSystemPrompt (from presetDef.customPrompt) and appendSystemPrompt to RunManager. The ProductPreset interface allows both customPrompt and sections to be defined. The comment at lines 38-41 of types.ts documents that customPrompt should take precedence, but this function does not validate or enforce that — it could pass both sections and customPrompt to RunManager, causing ambiguity about which takes effect.",
+      "fix": "Add validation: if presetDef.customPrompt is defined, do not build agentPreset.promptSections (set to empty array or undefined). Only pass one system prompt approach to RunManager."
+    }
+  },
+  {
+    "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+    "location": "$[15]",
+    "value": {
+      "pkg": "core",
+      "file": "packages/core/src/product/define.ts",
+      "line": "158-159",
+      "category": "correctness",
+      "severity": "low",
+      "title": "Ambiguous system prompt precedence not enforced",
+      "detail": "Lines 158-159 pass both customSystemPrompt (from presetDef.customPrompt) and appendSystemPrompt to RunManager. The ProductPreset interface allows both customPrompt and sections to be defined. The comment at lines 38-41 of types.ts documents that customPrompt should take precedence, but this function does not validate or enforce that — it could pass both sections and customPrompt to RunManager, causing ambiguity about which takes effect.",
+      "fix": "Add validation: if presetDef.customPrompt is defined, do not build agentPreset.promptSections (set to empty array or undefined). Only pass one system prompt approach to RunManager.",
+      "verify_note": "This is a real contract violation: the documented behavior (customPrompt takes precedence) is not implemented. Both the custom system prompt and the default sections appear in the final system prompt, which may confuse users who expect customPrompt to replace the default behavior entirely. However, this doesn't cause crashes or incorrect tool execution — it only results in both prompt contents being present, which is suboptimal but not catastrophic. The fix suggested by the reviewer (check if customPrompt is defined and exclude promptSections) is sound and straightforward.",
+      "verify_reason": "The code at define.ts lines 158-159 passes both customSystemPrompt and promptSections to RunManager/Engine. In composer.ts, the PromptComposer unconditionally includes both a \"custom_system\" section (if customSystemPrompt exists, lines 141-146) and a \"behavior\" section (always, lines 166-172) that loads the promptSections. According to types.ts lines 38-41, customPrompt should \"take precedence\" over sections, but the implementation doesn't enforce this — both are included in the final system prompt. Additionally, define.ts line 113 sets promptSections to default [\"base\", \"orchestration\"] even when customPrompt is defined, as long as sections isn't explicitly set to undefined."
+    }
+  },
+  {
+    "path": "docs/archive/review-2026-05-30/findings.json",
+    "location": "$[155]",
+    "value": {
+      "file": "packages/tui/src/cli/commands/runs.ts",
+      "line": "210",
+      "category": "simplify",
+      "severity": "low",
+      "confidence": "high",
+      "title": "Redundant FileRunStore instantiation in resume command",
+      "detail": "At line 210, a new FileRunStore is created directly with 'const store = new FileRunStore()'. However, the manager created at line 202 already has an internal store (created at line 39 in createRunManager). This redundant instantiation creates a separate store instance that doesn't share state with the manager's store, which could cause inconsistencies or missed data.",
+      "fix": "Either: (1) use manager.getStore() if the manager exposes it, or (2) add a getPendingApproval method to RunManager and call manager.getPendingApproval(runId) instead of creating a separate store."
+    }
+  }
+]

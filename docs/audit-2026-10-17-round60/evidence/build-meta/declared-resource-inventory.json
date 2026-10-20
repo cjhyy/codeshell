@@ -1,0 +1,27 @@
+{
+  "atUTC": "2026-10-17T19:55:57.303120+00:00",
+  "rootFilesPointers": "package.json#/files",
+  "filenames": [
+    {
+      "path": "assets/codeshell-dog-icon.png",
+      "isFile": true,
+      "contentRead": false
+    },
+    {
+      "path": "assets/codeshell-promo.png",
+      "isFile": true,
+      "contentRead": false
+    },
+    {
+      "path": "assets/codeshell-desktop-screenshot-en.png",
+      "isFile": true,
+      "contentRead": false
+    },
+    {
+      "path": "docs/architecture/images/overview-runtime-layers.png",
+      "isFile": true,
+      "contentRead": false
+    }
+  ],
+  "limits": "Only explicitly declared source resource path existence metadata; no binary bytes, dist/build output, package tarball, transitive closure or rendering verified."
+}

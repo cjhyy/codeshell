@@ -1,0 +1,52 @@
+{
+  "source": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+  "sourcePin": {
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+    "bytes": 129321,
+    "sha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+    "lines": 3430,
+    "pinTimeUTC": "2026-10-17T12:32:23.894230+00:00",
+    "purpose": "before source or focused history content reading in this prep",
+    "pinArtifact": "consumer-history-initial-pins.json"
+  },
+  "selectedJSONRows": [
+    {
+      "jsonLocation": "$[\"rankedCandidates\"][77]",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+        "bytes": 1840,
+        "lines": 39,
+        "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+        "coverageStatus": "no-matching-source-manifest-row",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 0,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 0,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "jsonLocation": "$[\"rankedCandidates\"][81]",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/panelAppRecommendations.ts",
+        "bytes": 997,
+        "lines": 43,
+        "sha256": "012fda7cd11fa07a975dc418281550b9e992e60884f0697e869d9692383cc3af",
+        "coverageStatus": "no-matching-source-manifest-row",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 0,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 1,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    }
+  ],
+  "decision": "Both current hashes match dated ranking rows, but rows say no-matching-source-manifest-row. Those rows are hash/inventory metadata only; no-row does not prove historically unread. Older May30 plan text is older implementation intent, June22 plan is prior local-route issue/fix plan, old receipts are historical only.",
+  "currentSemanticNoveltyClaim": false,
+  "oldLocalRouteNotReopened": true,
+  "priorSameVersionFullSemanticReadEstablished": false
+}

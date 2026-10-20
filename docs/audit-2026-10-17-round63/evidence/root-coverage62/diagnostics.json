@@ -1,0 +1,8 @@
+{
+  "methodDiscovery": "First Root metadata lookup guessed old163/migrate-coverage.py; wc and sed returned missing-file errors, shell exit1. Original only tool transcript, no standalone raw streams claimed. Exact source-manifest.currentMethod later identified migrate.py. No old method executed.",
+  "schemaPeekTiming": "Before new adapter, Root printed selected original source-manifest fields and SHA. Persistent input-pins explicitly say before adapter parse, after earlier schema peek; no invented earliest before-read pin. Earlier peek objects now preserved in canonical-rows.json from unchanged metadata.",
+  "adapterFirstExit": 0,
+  "verificationFirstExit": 0,
+  "productFailures": 0,
+  "productReruns": 0
+}

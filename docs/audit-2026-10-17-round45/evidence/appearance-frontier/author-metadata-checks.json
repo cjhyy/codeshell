@@ -1,0 +1,152 @@
+{
+  "capturedAtUTC": "2026-10-17T15:23:59.940914+00:00",
+  "role": "Author metadata check, not independent source review",
+  "files": [],
+  "currentByteOnlyChecks": [
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "bytes": 14267,
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "bytes": 6626,
+      "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/installedThemes.ts",
+      "bytes": 2787,
+      "sha256": "8df377284acfeaa9ce1fefce71e883a78daac3d65bcbfc4d6547d0423c7a58cc",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "bytes": 35851,
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.test.tsx",
+      "bytes": 5719,
+      "sha256": "8e4215d5becf549c8cd647bcc1fc3a3c025813f1ed998b50831bd7d61b02322a",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "bytes": 4694,
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/logs/LogsView.tsx",
+      "bytes": 12912,
+      "sha256": "4799aa28eaef52b4d59aef1cfd04b57e862401001c6ba91d4df4713c603fd21a",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameAsRecordedBeforeReadPin": true,
+      "byteMetadataOnlyNow": true
+    }
+  ],
+  "rangeChecks": {
+    "rows": 6,
+    "selected": 6,
+    "full": 0,
+    "semantic": 336,
+    "product": 265,
+    "test": 71,
+    "display": 713,
+    "valid": true
+  },
+  "relativeMarkdownLinks": [
+    {
+      "source": "report.md",
+      "target": "metadata-diagnostics.first.json",
+      "existsNow": true,
+      "receiptDeferredUntilFinalFreeze": false
+    },
+    {
+      "source": "report.md",
+      "target": "source-manifest.json",
+      "existsNow": true,
+      "receiptDeferredUntilFinalFreeze": false
+    },
+    {
+      "source": "report.md",
+      "target": "source-excerpts.json",
+      "existsNow": true,
+      "receiptDeferredUntilFinalFreeze": false
+    },
+    {
+      "source": "report.md",
+      "target": "history.json",
+      "existsNow": true,
+      "receiptDeferredUntilFinalFreeze": false
+    },
+    {
+      "source": "report.md",
+      "target": "ending-checks.json",
+      "existsNow": true,
+      "receiptDeferredUntilFinalFreeze": false
+    },
+    {
+      "source": "report.md",
+      "target": "history-decisions.json",
+      "existsNow": true,
+      "receiptDeferredUntilFinalFreeze": false
+    },
+    {
+      "source": "report.md",
+      "target": "classification.json",
+      "existsNow": true,
+      "receiptDeferredUntilFinalFreeze": false
+    },
+    {
+      "source": "report.md",
+      "target": "validation.json",
+      "existsNow": true,
+      "receiptDeferredUntilFinalFreeze": false
+    },
+    {
+      "source": "report.md",
+      "target": "artifact-receipt.json",
+      "existsNow": false,
+      "receiptDeferredUntilFinalFreeze": true
+    }
+  ],
+  "canonicalOwnedTargets": true,
+  "sourcePinMatches": 10,
+  "instructionIncludedSourcePinCount": true,
+  "historyScopeNotBackfilled": true,
+  "endingHistoryHasOneRealByteDrift": true,
+  "firstMetadataDiagnosticsPreserved": true,
+  "productRuns": 0,
+  "gitCommands": 0,
+  "oldFailedDirectionsRetried": false
+}

@@ -1,0 +1,164 @@
+{
+  "parentReportedPrepContext": "646f9243",
+  "parentContextNote": "Root reported short Round32 integration commit and Round33 formal baseline; no Git check or invented full SHA.",
+  "formalBaseline": null,
+  "prepOnly": true,
+  "initialPinsAtUTC": "2026-10-17T12:25:27.113278+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.ts",
+      "bytes": 813,
+      "lineCount": 26,
+      "sha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "initialFilesystemSha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "pinTiming": "before this prep semantic source read; prior filename inventory only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          26
+        ]
+      ],
+      "coveredLineCount": 26,
+      "finishFilesystemSha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.test.ts",
+      "bytes": 1238,
+      "lineCount": 41,
+      "sha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "initialFilesystemSha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "pinTiming": "before this prep semantic source read; prior filename inventory only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          41
+        ]
+      ],
+      "coveredLineCount": 41,
+      "finishFilesystemSha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/settingsCache.ts",
+      "bytes": 1054,
+      "lineCount": 25,
+      "sha256": "f80311b0eeef1ed1c4a87638fbb25df0bfe58fc10746a1c6ea1f7140b7975709",
+      "initialFilesystemSha256": "f80311b0eeef1ed1c4a87638fbb25df0bfe58fc10746a1c6ea1f7140b7975709",
+      "pinTiming": "before this prep semantic source read; prior filename inventory only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "coveredLineCount": 25,
+      "finishFilesystemSha256": "f80311b0eeef1ed1c4a87638fbb25df0bfe58fc10746a1c6ea1f7140b7975709",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "initialFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "pinTiming": "before selected direct consumer read; rg filenames only",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          674,
+          725
+        ]
+      ],
+      "coveredLineCount": 52,
+      "finishFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "bytes": 58805,
+      "lineCount": 1629,
+      "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "initialFilesystemSha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "pinTiming": "before selected direct consumer read; rg filenames only",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          450,
+          505
+        ]
+      ],
+      "coveredLineCount": 56,
+      "finishFilesystemSha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useSettingsResource.ts",
+      "bytes": 4812,
+      "lineCount": 111,
+      "sha256": "0239c4086e472dd5914f8786cb41d9ef632f94a2bfe451fcaa909a14275690e1",
+      "initialFilesystemSha256": "0239c4086e472dd5914f8786cb41d9ef632f94a2bfe451fcaa909a14275690e1",
+      "pinTiming": "before selected direct consumer read; rg filenames only",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          111
+        ]
+      ],
+      "coveredLineCount": 111,
+      "finishFilesystemSha256": "0239c4086e472dd5914f8786cb41d9ef632f94a2bfe451fcaa909a14275690e1",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useModelConnections.ts",
+      "bytes": 14636,
+      "lineCount": 390,
+      "sha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "initialFilesystemSha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "pinTiming": "before selected direct consumer read; rg filenames only",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          60,
+          145
+        ],
+        [
+          325,
+          350
+        ]
+      ],
+      "coveredLineCount": 112,
+      "finishFilesystemSha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "matchesInitialPin": true
+    }
+  ],
+  "productExecution": false,
+  "gitCommands": 0,
+  "scope": "Future34 metadata-only novelty gate; old status/hash inventory is not proof of never read.",
+  "consumerPinsAtUTC": "2026-10-17T12:25:58.965325+00:00",
+  "counts": {
+    "sourcePins": 7,
+    "full": 4,
+    "selected": 3,
+    "declaredReadLines": 423
+  },
+  "finishAtUTC": "2026-10-17T12:29:33.306624+00:00",
+  "scopeLimits": [
+    "Only helper snapshot data/priority and selected consumer code. No full App/Sidebar/settings/model/approval lifecycle or auth/identity/custody audit.",
+    "No claim all cached references remain immutable across all consumers; the helper explicitly requires immutable snapshots.",
+    "Old R28 test initial null remains its historical timing; this prep own before-read pin does not repair that old field."
+  ],
+  "reportLocalLinksChecked": [
+    "prior-status-pins.json",
+    "prior-coverage.json",
+    "source-manifest.json",
+    "history.json",
+    "gate.json",
+    "validation.json"
+  ],
+  "freezeAtUTC": "2026-10-17T12:29:33.313573+00:00"
+}

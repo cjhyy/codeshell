@@ -1,0 +1,180 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "scope": "host/link ordinary lifecycle and data parsing; selected consumers read only",
+  "sources": [
+    {
+      "path": "packages/host/src/runtime.ts",
+      "sha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "bytes": 4014,
+      "lines": 117
+    },
+    {
+      "path": "packages/host/src/host-requests.ts",
+      "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+      "bytes": 4880,
+      "lines": 151
+    },
+    {
+      "path": "packages/host/src/index.ts",
+      "sha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "bytes": 388,
+      "lines": 13
+    },
+    {
+      "path": "packages/link/src/catalog.ts",
+      "sha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "bytes": 30277,
+      "lines": 705
+    },
+    {
+      "path": "packages/link/src/file-selection.ts",
+      "sha256": "4b60b77e29a0f3e7ed46701d66394e3d8816b354c669222d622c726e8fdebd4b",
+      "bytes": 3645,
+      "lines": 92
+    },
+    {
+      "path": "packages/link/src/operations.ts",
+      "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "bytes": 17020,
+      "lines": 584
+    },
+    {
+      "path": "packages/link/src/operation-validation.ts",
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "bytes": 10999,
+      "lines": 278
+    },
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "sha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "bytes": 4215,
+      "lines": 118
+    },
+    {
+      "path": "packages/link/src/types.ts",
+      "sha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "bytes": 3278,
+      "lines": 107
+    },
+    {
+      "path": "packages/link/src/management-types.ts",
+      "sha256": "290214fc9c1f191c0dae2943eea79f32a54291e0fbe76134b880c7de0cb477ed",
+      "bytes": 7193,
+      "lines": 258
+    },
+    {
+      "path": "packages/link/src/recipes.ts",
+      "sha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "bytes": 4162,
+      "lines": 122
+    },
+    {
+      "path": "packages/link/src/figma.ts",
+      "sha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "bytes": 1031,
+      "lines": 29
+    },
+    {
+      "path": "packages/link/src/index.ts",
+      "sha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "bytes": 1878,
+      "lines": 71
+    },
+    {
+      "path": "packages/desktop/src/main/worker-host-runtime.ts",
+      "sha256": "b43e6ababb56769c3186475c709bbd0f156529adb2abd0652dc9155d6a8c9cc0",
+      "bytes": 2766,
+      "lines": 84
+    },
+    {
+      "path": "packages/desktop/src/main/linked-file-sources-service.ts",
+      "sha256": "13a34056e542a6427ec1c68bd04bf57caea16b3291ae7f57552c61a7fc1ebdd0",
+      "bytes": 10555,
+      "lines": 264
+    },
+    {
+      "path": "packages/desktop/src/renderer/credentials/LinkedFileSourcesDialog.tsx",
+      "sha256": "647477af05cab0b6bf0b7eab51d98add6b669fee65e622d663ba9a08d480d660",
+      "bytes": 17657,
+      "lines": 457
+    },
+    {
+      "path": "packages/core/src/links/http.ts",
+      "sha256": "dbaa7403836bd28e4bf3e45cce7adedd7bb0a972900ad4045b8df7716bcf618c",
+      "bytes": 8182,
+      "lines": 250
+    },
+    {
+      "path": "packages/core/src/links/cli.ts",
+      "sha256": "bbaaf7200746f7e313fa00c3236414003bb632478af3d80055caa50091e320ad",
+      "bytes": 29283,
+      "lines": 916
+    },
+    {
+      "path": "packages/core/src/links/remote-adapters.ts",
+      "sha256": "fa0efd76239cd3194dda45a840231818ed042d513cdd72dea907e5f5ccae4606",
+      "bytes": 20634,
+      "lines": 571
+    },
+    {
+      "path": "packages/core/src/sources/types.ts",
+      "sha256": "17a527864c47923879a4fc7a858d31eb86c68b9af43e1c358518943deb5075c9",
+      "bytes": 2896,
+      "lines": 87
+    },
+    {
+      "path": "packages/core/src/sources/catalog.ts",
+      "sha256": "7257cd54f1a1fd1ef9c1972429b0dfda284ebc560b022018a43cbc532d2c8142",
+      "bytes": 9080,
+      "lines": 233
+    },
+    {
+      "path": "packages/server/src/links/runtime/operation.ts",
+      "sha256": "ab20cf800ad31d91e0fe25405bf4e70e5d434c5ab1afe337d125980f89b3b447",
+      "bytes": 1162,
+      "lines": 32
+    },
+    {
+      "path": "packages/server/src/links/providers/defaults.ts",
+      "sha256": "5018a7d16dc3d5b3bd740dafd62bc8389f430110c819801a9739f767e40e9a72",
+      "bytes": 44168,
+      "lines": 1199
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "bytes": 66162,
+      "lines": 1690
+    },
+    {
+      "path": "packages/server/src/panels/agent-task-host.ts",
+      "sha256": "b21b444ea6ea0cdbcdf45aa4f00f769beefdb565a2780d351b4b2cc42308ee08",
+      "bytes": 21797,
+      "lines": 595
+    },
+    {
+      "path": "packages/host/src/runtime.test.ts",
+      "sha256": "789c3d008b4b153a3480b7c1a6b7981b988b6aa1f830f15fe87c382090bb8a62",
+      "bytes": 10519,
+      "lines": 300
+    },
+    {
+      "path": "packages/link/src/file-selection.test.ts",
+      "sha256": "4f145853d1d1be65f0a180d3fceb9a5059d93b571281a890bc584504548013e1",
+      "bytes": 3564,
+      "lines": 106
+    },
+    {
+      "path": "packages/link/src/operations.test.ts",
+      "sha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "bytes": 8281,
+      "lines": 212
+    },
+    {
+      "path": "packages/desktop/src/renderer/project-config/DataSourcesSection.tsx",
+      "sha256": "632200ef3cfdf74d6dbeb3a8fa8fcfe8275dc2ac6cb4aa695fabf930a0d86ba6",
+      "bytes": 26396,
+      "lines": 667
+    }
+  ]
+}

@@ -1,7 +1,19 @@
-import React, { useEffect, useRef, useState } from "react";
-import { FileText, Loader2, RefreshCw, Search, WrapText, X } from "lucide-react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  ArrowDownToLine,
+  Check,
+  Copy,
+  FileText,
+  Loader2,
+  RefreshCw,
+  Search,
+  WrapText,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SimpleSelect } from "@/components/ui/simple-select";
+import { useCopyFeedback } from "../ui/useCopyFeedback";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
@@ -15,6 +27,7 @@ const BUCKETS: Array<{ value: Bucket; label: TranslationKey }> = [
 ];
 interface ReadState {
   bucket: Bucket;
+  limit: number;
   lines: string[] | null;
   loading: boolean;
   error: string | null;
@@ -23,32 +36,47 @@ interface ReadState {
 export function LogsView() {
   const { t } = useT();
   const [bucket, setBucket] = useState<Bucket>("desktop");
+  const [limit, setLimit] = useState(500);
   const [read, setRead] = useState<ReadState>({
     bucket: "desktop",
+    limit: 500,
     lines: null,
     loading: true,
     error: null,
   });
   const [revision, setRevision] = useState(0);
   const [filter, setFilter] = useState("");
+  const { copied, copy } = useCopyFeedback(`${bucket}:${limit}:${filter}`);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const copyRequest = useRef(0);
   const [wrapLines, setWrapLines] = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
   const refreshRef = useRef<HTMLButtonElement>(null);
   const loadingRef = useRef(true);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const followTail = useRef(true);
+  useEffect(() => {
+    copyRequest.current += 1;
+    setCopyFailed(false);
+    return () => {
+      copyRequest.current += 1;
+    };
+  }, [bucket, limit, filter]);
 
   useEffect(() => {
     let cancelled = false;
     loadingRef.current = true;
     setRead((current) => ({
       bucket,
+      limit,
       lines: current.bucket === bucket ? current.lines : null,
       loading: true,
       error: null,
     }));
     void (async () => {
       try {
-        const lines = await window.codeshell.tailLog(bucket, 500);
-        if (!cancelled) setRead({ bucket, lines, loading: false, error: null });
+        const lines = await window.codeshell.tailLog(bucket, limit);
+        if (!cancelled) setRead({ bucket, limit, lines, loading: false, error: null });
       } catch (error) {
         if (!cancelled)
           setRead((current) => ({
@@ -63,12 +91,20 @@ export function LogsView() {
     return () => {
       cancelled = true;
     };
-  }, [bucket, revision]);
+  }, [bucket, limit, revision]);
 
   // Do not label the previous bucket's data as the newly selected log before its effect runs.
   const current: ReadState =
-    read.bucket === bucket ? read : { bucket, lines: null, loading: true, error: null };
-  const query = filter.toLowerCase();
+    read.bucket === bucket && read.limit === limit
+      ? read
+      : {
+          bucket,
+          limit,
+          lines: read.bucket === bucket ? read.lines : null,
+          loading: true,
+          error: null,
+        };
+  const query = filter.trim().toLowerCase();
   const filtered = current.lines?.filter((line) => !query || line.toLowerCase().includes(query));
   const refresh = () => {
     if (loadingRef.current) return;
@@ -80,12 +116,19 @@ export function LogsView() {
     setFilter("");
     searchRef.current?.focus({ preventScroll: true });
   };
+  useLayoutEffect(() => {
+    if (followTail.current && !query && panelRef.current)
+      panelRef.current.scrollTop = panelRef.current.scrollHeight;
+  }, [current.lines, query]);
 
   return (
     <Tabs
       value={bucket}
-      onValueChange={(value) => setBucket(value as Bucket)}
-      className="flex h-full min-h-0 min-w-0 flex-col bg-muted/10"
+      onValueChange={(value) => {
+        followTail.current = true;
+        setBucket(value as Bucket);
+      }}
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain bg-muted/10"
     >
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-6">
         <div className="flex min-w-0 items-start gap-3">
@@ -93,7 +136,7 @@ export function LogsView() {
             <FileText size={20} aria-hidden />
           </span>
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight">{t("auto.logs.title")}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{t("activity.diagnostics")}</h1>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
               {t("auto.logs.description")}
             </p>
@@ -116,7 +159,7 @@ export function LogsView() {
           {t("auto.logs.refresh")}
         </Button>
       </div>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-4 py-5 sm:px-6">
+      <div className="flex min-h-80 min-w-0 flex-1 shrink-0 flex-col gap-3 px-4 py-5 sm:px-6">
         <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card p-2.5">
           <TabsList
             aria-label={t("auto.logs.sources")}
@@ -133,7 +176,7 @@ export function LogsView() {
               </TabsTrigger>
             ))}
           </TabsList>
-          <div role="search" className="relative min-w-0 flex-1 basis-52">
+          <div role="search" className="relative min-w-0 flex-1 basis-36">
             <Search
               size={15}
               aria-hidden
@@ -161,24 +204,73 @@ export function LogsView() {
               </Button>
             )}
           </div>
+          <SimpleSelect
+            value={String(limit)}
+            ariaLabel={t("activity.logLimit")}
+            options={[200, 500, 2000].map((count) => ({
+              value: String(count),
+              label: String(count),
+            }))}
+            onChange={(value) => setLimit(Number(value))}
+            className="h-9 w-24 shrink-0 rounded-xl"
+          />
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 px-1">
           <p role="status" className="text-xs tabular-nums text-muted-foreground">
             {current.lines &&
               t("auto.logs.count", { count: filtered?.length ?? 0, total: current.lines.length })}
           </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-8 rounded-lg text-xs"
-            aria-pressed={wrapLines}
-            onClick={() => setWrapLines((value) => !value)}
-          >
-            <WrapText size={14} aria-hidden />
-            {t("auto.logs.wrapLines")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 rounded-lg text-xs"
+              disabled={!filtered?.length}
+              onClick={() => {
+                if (panelRef.current) panelRef.current.scrollTop = panelRef.current.scrollHeight;
+                followTail.current = true;
+                panelRef.current?.focus({ preventScroll: true });
+              }}
+            >
+              <ArrowDownToLine size={14} aria-hidden />
+              <span className="sr-only sm:not-sr-only">{t("activity.logLatest")}</span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 rounded-lg text-xs"
+              disabled={!filtered?.length}
+              onClick={async () => {
+                const request = ++copyRequest.current;
+                const success = await copy(filtered?.join("\n") ?? "");
+                if (request === copyRequest.current) setCopyFailed(!success);
+              }}
+            >
+              {copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
+              <span className="sr-only sm:not-sr-only">
+                {t(copied ? "activity.logCopied" : "activity.logCopy")}
+              </span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 rounded-lg text-xs"
+              aria-pressed={wrapLines}
+              onClick={() => setWrapLines((value) => !value)}
+            >
+              <WrapText size={14} aria-hidden />
+              {t("auto.logs.wrapLines")}
+            </Button>
+          </div>
         </div>
+        {copyFailed && (
+          <p role="alert" className="shrink-0 text-xs text-status-err">
+            {t("activity.logCopyFailed")}
+          </p>
+        )}
         {current.error && (
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-status-err/25 bg-status-err/5 p-3 text-sm">
             <p
@@ -199,10 +291,15 @@ export function LogsView() {
           </div>
         )}
         <TabsContent
+          ref={panelRef}
           key={bucket}
           value={bucket}
           aria-busy={current.loading}
-          className="mt-0 min-h-0 min-w-0 flex-1 overflow-auto rounded-2xl border border-border/70 bg-card/70 focus-visible:ring-inset"
+          onScroll={(event) => {
+            const panel = event.currentTarget;
+            followTail.current = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 40;
+          }}
+          className="mt-0 min-h-24 min-w-0 flex-1 overflow-auto rounded-2xl border border-border/70 bg-card/70 focus-visible:ring-inset"
         >
           {current.lines === null ? (
             <div

@@ -1,4 +1,5 @@
 import type { CloudAccountApi } from "../shared/cloud-account.js";
+import type { ModelTraceApi } from "./model-trace-api.js";
 import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import type {
@@ -74,6 +75,7 @@ import type {
   PanelAppExtensionSummary,
   PanelAppHostContext,
   PanelAppAgentToolInvocation,
+  PanelAppWindowTarget,
   PreparedPanelApp,
 } from "../shared/panel-apps";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
@@ -270,6 +272,8 @@ export type FoldItem =
       injected?: boolean;
       steerId?: string;
       clientMessageId?: string;
+      /** Persisted user-event identity, independent of the loaded history window. */
+      sourceEventId?: string;
       timestamp?: number;
     }
   // User interrupted this turn (Stop). Rebuilt from the core transcript's
@@ -646,6 +650,8 @@ export interface CredentialView {
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
     autoRefreshFromBrowser?: boolean;
+    recordSchemaVersion?: 2;
+    linkRecipeId?: import("@cjhyy/code-shell-link").LinkRecipeId;
     linkProvider?: string;
     linkConnectionMethod?: string;
     linkExecutionRuntime?: "local" | "server";
@@ -654,8 +660,9 @@ export interface CredentialView {
       | "github-cli"
       | "cli-session"
       | "browser-oauth"
+      | "mcp-oauth"
       | "remote-link";
-    linkExecutionBackend?: "http-token" | "cli" | "remote";
+    linkExecutionBackend?: "http-token" | "cli" | "remote" | "mcp";
     agentExposable?: boolean;
     linkAccountId?: string;
     linkAccountLabel?: string;
@@ -780,6 +787,8 @@ export interface CliLinkStatusView {
   installed: boolean;
   authenticated: boolean;
   account?: string;
+  /** Stable provider identity, separate from the mutable account display name. */
+  accountId?: string;
   message?: string;
 }
 
@@ -1336,7 +1345,10 @@ export interface CodeshellApi
     ): Promise<import("@cjhyy/code-shell-link").LinkAuthorization>;
     authorizationCancel(cwd: string, id: string): Promise<void>;
     authorizationOpen(cwd: string, id: string): Promise<boolean>;
-    remoteSnapshot(cwd: string): Promise<import("@cjhyy/code-shell-link").LinkSnapshot>;
+    remoteSnapshot(
+      cwd: string,
+      forceCatalog?: boolean,
+    ): Promise<import("@cjhyy/code-shell-link").LinkSnapshot>;
     remoteStart(
       cwd: string,
       requestId: string,
@@ -1403,6 +1415,8 @@ export interface CodeshellApi
           scope?: "domain" | "all";
           switchMode?: "clear" | "merge";
           autoRefreshFromBrowser?: boolean;
+          recordSchemaVersion?: 2;
+          linkRecipeId?: import("@cjhyy/code-shell-link").LinkRecipeId;
           linkProvider?: string;
           linkConnectionMethod?: string;
           linkExecutionRuntime?: "local" | "server";
@@ -1411,8 +1425,9 @@ export interface CodeshellApi
             | "github-cli"
             | "cli-session"
             | "browser-oauth"
+            | "mcp-oauth"
             | "remote-link";
-          linkExecutionBackend?: "http-token" | "cli" | "remote";
+          linkExecutionBackend?: "http-token" | "cli" | "remote" | "mcp";
           agentExposable?: boolean;
           linkAccountId?: string;
           linkAccountLabel?: string;
@@ -1498,6 +1513,8 @@ export interface CodeshellApi
   probeLocalhostPorts(ports?: number[]): Promise<number[]>;
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout(initialUrl?: string): Promise<void>;
+  /** Open or focus a separate view of an already-bound installed Panel tab. */
+  openPanelAppWindow(target: PanelAppWindowTarget): Promise<void>;
   /** From a popout: send an element-pick anchor back to the parent window. */
   sendBrowserAnchor(anchor: unknown): void;
   /** In the parent: receive anchors forwarded from a popout. Returns unsubscribe. */
@@ -1694,6 +1711,7 @@ export interface CodeshellApi
     patch: Record<string, unknown>,
   ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
+  modelTraces: ModelTraceApi;
   setSessionArchived(id: string, archived: boolean): Promise<void>;
   deleteSession(id: string): Promise<void>;
   claimQuickChatSession(id: string, claimId: string): Promise<void>;
@@ -2178,8 +2196,6 @@ export interface CodeshellApi
   }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }>;
   /** Remove one independently installed Panel App. */
   uninstallPanelApp(id: string, cwd?: string): Promise<void>;
-  /** Fuzzy file search across every registered root in a project. */
-  searchProjectFiles(projectId: string, query: string): Promise<ProjectFileSearchHit[]>;
   /** Bounded full-text search over on-disk session transcripts (session switcher). */
   searchSessionContent(query: string): Promise<SessionContentSearchResult>;
   readSkillBody(target: RendererConfigurationTarget | null, filePath: string): Promise<string>;
@@ -2791,6 +2807,8 @@ export interface PluginSummary {
   installKey: string;
   /** Marketplace source — null for direct git / GitHub installs without marketplace. */
   marketplace: string | null;
+  /** Core-validated source; absent/unknown origins cannot be uninstalled. */
+  installationKind: "marketplace" | "direct" | "unknown";
   /** Source line shown under the plugin name. */
   sourceLabel: string;
   /** Plugin install path (truncated display elsewhere). */

@@ -1,0 +1,77 @@
+{
+  "createdAt": "2026-10-17T18:11:28.325020+00:00",
+  "frozen": true,
+  "scope": "Exact packet files excluding this self-receipt; historical source-full gate metadata only, no current product body or Git",
+  "files": [
+    {
+      "path": "canonical-evidence.json",
+      "bytes": 5568,
+      "sha256": "cc653021c70c8e27a2958e514a30077ef30d46c10e48999e9a97906064231010"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 1023,
+      "sha256": "9daa8061c59948dacc7c60931856d89176aa72724f142b3009c474b434027c9f"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1259,
+      "sha256": "81576199ad66bfe0f738fbea2a3efe206b1debc09ab0b66daf3de97028b23557"
+    },
+    {
+      "path": "fallback-before-pin.json",
+      "bytes": 222,
+      "sha256": "54e29ef9135798b58063b2efbdbbb800652dc9db3d39bcd7ea5e22c8e4623f82"
+    },
+    {
+      "path": "fallback-gate.py",
+      "bytes": 2655,
+      "sha256": "fd84d79c25373cb64315949ab24377cbd8a1f0b89af1e250352873e77b10c431"
+    },
+    {
+      "path": "fallback-history-gate.json",
+      "bytes": 134674,
+      "sha256": "76a7a94534d335d3dc29acf5c644d83602b618410c25b2ec0efc817b60fe630c"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 9932,
+      "sha256": "283df524b75c805e9949573b372079219c9fdbb2b75e02050196fc246a1671cc"
+    },
+    {
+      "path": "history-gate.json",
+      "bytes": 93386,
+      "sha256": "4e320a5dead4737a755d96f8b5401de284f4e9cd78f76e4e003e7e596e6bd4e7"
+    },
+    {
+      "path": "history-inventory.json",
+      "bytes": 1069617,
+      "sha256": "b7e832725ea7d4492e6d94a13385472e93843ac539fea4a4f9bfefbd2d38a4de"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 899,
+      "sha256": "2687508aa417c524e8d88dd77ab02b62495059c30f4bd4cd8e65127522cda194"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3170,
+      "sha256": "39745b10c02e912f946a29f2525064785289d34110e5c2e00cca35b0082309f6"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 3696,
+      "sha256": "5a5b3f565a4b149c9fcdd8818c1b45d30249fcf876cb4b731285dfd6238176ec"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 10135,
+      "sha256": "944176588fd9bdfd9089adeb21327a1073349da897b2b67e7c5c56a6cc51bf31"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 702,
+      "sha256": "400ca56d0602ae425c597bc93be48c712986620ee58c54de2c34f4c0e508f545"
+    }
+  ]
+}

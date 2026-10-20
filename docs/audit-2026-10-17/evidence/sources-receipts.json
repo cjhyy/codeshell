@@ -1,0 +1,30 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "report": "docs/audit-2026-10-17/sources.md",
+  "productCodeChanged": false,
+  "gitOperations": false,
+  "confirmed": [
+    { "id": "S01", "priority": "P2", "file": "packages/core/src/sources/documents/parse.ts", "line": 291, "reportLine": 9, "dynamicBoundary": "pure production Office parser; URI-format primary-source support with stated package-level documentation limit" },
+    { "id": "S02", "priority": "P3", "file": "packages/core/src/sources/documents/parse.ts", "line": 301, "reportLine": 22, "dynamicBoundary": "pure production XLSX parser; XML namespace identity supported by W3C normative source" },
+    { "id": "S03", "priority": "P2", "file": "packages/core/src/tool-system/builtin/sources.ts", "line": 686, "reportLine": 46, "dynamicBoundary": "production data functions plus actual ReadSource handler and local parser worker; no UI/executor approval workflow" }
+  ],
+  "candidatesNotCounted": ["XLSX phonetic guides included in extracted cell strings", "Han/Latin/digit adjacency causes lexical keyword misses", "engine/query consumer return cancellation lifecycle clue transferred to parent"],
+  "shards": [
+    { "input": "./docs/audit-2026-10-17/evidence/sources-parse.test.ts", "log": "sources-parse.log", "tests": 5, "expectations": 10, "failures": 0, "skipped": 0 },
+    { "input": "packages/core/src/sources/truncate-utf8.test.ts packages/core/src/sources/adapters/mcp-resource.test.ts packages/core/src/sources/types.test.ts", "log": "sources-pure-baseline.log", "tests": 15, "expectations": 44, "failures": 0, "skipped": 0 },
+    { "input": "./docs/audit-2026-10-17/evidence/sources-search.test.ts", "log": "sources-search.log", "tests": 3, "expectations": 10, "failures": 0, "skipped": 0 },
+    { "input": "./docs/audit-2026-10-17/evidence/sources-redaction.test.ts", "log": "sources-redaction.log", "tests": 2, "expectations": 5, "failures": 0, "skipped": 0 },
+    { "input": "./docs/audit-2026-10-17/evidence/sources-handler.test.ts", "log": "sources-handler.log", "tests": 1, "expectations": 6, "failures": 0, "skipped": 0 },
+    { "input": "./docs/audit-2026-10-17/evidence/sources-local-document.test.ts", "log": "sources-local-document.log", "tests": 1, "expectations": 10, "failures": 0, "skipped": 0 }
+  ],
+  "runner": "node scripts/run-bun-test-shard.mjs --timeout 30000",
+  "totals": { "tests": 27, "expectations": 85, "failures": 0, "skipped": 0 },
+  "firstExecutionStdoutStderrRedirected": true,
+  "failedTestRetries": 0,
+  "skippedReadOnlyOperations": [
+    "zsh unmatched node_modules/@artifact* auxiliary search",
+    "web inaccessible PackagePart.CreateRelationship?view=net-10.0 page",
+    "rg nonexistent docs/shared-document-collection-query-delivery.md auxiliary input",
+    "zsh unmatched packages/desktop/src/main/upload* auxiliary search"
+  ]
+}

@@ -1,0 +1,38 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round7/evidence/providers-thinking-roundtrip.test.ts:
+66 |     expect(stored?.content).toEqual([{ type: "tool_use", id: "call-one", name: "Read", input: { path: "own.txt" } }]);
+67 |     const wire = requests[1].messages.find((message: any) => message.role === "assistant");
+68 |     expect(wire.content).toEqual(stored?.content);
+69 |     expect(wire.content).not.toEqual(content);
+70 |     expect(requests[1].thinking).toEqual(requests[0].thinking);
+71 |     expect(requests[1].messages.at(-1)).toEqual({
+                                             ^
+error: expect(received).toEqual(expected)
+
+  {
+    "content": [
+      {
++       "cache_control": {
++         "type": "ephemeral",
++       },
+        "content": "memory tool result",
+        "tool_use_id": "call-one",
+        "type": "tool_result",
+      },
+    ],
+    "role": "user",
+  }
+
+- Expected  - 0
++ Received  + 3
+
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/evidence/providers-thinking-roundtrip.test.ts:71:41)
+(fail) Round 7 Anthropic thinking tool round trip > thinking-enabled tool response loses both thinking block kinds before the continuation request [21.65ms]
+(pass) Round 7 Anthropic thinking tool round trip > thinking-off control echoes the whole tool response and preserves its result [5.32ms]
+
+ 1 pass
+ 1 fail
+ 13 expect() calls
+Ran 2 tests across 1 file. [214.00ms]
+Bun test process failed (1)

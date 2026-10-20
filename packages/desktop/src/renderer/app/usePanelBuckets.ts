@@ -50,6 +50,7 @@ import {
   type PanelBucketState,
 } from "./appUtils";
 import { startPanelResize } from "./panelResize";
+import type { SubagentSelection } from "../subagents/SubagentNavigation";
 
 interface Params {
   sessions: {
@@ -61,6 +62,8 @@ interface Params {
     setSessionIndices: Dispatch<SetStateAction<Record<string, SessionIndex>>>;
     /** Materialize the active draft and return its real session bucket. */
     materializeActiveSessionForPanel: () => string | null;
+    /** Write a review directly to its captured bucket, avoiding global seed races. */
+    appendReviewDraft?: (bucket: string, text: string) => void;
   };
   quickChat: {
     quickChatSessions: Record<string, QuickChatSessionRef>;
@@ -124,6 +127,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     sessionIndicesRef,
     setSessionIndices,
     materializeActiveSessionForPanel,
+    appendReviewDraft,
   } = sessions;
   const {
     quickChatSessions,
@@ -702,6 +706,20 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
       };
     });
 
+  const openSubagent = useCallback(
+    (selection: SubagentSelection): void => {
+      if (!selection.agentId?.trim()) return;
+      updatePanelBucket(activeBucketRef.current, (state) => ({
+        ...state,
+        open: true,
+        subagentSelection: { ...selection, navigationNonce: state.requestNonce + 1 },
+        requestNonce: state.requestNonce + 1,
+        requestKind: "subagent",
+      }));
+    },
+    [activeBucketRef, updatePanelBucket],
+  );
+
   const openPanel = (kind: PanelTab): void => {
     if (kind === "review" && !gitReviewAvailable) return;
     updateActivePanelBucket((state) => ({
@@ -766,13 +784,32 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
   useEffect(
     () =>
       onComposerSeedRequest((request) => {
+        // A hidden panel can finish preparing after the user switches chats.
+        // Never append that review to another conversation's unsent draft.
+        if (request.source === "code-review") {
+          const targetBucket = activeBucketRef.current;
+          if (
+            !appendReviewDraft ||
+            resolveEngineSessionIdForBucket(targetBucket) !== request.sessionId
+          )
+            return false;
+          appendReviewDraft(targetBucket, request.text);
+          setViewMode("chat");
+          return true;
+        }
         // Keep the current conversation bucket. Unlike conversational
         // automation creation, a plugin starter prompt is an explicit draft
         // for the session the user was viewing before opening Settings.
         seedComposer(request.text);
         setViewMode("chat");
       }),
-    [seedComposer, setViewMode],
+    [
+      seedComposer,
+      setViewMode,
+      resolveEngineSessionIdForBucket,
+      activeBucketRef,
+      appendReviewDraft,
+    ],
   );
   const startConversationalAutomation = (): void => {
     // Start a FRESH draft session — never pile onto whatever task/run session
@@ -793,12 +830,12 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     const onReview = (e: Event): void => {
       const detail = (e as CustomEvent<{ files?: string[]; diff?: string }>).detail;
       const files = detail?.files;
-      if (!gitReviewAvailableRef.current && !detail?.diff?.trim()) return;
+      if (!gitReviewAvailableRef.current && typeof detail?.diff !== "string") return;
       updatePanelBucket(activeBucketRef.current, (state) => ({
         ...state,
         open: true,
         reviewFiles: Array.isArray(files) && files.length > 0 ? files : undefined,
-        reviewDiff: detail?.diff || undefined,
+        reviewDiff: typeof detail?.diff === "string" ? detail.diff : undefined,
         requestNonce: state.requestNonce + 1,
         requestKind: "review",
       }));
@@ -979,6 +1016,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     panelBuckets,
     togglePanel,
     openPanel,
+    openSubagent,
     panelWidth,
     beginPanelResize,
     composerSeed,

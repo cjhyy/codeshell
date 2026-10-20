@@ -1,0 +1,20 @@
+{
+  "parentReportedContext": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "formalRound32Baseline": null,
+  "prepOnly": true,
+  "capturedUtc": "2026-10-17T12:03:47.258209+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "bytes": 7206,
+      "lines": 190,
+      "firstFilesystemSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "firstSemanticReadSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "pinBeforeSemanticRead": true,
+      "datedInventorySha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "matchesDatedInventory": true
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

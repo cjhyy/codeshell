@@ -1,0 +1,25 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "count": 0,
+  "sourceChanges": [],
+  "priorSourceStatus": [
+    {
+      "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+      "source": "packages/core/src/automation/cron-expr.ts",
+      "oldFrozen": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+      "oldReport": "docs/audit-2026-10-17/scheduling-data.md",
+      "oldFinding": "TIME1 (second-batch item23)",
+      "currentSha256": "5a5fcfd813afb00e42b32cbaa19f9be68918fed0608a30a33cb494ce7f2c3da0",
+      "oldFrozenSha256": "5a5fcfd813afb00e42b32cbaa19f9be68918fed0608a30a33cb494ce7f2c3da0",
+      "identicalBytes": true,
+      "status": "source mechanism unchanged; not runtime revalidation or new finding",
+      "productReruns": 0,
+      "excluded": [
+        "No old malformed suffix input evaluated.",
+        "No Scheduler create/update or old fixture rerun."
+      ]
+    }
+  ],
+  "runtimeRetested": false,
+  "note": "PriorTIME1 byte identity proves source unchanged only, not replay or fix validation. Selected main source status checked separately."
+}

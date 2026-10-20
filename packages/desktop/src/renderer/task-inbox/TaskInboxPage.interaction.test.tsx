@@ -21,8 +21,8 @@ const { TaskInboxPage } = await import("./TaskInboxPage");
 function row(id: string, patch: Partial<TaskInboxRecordV1> = {}): TaskInboxRecordV1 {
   return {
     schemaVersion: 1,
-    taskKey: `session:${id}`,
-    source: "session",
+    taskKey: `background-job:${id}`,
+    source: "background-job",
     sourceId: id,
     title: `任务 ${id}`,
     status: "running",
@@ -42,6 +42,19 @@ function props(node: Element): Record<string, any> {
   const key = Object.keys(node).find((name) => name.startsWith("__reactProps$"));
   return key ? (node as any)[key] : {};
 }
+
+/** Closed Radix menus live outside the mini-DOM; inspect the owning selector contract. */
+function selectProps(node: Element): Record<string, any> {
+  const current = node as unknown as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? current[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
+}
+
 function textOf(node: Node): string {
   if (node.nodeType === 3) return node.nodeValue ?? (node as Text).data ?? node.textContent ?? "";
   return node.childNodes.length
@@ -198,7 +211,15 @@ describe("TaskInboxPage", () => {
     };
     await render();
     await settle(() =>
-      requests[0].request.resolve(snapshot([row("uncertain", { status: "failed" })])),
+      requests[0].request.resolve(
+        snapshot([
+          row("uncertain", {
+            source: "session",
+            capabilities: ["open", "verify"],
+            status: "failed",
+          }),
+        ]),
+      ),
     );
     expect(calls).toEqual([]);
     await click(button("外部写入人工处理"));
@@ -238,7 +259,15 @@ describe("TaskInboxPage", () => {
     };
     await render();
     await settle(() =>
-      requests[0].request.resolve(snapshot([row("uncertain", { status: "failed" })])),
+      requests[0].request.resolve(
+        snapshot([
+          row("uncertain", {
+            source: "session",
+            capabilities: ["open", "verify"],
+            status: "failed",
+          }),
+        ]),
+      ),
     );
     await click(button("外部写入人工处理"));
     await click(button("人工核查后处理…"));
@@ -281,7 +310,15 @@ describe("TaskInboxPage", () => {
     };
     await render();
     await settle(() =>
-      requests[0].request.resolve(snapshot([row("uncertain", { status: "failed" })])),
+      requests[0].request.resolve(
+        snapshot([
+          row("uncertain", {
+            source: "session",
+            capabilities: ["open", "verify"],
+            status: "failed",
+          }),
+        ]),
+      ),
     );
     await click(button("外部写入人工处理"));
     await click(button("只读核查…"));
@@ -301,7 +338,7 @@ describe("TaskInboxPage", () => {
         snapshot([
           row("done", {
             status: "done",
-            source: "legacy-run",
+            source: "background-shell",
             capabilities: ["open"],
             workspacePath: "/work/a",
           }),
@@ -320,7 +357,7 @@ describe("TaskInboxPage", () => {
     expect(textOf(cards()[0])).toContain("需要审批");
     expect(textOf(cards()[3])).toContain("仅查看");
     expect(textOf(cards()[3])).toContain("/work/a");
-    expect(nodes().filter((node) => node.tagName === "SELECT")).toHaveLength(3);
+    expect(nodes().filter((node) => props(node).role === "combobox")).toHaveLength(3);
     expect(
       nodes()
         .filter((node) => node.tagName === "LABEL")
@@ -334,9 +371,9 @@ describe("TaskInboxPage", () => {
     ).toHaveLength(1);
     expect(textOf(container)).not.toContain("取消任务");
     const source = nodes().find(
-      (node) => node.tagName === "SELECT" && String(props(node).id).endsWith("-source"),
+      (node) => props(node).role === "combobox" && String(props(node).id).endsWith("-source"),
     )!;
-    await settle(() => props(source).onChange({ target: { value: "legacy-run" } }));
+    await settle(() => selectProps(source).onChange("background-shell"));
     expect(cards()).toHaveLength(1);
     const input = nodes().find((node) => node.tagName === "INPUT")!;
     await settle(() => props(input).onChange({ target: { value: "missing" } }));
@@ -460,11 +497,58 @@ describe("TaskInboxPage", () => {
     expect(cards()).toHaveLength(1);
     expect(textOf(container)).toContain("offline");
   });
+  test("initial read failure is not displayed as an empty inbox and can be retried", async () => {
+    await render();
+    await settle(() => requests[0].request.reject(new Error("initial outage")));
+    expect(textOf(container)).toContain("initial outage");
+    expect(textOf(container)).toContain("任务暂时无法读取");
+    expect(textOf(container)).not.toContain("没有任务记录");
+    await click(button("重试读取"));
+    await settle(() => requests[1].request.resolve(snapshot([row("recovered")])));
+    expect(cards()).toHaveLength(1);
+    expect(textOf(container)).not.toContain("initial outage");
+  });
+  test("a notification during a failed read is followed once instead of swallowed", async () => {
+    await render();
+    await settle(() => changed(2));
+    await settle(() => requests[0].request.reject(new Error("transient")));
+    expect(requests).toHaveLength(2);
+    await settle(() => requests[1].request.reject(new Error("still offline")));
+    expect(requests).toHaveLength(2);
+    expect(textOf(container)).toContain("still offline");
+  });
+  test("repeated mixed pagination versions stop with a recoverable error", async () => {
+    await render();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await settle(() =>
+        requests[attempt * 2].request.resolve({ ...snapshot([row("old")], 1), nextCursor: "p2" }),
+      );
+      await settle(() => requests[attempt * 2 + 1].request.resolve(snapshot([row("mixed")], 2)));
+    }
+    expect(requests).toHaveLength(6);
+    expect(cards()).toHaveLength(0);
+    expect(textOf(container)).toContain("Task snapshot changed repeatedly");
+    expect(button("重试读取")).toBeDefined();
+  });
+  test("summary search and clear-all restore the full inbox and keyboard focus", async () => {
+    await render();
+    await settle(() =>
+      requests[0].request.resolve(snapshot([row("a", { summary: "Needle in summary" }), row("b")])),
+    );
+    const search = nodes().find((node) => props(node).type === "search")!;
+    await settle(() => props(search).onChange({ target: { value: " needle " } }));
+    expect(cards()).toHaveLength(1);
+    await click(button("清除所有筛选"));
+    expect(cards()).toHaveLength(2);
+    expect(document.activeElement).toBe(search);
+  });
   test("open validates revision, invokes original detail callback and stale failures refresh", async () => {
     await render();
     await settle(() => requests[0].request.resolve(snapshot([row("a")])));
     await click(button("打开来源"));
-    expect(actions).toEqual([{ taskKey: "session:a", action: "open", expectedRevision: "r1" }]);
+    expect(actions).toEqual([
+      { taskKey: "background-job:a", action: "open", expectedRevision: "r1" },
+    ]);
     expect(opened.map((record) => record.sourceId)).toEqual(["a"]);
     await settle(() =>
       requests[1].request.resolve(snapshot([row("a", { capabilities: ["pause"] })], 2)),
@@ -473,6 +557,16 @@ describe("TaskInboxPage", () => {
     await click(button("暂停"));
     expect(textOf(container)).toContain("任务状态已变化");
     expect(requests).toHaveLength(3);
+  });
+  test("an open action response cannot navigate after leaving the task page", async () => {
+    const pendingOpen = deferred<TaskInboxActionResult>();
+    window.codeshell.taskInbox.act = () => pendingOpen.promise;
+    await render();
+    await settle(() => requests[0].request.resolve(snapshot([row("a")])));
+    await click(button("打开来源"));
+    await settle(() => root.render(null));
+    await settle(() => pendingOpen.resolve({ status: "ok" }));
+    expect(opened).toEqual([]);
   });
   test("a durable child opens its exact transcript without a live observer or ordinary Session import", async () => {
     const reads: string[] = [];
@@ -524,6 +618,8 @@ describe("TaskInboxPage", () => {
     await click(button("重试"));
     expect(textOf(container)).toContain("再次消耗模型额度");
     await click(button("确认"));
-    expect(actions).toEqual([{ taskKey: "session:a", action: "retry", expectedRevision: "r1" }]);
+    expect(actions).toEqual([
+      { taskKey: "background-job:a", action: "retry", expectedRevision: "r1" },
+    ]);
   });
 });

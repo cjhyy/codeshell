@@ -1,0 +1,37 @@
+{
+  "atUTC": "2026-10-17T19:54:10.558397+00:00",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "scripts/build-meta.ts",
+      "bytes": 1712,
+      "lines": 38,
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "lines": 129,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "rootReportedBaselineOnly": "c6a85ac1b69329f35bc1f6ff34d08070f91b1d96",
+  "role": "Independent bounded root meta build data/path contract source reviewer",
+  "gitOperations": 0,
+  "instructions": "Prior actual AGENTS5/CODESHELL217 reading carried under unchanged SHA; current hash-only."
+}

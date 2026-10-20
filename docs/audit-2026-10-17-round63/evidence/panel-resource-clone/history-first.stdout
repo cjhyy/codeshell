@@ -1,0 +1,14 @@
+TOPKEYS ['atUTC', 'excludedFormalAtOrAbove', 'historyFiles', 'inventory', 'jsonValueScalarsVisited', 'queries', 'counts', 'hits', 'capPerTarget', 'errors', 'note', 'productExecution']
+SCALAR atUTC 2026-10-17T20:51:39.407022+00:00
+SCALAR excludedFormalAtOrAbove 63
+SCALAR historyFiles 6669
+LIST inventory LEN 6669
+SCALAR jsonValueScalarsVisited 4882650
+DICT queries KEYS ['packages/core/src/model-traces/native-frames.ts', 'packages/core/src/model-traces/sanitize.ts', 'packages/core/src/model-traces/classification.ts', 'packages/desktop/src/main/background-notification-content.ts', 'packages/desktop/src/main/desktop-notification-routes.ts', 'packages/desktop/src/main/native-desktop-notification.ts', 'packages/server/src/panels/resources/clone.ts', 'packages/server/src/panels/resources/storage.ts', 'packages/server/src/panels/resources/directories.ts']
+DICT counts KEYS ['packages/core/src/model-traces/native-frames.ts', 'packages/core/src/model-traces/sanitize.ts', 'packages/core/src/model-traces/classification.ts', 'packages/desktop/src/main/background-notification-content.ts', 'packages/desktop/src/main/desktop-notification-routes.ts', 'packages/desktop/src/main/native-desktop-notification.ts', 'packages/server/src/panels/resources/clone.ts', 'packages/server/src/panels/resources/storage.ts', 'packages/server/src/panels/resources/directories.ts']
+DICT hits KEYS ['packages/core/src/model-traces/native-frames.ts', 'packages/core/src/model-traces/sanitize.ts', 'packages/core/src/model-traces/classification.ts', 'packages/desktop/src/main/background-notification-content.ts', 'packages/desktop/src/main/desktop-notification-routes.ts', 'packages/desktop/src/main/native-desktop-notification.ts', 'packages/server/src/panels/resources/clone.ts', 'packages/server/src/panels/resources/storage.ts', 'packages/server/src/panels/resources/directories.ts']
+SCALAR capPerTarget 100
+LIST errors LEN 0
+SCALAR note Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic r
+SCALAR productExecution 0
+PROJECTED ['packages/server/src/panels/resources/clone.ts']

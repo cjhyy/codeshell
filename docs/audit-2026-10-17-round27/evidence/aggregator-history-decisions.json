@@ -1,0 +1,112 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "priorCorpus": {
+    "files": 2596,
+    "markdown": 1250,
+    "json": 1346,
+    "stringLeaves": 468104,
+    "scalarLeaves": 676635,
+    "parseErrors": 0,
+    "archivePaths": 174,
+    "archivePathMatchingRule": "174 counts any lowercase path component containing archive; exact archive/_archive directory paths are169. Neither changes total2596 file inventory.",
+    "exactArchiveDirectoryPaths": 169
+  },
+  "directedMatches": {
+    "worktreeOpen": 7,
+    "externalPathLoss": 17,
+    "emptyExternalPreview": 50
+  },
+  "decisions": [
+    {
+      "source": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+      "ranges": [
+        [
+          1,
+          26
+        ],
+        [
+          112,
+          130
+        ]
+      ],
+      "decision": "Different cause: old dock skipped main session workspace resolution. Current finding assumes correct owning session root and loses a separate DriveAgent child-root in aggregate output."
+    },
+    {
+      "source": "docs/research/driveagent-worktree-cwd-visibility-gap.md",
+      "ranges": [
+        [
+          1,
+          40
+        ],
+        [
+          188,
+          239
+        ]
+      ],
+      "decision": "Different cause: historical external CLI internally migrates after launch, so captured cwd/transcript becomes stale. Current child worktree is chosen by CodeShell before launch, correct cwd survives event then is stripped only in renderer summary."
+    },
+    {
+      "source": "docs/audit-2026-10-17-round13/evidence/groups-skip-note.md",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "decision": "Old Delete/prefix/Move focused import failure remains SKIP; no retry or upgrade; current cwd-elision mechanism separate."
+    },
+    {
+      "source": "packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts",
+      "ranges": [
+        [
+          311,
+          329
+        ]
+      ],
+      "decision": "Existing single-cwd external attribution plus exact reversal is a source counterexample, not proof of multiple-root navigation or current passing test."
+    },
+    {
+      "source": "packages/desktop/src/renderer/types.test.ts",
+      "ranges": [
+        [
+          1280,
+          1321
+        ],
+        [
+          1370,
+          1425
+        ]
+      ],
+      "decision": "Existing completion tests share one cwd. The tests are read only, not run."
+    },
+    {
+      "source": "packages/coding/src/tools/drive-agent-worktree.test.ts",
+      "ranges": [
+        [
+          42,
+          100
+        ],
+        [
+          169,
+          230
+        ]
+      ],
+      "decision": "Existing test intentions explicitly preserve changed isolated worktree and auto-isolate concurrent writer; read only, no tests/Git execution."
+    }
+  ],
+  "notPromoted": [
+    {
+      "topic": "Relative native Edit/Write args matched to arbitrary external cwd",
+      "reason": "Tool descriptions require absolute file_path; implementation compatibility alone does not establish ordinary ambiguous producer, so not a formal/candidate."
+    },
+    {
+      "topic": "External-only files with empty sessionDiffs treated as empty snapshot",
+      "reason": "Static route noted with snapshot author, but lack of payload and intended authority contract require more evidence. No second finding/candidate or runtime expansion."
+    },
+    {
+      "topic": "Duplicate relative path React row keys",
+      "reason": "Secondary conditional consequence of same lost cwd; no observed React warning and not separate count."
+    }
+  ],
+  "limitation": "Keyword search and selected old-source inspection are not complete historical semantic exhaustion."
+}

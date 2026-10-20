@@ -1,0 +1,35 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedContextOnly": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "GitIndependentlyVerified": false,
+  "pins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:35:24.274826+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:35:24.275675+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "bytes": 8303,
+      "lines": 218,
+      "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:35:24.276172+00:00"
+    }
+  ],
+  "filenameInventory": {
+    "exitCode": 0,
+    "stderr": "",
+    "exactMatches": [
+      "packages/desktop/src/renderer/chat/compress.ts"
+    ]
+  }
+}

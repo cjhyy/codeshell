@@ -1,0 +1,43 @@
+{
+  "frozenCommit": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "scope": "ApplyPatch pure parser/AST content preservation and pure matcher; static normal consumer only",
+  "shards": [
+    {
+      "id": "patch-leading-context",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round12/evidence/patch-leading-context.test.ts"
+      ],
+      "exitCode": 0,
+      "cleanCompleted": true,
+      "pass": 8,
+      "fail": 0,
+      "skip": 0,
+      "expectCalls": 31,
+      "kind": "focused pure-function characterization and controls; no existing baseline executed",
+      "log": "evidence/patch-leading-context.first.log",
+      "exit": "evidence/patch-leading-context.first.exit.json"
+    }
+  ],
+  "totals": {
+    "cleanShards": 1,
+    "pass": 8,
+    "fail": 0,
+    "skip": 0,
+    "expectCalls": 31,
+    "existingTests": 0,
+    "focusedTests": 8,
+    "failedBunShards": 0
+  },
+  "coverageLimits": [
+    "parsePatch and seekSequence only executed",
+    "applier selected content-planning consumer range source-only; no applyPatch or ApplyPatch tool calls",
+    "existing mixed tests read only and not counted as executed",
+    "no product filesystem writes, Git/native calls, network/model/user data, permission/security/auth/custody experiments",
+    "no product changes, Git writes, dependency/dist build or broad-suite claim",
+    "first raw combined output and exit saved before inspection; no failed shards or retries"
+  ]
+}

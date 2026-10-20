@@ -1,0 +1,2816 @@
+{
+  "basedOn3696Inventory": "47ef0e5ccf80391d9c3203990262ad79c4dafa1dba05e383572c1674ae916cb1",
+  "patterns": {
+    "budget": "tool-output-budget|d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+    "notes": "context/notes\\.ts|06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+    "orphans": "patch-orphaned-tools|131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025"
+  },
+  "capturedAtUTC": "2026-10-17T14:30:14.250751+00:00",
+  "matchCounts": {
+    "budget": 106,
+    "notes": 53,
+    "orphans": 318
+  },
+  "contextCap": null,
+  "hits": {
+    "budget": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][200]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/review-toolbudget.md",
+        "location": "8",
+        "excerpt": "n/current source pins** against `615e4e4dd3a61b1ad132ab4f3683985a0d582386`; all matched. Only real `tool-output-budget` and the token heuristic execute. Manager/compaction/storage/executor/Engine remain source-only; no logger/model/network/filesystem/media bytes are involved."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/root-source-manifest.json",
+        "location": "$[\"files\"][8][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/root-source-manifest.json",
+        "location": "$[\"files\"][8][\"sha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"patterns\"][\"exact_budget\"]",
+        "excerpt": "tool-output-budget|createToolTextReplacement|truncateToolOutput|replaceToolResultText"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][0][\"context\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][1][\"context\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][2][\"context\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][3][\"context\"]",
+        "excerpt": "./tool-output-budget.js"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][4][\"context\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][5][\"context\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][6][\"context\"]",
+        "excerpt": "./tool-output-budget.js"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][7][\"context\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][8][\"context\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][9][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][10][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][11][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][12][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][13][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][14][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][15][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][16][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][17][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][18][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][19][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][20][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][21][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][22][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][23][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"exact_budget\"][24][\"context\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-first.exit.json",
+        "location": "$[\"command\"][4]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-preflight.json",
+        "location": "$[\"existingTest\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-preflight.json",
+        "location": "$[\"leafAbsoluteImport\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-preflight.json",
+        "location": "$[\"runtimeClosure\"][0]",
+        "excerpt": "tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-related.json",
+        "location": "$[0][\"file\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+        "location": "$[\"files\"][0][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+        "location": "$[\"files\"][0][\"frozenSha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+        "location": "$[\"files\"][0][\"currentSha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+        "location": "$[\"files\"][2][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+        "location": "$[\"limitations\"]",
+        "excerpt": "Only tool-output-budget and token-counter actual leaf logic execute. All other selected sources are static only; no ContextManager/compaction/storage/Engine/provider subsystem runtime coverage."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-validation.json",
+        "location": "$[\"runs\"][0][\"command\"][4]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-validation.json",
+        "location": "$[\"scope\"]",
+        "excerpt": "Actual tool-output-budget leaf+actual heuristic estimateStringTokens; owned small strings/typed blocks. Existing fixed default30k-cap test included, no pressure experiment. No runtime mocks or source extraction."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/related.json",
+        "location": "$[\"observations\"][0][\"file\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"files\"][16][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"files\"][17][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"files\"][17][\"sha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"files\"][17][\"currentSha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"files\"][17][\"mainSha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"workerSourceChecks\"][24][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"workerSourceChecks\"][24][\"sha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"workerSourceChecks\"][29][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"workerSourceChecks\"][29][\"sha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+        "location": "$[\"workerSourceChecks\"][31][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/tool-budget.md",
+        "location": "5",
+        "excerpt": "实际导入和执行 [`tool-output-budget.ts`](../../packages/core/src/context/tool-output-budget.ts#L1) 及其唯一 runtime dependency [`token-counter.ts`](../../packages/core/src/context/token-counter.ts#L33)；仅调用后者的 `estimateStringTokens`，不能扩大为全部 token-counter 函数覆盖。类型导入擦除，没有 mock、源码提取、真实 tokenizer、模型、网络、文件存储或 native 操作。`ContextManager`、`compaction`、`tool-result-storage`、Engine 和工具执行器只读清单列出的必要段落，没有导入执行。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/tool-budget.md",
+        "location": "5",
+        "excerpt": "实际导入和执行 [`tool-output-budget.ts`](../../packages/core/src/context/tool-output-budget.ts#L1) 及其唯一 runtime dependency [`token-counter.ts`](../../packages/core/src/context/token-counter.ts#L33)；仅调用后者的 `estimateStringTokens`，不能扩大为全部 token-counter 函数覆盖。类型导入擦除，没有 mock、源码提取、真实 tokenizer、模型、网络、文件存储或 native 操作。`ContextManager`、`compaction`、`tool-result-storage`、Engine 和工具执行器只读清单列出的必要段落，没有导入执行。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/tool-budget.md",
+        "location": "11",
+        "excerpt": "- [`createToolTextReplacement:78–106`](../../packages/core/src/context/tool-output-budget.ts#L78) 先预留每两个 text slots 间的 `\\n\\n`。当分隔符已超过预算，正文分配归零；`:106` 因 `availableChars === 0` 返回，即使 joined text 仍超预算。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/validation.json",
+        "location": "$[\"runs\"][3][\"command\"][4]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "$[\"files\"][290]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "$[\"files\"][300]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][172][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][173][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][173][\"sha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][173][\"claims\"][0][\"sourceSha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][354][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][355][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][355][\"sha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+        "location": "$[\"sources\"][3][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+        "location": "$[\"sources\"][3][\"sha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+        "location": "$[\"files\"][24][\"path\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+        "location": "$[\"files\"][24][\"sha256\"]",
+        "excerpt": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "$[\"relativeImports\"][517][\"specifier\"]",
+        "excerpt": "./tool-output-budget.js"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "$[\"relativeImports\"][517][\"resolved\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "$[\"relativeImports\"][518][\"from\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "$[\"relativeImports\"][592][\"specifier\"]",
+        "excerpt": "./tool-output-budget.js"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "$[\"relativeImports\"][592][\"resolved\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "$[\"relativeImports\"][593][\"from\"]",
+        "excerpt": "packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"final\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"final\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"final\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][89]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/tool-output-budget.ts"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+        "location": "$[\"modules\"][6][\"productionFiles\"][5]",
+        "excerpt": "context/tool-output-budget.ts"
+      }
+    ],
+    "notes": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][198]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "$[\"files\"][289]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][170][\"path\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][170][\"sha256\"]",
+        "excerpt": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][170][\"claims\"][0][\"sourceSha256\"]",
+        "excerpt": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][350][\"path\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][350][\"sha256\"]",
+        "excerpt": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+        "location": "$[\"sources\"][6][\"path\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+        "location": "$[\"sources\"][6][\"sha256\"]",
+        "excerpt": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+        "location": "$[\"files\"][22][\"path\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+        "location": "$[\"files\"][22][\"sha256\"]",
+        "excerpt": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+        "location": "$[\"files\"][19][\"path\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+        "location": "$[\"files\"][19][\"sha256\"]",
+        "excerpt": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "$[\"relativeImports\"][512][\"resolved\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "$[\"relativeImports\"][513][\"from\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "$[\"relativeImports\"][514][\"from\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "$[\"relativeImports\"][515][\"from\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "$[\"relativeImports\"][587][\"resolved\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "$[\"relativeImports\"][588][\"from\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "$[\"relativeImports\"][589][\"from\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "$[\"relativeImports\"][590][\"from\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "location": "$[\"files\"][9][\"path\"]",
+        "excerpt": "packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "location": "$[\"files\"][9][\"sha256\"]",
+        "excerpt": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"final\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"final\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"final\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][123]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/context/notes.ts"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+        "location": "$[\"modules\"][6][\"productionFiles\"][3]",
+        "excerpt": "context/notes.ts"
+      }
+    ],
+    "orphans": [
+      {
+        "path": "docs/architecture/01-engine-and-turn-loop.md",
+        "location": "30",
+        "excerpt": "| `engine/patch-orphaned-tools.ts` | Resume / failure repair for dangling `tool_use` blocks (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`) |"
+      },
+      {
+        "path": "docs/architecture/04-protocol-and-sessions.md",
+        "location": "106",
+        "excerpt": "rror `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/architecture/04-protocol-and-sessions.md",
+        "location": "106",
+        "excerpt": "ssistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+        "location": "138",
+        "excerpt": "| `patch-orphaned-tools.ts` | abort/error 时修复消息里的孤儿 tool_use/tool_result。 |"
+      },
+      {
+        "path": "docs/archive/articles/harness-agent-series/02-agent-turn-loop.md",
+        "location": "161",
+        "excerpt": "这也是为什么 CodeShell 有 `patch-orphaned-tools` 这类修补逻辑：如果恢复会话时发现 assistant 里有 tool_use，但缺少对应 tool_result，需要补合成结果，避免 provider 拒绝请求。"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "location": "367",
+        "excerpt": "### 4.5 `patch-orphaned-tools.ts`"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "location": "2753",
+        "excerpt": "- `engine/patch-orphaned-tools.ts`"
+      },
+      {
+        "path": "docs/archive/core-modules/engine.md",
+        "location": "25",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/archive/core-risk-signal-index.md",
+        "location": "57",
+        "excerpt": "| `engine/patch-orphaned-tools.ts` | `exec`×3 |"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+        "location": "37",
+        "excerpt": "为 OpenAI 严格要求每个 assistant tool_call 后有对应 tool result，否则下一次 API 调用直接 400，见 `packages/core/src/engine/patch-orphaned-tools.ts:5`。工具定义展示和执行都要读同一类 session 状态，是因为 registry 在 worker 内共享且构造期冻结，模型可能仍点名隐藏工具；所以 Engine 做可见性过滤，Executor 再执行期拒绝，见 `packages/core/src/engine/engine.ts:1802`、`packages/core/src/tool-system/executor.ts:139`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+        "location": "73",
+        "excerpt": "这一组是运行中控制和“踩坑修复”模块：`steer-queue.ts` 管不打断注入，`streaming-tool-queue.ts` 管流式工具并发，`patch-orphaned-tools.ts` 管恢复时的 dangling tool_use，Engine 还在 headless 场景特殊处理背景 sub-agent。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+        "location": "79",
+        "excerpt": "` 扫描完整 messages，给缺 result 的 tool_use 插入 synthetic error tool_result，且幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`。headless run 会在 TurnLoop 返回后等待“自己的背景 sub-agent”完成并注入 summary，但不等待 shell/video，见 `packages/core/src/engine/engine.ts:2201`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "location": "3",
+        "excerpt": "c/engine/turn-loop.ts` 为主，同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "location": "129",
+        "excerpt": "/engine/engine.ts:1425`。独立模块扫全历史、就地插入 synthetic error tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "location": "129",
+        "excerpt": "tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "location": "129",
+        "excerpt": "phaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "location": "129",
+        "excerpt": "phaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "location": "129",
+        "excerpt": "phaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "location": "133",
+        "excerpt": "bort/下一次模型请求”，不能伪装工具成功。`is_error: true` 是关键，否则模型会把 synthetic text 当成功输出，见 `packages/core/src/engine/patch-orphaned-tools.ts:95`、`packages/core/src/engine/turn-loop.ts:1417`。"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "location": "142",
+        "excerpt": "ine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1061`，恢复补丁见 `packages/core/src/engine/patch-orphaned-tools.ts:59`，运行补丁见 `packages/core/src/engine/turn-loop.ts:1385`。  "
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][247]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"history_identity\"][11][\"context\"]",
+        "excerpt": "能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concur"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][1][\"text\"]",
+        "excerpt": "| `engine/patch-orphaned-tools.ts` | Resume / failure repair for dangling `tool_use` blocks (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`) |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][4][\"text\"]",
+        "excerpt": "rror `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][4][\"text\"]",
+        "excerpt": "ssistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][5][\"text\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | abort/error 时修复消息里的孤儿 tool_use/tool_result。 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][7][\"text\"]",
+        "excerpt": "这也是为什么 CodeShell 有 `patch-orphaned-tools` 这类修补逻辑：如果恢复会话时发现 assistant 里有 tool_use，但缺少对应 tool_result，需要补合成结果，避免 provider 拒绝请求。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][17][\"text\"]",
+        "excerpt": "### 4.5 `patch-orphaned-tools.ts`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][23][\"text\"]",
+        "excerpt": "- `engine/patch-orphaned-tools.ts`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][25][\"text\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][32][\"text\"]",
+        "excerpt": "| `engine/patch-orphaned-tools.ts` | `exec`×3 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][71][\"text\"]",
+        "excerpt": "为 OpenAI 严格要求每个 assistant tool_call 后有对应 tool result，否则下一次 API 调用直接 400，见 `packages/core/src/engine/patch-orphaned-tools.ts:5`。工具定义展示和执行都要读同一类 session 状态，是因为 registry 在 worker 内共享且构造期冻结，模型可能仍点名隐藏工具；所以 Engine 做可见性过滤，Executor 再执行期拒绝，见 `packages/core/src/engine/engine.ts:1802`、`packages/core/src/tool-system/executor.ts:139`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][73][\"text\"]",
+        "excerpt": "这一组是运行中控制和“踩坑修复”模块：`steer-queue.ts` 管不打断注入，`streaming-tool-queue.ts` 管流式工具并发，`patch-orphaned-tools.ts` 管恢复时的 dangling tool_use，Engine 还在 headless 场景特殊处理背景 sub-agent。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][74][\"text\"]",
+        "excerpt": "` 扫描完整 messages，给缺 result 的 tool_use 插入 synthetic error tool_result，且幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`。headless run 会在 TurnLoop 返回后等待“自己的背景 sub-agent”完成并注入 summary，但不等待 shell/video，见 `packages/core/src/engine/engine.ts:2201`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][85][\"text\"]",
+        "excerpt": "c/engine/turn-loop.ts` 为主，同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][87][\"text\"]",
+        "excerpt": "/engine/engine.ts:1425`。独立模块扫全历史、就地插入 synthetic error tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][87][\"text\"]",
+        "excerpt": "tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][87][\"text\"]",
+        "excerpt": "phaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][87][\"text\"]",
+        "excerpt": "phaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][87][\"text\"]",
+        "excerpt": "phaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][89][\"text\"]",
+        "excerpt": "bort/下一次模型请求”，不能伪装工具成功。`is_error: true` 是关键，否则模型会把 synthetic text 当成功输出，见 `packages/core/src/engine/patch-orphaned-tools.ts:95`、`packages/core/src/engine/turn-loop.ts:1417`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][90][\"text\"]",
+        "excerpt": "ine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1061`，恢复补丁见 `packages/core/src/engine/patch-orphaned-tools.ts:59`，运行补丁见 `packages/core/src/engine/turn-loop.ts:1385`。  "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][101][\"text\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][103][\"text\"]",
+        "excerpt": "能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concur"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][124][\"text\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][125][\"text\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][167][\"text\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][168][\"text\"]",
+        "excerpt": "同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。\n\n先校正一个容易误读的点：`packages/core/src/types.ts:381` 定义了 `TurnPhase = \"pre_check\" | \"model_call\" | ...`，`packages/core/src/engine/turn-state.ts:17"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][169][\"text\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。\n\n## 3. 一次 run,从头到尾五个阶段\n\n`Engine.run(task, options?)` 返回 `EngineResult`(源码 `engine/engine.ts`,外层包了 try/catch)。它分五个阶段:\n\n**阶段 1 — 校验与解析输入**\n- 按优先级定 c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][170][\"text\"]",
+        "excerpt": "ken 桶就检查一次是否要做流内紧急压缩 |\n| `resolve-llm-config.ts` | settings + tag → `LLMConfig`（文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][171][\"text\"]",
+        "excerpt": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][174][\"text\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][178][\"text\"]",
+        "excerpt": "/engine/engine.ts:1425`。独立模块扫全历史、就地插入 synthetic error tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][178][\"text\"]",
+        "excerpt": "tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][178][\"text\"]",
+        "excerpt": "phaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][178][\"text\"]",
+        "excerpt": "phaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][178][\"text\"]",
+        "excerpt": "phaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][183][\"text\"]",
+        "excerpt": "bort/下一次模型请求”，不能伪装工具成功。`is_error: true` 是关键，否则模型会把 synthetic text 当成功输出，见 `packages/core/src/engine/patch-orphaned-tools.ts:95`、`packages/core/src/engine/turn-loop.ts:1417`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][185][\"text\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][188][\"text\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][195][\"text\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][199][\"text\"]",
+        "excerpt": "- `packages/core/src/engine/patch-orphaned-tools.ts`：恢复修补。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][201][\"text\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][204][\"text\"]",
+        "excerpt": "`patch-orphaned-tools.ts` 就是恢复侧的对手戏：它扫整段加载出来的历史（不是只看尾巴），先一遍预计算出\"已经被应答过的 `tool_use_id` 集合\"（避开\"每个 assistant 都去扫尾巴\"的 O(n²)），然后从左到右走一遍，给每个孤儿 `tool_use` 在它正确的位置补一个合成的 `tool_result`："
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][209][\"text\"]",
+        "excerpt": "3. **`engine/patch-orphaned-tools.ts`**：读 `patchOrphanedToolUses`，理解恢复时为什么要合成 `is_error: true` 的结果。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][222][\"text\"]",
+        "excerpt": "- `steer-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][251][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][252][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][253][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][254][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][255][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][256][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][257][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][267][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][268][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][269][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][270][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][271][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][272][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][273][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][274][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][275][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][276][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][277][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][278][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][279][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][280][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][281][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][282][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][283][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][284][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][285][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][286][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][287][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][288][\"text\"]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][292][\"text\"]",
+        "excerpt": "engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][299][\"text\"]",
+        "excerpt": "既有行为快照依据:`engine-client-message-id.test.ts`(submit/steer 幂等 + 早退)、`patch-orphaned-tools.test.ts`(孤儿 tool_use 修补单测)、`engine.todo-resume.test.ts`(resume 路径)、`engine.session-fork-history.test.ts`。**缺口**:cold-start summary 截断落盘无直接断言,先补。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][300][\"text\"]",
+        "excerpt": "import { patchOrphanedToolUses } from \"./patch-orphaned-tools.js\";"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][304][\"text\"]",
+        "excerpt": "`SpinnerWithVerb.tsx`, plus new `patch-orphaned-tools.ts`). The user"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "$[\"hits\"][\"linebreak_phonetic\"][326][\"text\"]",
+        "excerpt": "复用：`engine.resolve-cwd.test.ts`、`engine.workspace-cwd.test.ts`、`engine-client-message-id.test.ts`、`patch-orphaned-tools.test.ts`、`engine.todo-resume.test.ts`、`input-attachments.test.ts`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][2][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][8][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][10][\"context\"]",
+        "excerpt": "e.ts`\n- `engine/image-policy.ts`\n- `engine/image-compression.ts`\n- `engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][11][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runt"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][12][\"context\"]",
+        "excerpt": "tch {`×2 |\n| `engine/image-policy.ts` | `join(`×1 |\n| `engine/parse-task.ts` | `exec`×2 |\n| `engine/patch-orphaned-tools.ts` | `exec`×3 |\n| `engine/session-title.ts` | `catch {`×1 |\n| `engine/streaming-tool-queue.ts` | `exec`×16, `throw new Error`×1 |\n| `engine/tool-summary.ts` | `join(`×1, `exec`×2, `fire-and-forget`×1 |\n| `engine/turn-loop.ts` | `c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][32][\"context\"]",
+        "excerpt": "dless 背景续跑\n\n**What**\n\n这一组是运行中控制和“踩坑修复”模块：`steer-queue.ts` 管不打断注入，`streaming-tool-queue.ts` 管流式工具并发，`patch-orphaned-tools.ts` 管恢复时的 dangling tool_use，Engine 还在 headless 场景特殊处理背景 sub-agent。\n\n**How**\n\nEngine 用 `steerQueueBySid` 保存 per-session in-memory steer 队列，只有当前 active TurnLoop 且 sid 匹配时接受注入，见 `packages/core/src/engine/engine.ts:3"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][36][\"context\"]",
+        "excerpt": "c/engine/turn-loop.ts` 为主，同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。\n\n先校正一个容易误读的点：`packages/core/src/types.ts:381` 定义了 `T"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][55][\"context\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][58][\"context\"]",
+        "excerpt": "同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。\n\n先校正一个容易误读的点：`packages/core/src/types.ts:381` 定义了 `T"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][60][\"context\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。\n\n## 3. 一次 run,从头到尾五个阶段\n\n`Engine.run(task, options?)` 返回 `EngineResult`(源码 `engine/engine.ts`,外层包了 try/catch)。它分五个阶段:\n\n**阶段 1 — 校验与解析输入**\n- 按优先级定 c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][64][\"context\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。\n\n## 3. 一次 run,从头到尾五个阶段\n\n`Engine.run(task, options?)` 返回 `EngineResult`(源码 `engine/engine.ts`,外层包了 try/catch)。它分五个阶段:\n\n**阶段 1 — 校验与解析输入**\n- 按优先级定 cw"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][74][\"context\"]",
+        "excerpt": "ettings + tag → `LLMConfig`（文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片门（尺寸 / 张数上限） |\n| `parse-task.ts` | 从任务文本里抠出 `<codeshell-image>` 块 |\n\n一个准确性边界要先讲在前面：**不要以为所有 `Engine.run` 都经过 protocol 层。** TUI、headless CLI、桌面 worker、`RunManager` 这些主路径，确实常通过 `AgentServer`/`AgentClient` 协议接缝收口（详见第 5 篇）；但 SDK 嵌入、`asyncAgentRegistry` 里派生的子 agent、测试、专用 runner，完全可以直接装配或派生一个 `Engine` 来跑。**TurnLo"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][83][\"context\"]",
+        "excerpt": "` 在调模型后的检查点、`on_stop` 返回 `continueSession` 后的 `stopBlockCount` 逻辑、`complete_goal` 的短路。\n3. **`engine/patch-orphaned-tools.ts`**：读 `patchOrphanedToolUses`，理解恢复时为什么要合成 `is_error: true` 的结果。\n4. **`engine/streaming-tool-queue.ts`**：读 "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"direct_sources\"][88][\"context\"]",
+        "excerpt": "ime.ts`、`model-facade.ts`、`model-connections-pool.ts`\n- `steer-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"identity_cache\"][6][\"context\"]",
+        "excerpt": "dless 背景续跑\n\n**What**\n\n这一组是运行中控制和“踩坑修复”模块：`steer-queue.ts` 管不打断注入，`streaming-tool-queue.ts` 管流式工具并发，`patch-orphaned-tools.ts` 管恢复时的 dangling tool_use，Engine 还在 headless 场景特殊处理背景 sub-agent。\n\n**How**\n\nEngine 用 `steerQueueBySid` 保存 per-session in-memory steer 队列，只有当前 active TurnLoop 且 sid 匹配时接受注入，见 `packages/core/src/engine/engine.ts:384`、`packages/core/src/engine/engine.ts:820`。纯 helper 负责入队、消费、撤回，见 `packages/core/src/engine/steer-queue.ts:1`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"steering_queue\"][9][\"context\"]",
+        "excerpt": "reaming-tool-queue.ts` 管流式工具并发，`patch-orphaned-tools.ts` 管恢复时的 dangling tool_use，Engine 还在 headless 场景特殊处理背景 sub-agent。\n\n**How**\n\nEngine 用 `steerQueueBySid` 保存 per-session in-memory steer 队列，只有当前 active TurnLoop 且 sid 匹配时接受注入，见 `packages/core/src/engine/engine.ts:384`、`packages/core/src/engine/engine.ts:820`。纯 helper 负责入队、消费、撤回，见 `packages/core/src/engine/steer-queue.ts:1`。TurnLoop 每个 step boundary 调 `consumeQueuedSteer()`，注入为 user message 并发 `steer_injected`，见 `packages/core/src/engine/turn-"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"inline_image_grammar\"][8][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"inline_image_grammar\"][10][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runtime (e.g. model catalog params"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "$[\"hits\"][\"inline_image_grammar\"][169][\"context\"]",
+        "excerpt": "文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片门（尺寸 / 张数上限） |\n| `parse-task.ts` | 从任务文本里抠出 `<codeshell-image>` 块 |\n\n一个准确性边界要先讲在前面：**不要以为所有 `Engine.run` 都经过 protocol 层。** TUI、headless CLI、桌面 worker、`RunManager` 这些主路径，确实常通过 `AgentServer`/`AgentClient` 协议接缝收口（详见第 5 篇）；但 SDK 嵌入、`asyncAgentRegistry` 里派生的子 agent、测试、专用 runner，完全可以直接装配或派生一个 `Engine` 来跑。**TurnLoop 是引擎内部的循环机制，它和协议层是两回事**——别把\"主路径"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/toolsummary-dedup.json",
+        "location": "$[\"contexts\"][\"exact_summary\"][27][\"context\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/toolsummary-dedup.json",
+        "location": "$[\"contexts\"][\"exact_summary\"][28][\"context\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/toolsummary-dedup.json",
+        "location": "$[\"contexts\"][\"exact_summary\"][29][\"context\"]",
+        "excerpt": "`engine/patch-orphaned-tools.ts` | `exec`×3 |\n| `engine/session-title.ts` | `catch {`×1 |\n| `engine/streaming-tool-queue.ts` | `exec`×16, `throw new Error`×1 |\n| `engine/tool-summary.ts` | `join(`×1, `exec`×2, `fire-and-forget`×1 |\n| `engine/turn-loop.ts` | `c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"structured\"][1][\"context\"]",
+        "excerpt": "rror `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"structured\"][1][\"context\"]",
+        "excerpt": "ssistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"structured\"][12][\"context\"]",
+        "excerpt": "rror `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+        "location": "$[\"contexts\"][\"structured\"][12][\"context\"]",
+        "excerpt": "ssistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][14][\"excerpt\"]",
+        "excerpt": "c/engine/turn-loop.ts` 为主，同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][31][\"excerpt\"]",
+        "excerpt": "c/engine/turn-loop.ts` 为主，同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][32][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][33][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][34][\"excerpt\"]",
+        "excerpt": "同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。\n\n先校正一个容易误读的点：`packages/core/src/types.ts:381` 定义了 `TurnPhase = \"pre_check\" | \"model_call\" | ...`，`packages/core/src/engine/turn-state.ts:17"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][35][\"excerpt\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。\n\n## 3. 一次 run,从头到尾五个阶段\n\n`Engine.run(task, options?)` 返回 `EngineResult`(源码 `engine/engine.ts`,外层包了 try/catch)。它分五个阶段:\n\n**阶段 1 — 校验与解析输入**\n- 按优先级定 c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][36][\"excerpt\"]",
+        "excerpt": "ken 桶就检查一次是否要做流内紧急压缩 |\n| `resolve-llm-config.ts` | settings + tag → `LLMConfig`（文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][37][\"excerpt\"]",
+        "excerpt": "ken 桶就检查一次是否要做流内紧急压缩 |\n| `resolve-llm-config.ts` | settings + tag → `LLMConfig`（文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][38][\"excerpt\"]",
+        "excerpt": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][39][\"excerpt\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][42][\"excerpt\"]",
+        "excerpt": "age-policy.ts`\n- `engine/image-compression.ts`\n- `engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][43][\"excerpt\"]",
+        "excerpt": "age-compression.ts`\n- `engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][46][\"excerpt\"]",
+        "excerpt": "c/engine/turn-loop.ts` 为主，同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。\n\n先校正一个容易误读的点：`packages/core/src/types.ts:381` 定义了 `T"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][60][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][61][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][66][\"excerpt\"]",
+        "excerpt": "同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。\n\n先校正一个容易误读的点：`packages/core/src/types.ts:381` 定义了 `T"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][68][\"excerpt\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。\n\n## 3. 一次 run,从头到尾五个阶段\n\n`Engine.run(task, options?)` 返回 `EngineResult`(源码 `engine/engine.ts`,外层包了 try/catch)。它分五个阶段:\n\n**阶段 1 — 校验与解析输入**\n- 按优先级定 c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][71][\"excerpt\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。\n\n## 3. 一次 run,从头到尾五个阶段\n\n`Engine.run(task, options?)` 返回 `EngineResult`(源码 `engine/engine.ts`,外层包了 try/catch)。它分五个阶段:\n\n**阶段 1 — 校验与解析输入**\n- 按优先级定 cw"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][74][\"excerpt\"]",
+        "excerpt": "odel-facade.ts`、`model-connections-pool.ts`\n- `steer-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][79][\"excerpt\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][80][\"excerpt\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][81][\"excerpt\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][82][\"excerpt\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][97][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][98][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][107][\"excerpt\"]",
+        "excerpt": "同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。\n\n先校正一个容易误读的点：`packages/core/src/types.ts:381` 定义了 `TurnPhase = \"pre_check\" | \"model_call\" | ...`，`packages/core/src/engine/turn-state.ts:17"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][113][\"excerpt\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。\n\n## 3. 一次 run,从头到尾五个阶段\n\n`Engine.run(task, options?)` 返回 `EngineResult`(源码 `engine/engine.ts`,外层包了 try/catch)。它分五个阶段:\n\n**阶段 1 — 校验与解析输入**\n- 按优先级定 c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][114][\"excerpt\"]",
+        "excerpt": "ken 桶就检查一次是否要做流内紧急压缩 |\n| `resolve-llm-config.ts` | settings + tag → `LLMConfig`（文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][115][\"excerpt\"]",
+        "excerpt": "ken 桶就检查一次是否要做流内紧急压缩 |\n| `resolve-llm-config.ts` | settings + tag → `LLMConfig`（文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][116][\"excerpt\"]",
+        "excerpt": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][152][\"excerpt\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"budgetMechanism\"][42][\"excerpt\"]",
+        "excerpt": "` 在调模型后的检查点、`on_stop` 返回 `continueSession` 后的 `stopBlockCount` 逻辑、`complete_goal` 的短路。\n3. **`engine/patch-orphaned-tools.ts`**：读 `patchOrphanedToolUses`，理解恢复时为什么要合成 `is_error: true` 的结果。\n4. **`engine/streaming-tool-queue.ts`**：读 "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"reactiveMechanism\"][13][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"reactiveMechanism\"][14][\"excerpt\"]",
+        "excerpt": "ken 桶就检查一次是否要做流内紧急压缩 |\n| `resolve-llm-config.ts` | settings + tag → `LLMConfig`（文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"reactiveMechanism\"][16][\"excerpt\"]",
+        "excerpt": "age-compression.ts`\n- `engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"reactiveMechanism\"][18][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"reactiveMechanism\"][24][\"excerpt\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"reactiveMechanism\"][25][\"excerpt\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"reactiveMechanism\"][31][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+        "location": "$[\"matches\"][\"reactiveMechanism\"][33][\"excerpt\"]",
+        "excerpt": "ken 桶就检查一次是否要做流内紧急压缩 |\n| `resolve-llm-config.ts` | settings + tag → `LLMConfig`（文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-history-selected.json",
+        "location": "$[\"selected\"][14][\"excerpt\"]",
+        "excerpt": "c/engine/turn-loop.ts` 为主，同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/budget-history-selected.json",
+        "location": "$[\"selected\"][17][\"excerpt\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][11][\"excerpt\"]",
+        "excerpt": "能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concur"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][12][\"excerpt\"]",
+        "excerpt": "能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concur"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][13][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][16][\"excerpt\"]",
+        "excerpt": "e.ts`\n- `engine/image-policy.ts`\n- `engine/image-compression.ts`\n- `engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][17][\"excerpt\"]",
+        "excerpt": "tch {`×2 |\n| `engine/image-policy.ts` | `join(`×1 |\n| `engine/parse-task.ts` | `exec`×2 |\n| `engine/patch-orphaned-tools.ts` | `exec`×3 |\n| `engine/session-title.ts` | `catch {`×1 |\n| `engine/streaming-tool-queue.ts` | `exec`×16, `throw new Error`×1 |\n| `engine/tool-summary.ts` | `join(`×1, `exec`×2, `fire-and-forget`×1 |\n| `engine/turn-loop.ts` | `c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][18][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][21][\"excerpt\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][22][\"excerpt\"]",
+        "excerpt": "`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][23][\"excerpt\"]",
+        "excerpt": "`engine/patch-orphaned-tools.ts` | `exec`×3 |\n| `engine/session-title.ts` | `catch {`×1 |\n| `engine/streaming-tool-queue.ts` | `exec`×16, `throw new Error`×1 |\n| `engine/tool-summary.ts` | `join(`×1, `exec`×2, `fire-and-forget`×1 |\n| `engine/turn-loop.ts` | `c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "$[\"matches\"][\"exact\"][30][\"excerpt\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][39][\"excerpt\"]",
+        "excerpt": "/engine/engine.ts:1425`。独立模块扫全历史、就地插入 synthetic error tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][39][\"excerpt\"]",
+        "excerpt": "tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][39][\"excerpt\"]",
+        "excerpt": "phaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][39][\"excerpt\"]",
+        "excerpt": "phaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][39][\"excerpt\"]",
+        "excerpt": "phaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][59][\"excerpt\"]",
+        "excerpt": "/engine/engine.ts:1425`。独立模块扫全历史、就地插入 synthetic error tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][59][\"excerpt\"]",
+        "excerpt": "tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][59][\"excerpt\"]",
+        "excerpt": "phaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][59][\"excerpt\"]",
+        "excerpt": "phaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+        "location": "$[\"hits\"][\"package-build\"][59][\"excerpt\"]",
+        "excerpt": "phaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "$[\"files\"][1530]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "$[\"files\"][1551]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "location": "$[\"contexts\"][\"worktreeFileOpen\"][5][\"context\"]",
+        "excerpt": "压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concurrency-safe 工具提前执行/排队/drain。\n\n### 4.8 `token-budget.ts`、`r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "location": "$[\"contexts\"][\"worktreeFileOpen\"][52][\"context\"]",
+        "excerpt": "能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concur"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][203][\"path\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][203][\"sha256\"]",
+        "excerpt": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "$[\"files\"][203][\"claims\"][0][\"sourceSha256\"]",
+        "excerpt": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][498][\"path\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][499][\"path\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][499][\"sha256\"]",
+        "excerpt": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][3][\"excerpt\"]",
+        "excerpt": "rror `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][3][\"excerpt\"]",
+        "excerpt": "ssistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][16][\"excerpt\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][44][\"excerpt\"]",
+        "excerpt": "rror `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][44][\"excerpt\"]",
+        "excerpt": "ssistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][45][\"excerpt\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][46][\"excerpt\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][48][\"excerpt\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runt"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][49][\"excerpt\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runtime (e.g. model catalog params"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][3][\"excerpt\"]",
+        "excerpt": "rror `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][3][\"excerpt\"]",
+        "excerpt": "ssistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][16][\"excerpt\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][44][\"excerpt\"]",
+        "excerpt": "rror `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][44][\"excerpt\"]",
+        "excerpt": "ssistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`)."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][45][\"excerpt\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][46][\"excerpt\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][48][\"excerpt\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runt"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "$[\"hits\"][\"ordinary-projection\"][49][\"excerpt\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runtime (e.g. model catalog params"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][0][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair for dangling `tool_use` blocks (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`) |\n\n## 2. The run, end to end\n\n`Engine.run(task, options?) -> EngineResult` starts at `packages/core/src/engine/engine.ts:929`. It resolves the run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][1][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair for dangling `tool_use` blocks (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`) |\n\n## 2. The run, end to end\n\n`Engine.run(task, options?) -> EngineResult` starts at `packages/core/src/engine/engine.ts:929`. It resolves the run boundary, then delegates the "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][2][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair for dangling `tool_use` blocks (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`) |\n\n## 2. The run, end to end\n\n`Engine.run(task, options?) -> EngineResult` starts at `packages/core/src/engine/engine.ts:929`. It resolves the run boundary, then delegates the hot loop to `TurnLoop.run()` at `packages/core/src/engine/engine.ts:2127`.\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][11][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `st"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][12][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution q"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][13][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concurrency-safe 工具"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][14][\"context\"]",
+        "excerpt": "e.ts`\n- `engine/image-policy.ts`\n- `engine/image-compression.ts`\n- `engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run(task)\n  → parse images / input policy\n  → create or resume SessionManager bundle\n  → append user message t"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][15][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runtime (e.g. model catalog params). |\n| `token-budget.ts`, `reactive-threshold.ts`, `cost-store.ts`, `aux-key.ts`, `tool-summary.ts`, `streaming-tool-queue.ts`, `runtime.ts`, `turn-state.ts` | Small helpers: context/token budgeting, compaction thresholds, cost-state cache key, au"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][16][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runtime (e.g. model catalog params). |\n| `token-budget.ts`, `reactive-threshold.ts`, `cost-store.ts`, `aux-key.ts`, `tool-summary.ts`, `streaming-tool-queue.ts`, `runtime.ts`, `turn-state.ts` | Small helpers: context/token budgeting, compaction thresholds, cost-state cache key, au"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][18][\"context\"]",
+        "excerpt": "tch {`×2 |\n| `engine/image-policy.ts` | `join(`×1 |\n| `engine/parse-task.ts` | `exec`×2 |\n| `engine/patch-orphaned-tools.ts` | `exec`×3 |\n| `engine/session-title.ts` | `catch {`×1 |\n| `engine/streaming-tool-queue.ts` | `exec`×16, `throw new Error`×1 |\n| `engine/tool-summary.ts` | `join(`×1, `exec`×2, `fire-and-forget`×1 |\n| `engine/turn-loop.ts` | `catch {`×2, `join(`×2, `spawn`×1, `exec`×7 |\n| `exceptions.ts` | `exec`×1, `timeout`×3 |\n| `git/utils.ts` | `catch {`×3, `exec`×8, `timeout`×10, `throw new Error`×2 |\n| `git/worktree.ts` | `catch {`×5, `join(`×2, `exec`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][62][\"context\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][73][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][74][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][75][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][90][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][91][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][92][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][93][\"context\"]",
+        "excerpt": "e.ts`\n- `engine/image-policy.ts`\n- `engine/image-compression.ts`\n- `engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][94][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runt"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][95][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runt"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][96][\"context\"]",
+        "excerpt": "tch {`×2 |\n| `engine/image-policy.ts` | `join(`×1 |\n| `engine/parse-task.ts` | `exec`×2 |\n| `engine/patch-orphaned-tools.ts` | `exec`×3 |\n| `engine/session-title.ts` | `catch {`×1 |\n| `engine/streaming-tool-queue.ts` | `exec`×16, `throw new Error`×1 |\n| `engine/tool-summary.ts` | `join(`×1, `exec`×2, `fire-and-forget`×1 |\n| `engine/turn-loop.ts` | `c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][0][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair for dangling `tool_use` blocks (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`) |\n\n## 2. The run, end to end\n\n`Engine.run(task, options?) -> EngineResult` starts at `packages/core/src/engine/engine.ts:929`. It resolves the run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][1][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair for dangling `tool_use` blocks (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`) |\n\n## 2. The run, end to end\n\n`Engine.run(task, options?) -> EngineResult` starts at `packages/core/src/engine/engine.ts:929`. It resolves the run boundary, then delegates the "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][2][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair for dangling `tool_use` blocks (`packages/core/src/engine/engine.ts:1396`, `packages/core/src/engine/turn-loop.ts:1354`) |\n\n## 2. The run, end to end\n\n`Engine.run(task, options?) -> EngineResult` starts at `packages/core/src/engine/engine.ts:929`. It resolves the run boundary, then delegates the hot loop to `TurnLoop.run()` at `packages/core/src/engine/engine.ts:2127`.\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][11][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `st"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][12][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution q"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][13][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concurrency-safe 工具"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][14][\"context\"]",
+        "excerpt": "e.ts`\n- `engine/image-policy.ts`\n- `engine/image-compression.ts`\n- `engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run(task)\n  → parse images / input policy\n  → create or resume SessionManager bundle\n  → append user message t"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][15][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runtime (e.g. model catalog params). |\n| `token-budget.ts`, `reactive-threshold.ts`, `cost-store.ts`, `aux-key.ts`, `tool-summary.ts`, `streaming-tool-queue.ts`, `runtime.ts`, `turn-state.ts` | Small helpers: context/token budgeting, compaction thresholds, cost-state cache key, au"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][16][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runtime (e.g. model catalog params). |\n| `token-budget.ts`, `reactive-threshold.ts`, `cost-store.ts`, `aux-key.ts`, `tool-summary.ts`, `streaming-tool-queue.ts`, `runtime.ts`, `turn-state.ts` | Small helpers: context/token budgeting, compaction thresholds, cost-state cache key, au"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][18][\"context\"]",
+        "excerpt": "tch {`×2 |\n| `engine/image-policy.ts` | `join(`×1 |\n| `engine/parse-task.ts` | `exec`×2 |\n| `engine/patch-orphaned-tools.ts` | `exec`×3 |\n| `engine/session-title.ts` | `catch {`×1 |\n| `engine/streaming-tool-queue.ts` | `exec`×16, `throw new Error`×1 |\n| `engine/tool-summary.ts` | `join(`×1, `exec`×2, `fire-and-forget`×1 |\n| `engine/turn-loop.ts` | `catch {`×2, `join(`×2, `spawn`×1, `exec`×7 |\n| `exceptions.ts` | `exec`×1, `timeout`×3 |\n| `git/utils.ts` | `catch {`×3, `exec`×8, `timeout`×10, `throw new Error`×2 |\n| `git/worktree.ts` | `catch {`×5, `join(`×2, `exec`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][62][\"context\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][73][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][74][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][75][\"context\"]",
+        "excerpt": "es/core/src/engine/image-policy.ts:58`, `packages/core/src/engine/image-policy.ts:198`) |\n| `engine/patch-orphaned-tools.ts` | Resume / failure repair"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][90][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][91][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][92][\"context\"]",
+        "excerpt": "但本轮代码显示 core 已有 `image-compression.ts`；更准确的现状是：core 侧已有压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][93][\"context\"]",
+        "excerpt": "e.ts`\n- `engine/image-policy.ts`\n- `engine/image-compression.ts`\n- `engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][94][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runt"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][95][\"context\"]",
+        "excerpt": "| `parse-task.ts` | Parse `<codeshell-image>` blocks and structure out of the raw task string. |\n| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |\n| `dynamic-tool-defs.ts` | Build tool definitions whose descriptions vary at runt"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "$[\"hits\"][\"task-image-parser\"][96][\"context\"]",
+        "excerpt": "tch {`×2 |\n| `engine/image-policy.ts` | `join(`×1 |\n| `engine/parse-task.ts` | `exec`×2 |\n| `engine/patch-orphaned-tools.ts` | `exec`×3 |\n| `engine/session-title.ts` | `catch {`×1 |\n| `engine/streaming-tool-queue.ts` | `exec`×16, `throw new Error`×1 |\n| `engine/tool-summary.ts` | `join(`×1, `exec`×2, `fire-and-forget`×1 |\n| `engine/turn-loop.ts` | `c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+        "location": "$[\"sources\"][9][\"path\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+        "location": "$[\"sources\"][9][\"sha256\"]",
+        "excerpt": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+        "location": "$[\"files\"][28][\"path\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+        "location": "$[\"files\"][28][\"sha256\"]",
+        "excerpt": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"budget\"][3][\"snippet\"]",
+        "excerpt": "engine/parse-task.ts`\n- `engine/patch-orphaned-tools.ts`\n- `engine/session-title.ts`\n- `engine/streaming-tool-queue.ts`\n- `engine/token-budget.ts`\n- `engine/reactive-threshold.ts`\n- `engine/tool-summary.ts`\n- `engine/turn-state.ts`\n- `engine/cost-store.ts`\n- `engine/query.ts`\n\n### 入口\n\n- `new Engine(config)`\n- `engine.run(task, options)`\n- `TurnLoop.run(messages)`\n\n### 内部流程\n\n```text\nEngine.run"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"budget\"][9][\"snippet\"]",
+        "excerpt": "同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。\n\n先校正一个容易误读的点：`packages/core/src/types.ts:381` 定义了 `TurnPhase = \"pre_check\" | \"model_call\" | ...`，`packages/core/src/engine/turn-state.ts:17"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"budget\"][15][\"snippet\"]",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。\n\n## 3. 一次 run,从头到尾五个阶段\n\n`Engine.run(task, options?)` 返回 `EngineResult`(源码 `engine/engine.ts`,外层包了 try/catch)。它分五个阶段:\n\n**阶段 1 — 校验与解析输入**\n- 按优先级定 c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"budget\"][16][\"snippet\"]",
+        "excerpt": "ken 桶就检查一次是否要做流内紧急压缩 |\n| `resolve-llm-config.ts` | settings + tag → `LLMConfig`（文本模型；图/视频独立解析） |\n| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |\n| `image-policy.ts` | 每轮图片"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"budget\"][17][\"snippet\"]",
+        "excerpt": "er-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）\n- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`\n\n**工具系统 `packages/core/src/tool-system/`**\n- `registry.ts`（工具注册）、`executor.ts`（26KB，执行器）、`context.ts`（18KB，ToolRuntimeHost / 运行上下文——**打断循环依赖的窄接口就在这附近**）\n- `permission.ts`（39KB，权限门禁）、`path-policy.ts`（27KB，路径策略）、`investigation-guard"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$[\"hits\"][27][\"matches\"][2][\"text\"]",
+        "excerpt": "| `patch-orphaned-tools.ts` | Repair transcripts with tool_use blocks missing their tool_result (resume safety). |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$[\"hits\"][48][\"matches\"][3][\"text\"]",
+        "excerpt": "/engine/engine.ts:1425`。独立模块扫全历史、就地插入 synthetic error tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$[\"hits\"][48][\"matches\"][3][\"text\"]",
+        "excerpt": "tool_result，并声明幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$[\"hits\"][48][\"matches\"][3][\"text\"]",
+        "excerpt": "phaned-tools.ts:49`、`packages/core/src/engine/patch-orphaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$[\"hits\"][48][\"matches\"][3][\"text\"]",
+        "excerpt": "phaned-tools.ts:56`、`packages/core/src/engine/patch-orphaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "location": "$[\"hits\"][48][\"matches\"][3][\"text\"]",
+        "excerpt": "phaned-tools.ts:59`、`packages/core/src/engine/patch-orphaned-tools.ts:91`、`packages/core/src/engine/patch-orphaned-tools.ts:99`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-error-flag-dedup.json",
+        "location": "$[\"hits\"][7][\"text\"]",
+        "excerpt": "bort/下一次模型请求”，不能伪装工具成功。`is_error: true` 是关键，否则模型会把 synthetic text 当成功输出，见 `packages/core/src/engine/patch-orphaned-tools.ts:95`、`packages/core/src/engine/turn-loop.ts:1417`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+        "location": "$[\"files\"][17][\"path\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+        "location": "$[\"files\"][17][\"sha256\"]",
+        "excerpt": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "location": "$[\"files\"][27][\"path\"]",
+        "excerpt": "packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "location": "$[\"files\"][27][\"sha256\"]",
+        "excerpt": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025"
+      },
+      {
+        "path": "docs/core-deep-dive/02-engine-turn-loop.md",
+        "location": "28",
+        "excerpt": " LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。"
+      },
+      {
+        "path": "docs/core-deep-dive/REWRITE-PLAN.md",
+        "location": "119",
+        "excerpt": "- `packages/core/src/engine/patch-orphaned-tools.ts`：恢复修补。"
+      },
+      {
+        "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+        "location": "55",
+        "excerpt": "| `patch-orphaned-tools.ts` | 恢复时修补孤儿 `tool_use` |"
+      },
+      {
+        "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+        "location": "115",
+        "excerpt": "`patch-orphaned-tools.ts` 就是恢复侧的对手戏：它扫整段加载出来的历史（不是只看尾巴），先一遍预计算出\"已经被应答过的 `tool_use_id` 集合\"（避开\"每个 assistant 都去扫尾巴\"的 O(n²)），然后从左到右走一遍，给每个孤儿 `tool_use` 在它正确的位置补一个合成的 `tool_result`："
+      },
+      {
+        "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+        "location": "325",
+        "excerpt": "3. **`engine/patch-orphaned-tools.ts`**：读 `patchOrphanedToolUses`，理解恢复时为什么要合成 `is_error: true` 的结果。"
+      },
+      {
+        "path": "docs/review-2026-07-09/GUIDELINE.md",
+        "location": "55",
+        "excerpt": "- `steer-queue.ts`、`streaming-tool-queue.ts`、`patch-orphaned-tools.ts`（运行中注入 / 流式工具 / 孤儿工具补丁——都是踩过坑的地方）"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$[\"final\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$[\"final\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$[\"final\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "location": "$[\"snapshot\"][\"loadedWorkspaceModules\"][331]",
+        "excerpt": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+        "location": "$[\"modules\"][10][\"productionFiles\"][19]",
+        "excerpt": "engine/patch-orphaned-tools.ts"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-core-debt-cleanup.md",
+        "location": "1294",
+        "excerpt": "既有行为快照依据:`engine-client-message-id.test.ts`(submit/steer 幂等 + 早退)、`patch-orphaned-tools.test.ts`(孤儿 tool_use 修补单测)、`engine.todo-resume.test.ts`(resume 路径)、`engine.session-fork-history.test.ts`。**缺口**:cold-start summary 截断落盘无直接断言,先补。"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-core-debt-cleanup.md",
+        "location": "1386",
+        "excerpt": "import { patchOrphanedToolUses } from \"./patch-orphaned-tools.js\";"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-22-monorepo-split-design.md",
+        "location": "397",
+        "excerpt": "`SpinnerWithVerb.tsx`, plus new `patch-orphaned-tools.ts`). The user"
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/split-engine-ts.md",
+        "location": "346",
+        "excerpt": "复用：`engine.resolve-cwd.test.ts`、`engine.workspace-cwd.test.ts`、`engine-client-message-id.test.ts`、`patch-orphaned-tools.test.ts`、`engine.todo-resume.test.ts`、`input-attachments.test.ts`。"
+      }
+    ]
+  },
+  "directSourceObjects": [
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/root-source-manifest.json",
+      "location": "$[\"files\"][8]",
+      "object": {
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "bytes": 6990,
+        "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "scope": "Initial command up to220 displayed source; static only by Root, separate worker budget scope.",
+        "lineCount": 173,
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-related.json",
+      "location": "$[0]",
+      "object": {
+        "id": "BUDGET-R21-R1",
+        "title": "Structured text-slot separators retain a floor above the real backstop allowance; concrete helper edge related to prior budget-floor concern",
+        "classification": "related prior source concern, no new formal/candidate count",
+        "file": "packages/core/src/context/tool-output-budget.ts",
+        "lines": [
+          78,
+          106
+        ],
+        "oldRecord": "docs/audit-2026-10-17-round4/context.md:41",
+        "oldRecordStatus": "source concern only; no prior formal finding or candidate ID",
+        "ordinaryCallerSource": "packages/core/src/context/compaction.ts:773-776 supplies600 chars/200 heuristic tokens only after aggregate pressure",
+        "actualObservation": "Actual createToolTextReplacement/replaceToolResultText,302 owned text slots containing x: joined original904chars, final302 empty slots joined as602 newlines,151 heuristic tokens, exceeds600char budget=true.301slot control final600chars,150heuristic tokens, exceeds=false.",
+        "inputProvenance": "Handcrafted valid ContentBlock array, not an observed normal302-slot tool producer. No image bytes, tool invocation, provider or authority input.",
+        "limitations": [
+          "Actual compaction/ContextManager/storage/Engine not imported or run",
+          "Ordinary302-slot producer and aggregate gate reachability not established",
+          "No real provider token count/context overflow/UI impact proven",
+          "No0/negative/NaN budget inputs; exact real positive600/200 helper allowance only"
+        ],
+        "evidence": [
+          "docs/audit-2026-10-17-round21/evidence/toolbudget-focused.test.ts",
+          "docs/audit-2026-10-17-round21/evidence/toolbudget-first.raw.log",
+          "docs/audit-2026-10-17-round21/evidence/toolbudget-first.exit.json"
+        ],
+        "correctionDirection": "If later confirmed ordinary, preserve positional slot metadata while bounding the materialized joined view or explicitly represent an unavoidable floor; no fix made."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+      "location": "$[\"files\"][0]",
+      "object": {
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "frozenSha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "currentSha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "matchesFrozen": true,
+        "bytes": 6990,
+        "lineCount": 173,
+        "ranges": [
+          "1-173 (full source)"
+        ],
+        "kind": "actual runtime leaf, no mock/extraction"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/related.json",
+      "location": "$[\"observations\"][0]",
+      "object": {
+        "id": "BUDGET-R21-R1",
+        "title": "Structured text-slot separators retain a floor above the real backstop allowance; concrete helper edge related to prior budget-floor concern",
+        "classification": "related prior source concern, no new formal/candidate count",
+        "file": "packages/core/src/context/tool-output-budget.ts",
+        "lines": [
+          78,
+          106
+        ],
+        "oldRecord": "docs/audit-2026-10-17-round4/context.md:41",
+        "oldRecordStatus": "source concern only; no prior formal finding or candidate ID",
+        "ordinaryCallerSource": "packages/core/src/context/compaction.ts:773-776 supplies600 chars/200 heuristic tokens only after aggregate pressure",
+        "actualObservation": "Actual createToolTextReplacement/replaceToolResultText,302 owned text slots containing x: joined original904chars, final302 empty slots joined as602 newlines,151 heuristic tokens, exceeds600char budget=true.301slot control final600chars,150heuristic tokens, exceeds=false.",
+        "inputProvenance": "Handcrafted valid ContentBlock array, not an observed normal302-slot tool producer. No image bytes, tool invocation, provider or authority input.",
+        "limitations": [
+          "Actual compaction/ContextManager/storage/Engine not imported or run",
+          "Ordinary302-slot producer and aggregate gate reachability not established",
+          "No real provider token count/context overflow/UI impact proven",
+          "No0/negative/NaN budget inputs; exact real positive600/200 helper allowance only"
+        ],
+        "evidence": [
+          "docs/audit-2026-10-17-round21/evidence/toolbudget-focused.test.ts",
+          "docs/audit-2026-10-17-round21/evidence/toolbudget-first.raw.log",
+          "docs/audit-2026-10-17-round21/evidence/toolbudget-first.exit.json"
+        ],
+        "correctionDirection": "If later confirmed ordinary, preserve positional slot metadata while bounding the materialized joined view or explicitly represent an unavoidable floor; no fix made."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+      "location": "$[\"files\"][17]",
+      "object": {
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "bytes": 6990,
+        "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "mainSha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][24]",
+      "object": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][29]",
+      "object": {
+        "manifest": "toolbudget-source-manifest.json",
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][170]",
+      "object": {
+        "path": "packages/core/src/context/notes.ts",
+        "bytes": 13654,
+        "lines": 355,
+        "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][6]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+                "jsonLocation": "$[\"files\"][22]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+                "jsonLocation": "$[\"files\"][19]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                "jsonLocation": "$[\"files\"][9]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][173]",
+      "object": {
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "bytes": 6990,
+        "lines": 173,
+        "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round21/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][8]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+                "jsonLocation": "$[\"files\"][0]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+                "jsonLocation": "$[\"files\"][17]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][24]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][29]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][3]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+                "jsonLocation": "$[\"files\"][24]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][203]",
+      "object": {
+        "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+        "bytes": 4854,
+        "lines": 114,
+        "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][9]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+                "jsonLocation": "$[\"files\"][28]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+                "jsonLocation": "$[\"files\"][17]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                "jsonLocation": "$[\"files\"][27]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][350]",
+      "object": {
+        "path": "packages/core/src/context/notes.ts",
+        "bytes": 13654,
+        "lines": 355,
+        "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][355]",
+      "object": {
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "bytes": 6990,
+        "lines": 173,
+        "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][499]",
+      "object": {
+        "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+        "bytes": 4854,
+        "lines": 114,
+        "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+      "location": "$[\"sources\"][3]",
+      "object": {
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "review": "full"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+      "location": "$[\"sources\"][6]",
+      "object": {
+        "path": "packages/core/src/context/notes.ts",
+        "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+        "review": "full"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+      "location": "$[\"sources\"][9]",
+      "object": {
+        "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+        "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+        "review": "full"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+      "location": "$[\"files\"][22]",
+      "object": {
+        "path": "packages/core/src/context/notes.ts",
+        "bytes": 13654,
+        "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+      "location": "$[\"files\"][24]",
+      "object": {
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "bytes": 6990,
+        "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+      "location": "$[\"files\"][28]",
+      "object": {
+        "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+        "bytes": 4854,
+        "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+      "location": "$[\"files\"][17]",
+      "object": {
+        "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+        "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+        "bytes": 4854,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+      "location": "$[\"files\"][19]",
+      "object": {
+        "path": "packages/core/src/context/notes.ts",
+        "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+        "bytes": 13654,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "location": "$[\"files\"][9]",
+      "object": {
+        "path": "packages/core/src/context/notes.ts",
+        "bytes": 13654,
+        "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "location": "$[\"files\"][27]",
+      "object": {
+        "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+        "bytes": 4854,
+        "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "driftFromFirstInventory": []
+}

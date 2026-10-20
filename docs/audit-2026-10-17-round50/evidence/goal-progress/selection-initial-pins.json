@@ -1,0 +1,15 @@
+{
+  "atUTC": "2026-10-17T16:56:27.294832+00:00",
+  "baseline": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "sha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "bytes": 4978,
+      "lines": 130,
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverSemanticRead": null
+    }
+  ],
+  "scope": "Fresh exact gate after87 metadata-only suggestion; unknown is not unread."
+}

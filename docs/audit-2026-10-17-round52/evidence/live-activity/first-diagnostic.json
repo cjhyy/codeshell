@@ -1,0 +1,10 @@
+{
+  "toolChunk": "4b09ad",
+  "exitCode": 1,
+  "kind": "Expected filename-only literal search no-match",
+  "command": "rg -l uiVisibility: \"hidden\" packages/core/src -g *.ts",
+  "result": "No matching filename. Earlier sed source displays in the same tool succeeded. No stderr or product/test execution.",
+  "limits": "Exact double-quoted literal only; not proof that ordinary hidden producers do not exist. Search not retried or expanded.",
+  "originalCompleteToolOutputInTranscript": true,
+  "fullRawStdoutFileCaptured": false
+}

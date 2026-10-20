@@ -1,0 +1,28 @@
+bun test v1.3.11 (af24e281)
+
+packages/server/src/session-titles-store.test.ts:
+(pass) independent title stores serialize bounded writes without blocking each other's async lock holder [88.42ms]
+(pass) strict writes preserve malformed raw entries while tolerant Desktop reads still filter them [11.06ms]
+(pass) expected custom titles compare atomically against the latest independent writer [7.94ms]
+
+packages/server/src/hub/run-replay.test.ts:
+(pass) refresh combines a durable pre-run prefix with one live overlay and a race cursor [0.90ms]
+(pass) overlapping requests keep the earliest baseline until both finish [0.10ms]
+(pass) missing-record recovery is limited to a tracked empty baseline [0.02ms]
+(pass) bounded replay falls back to durable data with an explicit incomplete marker [0.05ms]
+(pass) worker exit releases overlays without recycling the stream cursor [0.28ms]
+(pass) concurrent sessions share a total memory budget and finishing one releases it [0.10ms]
+(pass) overlays and snapshot objects cannot mutate each other, and a finished run starts a fresh baseline [0.07ms]
+
+packages/server/src/mobile-remote/room-history.test.ts:
+(pass) frozen pages survive append and cold Host restart without changing their boundary [55.90ms]
+(pass) initial filtering retains the frozen throughSeq and does not rescan a tail window [40667.72ms]
+(pass) expired snapshot cursors fail instead of silently restarting from the live tail [226.22ms]
+(pass) multi-megabyte snapshot manifests remain bounded and page block boundaries correctly [164.58ms]
+
+ 14 pass
+ 9 filtered out
+ 0 fail
+ 59 expect() calls
+Ran 14 tests across 3 files. [41.61s]
+Completed Bun shard: 23 tests, 9 skipped; 0 failures.

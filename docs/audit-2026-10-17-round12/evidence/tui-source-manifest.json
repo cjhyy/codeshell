@@ -1,0 +1,197 @@
+{
+  "frozenSource": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/parse-keypress.ts",
+      "frozenSha256": "450ba7f1f2d568f830addd4c7cb356f32e1ad0fe3ed9a559050c8d8578a9cc05",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/events/input-event.ts",
+      "frozenSha256": "f8c62112887e81a00626eca4645d87c2beb81751f34b511c667c4fe4b7e7e2e5",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/events/keyboard-event.ts",
+      "frozenSha256": "052cc4125282867d71084a959b514ad3cba1ef3c6476592a8b37b34624babb2e",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/events/terminal-event.ts",
+      "frozenSha256": "0967ddd20c92469ad0665e7442adec9108716989e2e4f95a57c0a686f67d90fd",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/events/event.ts",
+      "frozenSha256": "d6d6e35fb3ac57eeff65343305f0b8d31d5af15ec3025c4b3e6bfef060650694",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio/parser.ts",
+      "frozenSha256": "3c71ed9abe2b935ad422c33049879a4c08ffabd91813e21b78f564a78ec51a4a",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio/tokenize.ts",
+      "frozenSha256": "227dfde6faa53250aa1c71a407ebb4b5cceaddb6f99ab52fb6ea33c749ba1735",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio/ansi.ts",
+      "frozenSha256": "aaec4c43878bc28293f96583ebe4211c8de92afc76191cc788a8bddf695a4644",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio/csi.ts",
+      "frozenSha256": "76171009bf287df27c330845fe4e8b5a07c2eecfe892229e88bca195be7236b6",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio/dec.ts",
+      "frozenSha256": "c068fb142421df7d3c6c9bd99e74665e1bbb0bf3989c1b9b308294cba5311cc6",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio/esc.ts",
+      "frozenSha256": "938c1be391df35c2484a8f2da9b8d0ea6d8c6f7059850877b866610aaeedb8fd",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio/osc.ts",
+      "frozenSha256": "5fec71ea0316f1bd580e81823bba9559111957ba9318bb5af183e1f7abe3e85e",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio/sgr.ts",
+      "frozenSha256": "e7f5b94bd74cad765f7d898984a75c442b6277fc7fb333fe9a120ab3a8d9d330",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio/types.ts",
+      "frozenSha256": "284f689d252a4381943612e8dff2a1847f9b73ff25b1ead94e5d826edcfd1d0e",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/termio.ts",
+      "frozenSha256": "79fd1843d4eec89d177cca42e40d8f0a7346d6da8a0a88c5b10629a73345c53c",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/stringWidth.ts",
+      "frozenSha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/line-width-cache.ts",
+      "frozenSha256": "27c2f86fa33066cc0d2a4aee688037030397e420a45b2afff57e13d25f24ecaa",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/get-max-width.ts",
+      "frozenSha256": "790f9f58831e06257a37043b2b8708d93ca8ad50842ffa347edbb2ec0db74deb",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/layout/node.ts",
+      "frozenSha256": "ddd9f2c37100850a8c394f1c2a748378111c71db0da888121ffa3d747517c303",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/Ansi.tsx",
+      "frozenSha256": "f8b5816236fc1fbbd51163dded0fdfc723f61c8d806ee6a4c75ff2f978a55130",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/components/App.tsx",
+      "frozenSha256": "3efc8fbee2da5a638faea0c1964231e6b502af4024c4d0b65e51c33f3559dfc7",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/components/Button.tsx",
+      "frozenSha256": "a85697949fb9c58769253e1dd8ccf4be57b89e356168cb269701813679f0d204",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/ink.tsx",
+      "frozenSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/hooks/use-input.ts",
+      "frozenSha256": "ed4d05bedcf6425f729dd009cd1d1d59e4f0fe7523c84fe5fe9f09339603b330",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/ui/components/TextInput.tsx",
+      "frozenSha256": "8b8296eaa6d3c5b17643bbd6e2cbcc07560384db912f9391a49f1f069e120a30",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/tui/src/render/terminal.ts",
+      "frozenSha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "frozenSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "tests/render-input.test.ts",
+      "frozenSha256": "e9de64e345b3e4c194ce20c03db8d1fc5431bcfc3d9232d25b8a012f03b75043",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "tests/fixtures/render/keypress/kitty.txt",
+      "frozenSha256": "b1bc2540739836c02a8d296124b033e8663366e71f11548bac458c6bdd176671",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "tests/fixtures/render/keypress/modify-other-keys.txt",
+      "frozenSha256": "7d8e226792c0371441f63442e788b1d29054b2c70000bb99b6839e66b84f9733",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentEqualsFrozen": true,
+      "scope": "targeted read and/or pure fixture import; not whole-file test coverage"
+    }
+  ]
+}

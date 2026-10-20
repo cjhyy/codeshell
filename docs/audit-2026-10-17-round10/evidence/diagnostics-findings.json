@@ -1,0 +1,29 @@
+{
+  "sourceBase": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "findings": [
+    {
+      "id": "DIAG-R10-01",
+      "priority": "P3",
+      "title": "DOM bounded traversal eagerly enumerates complete child collections before queue cap",
+      "file": "packages/browser-devtools/src/inspector.ts",
+      "line": 167,
+      "additionalLines": [
+        168,
+        171,
+        172
+      ],
+      "contract": [
+        "packages/browser-devtools/README.md:43-44",
+        "docs/todo/browser-automation-library-reuse.md:81",
+        "packages/browser-devtools/src/inspector.ts:132-134"
+      ],
+      "observed": "Actual callback in Node VM fully enumerated 20000 ordinary light children and 20000 open-shadow children independently at maxEntries=1; output stayed one node/truncated=true.",
+      "controls": "Four-child complete summary, Network mixed response/failure metadata, Performance count/timing projection, existing inspector baseline.",
+      "evidenceLevel": "Actual production inspector callback + fake iterable collection; real HTMLCollection enumeration and Desktop consumers source-only.",
+      "limitations": "No real browser, CSS/layout engine, measured browser latency or memory peak, timeout/hang, complete tool-chain or platform acceptance.",
+      "dedup": "CDP-R3-03 visibility hidden pruning has a different cause and is excluded; no eager collection cap finding found in parsed historical MD/JSON.",
+      "report": "docs/audit-2026-10-17-round10/diagnostics.md",
+      "fixture": "docs/audit-2026-10-17-round10/evidence/diagnostics-bounded-projection.test.ts"
+    }
+  ]
+}

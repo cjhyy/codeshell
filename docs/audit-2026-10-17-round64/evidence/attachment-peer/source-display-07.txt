@@ -1,0 +1,30 @@
+4:  * Renderer state for composer images. New paste/drop images are staged by
+19:   /** Local id for keying/removing in the UI. */
+20:   id: string;
+32:   absPath?: string;
+35:   /** Hex sha256 of the staged/sourced bytes, without a `sha256:` prefix. */
+47:   /** Session directory that owns staged attachments. */
+49:   /** When this attachment was staged/selected. */
+63:   /** Single-file ceiling. Most providers cap at 20 MB; stay conservative. */
+66:   /** Anything outside this set is rejected before reading. */
+75: let idCounter = 0;
+77:   idCounter += 1;
+78:   return `img-${Date.now().toString(36)}-${idCounter}`;
+91:  * Validate + read a batch of files into ImageAttachment. Returns the
+137:         id: nextId(),
+178:   absPath: string,
+182:     Pick<ImageAttachment, "path" | "relPath" | "absPath" | "sha256" | "origin" | "sessionId">
+200:         message: tr("chat.attachment.readFailedPath", { path: absPath }),
+217:           path: absPath,
+225:       id: nextId(),
+226:       name: absPath,
+230:       path: options.path ?? absPath,
+231:       absPath: options.absPath ?? absPath,
+237:       sourcePath: absPath,
+243:  * Wire format for embedding images in a single-string `task` send.
+247:  * keeps the boundary trivial — no protocol break — but the marker is
+248:  * specific enough that nothing else would accidentally produce it.
+269:     .filter((pair): pair is [string, string | number] => pair[1] !== undefined && pair[1] !== "")
+291:   /** Prose with image blocks removed and surrounding whitespace trimmed. */
+300:  * Derive a sidebar session title from a wire string. Image base64 must
+307:   // sidebar with raw `<codeshell-annotations>` XML.

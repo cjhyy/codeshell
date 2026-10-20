@@ -1,0 +1,62 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "files": [
+    {
+      "source": "/tmp/codeshell-audit-round28-coverage-frontier/README.md",
+      "destination": "docs/audit-2026-10-17-round28/evidence/coverage-prep/README.md",
+      "bytes": 4471,
+      "sha256": "583dd8022a324ba7eb36e463a53fd4ba2d240cba3e0e292ca0daa74641ae67da",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-index.json",
+      "destination": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "bytes": 1891704,
+      "sha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-method.py",
+      "destination": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-method.py",
+      "bytes": 9287,
+      "sha256": "669b17c5a61fd5d166659b7b30386678a5b2031a3de640172609c19bcb0af5e0",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-ranking.json",
+      "destination": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "bytes": 129321,
+      "sha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round28-coverage-frontier/package-inventory.json",
+      "destination": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round28-coverage-frontier/receipt.json",
+      "destination": "docs/audit-2026-10-17-round28/evidence/coverage-prep/receipt.json",
+      "bytes": 2937,
+      "sha256": "238fd5448217c1cda329ba00afe1ae579cdbf0b0509ebf37ef0d91730225ee96",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round28-coverage-frontier/shortlist-history.json",
+      "destination": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+      "bytes": 507177,
+      "sha256": "01c11771bcfb550707e63be5c9df654cea4fe8300068f1165e2dd3afa7575779",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round28-coverage-frontier/source-manifest-inventory.json",
+      "destination": "docs/audit-2026-10-17-round28/evidence/coverage-prep/source-manifest-inventory.json",
+      "bytes": 33231,
+      "sha256": "96e49468479f3fe23f25180e245f9e16636ca5a97fe62409886862e654133e6e",
+      "byteIdentical": true
+    }
+  ],
+  "note": "Verbatim metadata provenance. Original9b parent context and filesystem-only claims stay unchanged. Package inventory and regex candidate ranking do not constitute semantic source audit or product runs."
+}

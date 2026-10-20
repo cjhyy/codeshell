@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round7/evidence/providers-stream-contract.test.ts:
+(pass) Round 7 provider tool progress boundary > installed SDK emits inputJson before contentBlock, and returns correct final input [3.72ms]
+(pass) Round 7 provider tool progress boundary > Anthropic first-tool progress drops all args and announces the start only at block stop [8.50ms]
+(pass) Round 7 provider tool progress boundary > Anthropic second-tool args land on the previous tool in the actual ModelFacade and Web reducer [2.63ms]
+(pass) Round 7 provider tool progress boundary > OpenAI complete identity control routes progress correctly; later identity never emits a start [8.79ms]
+
+ 4 pass
+ 0 fail
+ 19 expect() calls
+Ran 4 tests across 1 file. [113.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

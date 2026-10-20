@@ -1,0 +1,59 @@
+{
+  "baseline": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "confirmed": 0,
+  "candidates": 1,
+  "firstShards": 2,
+  "completedCleanShards": 2,
+  "passed": 13,
+  "expectCalls": 35,
+  "failed": 0,
+  "skipped": 0,
+  "newFocusedTests": 4,
+  "existingBaselineTests": 9,
+  "runs": [
+    {
+      "name": "root-run-data",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round10/evidence/root-run-data.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "rawLog": "root-run-data.first.log",
+      "exitReceipt": "root-run-data.first.exit.json",
+      "passed": 4,
+      "expectCalls": 15,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "root-run-existing-baseline",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/run/FileRunStore.list-pagination.test.ts",
+        "packages/core/src/run/RunQueue.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "rawLog": "root-run-existing-baseline.first.log",
+      "exitReceipt": "root-run-existing-baseline.first.exit.json",
+      "passed": 9,
+      "expectCalls": 20,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "notes": [
+    "One guessed renderer source glob failed; preserved transcription and direction skipped.",
+    "No RunManager/Engine/CLI/native/approval/locks/crash recovery fixture or old failed direction restored.",
+    "No shared build/dependency replacement, actual model/provider/network/user data or broad suite."
+  ]
+}

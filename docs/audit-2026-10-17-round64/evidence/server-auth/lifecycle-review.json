@@ -1,0 +1,52 @@
+{
+  "matrix": [
+    {
+      "lifecycle": "initialize/restart/bootstrap",
+      "source": "auth-store.ts102–120,276–295",
+      "review": "Creates one-time secret only for first creator; established missing/corrupt store does not reopen bootstrap. Disclosure-once policy is explicit, reinforced by selected test declaration21–46. Not promoted as a restart defect."
+    },
+    {
+      "lifecycle": "setup and concurrent setup",
+      "source": "auth-store.ts123–139,203–211",
+      "review": "Validates input, prechecks bootstrap before async hash, then rechecks same bootstrap/account under mutate lock before commit."
+    },
+    {
+      "lifecycle": "login and token rotation",
+      "source": "auth-store.ts142–158,214–240; auth-http.ts101–104,130–143",
+      "review": "Authenticates normalized credentials, rechecks locked account hash after async work, removes presented/expired sessions, evicts oldest if capped, and returns revoked ids; HTTP performs callbacks, cookie and reply."
+    },
+    {
+      "lifecycle": "fixed expiry/authentication/list",
+      "source": "auth-store.ts161–183",
+      "review": "Validating auth rereads under mutation, checks expiry/createdAt; throttles lastSeen write; listing filters expired rows. Fixed rather than sliding TTL is explicit in selected declaration65–83."
+    },
+    {
+      "lifecycle": "revoke/logout and concrete cleanup",
+      "source": "auth-store.ts186–200; auth-http.ts146–168; headless-server.ts189–206,779–797",
+      "review": "Logout/revoke update store before callback and cookie clear. Concrete auth.handle routing occurs before protected-response tracking, so this inspected Hub handler is not assumed to cancel its own response. Existing R38 is kept under its original scope, not called fixed by this negative."
+    },
+    {
+      "lifecycle": "validation after connect",
+      "source": "headless-server.ts276–290,842–859,878–883",
+      "review": "Concrete WS principal checked on admission, every handled message and periodic recheck; failures close with4401. No real WS, timers or revocation timing observed."
+    },
+    {
+      "lifecycle": "HTTP input/error/cleanup",
+      "source": "auth-http.ts48–92,116–178,184–290; auth.ts72–105,122–141",
+      "review": "Actual Web POST sends JSON with same-origin credentials. Origin/token parse/body type and size/abort/timeout cleanup, activeLogins finally, typed error codes and generic503 branches were read; malformed DTOs were not used as findings."
+    },
+    {
+      "lifecycle": "UI normal producers/recovery",
+      "source": "AuthGate.tsx114–145,192–224,289–348",
+      "review": "Normal field maxima match store labels/password bounds; pending login prevents focus refresh superseding submit; revision and finally protect late responses and busy cleanup. No React/browser request observed."
+    },
+    {
+      "lifecycle": "storage/lock error boundary",
+      "source": "auth-store.ts254–310,369–415",
+      "review": "Full static read of locked reload/write/finally and strict record shape. Native storage errors, lock acquisition semantics, all restore/custody/platform races remain unvalidated; old FM19-1 acquisition retry root cause is excluded."
+    }
+  ],
+  "normalCounterexampleEstablished": false,
+  "arbitraryBadDtoOrInjectedRejectUsed": false,
+  "runtimeTests": 0
+}

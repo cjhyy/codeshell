@@ -32,6 +32,7 @@ import {
 } from "../../shared/digital-human-team";
 import type { DigitalHumanProfileImportPreview } from "../../shared/digital-human-profile-transfer";
 import type { RendererConfigurationTarget } from "../../preload/types";
+import { nativeBasename } from "../nativePath";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,6 +160,8 @@ export function DigitalHumansView({
   const [teamEditor, setTeamEditor] = React.useState<{ team?: DigitalHumanTeam } | null>(null);
   const [editor, setEditor] = React.useState<{ profile?: DigitalHumanProfileEntry } | null>(null);
   const [memoryProfile, setMemoryProfile] = React.useState<DigitalHumanProfileEntry | null>(null);
+  const editorOpener = React.useRef<HTMLButtonElement | null>(null);
+  const memoryOpener = React.useRef<HTMLButtonElement | null>(null);
   const [importPreview, setImportPreview] = React.useState<DigitalHumanProfileImportPreview | null>(
     null,
   );
@@ -283,7 +286,7 @@ export function DigitalHumansView({
                 ...preview.blockingSessions.map((session) => {
                   const label = session.title ?? session.id;
                   const where = session.workspace
-                    ? ` — ${session.workspace.split("/").pop() ?? session.workspace}`
+                    ? ` — ${nativeBasename(session.workspace, window.codeshell?.platform)}`
                     : "";
                   return `  · ${label}${where}`;
                 }),
@@ -737,7 +740,13 @@ export function DigitalHumansView({
                     )}
                     {t("digitalHumans.transfer.importDefinition")}
                   </Button>
-                  <Button size="sm" onClick={() => setEditor({})}>
+                  <Button
+                    size="sm"
+                    onClick={(event) => {
+                      editorOpener.current = event.currentTarget;
+                      setEditor({});
+                    }}
+                  >
                     <Plus size={14} aria-hidden="true" />
                     {t("digitalHumans.editor.create")}
                   </Button>
@@ -919,7 +928,10 @@ export function DigitalHumansView({
                     // empty grid is chrome. Show only where to get one.
                     <CatalogEmptyState
                       onImport={() => void pickProfileDefinitionImport()}
-                      onCreate={() => setEditor({})}
+                      onCreate={(opener) => {
+                        editorOpener.current = opener;
+                        setEditor({});
+                      }}
                       importBusy={importPickerBusy}
                     />
                   ) : (
@@ -1025,7 +1037,10 @@ export function DigitalHumansView({
                 <TabsContent value="mine" className="mt-0">
                   {profiles.length === 0 ? (
                     <LibraryEmptyState
-                      onCreate={() => setEditor({})}
+                      onCreate={(opener) => {
+                        editorOpener.current = opener;
+                        setEditor({});
+                      }}
                       onImport={() => void pickProfileDefinitionImport()}
                       importBusy={importPickerBusy}
                     />
@@ -1058,12 +1073,18 @@ export function DigitalHumansView({
                             useSelection({ kind: "single", id: profile.name, label: profile.label })
                           }
                           onDetails={() => setDetail({ kind: "profile", profile })}
-                          onEdit={() => setEditor({ profile })}
-                          onMemory={() => setMemoryProfile(profile)}
+                          onEdit={(opener) => {
+                            editorOpener.current = opener;
+                            setEditor({ profile });
+                          }}
+                          onMemory={(opener) => {
+                            memoryOpener.current = opener;
+                            setMemoryProfile(profile);
+                          }}
                           onDelete={() => void deleteProfileEntry(profile)}
-                          onToggleDefault={() => {
+                          onToggleDefault={(opener) => {
                             if (!hasRepositoryTarget) return;
-                            void profileSwitch.open(profile.active ? null : profile.name);
+                            void profileSwitch.open(profile.active ? null : profile.name, opener);
                           }}
                         />
                       ))}
@@ -1144,6 +1165,7 @@ export function DigitalHumansView({
 
       <DigitalHumanEditorDialog
         open={editor !== null}
+        opener={editorOpener.current}
         profile={editor?.profile}
         existingIds={profiles.map((profile) => profile.name)}
         skills={availableSkills.filter((skill) => skill.source !== "project")}
@@ -1204,6 +1226,7 @@ export function DigitalHumansView({
 
       <DigitalHumanMemoryDialog
         profile={memoryProfile}
+        opener={memoryOpener.current}
         enabling={
           memoryProfile ? operations.isBusy(`enable-profile-memory:${memoryProfile.name}`) : false
         }
@@ -1629,15 +1652,21 @@ function ProfileCard({
   busy: boolean;
   onUse: () => void;
   onDetails: () => void;
-  onEdit: () => void;
-  onMemory: () => void;
+  onEdit: (opener: HTMLButtonElement | null) => void;
+  onMemory: (opener: HTMLButtonElement | null) => void;
   onDelete: () => void;
-  onToggleDefault: () => void;
+  onToggleDefault: (opener: HTMLButtonElement | null) => void;
 }) {
   const { t } = useT();
   const count = capabilityCount(profile);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const menuTrigger = React.useRef<HTMLButtonElement>(null);
+  const handingOffMenuFocus = React.useRef(false);
   const runMenuAction = (action: () => void) => {
+    // Hand off before a dialog (or its async preview) starts. The menu's later
+    // FocusScope cleanup must not try to pull focus out of the new modal.
+    handingOffMenuFocus.current = true;
+    menuTrigger.current?.focus();
     setMenuOpen(false);
     action();
   };
@@ -1722,6 +1751,7 @@ function ProfileCard({
         <DropdownMenu modal={false} open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
+              ref={menuTrigger}
               size="icon"
               variant="ghost"
               className="shrink-0"
@@ -1733,21 +1763,30 @@ function ProfileCard({
             </Button>
           </DropdownMenuTrigger>
           {menuOpen ? (
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent
+              align="end"
+              className="w-48"
+              onCloseAutoFocus={(event) => {
+                if (handingOffMenuFocus.current) {
+                  event.preventDefault();
+                  handingOffMenuFocus.current = false;
+                }
+              }}
+            >
               <DropdownMenuItem onSelect={() => runMenuAction(onDetails)}>
                 <ChevronRight size={13} aria-hidden="true" />
                 {t("digitalHumans.market.details")}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => runMenuAction(onEdit)}>
+              <DropdownMenuItem onSelect={() => runMenuAction(() => onEdit(menuTrigger.current))}>
                 <Pencil size={13} aria-hidden="true" />
                 {t("digitalHumans.editor.edit")}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => runMenuAction(onMemory)}>
+              <DropdownMenuItem onSelect={() => runMenuAction(() => onMemory(menuTrigger.current))}>
                 <Brain size={13} aria-hidden="true" />
                 {t("digitalHumans.memory.button")}
               </DropdownMenuItem>
               <DropdownMenuItem
-                onSelect={() => runMenuAction(onToggleDefault)}
+                onSelect={() => runMenuAction(() => onToggleDefault(menuTrigger.current))}
                 disabled={!hasProject}
               >
                 <Check size={13} aria-hidden="true" />
@@ -2695,7 +2734,7 @@ function LibraryEmptyState({
   onImport,
   importBusy,
 }: {
-  onCreate: () => void;
+  onCreate: (opener: HTMLButtonElement) => void;
   onImport: () => void;
   importBusy: boolean;
 }) {
@@ -2710,7 +2749,7 @@ function LibraryEmptyState({
         {t("digitalHumans.empty.description")}
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
-        <Button size="sm" onClick={onCreate}>
+        <Button size="sm" onClick={(event) => onCreate(event.currentTarget)}>
           <Plus size={14} aria-hidden="true" />
           {t("digitalHumans.editor.create")}
         </Button>
@@ -2885,7 +2924,7 @@ function CatalogEmptyState({
   importBusy,
 }: {
   onImport: () => void;
-  onCreate: () => void;
+  onCreate: (opener: HTMLButtonElement) => void;
   importBusy: boolean;
 }) {
   const { t } = useT();
@@ -2904,7 +2943,7 @@ function CatalogEmptyState({
             )}
             {t("digitalHumans.transfer.importDefinition")}
           </Button>
-          <Button size="sm" variant="outline" onClick={onCreate}>
+          <Button size="sm" variant="outline" onClick={(event) => onCreate(event.currentTarget)}>
             <Plus size={14} aria-hidden="true" />
             {t("digitalHumans.editor.create")}
           </Button>

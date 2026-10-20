@@ -1,0 +1,11 @@
+{
+  "baseline": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "main": "0d2d5418b0b4821fdb11dc87e328fce7e1f2433e",
+  "paths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/src/renderer/chat/compress.test.ts",
+    "packages/desktop/src/renderer/chat/compress.ts"
+  ],
+  "productRuns": 0
+}

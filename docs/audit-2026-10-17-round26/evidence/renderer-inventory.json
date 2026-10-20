@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "rg",
+    "--files",
+    "packages/desktop"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "paths": [
+    "packages/desktop/src/renderer/chat/composerSeed.ts",
+    "packages/desktop/src/renderer/chat/composerSeed.test.ts",
+    "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+    "packages/desktop/src/renderer/subagents/SubagentSessionDetail.navigation.test.tsx",
+    "packages/desktop/src/renderer/subagents/SubagentSessionDetail.test.tsx",
+    "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+    "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx",
+    "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+    "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+    "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+    "packages/desktop/src/renderer/panels/PanelArea.subagent.test.tsx",
+    "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+    "packages/desktop/src/renderer/diff/reviewSnapshot.ts"
+  ]
+}

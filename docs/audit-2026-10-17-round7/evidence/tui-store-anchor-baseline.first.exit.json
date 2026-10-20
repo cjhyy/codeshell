@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/tui/src/ui/store-notify.test.ts",
+    "packages/tui/src/ui/stream-attempt.test.ts",
+    "tests/ui/store-commit-interrupted.test.ts",
+    "tests/slice-anchor.test.ts",
+    "tests/message-row-memo.test.ts"
+  ],
+  "exitCode": 0
+}

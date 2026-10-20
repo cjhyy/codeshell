@@ -1,0 +1,156 @@
+{
+  "checkedAt": "2026-10-17T19:33:21.250897+00:00",
+  "sourceChecks": [
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/delivery-queue.ts",
+      "initialSha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "endingSha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "bytes": 28387,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.ts",
+      "initialSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "endingSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "bytes": 3817,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "initialSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "endingSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "bytes": 10429,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "initialSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "endingSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "bytes": 7027,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "initialSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "endingSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "bytes": 11645,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/delivery-queue.test.ts",
+      "initialSha256": "14338213d386fd4ea2ff12c6202f6c1d2bbe4b7f8694f2182830bfe2e91228ff",
+      "endingSha256": "14338213d386fd4ea2ff12c6202f6c1d2bbe4b7f8694f2182830bfe2e91228ff",
+      "bytes": 18029,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.test.ts",
+      "initialSha256": "51fb1b92c9506431403e0883582a8c6e1be940a26deb3b9aeb567a774cd4e081",
+      "endingSha256": "51fb1b92c9506431403e0883582a8c6e1be940a26deb3b9aeb567a774cd4e081",
+      "bytes": 4481,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "initialSha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "endingSha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "bytes": 12790,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "initialSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "endingSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "bytes": 12984,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "initialSha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "endingSha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "bytes": 15174,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/instance-lock.ts",
+      "initialSha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "endingSha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "bytes": 4712,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/package.json",
+      "initialSha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "endingSha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "bytes": 2936,
+      "unchanged": true
+    }
+  ],
+  "historyChecks": [
+    {
+      "path": "docs/audit-2026-10-16/source-manifest.json",
+      "initialSha256": "9a624ccb9a02c21474a563b4b7382799a95cf7961f5ee6d2cf7f36da54c666d9",
+      "endingSha256": "9a624ccb9a02c21474a563b4b7382799a95cf7961f5ee6d2cf7f36da54c666d9",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/server-web-chat.md",
+      "initialSha256": "e12916c5a52bc6bee7ccb78acf25788fcc68a160283523fa32f52e2f74098de0",
+      "endingSha256": "e12916c5a52bc6bee7ccb78acf25788fcc68a160283523fa32f52e2f74098de0",
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "initialSha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "endingSha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "initialSha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "endingSha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/findings.json",
+      "initialSha256": "623dceaf7d194fb747529ffdd59994416111d78f5ba43925a505c8a7d93a1aa8",
+      "endingSha256": "623dceaf7d194fb747529ffdd59994416111d78f5ba43925a505c8a7d93a1aa8",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-findings.json",
+      "initialSha256": "b5867052aeb00ce829b4ba4c2244d2abcebdf36f9acf669a6e255b5ec898f06b",
+      "endingSha256": "b5867052aeb00ce829b4ba4c2244d2abcebdf36f9acf669a6e255b5ec898f06b",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+      "initialSha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e",
+      "endingSha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e",
+      "unchanged": true
+    }
+  ],
+  "sharedBatchCheck": {
+    "path": "/tmp/codeshell-audit-round141-pairing/history-batch.json",
+    "initialSha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b",
+    "endingSha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b",
+    "unchanged": true
+  },
+  "allSourceAndSelectedHistoryUnchanged": true,
+  "fullSharedInventoryRecheckedByThisAuthor": false,
+  "GitCalls": 0
+}

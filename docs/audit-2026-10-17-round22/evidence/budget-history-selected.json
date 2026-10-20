@@ -1,0 +1,900 @@
+{
+  "selected": [
+    {
+      "group": "exact",
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "67",
+      "excerpt": "| `packages/core/src/engine/token-budget.ts`、`reactive-threshold.ts` | turn/goal 预算和响应式阈值。 |",
+      "wholeValueCharacters": 92
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "67",
+      "excerpt": "| `packages/core/src/engine/token-budget.ts`、`reactive-threshold.ts` | turn/goal 预算和响应式阈值。 |",
+      "wholeValueCharacters": 92
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "383",
+      "excerpt": "### 4.8 `token-budget.ts`、`reactive-threshold.ts`",
+      "wholeValueCharacters": 49
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "383",
+      "excerpt": "### 4.8 `token-budget.ts`、`reactive-threshold.ts`",
+      "wholeValueCharacters": 49
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "385",
+      "excerpt": "- `token-budget.ts` 判断输出是否接近当前 turn budget，需要继续、提醒或停止。",
+      "wholeValueCharacters": 54
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "386",
+      "excerpt": "- `reactive-threshold.ts` 监控 streaming 中 token 跨过阈值的情况，目前主要用于 warning/标记，不在 streaming 中立即 compact。",
+      "wholeValueCharacters": 98
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "2756",
+      "excerpt": "- `engine/token-budget.ts`",
+      "wholeValueCharacters": 26
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "2757",
+      "excerpt": "- `engine/reactive-threshold.ts`",
+      "wholeValueCharacters": 32
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/engine.md",
+      "location": "27",
+      "excerpt": "| `token-budget.ts`, `reactive-threshold.ts`, `cost-store.ts`, `aux-key.ts`, `tool-summary.ts`, `streaming-tool-queue.ts`, `runtime.ts`, `turn-state.ts` | Small helpers: context/token budgeting, compaction thresholds, cost-state cache key, auxiliary-model cache key, tool-result summarization, streaming tool dispatch, per-turn state. |",
+      "wholeValueCharacters": 336
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/engine.md",
+      "location": "27",
+      "excerpt": "| `token-budget.ts`, `reactive-threshold.ts`, `cost-store.ts`, `aux-key.ts`, `tool-summary.ts`, `streaming-tool-queue.ts`, `runtime.ts`, `turn-state.ts` | Small helpers: context/token budgeting, compaction thresholds, cost-state cache key, auxiliary-model cache key, tool-result summarization, streaming tool dispatch, per-turn state. |",
+      "wholeValueCharacters": 336
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "59",
+      "excerpt": "`ModelFacade` 是 LLM client 与 transcript / stream / usage 之间的适配层，见 `packages/core/src/engine/model-facade.ts:1`。`session-usage.ts` 管 session 累计 token/cache 计数，`token-budget.ts` 管单轮输出预算，ContextManager 由 Engine 组装并交给 TurnLoop。",
+      "wholeValueCharacters": 223
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "89",
+      "excerpt": "`goal.ts` 规范 goal mode 的内部形状、turn/stop/budget 上限和 mid-run extension；`token-budget.ts` 控制普通输出预算；`image-policy.ts` 控制图片附件大小、数量、历史污染防护。Goal run 的 EngineConfig 入口在 `packages/core/src/engine/types.ts:64`。",
+      "wholeValueCharacters": 199
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "93",
+      "excerpt": "/src/engine/turn-loop.ts:913`。Goal 的 token/time budget 是 run-scoped，跨 turn 累计，见 `packages/core/src/engine/goal.ts:9`、`packages/core/src/engine/turn-loop.ts:836`。普通 token budget 用 `checkTokenBudget()` 在接近 90% 时 nudge，之后停止或因收益递减停止，见 `packages/core/src/engine/token-budget.ts:21`。图片在 parse-task 之后、进入 provider 前执行 policy；超大单图可被 drop 为文本占位，避免污染历史，见 `packages/core/src/engine/image-policy.ts:1`、`packages/core/src/engine/image-policy.ts:133`、`packages/core/src/engine/image-policy.ts:151`。",
+      "wholeValueCharacters": 728
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "93",
+      "excerpt": "，见 `packages/core/src/engine/goal.ts:9`、`packages/core/src/engine/turn-loop.ts:836`。普通 token budget 用 `checkTokenBudget()` 在接近 90% 时 nudge，之后停止或因收益递减停止，见 `packages/core/src/engine/token-budget.ts:21`。图片在 parse-task 之后、进入 provider 前执行 policy；超大单图可被 drop 为文本占位，避免污染历史，见 `packages/core/src/engine/image-policy.ts:1`、`packages/core/src/engine/image-policy.ts:133`、`packages/core/src/engine/image-policy.ts:151`。",
+      "wholeValueCharacters": 728
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "location": "3",
+      "excerpt": "源码。范围以 `packages/core/src/engine/turn-loop.ts` 为主，同时覆盖它依赖的 `engine/steer-queue.ts`、`engine/streaming-tool-queue.ts`、`engine/patch-orphaned-tools.ts`、`engine/turn-state.ts`、`engine/token-budget.ts`、`tool-system/executor.ts`，并把 Engine 外层 run 边界纳入生命周期，因为最终 `turn_complete` 和 session state 持久化发生在 `engine.ts`。",
+      "wholeValueCharacters": 318
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "location": "21",
+      "excerpt": "、`on_stop` 续跑/上限/达成、`complete_goal` / confirmed `cancel_goal` 短路清理持久 goal。 | unattended goal 的终止条件、续跑进度和持久 goal 生命周期。 | `rg \"goal_budget_exhausted|stop_hook_prevented|hook_stopped|checkTokenBudget|stopBlock\" packages/core/src/engine -g '*test.ts'` 只命中 `turn-loop.test.ts:25` 的类型契约和 `goal.test.ts` 的纯 budget helper；`rg \"goal_self_reported_complete|goal_user_cancelled|clearPersistedGoal|confirmedCancel\"` 未命中 TurnLoop 行为测试。 | 若回归，goal 可能预算耗尽仍继续跑、stop hook 不续跑或无限续跑、模型自报完成后持久 goal 未清导致下一次普通发送又重新进入 goal。 | `turn-loop goal budget exhausted stops before tools`：预算超限且 response 带 toolCalls，断言工具不执行、发预算耗尽 assistant_message、`reason === \"goal_budget_exhausted\"`；`turn-loop complete_goal clears persisted goal` / `cancel_goal confirm clears persisted goal`：断言 `clearPersistedGoal` 被调用且返回 `completed`；`turn-",
+      "wholeValueCharacters": 1031
+    },
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17-round9/usage.md",
+      "location": "18",
+      "excerpt": "- `token-budget.ts` 的有限/无限预算、90% nudge 后 stop 按当前实现工作，新增 2 个纯函数控制通过。静态发现 diminishing 分支在正常单调计数中难以达到，但没有独立可见错误或更强契约，未登记候选。实际 TurnLoop 调用与 run accounting 的关系只做源码追踪，不运行 Engine。",
+      "wholeValueCharacters": 173
+    },
+    {
+      "group": "exact",
+      "path": "docs/core-deep-dive/02-engine-turn-loop.md",
+      "location": "28",
+      "excerpt": "围绕它们还有一圈支撑模块,比较关键的几个:`model-facade.ts`(包住 LLM 客户端,做日志/转发/记账)、`goal.ts`(持久目标预算与上限)、`steer-queue.ts`(步间引导队列)、`token-budget.ts`(每轮输出 token 决策)、`patch-orphaned-tools.ts`(恢复时修补孤儿工具调用)、`resolve-llm-config.ts`(settings + tag → 模型配置)。",
+      "wholeValueCharacters": 226
+    },
+    {
+      "group": "exact",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "52",
+      "excerpt": "| `token-budget.ts` | 每轮输出 token 的决策（继续 / 催促 / 停止） |",
+      "wholeValueCharacters": 52
+    },
+    {
+      "group": "exact",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "53",
+      "excerpt": "| `reactive-threshold.ts` | 每跨过一个 2000-token 桶就检查一次是否要做流内紧急压缩 |",
+      "wholeValueCharacters": 63
+    },
+    {
+      "group": "exact",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "218",
+      "excerpt": "- **流式反应探针**（`reactive-threshold.ts`）：流式期间累计响应 token，每跨过一个 2000-token 桶，可能触发一次流内紧急 window 压缩——防止单轮模型输出过长把窗口在 turn 中途撑爆。",
+      "wholeValueCharacters": 119
+    },
+    {
+      "group": "exact",
+      "path": "docs/review-2026-07-09/GUIDELINE.md",
+      "location": "56",
+      "excerpt": "- `goal.ts`、`session-usage.ts`、`token-budget.ts`、`image-policy.ts`",
+      "wholeValueCharacters": 66
+    },
+    {
+      "group": "exact",
+      "path": "docs/superpowers/plans/2026-06-02-goal-mode-p0.md",
+      "location": "125",
+      "excerpt": " * The budget tracker is RUN-scoped (not per-turn like token-budget.ts):",
+      "wholeValueCharacters": 72
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/architecture/01-engine-and-turn-loop.md",
+      "location": "92",
+      "excerpt": "**e. Goal budget gate.** Goal token/time usage is accumulated after any continuation and checked before both final-answer and tool-execution branches (`packages/core/src/engine/turn-loop.ts:815`, `packages/core/src/engine/turn-loop.ts:834`). Budget exhaustion returns `goal_budget_exhausted`, not a tool or model error.",
+      "wholeValueCharacters": 319
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/architecture/01-engine-and-turn-loop.md",
+      "location": "98",
+      "excerpt": "**h. Turn boundary.** After tool results, token-budget nudges, investigation/task guards, and `on_turn_end`, the transcript records a turn boundary and the engine flushes turn count and cumulative usage to `state.json` (`packages/core/src/engine/turn-loop.ts:1108`, `packages/core/src/engine/turn-loop.ts:1139`, `packages/core/src/engine/turn-loop.ts:1172`, `packages/core/src/engine/engine.ts:2080`).",
+      "wholeValueCharacters": 401
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/architecture/01-engine-and-turn-loop.md",
+      "location": "112",
+      "excerpt": "3. **Goal budgets and ceilings are hard backstops.** `normalizeGoal()` drops empty/non-positive fields (`packages/core/src/engine/goal.ts:105`). Goal runs default to 300 turns and 25 stop-blocks; plain interactive runs default to 100 turns and 8 stop-blocks (`packages/core/src/engine/goal.ts:59`, `packages/core/src/engine/goal.ts:98`, `packages/core/src/engine/goal.ts:144`, `packages/core/src/engine/goal.ts:159`). Token/time budgets are checked in-loop before tools run (`packages/core/src/engine/goal.ts:285`, `packages/core/src/engine/turn-loop.ts:834`).",
+      "wholeValueCharacters": 560
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/architecture/01-engine-and-turn-loop.md",
+      "location": "130",
+      "excerpt": "The loop exposes `extendGoalRun()` through `ChatSession`, `Engine`, and `TurnLoop`. Extensions can add turns, token budget, time budget, and stop-block allowance; any real extension resets the consecutive stop-block streak and re-arms approaching-limit announcements (`packages/core/src/protocol/chat-session.ts:136`, `packages/core/src/engine/engine.ts:3022`, `packages/core/src/engine/turn-loop.ts:226`). The UI-facing approach marker watches both turns remaining and stop-blocks remaining because re-blocked goals usually hit the stop-block cap first (`packages/core/src/engine/turn-loop.ts:286`, `packages/core/src/engine/goal.ts:196`).",
+      "wholeValueCharacters": 640
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/architecture/07-plugins-capabilities-credentials-memory.md",
+      "location": "169",
+      "excerpt": "ejected, and `MemorySave`/`MemoryDelete` are refused unless `scope === \"dream\"` (`dream-consolidation.ts:165`, `dream-consolidation.ts:178`, `dream-consolidation.ts:183`). A write budget caps mutations at 10, and the loop stops after 8 LLM turns (`dream-consolidation.ts:34`, `dream-consolidation.ts:110`, `dream-consolidation.ts:112`, `dream-consolidation.ts:192`). Normal engine permission rules also allow dream-scope save/delete while leaving user-scope writes on the regular ask path (`engine.ts:2930`).",
+      "wholeValueCharacters": 572
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "208",
+      "excerpt": "ster(app, host)` 模块；IPC 改为一条 v2 通道加少量 Electron 专属 IPC                                     | index.ts、\\*-ipc.ts                                             | 现有 `tests/architecture-budgets.test.ts` 已锁定 `index.ts` 7,277 行和主进程路由总数；拆分后把 `index.ts` 上限下调到 1,500 行，并按领域模块分别计数路由  |",
+      "wholeValueCharacters": 308
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/architecture/02-runtime-flow.md",
+      "location": "103",
+      "excerpt": "  ContextUpdate --> Guards: token budget + guard nudges",
+      "wholeValueCharacters": 55
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "67",
+      "excerpt": "| `packages/core/src/engine/token-budget.ts`、`reactive-threshold.ts` | turn/goal 预算和响应式阈值。 |",
+      "wholeValueCharacters": 92
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/core-modules/engine.md",
+      "location": "14",
+      "excerpt": "| `turn-loop.ts` | `TurnLoop` — the internal LLM↔tool state machine. Goal budget tracking, stop-block counting, tool-cap enforcement, ctx-bar emission. Driven by `Engine.run()`. |",
+      "wholeValueCharacters": 179
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/core-modules/hooks.md",
+      "location": "152",
+      "excerpt": " `continueSession: true` (keep going), not allow-stop — silently letting an unattended goal fail is worse. The real infinite-loop backstop is the turn-loop's `maxStopBlocks` + run budget, not this hook. It also short-circuits (allows stop) when a background job is still running for the session.",
+      "wholeValueCharacters": 398
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "93",
+      "excerpt": "kages/core/src/engine/turn-loop.ts:913`。Goal 的 token/time budget 是 run-scoped，跨 turn 累计，见 `packages/core/src/engine/goal.ts:9`、`packages/core/src/engine/turn-loop.ts:836`。普通 token budget 用 `checkTokenBudget()` 在接近 90% 时 nudge，之后停止或因收益递减停止，见 `packages/core/src/engine/token-budget.ts:21`。图片在 parse-task 之后、进入 provider 前执行 policy；超大单图可被 drop 为文本占位，避免污染历史，见 `packages/core/src/engine/image-policy.ts:1`、`packages/core/src/engine/image-policy.ts:133`、`packages/core/src/engine/image-policy.ts:151`。",
+      "wholeValueCharacters": 728
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "97",
+      "excerpt": "Goal 的预算 tracker 是 run-scoped，是为了无人值守目标不会无限烧 token 或时间，见 `packages/core/src/engine/goal.ts:9`。goal mode 抬高 maxTurns，是因为“直到完成”的目标可能远超一次交互 prompt，真正 backstop 是 token/time budget 和 maxStopBlocks，见 `packages/core/src/engine/engine.ts:2126`、`packages/core/src/engine/goal.ts:147`。图片策略的动机来自真实问题：4MB screenshot base64 导致 provider connection error；Engine 是发出昂贵 vision 调用前最后能便宜拒绝的位置，见 `packages/core/src/engine/image-policy.ts:5`、`packages/core/src/engine/image-policy.ts:25`。",
+      "wholeValueCharacters": 467
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "location": "76",
+      "excerpt": "| S12 | 工具后续跑判定 | tool_result 已进入 messages。 | `complete_goal` / `cancel_goal` / token budget stop 可返回；nudge、guard reminder、task reminder、turn_end hook 后记录边界并继续。 | `packages/core/src/engine/turn-loop.ts:1065`、`packages/core/src/engine/turn-loop.ts:1089`、`packages/core/src/engine/turn-loop.ts:1093`、`packages/core/src/engine/turn-loop.ts:1112`、`packages/core/src/engine/turn-loop.ts:1130`、`packages/core/src/engine/turn-loop.ts:1161`、`packages/core/src/engine/turn-loop.ts:1187`、`packages/core/src/engine/turn-loop.ts:1194` |",
+      "wholeValueCharacters": 524
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "location": "90",
+      "excerpt": "k 之后见 `packages/core/src/engine/turn-loop.ts:974`、`complete_goal` / `cancel_goal` 见 `packages/core/src/engine/turn-loop.ts:1106`、`packages/core/src/engine/turn-loop.ts:1124`、token budget stop 见 `packages/core/src/engine/turn-loop.ts:1148`、maxTurns summary 前见 `packages/core/src/engine/turn-loop.ts:1234`。",
+      "wholeValueCharacters": 510
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "location": "177",
+      "excerpt": "11. goal 的续跑必须受 run-scoped 预算和 stop-block cap 约束。  ",
+      "wholeValueCharacters": 51
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "location": "178",
+      "excerpt": "    维护代码：goal tracker 是 run-scoped，见 `packages/core/src/engine/turn-loop.ts:537`；预算在工具前检查，见 `packages/core/src/engine/turn-loop.ts:855`；stop-block cap 检查见 `packages/core/src/engine/turn-loop.ts:897`、`packages/core/src/engine/turn-loop.ts:909`、`packages/core/src/engine/turn-loop.ts:944`；默认 cap 解析见 `packages/core/src/engine/goal.ts:79`。  ",
+      "wholeValueCharacters": 338
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/08-N03-fix-design.md",
+      "location": "423",
+      "excerpt": "- `goal_budget_exhausted`：仍是预期 stop，前端应按 completed 类状态处理。",
+      "wholeValueCharacters": 57
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "location": "49",
+      "excerpt": "| `assistant_message` | 完整 assistant message 边界；封住当前 streaming bubble | TurnLoop 正常文本：`packages/core/src/engine/turn-loop.ts:879` 到 `882`；goal budget：`866` 到 `873`；token stop：`1143` 到 `1151`；maxTurns summary：`1261` 到 `1267` | 主 reducer把 live assistant `done:true`，见 `packages/desktop/src/renderer/types.ts:664` 到 `675`；mobile reducer seal agent live bubble，见 `packages/desktop/src/renderer/lib/streamReducer.ts:350` 到 `365` |",
+      "wholeValueCharacters": 425
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/19-landing-status.md",
+      "location": "76",
+      "excerpt": "- **goal 生命周期测试**（worktree `../codeshell-goal`，分支 `test/goal-lifecycle`）：针对盲区 #3 补 4 个测试，固化「预算耗尽→goal_budget_exhausted 终止不执行工具、stop hook 续跑达 maxStopBlocks 上限强制停止（**防无限循环**）、complete_goal/cancel_goal 都清空持久 goal」。**实现本就安全，无缺陷**；`turn-loop-goal-lifecycle.test.ts`，engine 258 pass。「续跑触顶终态=completed」标注需人工确认。可选 merge。",
+      "wholeValueCharacters": 312
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "location": "21",
+      "excerpt": "| `packages/core/src/engine/turn-loop.ts:859`、`packages/core/src/engine/turn-loop.ts:897`、`packages/core/src/engine/turn-loop.ts:1102` | Goal 预算耗尽、`on_stop` 续跑/上限/达成、`complete_goal` / confirmed `cancel_goal` 短路清理持久 goal。 | unattended goal 的终止条件、续跑进度和持久 goal 生命周期。 | `rg \"goal_budget_exhausted|stop_hook_prevented|hook_stopped|checkTokenBudget|stopBlock\" packages/core/src/engine -g '*test.ts'` 只命中 `turn-loop.test.ts:25` 的类型契约和 `goal.test.ts` 的纯 budget helper；`rg \"goal_self_reported_complete|goal_user_cancelled|clearPersistedGoal|confirmedCancel\"` 未命中 TurnLoop 行为测试。 | 若回归，goal 可能预算耗尽仍继续跑、stop hook 不续跑或无限续跑、模型自报完成后持久 goal 未清导致下一次普通发送又重新进入 goal。 | `turn-loop goal budget exhausted stops before tools`：预算超限且 response 带 toolCalls，断言工具不执行、发预算耗尽 assistant_message、`reason === \"goal_budget_exhausted\"`；`turn-loop complete_goal clears persisted g",
+      "wholeValueCharacters": 1031
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "location": "21",
+      "excerpt": "ges/core/src/engine/turn-loop.ts:1102` | Goal 预算耗尽、`on_stop` 续跑/上限/达成、`complete_goal` / confirmed `cancel_goal` 短路清理持久 goal。 | unattended goal 的终止条件、续跑进度和持久 goal 生命周期。 | `rg \"goal_budget_exhausted|stop_hook_prevented|hook_stopped|checkTokenBudget|stopBlock\" packages/core/src/engine -g '*test.ts'` 只命中 `turn-loop.test.ts:25` 的类型契约和 `goal.test.ts` 的纯 budget helper；`rg \"goal_self_reported_complete|goal_user_cancelled|clearPersistedGoal|confirmedCancel\"` 未命中 TurnLoop 行为测试。 | 若回归，goal 可能预算耗尽仍继续跑、stop hook 不续跑或无限续跑、模型自报完成后持久 goal 未清导致下一次普通发送又重新进入 goal。 | `turn-loop goal budget exhausted stops before tools`：预算超限且 response 带 toolCalls，断言工具不执行、发预算耗尽 assistant_message、`reason === \"goal_budget_exhausted\"`；`turn-loop complete_goal clears persisted goal` / `cancel_goal confirm clears persisted goal`：断言 `clearPersistedGoal` 被调用且返回 `completed`；`turn-loop ",
+      "wholeValueCharacters": 1031
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "location": "21",
+      "excerpt": "n-loop.test.ts:25` 的类型契约和 `goal.test.ts` 的纯 budget helper；`rg \"goal_self_reported_complete|goal_user_cancelled|clearPersistedGoal|confirmedCancel\"` 未命中 TurnLoop 行为测试。 | 若回归，goal 可能预算耗尽仍继续跑、stop hook 不续跑或无限续跑、模型自报完成后持久 goal 未清导致下一次普通发送又重新进入 goal。 | `turn-loop goal budget exhausted stops before tools`：预算超限且 response 带 toolCalls，断言工具不执行、发预算耗尽 assistant_message、`reason === \"goal_budget_exhausted\"`；`turn-loop complete_goal clears persisted goal` / `cancel_goal confirm clears persisted goal`：断言 `clearPersistedGoal` 被调用且返回 `completed`；`turn-loop stop hook emits progress and cap exhaustion`：断言 `not_met`、`exhausted` 事件和注入消息。 | 高 |",
+      "wholeValueCharacters": 1031
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "location": "45",
+      "excerpt": "2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。",
+      "wholeValueCharacters": 145
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/22-test-quality-audit.md",
+      "location": "172",
+      "excerpt": "反事实推断：如果预算 guard 放在工具执行之后，`:147` 会失败。如果 stop hook 不封顶，`:187` 到 `:194` 会失败或跑到错误终态。如果 self-reported complete/cancel 不清持久 goal，`:282` 到 `:283`、`:323` 到 `:324` 会失败。",
+      "wholeValueCharacters": 160
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/archive/review-2026-07-09/23-codex-unpushed-12-review.md",
+      "location": "21",
+      "excerpt": "| 657c6fce test(core) | LGTM | Tests pin goal budget, bounded continuation, and goal clearing. |",
+      "wholeValueCharacters": 96
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/audit-2026-10-17-round21/README.md",
+      "location": "12",
+      "excerpt": "`BUDGET-R21-R1` 关联旧预算 floor source concern：在真实 backstop 的正预算600chars/200heuristic tokens下，手工302个短 text slots 清空正文后仍产生602字符分隔符，实际 helper 判超限；301 slots 对照正好600。普通工具产生302 slots、触发实际 aggregate gate 的证据尚缺，未运行 Manager/compaction/MCP/model，所以仅记旧 concern 的具体边界，不新增严重级别、确认或候选。通过的 characterization 断言当前现象，不是修复。",
+      "wholeValueCharacters": 300
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/audit-2026-10-17-round21/tool-budget.md",
+      "location": "12",
+      "excerpt": "- 实际生产调用的正预算可静态确认：[`compaction.ts:773–776`](../../packages/core/src/context/compaction.ts#L773) 的 aggregate backstop 传 `maxChars: 600, maxTokens: 200`。这条 caller 仅在整个 message 超 aggregate gate 后执行；本批没有导入该模块或触发 gate。",
+      "wholeValueCharacters": 213
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/audit-2026-10-17-round9/usage.md",
+      "location": "18",
+      "excerpt": "- `token-budget.ts` 的有限/无限预算、90% nudge 后 stop 按当前实现工作，新增 2 个纯函数控制通过。静态发现 diminishing 分支在正常单调计数中难以达到，但没有独立可见错误或更强契约，未登记候选。实际 TurnLoop 调用与 run accounting 的关系只做源码追踪，不运行 Engine。",
+      "wholeValueCharacters": 173
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/02-engine-turn-loop.md",
+      "location": "98",
+      "excerpt": "一个 `GoalConfig` 带目标 + 可选的 `tokenBudget`/`timeBudgetMs`/`maxTurns`/`maxStopBlocks`。goal 与交互的默认值不同,因为 goal 是**无人值守**的、stop-hook 会反复挡住收尾:",
+      "wholeValueCharacters": 134
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/02-engine-turn-loop.md",
+      "location": "103",
+      "excerpt": "无人值守 goal 的真正安全网是 token/时间预算;`maxStopBlocks` 只在裁判一直挡、两次挡之间又毫无进展时才咬。持久 goal 的完整故事见 [07 · Run/Automation/Goal](07-run-automation-goal.md)。",
+      "wholeValueCharacters": 136
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/02-engine-turn-loop.md",
+      "location": "109",
+      "excerpt": "3. **Goal 预算是硬底线**。run 级追踪器(token + 墙钟 + 回合 + 连续 stop-block)在执行工具前检查,run 中途不可越过。",
+      "wholeValueCharacters": 80
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/07-run-automation-goal.md",
+      "location": "58",
+      "excerpt": "`GoalConfig` 带目标 + 可选 `tokenBudget`/`timeBudgetMs`/`maxTurns`/`maxStopBlocks`(上限细节见 [02 · Engine 与 Turn Loop](02-engine-turn-loop.md) §6)。两个机制协作:",
+      "wholeValueCharacters": 145
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/REWRITE-PLAN.md",
+      "location": "142",
+      "excerpt": "editorial illustration on dark navy background. Show an agent loop with three control overlays: \"Steering Queue\" inserting messages between steps, \"Goal Judge\" checking stop, and \"Budget Backstop\" blocking runaway execution. Use cyan loop, purple queue, amber safety gate. Readable labels only, avoid tiny text, clean futuristic systems diagram.`",
+      "wholeValueCharacters": 368
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/REWRITE-PLAN.md",
+      "location": "146",
+      "excerpt": "- 重点源码细节：图片策略 fail-closed、`patchOrphanedToolUses`、`ContextManager.manageAsync`、`streamingQueue.drain()`、goal budget 在 model call 后/tool 执行前检查、`on_stop` 返回 `continueSession` 后继续循环、`complete_goal` 主动声明。",
+      "wholeValueCharacters": 200
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/assets/v2/IMAGE-MANIFEST.md",
+      "location": "23",
+      "excerpt": "| `v2-02-goal-steering-stop-hooks.png`             | `02-engine-turn-loop-deep-dive.md`             | 区分 step-gap steering、goal judge、budget backstop。                             | Agent loop with Steering Queue, Goal Judge, Budget Backstop overlays.                                                                                      | 讲 steering 与 goal stop-hook 的控制面时。 |",
+      "wholeValueCharacters": 374
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-00-feature-tour-xhs.md",
+      "location": "63",
+      "excerpt": "- 持久 `Goal` 负责“这个目标还没完成，下一轮继续围绕它工作”，并配合预算与 stop-hook 防止无限烧。",
+      "wholeValueCharacters": 59
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-00-feature-tour.juejin.md",
+      "location": "324",
+      "excerpt": "| 持久 Goal | 围绕目标继续推进，同时有预算和 stop-hook 兜底 |",
+      "wholeValueCharacters": 42
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-00-feature-tour.md",
+      "location": "324",
+      "excerpt": "| 持久 Goal | 围绕目标继续推进，同时有预算和 stop-hook 兜底 |",
+      "wholeValueCharacters": 42
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "49",
+      "excerpt": "| `goal.ts` | 持久 goal 的预算结构、回合/stop-block 上限、run 级追踪器 |",
+      "wholeValueCharacters": 55
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "237",
+      "excerpt": "要分清主次：**无人值守 goal 的真正安全网是 token / 时间预算**（`GoalBudgetTracker`，run 级追踪，在执行工具前查）；`maxStopBlocks` 只在裁判一直挡、且两次挡之间毫无进展时才咬——一个合法地在推进的 goal，每被接受一轮就把这个计数清零。",
+      "wholeValueCharacters": 147
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "245",
+      "excerpt": "![Goal、Steering、预算三套控制流](assets/v2/v2-02-goal-steering-stop-hooks.png)",
+      "wholeValueCharacters": 70
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "289",
+      "excerpt": "有一个**关键且反直觉的设计**：**判断调用失败（抛错或返回无法解析的文本）时，不允许停止**——照样返回 `continueSession: true` 催模型继续。理由很硬核：在无人值守的 run 里，悄悄允许停止会让 goal 静默失败、没人发现。所以宁可\"判不出就继续\"，把\"无限循环\"这个风险交给真正的硬底线去兜——也就是 **token / 时间预算 + `maxStopBlocks`**，而不是这个 hook 本身。",
+      "wholeValueCharacters": 219
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "307",
+      "excerpt": "3. **Goal 预算是硬底线。** run 级追踪器（token + 墙钟 + 回合 + 连续 stop-block）在执行工具前检查，run 中途不可越过。",
+      "wholeValueCharacters": 81
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "324",
+      "excerpt": "2. **`engine/turn-loop.ts` 的 `TurnLoop.run`**：对照本篇第五节的状态机。重点看 `signal.aborted` 的三处检查、`consumeSteerItems`、`callModelWithFallback` 的三种重试、`goalBudgetExceeded` 在调模型后的检查点、`on_stop` 返回 `continueSession` 后的 `stopBlockCount` 逻辑、`complete_goal` 的短路。",
+      "wholeValueCharacters": 240
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "342",
+      "excerpt": "- ❌ \"goal 没达成会一直空转烧钱。\" → ✅ token/时间预算是硬底线，后台 job 是停泊不是自旋，`maxStopBlocks` 兜住不可满足的循环。",
+      "wholeValueCharacters": 83
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "357",
+      "excerpt": "- **无人值守安全**：goal 预算硬底线 + stop-hook 裁判 + 后台停泊，让长目标既能跑久又不失控。",
+      "wholeValueCharacters": 59
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/nightly-2026-07-10/large-feature-breakdown.md",
+      "location": "255",
+      "excerpt": "| AD-14 | **迁移 token/turn/timing counters**：把 budget continuation、tool/hook/classifier timing 等放进 per-run metrics store；reset 只影响当前 run/session。 | AD-12 | M | `packages/core/src/state.ts:83`、`:162`；`packages/core/src/engine/runtime.ts:21` | 否 |",
+      "wholeValueCharacters": 244
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/plan-2026-07-09-security-M3-M2-IMPL-NOTES.md",
+      "location": "115",
+      "excerpt": "- The loop-top abort fast-path, confirmed `cancel_goal`, `complete_goal`, normal stop, max-turns, budget stop, prompt-too-long, abort, and model-error returns are all covered by the unified exit even when a branch forgets an inline redaction.",
+      "wholeValueCharacters": 242
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/_archive/goal-fix-review-codex.md",
+      "location": "76",
+      "excerpt": "会把用户刚写入的 goal 清除。`maxTurns`、`timeBudgetMs`、`maxStopBlocks` 的同 objective",
+      "wholeValueCharacters": 71
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "location": "13",
+      "excerpt": "最终架构固定为：**安全可接受的 `complete_goal` 显式完成优先；私有、受信任域和总预算约束的 contextual judge 兜底；公共 hook 只能额外阻止普通停止；既有 turn/stop/token/time 硬边界最终兜底。** Phase 3 的双模型/强 verifier 只在数据证明必要时另立 RFC。",
+      "wholeValueCharacters": 169
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "location": "38",
+      "excerpt": "- `maxTurns`、`maxStopBlocks`、Goal token/time budget 都保留。cap=N 的自然停止上界是 N+1 次 `on_stop` invocation，因为 emit 发生在 cap 检查前（`packages/core/src/engine/turn-loop.ts:951`—`packages/core/src/engine/turn-loop.ts:997`）；现有 cap=2 测试证明的是 3 次 handler invocation，不是必然 3 次 LLM 请求（`packages/core/src/engine/turn-loop-goal-lifecycle.test.ts:158`—`packages/core/src/engine/turn-loop-goal-lifecycle.test.ts:188`）。",
+      "wholeValueCharacters": 391
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "location": "117",
+      "excerpt": "| 容量未知、budget/cap 不准入或无 client | 不发 V1 | V0 也不能证明准入则零请求；普通 provider 故障为 `unavailable`，ledger exhausted 则硬终止 |",
+      "wholeValueCharacters": 109
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "location": "186",
+      "excerpt": "request/token/time/Goal budget 在 judge 前已耗尽，或 judge 后跨线时，产生硬终止 subtype `judge_budget_exhausted` 或更具体的 `goal_budget_exhausted`，**不得**转成普通 `unavailable` 再 nudge 主模型。`unavailable` 只表示尚有 ledger 但 provider/parse 暂时失败，继续 fail-closed。硬终止可为通知兼容发一次旧 envelope 的公共 `on_stop`，但不附 built-in nudge，且公共 `continueSession`、messages 或 data 均不能重开循环；hard terminal 优先于 built-in/public continue。",
+      "wholeValueCharacters": 372
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "location": "186",
+      "excerpt": "request/token/time/Goal budget 在 judge 前已耗尽，或 judge 后跨线时，产生硬终止 subtype `judge_budget_exhausted` 或更具体的 `goal_budget_exhausted`，**不得**转成普通 `unavailable` 再 nudge 主模型。`unavailable` 只表示尚有 ledger 但 provider/parse 暂时失败，继续 fail-closed。硬终止可为通知兼容发一次旧 envelope 的公共 `on_stop`，但不附 built-in nudge，且公共 `continueSession`、messages 或 data 均不能重开循环；hard terminal 优先于 built-in/public continue。",
+      "wholeValueCharacters": 372
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "location": "360",
+      "excerpt": "3. 能力为 without-approval、无 running background 且自然 stop：第 1、2 次只注入 deterministic completion-audit nudge，不调用 judge；第 3 次回落 Phase 1 contextual judge，不一路 nudge 到 maxStopBlocks。",
+      "wholeValueCharacters": 171
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "location": "93",
+      "excerpt": "| 上一轮 `gaps` / verdict | **没有** | gaps 仅用于本轮 nudge 和 UI data：`packages/core/src/hooks/goal-stop-hook.ts:366-377`；下一次 prompt 不带 previous verdict |",
+      "wholeValueCharacters": 145
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "location": "96",
+      "excerpt": "| tokenBudget/timeBudget/maxTurns/maxStopBlocks | **没有** | `GoalConfig` 定义这些字段：`packages/core/src/engine/goal.ts:14-49`；hook 只读取 objective/setAt，prompt 未序列化预算：`packages/core/src/hooks/goal-stop-hook.ts:183-190,223-265` |",
+      "wholeValueCharacters": 220
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "location": "96",
+      "excerpt": "| tokenBudget/timeBudget/maxTurns/maxStopBlocks | **没有** | `GoalConfig` 定义这些字段：`packages/core/src/engine/goal.ts:14-49`；hook 只读取 objective/setAt，prompt 未序列化预算：`packages/core/src/hooks/goal-stop-hook.ts:183-190,223-265` |",
+      "wholeValueCharacters": 220
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "location": "157",
+      "excerpt": "- `not_met`：hook 把 gaps 写入 nudge 和 `data.goalVerdict`：`packages/core/src/hooks/goal-stop-hook.ts:366-377`；TurnLoop 增加 `stopBlockCount` 后发 `goal_progress(status=\"not_met\", round, gaps)`：`packages/core/src/engine/turn-loop.ts:1017-1026`。",
+      "wholeValueCharacters": 235
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "location": "232",
+      "excerpt": "| 确定性条件 | 只有预算/waiting guard | 可用 script Stop hook | system/user lifecycle + evidence checks |",
+      "wholeValueCharacters": 94
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "location": "254",
+      "excerpt": "1. 用户 clear / confirmed cancel / abort / hard budget：沿现有权威路径终止或暂停，不调用 judge。",
+      "wholeValueCharacters": 76
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "location": "359",
+      "excerpt": "judge usage 必须计入独立 `GoalJudgeLedger`，并同时占用 Goal token/time budget。建议首版每个外层 `Engine.run()` 的 judge request cap 不超过 `min(maxStopBlocks + 1, 8)`；任何 aux retry、shrink retry、primary fallback 都共享同一 cap，不能各算一份。",
+      "wholeValueCharacters": 202
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "location": "507",
+      "excerpt": "- 忘记 1/2 次后 contextual fallback，不一路 nudge 到 maxStopBlocks；",
+      "wholeValueCharacters": 58
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "location": "557",
+      "excerpt": "| budgets | judge request/token/time、Goal token/time、stop block/max turn、extend 后共享 tracker |",
+      "wholeValueCharacters": 93
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "location": "75",
+      "excerpt": "- `codePointLength` 和 `codeUnitIndexAtCodePoint` 负责所有 1600/8000 head/tail 预算与切分（`goal-stop-hook.ts:176-214`）。预算路径没有遗留使用 `String.length` 或未经 code-point 索引的字符串 `slice`；其余 `.length/.slice` 只用于数组计数、分钟桶或日志预览，不参与这两个字符预算。",
+      "wholeValueCharacters": 214
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "location": "75",
+      "excerpt": "- `codePointLength` 和 `codeUnitIndexAtCodePoint` 负责所有 1600/8000 head/tail 预算与切分（`goal-stop-hook.ts:176-214`）。预算路径没有遗留使用 `String.length` 或未经 code-point 索引的字符串 `slice`；其余 `.length/.slice` 只用于数组计数、分钟桶或日志预览，不参与这两个字符预算。",
+      "wholeValueCharacters": 214
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/review-2026-07-10-goal-judge-v1.md",
+      "location": "11",
+      "excerpt": "recordUsage:false`，随后也完全忽略 `resp.usage`。TurnLoop 的 Goal tracker 只累计主 turn 的 `response.usage`，并且预算检查发生在 judge 之前。因此 judge 的上游 API 调用照常计费，却不进入 session cost、requestCount 或 Goal token budget；不可解析/抛错结果也不缓存，默认 stop-block 上限下可重复付费。切到主模型后，这不再只是“便宜 aux 的观测缺口”，而是违反 `GoalConfig.tokenBudget` 硬上限语义。 | 最小修法是给私有 judge seam 增加 usage 回传，拿到 `resp.usage` 后同时计入：独立 judge ledger、用户可见 cost、Goal token/time budget；在决定继续前再次检查硬预算。每个 run 另设 judge 请求上限，并给 judge 使用短于主生成的专用 timeout。不要只删除 `recordUsage:false`：那只能恢复部分统计，仍无法让 TurnLoop 的 Goal tracker 在本次 verdict 后及时执行硬限制。 |",
+      "wholeValueCharacters": 792
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/review-2026-10-12/browser-stop-plan-round22.md",
+      "location": "67",
+      "excerpt": "上文为 SG07:08 的 prelaunch 记录，保留当时状态。root/web预审最终guard/module图后，先root审 prepare-only生成物，再root明确授权native。最终作者第7次独立运行 Completed66 Nodeassert/exit0；前6次支架加载/模型schema发现/回包断言/预算失败均保留、未算产品问题或成功；源和完整账本见 `/tmp/codeshell-review-20261012-browser-stop-round22.md` 与 `.../browser-stop-round22/final-author/`。最终launcher SHA11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d，Main SHA1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b。",
+      "wholeValueCharacters": 443
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/review-2026-10-12/connection-recovery-quality-round15.md",
+      "location": "43",
+      "excerpt": "- native 12s timer 与 wrapper 18s timer 是诊断预算，现有成功执行约 1s。18s wrapper kill 的目标是 isolator parent，不能由此推定 arbitrary hung descendant 的进程树强杀已验证；本轮没有 deadline 命中或真实模型子进程，不另列产品发现。",
+      "wholeValueCharacters": 170
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/browser-stop-plan-round22.md",
+      "location": "65",
+      "excerpt": "上文为 SG07:08 的 prelaunch 记录，保留当时状态。root/web预审最终guard/module图后，先root审 prepare-only生成物，再root明确授权native。最终作者第7次独立运行 Completed66 Nodeassert/exit0；前6次支架加载/模型schema发现/回包断言/预算失败均保留、未算产品问题或成功；源和完整账本见 `/tmp/codeshell-review-20261012-browser-stop-round22.md` 与 `.../browser-stop-round22/final-author/`。最终launcher SHA11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d，Main SHA1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b。",
+      "wholeValueCharacters": 443
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/review-2026-10-12/validation/original-connection-recovery-round15/quality-audit.md",
+      "location": "43",
+      "excerpt": "- native 12s timer 与 wrapper 18s timer 是诊断预算，现有成功执行约 1s。18s wrapper kill 的目标是 isolator parent，不能由此推定 arbitrary hung descendant 的进程树强杀已验证；本轮没有 deadline 命中或真实模型子进程，不另列产品发现。",
+      "wholeValueCharacters": 170
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "location": "57",
+      "excerpt": " only two successful 4-token responses, total8. It stops with goal_budget_exhausted only after that extra request. Normal control: a single successful 10+2 stream crosses the same budget and stops after one send. All values come from post-gate no-network tests.",
+      "wholeValueCharacters": 805
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/review-remaining-2026-10-12/evidence-audit.md",
+      "location": "106",
+      "excerpt": "Root已经把CLI C1/N14降P2，ACK描述保留平台原文可重发、Core seam边界、Video6timeout和未验收MP4、Design导出/字体限定、Lab冷stop窄窗口、不同shard不相加、旧86不声称新基线复测，均与本审计一致。排序上先消息持久接受、再预算和数据完整性合理，没有发现需调整33项计数的合并问题。",
+      "wholeValueCharacters": 167
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+      "location": "57",
+      "excerpt": " only two successful 4-token responses, total8. It stops with goal_budget_exhausted only after that extra request. Normal control: a single successful 10+2 stream crosses the same budget and stops after one send. All values come from post-gate no-network tests.",
+      "wholeValueCharacters": 805
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-evidence-audit.md",
+      "location": "106",
+      "excerpt": "Root已经把CLI C1/N14降P2，ACK描述保留平台原文可重发、Core seam边界、Video6timeout和未验收MP4、Design导出/字体限定、Lab冷stop窄窗口、不同shard不相加、旧86不声称新基线复测，均与本审计一致。排序上先消息持久接受、再预算和数据完整性合理，没有发现需调整33项计数的合并问题。",
+      "wholeValueCharacters": 167
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/superpowers/plans/2026-06-02-goal-mode-p0.md",
+      "location": "26",
+      "excerpt": "| `packages/core/src/engine/turn-loop.ts` | `TurnLoopConfig.goal: string` → `GoalConfig`;run 级累加器结账;超预算强制停;`complete_goal` 短路;on_stop 传 `GoalConfig` | Modify |",
+      "wholeValueCharacters": 159
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/superpowers/plans/2026-06-02-goal-mode-p0.md",
+      "location": "457",
+      "excerpt": "      // budget is force-stopped regardless of what the model wants to do",
+      "wholeValueCharacters": 73
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/superpowers/plans/2026-06-02-goal-mode-p0.md",
+      "location": "630",
+      "excerpt": "      // run-scoped budget guardrail (turn-loop) is the real safety backstop.",
+      "wholeValueCharacters": 77
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/todo/all-todo-completion-2026-10-09.md",
+      "location": "179",
+      "excerpt": "   adapter。Skill 预算已发布；非核心工具渐进发现已合入 main，已随 0.9.28 正式发行。",
+      "wholeValueCharacters": 56
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/todo/mimi-architecture-review-2026-09-05.md",
+      "location": "101",
+      "excerpt": "在 Core 增加通用 `RunBehaviorProfile` 预算能力，Pet 只提供数值和策略；普通 Work 不受 Mimi 阈值影响。",
+      "wholeValueCharacters": 72
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/todo/mobile-external-output-journal-delivery.md",
+      "location": "99",
+      "excerpt": "retaining the verified candidate and the same page budget. Each continuation",
+      "wholeValueCharacters": 76
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/todo/mobile-output-journal-delivery.md",
+      "location": "50",
+      "excerpt": "page budget. An already observed terminal also wakes this continuation. Missing",
+      "wholeValueCharacters": 79
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/todo/operation-controller-delivery-plan.md",
+      "location": "42",
+      "excerpt": "相同错误指纹和策略切换遵守有界预算；声明了停止条件的 poll 不进入普通重复错误计数。",
+      "wholeValueCharacters": 44
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/todo/p0-p1-release-2026-10-12.md",
+      "location": "1236",
+      "excerpt": "  `87df5507`。没有提高其他行数或 API 预算。已核对其包含于正式 `v0.9.35`。",
+      "wholeValueCharacters": 50
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "docs/todo/pet-work-reliability-design-2026-09-20.md",
+      "location": "39",
+      "excerpt": "最后一轮由预算控制强制文本收尾时，即使模型 stop，也返回已有 max_turns 停止原因。正常在预算前完成仍为 completed。检查 Pet/Host 终态投影是否保留 max_turns，而不是把任何 final 文本都当作已达目标。复用已有协议字段，避免增加无必要的终态枚举。",
+      "wholeValueCharacters": 145
+    },
+    {
+      "group": "budgetMechanism",
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "location": "549",
+      "excerpt": "#### GCTRL-O09 Goal 预算终止事件可在持久化对账前短暂投影（P2）",
+      "wholeValueCharacters": 42
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/architecture/01-engine-and-turn-loop.md",
+      "location": "88",
+      "excerpt": "**c. Model call.** `callModelWithFallback()` calls the `ModelFacade` with streaming; text/tool deltas pass through a wrapper that tracks streamed tool IDs and reactive context-pressure buckets (`packages/core/src/engine/turn-loop.ts:1254`). A streaming failure emits a tombstone and retries without streaming, but `ContextLimitError` and user aborts are propagated instead of retried (`packages/core/src/engine/turn-loop.ts:1286`, `packages/core/src/engine/turn-loop.ts:1295`).",
+      "wholeValueCharacters": 477
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "67",
+      "excerpt": "| `packages/core/src/engine/token-budget.ts`、`reactive-threshold.ts` | turn/goal 预算和响应式阈值。 |",
+      "wholeValueCharacters": 92
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "383",
+      "excerpt": "### 4.8 `token-budget.ts`、`reactive-threshold.ts`",
+      "wholeValueCharacters": 49
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "386",
+      "excerpt": "- `reactive-threshold.ts` 监控 streaming 中 token 跨过阈值的情况，目前主要用于 warning/标记，不在 streaming 中立即 compact。",
+      "wholeValueCharacters": 98
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "2757",
+      "excerpt": "- `engine/reactive-threshold.ts`",
+      "wholeValueCharacters": 32
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/core-modules/context.md",
+      "location": "34",
+      "excerpt": "  shouldReactiveCompact(messages: Message[], currentResponseTokens: number): boolean;",
+      "wholeValueCharacters": 85
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/core-modules/context.md",
+      "location": "105",
+      "excerpt": "if (this.deps.contextManager.shouldReactiveCompact(messages, streamingResponseTokens)) { /* ... */ }",
+      "wholeValueCharacters": 100
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/core-modules/engine.md",
+      "location": "27",
+      "excerpt": "| `token-budget.ts`, `reactive-threshold.ts`, `cost-store.ts`, `aux-key.ts`, `tool-summary.ts`, `streaming-tool-queue.ts`, `runtime.ts`, `turn-state.ts` | Small helpers: context/token budgeting, compaction thresholds, cost-state cache key, auxiliary-model cache key, tool-result summarization, streaming tool dispatch, per-turn state. |",
+      "wholeValueCharacters": 336
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "location": "24",
+      "excerpt": "- 输出：仍是 `StreamEvent`，但 `TurnLoop` 同时记录已流式发出的 tool id、估算 streaming response token，并在接近 context limit 时写 reactive compaction warning。",
+      "wholeValueCharacters": 132
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "location": "211",
+      "excerpt": "流式期间只有 reactive warning，不做真正压缩。`wrappedStream` 累计 text delta 估算 token，每跨桶调用 `shouldReactiveCompact()`，命中只记录 warning；真正 messages 改写仍等下一 turn 的 S3，见 `packages/core/src/engine/turn-loop.ts:1286`、`packages/core/src/engine/turn-loop.ts:1293`、`packages/core/src/engine/turn-loop.ts:1296`、`packages/core/src/context/manager.ts:742`。",
+      "wholeValueCharacters": 325
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+      "location": "115",
+      "excerpt": "e/src/engine/turn-loop.ts:1280` 到 `packages/core/src/engine/turn-loop.ts:1304` 的 `wrappedStream` 在流式期间只做两件事：看到 `tool_use_start` 就把 id 放进 `this.streamedToolIds`，看到 `text_delta` 就估算 reactive compaction token，然后 `return this.config.onStream!(event)` 转发。这里没有 queue，也没有 `ToolExecutor`。",
+      "wholeValueCharacters": 295
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/core-deep-dive/00-writing-plan.md",
+      "location": "67",
+      "excerpt": "  - `context-compaction.svg`（必备）——Tier 0/1/2/3 分级压缩 + reactive probe + 冻结决策。",
+      "wholeValueCharacters": 76
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/core-deep-dive/02-engine-turn-loop.md",
+      "location": "88",
+      "excerpt": "- **流式反应探针**:流式期间累计响应 token,每跨过一个 2000-token 桶可能触发一次紧急 window 压缩。",
+      "wholeValueCharacters": 65
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "53",
+      "excerpt": "| `reactive-threshold.ts` | 每跨过一个 2000-token 桶就检查一次是否要做流内紧急压缩 |",
+      "wholeValueCharacters": 63
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "location": "218",
+      "excerpt": "- **流式反应探针**（`reactive-threshold.ts`）：流式期间累计响应 token，每跨过一个 2000-token 桶，可能触发一次流内紧急 window 压缩——防止单轮模型输出过长把窗口在 turn 中途撑爆。",
+      "wholeValueCharacters": 119
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/nightly-2026-07-10/session-fork-and-context-transfer-design.md",
+      "location": "46",
+      "excerpt": "- 小范围单次摘要；超过输入预算时按完整回合分块做 map summary，再用既有 prior-summary/rolling 思路合并为最终约 1,500～2,000 token 的 background context，禁止静默截掉尾部。",
+      "wholeValueCharacters": 122
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/todo/agent-reliability-and-context-optimization.md",
+      "location": "191",
+      "excerpt": "- Prompt 连续三轮累计增长超过 2,000 tokens；",
+      "wholeValueCharacters": 33
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/todo/prompt-cache-optimization.md",
+      "location": "63",
+      "excerpt": "  响应后对比 cache_read_tokens 暴跌(>5% 且 >2000 token)就诊断哪个因素破了缓存并打点。",
+      "wholeValueCharacters": 62
+    },
+    {
+      "group": "reactiveMechanism",
+      "path": "docs/todo/roadmap.md",
+      "location": "39",
+      "excerpt": "| Streaming + Reactive Compaction | 高 | 对齐 Claude Code |",
+      "wholeValueCharacters": 56
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round9/evidence/session-roundtrip-controls.test.ts:
+(pass) round9 ordinary session data controls > disk reload, full fork and selected range preserve paired structured results without changing the source [37.82ms]
+(pass) round9 ordinary session data controls > modifying a replay or selected package cannot rewrite the original transcript result [15.71ms]
+
+ 2 pass
+ 0 fail
+ 11 expect() calls
+Ran 2 tests across 1 file. [241.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

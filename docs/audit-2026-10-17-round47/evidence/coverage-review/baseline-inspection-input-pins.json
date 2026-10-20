@@ -1,0 +1,24 @@
+{
+  "capturedUTC": "2026-10-17T15:40:28.793524+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "bytes": 8637,
+      "sha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "matches49HistoryPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+      "bytes": 1377,
+      "sha256": "f533483096e0e77418d86da1348fbb8bb048b851fa6381d77b9d8e3970e42c27",
+      "matches49HistoryPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/local-marker-review/prior-source-claims.json",
+      "bytes": 191013,
+      "sha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c",
+      "matches49HistoryPin": true
+    }
+  ],
+  "scope": "metadata documents with exact inspectionScope object key in49 dated history; bytes inspected before JSON interpretation"
+}

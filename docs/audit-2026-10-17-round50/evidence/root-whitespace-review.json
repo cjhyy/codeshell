@@ -1,0 +1,145 @@
+{
+  "exactTrailingWhitespaceLines": {
+    "docs/audit-2026-10-17-round50/evidence/scroll-review/source-excerpts.txt": [
+      29,
+      61,
+      89,
+      103
+    ],
+    "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt": [
+      4,
+      9,
+      13,
+      34,
+      45,
+      52,
+      60,
+      62,
+      73,
+      82,
+      91,
+      93,
+      124,
+      182,
+      240
+    ]
+  },
+  "reviewedLines": [
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/scroll-review/source-excerpts.txt",
+      "line": 29,
+      "rawUTF8": "93: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/scroll-review/source-excerpts.txt",
+      "line": 61,
+      "rawUTF8": "125: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/scroll-review/source-excerpts.txt",
+      "line": 89,
+      "rawUTF8": "153: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/scroll-review/source-excerpts.txt",
+      "line": 103,
+      "rawUTF8": "167: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 4,
+      "rawUTF8": "3: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 9,
+      "rawUTF8": "8: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 13,
+      "rawUTF8": "12: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 34,
+      "rawUTF8": "33: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 45,
+      "rawUTF8": "44: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 52,
+      "rawUTF8": "51: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 60,
+      "rawUTF8": "59: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 62,
+      "rawUTF8": "61: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 73,
+      "rawUTF8": "72: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 82,
+      "rawUTF8": "81: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 91,
+      "rawUTF8": "90: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 93,
+      "rawUTF8": "92: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 124,
+      "rawUTF8": "7: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 182,
+      "rawUTF8": "102: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-excerpts.txt",
+      "line": 240,
+      "rawUTF8": "58: ",
+      "classification": "numbered blank source line in exact frozen author excerpt"
+    }
+  ],
+  "allOtherFilesMustPass": true,
+  "scope": "Preserve only these19 frozen numbered-blank excerpt lines verbatim; no product source or generated metadata whitespace exemptions."
+}

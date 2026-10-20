@@ -1,0 +1,75 @@
+{
+  "createdAt": "2026-10-17T18:20:29.555577+00:00",
+  "baseInput": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+  "transitionInput": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/status-transitions.json",
+  "baseRows": 4643,
+  "transitions": 35,
+  "transitionErrors": [],
+  "frozen45Counts": {
+    "unknown": 4170,
+    "full": 304,
+    "selected": 169
+  },
+  "currentUniverse": 4643,
+  "carryForwardCounts": {
+    "unknown": 4171,
+    "full": 304,
+    "selected": 168
+  },
+  "sourceDelta": {
+    "added": [],
+    "removed": [],
+    "changed": [
+      {
+        "path": "packages/core/src/session/turn-diff.test.ts",
+        "oldSha256": "c1049c9e90e4dc062373e4da869987691ad2b50169c7785a230a60dc1d5de0fd",
+        "currentSha256": "62663c1952cf797fc28011307f2dc30622396b218d1ec45f62ebf78a5ddecdf2",
+        "oldCoverage": "unknown"
+      },
+      {
+        "path": "packages/desktop/src/renderer/MessageStream.test.tsx",
+        "oldSha256": "c12e2abc516e298adaaa80cead67f26a765d7c51a44374eeed5ab6b584bda534",
+        "currentSha256": "986a6f7820b0870eb0e6fe8f338262fdba1064360ca78fa6fdb34e37f02f4f4b",
+        "oldCoverage": "unknown"
+      },
+      {
+        "path": "packages/desktop/src/renderer/MessageStream.tsx",
+        "oldSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+        "currentSha256": "b353994c6988952c08cbfee802b4e5e7101ac87b766e9588679814cf77cf6152",
+        "oldCoverage": "selected"
+      },
+      {
+        "path": "packages/desktop/src/renderer/chat/compress.test.ts",
+        "oldSha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+        "currentSha256": "ec175e769ea96c7d4aaca7a3fdf591f1bc8481f262f0144cb69a6b4674870f1a",
+        "oldCoverage": "unknown"
+      },
+      {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "oldSha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "currentSha256": "a5a4872f18dd0455dd8f50cccf89f97432b0a845011f876e350c97f71caf8446",
+        "oldCoverage": "unknown"
+      },
+      {
+        "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+        "oldSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+        "currentSha256": "4522429b243871bd04ca01377e76106eacf7750a2d7600182d7b0742b0fc7b7b",
+        "oldCoverage": "unknown"
+      },
+      {
+        "path": "packages/desktop/src/renderer/types.test.ts",
+        "oldSha256": "f97beead4e84cb7b7a6ce8da6445e62866c0b734c9d93a3c30682c0f430c92d2",
+        "currentSha256": "2534d12882751f3f376154f161502582395a568bdb4060e7d1e1f32bfec1f37c",
+        "oldCoverage": "unknown"
+      },
+      {
+        "path": "packages/desktop/src/renderer/types.ts",
+        "oldSha256": "345b05e12819f499643fd628ebcc02541e50386fede974856f4a8333a8928984",
+        "currentSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+        "oldCoverage": "unknown"
+      }
+    ]
+  },
+  "stage": "Conservative frozen45 records carried to current exact SHA only; no46+ evidence yet",
+  "limits": "Full/selected are exact-source metadata reading claims for retained purpose, not every contract checked or unread/remaining counts"
+}

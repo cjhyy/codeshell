@@ -1,0 +1,68 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "guardedRuns": [
+    {
+      "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+      "argv": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round23/evidence/cron-focused.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "elapsedSeconds": 0.287,
+      "raw": "docs/audit-2026-10-17-round23/evidence/cron-first.raw.log",
+      "rawBytes": 1191,
+      "rawSha256": "1cee5cd1b50a32f0e349e1607b5a6eff73bba461d137d4477bfe22d79be678e0",
+      "combinedStdoutStderr": true,
+      "rawAndExitSavedBeforeInspection": true,
+      "productReruns": 0,
+      "completedGuard": true,
+      "pass": 7,
+      "expect": 19,
+      "fail": 0,
+      "errors": 0,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 7,
+      "actualProductionLeafCalls": true,
+      "manualConsumerMirror": false
+    }
+  ],
+  "totals": {
+    "cleanRuns": 1,
+    "failedRuns": 0,
+    "runtimeAttempts": 1,
+    "pass": 7,
+    "expect": 19,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 0,
+    "focusedTests": 7,
+    "productRetryCount": 0
+  },
+  "actualScope": [
+    "Actual zero-runtime-import cron expression leaf via absolute path; ordinary supported combinations and fixedUTC references. No mocks.",
+    "Five nextCronTime calls each within1or2 candidate minutes; total at most6 candidates; built-in Date.UTC/Intl.UTC only."
+  ],
+  "staticOnly": [
+    "Entire cron-expr.ts and three related existing test source files; no existing tests executed.",
+    "Selected scheduler parseSchedule/validation/create/update/consumer snippets and export/tool description snippets.",
+    "Prior TIME1 source byte comparison; no runtime defect revalidation."
+  ],
+  "excluded": [
+    "Scheduler/store/runner/automation tasks/native/model/SDK/network/account/permission/security/timers/Date.now/system timezone.",
+    "Old malformed suffix defect/interval fallback/zero interval/confirmation timezone, longleap/DST/declared2year boundary experiments.",
+    "All old failed directions and broad existing cron/automation suites, build/lint/typecheck/full suite."
+  ],
+  "limitations": [
+    "These are limited ordinary controls, no independent new mechanism or completecron verification.",
+    "Single first shard completed before root follow-up prioritizing static-only arrived; all subsequent work static/metadata, no furtherproduct execution.",
+    "Passing controls do not fix prior TIME1 or establish Scheduler/real task behavior."
+  ]
+}

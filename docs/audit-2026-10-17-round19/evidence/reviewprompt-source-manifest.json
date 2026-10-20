@@ -1,0 +1,194 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "files": [
+    {
+      "path": "packages/coding/src/review/review-prompt.ts",
+      "frozenSha256": "e5508741e444c2958d0cf189559f6e707f0f23762448671985bf0a7c27e7a9d8",
+      "currentSha256": "e5508741e444c2958d0cf189559f6e707f0f23762448671985bf0a7c27e7a9d8",
+      "matchesFrozen": true,
+      "bytes": 4126,
+      "lineCount": 107,
+      "ranges": [
+        "1-107 (full source)"
+      ],
+      "kind": "actual runtime leaf; no runtime imports"
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "frozenSha256": "d9519c47b78f5ac9e67466e078e0d47a3486ade00cc92be6e30169c2a7fcffce",
+      "currentSha256": "d9519c47b78f5ac9e67466e078e0d47a3486ade00cc92be6e30169c2a7fcffce",
+      "matchesFrozen": true,
+      "bytes": 2285,
+      "lineCount": 60,
+      "ranges": [
+        "1-60 (full source)"
+      ],
+      "kind": "existing tests read and executed in one guarded shard"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "frozenSha256": "3b5322a8e7aa5783de55a0ed6645d8acd8a670fea627f0420e6f623a53a3ff1e",
+      "currentSha256": "3b5322a8e7aa5783de55a0ed6645d8acd8a670fea627f0420e6f623a53a3ff1e",
+      "matchesFrozen": true,
+      "bytes": 8000,
+      "lineCount": 259,
+      "ranges": [
+        "1-23",
+        "132-183"
+      ],
+      "kind": "selected /review static consumer; initial wider display did not mean full-file review; no import/command/Git/client execution"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/registry.ts",
+      "frozenSha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "currentSha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "matchesFrozen": true,
+      "bytes": 7302,
+      "lineCount": 200,
+      "ranges": [
+        "189-199"
+      ],
+      "kind": "selected usage list pass-through; static only"
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "frozenSha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "currentSha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "matchesFrozen": true,
+      "bytes": 8606,
+      "lineCount": 245,
+      "ranges": [
+        "1-38",
+        "176-207",
+        "227-245"
+      ],
+      "kind": "selected inline usage hint; static only, no React import/render"
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "frozenSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "currentSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "matchesFrozen": true,
+      "bytes": 90976,
+      "lineCount": 2318,
+      "ranges": [
+        "2108-2120",
+        "2255-2274"
+      ],
+      "kind": "selected commandDefs wiring; static only, no App import/render"
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "frozenSha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "currentSha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "matchesFrozen": true,
+      "bytes": 177,
+      "lineCount": 4,
+      "ranges": [
+        "1-4 (full source)"
+      ],
+      "kind": "static review export; package barrel not imported"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true,
+      "bytes": 233,
+      "lineCount": 8,
+      "ranges": [
+        "1-8 (full source)"
+      ],
+      "kind": "guard entry read and executed once"
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "frozenSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "currentSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "matchesFrozen": true,
+      "bytes": 6518,
+      "lineCount": 152,
+      "ranges": [],
+      "kind": "metadata byte pin only; invoked by guarded runner; not source-audited in this lane"
+    },
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "bytes": 17639,
+      "lineCount": 217,
+      "ranges": [
+        "full file"
+      ],
+      "kind": "repository instructions read; not product bug coverage"
+    },
+    {
+      "path": "docs/archive/core-modules/review.md",
+      "frozenSha256": "d77f6849d3659c6f1dd5c32a9faa4562391a1f21c94762cc5d748272e31927b7",
+      "currentSha256": "d77f6849d3659c6f1dd5c32a9faa4562391a1f21c94762cc5d748272e31927b7",
+      "matchesFrozen": true,
+      "bytes": 4552,
+      "lineCount": 84,
+      "ranges": [
+        "1-84 (full document)"
+      ],
+      "kind": "historical contract/dedup only"
+    },
+    {
+      "path": "docs/architecture/08-arena-and-integrations.md",
+      "frozenSha256": "60bdbafe5ad3d96175ed00c59bd64ba29ebf82bfd63adb6b679d792c15c26f13",
+      "currentSha256": "60bdbafe5ad3d96175ed00c59bd64ba29ebf82bfd63adb6b679d792c15c26f13",
+      "matchesFrozen": true,
+      "bytes": 22118,
+      "lineCount": 106,
+      "ranges": [
+        "88-105"
+      ],
+      "kind": "selected historical review paragraph; surrounding STT was displayed but not audited"
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "frozenSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+      "currentSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+      "matchesFrozen": true,
+      "bytes": 18621,
+      "lineCount": 127,
+      "ranges": [
+        "15-42"
+      ],
+      "kind": "selected historical R2-03 dedup; nearby findings displayed but not audited"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "frozenSha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "currentSha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "matchesFrozen": true,
+      "bytes": 8725,
+      "lineCount": 50,
+      "ranges": [
+        "7-43"
+      ],
+      "kind": "selected historical DESKTOP-R12-01 dedup; nearby findings displayed but not audited"
+    },
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "frozenSha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "currentSha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "matchesFrozen": true,
+      "bytes": 13129,
+      "lineCount": 387,
+      "ranges": [
+        "354-375"
+      ],
+      "kind": "selected static intermediate App -> CommandInput commands prop pass-through; no component import/render"
+    }
+  ],
+  "limitations": [
+    "Whole-file SHA pins do not imply whole-file or transitive audit coverage.",
+    "Only review-prompt leaf and two test files execute; TUI consumers and historical docs are source-only."
+  ],
+  "metadataAdjustments": [
+    "Independent review identified the intermediate TuiControlSurface commands prop pass-through. Read the selected actual source and added its frozen/current pin and report link. This extends static consumer evidence only; zero product reruns."
+  ]
+}

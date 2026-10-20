@@ -1,0 +1,1 @@
+{"historyFiles": 5584, "counts": {"packages/server/src/model-trace-history.ts": 579, "packages/browser-devtools/src/inspector.ts": 329, "packages/browser-devtools/src/contracts.ts": 235, "packages/core/src/context/image-history-window.ts": 381, "packages/core/src/context/tool-result-storage.ts": 99, "packages/core/src/context/tool-output-budget.ts": 269}, "errors": []}

@@ -1,0 +1,138 @@
+{
+  "baseline": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "files": [
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "bytes": 7206,
+      "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "lineCount": 190,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "coveredLineCount": 190,
+      "role": "product",
+      "initialFilesystemSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "initialSemanticReadTiming": "Before this independent review source ranges; not a claim about earlier audit read-time.",
+      "finishSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "tests/parse-task.test.ts",
+      "bytes": 6432,
+      "sha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "lineCount": 140,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          140
+        ]
+      ],
+      "coveredLineCount": 140,
+      "role": "test declarations",
+      "initialFilesystemSha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "initialSemanticReadTiming": "Before this independent review source ranges; not a claim about earlier audit read-time.",
+      "finishSha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "lineCount": 391,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          230,
+          280
+        ]
+      ],
+      "coveredLineCount": 51,
+      "role": "ordinary encoder",
+      "initialFilesystemSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "initialSemanticReadTiming": "Before this independent review source ranges; not a claim about earlier audit read-time.",
+      "finishSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "bytes": 9480,
+      "sha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "lineCount": 243,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          95
+        ],
+        [
+          104,
+          113
+        ],
+        [
+          188,
+          199
+        ],
+        [
+          214,
+          228
+        ]
+      ],
+      "coveredLineCount": 132,
+      "role": "ordinary DTO consumer; authority boundary not followed",
+      "initialFilesystemSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "initialSemanticReadTiming": "Before this independent review source ranges; not a claim about earlier audit read-time.",
+      "finishSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/injection.md",
+      "bytes": 8043,
+      "sha256": "830dfc22e9a83f7731b650226075d0fb465bbdee4fa4ff036f862b0971bd00b6",
+      "lineCount": 48,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          48
+        ]
+      ],
+      "coveredLineCount": 48,
+      "role": "prior report",
+      "initialFilesystemSha256": "830dfc22e9a83f7731b650226075d0fb465bbdee4fa4ff036f862b0971bd00b6",
+      "initialSemanticReadTiming": "Before direct full report reading in this independent review; earlier author references only, not a reconstruction of prior review timing.",
+      "finishSha256": "830dfc22e9a83f7731b650226075d0fb465bbdee4fa4ff036f862b0971bd00b6",
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/attachments.md",
+      "bytes": 6246,
+      "sha256": "1f806623cd40c6be1fcb5f739db67488855c7f659b5c51b63e1ebe882113dd1b",
+      "lineCount": 24,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          24
+        ]
+      ],
+      "coveredLineCount": 24,
+      "role": "prior report",
+      "initialFilesystemSha256": "1f806623cd40c6be1fcb5f739db67488855c7f659b5c51b63e1ebe882113dd1b",
+      "initialSemanticReadTiming": "Before direct full report reading in this independent review; earlier author references only, not a reconstruction of prior review timing.",
+      "finishSha256": "1f806623cd40c6be1fcb5f739db67488855c7f659b5c51b63e1ebe882113dd1b",
+      "gitBlobComparedByReviewer": false
+    }
+  ],
+  "sourcePins": 6,
+  "productSemanticLines": 373,
+  "testDeclarationLines": 140,
+  "priorReportLines": 72,
+  "totalDeclaredLines": 585,
+  "productExecution": false,
+  "rootFrozenBlobBindingRequired": true
+}

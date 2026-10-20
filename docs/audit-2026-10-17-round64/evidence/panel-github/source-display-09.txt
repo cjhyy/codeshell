@@ -1,0 +1,24 @@
+35: describe("GitHub Panel App Git ref resolution", () => {
+36:   test("resolves the default HEAD through one bounded Git advertisement, without the API", async () => {
+38:     const commit = await resolveGitHubPanelAppCommit(source, {
+65:         await resolveGitHubPanelAppCommit({ ...source, ref }, { fetch: async () => response() }),
+70:   test("accepts an explicit SHA without any network request", async () => {
+72:       await resolveGitHubPanelAppCommit(
+73:         { ...source, ref: other.toUpperCase() },
+83:   test("validates the GitHub origin even for a pinned SHA", async () => {
+85:       resolveGitHubPanelAppCommit({ ...source, url: "https://example.com/acme/panels", ref: head }),
+89:   test("reports a missing ref and an empty repository", async () => {
+91:       resolveGitHubPanelAppCommit({ ...source, ref: "missing" }, { fetch: async () => response() }),
+94:       resolveGitHubPanelAppCommit(source, { fetch: async () => response(advertisement([])) }),
+107:       resolveGitHubPanelAppCommit(source, { fetch: async () => response(body) }),
+111:   test("rejects high-bit packet lengths instead of normalizing them to ASCII hex", async () => {
+115:       resolveGitHubPanelAppCommit(source, {
+124:   test("rejects a non-Git content type and a false Content-Length", async () => {
+127:         resolveGitHubPanelAppCommit(source, { fetch: async () => response(undefined, headers) }),
+132:   test("caps both declared and streamed advertisements with an actionable SHA fallback", async () => {
+138:         resolveGitHubPanelAppCommit(source, { fetch: async () => reply }),
+145:       resolveGitHubPanelAppCommit(source, { fetch: async () => new Response(null, { status }) }),
+149:   test("bounds a hung request even when the transport ignores the signal", async () => {
+151:       resolveGitHubPanelAppCommit(source, {
+158:   test("bounds a stalled body and cancels it without awaiting stalled cancellation", async () => {
+170:       resolveGitHubPanelAppCommit(source, {

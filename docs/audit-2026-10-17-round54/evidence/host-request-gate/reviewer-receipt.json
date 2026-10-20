@@ -1,0 +1,106 @@
+{
+  "frozenUTC": "2026-10-17T18:09:13.354141+00:00",
+  "root": "/tmp/codeshell-audit-round117-host-requests",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 654,
+      "sha256": "0c002bc89527bcfc38a1bb0ebabb51af734df7f444f5410fba450573bb957506"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 26935,
+      "sha256": "da69aa6d700142bd8cb30b81347e74839e7294a291ff0f30c942474cb4954567"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 765,
+      "sha256": "8f3b75309b612305a9778587993c9740d5d470e01672e3f6ec1288ea863632df"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1574,
+      "sha256": "e28ba4f51e0367f017eae930fe5c1961ba3986617b2350df3ce9547f67d69a58"
+    },
+    {
+      "path": "fallback-coverage-gate-objects.json",
+      "bytes": 37822,
+      "sha256": "2f10af63d9d824b079799f4d4b050a5c71fc6ed898866690b67428692566b3b4"
+    },
+    {
+      "path": "fallback-history-contexts.json",
+      "bytes": 227072,
+      "sha256": "1f02c2e503929294ccadf06d1bf317eef8dcb5711020e9ba27f12bcde8b404d2"
+    },
+    {
+      "path": "fallback-history-method.py",
+      "bytes": 3776,
+      "sha256": "5ab570242788a37230c229385bc21da80354816e879ccab5e380613064d60b77"
+    },
+    {
+      "path": "fallback-history.json",
+      "bytes": 1183758,
+      "sha256": "9b32ead140e4827588b752b853c91377a982a3a7ad80db9b334900b33a30ae74"
+    },
+    {
+      "path": "fallback-initial-pins.json",
+      "bytes": 361,
+      "sha256": "c2720cec2bfa54c92bb7b0cd9a211be8cc234e68d463e4025557df5d4b2fe2b8"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 8953,
+      "sha256": "05a2a47858ccb3d32c6c43fe22ca28e49c55c093b0ca70a77ddf1d678d5fd716"
+    },
+    {
+      "path": "freeze-checks.json",
+      "bytes": 3281,
+      "sha256": "2818db750c2a0218430101d53f84b89852c2e0277b16923a7a859f73178df5eb"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 4440,
+      "sha256": "65774577e8708641ad76012917d237e80bf53e2e98c1a5a95211ad8ec457664c"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 142185,
+      "sha256": "6e399f3eab7c325229c853281770eb4bf574f03762d297b3e2282c039823983e"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3772,
+      "sha256": "7d3544b8c813d35f1c7bec4c5c2f99c4fbdb0815ceeb3d31464cdeea8dc64a7c"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1183758,
+      "sha256": "9e73e405ad19d682d593980ca74aa4014b23471ddb081fea3ace130cd668e5b4"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 983,
+      "sha256": "5d6cf70a3cbf36faa31899b353a6570e0e3878de4ffe059025a7eb436409192b"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5393,
+      "sha256": "dada871cb574564f1d15198d1ca19658c8dbcce557858c1b2ae132d032866efb"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 4113,
+      "sha256": "44b9606c2962f4487459ed811d8ac6afdc51d420e2a4134e7b040a1542b8ae42"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1174,
+      "sha256": "43d26f6923e23a3cf017fbaa9370108075a40400230916cbbda0f819467b7542"
+    }
+  ],
+  "fileCountExcludingReceipt": 19,
+  "role": "Independent canonical old-full gate only; current product body0",
+  "productRunCount": 0,
+  "GitOperationCount": 0
+}

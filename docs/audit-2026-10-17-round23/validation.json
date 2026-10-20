@@ -1,0 +1,84 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "totals": {
+    "firstBunShards": 2,
+    "completedCleanShards": 2,
+    "failedBunShards": 0,
+    "passedTests": 13,
+    "expectations": 32,
+    "failedTests": 0,
+    "skippedOrFilteredTests": 0,
+    "existingBaselineTests": 0,
+    "focusedTests": 13,
+    "directActualLeafCases": 13,
+    "manuallyMirroredConsumerTests": 0,
+    "productReruns": 0,
+    "rootProductAttempts": 0,
+    "productFactoryAttempts": 0,
+    "codexParserAttempts": 0
+  },
+  "runs": [
+    {
+      "log": "evidence/cron-first.raw.log",
+      "exitFile": "evidence/cron-first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round23/evidence/cron-focused.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 19,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 7,
+      "scope": "Actual zero-import cron leaf,7ordinary focused short fixedUTC controls; five nextTime calls<=6candidate minutes total. No old malformed/DST/leap/long search/Scheduler/real timer.",
+      "sha256": "1cee5cd1b50a32f0e349e1607b5a6eff73bba461d137d4477bfe22d79be678e0"
+    },
+    {
+      "log": "evidence/room-data-first.raw.log",
+      "exitFile": "evidence/room-data-first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round23/evidence/room-data-mobile-history.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 13,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 6,
+      "scope": "Actual mobile-history leaf,4ordinary+2owned deferred/reject controls. No realreader/Room/FS/CLI/SDK; Codex parser/approval/oldR3/R84 baselines static only.",
+      "sha256": "ef82f0429bdd43e631ccc958dd6b57e138e61d90317be663bcb5ba8e96c1fc0b"
+    }
+  ],
+  "notes": [
+    "Both first combined raw stdout/stderr and exit saved before inspection;0failed Bun shards/fixture repair/product rerun/alternative validation.",
+    "PRODUCT-R23-01 rests on explicit public cwd option contract and complete static omission/default source flow, not a passing fixture. No factory/Manager/Engine constructed or actual task/tool/FS/model/permission run.",
+    "Factory and defineProduct are one missing default-cwd chain, counted once. Old prompt precedence related item remains unranked, no new prompt output or model experiment.",
+    "Cron7short ordinary controls completed before later root static-priority followup arrived; all subsequent work static. No new mechanism or oldTIME1 malformed/DST/leap/Scheduler replay.",
+    "Mobile6cases=4ordinary+2ownedcallback boundary controls; no producerfailure/recovery/realconcurrency claim. Codex entire existing suite static only, no current CLI format proof or new shape finding.",
+    "Root33selection reads and10prior prep hash revalidations are static/provenance only; oldstdinCLI failed direction excluded before0attempts, oldqueue/params/OM3/Unicode/JSON families not recovered.",
+    "Metadata guessedfile/schema/range/selfreceipt ordering errors labeled separately, no product failure or retry. Hashes/search counts do not prove full semantic coverage.",
+    "No real model/paid API/account/user data/business network/external message/native/PTY/auth/permission/security/custody/watchdog/identity/timer or shareddependency/dist/build/typecheck/lint/fullsuite/E2E experiment."
+  ]
+}

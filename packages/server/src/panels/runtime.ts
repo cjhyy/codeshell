@@ -29,6 +29,11 @@ import {
   panelConnectionIds,
   materializePanelConnections,
 } from "./connections.js";
+import {
+  PanelModelTraceService,
+  panelModelTraceMethods,
+  panelModelTraceLimits,
+} from "./model-traces.js";
 import { PanelRuntimeServices } from "./runtime-services.js";
 import {
   PanelToolJobService,
@@ -68,6 +73,7 @@ const MAX_FILE = 16 * 1024 * 1024;
 const GRANT_TTL = 30 * 60_000;
 const METHODS = [
   "context.get",
+  ...panelModelTraceMethods,
   "storage.get",
   "storage.getSnapshot",
   "storage.compareAndSet",
@@ -122,6 +128,7 @@ const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
+  ".wasm": "application/wasm",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json",
   ".md": "text/markdown; charset=utf-8",
@@ -231,6 +238,7 @@ export interface PanelRuntimeOptions {
   bindingCwd?: string;
   projectPackages?: boolean;
   dataDir: string;
+  traceStorageDir?: string;
   host: "hub" | "desktop";
   /** Host authority only, never a field accepted from Panel HTTP requests. */
   projectScope?: () => Promise<PanelProjectScopeBinding | undefined>;
@@ -535,6 +543,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   const assets = new Map<string, Grant>();
   const now = options.now ?? Date.now;
   const services = new PanelRuntimeServices({ dataDir: options.dataDir });
+  const modelTraces = new PanelModelTraceService({
+    storageDir: options.traceStorageDir,
+    now: options.now,
+  });
   const installed =
     options.listInstalled ??
     (options.projectPackages
@@ -557,7 +569,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       appId,
       digest(Buffer.from(options.bindingCwd ?? options.cwd)).slice(0, 24),
     );
-  const toolOwners = new Map<number, ToolJobScope>();
+  const toolOwners = new Map<number, ToolJobScope & { taskId: string }>();
   const jobOwners = new Map<string, { owner: string; scope: ToolJobScope }>();
   let toolJobs: PanelToolJobService | undefined;
   let taskCookies: PanelTaskCookieHost | undefined;
@@ -648,6 +660,27 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     return app;
   }
   const processes = new PanelAppProcessService({
+    modelTraces,
+    modelTraceOwner: (owner) => {
+      const task = toolOwners.get(owner.guestId);
+      if (task)
+        return {
+          appId: owner.appId,
+          revision: owner.revision,
+          workspacePath: options.cwd,
+          traceId: task.taskId,
+          taskId: task.taskId,
+        };
+      const grant = byGuest.get(owner.guestId);
+      if (!grant || grant.revision !== owner.revision) return undefined;
+      return {
+        appId: owner.appId,
+        revision: owner.revision,
+        workspacePath: options.cwd,
+        sessionId:
+          typeof grant.context.sessionId === "string" ? grant.context.sessionId : undefined,
+      };
+    },
     acquireExecution: (owner) =>
       panelExecutionGate.enter({
         appId: owner.appId,
@@ -897,7 +930,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       resources,
       owner: (job, send) => {
         const guestId = nextToolOwner--;
-        toolOwners.set(guestId, job.scope);
+        toolOwners.set(guestId, { ...job.scope, taskId: job.id });
         return {
           guestId,
           appId: job.scope.appId,
@@ -969,6 +1002,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     assets.delete(grant.asset);
     byGuest.delete(grant.guestId);
     processes.revokeGuest(grant.guestId);
+    modelTraces.cancelOwner(`grant:${grant.id}`);
     agentTasks?.revokeInstance(grant.id);
     for (const item of grant.confirmations.values()) item.finish(false);
     for (const item of grant.toolCalls.values())
@@ -1254,6 +1288,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         locale: typeof input.locale === "string" ? input.locale.slice(0, 32) : "zh-CN",
         apiVersion: panelRuntimeApiVersion,
         capabilities: {
+          packageAssets: { wasm: true, fetch: "package" },
+          modelTraces: { writeOnly: true, coverage: "logical-input", ...panelModelTraceLimits },
           ...panelRuntimeCapabilities({
             process: app.permissions.includes("process"),
             cookieProcess:
@@ -1366,7 +1402,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
             return false;
           if (method.startsWith("tools.")) return !!app.agent?.tools.length;
           return (
-            method === "context.get" || app.permissions.includes(methodPermission(method) as never)
+            method === "context.get" ||
+            method.startsWith("modelTraces.") ||
+            app.permissions.includes(methodPermission(method) as never)
           );
         }),
         limitations: panel.compatibility.reasons,
@@ -1485,6 +1523,19 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     if (transfer) grant.transfers = history;
     else grant.calls = history;
     if (method === "context.get") return grant.context;
+    if (method.startsWith("modelTraces."))
+      return modelTraces.call(
+        {
+          ownerKey: `grant:${grant.id}`,
+          appId: grant.app.id,
+          revision: grant.revision,
+          workspacePath: options.cwd,
+          sessionId:
+            typeof grant.context.sessionId === "string" ? grant.context.sessionId : undefined,
+        },
+        method,
+        params,
+      );
     if (method.startsWith("tasks.")) return dispatchToolJobs(grant, method, params);
     if (method.startsWith("tools.")) {
       const name = (params as { name?: unknown } | undefined)?.name;
@@ -1836,6 +1887,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         return {
           effect: method,
           prompt: value.prompt,
+          modelTraceSource: `panel:${grant.app.id}`,
           sessionId: grant.context.sessionId,
           ...(value.displayText ? { displayText: value.displayText } : {}),
         };
@@ -1946,6 +1998,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     },
     async close() {
       closed = true;
+      modelTraces.closeAll();
       for (const preparation of preparingTools) preparation.controller.abort();
       clearInterval(reaper);
       for (const grant of grants.values()) remove(grant);
@@ -2187,7 +2240,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
             "Content-Security-Policy",
             "default-src 'none'; script-src " +
               assetSource +
-              "; style-src " +
+              " 'wasm-unsafe-eval'; style-src " +
               assetSource +
               " 'unsafe-inline'; img-src " +
               assetSource +
@@ -2195,7 +2248,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               assetSource +
               " blob:; font-src " +
               assetSource +
-              " data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads; frame-ancestors " +
+              " data:; connect-src " +
+              assetSource +
+              "; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads; frame-ancestors " +
               resourceOrigin,
           );
           response.setHeader(

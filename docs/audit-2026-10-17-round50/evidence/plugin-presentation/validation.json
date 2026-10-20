@@ -1,0 +1,18 @@
+{
+  "formal": 0,
+  "candidate": 0,
+  "newRelated": 0,
+  "productImportsHelpersFunctionsRun": 0,
+  "testsFixtureRuns": 0,
+  "DOMReactClockTimerRuns": 0,
+  "networkNativeModelGitRuns": 0,
+  "productWrites": 0,
+  "realPluginImageOrConfigFilesRead": 0,
+  "mutable87Read": false,
+  "metadataErrors": 0,
+  "metadataOutputTruncations": 0,
+  "allObservedCompletedCommandExits": 0,
+  "metadataOnly": "Own standard-library hashes/JSON/scalar/range I/O and audit history scanners; rg filename/navigation. No repository/product scripts.",
+  "oldCauseLimitation": "Broad query false positive preserved, no rescan hidden or universal negative asserted. No new finding to certify as novel.",
+  "ending": "ending-checks.json"
+}

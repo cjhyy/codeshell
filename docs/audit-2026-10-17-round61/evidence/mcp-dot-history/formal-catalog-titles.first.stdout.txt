@@ -1,0 +1,6 @@
+docs/audit-2026-10-17-round58/recorded-findings-catalog.json
+{"pointer": "/findings/13", "id": "C02", "priority": "P2", "title": "pre_tool_use 改写参数后未重复 Plan/MCP 参数权限门禁（旧报告已知，仍存在）"}
+{"pointer": "/findings/52", "id": "R3-02", "priority": "P3", "title": "Codex MCP结果与失败原因变成不可读摘要"}
+{"pointer": "/findings/108", "id": "MCP-R38-01", "priority": "P3", "title": "Reopening and saving a stdio MCP form loses structured argument boundaries"}
+{"pointer": "/findings/109", "id": "MCP-R39-01", "priority": "P3", "title": "Renaming a settings-owned MCP server drops supported non-editor fields"}
+machine id/title rows 118

@@ -1,0 +1,47 @@
+{
+  "capturedUTC": "2026-10-17T17:32:44.212376+00:00",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "oldFullSourceExclusions": 1,
+  "target": "packages/desktop/src/renderer/builtin-character-themes.ts",
+  "currentSha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+  "canonicalSourceBinding": {
+    "document": "docs/audit-2026-10-17-round7/source-manifest.json",
+    "documentSha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f",
+    "jsonPointer": "/files/48",
+    "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80"
+  },
+  "originalMarkdownFullQualifier": {
+    "path": "docs/audit-2026-10-17-round7/root-metadata.md",
+    "bytes": 4033,
+    "sha256": "85293596049364a1b941e7e68be4b393f2a97e2d7bca14776ce34aecd01b2e75",
+    "paragraphs": [
+      {
+        "paragraph": 3,
+        "startLine": 7,
+        "endLine": 7,
+        "text": "阅读了现有 Sources 审查记录、`packages/core/src/sources/documents/parse.ts` 和 `index-store.ts`、`sources/truncate-utf8.ts`，以及 `sources/collection-url.ts` 的文件名/纯 URL validation 入口；下载器输出有截断，不算完整审查。已有 Office 内部关系路径、namespace 前缀及单文件 JSON 数据转换问题不重复报告；CJK/Latin 词法边界与 phonetic 注音仍保持旧候选状态，没有重跑旧 fixture。未启动 parser worker、PDF/Office 应用、下载器或远端请求。"
+      },
+      {
+        "paragraph": 4,
+        "startLine": 9,
+        "endLine": 9,
+        "text": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。"
+      }
+    ]
+  },
+  "decision": "Explicit sameSHA original full-source claim closes target before current body; no new specific independent problem established.",
+  "consumerThemePacksFullSeparatelyActivated": false,
+  "currentProductBodyLines": 0,
+  "currentTestDeclarationLines": 0,
+  "currentHelperOrRuntimeRuns": 0,
+  "scopeWarnings": [
+    "Originalfullsource read claim is not dynamic behavior or runtime test proof.",
+    "R7 themeapply caller navigation failed due unmatched zshglob, originalnotretried; applicationprojection was not dynamically covered. Current102 does not restore/retry that path or read currentthemeapplybody.",
+    "The JSON-only prep87/formal50scope-unconfirmedcategory is dated and not unread; currenttarget exclusion pairs originalMDwithcanonicalsourceSHA only.",
+    "No global coverage index or old packet changed; no currentasset/media/native/Host/userconfig opened or executed."
+  ]
+}

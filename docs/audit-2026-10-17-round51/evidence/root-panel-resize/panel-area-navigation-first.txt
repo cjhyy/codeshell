@@ -1,0 +1,7 @@
+123:  width: number;
+125:  onResizeStart: (startX: number, startWidth: number, target: HTMLElement) => void;
+182:  onResizeStart,
+550:            maxWidth: "100%",
+557:      : { width, maxWidth: "100%" };
+579:          onMouseDown={(e) => {
+583:            if (target) onResizeStart(e.clientX, width, target);

@@ -1,0 +1,7 @@
+{
+  "toolChunk": "d20eb3",
+  "exitCode": 1,
+  "stderr": "File \"<stdin>\", line 8\n    m=re.search(pat,r['context'],re.I);j=m.start()if m else0\n                                         ^^^^^^^^^^^^^\nSyntaxError: expected 'else' after 'if' expression",
+  "cause": "Own metadata display code missing whitespace after else. Failed before JSON reading or product/source body. Fixed only metadata display expression; original artifacts unchanged.",
+  "capturedUTC": "2026-10-17T17:01:48.968504+00:00"
+}

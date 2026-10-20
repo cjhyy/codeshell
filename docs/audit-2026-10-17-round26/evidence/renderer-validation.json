@@ -1,0 +1,70 @@
+{
+  "base": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "runs": [],
+  "guardedRuns": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "fixtureCount": 0,
+  "reactRenders": 0,
+  "browserActions": 0,
+  "vmAstEvaluations": 0,
+  "nativeExperiments": 0,
+  "networkRequests": 0,
+  "realHomeAccess": 0,
+  "permissionSecurityCustodyIdentityExperiments": 0,
+  "gitCommands": 0,
+  "gitWrites": 0,
+  "productChanges": false,
+  "pass": 0,
+  "fail": 0,
+  "expect": 0,
+  "skipped": 0,
+  "existingTestsExecuted": 0,
+  "focusedTestsExecuted": 0,
+  "existingTestSourceInventory": [
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx",
+      "testDeclarations": 3,
+      "executed": 0
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+      "testDeclarations": 7,
+      "executed": 0
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.test.ts",
+      "testDeclarations": 5,
+      "executed": 0
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+      "testDeclarations": 7,
+      "executed": 0
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+      "testDeclarations": 1,
+      "executed": 0
+    }
+  ],
+  "existingTestSourceDeclarations": 23,
+  "raw": null,
+  "exit": null,
+  "rawExitReason": "No product/test execution was attempted, so no runtime raw/exit is fabricated.",
+  "staticScope": [
+    "Assigned10targets: nine full source/test files and selected usePanelBuckets ranges.",
+    "Necessary actual App draft consumer, Select value adapter, diff parser/path helpers, viewer filter and FilesChangedCard snapshot producer.",
+    "Full source hashes at first/current pin; no Git command or independent frozen-blob comparison."
+  ],
+  "limitations": [
+    "Formal finding is source-only conditional scope collision. No dynamic UI/actual producer execution.",
+    "Existing tests identify covered intentions/counterevidence but are not current passing evidence.",
+    "No normal-completion race found in read source; arbitrary hook context reuse/malformed objects are not promoted.",
+    "No retry/alternate validation of old failed directions; no build/lint/typecheck/baseline repetition."
+  ]
+}

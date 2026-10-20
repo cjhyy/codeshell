@@ -1,0 +1,26 @@
+[
+  {
+    "path": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+    "range": [
+      19,
+      23
+    ],
+    "text": "file-mutex 默认 [50](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:50) 30,000ms；[62–64](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:62) sleepSync 直接 Atomics.wait；[95–112](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/file-mutex.ts:95) 捕获全部 lockSync 错误，不筛 ELOCKED，EACCES 也同步重试直到 deadline。Promise/async 不会把此代码移入 worker。\n\nlazy wrapper [65–77](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/lockfile.ts:65) 调 proper-lockfile 4.1.2。依赖 [lib/lockfile.js:46–49](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile/lib/lockfile.js:46) 对非 EEXIST 原错立即回传；live lock [67–69](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile/lib/lockfile.js:67) 才转 ELOCKED。adapter [5–20/43–57](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/node_modules/.bun/proper-lockfile@4.1.2/node_modules/proper-lockfile/lib/adapter.js:5) 用真实 sync fs 并原样抛错。无谓权限重试由仓库外层引入；正常控制的 native mkdir EEXIST 与外层捕获 ELOCKED 应明确区分。\n\nHeadless [715–780](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:715) 同一 Node createServer callback 处理 /health（719）、environment（742）和 session API（751）；WS upgrade [1216–1217](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:1216) 也在该 server。无需 AUTH 的 /health 仍等同一个 JS 事件循环，定时器和 JS 消息处理也无法进展。这不等于 OS 网络停止或独立 agent worker 计算停止，不能冒称实际所有任务超时。"
+  },
+  {
+    "path": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+    "range": [
+      31,
+      31
+    ],
+    "text": "Auth setup/login [127–129/146–153](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/auth-store.ts:127) 在锁前 await scrypt，mutate 锁内仅同步 read/validate/write/finally release。这不是该 writer 的同进程 async-holder deadlock，不能借 CODESHELL 警告另造一个发现。"
+  },
+  {
+    "path": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+    "range": [
+      53,
+      57
+    ],
+    "text": "84740 与 a66f 的 file-mutex、lockfile wrapper、HubAuthStore/auth-http、SessionTitlesStore/session-management 产品源码无差异；latest 既有 dist 的真实入口、默认30秒和 retry 与 src 对应。本审计未 build，两基线动态适用以作者/root 收据为准，不用源码一致冒充双基线执行。精确行号按 latest。\n\n与 R43 Token 拒写缺反馈、R71 项目重命名乐观 UI、R65 目录 EACCES 冒充空树独立：UI feedback 修复不去掉明确非争用错误的同步重试；本项缺 Host 可用性。第十八轮非文件 title registry 500 是取得锁后 strict read 拒绝，其 Bun EACCES 诊断只是调查线索，不能当成已证明 native title锁的重复发现。第十七轮 fresh title parent EACCES 在 mkdir(anchor) 前置失败，不冲突。\n\n最小修复是只为真正可重试的 ELOCKED 保留争用重试，明确权限/存储 acquisition 错误立即回传；若 Host 还要在正常争用时保持响应，应使用有界非阻塞 acquisition 或隔离同步锁工作。保留认证、跨进程 read-modify-write、真实 parent/anchor 检查、标题 CAS、严格 registry、finally release、同稿重试，不能故障时无锁写入或跳过认证。"
+  }
+]

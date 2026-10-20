@@ -237,6 +237,10 @@ interface DiskSessionCursor {
   id: string;
 }
 
+function compareDiskSessionPosition(a: DiskSessionCursor, b: DiskSessionCursor): number {
+  return b.mtime - a.mtime || a.id.localeCompare(b.id);
+}
+
 function encodeDiskSessionCursor(cursor: DiskSessionCursor): string {
   return `v1:${cursor.mtime}:${cursor.id}`;
 }
@@ -289,7 +293,7 @@ export async function listDiskSessions(
   const dirs = (await scanSessionDirectories(baseDir)).filter(
     ({ id }) => !isInternalEphemeralSessionId(id),
   );
-  dirs.sort((a, b) => b.mtime - a.mtime || a.id.localeCompare(b.id));
+  dirs.sort(compareDiskSessionPosition);
 
   const decodedCursor = decodeDiskSessionCursor(opts.cursor);
   if (decodedCursor === null) return { sessions: [], nextCursor: null };
@@ -298,9 +302,7 @@ export async function listDiskSessions(
       ? Math.max(0, decodedCursor)
       : (() => {
           const index = dirs.findIndex(
-            (entry) =>
-              entry.mtime < decodedCursor.mtime ||
-              (entry.mtime === decodedCursor.mtime && entry.id.localeCompare(decodedCursor.id) > 0),
+            (entry) => compareDiskSessionPosition(entry, decodedCursor) > 0,
           );
           return index < 0 ? dirs.length : index;
         })();

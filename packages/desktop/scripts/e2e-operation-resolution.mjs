@@ -132,8 +132,8 @@ async function launch() {
   return errors;
 }
 async function activityReview() {
-  await navigateSettingsMenu(win, "Task center", { activity: true });
-  const card = win.locator(`[data-task-key="session:${sessionId}"]`);
+  await navigateSettingsMenu(win, "Conversations", { activity: true });
+  const card = win.locator(`[data-session-id="${sessionId}"]`);
   await card.waitFor({ timeout: 20_000 });
   await card.getByRole("button", { name: "Review uncertain external writes", exact: true }).click();
   await card
@@ -204,6 +204,9 @@ try {
   let processes = await guardProcesses();
   stage = "actual compiled Engine creates uncertain write";
   core = await import("@cjhyy/code-shell-core");
+  (await import("@cjhyy/code-shell-server/links")).installDefaultLinkProviders(
+    core.registerLocalLinkProviders,
+  );
   const credential = {
     id: "synthetic-link",
     type: "oauth",
@@ -217,6 +220,12 @@ try {
       linkExecutionBackend: "remote",
       linkRemoteState: "connected",
       linkRemoteGrantId: "synthetic-grant",
+      linkResourceGroups: [
+        {
+          id: "repositories",
+          items: ["fixture/unknown", "fixture/success"].map((id) => ({ id, label: id })),
+        },
+      ],
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       linkCapabilityIds: ["github.list_issues", "github.create_issue", "github.get_issue"],
     },
@@ -243,6 +252,16 @@ try {
       physicalRequests++;
       const usage = { promptTokens: 10, completionTokens: 1, totalTokens: 11 };
       this.recordUsage(usage, request);
+      if (request.usagePurpose === "tool_summary") {
+        assert.deepEqual(request.tools, []);
+        assert.match(request.messages[0]?.content, /^Tool: LinkAction\(/);
+        return {
+          text: "Reviewed synthetic Link operation",
+          usage,
+          stopReason: "stop",
+          toolCalls: [],
+        };
+      }
       const intent = request.messages.findLastIndex(
         (message) =>
           message.role === "user" &&
@@ -358,14 +377,18 @@ try {
         row.runId === state.runId,
     );
     if (
-      physicalRequests === 5 &&
-      own.length === 5 &&
+      physicalRequests === 4 &&
+      own.length === 4 &&
       own.every((row) => row.outcome === "completed") &&
-      own.filter((row) => row.purpose === "tool_summary").length === 2 &&
-      state.costState.summary.requests === 5 &&
-      state.tokenUsage.totalTokens === 55 &&
+      own.filter((row) => row.purpose === "main").length === 3 &&
+      own.filter((row) => row.purpose === "tool_summary").length === 1 &&
+      state.costState.summary.requests === 4 &&
+      state.tokenUsage.totalTokens === 44 &&
       state.status === "unverified_write"
     ) {
+      assert.equal(state.cacheUsageVersion, 1);
+      assert.equal(state.cumulativePromptTokens, 30);
+      assert.equal(state.tokenUsage.promptTokens, 40);
       observations.push({
         phase: "actual idle after auxiliary callbacks",
         stateRevision: state.stateRevision,

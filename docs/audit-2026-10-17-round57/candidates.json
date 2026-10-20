@@ -1,0 +1,25 @@
+{
+  "baseline": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "count": 1,
+  "candidates": [
+    {
+      "id": "STATIC-R135-C1",
+      "proposedPriority": "P3",
+      "title": "移动静态资源未解码编码文件名",
+      "location": {
+        "path": "packages/server/src/mobile-remote/mobile-static.ts",
+        "line": 27,
+        "endLine": 31
+      },
+      "status": "Candidate retained, not formal: handler404 reproduced for owned space-named file; current default product resource producer unestablished.",
+      "validation": "Single guarded shard3pass/8expect/0failure, no reruns; actual serveMobile and real temporary files, Writable response recorder, no HTTP server/socket.",
+      "counterevidence": "Independent137 found4 current public names and selected actual URLs are ASCII. Its208 filename inventory is not a full dependency/bundle closure. Do not claim current product resource breakage or absence of all encoded assets.",
+      "evidence": [
+        "evidence/root-static-files/report.md",
+        "evidence/mobile-path-review/report.md",
+        "evidence/static-path.test.ts"
+      ]
+    }
+  ],
+  "note": "Original132/136 candidate is promoted once to PET-R57-01 by Root; no duplicate pending entry. STATIC-R135-C1 remains unproven for actual default asset producer."
+}

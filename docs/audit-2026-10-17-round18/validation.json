@@ -1,0 +1,139 @@
+{
+  "baseline": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "totals": {
+    "firstBunShards": 4,
+    "completedCleanShards": 4,
+    "failedBunShards": 0,
+    "passedTests": 33,
+    "expectations": 138,
+    "failedTests": 0,
+    "skippedOrFilteredTests": 0,
+    "existingBaselineTests": 5,
+    "newFocusedObservationsAndControls": 28,
+    "directLeafTestCases": 32,
+    "manuallyMirroredCompositionTests": 1,
+    "productReruns": 0
+  },
+  "runs": [
+    {
+      "log": "evidence/root-environment.first.log",
+      "exitFile": "evidence/root-environment.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round18/evidence/root-environment.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 22,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 6,
+      "scope": "Actual descriptor guard on ordinary owned metadata; no producer/identity persistence/storage/navigation",
+      "sha256": "8916edd7edb7e67f46302a64fc1c3d7a48d59c6c08f2e582216789a5d9049950"
+    },
+    {
+      "log": "evidence/presentation-pure.first.raw.log",
+      "exitFile": "evidence/presentation-pure.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/web/src/components/model-trace-presentation.test.ts",
+        "docs/audit-2026-10-17-round18/evidence/presentation-focused.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 10,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 58,
+      "skipped": 0,
+      "existingTests": 5,
+      "focusedTests": 5,
+      "scope": "Actual Web presentation leaf,5 maintained examples+5 focused; Core/backend/i18n/UI static only",
+      "sha256": "7d3c3d3027ae54fc34363f7320c22c8e62710f2235127a6468db4cb7ce89c1b6"
+    },
+    {
+      "log": "evidence/traceapi-normal.first.raw.log",
+      "exitFile": "evidence/traceapi-normal.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 23,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 8,
+      "scope": "Actual API adapter with in-memory requester; partial owned payload passthrough, no real fetch/schema/Host",
+      "sha256": "6505f896fe066d81697e2e9a58800b18aa918064943951f2980568b03434b3e2"
+    },
+    {
+      "log": "evidence/unread-pure.first.raw.log",
+      "exitFile": "evidence/unread-pure.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round18/evidence/unread-pure.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 35,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 9,
+      "scope": "Actual unread helpers;8 direct+1 manually mirrored list composition, no hook/producer/timing",
+      "sha256": "6f477992665d7710d6b3144e1d3d7a09172901cd418a98619dcc81f1f488d255"
+    }
+  ],
+  "metadataNotes": [
+    "evidence/presentation-navigation-skip.md",
+    "evidence/review-environment.md"
+  ],
+  "notes": [
+    "Four first combined stdout/stderr logs and exit receipts saved before inspection; no failed Bun shard, product retry, fixture repair or alternative validation.",
+    "33=5 maintained Web presentation examples+28 focused.32 direct leaf cases and1 unread list recipe with actual helpers/manual navigation predicate; actual hook never run.",
+    "Presentation type labels/input boundary helpers only; Core producer/type/classification/context and UI are static, no old backend/i18n restoration.",
+    "Trace API uses owned in-memory requester and partial page/detail values for passthrough, not actual Host schema validation. Existing mixed auth/scope test never executed; inaccurate first test title is disclosed in worker receipt, raw/fixture unchanged.",
+    "Environment module has prior full static review; this batch supplements ordinary descriptor shape only, no identity service/persistence/storage/navigation or unused projectReferenceKey execution.",
+    "Unread helpers behave locally normally; candidate is static list-before-navigation wiring plus hand-mirrored composition, no cross-tab/socket/actual consumer outcome.",
+    "Metadata guessed locators/range corrections/large-output truncation are separately disclosed and do not restore failed dynamic directions.",
+    "Other-task old Write byte-label source change tracked separately; no actual card/Write/new regression/UI verification.",
+    "No real models, paid APIs, accounts, user artifacts, external messages, product network/native/PTY/auth/permission/security/custody/watchdog experiments, shared dependency/dist rebuild or full build/typecheck/lint/suite."
+  ]
+}

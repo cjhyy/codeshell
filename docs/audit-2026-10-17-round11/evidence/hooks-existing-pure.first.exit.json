@@ -1,0 +1,13 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "tests/hooks-inject.test.ts",
+    "packages/core/src/hooks/registry.unregister.test.ts"
+  ],
+  "exitCode": 0,
+  "startedAt": "2026-10-17T06:30:27.161182+00:00",
+  "rawCombinedLogSha256": "11a5a786d84d2a570e2ad263635242896659d0f9e7e455e426c53a97cc22c6ad"
+}

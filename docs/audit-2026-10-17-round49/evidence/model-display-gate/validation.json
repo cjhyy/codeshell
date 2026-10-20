@@ -1,0 +1,16 @@
+{
+  "capturedUTC": "2026-10-17T16:19:06.283842+00:00",
+  "mode": "fresh historical metadata gate and byte pin only",
+  "productsHelpersFixturesTestsReactTerminalNativeModelsNetworkGit": 0,
+  "testPasses": 0,
+  "sourceBodyReads": 0,
+  "testDeclarationReads": 0,
+  "actualProducerConsumerReads": 0,
+  "realConfigurationsRead": 0,
+  "metadataErrors": 0,
+  "consoleTruncations": 0,
+  "allQueryTotalsWithinCap": true,
+  "sourceEndingSame": true,
+  "historyEndingSame": true,
+  "oldFullExclusions": 2
+}

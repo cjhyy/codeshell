@@ -1,0 +1,22 @@
+{
+  "baseOriginal111Unchanged": true,
+  "formalRows": 112,
+  "uniqueIds": 112,
+  "P2": 44,
+  "P3": 68,
+  "newFormal": "TUI-R48-01",
+  "proposalAliasOnly": "STATUSLINE-R64-C1",
+  "markdownTableIssueRows": 112,
+  "sourceDocs": 48,
+  "currentUnfixedCount": null,
+  "coverageDatedThrough": 45,
+  "coverageFullSelectedUnknown": [
+    304,
+    169,
+    4170
+  ],
+  "cannotMarkFull": 4339,
+  "notUnreadCount": true,
+  "original68FrozenUnmodified": true,
+  "productRuns": 0
+}

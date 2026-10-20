@@ -1,0 +1,158 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "branch": "codex/audit/broad-round3-20261017",
+  "scope": "legacy CDP SDK geometry/keymap/scroll/read and browser diagnostics console/DOM/performance ordinary projection",
+  "dynamicBoundary": "guarded Bun; local fake sender/page; Node VM callback with plain-object DOM/Performance; no real browser/CDP/network/model/Host",
+  "confirmedNew": [
+    "CDP-R3-01",
+    "CDP-R3-02",
+    "CDP-R3-03"
+  ],
+  "knownDuplicateCount": 1,
+  "candidateCount": 3,
+  "tests": {
+    "files": 3,
+    "unique": 20,
+    "pass": 20,
+    "fail": 0,
+    "skip": 0,
+    "expect": 55,
+    "completedShards": 3,
+    "retries": 0,
+    "problemObservationTests": 5,
+    "normalControls": 13,
+    "duplicateObservations": 1,
+    "candidateObservations": 1
+  },
+  "shards": [
+    {
+      "file": "cdp-geometry-keymap.test.ts",
+      "pass": 9,
+      "expect": 24,
+      "exit": 0
+    },
+    {
+      "file": "cdp-diagnostics-projection.test.ts",
+      "pass": 6,
+      "expect": 18,
+      "exit": 0
+    },
+    {
+      "file": "cdp-scroll-read-data.test.ts",
+      "pass": 5,
+      "expect": 13,
+      "exit": 0
+    }
+  ],
+  "primaryReadOnlySources": [
+    "https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master/pdl/domains/DOM.pdl",
+    "https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master/pdl/domains/Input.pdl",
+    "https://www.w3.org/TR/CSS2/visufx.html#visibility"
+  ],
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2"
+    },
+    {
+      "path": "packages/cdp/src/driver.ts",
+      "sha256": "a442ceb609e5104db229cb20beddc2c5c22f0ec8600edca8812be55880514af1"
+    },
+    {
+      "path": "packages/cdp/src/keymap.ts",
+      "sha256": "d1eca6478c2f56a60741c654722cdc29273606464d3320de14222f4bcaa1ad31"
+    },
+    {
+      "path": "packages/cdp/src/scroll-state.ts",
+      "sha256": "2b49511400ae781cd61275f11a8079744312a214a920769a920a51d85df7b551"
+    },
+    {
+      "path": "packages/cdp/src/types.ts",
+      "sha256": "89dba9f3c4be528686a66aaf2a942d0d70d8573f7db08977ebd722f0ea9ee717"
+    },
+    {
+      "path": "packages/cdp/src/sender.ts",
+      "sha256": "0b2fd0387b1391607dd7ec928a5933913989f30b468c34c0dce4e2bdaf05705e"
+    },
+    {
+      "path": "packages/cdp/src/index.ts",
+      "sha256": "9832c52ca5f3f6ec1ddc3859fc7a8e960e2ecd707886f39cbd3e286ba4a83442"
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2"
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "sha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55"
+    },
+    {
+      "path": "packages/desktop/src/main/browser-driver/cdp-driver.ts",
+      "sha256": "460d17d7650676ef3752492859194f83357cb38edf1b369f978f08f9202d89b8"
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "sha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac"
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "sha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/cdp-browser.md",
+      "sha256": "f454c0eb41eb94bcf0974b771459b5f7ed3e7b24f42c1e85f56a54569c4cdf4e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-diagnostics-projection.test.ts",
+      "sha256": "8135b404d14b3ba92b9b7b3210339dff187db00d7e4b6dab9500e3f6f0a03ec3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-geometry-keymap.test.ts",
+      "sha256": "70e0a4371518193d7d626875cf43a1ac8265d79b234b47cc4b01d56c888a8d0b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-scroll-read-data.test.ts",
+      "sha256": "3a7b46023e97978c637d966b2c52e6602d7298160a986c9b51ee2cb1ce50c696"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-diagnostics-projection.first.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-diagnostics-projection.first.stderr.log",
+      "sha256": "93d7b8511579537d1ecc03bb20379c6c17a3d90dd945f69db741faee089e4161"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-diagnostics-projection.first.stdout.log",
+      "sha256": "7791467a0d4ffed0225ea15ce52fb9cef34e5a78096ffe44c5511e7d2a26f7b2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-geometry-keymap.first.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-geometry-keymap.first.stderr.log",
+      "sha256": "46ba6c24bdfe5a1d6fe72b160ece4342a926f574c07d78569d017ae4b1419529"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-geometry-keymap.first.stdout.log",
+      "sha256": "d7255ed3d69eef36a937382c37143f672a53fbd5ad5b3694629721f029d03223"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-scroll-read-data.first.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-scroll-read-data.first.stderr.log",
+      "sha256": "ed02d5109de977700b654ae81f602ec1cb3802f8003b2e61ccaef50354e7bcc5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/cdp-scroll-read-data.first.stdout.log",
+      "sha256": "5d3729f3ee243d3dac395c9f61bdfd9ab004656d6e82bda3d1eb50cdaa8c619b"
+    }
+  ]
+}

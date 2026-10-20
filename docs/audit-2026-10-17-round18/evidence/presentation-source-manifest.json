@@ -1,0 +1,130 @@
+{
+  "base": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "scope": "full read; workflow contract",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentMatchesFrozen": true,
+      "bytes": 17639
+    },
+    {
+      "path": "AGENTS.md",
+      "scope": "full read; primary instruction alias",
+      "frozenSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentMatchesFrozen": true,
+      "bytes": 206
+    },
+    {
+      "path": "packages/web/src/components/model-trace-presentation.ts",
+      "scope": "full read; actual guarded runtime leaf",
+      "frozenSha256": "f4e76a39484ce12c4b1b77110ffeeb21aee5ac91df7e083e11c2b7f3dc2c1afc",
+      "currentSha256": "f4e76a39484ce12c4b1b77110ffeeb21aee5ac91df7e083e11c2b7f3dc2c1afc",
+      "currentMatchesFrozen": true,
+      "bytes": 3800
+    },
+    {
+      "path": "packages/web/src/components/model-trace-presentation.test.ts",
+      "scope": "full read; five existing tests executed",
+      "frozenSha256": "90bd11896fd5fd93fe45b2c09ff3a908bca59568c5994cba3cfd7de3310a8563",
+      "currentSha256": "90bd11896fd5fd93fe45b2c09ff3a908bca59568c5994cba3cfd7de3310a8563",
+      "currentMatchesFrozen": true,
+      "bytes": 2752
+    },
+    {
+      "path": "packages/web/src/model-trace-api.ts",
+      "scope": "full read; fixture/helper import type only; remote request functions not executed",
+      "frozenSha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "currentSha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "currentMatchesFrozen": true,
+      "bytes": 2466
+    },
+    {
+      "path": "packages/web/src/components/ModelTraceExplorer.tsx",
+      "scope": "static read 1-215,209-560,670-880; React not imported/mounted",
+      "frozenSha256": "773c83917377c4652b9f2a96d7e97db05330a6813a419abd11807e5bc4f5659b",
+      "currentSha256": "773c83917377c4652b9f2a96d7e97db05330a6813a419abd11807e5bc4f5659b",
+      "currentMatchesFrozen": true,
+      "bytes": 38195
+    },
+    {
+      "path": "packages/core/src/model-traces/types.ts",
+      "scope": "full static read; type declarations only",
+      "frozenSha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+      "currentSha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+      "currentMatchesFrozen": true,
+      "bytes": 6231
+    },
+    {
+      "path": "packages/core/src/model-traces/classification.ts",
+      "scope": "full static read; not imported/executed",
+      "frozenSha256": "fb315940464ed4d6af338a4b6335fb49226869e5cb76644afe78c391cd06f1cb",
+      "currentSha256": "fb315940464ed4d6af338a4b6335fb49226869e5cb76644afe78c391cd06f1cb",
+      "currentMatchesFrozen": true,
+      "bytes": 2106
+    },
+    {
+      "path": "packages/core/src/model-traces/classification.test.ts",
+      "scope": "full static read; tests not executed",
+      "frozenSha256": "32dc4daf55174387200a6c22c23b320dabb2ad4b68c19b76ad4fe69227d6c4a1",
+      "currentSha256": "32dc4daf55174387200a6c22c23b320dabb2ad4b68c19b76ad4fe69227d6c4a1",
+      "currentMatchesFrozen": true,
+      "bytes": 2857
+    },
+    {
+      "path": "packages/core/src/model-traces/context.ts",
+      "scope": "static read 330-400,470-510,835-885 only; not imported/executed",
+      "frozenSha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+      "currentSha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+      "currentMatchesFrozen": true,
+      "bytes": 33874
+    },
+    {
+      "path": "packages/core/src/model-traces/native-process.ts",
+      "scope": "static read 110-148 only; no process/native execution",
+      "frozenSha256": "91c499a8fb06eb7e71e247f4de102197dc722839a43177a54cd57d7ddf21f7fc",
+      "currentSha256": "91c499a8fb06eb7e71e247f4de102197dc722839a43177a54cd57d7ddf21f7fc",
+      "currentMatchesFrozen": true,
+      "bytes": 6670
+    },
+    {
+      "path": "packages/core/src/model-traces/store.ts",
+      "scope": "static read 446-460 only; no storage execution",
+      "frozenSha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "currentSha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "currentMatchesFrozen": true,
+      "bytes": 23181
+    },
+    {
+      "path": "docs/model-observability.md",
+      "scope": "full read; local product contract",
+      "frozenSha256": "df179afb4282d7e98464e4605f957a847177c658a01d2f3dee3babedab20564b",
+      "currentSha256": "df179afb4282d7e98464e4605f957a847177c658a01d2f3dee3babedab20564b",
+      "currentMatchesFrozen": true,
+      "bytes": 7122
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/traces.md",
+      "scope": "full read; old different Desktop helper and maintained skip boundary",
+      "frozenSha256": "0c060adcb7837647300a904494ee6aa44c86015a134d9ff4dcea5801f6768b6c",
+      "currentSha256": "0c060adcb7837647300a904494ee6aa44c86015a134d9ff4dcea5801f6768b6c",
+      "currentMatchesFrozen": true,
+      "bytes": 4503
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "scope": "frozen bytes preflight and guarded runner execution; no claim of full source review",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentMatchesFrozen": true,
+      "bytes": 233
+    }
+  ],
+  "excludedNonexistentGuesses": [
+    "packages/core/src/models",
+    "docs/audit-2026-10-17-round14/root-trace.md"
+  ],
+  "note": "Exact skipped guesses are metadata diagnostics only; no fabricated Git blob pin."
+}

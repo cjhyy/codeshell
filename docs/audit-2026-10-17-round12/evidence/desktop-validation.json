@@ -1,0 +1,125 @@
+{
+  "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "confirmedFindings": [
+    {
+      "id": "DESKTOP-R12-01",
+      "priority": "P3",
+      "title": "工具卡摘要截断拆开 Unicode 代理对",
+      "file": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "line": 13,
+      "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+      "evidenceLevel": "Actual production pure helper with valid Unicode input and real positive card limits; UI consumption source-only",
+      "trigger": "Valid supplementary Unicode character straddles max-1 UTF-16 boundary at existing 70/80/90 card limits",
+      "expected": "Truncated summaries remain well-formed Unicode text",
+      "actual": "Returned text contains a lone high surrogate; standard UTF-8 roundtrip yields U+FFFD",
+      "controls": "Short Unicode, complete emoji boundary, ASCII and BMP truncation",
+      "limitations": "No UI mount, Electron, actual tool execution or file open; raw arguments remain intact",
+      "relatedHistory": [
+        "CHD02: Chat attachment label implementation",
+        "HL-02: Host GitHub selection label implementation"
+      ],
+      "report": "docs/audit-2026-10-17-round12/desktop.md",
+      "fixture": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts",
+      "rawLog": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.log"
+    }
+  ],
+  "candidateIds": [
+    "DESKTOP-R12-C1"
+  ],
+  "relatedObservationsNotCounted": [
+    "DESKTOP-R12-R1"
+  ],
+  "runs": [
+    {
+      "name": "desktop-display-contracts",
+      "kind": "focused observations and controls",
+      "attempt": 1,
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts"
+      ],
+      "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+      "fixtures": [
+        {
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts",
+          "bytes": 4809,
+          "sha256": "32dbfd5f232bff93c5b794f88d968085e773b1eaddf534ecb5c522f89e32f098"
+        }
+      ],
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.log",
+      "rawLogSha256": "d77108a3dd1a57611c4729ee552aa8e141ea6f6d040442f9f403b2c4e1c0f611",
+      "exitFile": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.exit.txt",
+      "exitFileSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "exitCode": 0,
+      "tests": 9,
+      "expectCalls": 41,
+      "failures": 0,
+      "skipped": 0,
+      "guardedCompletionPresent": true,
+      "clean": true
+    },
+    {
+      "name": "desktop-existing-metadata",
+      "kind": "existing targeted pure metadata baseline",
+      "attempt": 1,
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "packages/desktop/src/renderer/tool-cards/utils.test.ts",
+        "packages/desktop/src/renderer/diff/reviewScope.test.ts"
+      ],
+      "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+      "fixtures": [
+        {
+          "path": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+          "bytes": 827,
+          "sha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271"
+        },
+        {
+          "path": "packages/desktop/src/renderer/tool-cards/utils.test.ts",
+          "bytes": 2574,
+          "sha256": "4bd4196d28d0d90058358d2f4dc9be94e843a6fb80fb9b0720dacd8407d62b5b"
+        },
+        {
+          "path": "packages/desktop/src/renderer/diff/reviewScope.test.ts",
+          "bytes": 2739,
+          "sha256": "4a3aa3f4038de8e2b14bfdcd61bc75671d3ae181bd46bf18a2440e9eac71031b"
+        }
+      ],
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.log",
+      "rawLogSha256": "35338aa219a51a1b42bdfea45878b472515510b888bc2a1c8eb4e8333b8782d8",
+      "exitFile": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.exit.txt",
+      "exitFileSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "exitCode": 0,
+      "tests": 23,
+      "expectCalls": 39,
+      "failures": 0,
+      "skipped": 0,
+      "guardedCompletionPresent": true,
+      "clean": true
+    }
+  ],
+  "totals": {
+    "cleanFirstShards": 2,
+    "tests": 32,
+    "expectCalls": 80,
+    "newFocusedTests": 9,
+    "baselineTests": 23,
+    "failures": 0,
+    "skipped": 0,
+    "failedShards": 0,
+    "retries": 0
+  },
+  "firstRunPolicy": "Each combined stdout/stderr log and exit file saved before inspection. Zero product failure/retry. Metadata-only errors and corrections disclosed in desktop-metadata-notes.md.",
+  "scope": "Actual production pure metadata helper functions and standard UTF-8 encoders only. No UI/Electron/native/PTY/Git product process/model/network business call/user data/auth/security/custody experiment. Official web sources read only for normal patch format. No shared dependency/dist build or broad lint/typecheck/suite claims.",
+  "sourceManifest": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+  "dedup": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+  "metadataNotes": "docs/audit-2026-10-17-round12/evidence/desktop-metadata-notes.md",
+  "externalSources": "docs/audit-2026-10-17-round12/evidence/desktop-external-sources.json"
+}

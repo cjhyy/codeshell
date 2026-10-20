@@ -1,0 +1,239 @@
+{
+  "capturedUTC": "2026-10-17T16:59:04.767731+00:00",
+  "inventory": "same frozen initial4693 docs/bugs files",
+  "cap": null,
+  "queryPatterns": {
+    "named-param-range": "(?:ParamControls|paramValues|temperature|top_p).{0,220}(?:bound|out.of.range|clamp|invalid|validat|越界|校验|超出|范围)|(?:bound|out.of.range|clamp|invalid|validat|越界|校验|超出|范围).{0,220}(?:ParamControls|paramValues|temperature|top_p)",
+    "numeric-form-range": "(?:number input|numeric (?:input|field|control)|数值(?:输入|控件|参数)|数字(?:输入|控件)).{0,180}(?:保存|save|valid|bound|范围|校验|越界)"
+  },
+  "totalMatches": {
+    "named-param-range": 22,
+    "numeric-form-range": 0
+  },
+  "contexts": {
+    "named-param-range": [
+      {
+        "document": "docs/architecture/03-llm-and-model-layer.md",
+        "locator": "paragraph/19",
+        "kind": "markdown-paragraph",
+        "excerpt": "ence is centralized in `buildRequestBody()` (`llm/providers/openai.ts:306`):\n- token limit field and output cap: `max_tokens` vs `max_completion_tokens`, plus `clampMaxTokens` against capability `maxOutputTokens` (`llm/providers/openai.ts:318`, `llm/providers/openai.ts:329`);\n- sampling: `temperature` is omitted when the capability rejects it, with precedence `default temperature < catalog extraBody < per-call override` (`llm/providers/openai.ts:338`, `llm/providers/openai.ts:449`);\n- reasoning: normalized `ReasoningSetting` becomes `thinking.type`, `reasoning_effort`, or OpenRouter `reasoning.{effort,...}` depending on capability (`llm/providers/openai.ts:356`);\n- gpt-5.5+ tool calls suppress `reasoning_effort` up front when `noEffortWithTools` is set, with a sticky self-correcting fallback if an unknown model returns the same 400 (`llm/providers/openai.ts:362`, `llm/providers/openai.ts:1046`);\n- catalog `extraBody` is filtered through `rejectedParams` and then deep-merged with sampling and reasoning so shared nested keys like `thinking` are not clobbered (`llm/pro",
+        "excerptStart": 52,
+        "excerptEnd": 1134,
+        "originalChars": 1189,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "paragraph/31",
+        "kind": "markdown-paragraph",
+        "excerpt": "> **进度(2026-06-23)**:优先级 1/2/3 + 全部中低优先级缺口均已补完,并顺手修了一个真 bug。\n> - P1:`validateSettings` 端到端 effort(commit 70b7db38)— TDD 验证退回闭合 enum 时恰好转红。\n> - P2:`reasoningFromParamValues` 未知 effort round-trip + 过 validateSettings(commit 2be894aa)。\n> - P3:`classifyLocalInstallError`(从 installLocalPluginForUi 抽纯函数)+ marketplace-service.test.ts(commit 0000c931)。\n> - InjectCredential 工具 11 例(commit 0e54d0d8);resolveSafePluginPath 9 例(commit bb0db988)。\n> - EditModelCatalog summarizeWrite 9 例 **+ 修真 bug**:saveCatalogEntry 缺父目录时崩 ENOENT,改 mkdirSync(commit 358efbb0)。\n> - 全量:core 1571 pass / 0 fail;core+desktop typecheck 均 0 error。",
+        "excerptStart": 0,
+        "excerptEnd": 615,
+        "originalChars": 615,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "paragraph/34",
+        "kind": "markdown-paragraph",
+        "excerpt": "**优先级 1(最高,直接重新武装已修的 boot-crash):**\n- `validateSettings` 端到端接受 effort —— 加在 `packages/core/src/settings/schema.test.ts`。\n  断言 `validateSettings({ providers:[{…, reasoning:{mode:\"effort\",effort:\"xhigh\"} }] })` 以及一个**未知**档(如 `\"max\"`)**都不抛**。\n  当前 `reasoning-setting.test.ts` 只证叶子 schema,没覆盖真正崩过的 `validateSettings` 集成路径。\n  崩溃路径:`paramValues.reasoning`(schema.ts:314 `z.unknown()`)→ `reasoningFromParamValues()`(`engine/model-connections-pool.ts`)→ `providers[].reasoning`(schema.ts:150)/`models[].reasoning`(:195)→ `validateSettings()`(schema.ts:739)boot 时抛。",
+        "excerptStart": 0,
+        "excerptEnd": 556,
+        "originalChars": 556,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "paragraph/35",
+        "kind": "markdown-paragraph",
+        "excerpt": "**优先级 2:**\n- `paramValues.reasoning` 把未知 effort round-trip 成 ReasoningSetting 不抛 —— 加在 `packages/core/src/engine/model-connections-pool.test.ts`。\n  断言 `reasoningFromParamValues({reasoning:\"max\"})` → `{mode:\"effort\",effort:\"max\"}`,且携带它的连接能过 `validateSettings`。",
+        "excerptStart": 0,
+        "excerptEnd": 259,
+        "originalChars": 259,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "locator": "/60/reason",
+        "kind": "json-recursive-value",
+        "excerpt": "ng 'claude-opus', but the settings schema (schema.ts lines 47-56) enforces that model is always an object with properties like provider, name, apiKey, baseUrl, temperature, maxTokens. Schema validation via SettingsManager prevents scalar values at the model key. The overwrite behavior (line 64) is real but cannot occur with valid settings because the schema would have coerced or rejected scalar model values before this code executes. The tool's documented behavior is \"creates nested objects as needed\", making this the intended design for nested key writes.",
+        "excerptStart": 70,
+        "excerptEnd": 632,
+        "originalChars": 632,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round27/evidence/root-frontier-dedup.json",
+        "locator": "/contexts/memoize/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "ence is centralized in `buildRequestBody()` (`llm/providers/openai.ts:306`):\n- token limit field and output cap: `max_tokens` vs `max_completion_tokens`, plus `clampMaxTokens` against capability `maxOutputTokens` (`llm/providers/openai.ts:318`, `llm/providers/openai.ts:329`);\n- sampling: `temperature` is omitted whe",
+        "excerptStart": 320,
+        "excerptEnd": 637,
+        "originalChars": 637,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round34/evidence/root-history.json",
+        "locator": "/hits/helper-contract/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "ence is centralized in `buildRequestBody()` (`llm/providers/openai.ts:306`):\n- token limit field and output cap: `max_tokens` vs `max_completion_tokens`, plus `clampMaxTokens` against capability `maxOutputTokens` (`llm/providers/openai.ts:318`, `llm/providers/openai.ts:329`);\n- sampling: `temperature` is omitted when the capability rejects it, with precedence `default temperature < catalog extraBody < per-call override` (`l",
+        "excerptStart": 300,
+        "excerptEnd": 727,
+        "originalChars": 727,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-contexts.json",
+        "locator": "/hits/unquoted_marketplace_local/3/context",
+        "kind": "json-recursive-value",
+        "excerpt": "通道代理给 mobile/remote 面,即成 RCE —— 务必保持 renderer-only。**\n\n---\n\n## 3. ✅ 测试补全(2026-06-23 全部完成)\n\n> **进度(2026-06-23)**:优先级 1/2/3 + 全部中低优先级缺口均已补完,并顺手修了一个真 bug。\n> - P1:`validateSettings` 端到端 effort(commit 70b7db38)— TDD 验证退回闭合 enum 时恰好转红。\n> - P2:`reasoningFromParamValues` 未知 effort round-trip + 过 validateSettings(commit 2be894aa)。\n> - P3:`classifyLocalInstallError`(从 installLocalPluginForUi 抽纯函数)+ marketplace-service.test.ts(commit 0000c931)。\n> - InjectCredential 工具 11 例(commit 0e54d0d8);resolveSafePluginPath 9 例(commit bb0db988)。\n> - EditModelCatalog summarizeWrite 9 例 **+ 修真 bug**:saveCatalogEntry 缺父目录时崩 ENOENT,改 mkdirSync(commit 358efbb0)。\n> - 全量:core 1571 pass / 0 fail;core+desktop typecheck 均 0 error。\n\n<details><summary>原始缺口清单(留档)</summary>\n\n> 你最担心的两个手修 bug(cookie nonce spoof 9eaefd86、wrong-dir delete 71cf2798)**都已带回归测试,无需补**。plugin-MCP override 层覆盖堪称范本。真正缺口在下面。\n\n**优先级 1(最高,直接重新武装已修的 boot-crash):**\n- `validateSettings` 端到端接受 effort —— 加在 `packages/core",
+        "excerptStart": 10,
+        "excerptEnd": 972,
+        "originalChars": 1113,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-contexts.json",
+        "locator": "/hits/unquoted_marketplace_local/4/context",
+        "kind": "json-recursive-value",
+        "excerpt": "`validateSettings()`(schema.ts:739)boot 时抛。\n\n**优先级 2:**\n- `paramValues.reasoning` 把未知 effort round-trip 成 ReasoningSetting 不抛 —— 加在 `packages/core/src/engine/model-connections-pool.test.ts`。\n  断言 `reasoningFromParamValues({reasoning:\"max\"})` → `{mode:\"effort\",effort:\"max\"}`,且携带它的连接能过 `validateSettings`。\n\n**优先级 3(护你未提交的 overwrite UI 流):**\n- `installLocalPluginForUi` 把 already-installed 错误映射成 `{ok:false, alreadyInstalled:true, name}` —— **新建** `packages/desktop/src/main/marketplace-service.test.ts`(该文件目前零测试)。\n  断言正则从 `plugin '<name>' already installed` 提取权威插件名、返回 `alreadyInstalled:true`;无关错误返回 humanized `{ok:false,error}`。\n  风险:core 一旦改这句错误文案,脆弱正则会让 overwrite 流静默失效。\n\n**优先级中低(可发后补):**\n- InjectCredential 工具(`packages/core/src/credentials/inject-credential-tool.ts`)**零测试**:补「审批门控 / 拒非 cookie 凭证 / headless 无回调报错 / 无 cookie 凭证时 `isInjectCredentialAvailable` 隐藏」。现仅经 `use-gate.test.ts` 间接覆盖。\n- EditModelCatalog 工具(`to",
+        "excerptStart": 0,
+        "excerptEnd": 921,
+        "originalChars": 1184,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/supplement.json",
+        "locator": "/hits/unquoted_marketplace_local/3/context",
+        "kind": "json-recursive-value",
+        "excerpt": "derer-only。**\n\n---\n\n## 3. ✅ 测试补全(2026-06-23 全部完成)\n\n> **进度(2026-06-23)**:优先级 1/2/3 + 全部中低优先级缺口均已补完,并顺手修了一个真 bug。\n> - P1:`validateSettings` 端到端 effort(commit 70b7db38)— TDD 验证退回闭合 enum 时恰好转红。\n> - P2:`reasoningFromParamValues` 未知 effort round-trip + 过 validateSettings(commit 2be894aa)。\n> - P3:`classifyLocalInstallError`(从 installLocalPluginForUi 抽纯函数)+ marketplace-service.test.ts(commit 0000c931)。\n> - InjectCredential 工具 11 例(commit 0e54d0d8);resolveSafePluginPath 9 例(commit bb0db988)。\n> - EditModelCatalog summarizeWrite 9 例 **+ 修真 bug**:saveCatalogEntry 缺父目录时崩 ENOENT,改 mkdirSync(commit 358efbb0)。\n> - 全量:core 1571 pass / 0 fail;core+desktop typecheck 均 0 error。\n\n<details><summary>原始缺口清单(留档)</summary>\n\n> 你最担心的两个手修 bug(cookie nonce spoof 9eaefd86、wrong-dir delete 71cf2798)**都已带回归测试,无需补**。plugin-MCP override 层覆盖堪称范本。真正缺口在下面。\n\n**优先级 1(最高,直接重新武装已修的 boot-crash):**\n- `validateSettings` 端到端接受 effort —— 加在 `packages/core",
+        "excerptStart": 0,
+        "excerptEnd": 922,
+        "originalChars": 1063,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/supplement.json",
+        "locator": "/hits/unquoted_marketplace_local/4/context",
+        "kind": "json-recursive-value",
+        "excerpt": " 2:**\n- `paramValues.reasoning` 把未知 effort round-trip 成 ReasoningSetting 不抛 —— 加在 `packages/core/src/engine/model-connections-pool.test.ts`。\n  断言 `reasoningFromParamValues({reasoning:\"max\"})` → `{mode:\"effort\",effort:\"max\"}`,且携带它的连接能过 `validateSettings`。\n\n**优先级 3(护你未提交的 overwrite UI 流):**\n- `installLocalPluginForUi` 把 already-installed 错误映射成 `{ok:false, alreadyInstalled:true, name}` —— **新建** `packages/desktop/src/main/marketplace-service.test.ts`(该文件目前零测试)。\n  断言正则从 `plugin '<name>' already installed` 提取权威插件名、返回 `alreadyInstalled:true`;无关错误返回 humanized `{ok:false,error}`。\n  风险:core 一旦改这句错误文案,脆弱正则会让 overwrite 流静默失效。\n\n**优先级中低(可发后补):**\n- InjectCredential 工具(`packages/core/src/credentials/inject-credential-tool.ts`)**零测试**:补「审批门控 / 拒非 cookie 凭证 / headless 无回调报错 / 无 cookie 凭证时 `isInjectCredentialAvailable` 隐藏」。现仅经 `use-gate.test.ts` 间接覆盖。\n- EditModelCatalog 工具(`tool-system/builtin/edit-model-catalog.ts`)**零测试**(catalog 库本身覆盖良好):补**未提交",
+        "excerptStart": 0,
+        "excerptEnd": 943,
+        "originalChars": 1134,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/root-history.json",
+        "locator": "/hits/local-route/3/context",
+        "kind": "json-recursive-value",
+        "excerpt": "端 effort(commit 70b7db38)— TDD 验证退回闭合 enum 时恰好转红。\n> - P2:`reasoningFromParamValues` 未知 effort round-trip + 过 validateSettings(commit 2be894aa)。\n> - P3:`classifyLocalInstallError`(从 installLocalPluginForUi 抽纯函数)+ marketplace-service.test.ts(commit 0000c931)。\n> - InjectCredential 工具 11 例(commit 0e54d0d8);resolveSafePluginPath 9 例(commit bb0db988)。\n> - EditModelCatalog summarizeWrite 9 例 **+ 修真 bug**:saveCatalogEntry 缺父目录时崩 ENOENT,改 mkdirSync(commit 358efbb0)。\n> - 全量:core 1571 pass / 0 fail;core+desktop typecheck 均 0 error。\n\n<details><summary>原始缺口清单(留档)</summary>\n\n> 你最担心的两个手修 bug(cookie nonce spoof 9eaefd86、wrong-dir delete 71cf2798)**都已带回归测试,无需补**。plugin-MCP override 层覆盖堪称范本。真正缺口在下面。\n\n**优先级 1(最高,直接重新武装已修的 boot-crash):**\n- `validateSettings` 端到端接受 effort —— 加在 `packages/core/",
+        "excerptStart": 0,
+        "excerptEnd": 783,
+        "originalChars": 783,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/root-history.json",
+        "locator": "/hits/local-route/4/context",
+        "kind": "json-recursive-value",
+        "excerpt": "\n  断言 `reasoningFromParamValues({reasoning:\"max\"})` → `{mode:\"effort\",effort:\"max\"}`,且携带它的连接能过 `validateSettings`。\n\n**优先级 3(护你未提交的 overwrite UI 流):**\n- `installLocalPluginForUi` 把 already-installed 错误映射成 `{ok:false, alreadyInstalled:true, name}` —— **新建** `packages/desktop/src/main/marketplace-service.test.ts`(该文件目前零测试)。\n  断言正则从 `plugin '<name>' already installed` 提取权威插件名、返回 `alreadyInstalled:true`;无关错误返回 humanized `{ok:false,error}`。\n  风险:core 一旦改这句错误文案,脆弱正则会让 overwrite 流静默失效。\n\n**优先级中低(可发后补):**\n- InjectCredential 工具(`packages/core/src/credentials/inject-credential-tool.ts`)**零测试**:补「审批门控 / 拒非 cookie 凭证 / headless 无回调报错 / 无 cookie 凭证时 `isInjectCredentialAvailable` 隐藏」。现仅经 `use-gate.test.ts` 间接覆盖。\n- EditModelCatalog 工具(`tool-system/builtin/edit-model-catalog.ts`)**零测试**(catalog 库本身覆盖良好):补**未提交",
+        "excerptStart": 0,
+        "excerptEnd": 803,
+        "originalChars": 854,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round46/evidence/panel-frontier/history-contexts.json",
+        "locator": "/hits/settings_contract/4/context",
+        "kind": "json-recursive-value",
+        "excerpt": "# 4. Engine 模块\n\nEngine 模块在 `src/engine/**`，是 core 的最高层编排。\n\n### 4.1 `engine.ts`\n\n`engine.ts` 定义：\n\n- `EngineConfig`\n- `EngineResult`\n- `Engine`\n\n`EngineConfig` 覆盖范围很广：\n\n- LLM config：provider、model、apiKey、baseUrl、temperature、maxTokens 等。\n- cwd / maxTurns / headless / permissionMode。\n- builtin tools enable/disable。\n- custom tools。\n- approvalBacken",
+        "excerptStart": 722,
+        "excerptEnd": 1067,
+        "originalChars": 1067,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-excerpts.json",
+        "locator": "/snapshots/4/text",
+        "kind": "json-recursive-value",
+        "excerpt": "long\n    // outputs — a streamed tool-arg JSON cut off mid-token → \"Missing file_path\".\n    this.maxTokens = config.maxTokens;\n    this.temperature = defaults?.temperature ?? 0.3;\n    this.timeout = defaults?.timeout ?? 120_000;\n    this.retryMaxAttempts = defaults?.retryMaxAttempts ?? 3;\n    this.imageDetail = defaults?.imageDetail;\n    this.fetch = usageTrackingFetch(\n      requestBoundaryFetch(\n        modelTraceFetch(defaults?.fetch ?? globalThis.fetch),\n        currentUsageAttempt,\n        markCurrentUsageAttemptNotSent,\n      ),",
+        "excerptStart": 1540,
+        "excerptEnd": 2080,
+        "originalChars": 2080,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/cost-context-review/source-excerpts.json",
+        "locator": "/files/1/displayedText/0/text",
+        "kind": "json-recursive-value",
+        "excerpt": "long\n    // outputs — a streamed tool-arg JSON cut off mid-token → \"Missing file_path\".\n    this.maxTokens = config.maxTokens;\n    this.temperature = defaults?.temperature ?? 0.3;\n    this.timeout = defaults?.timeout ?? 120_000;\n    this.retryMaxAttempts = defaults?.retryMaxAttempts ?? 3;\n    this.imageDetail = defaults?.imageDetail;\n    this.fetch = usageTrackingFetch(\n      requestBoundaryFetch(\n        modelTraceFetch(defaults?.fetch ?? globalThis.fetch),\n        currentUsageAttempt,\n        markCurrentUsageAttemptNotSent,\n      ),\n    );\n    this.initClient();\n    this.enableUsageAccounting();\n  }\n\n  protected abstract initClient(): void;\n\n  abstract createMessage(options: CreateMessageOptions): Promise<LLMResponse>;\n\n  /** Also supports directly constructed SDK clients; the factory rechecks class fields. */\n  enableUsageAccounting(): void {\n    const original = this.createMessage;\n    if (typeof original !== \"function\" || accountingWrappers.has(original)) return;\n    const wrapped = (options: CreateMessageOptions) =>\n      withModelTrace(\n        {\n          provider: t",
+        "excerptStart": 426,
+        "excerptEnd": 1517,
+        "originalChars": 3836,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+        "locator": "/hits/display_contract/2/context",
+        "kind": "json-recursive-value",
+        "excerpt": "# 4. Engine 模块\n\nEngine 模块在 `src/engine/**`，是 core 的最高层编排。\n\n### 4.1 `engine.ts`\n\n`engine.ts` 定义：\n\n- `EngineConfig`\n- `EngineResult`\n- `Engine`\n\n`EngineConfig` 覆盖范围很广：\n\n- LLM config：provider、model、apiKey、baseUrl、temperature、maxTokens 等。\n- cwd / maxTurns / headless / permissionMode。\n- builtin tools enable/disable。\n- custom tools。\n- approvalBackend / askUser。\n- hooks。\n- mcpServers。\n- sandbox。\n- runtim",
+        "excerptStart": 663,
+        "excerptEnd": 1063,
+        "originalChars": 1063,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+        "locator": "/hits/display_contract/82/context",
+        "kind": "json-recursive-value",
+        "excerpt": "# 4. Engine 模块\n\nEngine 模块在 `src/engine/**`，是 core 的最高层编排。\n\n### 4.1 `engine.ts`\n\n`engine.ts` 定义：\n\n- `EngineConfig`\n- `EngineResult`\n- `Engine`\n\n`EngineConfig` 覆盖范围很广：\n\n- LLM config：provider、model、apiKey、baseUrl、temperature、maxTokens 等。\n- cwd / maxTurns / headless / permissionMode。\n- builtin tools enable/disable。\n- custom tools。\n- approvalBacken",
+        "excerptStart": 663,
+        "excerptEnd": 1008,
+        "originalChars": 1008,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/cost-review/history-contexts.json",
+        "locator": "/oldCause/19/context",
+        "kind": "json-recursive-value",
+        "excerpt": "# 4. Engine 模块\n\nEngine 模块在 `src/engine/**`，是 core 的最高层编排。\n\n### 4.1 `engine.ts`\n\n`engine.ts` 定义：\n\n- `EngineConfig`\n- `EngineResult`\n- `Engine`\n\n`EngineConfig` 覆盖范围很广：\n\n- LLM config：provider、model、apiKey、baseUrl、temperature、maxTokens 等。\n- cwd / maxTurns / headless / permissionMode。\n- builtin tools e",
+        "excerptStart": 1107,
+        "excerptEnd": 1405,
+        "originalChars": 1405,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/title-gate/history-contexts.json",
+        "locator": "/oldCause/5/context",
+        "kind": "json-recursive-value",
+        "excerpt": "# 4. Engine 模块\n\nEngine 模块在 `src/engine/**`，是 core 的最高层编排。\n\n### 4.1 `engine.ts`\n\n`engine.ts` 定义：\n\n- `EngineConfig`\n- `EngineResult`\n- `Engine`\n\n`EngineConfig` 覆盖范围很广：\n\n- LLM config：provider、model、apiKey、baseUrl、temperature、maxTokens 等。\n- cwd / maxTurns / headless / permissionMode。\n- builtin tools enable/disable。\n- custom tools。\n- approvalBackend / askUser。\n- hooks。\n- mcpServers。\n- sandbox。\n- runtime。\n- settingsScope。\n- preset。\n\n`Engine` 构造函数主要做长期资源初始化：\n\n- 创建或复用 `EngineRuntime`。\n- 创建 `ToolRegistry`。\n- 注册 custom tools。\n- 创建 `HookRegistry`。\n- 加载 plugin hooks。\n- 注册 settings hooks。\n- 注册 config hooks",
+        "excerptStart": 813,
+        "excerptEnd": 1413,
+        "originalChars": 1413,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md",
+        "locator": "paragraph/60",
+        "kind": "markdown-paragraph",
+        "excerpt": ":一次性生成内置 catalog vs 运行时把 rules 投影合进 catalog。\n2. **wire 映射的复杂度边界**:最小版只需 `field`;Anthropic 嵌套字段(`thinking.budget_tokens`)、二选一互斥(effort vs budget)等复杂映射做到哪。\n3. **`paramValues` 的校验**:实例存的值是否对照 `params` 校验(枚举越界/范围),还是宽松透传。\n4. **文本 UI 分支与 connUi 的复用边界**:文本卡片多大程度共用 `connUi`。\n",
+        "excerptStart": 20,
+        "excerptEnd": 289,
+        "originalChars": 289,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/superpowers/specs/2026-06-22-remove-legacy-model-storage-design.md",
+        "locator": "paragraph/14",
+        "kind": "markdown-paragraph",
+        "excerpt": "**不在本次范围**:\n- 通用 param `wire` 映射(目前只有 reasoning 接线,其余 paramValues 不下发 —— 独立工作)\n- builtin catalog 用 rules.ts 数据填充\n- AI 辅助生成 catalog 的 skill",
+        "excerptStart": 0,
+        "excerptEnd": 138,
+        "originalChars": 138,
+        "excerptTruncated": false
+      }
+    ],
+    "numeric-form-range": []
+  },
+  "actualHumanRead": "pending; bounded excerpt actual reading tracked separately"
+}

@@ -105,6 +105,8 @@ export type { InputAttachmentKind, InputAttachmentOrigin, InputAttachmentMeta } 
 
 /** Start an agent run with a user task. */
 export interface RunParams {
+  /** Diagnostic origin label only; Hosts author this independently of Panel JSON. */
+  modelTraceSource?: string;
   sessionId: string; // required, client-minted
   task: string;
   /** Renderer/mobile project hint. Desktop Main resolves it to authoritative roots. */

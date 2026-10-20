@@ -1,0 +1,227 @@
+{
+  "atUTC": "2026-10-17T19:59:10.750889+00:00",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "beforeSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "unchanged": true
+    },
+    {
+      "path": "scripts/verify-release-versions.ts",
+      "beforeSha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "endingSha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "bytes": 6500,
+      "unchanged": true
+    },
+    {
+      "path": "package.json",
+      "beforeSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "endingSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "bytes": 7063,
+      "unchanged": true
+    },
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "beforeSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "endingSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "bytes": 9020,
+      "unchanged": true
+    },
+    {
+      "path": "scripts/release.ts",
+      "beforeSha256": "c2cc6e0ea1b1ac6997825c779eeaae6747ea3d96e5d5bea8f1ff7f10ee345ec7",
+      "endingSha256": "c2cc6e0ea1b1ac6997825c779eeaae6747ea3d96e5d5bea8f1ff7f10ee345ec7",
+      "bytes": 9343,
+      "unchanged": true
+    },
+    {
+      "path": "scripts/publish-release-packages.ts",
+      "beforeSha256": "640ce2719b67f9ee63b1c7febe3a751af6144025e8838b47a7d7d5c658d1d9e9",
+      "endingSha256": "640ce2719b67f9ee63b1c7febe3a751af6144025e8838b47a7d7d5c658d1d9e9",
+      "bytes": 16487,
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "beforeSha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "endingSha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "bytes": 15885,
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/release-recovery.yml",
+      "beforeSha256": "000e878c0954d42fc1f541b9c06c9a682682777f8ea85ccb5bd21b00cbdedac6",
+      "endingSha256": "000e878c0954d42fc1f541b9c06c9a682682777f8ea85ccb5bd21b00cbdedac6",
+      "bytes": 4915,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "beforeSha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+      "endingSha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+      "bytes": 27608,
+      "unchanged": true
+    },
+    {
+      "path": "bun.lock",
+      "beforeSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "endingSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "bytes": 339166,
+      "unchanged": true
+    },
+    {
+      "path": "tests/package-boundaries.test.ts",
+      "beforeSha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "endingSha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "bytes": 14692,
+      "unchanged": true
+    },
+    {
+      "path": "packages/arena/package.json",
+      "beforeSha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "endingSha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+      "bytes": 1188,
+      "unchanged": true
+    },
+    {
+      "path": "packages/browser-devtools/package.json",
+      "beforeSha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "endingSha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+      "bytes": 910,
+      "unchanged": true
+    },
+    {
+      "path": "packages/cdp/package.json",
+      "beforeSha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "endingSha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+      "bytes": 1146,
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/package.json",
+      "beforeSha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "endingSha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "bytes": 2936,
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/package.json",
+      "beforeSha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "endingSha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "bytes": 1906,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "beforeSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "endingSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "bytes": 3452,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/package.json",
+      "beforeSha256": "a5d1d02d3534c1a5d54e7d5de6b26214af4e41287d96406eebe28cb4ff7e0fe9",
+      "endingSha256": "a5d1d02d3534c1a5d54e7d5de6b26214af4e41287d96406eebe28cb4ff7e0fe9",
+      "bytes": 13339,
+      "unchanged": true
+    },
+    {
+      "path": "packages/host/package.json",
+      "beforeSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "endingSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "bytes": 923,
+      "unchanged": true
+    },
+    {
+      "path": "packages/link/package.json",
+      "beforeSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "endingSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "bytes": 951,
+      "unchanged": true
+    },
+    {
+      "path": "packages/optimization-lab/package.json",
+      "beforeSha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "endingSha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+      "bytes": 927,
+      "unchanged": true
+    },
+    {
+      "path": "packages/pet/package.json",
+      "beforeSha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+      "endingSha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+      "bytes": 1572,
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/package.json",
+      "beforeSha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "endingSha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+      "bytes": 2789,
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/package.json",
+      "beforeSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "endingSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "bytes": 2110,
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/package.json",
+      "beforeSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "endingSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "bytes": 3638,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "beforeSha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf",
+      "endingSha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf",
+      "bytes": 27024,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/root-package.md",
+      "beforeSha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "endingSha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "bytes": 2847,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/findings.json",
+      "beforeSha256": "6a4cf415ee6c3a4fb5c7fae5d97445838bd668fcbe6060a1c4656c51f5cd96b2",
+      "endingSha256": "6a4cf415ee6c3a4fb5c7fae5d97445838bd668fcbe6060a1c4656c51f5cd96b2",
+      "bytes": 12610,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "beforeSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "endingSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "bytes": 14642,
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round153-release-audit-config/history-batch.json",
+      "beforeSha256": "be3ff0ec8e4a82e7e8b72b8a678bda0caeff940e42bb3bebfc2178e1b3d35b56",
+      "endingSha256": "be3ff0ec8e4a82e7e8b72b8a678bda0caeff940e42bb3bebfc2178e1b3d35b56",
+      "bytes": 1345579,
+      "unchanged": true
+    }
+  ],
+  "sourceInstructionChecks": 26,
+  "boundedCanonicalAndSharedMetadataChecks": 5,
+  "allUnchanged": true,
+  "historyLimitation": "Rehashed shared batch and personally read bounded canonical inputs only; not a fresh rehash/rescan of all 6126 historical documents.",
+  "gitOrFrozenBlobVerificationExecuted": false
+}

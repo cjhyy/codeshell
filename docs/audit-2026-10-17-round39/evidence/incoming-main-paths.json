@@ -1,0 +1,16 @@
+{
+  "baseline": "42683054b1eea00d76e3ed18817766be3047c110",
+  "main": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+  "paths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/core/src/engine/engine.turn-diff.test.ts",
+    "packages/core/src/runtime/background-shell.ts",
+    "packages/core/src/runtime/background-shell.utf8-frontier.test.ts",
+    "packages/core/src/session/turn-diff.bom.test.ts",
+    "packages/core/src/session/turn-diff.test.ts",
+    "packages/desktop/scripts/e2e-review-draft-operations.mjs",
+    "packages/desktop/scripts/review-draft-response-gate.test.mjs"
+  ],
+  "productRuns": 0
+}

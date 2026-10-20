@@ -1,0 +1,45 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/report.md",
+      "bytes": 3940,
+      "sha256": "99f4356ec1ad48f9671c9dcfbdb9651bfdf40aecbbe73613dc696dd6ab9a41cb",
+      "lines": 23,
+      "pinnedUTC": "2026-10-17T17:40:37.919744+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/summary.json",
+      "bytes": 4928,
+      "sha256": "8ee2c70b131469c29f074e413bca14032264b317bf5dcdb202cd9825aa42e000",
+      "lines": 132,
+      "pinnedUTC": "2026-10-17T17:40:37.922119+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/README.md",
+      "bytes": 3797,
+      "sha256": "a1a3f9c88b4f7b238d85c170b47da4e284085801920321a466438e631e337f24",
+      "lines": 22,
+      "pinnedUTC": "2026-10-17T17:40:37.923183+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/README.md",
+      "bytes": 4197,
+      "sha256": "cb3a2f310abda3f82b77387ea80aa9a30eed5facaa3ab052eb6529e340697fe4",
+      "lines": 17,
+      "pinnedUTC": "2026-10-17T17:40:37.924430+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/README.md",
+      "bytes": 2740,
+      "sha256": "6aad67b1e5180a91aa8cfbdb659413e6fa86d15fc2347f51f910402ac63826cb",
+      "lines": 13,
+      "pinnedUTC": "2026-10-17T17:40:37.925241+00:00",
+      "coverage": "metadata bytes before selected/full documentation read; not product source"
+    }
+  ]
+}

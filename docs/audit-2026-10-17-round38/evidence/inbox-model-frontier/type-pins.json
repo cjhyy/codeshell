@@ -1,0 +1,13 @@
+{
+  "capturedUTC": "2026-10-17T13:10:00.120228+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/main/task-inbox/task-inbox-types.ts",
+      "bytes": 9095,
+      "lineCount": 268,
+      "sha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "initialSemanticReadSha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "timing": "before content read; import path/filename-only inventory preceded pin"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "lines": 344,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "pinnedBeforeBodyUTC": "2026-10-17T17:53:25.580752+00:00"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "bytes": 13137,
+      "lines": 314,
+      "sha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "pinnedBeforeBodyUTC": "2026-10-17T17:53:25.582618+00:00"
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.test.ts",
+      "bytes": 3781,
+      "lines": 111,
+      "sha256": "ef51ee33912b0d347ea7fdead6731bc417a9205061086c1bf1d98cd86665a1e4",
+      "pinnedBeforeBodyUTC": "2026-10-17T17:53:25.583105+00:00"
+    }
+  ]
+}

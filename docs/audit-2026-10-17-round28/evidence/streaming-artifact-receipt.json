@@ -1,0 +1,74 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "report": "docs/audit-2026-10-17-round28/streaming-report.md",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-author-checks.json",
+      "bytes": 2918,
+      "sha256": "3380970c4320649f33e648b85c6d05dd88e1d23f78e63d459dba8973daabc6cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-dedup.json",
+      "bytes": 598824,
+      "sha256": "b3d271365b3e4b5960aebe068c2304a9d96b9fa9907499a70b7358fde52ec414"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-dedup.py",
+      "bytes": 3612,
+      "sha256": "40b98ed575751086c7edab4c7691224d5acf412b6dce7f949c7999b77940be32"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-findings.json",
+      "bytes": 5131,
+      "sha256": "61a1b2a54da3db559a77ad707215774c5c73c3ed349679607290fb324123797d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-history-decisions.json",
+      "bytes": 2349,
+      "sha256": "cccd8fa354200c606f3d119c452f55dd09f41469f77d12ab0b3761d39f3dcd81"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-initial-source-pins.json",
+      "bytes": 4295,
+      "sha256": "e4d33cb6c6705b61cffff2224832056bdc043ac82f6175f3a03003fdbaf5f546"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-metadata-notes.json",
+      "bytes": 881,
+      "sha256": "e19191a1745440aa059e4b505ae637097af159b292476858111bd91ccd814975"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-source-manifest.json",
+      "bytes": 10912,
+      "sha256": "e215126d8d5a159a0447ec07b131f0f9c12c2bb33576c2ebc4b64ba1e7e521a7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/streaming-validation.json",
+      "bytes": 1009,
+      "sha256": "596daf45c448991ce1f449e14d5875aa5e196751228a48d90970cea254bb229e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/streaming-report.md",
+      "bytes": 6622,
+      "sha256": "9b58f8e86a18e917a3a8c01124ff1bd5216ef3af61f8b556d4cf184f4b3ae643"
+    }
+  ],
+  "artifactCount": 12,
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "gitWrites": 0,
+  "receiptSelfExcluded": true
+}

@@ -1,0 +1,18 @@
+{
+  "formal": [],
+  "candidates": [],
+  "related": [],
+  "counterevidence": [
+    "Structured preview retains parts per original text slot; header/footer go into first/last text parts rather than collapsing media positions.",
+    "replaceToolResultText preserves nontext references and spreads text blocks; ambiguous legacy scalar for multiple slots returns original rather than guessing positions.",
+    "Apply persistence pass spreads tool_result and affected messages, retains other fields; unchanged and cleared-result branches avoid unnecessary rollback.",
+    "Cold projection validates version/hash/part count and joined replacement; ordinary cached same-id replay has exact replacement map semantics. No actual FS restart or corrupt-file claim."
+  ],
+  "exclusions": [
+    "CTX-1 prefix pair snipping and CTX-2 structured summary omission",
+    "R21 source concern/structured separator floor and May30 magic200 already recorded",
+    "R4 image-number drift old archive cause",
+    "Arbitrary repeated-id changed-content or sentinel-looking DTO without actual normal producer not promoted",
+    "Filesystem/custody/path/atomic-write fault tests not executed, even though adjacent implementation displayed"
+  ]
+}

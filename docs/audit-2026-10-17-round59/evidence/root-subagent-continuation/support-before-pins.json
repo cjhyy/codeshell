@@ -1,0 +1,65 @@
+[
+  {
+    "path": "packages/core/src/session/session-manager.ts",
+    "bytes": 109429,
+    "lines": 2841,
+    "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+    "beforeNavigationUTC": "2026-10-17T19:43:53.789777+00:00"
+  },
+  {
+    "path": "packages/core/src/engine/run-types.ts",
+    "bytes": 12029,
+    "lines": 262,
+    "sha256": "b1daf9f5b1753091e4cb1fc324c50a56c3171dd1fb3909d65473f8ff594ac73e",
+    "beforeNavigationUTC": "2026-10-17T19:43:53.790957+00:00"
+  },
+  {
+    "path": "packages/core/src/tool-system/context.ts",
+    "bytes": 29617,
+    "lines": 624,
+    "sha256": "1bfff3d434f876089460f61336ff160d31a0eda6483b604cf874b331fb6e3b03",
+    "beforeNavigationUTC": "2026-10-17T19:43:53.791519+00:00"
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/agent.ts",
+    "bytes": 62377,
+    "lines": 1571,
+    "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+    "beforeNavigationUTC": "2026-10-17T19:43:53.792256+00:00"
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+    "bytes": 15679,
+    "lines": 445,
+    "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+    "beforeNavigationUTC": "2026-10-17T19:43:53.792663+00:00"
+  },
+  {
+    "path": "packages/core/src/engine/run-session-open.ts",
+    "bytes": 11804,
+    "lines": 292,
+    "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+    "beforeNavigationUTC": "2026-10-17T19:43:53.793094+00:00"
+  },
+  {
+    "path": "packages/core/src/engine/subagent-spawner.ts",
+    "bytes": 16481,
+    "lines": 441,
+    "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+    "beforeNavigationUTC": "2026-10-17T19:43:53.793674+00:00"
+  },
+  {
+    "path": "packages/core/src/engine/engine.ts",
+    "bytes": 210666,
+    "lines": 5082,
+    "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+    "beforeNavigationUTC": "2026-10-17T19:43:53.794273+00:00"
+  },
+  {
+    "path": "packages/core/src/types.ts",
+    "bytes": 51788,
+    "lines": 1333,
+    "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+    "beforeNavigationUTC": "2026-10-17T19:43:53.794849+00:00"
+  }
+]

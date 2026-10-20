@@ -1,0 +1,19 @@
+{
+  "capturedUTC": "2026-10-17T15:22:52.138656+00:00",
+  "initial": 3979,
+  "ending": 3979,
+  "added": [],
+  "removed": [],
+  "changed": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "initialSha256": "f654cd5e3acdacf39eb2156514322d048d5ea1d548daad46fd9504060d7f470e",
+      "endingSha256": "1ae146ac477f14887a403e670128521c15ee47b23e7f97ab1148c7fcca0a05f3",
+      "initialBytes": 212262,
+      "endingBytes": 219241
+    }
+  ],
+  "allUnchanged": false,
+  "scope": "Original3979 inventory preserved. Refresh required after Root-reported0b1749 main context. Only byte metadata, no changed release prose read; mutable44/future45–52 stay excluded.",
+  "firstCheck": "history-finish-check.first.json"
+}

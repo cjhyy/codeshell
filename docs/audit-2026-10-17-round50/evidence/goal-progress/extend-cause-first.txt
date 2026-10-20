@@ -1,0 +1,1 @@
+{"atUTC": "2026-10-17T17:00:21.101219+00:00", "parentInventory": "history.json", "filesCheckedSameBytes": 4693, "pattern": "GoalProgressView|goal\\.extend\\.failed|setClicked\\(|再续.{0,40}(?:失败|提前|成功)|(?:延长|续跑).{0,40}(?:失败|成功)", "count": 30, "retained": 30, "cap": 100, "errors": [], "productRuns": 0}

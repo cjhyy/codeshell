@@ -1,0 +1,54 @@
+{
+  "createdAt": "2026-10-17T18:20:27.521979+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "lines": 41807
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/status-transitions.json",
+      "bytes": 54654,
+      "sha256": "96105e210c3c48dbc209edc6e4e9e26c239bcd1bb98db90a158988403c679ed5",
+      "lines": 1460
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/summary.json",
+      "bytes": 4928,
+      "sha256": "8ee2c70b131469c29f074e413bca14032264b317bf5dcdb202cd9825aa42e000",
+      "lines": 132
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/current-source-delta.json",
+      "bytes": 484,
+      "sha256": "e41a9ab67e90bec4a165c8d8533cce3724d8ca74959147141f87599c746b8e15",
+      "lines": 23
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/method.py",
+      "bytes": 21503,
+      "sha256": "b4fc38e937b1d2dd1523c5fdf5f00e6cfdbcc71897ae744520b055711b6d274c",
+      "lines": 298
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/method.md",
+      "bytes": 2879,
+      "sha256": "6f047e9ce17d2224684a00ec55f672729f22e355b549b1085b2e2cd14adceba9",
+      "lines": 11
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/source-manifest.json",
+      "bytes": 578,
+      "sha256": "a4d768cdfc27cdc6d6e7aef0602c3c985b9fb3130a26b9f92110919381884388",
+      "lines": 13
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/initial-input-pins.json",
+      "bytes": 3558,
+      "sha256": "7ce012e430114915548f23979922b7a61ba450edcb82218dfc6d43be3e13b854",
+      "lines": 82
+    }
+  ],
+  "limitation": "Metadata byte pins; original method.py is read only, never executed; original first method read was tool chunks7e5191/644b97 and before it hash was observed in978106."
+}

@@ -19,6 +19,7 @@ export {
   type CredentialMetadata,
   type CredentialSnapshot,
   type CredentialSnapshotEntry,
+  type RemoteLinkActionReply,
 } from "./access.js";
 export type {
   Credential,

@@ -1,0 +1,191 @@
+{
+  "schema": "static-source-manifest-v1",
+  "rootReportedReadBaseline": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "files": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lines": 173,
+      "beforeRootCurrentScrollBodyAndNavigation": true,
+      "firstEverSemanticReadPin": null,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "semanticLineCount": 173,
+      "bodyDisplayedLineCount": 173,
+      "purpose": "Full current173-line static hook module read, including output comparisons, unread transitions, follow/snap/onScroll and ResizeObserver source. Earlier83 selected97 and current85 overlap; not first-ever/unread or browser/React/layout certification.",
+      "firstEverSemanticReadSha256": null,
+      "initialSemanticReadSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "endingSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "endingBytes": 6078,
+      "endingCheckedUTC": "2026-10-17T16:55:09.242127+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lines": 1404,
+      "beforeRootCurrentScrollBodyAndNavigation": true,
+      "firstEverSemanticReadPin": null,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          155,
+          164
+        ],
+        [
+          283,
+          288
+        ],
+        [
+          342,
+          348
+        ],
+        [
+          360,
+          364
+        ],
+        [
+          755,
+          788
+        ],
+        [
+          806,
+          849
+        ],
+        [
+          861,
+          894
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          147,
+          166
+        ],
+        [
+          746,
+          792
+        ],
+        [
+          849,
+          905
+        ],
+        [
+          270,
+          301
+        ],
+        [
+          330,
+          366
+        ],
+        [
+          783,
+          849
+        ]
+      ],
+      "semanticLineCount": 140,
+      "bodyDisplayedLineCount": 249,
+      "purpose": "Actual hook props/scope and active flag, textarea resize source, explicit resume on conversation/send, mounted hidden chat section, listRef/onScroll/contentRef, item switches and approval placement, jump button and announcement. Adjacent sidebar focus, unload/attachments/authority actions displayed only and not certified.",
+      "firstEverSemanticReadSha256": null,
+      "initialSemanticReadSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "endingSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "endingBytes": 53688,
+      "endingCheckedUTC": "2026-10-17T16:55:09.242127+00:00",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/app/app.css",
+      "bytes": 21770,
+      "lines": 1177,
+      "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "beforeRootCurrentNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          418,
+          424
+        ],
+        [
+          444,
+          512
+        ],
+        [
+          1090,
+          1095
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          417,
+          520
+        ],
+        [
+          1080,
+          1102
+        ]
+      ],
+      "semanticLineCount": 82,
+      "bodyDisplayedLineCount": 127,
+      "purpose": "Selected structural viewport/messages/transcript sizing, overflow, jump button and announcement plus responsive padding/gap. No computed style or global stylesheet proof.",
+      "firstEverSemanticReadSha256": null,
+      "initialSemanticReadSha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "endingSha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "endingBytes": 21770,
+      "endingCheckedUTC": "2026-10-17T16:55:09.242127+00:00",
+      "unchanged": true
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only this prep; prior instruction-body reading retained",
+      "currentInstructionBodyRead": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only this prep; prior instruction-body reading retained",
+      "currentInstructionBodyRead": false
+    }
+  ],
+  "counts": {
+    "full": 1,
+    "selected": 2,
+    "semanticLines": 395,
+    "bodyDisplayedLines": 549,
+    "testDeclarationLines": 0
+  },
+  "historicalMetadataReads": {
+    "machinePathObjects": 75,
+    "compactScopeRowsActuallyRead": 12,
+    "hookPathHits": 190,
+    "hookShaHits": 56,
+    "workbenchPathHits": 184,
+    "workbenchShaHits": 28,
+    "scrollCauseHits": 198,
+    "contextCapEach": 60,
+    "notAllRetainedWindowsRead": true,
+    "sameShaPriorModuleFullEstablished": false,
+    "knownPrior83SelectedHookLines": 97
+  },
+  "scope": "Static source only. Root independently read own captures before85 frozen packet was inspected; not blind because prior83 source was known. No addition to global coverage snapshot, no summing overlapped reads as unique frontier. Source shown in adjacent callbacks remains boundary/display only. Actual browser/React/layout/event ordering not observed.",
+  "productRuns": 0
+}

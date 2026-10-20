@@ -1,0 +1,57 @@
+{
+  "finishUTC": "2026-10-17T10:28:59.540441+00:00",
+  "parentReportedCurrentHead": "d9d2c33ddd1b2edea28a719e4cd0a505a96c0b08",
+  "headVerifiedByGit": false,
+  "sourceChecks": [
+    {
+      "path": "CODESHELL.md",
+      "firstCapturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFirstCaptured": true
+    },
+    {
+      "path": "packages/web/src/lib/connectionLiveness.ts",
+      "firstCapturedSha256": "99aedd6c3718ae3ab40eb9d1b0ce1a415332bec3c861edd6d15ecedba63f2677",
+      "finishSha256": "99aedd6c3718ae3ab40eb9d1b0ce1a415332bec3c861edd6d15ecedba63f2677",
+      "matchesFirstCaptured": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "firstCapturedSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "finishSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "matchesFirstCaptured": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-user-text.ts",
+      "firstCapturedSha256": "c1713b7f8e31074d92d533abc745def88c946202d3339c759c0b52564a2a809e",
+      "finishSha256": "c1713b7f8e31074d92d533abc745def88c946202d3339c759c0b52564a2a809e",
+      "matchesFirstCaptured": true
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/turn-input.ts",
+      "firstCapturedSha256": "5d1fb46f58390a4790e63059b92635fd1bce2a3cab107e134c78c5297078b6a3",
+      "finishSha256": "5d1fb46f58390a4790e63059b92635fd1bce2a3cab107e134c78c5297078b6a3",
+      "matchesFirstCaptured": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-history.ts",
+      "firstCapturedSha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "finishSha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "matchesFirstCaptured": true
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-discovery.ts",
+      "firstCapturedSha256": "83703ced8d60abe1a5ea89e8eeaad40dd2fdc38f957d50ce795df0ed12d98e6e",
+      "finishSha256": "83703ced8d60abe1a5ea89e8eeaad40dd2fdc38f957d50ce795df0ed12d98e6e",
+      "matchesFirstCaptured": true
+    }
+  ],
+  "allMatchFirstCaptured": true,
+  "initialSemanticReadHashUnavailable": true,
+  "sourcePins": 7,
+  "consideredSourceLines": 435,
+  "metadataOnlyFailureCount": 1,
+  "productAttempts": 0,
+  "testsRun": 0,
+  "gitCommands": 0
+}

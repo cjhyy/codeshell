@@ -1,0 +1,65 @@
+{
+  "atUTC": "2026-10-17T15:32:26.982508+00:00",
+  "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+  "sha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+  "displayedRanges": [
+    [
+      258,
+      276
+    ],
+    [
+      477,
+      502
+    ],
+    [
+      583,
+      623
+    ],
+    [
+      687,
+      733
+    ],
+    [
+      905,
+      923
+    ]
+  ],
+  "excerpts": [
+    {
+      "range": [
+        258,
+        276
+      ],
+      "text": " 258   const activeTabs = tabs.filter((tb) => {\n 259     if (\n 260       (tb.kind !== PANEL_LAUNCHER_KIND &&\n 261         !enabledPanelIds.has(tb.kind) &&\n 262         !(tb.kind === \"review\" && hasReviewSnapshot)) ||\n 263       seenTabIds.has(tb.id)\n 264     )\n 265       return false;\n 266     seenTabIds.add(tb.id);\n 267     return true;\n 268   });\n 269   const candidateActiveId = activeId;\n 270   const visibleActiveId =\n 271     candidateActiveId && activeTabs.some((tb) => tb.id === candidateActiveId)\n 272       ? candidateActiveId\n 273       : (activeTabs[0]?.id ?? null);\n 274   const activeTab = activeTabs.find((tab) => tab.id === visibleActiveId);\n 275   const pendingTabFocus = useRef<string | null>(null);\n 276   useEffect(() => {"
+    },
+    {
+      "range": [
+        477,
+        502
+      ],
+      "text": " 477     } else if (launcherId)\n 478       setTabs((previous) => previous.filter((candidate) => candidate.id !== launcherId));\n 479     pendingTabFocus.current = tab.id;\n 480     setActiveId(tab.id);\n 481   };\n 482 \n 483   const closeTab = (id: string): void => {\n 484     const idx = activeTabs.findIndex((t) => t.id === id);\n 485     if (idx === -1) return;\n 486     if (pendingWindows.current.has(id)) finishWindowRequest(id);\n 487     readyWindowTabs.current.delete(id);\n 488     sourceWindowErrors.current.delete(id);\n 489     setReadyWindowTabIds(new Set(readyWindowTabs.current));\n 490     const next = activeTabs.filter((t) => t.id !== id);\n 491     setTabs((prev) => prev.filter((t) => t.id !== id));\n 492     if (next.length === 0) {\n 493       onClose(); // closing the last tab closes the dock\n 494       return;\n 495     }\n 496     if (id === visibleActiveId) {\n 497       // Activate the neighbour (prefer the one to the left).\n 498       setActiveId(next[Math.max(0, idx - 1)].id);\n 499     }\n 500   };\n 501 \n 502   // Single source for opening tabs: react to each new request nonce. Focus an"
+    },
+    {
+      "range": [
+        583,
+        623
+      ],
+      "text": " 583             if (target) onResizeStart(e.clientX, width, target);\n 584           }}\n 585           className=\"absolute left-0 top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-primary/40\"\n 586         />\n 587       )}\n 588       {/* Tab strip */}\n 589       <div className=\"flex min-w-0 shrink-0 items-center gap-1 border-b border-border/80 bg-muted/35 px-1.5 py-0.5\">\n 590         {activeTabs.length > 0 ? (\n 591           <PanelTabStrip\n 592             tabs={activeTabs.map((tab) => {\n 593               const entry = getPanelEntry(tab.kind, {\n 594                 projectPath,\n 595                 cwd,\n 596                 engineSessionId: engineSessionId ?? null,\n 597               });\n 598               return {\n 599                 id: tab.id,\n 600                 label:\n 601                   tab.kind === PANEL_LAUNCHER_KIND\n 602                     ? t(\"panels.area.launcherTitle\")\n 603                     : tab.kind === \"subagent\" && subagentSelection?.label\n 604                       ? subagentSelection.label\n 605                       : entry\n 606                         ? panelEntryTitle(entry, (key) => t(key as never))\n 607                         : t(\"panels.area.unavailable\"),\n 608                 icon: tab.kind === PANEL_LAUNCHER_KIND ? LayoutGrid : (entry?.icon ?? CircleOff),\n 609               };\n 610             })}\n 611             activeId={visibleActiveId}\n 612             idPrefix={panelDomId}\n 613             hidden={hidden}\n 614             label={t(\"panels.area.tabsLabel\")}\n 615             closeLabel={t(\"panels.common.closeTab\")}\n 616             onActivate={setActiveId}\n 617             onClose={closeTab}\n 618             onRestoreFocus={hidden ? undefined : onRestoreFocus}\n 619           />\n 620         ) : (\n 621           <div className=\"flex h-10 min-w-0 flex-1 items-center gap-2 px-2 text-xs font-medium text-muted-foreground\">\n 622             <PanelsTopLeft className=\"size-3.5 shrink-0\" />\n 623             <span className=\"truncate\">{t(\"panels.area.title\")}</span>"
+    },
+    {
+      "range": [
+        687,
+        733
+      ],
+      "text": " 687         {activeTabs.length === 0 && (\n 688           <PanelLauncher\n 689             entries={pickerPanels}\n 690             onPick={addTab}\n 691             onOpenWindow={openLauncherWindow}\n 692             openingWindowKinds={openingWindowKinds}\n 693             active={!hidden}\n 694           />\n 695         )}\n 696         {activeTabs.map((panelTab) => {\n 697           const activeTab = panelTab.id === visibleActiveId;\n 698           if (panelTab.kind === PANEL_LAUNCHER_KIND) {\n 699             return (\n 700               <Slot\n 701                 key={panelTab.id}\n 702                 active={activeTab}\n 703                 panelId={PANEL_LAUNCHER_KIND}\n 704                 id={`${panelDomId}-body-${panelTab.id}`}\n 705                 labelledBy={`${panelDomId}-tab-${panelTab.id}`}\n 706               >\n 707                 <PanelLauncher\n 708                   entries={pickerPanels}\n 709                   onPick={addTab}\n 710                   onOpenWindow={openLauncherWindow}\n 711                   openingWindowKinds={openingWindowKinds}\n 712                   active={activeTab && !hidden}\n 713                   focusRequest={launcherFocusRequest}\n 714                 />\n 715               </Slot>\n 716             );\n 717           }\n 718           const visibility = resolvePanelVisibility({ hidden, keepActiveBodyLive, activeTab });\n 719           const workspacePresentation = panelWorkspacePresentation(workspace);\n 720           return (\n 721             <Slot\n 722               key={panelTab.id}\n 723               active={activeTab}\n 724               panelId={panelTab.kind}\n 725               id={`${panelDomId}-body-${panelTab.id}`}\n 726               labelledBy={`${panelDomId}-tab-${panelTab.id}`}\n 727             >\n 728               <DesktopPanelLifecycleBoundary\n 729                 entry={getPanelEntry(panelTab.kind, {\n 730                   projectPath,\n 731                   cwd,\n 732                   engineSessionId: engineSessionId ?? null,\n 733                 })}"
+    },
+    {
+      "range": [
+        905,
+        923
+      ],
+      "text": " 905   labelledBy,\n 906 }: {\n 907   active: boolean;\n 908   children: React.ReactNode;\n 909   panelId: PanelTab;\n 910   id: string;\n 911   labelledBy: string;\n 912 }) {\n 913   return (\n 914     <div\n 915       role=\"tabpanel\"\n 916       id={id}\n 917       aria-labelledby={labelledBy}\n 918       className={cn(\"absolute inset-0 flex min-h-0 flex-col\", active ? \"z-10\" : \"-z-10 opacity-0\")}\n 919       aria-hidden={!active}\n 920       inert={!active || undefined}\n 921       data-panel-id={panelId}\n 922       data-panel-active={active ? \"true\" : \"false\"}\n 923       style={active ? undefined : { pointerEvents: \"none\" }}"
+    }
+  ],
+  "scope": "Ordinary tabs/active/close and DOM id linkage only; adjacent native/frame/module lifecycle display is not mechanism certification."
+}

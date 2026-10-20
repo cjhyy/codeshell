@@ -1,0 +1,12 @@
+{
+  "baseline": "9874f8abdfce0ade5bb058d26e026b10f173a129",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "failedTests": 0,
+    "productReruns": 0
+  },
+  "mode": "Static-only source review; no product/helper/import/fixture/test/React/worker/native/browser/model/clock/business-network/auth/custody experiments. Prior57 static-handler3pass is not a current run or proof of these paths."
+}

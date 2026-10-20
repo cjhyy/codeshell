@@ -1,0 +1,140 @@
+{
+  "frozenUTC": "2026-10-17T17:04:41.081545+00:00",
+  "root": "/tmp/codeshell-audit-round90-param-controls",
+  "authorRole": "Current90 ordinary static source review; historical scope gate and own stdlib metadata only. Product/test/helper/render/authority methods never invoked.",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "files": [
+    {
+      "path": "assessment-boundary.json",
+      "bytes": 1934,
+      "sha256": "d82707fa4417d23936dafe2b06a56d74fcf83a3b192fc22d7baf27d6c21948f6"
+    },
+    {
+      "path": "canonical-gate-read.json",
+      "bytes": 6404,
+      "sha256": "e9c91725620006c5c10ff27debc33bd160aaddcf47d63522aec5e6b9bfa780fd"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 944,
+      "sha256": "7f337cc46cf485c33b2f8336d6b4b73dfb5b5adf177dba29aa1bb99e76f463d0"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 4804,
+      "sha256": "25c7455fe4382700e4e90aa33265794f9468240605076647e7d84059787ae20c"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 5399,
+      "sha256": "aaaa760ff7eefa4950d706e27d70b101d6f7be99f29a0710007c0ea436a75891"
+    },
+    {
+      "path": "exact-cause-history.json",
+      "bytes": 24642,
+      "sha256": "99cd7cf11ffa818c7bd106ae85bdc24e14f3b002cad02e4cbf282e9336965f76"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 20441,
+      "sha256": "357657b4c871026b5c4931ccff71a61df0d42eef82424e9db4a000e81059c6f1"
+    },
+    {
+      "path": "first-focused-presentation-diagnostic.json",
+      "bytes": 590,
+      "sha256": "8216d1f699c011f6848062b8345c33d82102ad766bd805ace6a246685e1624bc"
+    },
+    {
+      "path": "first-focused-presentation.py",
+      "bytes": 480,
+      "sha256": "dd8d66d5a2246f74da3e1f6a9c0b069de5c05a1b1afdbd244f12bbbff7148e3b"
+    },
+    {
+      "path": "focused-history.json",
+      "bytes": 190983,
+      "sha256": "fa4baf095898a15d9ee951ae22a6d5abd4725e07f1c07256e5f6dd6561e1fba1"
+    },
+    {
+      "path": "history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 153417,
+      "sha256": "d6cc1885f20fee68786d7609fcd6340e5f50804369d5df0575f8c6ee05fb5020"
+    },
+    {
+      "path": "history-initial-inventory.json",
+      "bytes": 939853,
+      "sha256": "c1f3a5e9ca847831d3aaed7447a71c296970419d57341b043de53e3919c49bee"
+    },
+    {
+      "path": "history-source-rows.json",
+      "bytes": 23130,
+      "sha256": "c436a328feecc63e3fb7cd4fca2cf7749fddbf1084d0601578cb704e2a8e70c1"
+    },
+    {
+      "path": "history-summary.json",
+      "bytes": 789,
+      "sha256": "92035db4d6a2abe0e22403b34cc3495d0a6fc448ef74c78cdb08c118fda2ac7c"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1367,
+      "sha256": "422833db666420f2c4dd2ba4c210bc8e9495c8c41b37ab0122b59da2e8d906ba"
+    },
+    {
+      "path": "read-ledger.json",
+      "bytes": 1598,
+      "sha256": "7ca2f78730f4933d73ab62fc686531f15d41f400efe6e499da60a843e8008de6"
+    },
+    {
+      "path": "report.md",
+      "bytes": 6003,
+      "sha256": "afab1b3cb34c932d7b73ef559b05b2f09957dc576c4c93f30d703e3d992f025f"
+    },
+    {
+      "path": "scan-exact-cause.py",
+      "bytes": 2003,
+      "sha256": "b194a2416a170224532f76a2d631259d0697a256def2db546cf11ebe480f485b"
+    },
+    {
+      "path": "scan-focused-history.py",
+      "bytes": 2062,
+      "sha256": "ce72da81d677a14f429d33feeb365d9aeb9fba35b42ff987f345696f0f81b0e8"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5319,
+      "sha256": "0c7d3fef05a5bd106acbc0508cc45a06ca0fb10ca8020db0f44aa24f0b623b79"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 39031,
+      "sha256": "5f252f7bcc703cad3158b547c59fea6f2064f085a112e114f80d065d27d9262c"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 25973,
+      "sha256": "9232c81e0dfc3d4f888e4fcd3a45d378b8f0796c27f69bac16e9e433b88a71aa"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 2973,
+      "sha256": "1126003b1eb49237a42ffd78b800c98e0a0990cf00747a624be16466b20ec7d8"
+    }
+  ],
+  "fileCountExcludingSelf": 24,
+  "selfExcluded": true,
+  "productValidationRuns": 0,
+  "GitOperations": 0,
+  "metadataCommandFailures": 0,
+  "metadataTruncatedPresentations": 1,
+  "firstDiagnostic": "first-focused-presentation-diagnostic.json; raw retained contexts focused-history.json; no regenerated raw stdout claim",
+  "scope": "Source pins18; product semantic436/test declaration138/display859. Instructions217 separately. No global coverage update."
+}

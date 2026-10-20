@@ -1,0 +1,65 @@
+{
+  "formal": [
+    {
+      "id": "PET-R57-01",
+      "severity": "P3",
+      "title": "定时续办生成被过滤的话题边界，跳过已关闭段的小结和自动记忆",
+      "location": {
+        "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+        "line": 2218,
+        "endLine": 2218
+      },
+      "secondaryLocation": {
+        "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+        "line": 84,
+        "endLine": 84
+      },
+      "proposalAlias": "PET-R132-C1",
+      "aliasDisposition": "Author132 and independent136 assess one cause; Root promotes the same candidate once. Original frozen author candidate counts retained.",
+      "runtimeValidated": false,
+      "validation": "Static actual future-registration→idle wake→dispatch→protocol→transcript→default closure reader/locator chain, independently reviewed. No PET helper/test/model/clock/session execution. The separate static-file shard is not validation of this finding.",
+      "condition": "An existing active topic S0 has at least3 meaningful ordinary messages, auto-extract is enabled, and an accepted user-authorized resume follow-up with a valid idle source and no pending decision wakes after the configured idle gap (default12h), taking the ordinary chat wake branch rather than paused-task direct resume. The worker run completes normally.",
+      "expected": "Closing S0 should locate its next boundary and perform the ordinary journal/auto-memory extraction; the next active topic should retain a boundary that the closure reader can locate.",
+      "actual": "wakeFollowUp creates H=pet-followup-ID-revision. The shared chat branch calls beginTurn(H), closing S0 with endH and opening S1 with startH. The same run persists H with injected:true. After run settle, the default closure reader filters that user message, so locateClosureWindow cannot find endH and returns null; close returns before extraction. Later closing S1 also cannot find startH. Backfill reuses the same persisted IDs and reader.",
+      "impact": "The just-closed topic S0 loses its automatic journal/auto-memory extraction under these conditions; the following H-anchored segment also fails at its next closure. Raw transcript is retained, earlier successful journals remain, and a later topic anchored to a real user can recover. No claim that the separate Core span/context archival path fails.",
+      "counterevidence": [
+        "First interaction or a gap shorter than idleMs does not create this boundary.",
+        "Notify-only reminders, unavailable/external/running/pending sources and paused-task direct resume are outside the trigger.",
+        "A later ordinary user starting a fresh topic can create a healthy new anchor; it does not rewrite the closed H-bounded segments.",
+        "Ordinary assistant transcript writers do not duplicate H in message.data; stream-envelope correlation IDs are not transcript anchor fields. Independent136 verifies this finite writer/wiring chain.",
+        "Old persist-mimi-archive-boundary plan866 explicitly discusses injected skipping and separate span archival; that design discussion is preserved and is not evidence that journal extraction has a fallback."
+      ],
+      "deduplication": "Shared5676 MD/recursive JSON-value history (archives included, formal57+ excluded) is machine navigation, not exhaustive semantic coverage. Author132 additionally read bounded focused windows and original topic/closure old-full evidence. Existing PET search defects are distinct; the old injected/span design discussion is related background, not the exact follow-up boundary→journal null cause. No first-ever or exhaustive historical-absence claim.",
+      "fixDirection": "Keep stored topic boundaries locatable under the closure reader’s injected-message policy while preserving the independent context-archive behavior.",
+      "evidence": [
+        "evidence/pet-topic/report.md",
+        "evidence/pet-topic/candidate-evidence.json",
+        "evidence/pet-closure-review/report.md",
+        "evidence/review-aggregate.md"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "STATIC-R135-C1",
+      "proposedPriority": "P3",
+      "title": "移动静态资源未解码编码文件名",
+      "location": {
+        "path": "packages/server/src/mobile-remote/mobile-static.ts",
+        "line": 27,
+        "endLine": 31
+      },
+      "status": "Candidate retained, not formal: handler404 reproduced for owned space-named file; current default product resource producer unestablished.",
+      "validation": "Single guarded shard3pass/8expect/0failure, no reruns; actual serveMobile and real temporary files, Writable response recorder, no HTTP server/socket.",
+      "counterevidence": "Independent137 found4 current public names and selected actual URLs are ASCII. Its208 filename inventory is not a full dependency/bundle closure. Do not claim current product resource breakage or absence of all encoded assets.",
+      "evidence": [
+        "evidence/root-static-files/report.md",
+        "evidence/mobile-path-review/report.md",
+        "evidence/static-path.test.ts"
+      ]
+    }
+  ],
+  "independent136SupportVerified": true,
+  "status": "Frozen136 full report actually read; same cause supported, finite source/writer/producer and limits retained. Promotion final for frozen baseline.",
+  "independent136ReportSha256": "626819294fb567aa0b84c3a622f03e57bcc770fc3be99d14ea2141e0ab50d77f"
+}

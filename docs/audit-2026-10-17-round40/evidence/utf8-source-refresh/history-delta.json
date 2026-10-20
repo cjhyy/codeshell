@@ -1,0 +1,24 @@
+{
+  "earlierScope": "future40 frozen38/exclude39/40",
+  "currentScope": "future41 frozen38/exclude39/40/41",
+  "earlierFiles": 3509,
+  "currentFiles": 3509,
+  "added": [],
+  "removed": [],
+  "sharedChanged": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "earlier": {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "bytes": 189803,
+        "sha256": "c8cdef20f7d9fcf62b330ef6167fea725d6738e511ac65bb6384c3a6d37842ba"
+      },
+      "current": {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "bytes": 199956,
+        "sha256": "8c1b9ca1624268007d7c7c6b92af69c58b619e20cc8cc991b4de1676a12c2db3"
+      }
+    }
+  ],
+  "priorSnapshotsUnmodified": true
+}

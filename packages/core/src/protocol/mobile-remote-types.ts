@@ -75,6 +75,9 @@ export interface MobileProjectMeta {
   name: string;
   addedAt?: number;
   pinned?: boolean;
+  /** Host canonical-key comparison policy; never inferred from the browser OS.
+   * Older Hosts omit this, so unknown POSIX paths must remain case-sensitive. */
+  pathCaseSensitive?: boolean;
   roots?: Array<{ id: string; path: string; name: string; role: "primary" | "secondary" }>;
   primaryRootId?: string;
 }
@@ -99,6 +102,8 @@ export type MobileClientEvent =
   | { type: "pair.complete"; token: string; name: string; secretHash: string }
   | {
       type: "chat.send";
+      /** Observation source label only; no storage or workspace authority. */
+      modelTraceSource?: string;
       text: string;
       sessionId?: string;
       clientMessageId?: string;

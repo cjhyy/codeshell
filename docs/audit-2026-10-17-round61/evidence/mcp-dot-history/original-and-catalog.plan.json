@@ -1,0 +1,18 @@
+{
+  "name": "original-and-catalog",
+  "items": [
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "ranges": [
+        [
+          1,
+          20
+        ],
+        [
+          36,
+          45
+        ]
+      ]
+    }
+  ]
+}

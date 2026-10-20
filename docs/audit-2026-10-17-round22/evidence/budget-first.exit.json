@@ -1,0 +1,20 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "argv": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/engine/reactive-threshold.test.ts",
+    "docs/audit-2026-10-17-round22/evidence/budget-reactive-focused.test.ts"
+  ],
+  "attempt": 1,
+  "exitCode": 0,
+  "elapsedSeconds": 0.203,
+  "raw": "docs/audit-2026-10-17-round22/evidence/budget-first.raw.log",
+  "rawBytes": 1124,
+  "rawSha256": "98864a76576bdc9ccac2e45e6e0ea93d8f5fe5d3bd4d18d59c05ad432620baec",
+  "combinedStdoutStderr": true,
+  "rawAndExitSavedBeforeInspection": true,
+  "productReruns": 0
+}

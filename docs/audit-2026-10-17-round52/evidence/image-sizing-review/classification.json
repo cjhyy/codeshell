@@ -1,0 +1,23 @@
+{
+  "role": "Independent source support of sameRootzero-short-edgelead",
+  "newIndependentId": null,
+  "newStandaloneFormalFindings": 0,
+  "newStandaloneCandidates": 0,
+  "newRelated": 0,
+  "opinion": "Support one shared P3 static proposal; parent assigns unifiedID/classification; do notdoublecount.",
+  "normalTrigger": "Validdecodable1×4096PNG/JPEG/WebP under10MB,countlimit,low orstandard clarity. Positiveordinarydimensions,noimage/DOM/JSfixtureconstructed.",
+  "humanSourceDerivation": "low1*1024/4096=0.25→round0;standard1*1568/4096=0.3828125→round0; landscape symmetric. No arithmetic/helper/JSfixture execution.",
+  "sourceCause": "scaledDimensions189–199 noone-pixel minimum→canvas128–133zeroedge→WHATWGtoBlobnull→qualityloop135–152continues→return originalatt. Exceptions/getContextnull also preserveoriginal.",
+  "impact": "Rendererselectedclaritydownscale failsforthinvalidimages; unchangedabovecap bytes/dataURL reachstaginginputboundary. Noimageloss/paidbilling/observedUI/allimagesfailure/finalHost-or-wireclaim.",
+  "counterevidence": [
+    "high/default passunder2MBintentionally;outsideimpact.",
+    "GIF/unsupportedMIMEs intentionally passthrough;outside trigger.",
+    "Inputs alreadyfitcap+bytes deliberatelyunchanged; trigger4096above1024/1568.",
+    "Fallbackmustpreserveimage,buthereinvalidcanvasisdeterministicallygeneratedfromvalidinput,notrandomdecoder/OOMreject.",
+    "Normalstagingreplacesmetadata; nooldpathstalenessissue proposed."
+  ],
+  "suggestedFix": "Clamp scaledshortedge toatleast1pixel; futuretests for thinportrait/landscape. Nofix/testwrittenorexecuted.",
+  "parentReportedProposalAlias": "IMAGE-R103-C1",
+  "parentPlannedFormalId": "DESKTOP-R52-01",
+  "idAssignmentStatus": "Parent-reported sameitem; independentreviewcreatesnone. Root103frozenreportnotread."
+}

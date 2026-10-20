@@ -1,0 +1,29 @@
+[
+  [
+    "packages/desktop/src/main/theme-pack-conversion.ts",
+    [
+      [
+        1,
+        61
+      ]
+    ]
+  ],
+  [
+    "packages/desktop/src/main/theme-asset-url.ts",
+    [
+      [
+        1,
+        70
+      ]
+    ]
+  ],
+  [
+    "packages/desktop/src/main/theme-asset-protocol.ts",
+    [
+      [
+        1,
+        141
+      ]
+    ]
+  ]
+]

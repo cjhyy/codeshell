@@ -61,6 +61,24 @@ const CREDS: Credential[] = [
 ];
 
 describe("modelEntriesFromConnections", () => {
+  test.each([true, false, undefined])(
+    "preserves catalog vision metadata (%s) through LLMConfig",
+    (supportsVision) => {
+      const catalog = [
+        { ...CATALOG[1]!, modelPresets: [{ value: "openai/gpt-6.1-sol", supportsVision }] },
+      ];
+      const [entry] = modelEntriesFromConnections(
+        [{ id: "sol", catalogId: "openrouter", tag: "text", model: "openai/gpt-6.1-sol" }],
+        [],
+        catalog,
+      );
+      expect(entry!.supportsVision).toBe(supportsVision);
+      const config = new ModelPool().toLLMConfig(entry!);
+      expect(config.supportsVision).toBe(supportsVision);
+      expect(config.modelKey).toBe("sol");
+    },
+  );
+
   test("maps a text connection to a ModelEntry keyed by instance id, key from credential", () => {
     const insts: ModelInstance[] = [
       {

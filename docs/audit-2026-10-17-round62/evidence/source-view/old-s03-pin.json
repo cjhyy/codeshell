@@ -1,0 +1,7 @@
+{
+  "path": "docs/audit-2026-10-16/findings.json",
+  "bytes": 12610,
+  "sha256": "6a4cf415ee6c3a4fb5c7fae5d97445838bd668fcbe6060a1c4656c51f5cd96b2",
+  "pinnedAtUTC": "2026-10-17T20:36:46.334350+00:00",
+  "timing": "before own bounded old S03 canonical read"
+}

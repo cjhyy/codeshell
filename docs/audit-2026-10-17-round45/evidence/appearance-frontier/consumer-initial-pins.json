@@ -1,0 +1,48 @@
+{
+  "capturedAtUTC": "2026-10-17T15:16:25.869535+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "bytes": 6626,
+      "lines": 155,
+      "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "lines": 245,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/installedThemes.ts",
+      "bytes": 2787,
+      "lines": 75,
+      "sha256": "8df377284acfeaa9ce1fefce71e883a78daac3d65bcbfc4d6547d0423c7a58cc",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "bytes": 4694,
+      "lines": 121,
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "bytes": 35851,
+      "lines": 931,
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.test.tsx",
+      "bytes": 5719,
+      "lines": 171,
+      "sha256": "8e4215d5becf549c8cd647bcc1fc3a3c025813f1ed998b50831bd7d61b02322a",
+      "semanticRead": false
+    }
+  ],
+  "scope": "Before content/navigation pins for ordinary preference producer/consumer dependencies; native/audio/import/remove mechanisms not followed."
+}

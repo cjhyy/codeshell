@@ -1,0 +1,33 @@
+{
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "productImportsFunctionsHelpersRun": 0,
+  "testsFixturesRun": 0,
+  "ReactDOMTimerClockRuns": 0,
+  "realUserDataRead": 0,
+  "networkNativeModelGit": 0,
+  "mutable80or81Read": false,
+  "productWrites": 0,
+  "metadataOnly": "Own Python stdlib hash/JSON/range accounting and rg path/navigation; own history-method.py metadata scanner, no product/repository scripts.",
+  "metadataLocatorError": {
+    "tool": "b09b3e",
+    "combinedExit": 2,
+    "raw": "metadata-locator-error.txt",
+    "notes": "metadata-locator-error.json",
+    "correction": "Actual filename inventory founduseHubController; no missing source or product failure inferred."
+  },
+  "metadataDisplayTruncation": {
+    "tool": "098f43",
+    "observedExit": 0,
+    "requestedMaxOutputTokens": 4500,
+    "originalTokenCount": 5061,
+    "notes": "metadata-first-display-diagnostic.json",
+    "fullStdoutFileClaim": false
+  },
+  "otherObservedCompletedExits": 0,
+  "ending": "ending-checks.json",
+  "instructions": "CODESHELL/AGENTS current hashes unchanged; prior72 instruction read reused, zero repeat semantic lines."
+}

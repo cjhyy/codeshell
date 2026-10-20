@@ -1,0 +1,13 @@
+5:import { CommandInput } from "./CommandInput.js";
+64:  isRunning: boolean;
+103:    isRunning,
+109:  if (screen === "transcript") {
+118:  if (showOnboarding) {
+156:  if (modelEntries) {
+178:  if (sessionEntries) {
+191:  if (wizard === "flow" && modelManager) {
+242:  if (modelManager) {
+311:  if (pendingQuestion) {
+353:  if (pendingApproval) return null;
+364:      <CommandInput
+369:        placeholder={isRunning ? "Interrupt… (Ctrl+C to cancel)" : undefined}

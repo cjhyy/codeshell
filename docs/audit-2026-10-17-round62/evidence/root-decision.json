@@ -1,0 +1,16 @@
+{
+  "allReadersFrozen": true,
+  "rootSourceReviewComplete": true,
+  "formal": [],
+  "candidates": [],
+  "related": [],
+  "historicalFormalRecords": 119,
+  "priorities": {
+    "P2": 46,
+    "P3": 73
+  },
+  "historicalCandidates": 42,
+  "productRuns": 0,
+  "goalStillActive": true,
+  "notes": "163 metadata through61 only; four finite current source reviews found no new ordinary counterexample. Whole repository goal remains incomplete. Original source reader scopes/overlap and failed direction skips retained."
+}

@@ -1,0 +1,26 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalRound33Baseline": null,
+  "prepOnly": true,
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "bytes": 3079,
+      "lines": 89,
+      "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "firstSemanticReadSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:10:57.856896+00:00"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "bytes": 6234,
+      "lines": 193,
+      "sha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "firstSemanticReadSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:10:57.858026+00:00"
+    }
+  ]
+}

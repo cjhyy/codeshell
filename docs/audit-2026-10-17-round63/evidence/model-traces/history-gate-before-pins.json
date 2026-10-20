@@ -1,0 +1,20 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json",
+    "bytes": 5925,
+    "sha256": "658679d962ea547236d14bd7d748370c2ace7f413b207864d0cb274a27e7f543",
+    "pinAtUTC": "2026-10-17T20:52:41.914569+00:00"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round18/presentation.md",
+    "bytes": 5144,
+    "sha256": "91f8c12fbd57bd72fcf3fa85c5082f3da728121879d80295bcdec1e2c5cad2bf",
+    "pinAtUTC": "2026-10-17T20:52:41.917974+00:00"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "bytes": 12061422,
+    "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+    "pinAtUTC": "2026-10-17T20:52:41.928188+00:00"
+  }
+]

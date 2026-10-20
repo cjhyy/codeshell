@@ -1,0 +1,298 @@
+{
+  "scope": "Future41 independent source-only counterevidence; not a formal40 baseline snapshot",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "bytes": 26558,
+      "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "lineCount": 739,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          46,
+          46
+        ],
+        [
+          54,
+          85
+        ],
+        [
+          345,
+          360
+        ],
+        [
+          370,
+          372
+        ],
+        [
+          468,
+          478
+        ],
+        [
+          485,
+          538
+        ]
+      ],
+      "semanticLineCount": 117,
+      "displayedLineRanges": [
+        [
+          1,
+          105
+        ],
+        [
+          345,
+          377
+        ],
+        [
+          453,
+          545
+        ]
+      ],
+      "displayedLineCount": 231,
+      "initialSemanticReadSha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "beforeCurrentReviewSemanticRead": true,
+      "firstEverSemanticReadClaim": false,
+      "pinUTC": "2026-10-17T13:50:40.594444+00:00",
+      "finishUTC": "2026-10-17T13:52:31.010125+00:00",
+      "finishSha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "unchanged": true,
+      "readToolChunks": [
+        "4ac90a"
+      ],
+      "semanticScope": "Ordinary UTF8 prefix, byte cursor, retained-memory and default output entry only; incidental authority/native code display is excluded"
+    },
+    {
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "bytes": 927,
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "lineCount": 21,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "semanticLineCount": 21,
+      "displayedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "displayedLineCount": 21,
+      "initialSemanticReadSha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "beforeCurrentReviewSemanticRead": true,
+      "firstEverSemanticReadClaim": false,
+      "pinUTC": "2026-10-17T13:50:40.594729+00:00",
+      "finishUTC": "2026-10-17T13:52:31.010125+00:00",
+      "finishSha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "unchanged": true,
+      "readToolChunks": [
+        "4ac90a"
+      ],
+      "semanticScope": "Ordinary UTF8 prefix, byte cursor, retained-memory and default output entry only; incidental authority/native code display is excluded"
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "bytes": 5956,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "lineCount": 188,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          5,
+          14
+        ],
+        [
+          33,
+          44
+        ],
+        [
+          96,
+          112
+        ],
+        [
+          119,
+          151
+        ]
+      ],
+      "semanticLineCount": 72,
+      "displayedLineRanges": [
+        [
+          1,
+          44
+        ],
+        [
+          86,
+          162
+        ]
+      ],
+      "displayedLineCount": 121,
+      "initialSemanticReadSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "beforeCurrentReviewSemanticRead": true,
+      "firstEverSemanticReadClaim": false,
+      "pinUTC": "2026-10-17T13:50:40.594997+00:00",
+      "finishUTC": "2026-10-17T13:52:31.010125+00:00",
+      "finishSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "unchanged": true,
+      "readToolChunks": [
+        "4ac90a",
+        "7dcef0"
+      ],
+      "semanticScope": "Ordinary UTF8 prefix, byte cursor, retained-memory and default output entry only; incidental authority/native code display is excluded"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "lineCount": 130,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          14,
+          21
+        ],
+        [
+          25,
+          62
+        ]
+      ],
+      "semanticLineCount": 46,
+      "displayedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "displayedLineCount": 62,
+      "initialSemanticReadSha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "beforeCurrentReviewSemanticRead": true,
+      "firstEverSemanticReadClaim": false,
+      "pinUTC": "2026-10-17T13:50:40.595360+00:00",
+      "finishUTC": "2026-10-17T13:52:31.010125+00:00",
+      "finishSha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "unchanged": true,
+      "readToolChunks": [
+        "4ac90a"
+      ],
+      "semanticScope": "Ordinary UTF8 prefix, byte cursor, retained-memory and default output entry only; incidental authority/native code display is excluded"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "lineCount": 15,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "semanticLineCount": 15,
+      "sourceKind": "Frozen old report, not product source",
+      "initialSemanticReadSha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "beforeCurrentReviewSemanticRead": true,
+      "firstEverSemanticReadClaim": false,
+      "pinUTC": "2026-10-17T13:50:40.593247+00:00",
+      "finishUTC": "2026-10-17T13:52:31.010125+00:00",
+      "finishSha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "unchanged": true,
+      "readToolChunks": [
+        "c02525"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "lineCount": 13,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "semanticLineCount": 13,
+      "sourceKind": "Frozen old report, not product source",
+      "initialSemanticReadSha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "beforeCurrentReviewSemanticRead": true,
+      "firstEverSemanticReadClaim": false,
+      "pinUTC": "2026-10-17T13:50:40.593645+00:00",
+      "finishUTC": "2026-10-17T13:52:31.010125+00:00",
+      "finishSha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "unchanged": true,
+      "readToolChunks": [
+        "c02525"
+      ]
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/source-manifest.json",
+      "bytes": 3551,
+      "sha256": "034e393e24e10e759c6d3319f9c3c7842073ce99f7b1e110c322dcabf690a464",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticRead": false
+    }
+  ],
+  "counts": {
+    "currentProductFiles": 4,
+    "currentProductFull": 1,
+    "currentProductSelected": 3,
+    "currentProductSemanticLines": 256,
+    "currentProductDisplayedLines": 435,
+    "currentTestSemanticLines": 0,
+    "historicalReportFiles": 2,
+    "historicalReportSemanticLines": 28,
+    "oldManifestHashOnlyFiles": 1
+  },
+  "versionBinding": {
+    "ownGitCommands": 0,
+    "ownObservedHEAD": null,
+    "authorRecordedCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+    "sourceByteClaimsMatchOwnFourPins": [
+      {
+        "path": "packages/core/src/runtime/background-shell.ts",
+        "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+        "authorRecordedGitBlobCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "matchesOwnBeforeReadFilesystemPin": true,
+        "independentGitCommandByThisReviewer": false
+      },
+      {
+        "path": "packages/core/src/runtime/utf8-cut.ts",
+        "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+        "authorRecordedGitBlobCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "matchesOwnBeforeReadFilesystemPin": true,
+        "independentGitCommandByThisReviewer": false
+      },
+      {
+        "path": "packages/core/src/runtime/ring-file.ts",
+        "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+        "authorRecordedGitBlobCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "matchesOwnBeforeReadFilesystemPin": true,
+        "independentGitCommandByThisReviewer": false
+      },
+      {
+        "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+        "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+        "authorRecordedGitBlobCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "matchesOwnBeforeReadFilesystemPin": true,
+        "independentGitCommandByThisReviewer": false
+      }
+    ],
+    "formal40BaselineNotEstablishedByThisReview": true
+  },
+  "role": {
+    "notOriginalUTF8R34C1Author": true,
+    "R34OwnScopeWas": "memoize",
+    "notFixImplementer": true
+  },
+  "allSourcePinsStable": true,
+  "productExecutions": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0
+}

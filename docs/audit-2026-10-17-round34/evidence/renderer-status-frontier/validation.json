@@ -1,0 +1,23 @@
+{
+  "parentReportedPrepContext": "646f9243",
+  "mode": "static-only",
+  "runs": [],
+  "productAttempts": 0,
+  "productImports": 0,
+  "productFunctionCalls": 0,
+  "testsExecuted": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "reactFixtureRuns": 0,
+  "browserRuns": 0,
+  "nativeRuns": 0,
+  "networkRequests": 0,
+  "authIdentityCustodyExperiments": 0,
+  "settingsOrUserDirectoryOperations": 0,
+  "gitCommands": 0,
+  "existingTestDeclarationsRead": 7,
+  "existingTestsExecuted": 0,
+  "sourceInitialFinishMatched": true,
+  "metadataErrors": [],
+  "noNewFrontierProofClaimed": true
+}

@@ -1,0 +1,51 @@
+{
+  "addedFiles": 95,
+  "counts": {
+    "sources": 4,
+    "args-roundtrip": 2,
+    "exact-form": 0
+  },
+  "hits": {
+    "sources": [
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-contexts.json",
+        "at": "$[\"hits\"][\"helper\"][54][\"context\"]",
+        "context": "\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSection）✓；市场两层（P2）✓；发现首页极简（P3）✓；体验缺口 spinner/空态/重试/确认（Task 5/6/9 内置）✓。\n- **占位符**：P1 各步均有完整代码/命令；P2/P3 为明确标注的概要（待 P1 后细化），非 P1 任务内的占位。\n- **类型一致**：`resolveUninstallTarget`（Task1）↔ PluginsTab 调用（Task6）一致；`UninstallablePlugin` 字段是 PluginSummary 的子集 ✓；`uninstallPlugin(pluginName, marketplaceName)` 三处（core/IPC/preload/调用）参数名顺序一致 ✓。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-contexts.json",
+        "at": "$[\"hits\"][\"helper\"][54][\"context\"]",
+        "context": "，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。\n\n### 执行期已查明的事实（供 Task 6/7/8 复用）\n\n- **Markdown 组件**：`packages/desktop/src/renderer/Markdown.tsx` 命名导出 `Markdown`，prop 是 **`text`**（不是 `content`）。用法：`<Markdown text={body} />`（参 `PluginsAndSkillsSection.tsx:546`）。\n- **启用/禁用机制**：用户 settings 里的 `disabledSkills` / `disabledPlugins` 数组，**按 skill name / 按 plug"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/contexts.json",
+        "at": "$[\"hits\"][\"helper\"][54][\"context\"]",
+        "context": "\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSection）✓；市场两层（P2）✓；发现首页极简（P3）✓；体验缺口 spinner/空态/重试/确认（Task 5/6/9 内置）✓。\n- **占位符**：P1 各步均有完整代码/命令；P2/P3 为明确标注的概要（待 P1 后细化），非 P1 任务内的占位。\n- **类型一致**：`resolveUninstallTarget`（Task1）↔ PluginsTab 调用（Task6）一致；`UninstallablePlugin` 字段是 PluginSummary 的子集 ✓；`uninstallPlugin(pluginName, marketplaceName)` 三处（core/IPC/preload/调用）参数名顺序一致 ✓。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/contexts.json",
+        "at": "$[\"hits\"][\"helper\"][54][\"context\"]",
+        "context": "，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。\n\n### 执行期已查明的事实（供 Task 6/7/8 复用）\n\n- **Markdown 组件**：`packages/desktop/src/renderer/Markdown.tsx` 命名导出 `Markdown`，prop 是 **`text`**（不是 `content`）。用法：`<Markdown text={body} />`（参 `PluginsAndSkillsSection.tsx:546`）。\n- **启用/禁用机制**：用户 settings 里的 `disabledSkills` / `disabledPlugins` 数组，**按 skill name / 按 plug"
+      }
+    ],
+    "args-roundtrip": [
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-contexts.json",
+        "at": "$[\"hits\"][\"literal_namespace\"][1][\"context\"]",
+        "context": "amed expansion，模块也明确 `$1`…`$9` 语法；将显式空引号解释成一个位置参数是该支持语法的合理推断，报告已标为推断，没有声称验证了上游 Codex 实现。Converter 证据只覆盖自有目录的真实复制→展开，不等于完整安装/宿主调用。\n- **PLUGIN-R8-02 保留**：placeholder regex 的 `$ARGUMENTS` 分支在完整命名 token 之前且没有边界，直接解释了 `$ARGUMENTS_FILE` / `$ARGUMENTS_UNKNOWN` 两个结果。命名赋值和命名占位都接受大写加下划线，现有测试要求未知 token 保留，故不需额外外部兼容合同。已合并成单一根因，没有把已知名与未知名各计一项。\n- **PLUGIN-R8-03 保留**：parser 显式接受 dr"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/contexts.json",
+        "at": "$[\"hits\"][\"literal_namespace\"][1][\"context\"]",
+        "context": "有意义的控制。现有 `pluginCommandsLoader.expand.test.ts` 要求 quoted positional/named expansion，模块也明确 `$1`…`$9` 语法；将显式空引号解释成一个位置参数是该支持语法的合理推断，报告已标为推断，没有声称验证了上游 Codex 实现。Converter 证据只覆盖自有目录的真实复制→展开，不等于完整安装/宿主调用。\n- **PLUGIN-R8-02 保留**：placeholder regex 的 `$ARGUMENTS` 分支在完整命名 token 之前且没有边界，直接解释了 `$ARGUMENTS_FILE` / `$ARGUMENTS_UNKNOWN` 两个结果。命名赋值和命名占位都接受大写加下划线，现有测试要求未知 token 保留，故不需额外外部兼容合同。已合并成单一根因，没有把已知名与未知名各计一项。\n- **PLUGIN-R8-03 保留**：parser 显式接受 dr"
+      }
+    ],
+    "exact-form": []
+  },
+  "contextCapEach": 100,
+  "productRuns": 0,
+  "limitations": [
+    "Only new frozen37 exact inventory delta; queries have bounded windows, counts are not semantic exhaustion.",
+    "sources query carries a noncanonical tui/src/ink/geometry locator; actual geometry exact path/history checks belong to the frozen geometry reviewer. No claim that this Root locator searched the real geometry path."
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "mode": "Pure static ordinary shortcut-label text and selected consumer/test declarations plus metadata gates",
+  "productExecutions": 0,
+  "productImports": 0,
+  "languageFixturesEvaluated": 0,
+  "testsExecuted": 0,
+  "existingTestDeclarationSyntaxRead": 2,
+  "existingTestEachRowsRead": 3,
+  "existingSingleTestBodiesRead": 1,
+  "ReactBrowserKeyboardActions": 0,
+  "nativeShortcutMenuOrCommandActions": 0,
+  "actualStateIdentityPermissionNetworkModelExperiments": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round42-data-frontier",
+  "productRuns": [],
+  "metadataRuns": [
+    {
+      "name": "Fresh all3509 history value scan",
+      "sessionId": 87267,
+      "sameHandleExitCode": 0
+    },
+    {
+      "name": "One replacement all3509 value scan",
+      "sessionId": 94109,
+      "sameHandleExitCode": 0
+    }
+  ],
+  "metadataFailures": 0,
+  "metadataOutputTruncation": [
+    {
+      "toolChunk": "114003",
+      "detail": "Complete stored locator/context output exceeded budget due long locator arrays; not all output initially read. Subsequent minimal-header23unique context texts fully read; no all399/capped160 broad group reading claim."
+    }
+  ],
+  "oldPassesBorrowed": false,
+  "oldFailedDirectionsReopened": false,
+  "sourceCoverageCounts": {
+    "activeSemanticPins": 4,
+    "fullPins": 2,
+    "selectedPins": 2,
+    "productAndTestLines": 59,
+    "productLines": 41,
+    "testDeclarationLines": 18,
+    "metadataOnlyRankedOrExcludedProductPins": 5,
+    "totalProductBytePins": 9,
+    "carriedInstructionHashChecks": 2,
+    "newInstructionSemanticReadLines": 0
+  },
+  "all9ProductPinsStable": true,
+  "instructionBothStable": true,
+  "historyInitialFinishChanges": 0
+}

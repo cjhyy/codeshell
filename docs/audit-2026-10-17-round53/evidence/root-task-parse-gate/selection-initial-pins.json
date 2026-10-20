@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-10-17T17:48:36.017872+00:00",
+  "baseline": "524c0827a480132119b637aa87e16f0eab9895f3",
+  "files": [
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "bytes": 7206,
+      "lines": 190,
+      "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverReadClaim": null
+    }
+  ]
+}

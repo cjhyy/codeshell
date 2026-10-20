@@ -1,0 +1,622 @@
+packages/web/app/useLatestMessages.ts
+1: import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+2: import type { ChatItem } from "../src/lib/streamReducer.js";
+3: 
+4: function visibleOutput(item: ChatItem): boolean {
+5:   return (
+6:     item.kind !== "user" &&
+7:     !(item.kind === "assistant" && item.done && !item.text && !item.reasoning)
+8:   );
+9: }
+10: 
+11: /** Transport snapshots can recreate objects without adding visible output. */
+12: export function outputChanged(previous: ChatItem | undefined, item: ChatItem): boolean {
+13:   if (!visibleOutput(item) || previous === item) return false;
+14:   if (!previous || previous.kind !== item.kind) return true;
+15:   switch (item.kind) {
+16:     case "user":
+17:       return false;
+18:     case "assistant":
+19:       return (
+20:         previous.kind === "assistant" &&
+21:         (previous.text !== item.text ||
+22:           previous.reasoning !== item.reasoning ||
+23:           previous.done !== item.done)
+24:       );
+25:     case "tool":
+26:       return (
+27:         previous.kind === "tool" &&
+28:         (previous.result !== item.result ||
+29:           previous.summary !== item.summary ||
+30:           previous.done !== item.done ||
+31:           previous.error !== item.error ||
+32:           JSON.stringify(previous.args) !== JSON.stringify(item.args))
+33:       );
+34:     case "subagent":
+35:       return (
+36:         previous.kind === "subagent" &&
+37:         (previous.label !== item.label || previous.status !== item.status)
+38:       );
+39:     case "system":
+40:     case "system_error":
+41:       return (
+42:         (previous.kind === "system" || previous.kind === "system_error") &&
+43:         previous.text !== item.text
+44:       );
+45:   }
+46: }
+47: 
+48: /** Follow the live tail until the reader scrolls up. Session changes and explicit
+49:  * jumps resume following; reconnect/history hydration clear notices without
+50:  * disturbing an older paragraph the reader has chosen to keep on screen. */
+51: export function useLatestMessages({
+52:   items,
+53:   scope,
+54:   connection,
+55:   loading,
+56:   active,
+57:   approvalCount,
+58: }: {
+59:   items: ChatItem[];
+60:   scope: string;
+61:   connection: string;
+62:   loading: boolean;
+63:   active: boolean;
+64:   approvalCount: number;
+65: }) {
+66:   const listRef = useRef<HTMLDivElement>(null);
+67:   const contentRef = useRef<HTMLDivElement>(null);
+68:   const following = useRef(true);
+69:   const programmaticTop = useRef<number | null>(null);
+70:   const snappedSize = useRef<{ width: number; height: number } | null>(null);
+71:   const previous = useRef(new Map<string, ChatItem>());
+72:   const unread = useRef(new Set<string>());
+73:   const identity = useRef({ scope, connection, loading, active });
+74:   const [showJump, setShowJump] = useState(false);
+75:   const [newOutputCount, setNewOutputCount] = useState(0);
+76:   const clearNotices = useCallback(() => {
+77:     unread.current.clear();
+78:     setNewOutputCount(0);
+79:   }, []);
+80:   const snap = useCallback(() => {
+81:     const list = listRef.current;
+82:     if (!list) return;
+83:     list.scrollTop = list.scrollHeight;
+84:     programmaticTop.current = list.scrollTop;
+85:     snappedSize.current = { width: list.clientWidth, height: list.clientHeight };
+86:   }, []);
+87:   const resume = useCallback(() => {
+88:     following.current = true;
+89:     clearNotices();
+90:     setShowJump(false);
+91:     snap();
+92:   }, [clearNotices, snap]);
+93: 
+94:   const onScroll = useCallback(() => {
+95:     const list = listRef.current;
+96:     if (!list || !active) return;
+97:     const size = snappedSize.current;
+98:     // Viewport/composer reflow can dispatch scroll before ResizeObserver. Keep
+99:     // an existing follow decision through that layout event, then measure anew.
+100:     if (
+101:       following.current &&
+102:       size &&
+103:       (size.width !== list.clientWidth || size.height !== list.clientHeight)
+104:     ) {
+105:       snap();
+106:       setShowJump(false);
+107:       return;
+108:     }
+109:     const near = list.scrollHeight - list.scrollTop - list.clientHeight <= 100;
+110:     // A bottom snap dispatches its scroll event after more content may arrive.
+111:     // Do not mistake that delayed event for the reader leaving the live tail.
+112:     if (
+113:       programmaticTop.current !== null &&
+114:       Math.abs(list.scrollTop - programmaticTop.current) <= 2
+115:     ) {
+116:       programmaticTop.current = null;
+117:       setShowJump(!near && !following.current);
+118:       return;
+119:     }
+120:     programmaticTop.current = null;
+121:     following.current = near;
+122:     setShowJump(!near);
+123:     if (near) clearNotices();
+124:   }, [active, clearNotices, snap]);
+125: 
+126:   useLayoutEffect(() => {
+127:     const before = identity.current;
+128:     const changedScope = before.scope !== scope;
+129:     const reset =
+130:       changedScope ||
+131:       before.connection !== connection ||
+132:       before.loading !== loading ||
+133:       before.active !== active;
+134:     identity.current = { scope, connection, loading, active };
+135:     const next = new Map(items.filter(visibleOutput).map((item) => [item.id, item]));
+136:     if (reset) {
+137:       clearNotices();
+138:       if (changedScope) {
+139:         following.current = true;
+140:         programmaticTop.current = null;
+141:         setShowJump(false);
+142:       }
+143:     } else if (active && connection === "open" && !loading && !following.current) {
+144:       for (const item of items) {
+145:         if (outputChanged(previous.current.get(item.id), item)) unread.current.add(item.id);
+146:       }
+147:       for (const id of unread.current) if (!next.has(id)) unread.current.delete(id);
+148:       setNewOutputCount(unread.current.size);
+149:     }
+150:     previous.current = next;
+151:     if (active && following.current) snap();
+152:   }, [items, scope, connection, loading, active, approvalCount, clearNotices, snap]);
+153: 
+154:   useEffect(() => {
+155:     const list = listRef.current;
+156:     const content = contentRef.current;
+157:     if (!active || !list || !content || typeof ResizeObserver === "undefined") return;
+158:     const observer = new ResizeObserver(() => {
+159:       if (following.current) snap();
+160:       else if (list.scrollHeight - list.scrollTop - list.clientHeight <= 100) resume();
+161:       else setShowJump(true);
+162:     });
+163:     observer.observe(list);
+164:     observer.observe(content);
+165:     return () => observer.disconnect();
+166:   }, [active, resume, snap]);
+167: 
+168:   const jumpToLatest = useCallback(() => {
+169:     resume();
+170:     listRef.current?.focus({ preventScroll: true });
+171:   }, [resume]);
+172:   return { listRef, contentRef, onScroll, showJump, newOutputCount, jumpToLatest, resume };
+173: }
+
+packages/web/app/Workbench.tsx [142,166]
+142:   }, []);
+143:   const [narrow, setNarrow] = React.useState(() => window.matchMedia("(max-width: 760px)").matches);
+144:   const [sidebarOpen, setSidebarOpen] = React.useState(
+145:     () => !window.matchMedia("(max-width: 760px)").matches,
+146:   );
+147:   const sidebarRef = React.useRef<HTMLElement>(null);
+148:   const sidebarBackdropRef = React.useRef<HTMLDivElement>(null);
+149:   const sidebarToggleRef = React.useRef<HTMLButtonElement>(null);
+150:   const sidebarCloseFocus = React.useRef<{
+151:     source: HTMLElement;
+152:     workspace: string;
+153:     cancelled: boolean;
+154:   } | null>(null);
+155:   const messageListId = React.useId();
+156:   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+157:   const latest = useLatestMessages({
+158:     items: chat.items,
+159:     scope: JSON.stringify([controller.workspaceKey, activeId]),
+160:     connection,
+161:     loading: Boolean(controller.loading),
+162:     active: view === "chat",
+163:     approvalCount: controller.approvals.length,
+164:   });
+165:   React.useLayoutEffect(() => {
+166:     const handoff = historyHandoff.current;
+
+packages/web/app/Workbench.tsx [783,826]
+783:                 {chat.items.map((item) => {
+784:                   switch (item.kind) {
+785:                     case "user":
+786:                       return (
+787:                         <div key={item.id} className="msg user">
+788:                           {item.text}
+789:                           {item.attachments?.map((attachment, index) =>
+790:                             hub && attachment.path ? (
+791:                               <button
+792:                                 className="attachment attachment-open"
+793:                                 key={index}
+794:                                 onClick={() => openFiles(attachment.path)}
+795:                               >
+796:                                 📎 {attachment.name}
+797:                               </button>
+798:                             ) : (
+799:                               <span className="attachment" key={index}>
+800:                                 📎 {attachment.name}
+801:                               </span>
+802:                             ),
+803:                           )}
+804:                         </div>
+805:                       );
+806:                     case "assistant":
+807:                       if (item.done && !item.text && !item.reasoning) return null;
+808:                       return (
+809:                         <div key={item.id} className="msg assistant">
+810:                           <MessageContent
+811:                             text={item.text}
+812:                             reasoning={item.reasoning}
+813:                             streaming={!item.done}
+814:                             onOpenFile={hub ? openMessageFile : undefined}
+815:                           />
+816:                         </div>
+817:                       );
+818:                     case "tool":
+819:                       return (
+820:                         <div key={item.id} className={`msg tool${item.error ? " tool-error" : ""}`}>
+821:                           <ToolMessage item={item} running={running} />
+822:                         </div>
+823:                       );
+824:                     case "subagent":
+825:                       return (
+826:                         <div key={item.id} className="msg info">
+
+packages/web/app/Workbench.tsx [863,894]
+863:             {latest.showJump && (
+864:               <button
+865:                 type="button"
+866:                 className="latest-messages"
+867:                 aria-controls={messageListId}
+868:                 aria-label={
+869:                   latest.newOutputCount
+870:                     ? `回到最新消息，${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出`
+871:                     : "回到最新消息"
+872:                 }
+873:                 onClick={latest.jumpToLatest}
+874:               >
+875:                 <span aria-hidden="true">↓</span>
+876:                 回到最新消息
+877:                 {latest.newOutputCount > 0 && (
+878:                   <span className="latest-count" aria-hidden="true">
+879:                     {latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出
+880:                   </span>
+881:                 )}
+882:               </button>
+883:             )}
+884:             <span
+885:               className="latest-announcement"
+886:               role="status"
+887:               aria-live="polite"
+888:               aria-atomic="true"
+889:             >
+890:               {latest.newOutputCount > 0
+891:                 ? `${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出，可回到最新消息。`
+892:                 : ""}
+893:             </span>
+894:           </div>
+
+packages/web/src/lib/streamReducer.ts [37,67]
+37: export type ChatItem =
+38:   | {
+39:       kind: "user";
+40:       id: string;
+41:       text: string;
+42:       attachments?: UserAttachmentSummary[];
+43:       clientMessageId?: string;
+44:     }
+45:   | {
+46:       kind: "assistant";
+47:       id: string;
+48:       messageId?: string;
+49:       text: string;
+50:       reasoning: string;
+51:       done: boolean;
+52:       agentId?: string;
+53:     }
+54:   | {
+55:       kind: "tool";
+56:       id: string;
+57:       name: string;
+58:       args?: Record<string, unknown>;
+59:       result?: string;
+60:       error?: boolean;
+61:       summary?: string;
+62:       done: boolean;
+63:       agentId?: string;
+64:     }
+65:   | { kind: "subagent"; id: string; agentId: string; label: string; status: string }
+66:   | { kind: "system"; id: string; text: string }
+67:   | { kind: "system_error"; id: string; text: string };
+
+packages/web/src/lib/streamReducer.ts [184,205]
+184:     const next = s.seq + 1;
+185:     return [`${prefix}-${next}`, { ...s, seq: next }];
+186:   };
+187: 
+188:   switch (type) {
+189:     case "stream_request_start": {
+190:       // Open a fresh assistant message (for THIS agent) to accumulate text into.
+191:       const key = agentKey(event);
+192:       const [id, s2] = freshId("a");
+193:       const item: ChatItem = {
+194:         kind: "assistant",
+195:         id,
+196:         text: "",
+197:         reasoning: "",
+198:         done: false,
+199:         agentId: event.agentId as string | undefined,
+200:         ...(typeof event.messageId === "string" ? { messageId: event.messageId } : {}),
+201:       };
+202:       return {
+203:         ...s2,
+204:         items: [...s2.items, item],
+205:         liveByAgent: { ...s2.liveByAgent, [key]: id },
+
+packages/web/src/lib/streamReducer.ts [211,235]
+211:       const text = (event.text as string) ?? "";
+212:       const key = agentKey(event);
+213:       const liveId = s.liveByAgent[key];
+214:       const live = liveId && s.items.find((i) => i.id === liveId && i.kind === "assistant");
+215:       if (live) {
+216:         return {
+217:           ...s,
+218:           run: event.agentId ? s.run : "running",
+219:           items: s.items.map((i) =>
+220:             i.id === liveId && i.kind === "assistant" ? { ...i, text: i.text + text } : i,
+221:           ),
+222:         };
+223:       }
+224:       // No open assistant for this agent (e.g. text before stream_request_start)
+225:       // → open one scoped to this agent.
+226:       const [id, s2] = freshId("a");
+227:       const item: ChatItem = {
+228:         kind: "assistant",
+229:         id,
+230:         text,
+231:         reasoning: "",
+232:         done: false,
+233:         agentId: event.agentId as string | undefined,
+234:       };
+235:       return {
+
+packages/web/src/lib/streamReducer.ts [276,301]
+276:         | undefined;
+277:       if (!call) return s;
+278:       // Idempotent: a duplicate start for the same call id is a no-op.
+279:       if (s.items.some((i) => i.kind === "tool" && i.id === call.id)) return s;
+280:       // A tool_result may have arrived BEFORE this start (out-of-order); apply
+281:       // the buffered orphan now so the card isn't stuck open with no result.
+282:       const orphan = s.orphanResults?.[call.id];
+283:       const item: ChatItem = {
+284:         kind: "tool",
+285:         id: call.id,
+286:         name: call.toolName,
+287:         args: call.args,
+288:         // Room tool messages carry a human summary instead of structured args.
+289:         summary: call.summary,
+290:         done: orphan ? true : false,
+291:         result: orphan?.result,
+292:         error: orphan?.error,
+293:         agentId: event.agentId as string | undefined,
+294:       };
+295:       let orphanResults = s.orphanResults;
+296:       if (orphan) {
+297:         const { [call.id]: _used, ...restOrphans } = s.orphanResults!;
+298:         orphanResults = Object.keys(restOrphans).length > 0 ? restOrphans : undefined;
+299:       }
+300:       return {
+301:         ...s,
+
+packages/web/src/lib/streamReducer.ts [381,408]
+381:       const tool = items[idx] as Extract<ChatItem, { kind: "tool" }>;
+382:       items[idx] = {
+383:         ...tool,
+384:         done: true,
+385:         result: resultText,
+386:         summary: resultText || tool.summary,
+387:         error: isError,
+388:       };
+389:       return { ...s, items };
+390:     }
+391: 
+392:     case "tool_summary": {
+393:       const summary = (event.summary as string) ?? "";
+394:       const ids = Array.isArray(event.toolCallIds)
+395:         ? event.toolCallIds.filter((id): id is string => typeof id === "string")
+396:         : [];
+397:       const hasTargetIds = ids.length > 0;
+398:       const targetToolId = hasTargetIds ? ids[ids.length - 1] : undefined;
+399:       const agentId = event.agentId as string | undefined;
+400: 
+401:       if (targetToolId) {
+402:         let found = false;
+403:         const items = s.items.map((i) => {
+404:           if (i.kind !== "tool" || i.id !== targetToolId || i.agentId !== agentId) return i;
+405:           found = true;
+406:           return { ...i, summary };
+407:         });
+408:         return found ? { ...s, items } : s;
+
+packages/web/src/lib/streamReducer.ts [560,607]
+560:       // agentId (fbe6f68). The MAIN agent's own TodoWrite emits task_update with
+561:       // NO agentId (core task.ts) — like the desktop renderer (renderer/types.ts
+562:       // drops agentId-less task_updates from the subagent path), we must NOT turn
+563:       // the user's own todo list into a spurious "sub-main" child-agent row.
+564:       const agentId = event.agentId as string | undefined;
+565:       if (!agentId) return s;
+566:       const tasks = (event.tasks as { status: string }[] | undefined) ?? [];
+567:       const done = tasks.filter((t) => t.status === "completed").length;
+568:       const label = `任务 ${done}/${tasks.length}`;
+569:       const existing = s.items.findIndex((i) => i.kind === "subagent" && i.agentId === agentId);
+570:       const sub: ChatItem = {
+571:         kind: "subagent",
+572:         id: `sub-${agentId}`,
+573:         agentId,
+574:         label,
+575:         // Empty list ⇒ not started, not "completed" (Array.every is vacuously
+576:         // true on []). Only call it completed when there is at least one task and
+577:         // all are done.
+578:         status: tasks.length > 0 && done === tasks.length ? "completed" : "running",
+579:       };
+580:       if (existing >= 0) {
+581:         const items = s.items.slice();
+582:         items[existing] = sub;
+583:         return { ...s, items };
+584:       }
+585:       return { ...s, items: [...s.items, sub] };
+586:     }
+587: 
+588:     case "agent_start": {
+589:       const agentId = event.agentId as string;
+590:       if (!agentId) return s;
+591:       const sub: ChatItem = {
+592:         kind: "subagent",
+593:         id: `sub-${agentId}`,
+594:         agentId,
+595:         label: (event.name as string) || (event.description as string) || "子代理",
+596:         status: event.status === "recorded" ? "recorded" : "running",
+597:       };
+598:       if (s.items.some((i) => i.kind === "subagent" && i.agentId === agentId)) return s;
+599:       return { ...s, items: [...s.items, sub] };
+600:     }
+601: 
+602:     case "agent_end": {
+603:       const agentId = event.agentId as string;
+604:       return {
+605:         ...s,
+606:         items: s.items.map((i) =>
+607:           i.kind === "subagent" && i.agentId === agentId
+
+packages/web/app/useLatestMessages.test.ts [1,50]
+1: import { expect, test } from "bun:test";
+2: import type { ChatItem } from "../src/lib/streamReducer.js";
+3: import { outputChanged } from "./useLatestMessages.js";
+4: 
+5: const assistant: ChatItem = {
+6:   kind: "assistant",
+7:   id: "reply",
+8:   text: "First paragraph",
+9:   reasoning: "",
+10:   done: false,
+11: };
+12: test("unchanged transport replay does not count as new output", () => {
+13:   const tool: ChatItem = {
+14:     kind: "tool",
+15:     id: "tool",
+16:     name: "Read",
+17:     args: { path: "notes.md" },
+18:     done: false,
+19:   };
+20:   for (const item of [assistant, tool, { kind: "system", id: "notice", text: "Ready" } as ChatItem])
+21:     expect(outputChanged(item, structuredClone(item))).toBe(false);
+22: });
+23: test("streaming text, reasoning, results and completion remain visible changes", () => {
+24:   expect(outputChanged(assistant, { ...assistant, text: "First paragraph\nNext paragraph" })).toBe(
+25:     true,
+26:   );
+27:   expect(outputChanged(assistant, { ...assistant, reasoning: "New reasoning" })).toBe(true);
+28:   expect(outputChanged(assistant, { ...assistant, done: true })).toBe(true);
+29:   const tool: ChatItem = { kind: "tool", id: "tool", name: "Read", done: false };
+30:   expect(outputChanged(tool, { ...tool, result: "Read result", done: true })).toBe(true);
+31:   expect(outputChanged(tool, { ...tool, args: { path: "notes.md" } })).toBe(true);
+32: });
+33: test("new output has an identity while optimistic user echoes do not create notices", () => {
+34:   expect(outputChanged(undefined, assistant)).toBe(true);
+35:   expect(outputChanged(undefined, { kind: "user", id: "user", text: "My task" })).toBe(false);
+36:   expect(
+37:     outputChanged(
+38:       { kind: "subagent", id: "child", agentId: "child", label: "Task", status: "running" },
+39:       { kind: "subagent", id: "child", agentId: "child", label: "Task", status: "done" },
+40:     ),
+41:   ).toBe(true);
+42: });
+43: test("completed empty assistant placeholders match the transcript's hidden-message rule", () => {
+44:   expect(outputChanged(undefined, { ...assistant, text: "", reasoning: "", done: true })).toBe(
+45:     false,
+46:   );
+47:   expect(outputChanged(assistant, { ...assistant, text: "", reasoning: "", done: true })).toBe(
+48:     false,
+49:   );
+50: });
+
+packages/web/app/Workbench.tsx [72,84]
+72:   renderAccountControl?: (navigation: WorkbenchNavigation) => React.ReactNode;
+73: }) {
+74:   const {
+75:     connection,
+76:     sessions,
+77:     activeId,
+78:     chat,
+79:     draft,
+80:     files,
+81:     uploading,
+82:     workerNote,
+83:     replayNote,
+84:     error,
+
+packages/web/app/workbench-types.ts [18,24]
+18:   connection: ConnectionState;
+19:   session?: AuthSession;
+20:   activeId: string;
+21:   chat: ChatState;
+22:   sessions: SessionSummary[];
+23:   workspaceCwd: string | null;
+24:   workspaceName: string;
+
+packages/web/app/useHubController.tsx [62,62]
+62:   const [chat, setChat] = React.useState<ChatState>(initialChatState());
+
+packages/web/app/useHubController.tsx [500,500]
+500:           setChat((prev) => reduceStream(prev, event));
+
+packages/web/app/useHubController.tsx [580,609]
+580:     activeIdRef.current = sessionId;
+581:     activeStreamCursor.current = null;
+582:     activeOutputCursor.current = null;
+583:     outputRecoveryBlocked.current = false;
+584:     setActiveId(sessionId);
+585:     syncDraft(sessionId);
+586:     setChat(initialChatState());
+587:     setReplayNote(null);
+588:     if (
+589:       !sessions.some((item) => item.sessionId === sessionId) &&
+590:       !liveRuns.current.has(sessionId) &&
+591:       draftStore.current.unsent().some((item) => item.sessionId === sessionId)
+592:     )
+593:       return;
+594:     await loadTranscript(sessionId);
+595:   };
+596: 
+597:   const createNewSession = (): void => {
+598:     const id = newSessionId();
+599:     activeIdRef.current = id;
+600:     activeStreamCursor.current = null;
+601:     activeOutputCursor.current = null;
+602:     outputRecoveryBlocked.current = false;
+603:     loadingTranscript.current = null;
+604:     setLoadingSession(null);
+605:     setActiveId(id);
+606:     syncDraft(id);
+607:     setChat(initialChatState());
+608:     setError("");
+609:     setReplayNote(null);
+
+packages/web/app/useHubController.tsx [811,811]
+811:     chat,
+
+packages/web/src/lib/streamReducer.ts [608,612]
+608:             ? { ...i, status: event.error ? "error" : "completed" }
+609:             : i,
+610:         ),
+611:       };
+612:     }
+
+packages/web/app/Workbench.tsx [827,849]
+827:                           ↳ {item.label} · {subagentStatusLabel(item.status)}
+828:                         </div>
+829:                       );
+830:                     case "system":
+831:                       return (
+832:                         <div key={item.id} className="msg info">
+833:                           {item.text}
+834:                         </div>
+835:                       );
+836:                     case "system_error":
+837:                       return (
+838:                         <div key={item.id} className="msg error">
+839:                           {item.text}
+840:                         </div>
+841:                       );
+842:                     default:
+843:                       return null;
+844:                   }
+845:                 })}
+846:                 {controller.approvalContent}
+847: 
+848:                 {empty ? (
+849:                   <div className="empty-chat">

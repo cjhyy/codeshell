@@ -1,12 +1,63 @@
-import { equal, match, rejects } from "node:assert/strict";
+import { deepStrictEqual, equal, match, rejects } from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { launchCodeShellElectron, makeIsolatedElectronHome } from "./electron-harness.mjs";
-import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
+import vm from "node:vm";
+import {
+  launchCodeShellElectron,
+  makeIsolatedElectronHome,
+  waitForAsyncFunction,
+} from "./electron-harness.mjs";
+import {
+  ensureElectronKeychainContext,
+  getElectronKeychainPreflightDiagnostic,
+} from "./electron-keychain-preflight.mjs";
 import { keychainPreferenceXml } from "./macos-keychain-context.mjs";
+
+test("async condition polling awaits false results instead of accepting their Promise", async () => {
+  let calls = 0;
+  const win = {
+    evaluate: async () => {
+      await new Promise((done) => setTimeout(done, 1));
+      return ++calls === 3;
+    },
+  };
+  equal(await waitForAsyncFunction(win, () => {}, undefined, { polling: 1 }), true);
+  equal(calls, 3);
+  await rejects(
+    waitForAsyncFunction({ evaluate: async () => false }, () => {}, undefined, { timeout: 0 }),
+    /Timed out waiting for an asynchronous UI condition/,
+  );
+  await rejects(
+    waitForAsyncFunction(
+      {
+        evaluate: async () => {
+          throw new Error("IPC failed");
+        },
+      },
+      () => {},
+    ),
+    /IPC failed/,
+  );
+  await rejects(
+    waitForAsyncFunction({ evaluate: () => new Promise(() => {}) }, () => {}, undefined, {
+      timeout: 10,
+    }),
+    /Timed out waiting for an asynchronous UI condition/,
+  );
+});
 
 function fixture(t) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "electron-launch-preflight-test-")));
@@ -40,6 +91,84 @@ test("missing macOS default fails before bootstrap or Electron launch", async (t
   );
   equal(launches, 0);
   equal(existsSync(join(input.home, "real-keyring.cjs")), false);
+});
+
+test("a replaced owned inode blocks launch without repinning; a fresh fixture is independent", async (t) => {
+  const input = fixture(t);
+  // An ordinary temporary file exercises filesystem identity; no native Keychain is queried.
+  const target = join(input.operatorHome, "synthetic-metadata-file");
+  writeFileSync(target, "owned fixture\n", { mode: 0o600 });
+  const query = () => {
+    const info = statSync(target);
+    return {
+      path: target,
+      pathHash: createHash("sha256").update(target).digest("hex"),
+      dev: info.dev,
+      ino: info.ino,
+      uid: info.uid,
+    };
+  };
+  const preflight = (options) =>
+    ensureElectronKeychainContext({
+      ...options,
+      platform: "darwin",
+      operatorHome: input.operatorHome,
+      query,
+    });
+  const environment = { HOME: input.home, USERPROFILE: input.home };
+  preflight({ home: input.home, environment });
+  const files = [
+    join(input.home, "electron-keychain-reference.json"),
+    join(input.home, "electron-keychain-context.json"),
+    join(input.home, "Library", "Preferences", "com.apple.security.plist"),
+  ];
+  const snapshot = () =>
+    files.map((file) => {
+      const info = statSync(file);
+      return {
+        bytes: readFileSync(file),
+        inode: info.ino,
+        mtimeMs: info.mtimeMs,
+        mode: info.mode,
+      };
+    });
+  const original = snapshot();
+  const replacement = join(input.operatorHome, "replacement");
+  writeFileSync(replacement, "replacement owned fixture\n", { mode: 0o600 });
+  renameSync(replacement, target);
+  let launches = 0;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await rejects(
+      launchCodeShellElectron(input, {
+        preflight,
+        launch() {
+          launches++;
+        },
+      }),
+      (error) => {
+        const diagnostic = getElectronKeychainPreflightDiagnostic(error);
+        equal(diagnostic.code, "CODESHELL_KEYCHAIN_PREFLIGHT_IDENTITY_CHANGED");
+        equal(diagnostic.stage, "account-before");
+        deepStrictEqual(diagnostic.identity, {
+          sameHome: true,
+          samePath: true,
+          sameDevice: true,
+          sameInode: false,
+          sameOwner: true,
+        });
+        return true;
+      },
+    );
+    deepStrictEqual(snapshot(), original);
+  }
+  equal(launches, 0);
+  equal(existsSync(join(input.home, "real-keyring.cjs")), false);
+  const freshHome = join(input.appDir, "fresh-home");
+  mkdirSync(freshHome, { mode: 0o700 });
+  const fresh = { home: freshHome, environment: { HOME: freshHome, USERPROFILE: freshHome } };
+  equal(preflight(fresh).reused, false);
+  equal(preflight(fresh).reused, true);
+  deepStrictEqual(snapshot(), original);
 });
 
 test("HOME overrides cannot bypass preflight and reach Electron", async (t) => {
@@ -79,16 +208,22 @@ test("launch validates merged environment first and attaches a bounded watchdog"
   const result = await launchCodeShellElectron(
     { ...input, env: { CODE_SHELL_NO_DEVTOOLS: "fixture" }, runtimeTimeoutMs: 12_345 },
     {
+      // This mock has no installed-Windows spawn handshake. That contract is
+      // exercised independently by windows-source-harness.test.mjs.
+      platform: "linux",
       preflight(options) {
         order.push("preflight");
         equal(options.environment.HOME, input.home);
         equal(options.environment.USERPROFILE, input.home);
+        equal(options.environment.CODE_SHELL_HOME, join(input.home, ".code-shell"));
+        equal(options.environment.CODE_SHELL_TEST_HOME, join(input.home, ".code-shell"));
         equal(options.environment.CODE_SHELL_NO_DEVTOOLS, "fixture");
         equal(existsSync(join(input.home, "real-keyring.cjs")), false);
       },
       async launch(options) {
         order.push("launch");
         equal(options.timeout, 30_000);
+        equal(options.chromiumSandbox, true);
         equal(options.env.HOME, input.home);
         equal(existsSync(join(input.home, "real-keyring.cjs")), true);
         match(options.args[2], /^--user-data-dir=/);
@@ -103,6 +238,55 @@ test("launch validates merged environment first and attaches a bounded watchdog"
   );
   equal(order.join(), "preflight,launch,watch");
   equal(result, application);
+});
+
+test("Linux bootstrap refuses an actual no-sandbox switch before app initialization", async (t) => {
+  const input = fixture(t);
+  await launchCodeShellElectron(input, {
+    platform: "linux",
+    preflight: () => {},
+    watch: () => {},
+    launch: async (options) => {
+      equal(options.chromiumSandbox, true);
+      return { process: () => ({}) };
+    },
+  });
+  const source = readFileSync(join(input.home, "real-keyring.cjs"), "utf8");
+  for (const noSandbox of [true, false]) {
+    const initialization = [],
+      records = [];
+    const script = new vm.Script(source);
+    const run = () =>
+      script.runInNewContext({
+        process: { platform: "linux", pid: 101, ppid: 100, versions: { electron: "fixture" } },
+        require: (name) => {
+          if (name === "node:fs")
+            return { appendFileSync: (_path, text) => records.push(JSON.parse(text)) };
+          equal(name, "electron");
+          return {
+            app: {
+              setName: (name) => initialization.push(name),
+              getName: () => "code-shell",
+              commandLine: {
+                hasSwitch: (name) => name === "no-sandbox" && noSandbox,
+                removeSwitch: () => {},
+                appendSwitch: () => {},
+                getSwitchValue: () => "gnome-libsecret",
+              },
+            },
+          };
+        },
+      });
+    if (noSandbox) {
+      await rejects(async () => run(), /refused no-sandbox/);
+      deepStrictEqual(initialization, []);
+      deepStrictEqual(records, []);
+    } else {
+      run();
+      deepStrictEqual(initialization, ["code-shell"]);
+      equal(records[0].noSandboxSwitch, false);
+    }
+  }
 });
 
 test(
@@ -163,7 +347,7 @@ test(
   },
 );
 
-test("invalid deadlines refuse launch and watcher setup failure closes only its app", async (t) => {
+test("invalid deadlines refuse launch and missing birth custody never closes its app", async (t) => {
   const input = fixture(t);
   for (const options of [
     { timeout: 0 },
@@ -185,6 +369,7 @@ test("invalid deadlines refuse launch and watcher setup failure closes only its 
   let closed = 0;
   await rejects(
     launchCodeShellElectron(input, {
+      platform: "linux",
       preflight: () => {},
       launch: async () => ({
         process: () => ({}),
@@ -198,7 +383,7 @@ test("invalid deadlines refuse launch and watcher setup failure closes only its 
     }),
     /synthetic watchdog failure/,
   );
-  equal(closed, 1);
+  equal(closed, 0);
 });
 
 test("temporary Electron homes are canonical and cleanup stays scoped to that fixture", async () => {

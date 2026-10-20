@@ -26,6 +26,7 @@ import {
   navigateSettingsMenu,
   seedSessionCatalog,
 } from "./electron-harness.mjs";
+import { settingsNetworkGuard } from "./settings-network-guard.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-themes-e2e-");
@@ -281,19 +282,59 @@ async function recordThemeAudio() {
   });
 }
 
-async function assertThemeMusicPlayback(label) {
+async function assertThemeMusicPlayback(
+  label,
+  expectedTracks = 1,
+  expectedSounds = ["send", "complete", "approval", "error"],
+) {
   await recordThemeAudio();
   assert(
     await win.evaluate(() => window.__codeshellThemeAudio.every((audio) => audio.paused)),
     `${label} does not autoplay on selection`,
   );
   assert(
-    (await win.locator("[data-theme-sound-preview]").count()) === 4,
-    `${label} exposes four sound previews`,
+    (await win.locator("[data-theme-sound-preview]").count()) === expectedSounds.length,
+    `${label} exposes its sound previews`,
+  );
+  const soundEvents = await win
+    .locator("[data-theme-sound-preview]")
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-theme-sound-preview")));
+  assert(
+    JSON.stringify(soundEvents.sort()) === JSON.stringify([...expectedSounds].sort()),
+    `${label} exposes the declared sound events`,
+  );
+  const musicSelect = win.locator("[data-theme-music-select]");
+  if (expectedTracks > 0) {
+    assert(
+      (await musicSelect.getAttribute("role")) === "combobox",
+      `${label} uses the themed selector`,
+    );
+    await musicSelect.click();
+    const trackList = win.getByRole("listbox");
+    await trackList.waitFor({ state: "visible" });
+    const tracks = trackList.getByRole("option");
+    assert((await tracks.count()) === expectedTracks, `${label} offers its local music tracks`);
+    const selectedTitle = await tracks.last().locator(".cs-select-option-label").textContent();
+    await tracks.last().click();
+    await trackList.waitFor({ state: "hidden" });
+    assert(
+      (await musicSelect.textContent()).includes(selectedTitle),
+      `${label} selects a local track`,
+    );
+  } else {
+    assert((await musicSelect.count()) === 0, `${label} has no local music selector`);
+    assert(
+      (await win.locator("[data-theme-music-play]").count()) === 0,
+      `${label} has no local music player`,
+    );
+  }
+  assert(
+    (await win.locator("[data-theme-music-open]").count()) === 0,
+    `${label} does not offer external listening links`,
   );
   assert(
-    (await win.locator("[data-theme-music-select] option").count()) === 4,
-    `${label} offers an offline original and three official music links`,
+    await win.evaluate(() => window.__codeshellThemeAudio.every((audio) => audio.paused)),
+    `${label} does not autoplay after selecting a track`,
   );
   const cueSources = [];
   for (const cue of await win.locator("[data-theme-sound-preview]").all()) {
@@ -312,9 +353,25 @@ async function assertThemeMusicPlayback(label) {
     );
     cueSources.push(played.src);
   }
-  assert(new Set(cueSources).size === 4, `${label} plays four distinct notification files`);
+  assert(
+    new Set(cueSources).size === expectedSounds.length,
+    `${label} plays distinct notification files`,
+  );
   await win.waitForFunction(() => window.__codeshellThemeAudio.every((audio) => audio.paused));
+  if (expectedTracks === 0) return;
+  const previousMusic = await win.evaluate(() => window.__codeshellThemeAudioPlayed.length);
   await win.locator("[data-theme-music-play]").click();
+  await win.waitForFunction(
+    (count) => window.__codeshellThemeAudioPlayed.length > count,
+    previousMusic,
+  );
+  const playedMusic = await win.evaluate(() => window.__codeshellThemeAudioPlayed.at(-1));
+  assert(
+    ["file:", "cstheme:"].includes(new URL(playedMusic.src).protocol) &&
+      Number.isFinite(playedMusic.duration) &&
+      playedMusic.duration > 0,
+    `${label} decodes and plays local background music`,
+  );
   await win.waitForFunction(() =>
     window.__codeshellThemeAudio.some((audio) => !audio.paused && audio.currentTime > 0),
   );
@@ -430,6 +487,7 @@ try {
   });
   const rootZip = await zipFixture(legacy, "legacy-root.zip");
   const wrappedZip = await zipFixture(rich, "surface-theme.zip", "surface-theme/");
+  const networkGuard = await settingsNetworkGuard(isolated.home);
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
@@ -437,9 +495,10 @@ try {
     // Bundled skins, background playback and source-pack imports extend
     // this smoke beyond the harness's default three-minute runtime budget.
     runtimeTimeoutMs: 300_000,
+    mainBootstrap: networkGuard.mainBootstrap,
     // The outer guarded runner owns a different fixture HOME. Keep the Core
     // test-runner fallback attached to this Electron profile as well.
-    env: { CODE_SHELL_TEST_HOME: isolated.codeShellHome },
+    env: { ...networkGuard.env, CODE_SHELL_TEST_HOME: isolated.codeShellHome },
   });
   app.process().stderr?.on("data", (chunk) => {
     processLog = (processLog + chunk).slice(-20_000);
@@ -519,6 +578,7 @@ try {
     await appearance();
   }
   report.builtinPacks = builtinPacks;
+  await recordThemeAudio();
   for (const id of builtinPacks) {
     await chooseMode("light");
     await win.locator(`[data-theme-pack="${id}"] button[aria-pressed]`).click();
@@ -644,9 +704,14 @@ try {
     await win.locator('[data-theme-pack="visual-legacy"]').waitFor({ state: "hidden" });
     await win.locator('[data-theme-pack="visual-surfaces"]').waitFor({ state: "hidden" });
     const manifest = JSON.parse(await readFile(join(sourceDir, ".cs-theme.json"), "utf8"));
+    await recordThemeAudio();
     await importPack(resolve(sourceDir), manifest.id);
-    if (manifest.sounds && manifest.music) {
-      await assertThemeMusicPlayback(`Installed ${manifest.id}`);
+    if (manifest.sounds || manifest.music) {
+      await assertThemeMusicPlayback(
+        `Installed ${manifest.id}`,
+        (manifest.music ?? []).filter((track) => track.file?.trim()).length,
+        Object.keys(manifest.sounds ?? {}),
+      );
     }
     for (const mode of ["light", "dark"]) {
       await chooseMode(mode);
@@ -724,6 +789,10 @@ try {
   assert(
     errors.length === 0,
     `Renderer errors: ${errors.map((error) => error.message).join("; ")}`,
+  );
+  assert(
+    (await app.evaluate(() => globalThis.__staticSettingsNetworkAttempts)) === 0,
+    "Offline theme settings attempted network access",
   );
   if (screenshotDir)
     await writeFile(join(screenshotDir, "report.json"), JSON.stringify(report, null, 2));

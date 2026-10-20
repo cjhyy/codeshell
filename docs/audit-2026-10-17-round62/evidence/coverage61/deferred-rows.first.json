@@ -1,0 +1,228 @@
+{
+  "count": 2,
+  "rows": [
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+        "metadataSHA256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+        "jsonPointer": "/files/7"
+      },
+      "originalObject": {
+        "path": "packages/desktop/src/main/capabilities-service.ts",
+        "bytes": 4475,
+        "lineCount": 120,
+        "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+        "pinnedAtUTC": "2026-10-17T20:20:15.062779+00:00",
+        "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+        "selectedLineRanges": [
+          [
+            51,
+            80
+          ],
+          [
+            114,
+            120
+          ]
+        ],
+        "semanticLineCount": 37,
+        "bodyDisplayedLineRanges": [
+          [
+            40,
+            124
+          ]
+        ],
+        "bodyDisplayedLineCount": 85,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [
+          [
+            40,
+            124
+          ]
+        ],
+        "displayedLineCount": 85,
+        "coverage": "selected",
+        "semanticFull": false,
+        "category": "product-selected",
+        "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+      },
+      "path": "packages/desktop/src/main/capabilities-service.ts",
+      "declaredCoverage": "selected",
+      "issues": [
+        "bodyDisplayedLineRanges: outside EOF [40, 124]",
+        "body display count mismatch or absent",
+        "semantic ranges not contained in displayed body",
+        "displayedLineRanges: outside EOF [40, 124]",
+        "total display count mismatch"
+      ],
+      "validSemanticRangesRetainedForDiagnosisOnly": [
+        [
+          51,
+          80
+        ],
+        [
+          114,
+          120
+        ]
+      ],
+      "policy": "Conservatively defer this entire metadata row; other valid canonical rows may support the same path."
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+        "metadataSHA256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+        "jsonPointer": "/files/10"
+      },
+      "originalObject": {
+        "path": "packages/core/src/settings/migrate-config.ts",
+        "bytes": 5819,
+        "lineCount": 149,
+        "sha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc",
+        "pinnedAtUTC": "2026-10-17T20:21:57.791266+00:00",
+        "timing": "before own prep161 body/nav; imported manager path, exact inventory confirmed",
+        "selectedLineRanges": [
+          [
+            17,
+            17
+          ],
+          [
+            91,
+            102
+          ],
+          [
+            119,
+            147
+          ]
+        ],
+        "semanticLineCount": 42,
+        "bodyDisplayedLineRanges": [
+          [
+            91,
+            147
+          ]
+        ],
+        "bodyDisplayedLineCount": 57,
+        "additionalNavigationSnippetLineRanges": [
+          [
+            7,
+            7
+          ],
+          [
+            17,
+            17
+          ],
+          [
+            49,
+            49
+          ],
+          [
+            51,
+            51
+          ],
+          [
+            53,
+            53
+          ],
+          [
+            55,
+            55
+          ],
+          [
+            59,
+            59
+          ],
+          [
+            72,
+            72
+          ],
+          [
+            81,
+            81
+          ],
+          [
+            84,
+            84
+          ],
+          [
+            88,
+            89
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            7,
+            7
+          ],
+          [
+            17,
+            17
+          ],
+          [
+            49,
+            49
+          ],
+          [
+            51,
+            51
+          ],
+          [
+            53,
+            53
+          ],
+          [
+            55,
+            55
+          ],
+          [
+            59,
+            59
+          ],
+          [
+            72,
+            72
+          ],
+          [
+            81,
+            81
+          ],
+          [
+            84,
+            84
+          ],
+          [
+            88,
+            89
+          ],
+          [
+            91,
+            147
+          ]
+        ],
+        "displayedLineCount": 69,
+        "coverage": "selected",
+        "semanticFull": false,
+        "category": "product-selected",
+        "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+      },
+      "path": "packages/core/src/settings/migrate-config.ts",
+      "declaredCoverage": "selected",
+      "issues": [
+        "semantic ranges not contained in displayed body"
+      ],
+      "validSemanticRangesRetainedForDiagnosisOnly": [
+        [
+          17,
+          17
+        ],
+        [
+          91,
+          102
+        ],
+        [
+          119,
+          147
+        ]
+      ],
+      "policy": "Conservatively defer this entire metadata row; other valid canonical rows may support the same path."
+    }
+  ]
+}

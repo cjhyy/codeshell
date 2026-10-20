@@ -1,0 +1,16 @@
+{
+  "parentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "atUTC": "2026-10-17T11:43:40.480937+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "bytes": 2824,
+      "lineCount": 94,
+      "sha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "coveragePrepSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "structuredCoverageStatus": "current-sha-pin-only-no-semantic-coverage",
+      "firstPinBeforeSemanticRead": true
+    }
+  ],
+  "productExecution": false
+}

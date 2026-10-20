@@ -1,0 +1,43 @@
+{
+  "objects": [
+    {
+      "document": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "pointer": "/sources/8",
+      "row": {
+        "path": "packages/web/src/lib/environment.ts",
+        "sha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+        "matchesFrozenGitBlobAtAudit": true,
+        "review": "whole-file"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "pointer": "/sources/9",
+      "row": {
+        "path": "packages/web/src/lib/storage.ts",
+        "sha256": "86312680d2363fc3b69945527aeaa24130bfddbfff620404c99e189fea87237d",
+        "matchesFrozenGitBlobAtAudit": true,
+        "review": "whole-file"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round18/evidence/root-source-manifest.json",
+      "pointer": "/files/2",
+      "row": {
+        "path": "packages/web/src/lib/environment.ts",
+        "bytes": 1644,
+        "sha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "scope": "full source read; isEnvironmentDescriptor actual only,6 first focused tests; projectReferenceKey not called"
+      }
+    }
+  ],
+  "decisions": {
+    "storage": "R5 /sources9 sameSHA review whole-file, preserved old full overlap; targeted get/set/hook review rather than first coverage.",
+    "environment": "R5 /sources8 whole-file plusR18 /files2 full source read sameSHA; previous actual helper tests not rerun or borrowed as pass.",
+    "deviceCredential": "All28 target hits retained; printed provenance limited180characters per row. Navigated hits were inventory/coverage/raw filenames, not an original explicit semantic full object. This is not proof never read.",
+    "W10": "Original web-round3.md15–20 exact quota safeSet failure + pair-time secretA and pair.ok-time secretB. Current selected getter order samecause, excluded without new related item or dynamic retry."
+  },
+  "historyLimits": "5850 dated MD/JSON, frozen57 included58+ excluded, recursiveJSONvalues inclarchive, keys excluded. Shared4251467 scalar visits are Root machine navigation not new reviewer semantic lines or per-reader summed runs.3targets39/28/87 allretained under cap100. First provenance preview limited1100characters per hit and later device180; exact original4bounded inputs are semantic prior reads, not all hits."
+}

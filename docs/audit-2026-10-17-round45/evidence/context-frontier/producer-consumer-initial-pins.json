@@ -1,0 +1,68 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "bytes": 1037,
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "lines": 29,
+      "capturedUTC": "2026-10-17T15:15:06.664021+00:00",
+      "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "lines": 731,
+      "capturedUTC": "2026-10-17T15:15:06.666045+00:00",
+      "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "lines": 1139,
+      "capturedUTC": "2026-10-17T15:15:06.666950+00:00",
+      "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "bytes": 43905,
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "lines": 1184,
+      "capturedUTC": "2026-10-17T15:15:06.667589+00:00",
+      "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "lines": 867,
+      "capturedUTC": "2026-10-17T15:15:06.668210+00:00",
+      "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+    },
+    {
+      "path": "packages/core/src/engine/run-context.ts",
+      "bytes": 5588,
+      "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "lines": 133,
+      "capturedUTC": "2026-10-17T15:15:06.668766+00:00",
+      "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPreferences.interaction.test.tsx",
+      "bytes": 1430,
+      "sha256": "e82e3b0d9e3ba60a10a1c377882437cccb4b3a760bf924f72ba8db666715858c",
+      "lines": 45,
+      "capturedUTC": "2026-10-17T15:15:06.669313+00:00",
+      "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+    },
+    {
+      "path": "packages/core/src/context/compaction.ratios.test.ts",
+      "bytes": 2064,
+      "sha256": "e32a846d34b73d1c840b3fd66644b72f50592a7f32e1b1027b240ccf73ade84c",
+      "lines": 67,
+      "capturedUTC": "2026-10-17T15:15:06.669853+00:00",
+      "timing": "before selected ordinary DTO/schema/threshold consumer or test declaration navigation/body read"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round22/evidence/root-friendly.test.ts"
+  ],
+  "startedAt": "2026-10-17T09:22:50.106295+00:00",
+  "exitCode": 0,
+  "firstRun": true,
+  "attempts": 1,
+  "reruns": 0,
+  "rawSha256": "742699bd682db2b595e7cf8d4471d774bc6b9dd2429a72e4486f04613b87c035"
+}

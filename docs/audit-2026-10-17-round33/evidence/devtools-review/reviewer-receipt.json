@@ -1,0 +1,76 @@
+{
+  "frozenUTC": "2026-10-17T12:20:35.340074+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "initialContext": "Root reported mutableRound32 on4be; futureRound33 not bound",
+  "selfExcluded": true,
+  "artifactCount": 8,
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 2693,
+      "sha256": "38a1837ab354fe0f36195c7e09f8c6b97612689db982d327eb88c9cd29747d67"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 876,
+      "sha256": "ca531e33bf8fca2ed6e2e1dc9fa226e842162ca863748d0dbfe316610c597cf5"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3066,
+      "sha256": "7b3becfa216575940928adfe46f92efc9e2af893da3ff7c42dfea130d919c65f"
+    },
+    {
+      "path": "history.json",
+      "bytes": 618274,
+      "sha256": "33b6e91f175fdbab0615eb3906cb5d3ce5a21642c2dbe8f2da57ed615a0e787b"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 2405,
+      "sha256": "19a5eeec810ceeb2540e943225cfb4ad94625aacb4a4cc927583154a5457d924"
+    },
+    {
+      "path": "prior-source-comparison.json",
+      "bytes": 4070,
+      "sha256": "828ffb9754001a48f7970d31281eb27fce280fac805704bd2fa5108c3894972c"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4138,
+      "sha256": "42002e5a0532a9b548d72ca9300f78debfbb7220218ed40b956c891ec773a9ff"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 24306,
+      "sha256": "31ac889ba43f69e428262ed12625d17c67b7d65ed0d82ad93924d61ab5b2f960"
+    }
+  ],
+  "classification": {
+    "newFormal": 0,
+    "newCandidates": 0,
+    "newRelated": 0
+  },
+  "sourceRows": 13,
+  "hashOnlySourceRows": 3,
+  "tsProductTestLines": 734,
+  "readmeContractLines": 56,
+  "priorReportLines": 38,
+  "knownCausesExcluded": [
+    "DIAG-R10-01",
+    "CDP-R3-03"
+  ],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "pageEvaluateCalls": 0,
+  "domLanguageFixtures": 0,
+  "browserRuns": 0,
+  "httpNetworkRequests": 0,
+  "nativeRuns": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "sourceChanged": false,
+  "metadataFailures": []
+}

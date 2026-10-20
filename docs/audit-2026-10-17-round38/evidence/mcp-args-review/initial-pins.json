@@ -1,0 +1,43 @@
+{
+  "capturedUTC": "2026-10-17T13:15:45.772066+00:00",
+  "prepOnly": true,
+  "parentContextSupplied": "Root frozen36 abbreviatedee5c; no Git verification; mutable37 / future38 excluded from dated history if scanned.",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "lineCount": 1893,
+      "pinBeforeAnyContentRead": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "lineCount": 62,
+      "pinBeforeAnyContentRead": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "bytes": 4590,
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "lineCount": 114,
+      "pinBeforeAnyContentRead": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpDetailDialogs.tsx",
+      "bytes": 4997,
+      "sha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+      "lineCount": 148,
+      "pinBeforeAnyContentRead": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "bytes": 848,
+      "sha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "lineCount": 34,
+      "pinBeforeAnyContentRead": true
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "formal": [],
+  "candidates": [],
+  "related": [],
+  "oldFullGate": "Fresh4162 MD/JSON before Root body; eight exactpath objects and19 contexts fully read are only inventory/rank/hash/scope-unknown, not an old full proof. No historical-never-read claim.",
+  "normalCounterevidence": [
+    "Parent removes duplicate/disabled visible IDs and falls back to first member before passing the strip active ID.",
+    "Strip and parent use the same visible list and same left-neighbour rule for active close; last close triggers parent onClose and optional strip focus restore.",
+    "Tab controls IDs and Slot panel IDs share panelDomId and panel instance ID. Root dock aria-hidden and inert explicitly follow hidden.",
+    "Arrow/Home/End operate on the same nonempty mapped list. Legitimate ordinary descriptors do not create NaN or missing-index examples."
+  ],
+  "limits": [
+    "No actual focus/scroll/click/key/DOM/React/native action or fixture executed.",
+    "Parent native/window cleanup and guest lifecycle boundaries not reviewed; no arbitrary malformed DTO or all asynchronous race guarantee.",
+    "Root had author55 outline, so this is additional current-byte source review rather than a blind replication."
+  ]
+}

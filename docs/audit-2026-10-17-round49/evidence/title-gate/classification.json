@@ -1,0 +1,12 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "sameSHAExplicitFullGateExclusions": 2,
+  "primary": "packages/core/src/engine/session-title.ts",
+  "fallback": "packages/core/src/sources/context-summary.ts",
+  "fallbackGatePerformed": true,
+  "productBodyRead": false,
+  "newCoverageClaim": null,
+  "scope": "No new product correctness or bug-free statement. Both targets stopped at original sameSHA full static metadata."
+}

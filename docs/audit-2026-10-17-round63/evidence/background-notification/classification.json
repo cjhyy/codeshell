@@ -1,0 +1,19 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "negative": "No ordinary data/visible identity/click target mismatch established in selected producer→route→notifier→native/preload/hook source chain. Not all notification scheduling/OS presentation/window ownership/session resolution correctness.",
+  "normalChain": [
+    "Core ResultPayload plus legacyItemToDraft retain workId/name/description/status/kind/optionalcommand,error,exit,signal and recipient sessionId; actual enqueue publishes to bus after queue commit.",
+    "Main subscribes actual bus to notifyBackgroundResult. Routes validate ordinary terminal fields and use recipient to.sessionId as click target; content formatting and delivery key include work/status identity fields.",
+    "DesktopNotifier forwards that sessionId; native instance captures it before registering click callback. Main sends the same id on notification:open-session, preserving it through preload listener/buffer and renderer hook.",
+    "Preload index and App import/mount calls were confirmed by exact navigation only, not whole module or application execution.",
+    "Renderer hook calls normal session-resolution/navigation seams with same id and generation guard; full resolver, user disk data and cross-window custody were not reviewed.",
+    "Content redaction/delegate and notifier receipt/rate-limit mechanisms are adjacent boundaries, not certification or speculative new security findings."
+  ]
+}

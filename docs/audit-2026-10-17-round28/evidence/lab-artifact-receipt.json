@@ -1,0 +1,54 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "sourceReadParentReportedHead": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-prep-copy-receipt.json",
+      "bytes": 3649,
+      "sha256": "62fc0b6290b9486008272569c4b01305dd53ffaeed45748ee78fa2e5adbed28c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-related.json",
+      "bytes": 253,
+      "sha256": "b069e401b3702fd340092a391a26a30eb8adb62dabe2090e2ac2d07f786c70ac"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-source-manifest.json",
+      "bytes": 15867,
+      "sha256": "98a573be9bb4279b817aec7a54ff960e8c41c75c4c4b9638c015c5df4685dc12"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/lab-validation.json",
+      "bytes": 1869,
+      "sha256": "eaed95aa89d2b63122262b2f81427937032f823cc9233cab3e48bac5810bc738"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/lab-report.md",
+      "bytes": 4980,
+      "sha256": "18e987265e6add281317bf139e7c517f3a64dfc15aa4b7d8b635471c18674e1b"
+    }
+  ],
+  "artifactCount": 7,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "copyReceipt": "docs/audit-2026-10-17-round28/evidence/lab-prep-copy-receipt.json",
+  "copiedArtifactsCount": 10,
+  "sourcePinCount": 15,
+  "newSemanticReadsInFormalization": 0,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "localReportLinksChecked": 12,
+  "selfExcluded": true,
+  "copiesCheckedSeparately": true
+}

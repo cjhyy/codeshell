@@ -1,0 +1,38 @@
+{
+  "baseline": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "count": 1,
+  "findings": [
+    {
+      "id": "REVIEWPROMPT-R19-01",
+      "severity": "P3",
+      "priority": "P3",
+      "title": "/review 用法提示给出未被 parser 识别的 perf 维度名",
+      "file": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "line": 136,
+      "relatedSourceLocations": [
+        {
+          "path": "packages/coding/src/review/review-prompt.ts",
+          "lines": "43-50"
+        },
+        {
+          "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+          "lines": "145-175"
+        }
+      ],
+      "trigger": "普通 TUI usage 明示 --dimensions=security,perf,...；用户输入 security,perf 或 perf，handler 把 flag 值直接交给 parseDimensions。",
+      "expected": "所提示的 perf 选中性能维度，且与其他有效维度组合时不被静默丢弃。",
+      "actual": "actual leaf parseDimensions(\"security,perf\") returns [\"security\"]; perf alone falls back to ALL_DIMENSIONS. Actual built prompts omit performance in the mixed case and list all four dimension choices in the perf-only JSON case. Canonical performance controls stay scoped correctly.",
+      "contract": "The bug is the help/parser contradiction, not the documented behavior for arbitrary unknown names. Existing archive example uses security,performance.",
+      "evidence": [
+        "docs/audit-2026-10-17-round19/evidence/reviewprompt-focused.test.ts",
+        "docs/audit-2026-10-17-round19/evidence/reviewprompt-first.raw.log",
+        "docs/audit-2026-10-17-round19/evidence/reviewprompt-first.exit.json"
+      ],
+      "runtimeScope": "Actual production leaf parser and prompt builder only; owned strings; no CLI/client/Git/model/TUI render execution.",
+      "consumerEvidence": "Static selected TUI handler, registry listCommands, App commandDefs pass-through, CommandInput inline hint usage.",
+      "dedup": "All-history docs/bugs Markdown and recursive JSON values searched; exact reviewed contexts are architecture/archive/inventory, no same help/parser mismatch finding found. Pattern index is not exhaustive semantic proof.",
+      "fixDirection": "Change usage to performance, or deliberately support/test perf as an alias."
+    }
+  ],
+  "note": "One help/parser contract defect; actual leaf characterization plus static ordinary consumer, not CLI/model execution."
+}

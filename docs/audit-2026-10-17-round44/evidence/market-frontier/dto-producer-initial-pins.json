@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "lineCount": 612,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "capturedUTC": "2026-10-17T14:42:47.978416+00:00",
+      "timing": "before narrow recommended-list DTO producer source lookup; no IPC/network/install invocation"
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.test.ts",
+      "bytes": 5693,
+      "lineCount": 146,
+      "sha256": "5a01d7838157270678ef5dc0a4b425de94fe33989bba7bd7b5e89d434172169b",
+      "capturedUTC": "2026-10-17T14:42:47.980002+00:00",
+      "timing": "before narrow recommended-list DTO producer source lookup; no IPC/network/install invocation"
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "lineCount": 2982,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "capturedUTC": "2026-10-17T14:42:47.981100+00:00",
+      "timing": "before narrow recommended-list DTO producer source lookup; no IPC/network/install invocation"
+    }
+  ]
+}

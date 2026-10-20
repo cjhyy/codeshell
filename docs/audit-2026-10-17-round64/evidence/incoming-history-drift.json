@@ -1,0 +1,8 @@
+{
+  "historyFiles": 6801,
+  "changed": [
+    "docs/todo/release-real-operations-2026-10-16.md"
+  ],
+  "missing": [],
+  "scope": "Original frozen63/exclude64+ machine inventory; original queries not rerun after concurrent main refresh."
+}

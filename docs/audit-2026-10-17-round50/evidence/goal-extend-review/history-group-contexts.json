@@ -1,0 +1,62 @@
+{
+  "groupGoalExtend": [
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 11619,
+      "context": "eExisting`、askUser session 隔离/timeout、cancel approvals、background shell wakeup、reload settings、workspace bridge 有测试覆盖，说明 protocol 并非整体缺测。\n- Tool-system 的 path policy 覆盖较强：string/array path arg、outside workspace approval、sensitive file、Windows case、apply_patch escape、Glob/Grep/Notebook/Edit approval 统一都有测试。plan mode、disabled builtin、MCP allowlist、goal-control runtime gate 也有执行层测试。\n- Renderer `types.ts` 对 subagent text/tool 路由、重复 `tool_use_start`、backgrounded/agent_end、turn_complete files_changed、goal_progress、usage_update、error 空串等覆盖较好；`messages/streamGroups.ts` 对中断 turn、injected user、bookkeeping tool、live/non-live、memo reuse、duration 也覆盖充分；移动 `lib/streamReducer.ts` 覆盖了乱序 `tool_result`、子代理隔离、终态映射和 determinism。\n- `transcriptsReducer.ts` 的 hydrate/steer/clientMessageId 去重保护覆盖充分，尤其覆盖了 lagging snapshot 不擦掉 confirmed steer 的场景。\n\n## 建议补测顺序\n\n1. 先补权限硬化：`ToolExecutor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/a",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "pointer": "/hits/43/text",
+      "kind": "json-value-scalar",
+      "offset": 117,
+      "context": "- Renderer `types.ts` 对 subagent text/tool 路由、重复 `tool_use_start`、backgrounded/agent_end、turn_complete files_changed、goal_progress、usage_update、error 空串等覆盖较好；`messages/streamGroups.ts` 对中断 turn、injected user、bookkeeping tool、live/non-live、memo reuse、duration 也覆盖充分；移动 `lib/streamReducer.ts` 覆盖了乱序 `tool_result`、子代理隔离、终态映射和 determinism。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/output-projection/40/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 4,
+      "context": "ged、goal_progress、usage_update、error 空串等覆盖较好；`messages/streamGroups.ts` 对中断 turn、injected user、bookkeeping tool、live/non-live、memo reuse、duration 也覆盖充分；移动 `lib/streamReducer.ts` 覆盖了乱序 `tool_result`、子代理隔离、终态映射和 determinism。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/output-projection/69/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 4,
+      "context": "ged、goal_progress、usage_update、error 空串等覆盖较好；`messages/streamGroups.ts` 对中断 turn、injected user、bookkeeping tool、live/non-live、memo reuse、duration 也覆盖充分；移动 `lib/streamReducer.ts` 覆盖了乱序 `tool_result`、子代理隔离、终态映射和 determinism。",
+      "completeScalar": true
+    }
+  ],
+  "goalButton": [
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/source-excerpts.json",
+      "pointer": "/snapshots/18/text",
+      "kind": "json-value-scalar",
+      "offset": 1079,
+      "context": "  onComposerSeedConsumed={onComposerSeedConsumed}\n                    draft={composerDraft.text}\n                    onDraftChange={setComposerDraftText}\n                    attachments={composerDraft.attachments}\n                    onAttachmentsChange={setComposerDraftAttachments}\n                    anchors={anchors}\n                    onRemoveAnchor={removeAnchor}\n                    onClearAnchors={clearAnchors}\n                    onAskUserAnswer={handleAskUserAnswer}\n                    onExtendGoal={extendGoal}\n                    onAttachImagePath={(p) => void attachImageByPath(p)}\n                    onPrepareAttachmentSession={prepareAttachmentSession}\n                    imageDetail={imageDetail}\n                    pendingApproval={visibleApproval}\n                    onApprovalDecide={\n                      visibleApproval\n                        ? (decision, reason, scope, pathScope) =>\n                            decideEnvelope(visibleApproval, decision, reason, scope, pathScope)\n                        : undefined\n                    }\n                    permissionMode={permissionMode}\n                    onPermissionChange={onPermissionChange}\n                    goalEnabled={goalEnabled}\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1800,
+      "context": "lush 不卡)\n\n## D. 权限审批(核心:手机弹窗允许,等同桌面)\n- [ ] D1 审批卡:toolName + description + 摘要(command/file_path/…)+ 风险 badge(high 红醒目)\n- [ ] D2 approve / deny(approval.respond,已有)\n- [ ] D3 deny 带理由(可选输入)\n- [ ] D4 approve 作用域:once / session / project(对齐 desktop approve 的 scope)\n- [ ] D5 路径作用域:file / dir / tool(对齐 pathScope;仅路径类工具显示)\n- [ ] D6 AskUser 型审批:选项按钮 / 自由输入(answer);optionsOnly 时禁自由输入\n- [ ] D7 等待审批时运行状态条转 waiting + 顶部提示\n\n## E. 目标 / 子代理 / 后台(桌面有,手机补)\n- [ ] E1 goal_progress 状态行(轮次/状态;display-only)\n- [ ] E2 goalExtend(延长目标:加轮次/预算)——按钮(agent/goalExtend)\n- [ ] E3 子代理状态行(agent_start/end + task_update,按 agentId 隔离;只读)\n- [ ] E4 后台 shell 列表 + 输出查看 + kill(agent/backgroundShells)——P1,评估\n\n## F. 能力控制\n- [ ] F1 权限模式查看 + 切换:default/acceptEdits/bypassPermissions(新协议 permission.setMode;bypass 醒目确认)\n- [ ] F2 模型查看 + 切换(agent/configure model;新协议 model.set)——P2\n- [ ] F3 planMode 开关(run 带 planMode)——P2,评估\n\n## G. 房间(手机专属,UI 重做)\n- [x] G1 协议全(list/projects/create/open/close/send/history)\n- [ ] G2 房间列表 UI:名 + cwd + 权限 badge(bypass 红)+ 在线/状态\n- [ ] G3 新建房间(选 project:room.projects)\n- [ ] G4 进出房间 + 历史回放(room.history)+ 实时(room.message)\n- [ ] G5 房间内发消息(room.send)\n- [ ] G6 关房间(room.close)\n\n## H. 布局 / 成熟度(平板兼容)\n- [ ] H1 单列手机布局 + 安全区(env(safe-area-inset-*))\n- [ ] H2 平板两栏(≥820px:左 会话/房间 栏 + 右 聊天)\n- [ ] H3 顶栏:品牌 + 在线状态 + 会话/房间切换入口 + 设备/退出\n- [ ] H4 抽屉:窄屏会话/房间列表走抽屉,宽屏常驻左栏\n- [ ] H5 暗色(沿用 renderer token);触摸目标 ≥44px;tap-highlight 去除\n- [ ] H6 空态 / 加载态 / 错误态",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3574,
+      "context": "(markdown 包体)、F3、原生 push。\n\n---\n\n## 完成状态(2026-06-10 本轮)\n\n**已做并验证(tsc + 45 mobile 单测 + renderToStaticMarkup 渲染冒烟 + 浏览器 boot 冒烟 phone/tablet 零错误 + 642 全仓测试绿):**\n- A1-A5 连接/身份(useRemoteSocket 态机 + 退出登录 + 设备名)\n- B1-B6 会话(session.list/history 协议+main+UI;进桌面会话回放;新建;当前指示)\n- C1-C2、C4-C6 聊天(user/assistant/reasoning/工具卡/子代理/错误流;运行态;停止;composer)\n- D1-D6 审批(工具/描述/摘要/风险红;允许拒绝;deny 理由;scope once/session/project;\n  pathScope file/dir/tool;AskUser 选项+自由输入+optionsOnly)— 端到端协议对齐核实\n- D7 等待态(StatusBar waiting)\n- E1 goal 横幅;E2 延长目标(按钮,默认 +100 轮);E3 子代理行(按 agentId)\n- F1 权限模式切换(default/acceptEdits/bypass + bypass 二次确认);F2 model.set 协议+main(无 UI)\n- G2-G6 房间 UI(列表/权限 badge 危险红/从项目新建/进出/历史回放/发消息/关)\n- H1-H7 布局(单列+安全区/平板 820px 两栏/顶栏/抽屉/暗色 token/空加载错误态/自动贴底)\n- I1-I4 工程(lib 单测/协议 @protocol 共享/双 tsc+build 绿/删 mobile-ui.ts 690 行)\n\n**未做(留给后续/需用户):**\n- C3 Markdown 渲染(评估包体后;现为纯文本+等宽 pre,代码可读)\n- C7 流批量(React key 稳定已是主要护栏;未测出卡顿,YAGNI)\n- E4 后台 shell 查看/kill(协议未接,P1)\n- F2 model UI / F3 planMode(P2)\n- I5 真机/平板冒烟:需用户手机+桌面 Electron 跑起来扫码实测(浏览器 boot 已冒烟,\n  WS 链路需真 main)。清单见 2026-06-06 §10.3。\n",
+      "completeScalar": false
+    }
+  ]
+}

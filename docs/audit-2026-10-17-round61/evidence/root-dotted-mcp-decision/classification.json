@@ -1,0 +1,37 @@
+{
+  "formal": [
+    {
+      "id": "MCP-R61-01",
+      "severity": "P2",
+      "title": "合法点号MCP名称的项目开关写出嵌套对象，导致后续配置读取失败",
+      "status": "static-confirmed; runtime not validated",
+      "baseline": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+      "code_location": {
+        "absolute_file_path": "/Users/admin/Documents/个人学习/代码学习/codeshell/packages/core/src/capability-control/service.ts",
+        "line_range": {
+          "start": 161,
+          "end": 164
+        }
+      },
+      "trigger": "Existing ordinary current-version settings with a configured server named team.docs; use project capability on/off after ordinary target resolution and a successful settings write.",
+      "actual": "setOverride joins an opaque server token into capabilityOverrides.mcp.team.docs. saveProjectSetting splits dots and persists {mcp:{team:{docs:\"off\"}}}; merge retains team as an object, but CapabilityOverridesSchema.mcp requires every record value to be inherit/on/off. getForScope then throws, and ordinary Desktop makeService settings.get/load can reject the merged project configuration.",
+      "expected": "Persist the entire MCP server name as one literal record key; the produced settings must satisfy the same schema used by readback.",
+      "impact": "A supported name and normal project switch can leave the project settings unreadable through validated settings APIs until the malformed override is corrected. More than a silently ignored override.",
+      "conditions": [
+        "Successful project settings mutation, normal current config version (2), and no higher layer explicitly removes this subtree.",
+        "Global MCP enable uses a whole record and is outside this defect. No claim that every migration/version/consumer fails."
+      ],
+      "evidence": [
+        "Root159 ordinary UI -> preload -> IPC -> Desktop service -> core write chain selected source",
+        "Independent161 parser/sanitize, merge, schema, ordinary load and version-migration counterchecks",
+        "Independent160 bounded old-cause history review"
+      ],
+      "legacyRelationship": "Same dotted-token representation family as completed archive plugin/Skill issue; that fix rejects old plugin/Skill dotted names, while current MCP names remain valid. Old SET-02 malformed-input schema gap and MCP-R38/39 editor args/rename are distinct entry contracts. Register this current MCP input once; 155 original exclusion and 158 candidate are retained as dated opinions.",
+      "execution": "Static-only; no product/helper/import/schema/test/fixture/network/native/real settings execution."
+    }
+  ],
+  "candidates": [],
+  "related": [],
+  "promotion": "Same prep155/158 line of inquiry registered once by Root; no extra candidate or related counter.",
+  "productRuns": 0
+}

@@ -1,0 +1,69 @@
+{
+  "query": "shortcut-old-cause",
+  "totalRetained": 41,
+  "actualReadIndices": [
+    26,
+    35,
+    36,
+    37,
+    38
+  ],
+  "contexts": [
+    {
+      "index": 26,
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/report.md",
+      "locator": "paragraph/1",
+      "kind": "markdown-paragraph",
+      "excerpt": "本次有限静态结果是 **0新增 formal / 0 candidate / 0 new related**。唯一 active leaf 为 `packages/desktop/src/renderer/keyboardShortcutHints.ts`，全文9行。已读普通显示调用与测试声明没有建立新的文本拼接反例；这不代表实际快捷键处理、菜单、窗口或平台运行均正确。[分类](classification.json)明确范围。",
+      "excerptStart": 0,
+      "excerptEnd": 216,
+      "originalChars": 216,
+      "excerptTruncated": false
+    },
+    {
+      "index": 35,
+      "document": "docs/review-2026-10-12/README.md",
+      "locator": "paragraph/8",
+      "kind": "markdown-paragraph",
+      "excerpt": "仍显示正在使用，需先断开再重新授权；动作门禁正确拒绝 | [浏览器连接 B21-1](browser-lifecycle-round21.md)，第二十一轮 |\n| R82 | P3 | macOS前台A显式菜单操作仍发往最后安装菜单的B，后台窗口被打开Search/Palette或切项目 | [菜单窗口 D23-1](menu-routing-round23.md)，第二十三轮；无真实OS菜单/快捷键实测 |\n| R83 | P3 | macOS项目成功创建、改名、移除后Recent菜单不刷新，新项目缺项、旧名和已删项残留 | [最近项目 D23-2](menu-recents-round23.md)，第二十三轮；权威磁盘与广播正常 |\n| R84 | P3 | 从未发布输出日志的旧配对原生图片会话恢复时，把内部路径和模型提示当正文，没有安全附件摘要 | [旧历史 F24-1](legacy-history-round24.md)，第二十四轮；正文和图片原件保留 |\n| R85 | P3 | 现代图片会话在普通Desktop冷恢复后缺附件提示，纯图片用户气泡不显示；正确metadata和原件均保留 | [现代图片 D25-1](modern-desktop-image-round25.md)，第二十五轮；Web及inline UI控制正常 |\n| R86 | P3 | 换项目primary后摘要分叉的Files把新根ID配旧workspace路径，新主目录文件无法显示；旧根及原件正常 | [Files映射 F27-1](file-root-round27.md)，第二十七轮；Main拒读正确 |",
+      "excerptStart": 9289,
+      "excerptEnd": 9999,
+      "originalChars": 9999,
+      "excerptTruncated": true
+    },
+    {
+      "index": 36,
+      "document": "docs/review-2026-10-12/README.md",
+      "locator": "paragraph/84",
+      "kind": "markdown-paragraph",
+      "excerpt": " |\n| Server/Web 现有逐文件测试       | 141 文件、1428 测试、0 失败                                               | [日志或收据](validation/server-web-results.json)   |\n| Electron 导航                   | 通过，含窗口宽度、抽屉、焦点、重载及快捷键                                | [日志或收据](validation/navigation.log)          |\n| Electron 设置                   | 通过，3 种宽度、2 种语言、主题                                            | [日志或收据](validation/settings-e2e.log)        |\n| Electron 工作区页面             | 通过，扩展、凭据、自动化及键盘操作                                        | [日志或收据](validation/workspace-pages-e2e.log) |\n| Electron 模型设置               | 通过，含读写失败、草稿、焦点、删除与重试；0 renderer errors               | `validation/model-settings-e2e.log`                      |\n| Electron 数字人与项目配置       | 通过，含列表、搜索、编辑、团队及 3 宽度/明暗主题                          | `validation/digital-humans-e2e.log`                      |\n| Electron Panel 安装与恢复       | 通过，两个项目窗口、更新/恢复/损坏修复及文件保留                          | `validation/panel-recovery-e2e.log`                      |\n| 第一",
+      "excerptStart": 936,
+      "excerptEnd": 1932,
+      "originalChars": 8660,
+      "excerptTruncated": true
+    },
+    {
+      "index": 37,
+      "document": "docs/review-2026-10-12/priority-and-coverage.md",
+      "locator": "paragraph/18",
+      "kind": "markdown-paragraph",
+      "excerpt": "使用，需先断开再重新授权；动作门禁正确拒绝 | [浏览器连接 B21-1](browser-lifecycle-round21.md)，第二十一轮 |\n| 82 | P3 | R82 | macOS前台A显式菜单操作仍发往最后安装菜单的B，后台窗口被打开Search/Palette或切项目 | [菜单窗口 D23-1](menu-routing-round23.md)，第二十三轮；无真实OS菜单/快捷键实测 |\n| 83 | P3 | R83 | macOS项目成功创建、改名、移除后Recent菜单不刷新，新项目缺项、旧名和已删项残留 | [最近项目 D23-2](menu-recents-round23.md)，第二十三轮；权威磁盘与广播正常 |\n| 84 | P3 | R84 | 从未发布输出日志的旧配对原生图片会话恢复时，把内部路径和模型提示当正文，没有安全附件摘要 | [旧历史 F24-1](legacy-history-round24.md)，第二十四轮；正文和图片原件保留 |\n| 85 | P3 | R85 | 现代图片会话在普通Desktop冷恢复后缺附件提示，纯图片用户气泡不显示；正确metadata和原件均保留 | [现代图片 D25-1](modern-desktop-image-round25.md)，第二十五轮；Web及inline UI控制正常 |\n| 86 | P3 | R86 | 换项目primary后摘要分叉的Files把新根ID配旧workspace路径，新主目录文件无法显示；旧根及原件正常 | [Files映射 F27-1](file-root-round27.md)，第二十七轮；Main拒读正确 |",
+      "excerptStart": 2910,
+      "excerptEnd": 3640,
+      "originalChars": 3640,
+      "excerptTruncated": true
+    },
+    {
+      "index": 38,
+      "document": "docs/review-2026-10-12/priority-and-coverage.md",
+      "locator": "paragraph/22",
+      "kind": "markdown-paragraph",
+      "excerpt": "有[专项](link-recovery-round16.md) | `packages/link` 自身 provider manifest/授权指南正确性和所有真实服务授权没有独立专项；不能把同名 Links UI/服务审查视为整个 manifest 包已覆盖。 |\n| TUI | 插件命令共用服务有静态衔接，部分 Core 行为可供参考 | 真实 TTY/Ink 输入、多行/IME、终端缩放、快捷键、语音、退出与恢复没有完整专项。 |\n| Chat | 自动化通知到 relay 的局部静态衔接；[自动化复核](automation-quality-round18.md) | 各聊天平台 adapter、真实消息发送/编辑、附件、会话/thread 映射、重连、限流和去重没有渠道级专项。 |\n| Pet | 搜索/disclosure/导航局部有动态证据；[搜索](search-routing-round11.md)、[搜索复核](search-quality-round12.md)；Desktop 数字人另有 Electron UI 验证 | 完整委派、projection observer、行为 profile 与长任务生命周期没有全流程专项。数字人页面测试不等于整个 Pet capability 已审完。 |\n| Optimization Lab | Desktop 部分既有单测；构建/类型检查 | 没有专项审查报告。私有、默认关闭，排在在用主流程之后补审。 |\n| CDP 兼容包 | 浏览器专项触达维护中的 Desktop driver，部分预审提及协议/alias | `packages/cdp` 兼容层没有独立专项；不能把 Puppeteer/Browser Stop 结果外推到全部兼容导出。 |\n| Arena | 类型检查门禁内的保留源码；根 build 不包含 Arena | 没有专项审查。私有保留、Host 不加载，不是当前日常流程的高优先补审项。 |\n| 根 scripts / 打包发行 | install、工作区 build/typecheck、Desktop build 已有记录 | `test:package-release`、安装后 SDK/export/bin/assets 合同、版本一致性、升级/回滚与跨平台发行缺专项；成功构建不等于可安装包及发行流程已验收。 |",
+      "excerptStart": 1429,
+      "excerptEnd": 2446,
+      "originalChars": 2446,
+      "excerptTruncated": true
+    }
+  ],
+  "otherRetainedContextsClaimedRead": false
+}

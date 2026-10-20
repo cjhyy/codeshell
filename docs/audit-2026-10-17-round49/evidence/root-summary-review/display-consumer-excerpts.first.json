@@ -1,0 +1,74 @@
+{
+  "atUTC": "2026-10-17T16:21:09.109623+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "displayedRanges": [
+        [
+          676,
+          702
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            676,
+            702
+          ],
+          "text": " 676             `Permission:  ${config.permissionMode ?? \"acceptEdits\"}`,\n 677             `Session:     ${ctx.sessionId ?? \"none\"}`,\n 678             `CWD:         ${ctx.cwd}`,\n 679             `Tools:       ${tools.length} registered`,\n 680           ];\n 681           try {\n 682             const branch = execSync(\"git branch --show-current\", {\n 683               cwd: ctx.cwd,\n 684               encoding: \"utf-8\",\n 685               timeout: 5000,\n 686             }).trim();\n 687             lines.push(`Git branch:  ${branch}`);\n 688           } catch {\n 689             /* ignore */\n 690           }\n 691           const t = costTracker.getTotalTokens();\n 692           if (t.total > 0) {\n 693             lines.push(`Tokens:      ${t.total} (in: ${t.prompt}, out: ${t.completion})`);\n 694             const summary = costTracker.getUsageSummary();\n 695             lines.push(`Cost:        ${summary ? formatUsageCost(summary) : \"unknown\"}`);\n 696           }\n 697           ctx.addStatus(lines.join(\"\\n\"));\n 698         } catch (err) {\n 699           ctx.addStatus(`Error: ${(err as Error).message}`);\n 700         }\n 701       }\n 702     },"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "displayedRanges": [
+        [
+          349,
+          363
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            349,
+            363
+          ],
+          "text": " 349           sessionId: hydrateSessionId,\n 350           error: formatCommandError(error),\n 351         });\n 352       });\n 353   }, [client, sessionId]);\n 354   const [showBanner, setShowBanner] = useState(true);\n 355   const { summary: sessionUsage, refresh: refreshUsage } = useSessionUsage(\n 356     client,\n 357     sessionId,\n 358     sidRef,\n 359   );\n 360   const totalTokens = sessionUsage?.totalTokens ?? 0;\n 361   const totalCost = sessionUsage ? formatUsageCost(sessionUsage) : undefined;\n 362   const [contextTokens, setContextTokens] = useState(0);\n 363   const [currentEffort, setCurrentEffort] = useState(effort);"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "displayedRanges": [
+        [
+          202,
+          221
+        ],
+        [
+          294,
+          310
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            202,
+            221
+          ],
+          "text": " 202 \n 203   /**\n 204    * Format a styled cost summary for terminal display.\n 205    */\n 206   formatSummary(c: Colorizer = NOOP_COLORIZER): string {\n 207     if (this.ledger) {\n 208       const s = this.ledger.summary();\n 209       return [\n 210         \"  Cost Summary (Runtime)\",\n 211         `    Requests: ${s.requests}`,\n 212         `    Input tokens: ${formatNumber(s.promptTokens)}`,\n 213         `    Output tokens: ${formatNumber(s.completionTokens)}`,\n 214         `    Estimated cost: ${formatUsageCost(s)}`,\n 215         ...s.byModel.map(\n 216           (m) =>\n 217             `      ${m.provider}/${m.model}: ${m.requests} requests, ${formatUsageCost({ ...m, partial: s.partial })}`,\n 218         ),\n 219         ...(s.unknownUsageRequests\n 220           ? [`    Usage unavailable for ${s.unknownUsageRequests} requests`]\n 221           : []),"
+        },
+        {
+          "range": [
+            294,
+            310
+          ],
+          "text": " 294 \n 295     return lines.join(\"\\n\");\n 296   }\n 297 \n 298   /**\n 299    * Format a compact one-line cost display for the prompt footer.\n 300    */\n 301   formatCompact(c: Colorizer = NOOP_COLORIZER): string {\n 302     if (this.ledger) {\n 303       const summary = this.ledger.summary();\n 304       return c.dim(\n 305         `tokens: ${formatNumber(summary.totalTokens)} | cost: ${formatUsageCost(summary)}`,\n 306       );\n 307     }\n 308     const tokens = this.getTotalTokens();\n 309     const cost = this.getEstimatedCost();\n 310     return c.dim(`tokens: ${formatNumber(tokens.total)} | cost: ${formatCost(cost)}`);"
+        }
+      ]
+    }
+  ],
+  "scope": "Actual ordinary /cost and TUI existing summary DTO display; no cost/usage methods or standalone CostTracker bug experiments."
+}

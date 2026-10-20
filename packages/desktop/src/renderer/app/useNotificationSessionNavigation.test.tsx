@@ -138,7 +138,7 @@ describe("notification session entry points", () => {
         setPanelByBucket: () => {},
         activeBucketRef,
         setView,
-        setRunsInitialRunId: () => {},
+        onOpenTrace: () => {},
       });
       useNotificationSessionNavigation({
         sessionIndicesRef: indices,

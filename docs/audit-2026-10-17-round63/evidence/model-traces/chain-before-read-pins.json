@@ -1,0 +1,70 @@
+[
+  {
+    "path": "packages/core/src/model-traces/context.ts",
+    "bytes": 33874,
+    "lines": 944,
+    "sha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+    "pinAtUTC": "2026-10-17T20:53:55.513148+00:00",
+    "selectedLineRanges": [
+      [
+        199,
+        240
+      ],
+      [
+        740,
+        775
+      ]
+    ],
+    "coverage": "selected",
+    "sourceKind": "product"
+  },
+  {
+    "path": "packages/core/src/model-traces/native-process.ts",
+    "bytes": 6670,
+    "lines": 192,
+    "sha256": "91c499a8fb06eb7e71e247f4de102197dc722839a43177a54cd57d7ddf21f7fc",
+    "pinAtUTC": "2026-10-17T20:53:55.514111+00:00",
+    "selectedLineRanges": [
+      [
+        1,
+        80
+      ],
+      [
+        140,
+        163
+      ]
+    ],
+    "coverage": "selected",
+    "sourceKind": "product"
+  },
+  {
+    "path": "packages/core/src/model-traces/types.ts",
+    "bytes": 6231,
+    "lines": 214,
+    "sha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+    "pinAtUTC": "2026-10-17T20:53:55.514572+00:00",
+    "selectedLineRanges": [
+      [
+        1,
+        5
+      ]
+    ],
+    "coverage": "selected",
+    "sourceKind": "product"
+  },
+  {
+    "path": "packages/core/src/model-traces/native-frames.test.ts",
+    "bytes": 4644,
+    "lines": 128,
+    "sha256": "29f70e32cbaf84fd9880ff4558a71db605340c22e9d1a2da4420aec8130e46cf",
+    "pinAtUTC": "2026-10-17T20:53:55.515417+00:00",
+    "selectedLineRanges": [
+      [
+        1,
+        60
+      ]
+    ],
+    "coverage": "selected",
+    "sourceKind": "test-declaration"
+  }
+]

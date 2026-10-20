@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round5/evidence/profile-catalog-data.test.ts:
+{"observation":"catalog-key-collision","first":"acme-labs/agents","second":"acme/labs-agents","key":"acme-labs-agents","entries":[{"name":"second-human","sourceRepo":"acme-labs/agents"}],"errors":["\"second-human\" 同时存在于 acme-labs/agents 与 acme/labs-agents，已采用前者"]}
+(pass) observed: hyphen placement collapses distinct sources and attributes the cached definition to the first source [15.12ms]
+{"observation":"catalog-colliding-remove","remaining":[{"repo":"acme-labs/agents","addedAt":1,"count":0,"errors":["尚未克隆"],"cloned":false}]}
+(pass) observed: removing the second colliding source removes the first still-registered source's cached catalog [50.76ms]
+(pass) control: distinct noncolliding sources retain independent caches and provenance after one removal [22.26ms]
+(pass) control: malformed individual catalog definitions are isolated and valid team members resolve within the same directory [17.78ms]
+
+ 4 pass
+ 0 fail
+ 21 expect() calls
+Ran 4 tests across 1 file. [184.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

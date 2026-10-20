@@ -1,0 +1,45 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/llm/providers/openai-tool-result-error.test.ts:
+(pass) OpenAIClient errored tool_result > carries the error text in the tool message content [8.45ms]
+(pass) OpenAIClient errored tool_result > collapses duplicate results to the latest response for one tool call [3.06ms]
+(pass) OpenAIClient errored tool_result > fills a missing result at the wire boundary without persisting it [0.45ms]
+
+packages/core/src/llm/providers/openai-tool-result-image.test.ts:
+(pass) OpenAIClient tool_result with image content (view_image) > splits the image into a separate user image_url message [8.27ms]
+
+packages/core/src/llm/providers/anthropic-thinking.test.ts:
+(pass) AnthropicClient thinking — anthropic-budget > {mode:budget} sends thinking:{type:enabled,budget_tokens} [1.10ms]
+(pass) AnthropicClient thinking — anthropic-budget > clamps budget up to the model's minBudgetTokens [3.93ms]
+(pass) AnthropicClient thinking — anthropic-budget > {mode:on} uses a default budget (≥ min) [0.79ms]
+(pass) AnthropicClient thinking — anthropic-budget > {mode:effort} on a budget model is treated as on (default budget) [3.95ms]
+(pass) AnthropicClient thinking — anthropic-budget > {mode:off} does NOT send thinking [0.94ms]
+(pass) AnthropicClient thinking — anthropic-budget > no reasoning set → no thinking field [3.37ms]
+(pass) AnthropicClient thinking — anthropic-budget > caps budget below max_tokens (max_tokens must exceed budget_tokens) [1.06ms]
+(pass) AnthropicClient thinking — anthropic-budget > omits thinking when max_tokens has no headroom for a min budget [4.32ms]
+(pass) AnthropicClient thinking — anthropic-budget > whenever thinking IS sent, budget_tokens stays strictly below max_tokens [1.00ms]
+(pass) AnthropicClient thinking — anthropic-budget > falls back to config.reasoning when no per-call reasoning [4.21ms]
+(pass) AnthropicClient thinking — anthropic-adaptive (Claude 4.6+) > {mode:off} does NOT send a thinking field [0.66ms]
+(pass) AnthropicClient thinking — anthropic-adaptive (Claude 4.6+) > never sends thinking even with an explicit budget (would 400) [4.45ms]
+
+packages/core/src/llm/providers/anthropic-tool-result-error.test.ts:
+(pass) AnthropicClient tool_result is_error propagation > sets is_error:true on the API block when the ContentBlock is flagged errored [0.97ms]
+(pass) AnthropicClient tool_result is_error propagation > filters image blocks for non-vision anthropic-style models [7.22ms]
+(pass) AnthropicClient tool_result is_error propagation > keeps image blocks for vision-capable Claude models [1.66ms]
+(pass) AnthropicClient tool_result is_error propagation > maps an image-bearing tool_result.content array to API image blocks (vision model) [6.23ms]
+(pass) AnthropicClient tool_result is_error propagation > omits is_error (or leaves it falsy) for a successful tool_result [1.03ms]
+
+packages/core/src/llm/providers/openai-max-tokens-clamp.test.ts:
+(pass) OpenAIClient max_tokens clamp > clamps a stale 384000 down to gpt-5.5's 128k cap [8.65ms]
+(pass) OpenAIClient max_tokens clamp > leaves a within-cap value untouched [0.99ms]
+(pass) OpenAIClient max_tokens clamp > omits the token-limit field entirely when neither a requested value nor a known cap exists [5.27ms]
+
+packages/core/src/llm/providers/anthropic-usage.test.ts:
+(pass) AnthropicClient token usage > counts cache reads and writes in the prompt/context total [0.93ms]
+(pass) AnthropicClient token usage > keeps cache counters absent when Anthropic did not report them [5.52ms]
+
+ 26 pass
+ 0 fail
+ 46 expect() calls
+Ran 26 tests across 6 files. [443.00ms]
+Completed Bun shard: 26 tests, 0 skipped; 0 failures.

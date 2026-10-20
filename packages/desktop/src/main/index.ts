@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
@@ -8,6 +9,13 @@ import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
 import { openSourceCollectionOperation } from "./source-collections-host.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
+import {
+  createLinkAccountAccess,
+  linkAccountExecutionOptions,
+  requireLinkAccountAccess,
+  type CaptureLinkAccountAccess,
+} from "./link-account-access.js";
+import { createFigmaMcpLinkAdapter } from "./figma-mcp-link.js";
 import { registerOperationResolutionHost } from "./operation-resolution-host.js";
 /**
  * Electron main entry — broker between renderer (ipcMain) and the
@@ -17,6 +25,7 @@ import { registerOperationResolutionHost } from "./operation-resolution-host.js"
 import {
   app,
   BrowserWindow,
+  WebContentsView,
   clipboard,
   dialog,
   ipcMain,
@@ -41,6 +50,7 @@ import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
 import {
   createDesktopManagedRuntimeProvider,
   createManagedRuntimeHandlers,
+  injectDesktopManagedRuntimePath,
 } from "./managed-runtime-service.js";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
@@ -70,6 +80,8 @@ import {
   type CliLinkProviderId,
   sweepStaleCredentialCookies,
   setDefaultCredentialCipher,
+  setDefaultCredentialAccess,
+  localCredentialAccess,
   sessionsRoot,
   // Quota — remaining CC/Codex subscription usage.
   ErrorCodes,
@@ -339,7 +351,6 @@ import {
   deleteSession,
   listDiskSessions,
   listRecentAttachments,
-  listSessions,
   markAttachmentsSent,
   stablePromptHash,
   stageFileBytes,
@@ -413,7 +424,7 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
+import { registerActivityHistoryIpc } from "./activity-history-ipc.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
 import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
@@ -425,11 +436,9 @@ import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
-import { listTitles, setTitle } from "./session-titles-store.js";
 import { createLinkService, remoteLinkFromEnvironment } from "@cjhyy/code-shell-server/links";
 import { createDesktopWebService } from "./desktop-web-service.js";
 import { createDesktopPanelAutomationHost } from "./panel-automation-host.js";
-import { tailLog, type LogBucket } from "./logs-service.js";
 import {
   installSkillFromDirectory,
   listSkills,
@@ -450,11 +459,13 @@ import { expandPluginCommand, listPluginCommands } from "./plugin-command-servic
 import { getPluginMedia } from "./plugin-media-service.js";
 import {
   preparedPanelAppPartitionProjectPath,
+  preparePanelApp,
   registerPanelAppSchemePrivileges,
   validatePanelAppEntryUrl,
 } from "./panel-app-protocol.js";
 import { installThemeAssetProtocol, THEME_ASSET_SCHEME } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
+import { PanelAppWindows } from "./panel-app-windows.js";
 import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
   listMarketplacesForUi,
@@ -515,7 +526,7 @@ import {
   listDigitalHumanTeams,
   saveDigitalHumanTeam,
 } from "./digital-human-team-service.js";
-import { searchProjectFiles } from "./file-search-service.js";
+import { createRendererProjectFileSearch } from "./file-search-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
 import {
@@ -527,8 +538,6 @@ import { GithubSkillReviewStore } from "./github-skill-review.js";
 import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
 import { resolveModelMeta } from "./model-meta-service.js";
 import { deleteRunDir } from "./runs-service.js";
-import { listRunsForUi, getRunHistory } from "./run-history-service.js";
-import { readUsageHistory } from "./usage-history-service.js";
 import { listRuns } from "./runs-service.js";
 import {
   initUpdater,
@@ -580,7 +589,6 @@ import {
   registerSecondInstanceFocus,
   runOwnedQuickChatStartupCleanup,
 } from "./quick-chat-startup-cleanup.js";
-import { getSessionCwdIndex } from "./session-cwd-index.js";
 import {
   readSessionDirectoryForUi,
   readSessionFileForUi,
@@ -861,6 +869,22 @@ const panelAppBridge = new PanelAppBridge({
   },
 });
 panelAppBridge.registerIpc();
+const panelAppWindows = new PanelAppWindows({
+  bridge: panelAppBridge,
+  prepare: preparePanelApp,
+  validateEntry: validatePanelAppEntryUrl,
+  ownerWindow: (id) => BrowserWindow.fromId(id),
+  createWindow: (options) => new BrowserWindow(options),
+  createView: (options) => new WebContentsView(options),
+  preloadPath: resolve(__dirname, "..", "preload", "panel-app.cjs"),
+});
+ipcMain.handle("panel-apps:open-window", async (event, target) => {
+  const parent = BrowserWindow.fromWebContents(event.sender);
+  if (!parent || !mainWindows.has(parent) || event.senderFrame !== event.sender.mainFrame) {
+    throw new Error("Panel windows can only be opened from their Desktop tab");
+  }
+  await panelAppWindows.open(event.sender, target);
+});
 const imGatewayService = new ImGatewayService({
   ensureDesktopControl: async () => {
     if (!gatewayControlServer) throw new Error("Desktop 消息桥接尚未启动");
@@ -907,6 +931,7 @@ function getMcpOAuthService(): McpOAuthService {
       onCredentialsChanged: () => {
         bridge?.pushCredentialSnapshot(undefined);
         invalidateMcpProbeCache();
+        bridge?.notifyWebConfigurationChanged();
       },
     });
   }
@@ -921,6 +946,7 @@ function normalizeMcpOAuthLoginInput(raw: unknown): McpOAuthLoginInput {
   if (input.source === "catalog") {
     const profileId = optionalString(input.profileId);
     if (!profileId) throw new Error("mcpOAuth:login requires profileId");
+    if (profileId === "figma-mcp") throw new Error("请通过 Figma Link 连接官方 MCP。");
     return { source: "catalog", profileId, credentialId: optionalString(input.credentialId) };
   }
   if (input.source !== "mcp") throw new Error("mcpOAuth:login source must be catalog or mcp");
@@ -989,15 +1015,22 @@ const mobileRemote = new RemoteHostManager({
     authorizePanelDirectory: (app, projectPath, workspacePath) =>
       panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,
+    captureRemoteAuthority: () => requireLinkAccountAccess(captureLinkAccount),
     // A registered HTTPS origin is trusted deployment configuration, never a request header.
-    remoteLink: () =>
-      process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN
+    remoteLink: () => {
+      try {
+        requireLinkAccountAccess(captureLinkAccount);
+      } catch {
+        return undefined;
+      }
+      return process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN
         ? remoteLinkFromEnvironment(
             process.env,
             process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN,
             "/mobile/link/callback",
           )
-        : undefined,
+        : undefined;
+    },
     onPanelsChanged: (id, kind) => {
       if (kind === "remove") panelAppBridge.revokeAppId(id);
       broadcastPanelAppsChanged(BrowserWindow.getAllWindows());
@@ -1045,23 +1078,34 @@ const accessPasscode = new AccessPasscode({
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
   | undefined = undefined;
-const { mobileRemoteController, cloudManagementManager } = createDesktopRemoteServices({
-  ipcMain,
-  userDataDir: app.getPath("userData"),
-  environmentDir: join(codeShellHome(), "desktop"),
-  safeStorage,
-  windows: () => mainWindows,
-  openExternal: (url) => shell.openExternal(url),
-  prepareGitHubLink: (signal, authorized) => {
-    if (!prepareAccountGitHubLink) throw new Error("GitHub Link 服务尚未就绪。");
-    return prepareAccountGitHubLink(signal, authorized);
-  },
-  host: mobileRemote,
-  tunnel: tunnelManager,
-  binary: cloudflaredBinary,
-  passcode: accessPasscode,
-  cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
-  openLegacyCloud: openCloudWorkbench,
+const { cloudAccountManager, mobileRemoteController, cloudManagementManager } =
+  createDesktopRemoteServices({
+    ipcMain,
+    userDataDir: app.getPath("userData"),
+    environmentDir: join(codeShellHome(), "desktop"),
+    safeStorage,
+    windows: () => mainWindows,
+    openExternal: (url) => shell.openExternal(url),
+    prepareGitHubLink: (signal, authorized) => {
+      if (!prepareAccountGitHubLink) throw new Error("GitHub Link 服务尚未就绪。");
+      return prepareAccountGitHubLink(signal, authorized);
+    },
+    host: mobileRemote,
+    tunnel: tunnelManager,
+    binary: cloudflaredBinary,
+    passcode: accessPasscode,
+    cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
+    openLegacyCloud: openCloudWorkbench,
+  });
+const captureLinkAccount: CaptureLinkAccountAccess = createLinkAccountAccess(cloudAccountManager);
+// Main-owned external runtimes use the same account gate as the stdio worker.
+setDefaultCredentialAccess({
+  ...localCredentialAccess,
+  executeRemoteLinkAction: async (input, options) =>
+    localCredentialAccess.executeRemoteLinkAction!(
+      input,
+      linkAccountExecutionOptions(captureLinkAccount, options),
+    ),
 });
 let gatewayControlServer: GatewayControlServer | undefined;
 let sessionBridge: SessionBridgeWiring | undefined;
@@ -1162,6 +1206,11 @@ const approvalBridge = new ApprovalBridge({
 });
 const roomManager = new RoomManager({
   rootDir: resolve(app.getPath("userData"), "mobile-remote", "rooms"),
+  modelTracing: {
+    storageDir: join(sessionsRoot(), ".model-traces"),
+    parameters: (room) =>
+      room.kind === "codex" ? {} : { appendSystemPrompt: CC_COST_GUARD_PROMPT },
+  },
   resolveLinkedSession: resolveLinkedSessionFromDisk,
   createAgent: (room, onEvent) =>
     room.kind === "codex"
@@ -1522,13 +1571,15 @@ async function createWindow(): Promise<BrowserWindow> {
 
   const devUrl = process.env.VITE_DEV_URL;
   const noDevtools = process.env.CODE_SHELL_NO_DEVTOOLS === "1";
-  if (devUrl) {
-    win.loadURL(devUrl);
-    if (!noDevtools) win.webContents.openDevTools({ mode: "right" });
-  } else {
-    win.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
-    if (!app.isPackaged && !noDevtools) win.webContents.openDevTools({ mode: "right" });
-  }
+  const loadRenderer = () => {
+    if (devUrl) {
+      void win.loadURL(devUrl);
+      if (!noDevtools) win.webContents.openDevTools({ mode: "right" });
+    } else {
+      void win.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
+      if (!app.isPackaged && !noDevtools) win.webContents.openDevTools({ mode: "right" });
+    }
+  };
 
   win.webContents.on("did-fail-load", (_e, code, desc, url) => {
     dlog("main", "renderer.did-fail-load", { code, desc, url });
@@ -1583,7 +1634,11 @@ async function createWindow(): Promise<BrowserWindow> {
   if (!bridge) {
     bridge = new AgentBridge(
       win,
-      (req) => getMcpOAuthService().resolveAccessToken(req.id, { forceRefresh: req.forceRefresh }),
+      (req) =>
+        getMcpOAuthService().resolveAccessToken(req.id, {
+          serverUrl: req.serverUrl,
+          forceRefresh: req.forceRefresh,
+        }),
       {
         begin: ({ sessionId, ownerId, claimId }) =>
           quickChatOwnership.beginFork(sessionId, ownerId, claimId),
@@ -1610,6 +1665,7 @@ async function createWindow(): Promise<BrowserWindow> {
             safeStorage.getSelectedStorageBackend() !== "basic_text"),
         hasActiveEphemeralOwner: (sessionId) => quickChatOwnership.hasActiveOwner(sessionId),
       }),
+      captureLinkAccount,
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the
@@ -2731,12 +2787,17 @@ async function createWindow(): Promise<BrowserWindow> {
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });
+    // The renderer immediately publishes its active session and reads Mimi's
+    // state. Register those handlers before loading it; handlers themselves
+    // await hydration, so the interface can still load while indexes recover.
+    loadRenderer();
     await petInitialization;
     petRuntimeReady = petDispatchService !== null;
     markPetIpcReady?.();
     markPetIpcReady = null;
   } else {
     bridge.attachWindow(win);
+    loadRenderer();
   }
 
   await installAppMenu(win);
@@ -3496,6 +3557,16 @@ app.whenReady().then(async () => {
     log: (event, data) => dlog("main", event, data),
   });
 
+  // Child tools inherit appended fallbacks; existing and project PATHs keep precedence.
+  await injectDesktopManagedRuntimePath({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    appPath: app.getAppPath(),
+    additionalDirectories: [join(app.getPath("userData"), "bin")],
+  })
+    .then((result) => dlog("main", "managed-runtime-path.ready", result))
+    .catch((error) => dlog("main", "managed-runtime-path.failed", { error: String(error) }));
+
   // Main owns Electron safeStorage. Worker gets metadata snapshots and asks
   // main to resolve/materialize secrets on demand; if safeStorage is unavailable
   // SafeStorageCipher intentionally falls back to `plain:` owner-only storage.
@@ -4102,6 +4173,7 @@ ipcMain.handle("credentials:list", async (_e, cwd: string) => {
   const projectIds = new Set(store.list("project").map((credential) => credential.id));
   return store.listMasked().map((credential) => ({
     ...credential,
+    meta: credential.meta ? linkConnectionMetadata(credential.meta) : undefined,
     storeScope: projectIds.has(credential.id) ? "project" : "user",
   }));
 });
@@ -4111,6 +4183,15 @@ ipcMain.handle(
     const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
     assertGenericCredentialMutation(authorizedCwd, cred.id);
     if (isRemoteLinkCredential(cred)) throw new Error("远程 Link 连接必须通过授权创建。");
+    if (cred.meta?.recordSchemaVersion === 2) {
+      const {
+        linkExecutionRuntime: _runtime,
+        linkExecutionBackend: _backend,
+        linkAuthSource: _source,
+        ...meta
+      } = cred.meta;
+      cred = { ...cred, meta };
+    }
     new CredentialStore(authorizedCwd || undefined).save(scope, cred);
     cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, cred.id, scope);
     bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
@@ -4136,6 +4217,13 @@ const remoteLinkIpc = registerRemoteLinkIpc({
   withMutation: (cwd, write) =>
     bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
   onChanged: () => bridge?.notifyWebConfigurationChanged(),
+  captureAccount: captureLinkAccount,
+  hostOAuthAdapters: () => [
+    createFigmaMcpLinkAdapter({
+      oauth: getMcpOAuthService(),
+      openExternal: (url) => shell.openExternal(url),
+    }),
+  ],
 });
 prepareAccountGitHubLink = remoteLinkIpc.prepareGitHubLink;
 
@@ -4928,12 +5016,13 @@ ipcMain.handle(
   async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
     updateSkillEntry(await requireRendererListedSkillPath(target, filePath)),
 );
-ipcMain.handle("files:searchProject", async (_e, projectId: string, query: string) => {
-  const project = await requireRendererProject(projectId);
-  const q = typeof query === "string" ? query : "";
-  if (q.length > 512) throw new Error("files:searchProject query is too long");
-  return searchProjectFiles(project.roots, q);
+const rendererProjectFileSearch = createRendererProjectFileSearch({
+  requireProject: requireRendererProject,
+  requireRoot: requireRendererProjectRoot,
 });
+ipcMain.handle("files:searchProject", (_e, projectId: unknown, query: unknown, rootId?: unknown) =>
+  rendererProjectFileSearch(projectId, query, rootId),
+);
 ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
   const query = args.length === 1 ? args[0] : undefined;
   if (typeof query !== "string") throw new Error("invalid content search query");
@@ -6360,6 +6449,14 @@ ipcMain.handle("review:recentCommits", async (_e, sessionId: string, limit?: num
   return reviewService.getRecentCommits(sessionId, limit);
 });
 
+ipcMain.handle("review:preparePrompt", async (_e, sessionId: string, request: unknown) => {
+  assertDesktopSessionId(sessionId);
+  return reviewService.preparePrompt(
+    sessionId,
+    request as import("../shared/review.js").ReviewAiPromptRequest,
+  );
+});
+
 interface MainGitPrefs {
   branchPrefix: string;
   autoDeleteWorktrees: boolean;
@@ -6782,13 +6879,6 @@ ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
   return runDream(level, authorizedCwd);
 });
 
-ipcMain.handle("sessions:list", async () => listSessions());
-ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: boolean) => {
-  assertDesktopSessionId(id);
-  if (typeof archived !== "boolean") throw new Error("archived must be a boolean");
-  await archiveDiskSession(id, archived ? Date.now() : undefined);
-  await getSessionCwdIndex().refresh(id);
-});
 async function deleteDesktopSession(id: string): Promise<void> {
   mediaPreviewService.releaseSession(id);
   builtInBrowserHandoffGrants.clearSession(id);
@@ -6898,36 +6988,10 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
     }
   );
 });
-ipcMain.handle("sessions:titles", async () => listTitles());
-ipcMain.handle("sessions:rename", async (_e, id: string, title: string) => {
-  assertDesktopSessionId(id);
-  if (typeof title !== "string" || title.length > 1_024 || title.includes("\0")) {
-    throw new Error("title must be a bounded string");
-  }
-  await setTitle(id, title);
-});
-
-ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {
-  if (bucket !== "ui-ink" && bucket !== "engine" && bucket !== "desktop") {
-    throw new Error("invalid bucket");
-  }
-  const boundedLines =
-    typeof lines === "number" && Number.isSafeInteger(lines) && lines > 0
-      ? Math.min(lines, 10_000)
-      : undefined;
-  return tailLog(bucket, boundedLines);
-});
-
-ipcMain.handle("usage:summary", async (_e, query) => readUsageHistory(query));
-
-ipcMain.handle("runs:list", async (_e, options?: { includeSessions?: boolean }) =>
-  listRunsForUi(options),
-);
-ipcMain.handle("runs:get", async (_e, runId: string) => {
-  if (typeof runId !== "string") throw new Error("runId required");
-  return getRunHistory(runId);
-});
-registerSessionTranscriptIpc(ipcMain);
+registerActivityHistoryIpc(ipcMain, () => [
+  ...mainWindows,
+  ...(petWidgetWindow ? [petWidgetWindow] : []),
+]);
 const sessionCatalogStore = new SessionCatalogStore();
 const sessionCatalogIpc = registerSessionCatalogIpc(
   ipcMain,

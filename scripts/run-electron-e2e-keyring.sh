@@ -6,8 +6,13 @@ set -euo pipefail
 unset DBUS_SESSION_BUS_ADDRESS DBUS_SESSION_BUS_PID DBUS_SESSION_BUS_WINDOWID
 unset DBUS_STARTER_ADDRESS DBUS_STARTER_BUS_TYPE
 unset GNOME_KEYRING_CONTROL GNOME_KEYRING_PID SSH_AUTH_SOCK SSH_AGENT_PID
-exec dbus-run-session -- bash -euo pipefail -s -- "$@" <<'PRIVATE_SESSION'
-fixture_keyring_root=$(mktemp -d)
+unset CODESHELL_LINUX_KEYRING_REFERENCE
+fixture_keyring_helper="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../packages/desktop/scripts" && pwd -P)/packaged-linux-environment.mjs"
+exec dbus-run-session -- bash -euo pipefail -s -- "$fixture_keyring_helper" "$@" <<'PRIVATE_SESSION'
+fixture_keyring_helper=$1
+shift
+fixture_keyring_root=$(mktemp -d "${TMPDIR:-/tmp}/codeshell-linux-keyring-XXXXXX")
+fixture_keyring_root=$(cd -- "$fixture_keyring_root" && pwd -P)
 fixture_keyring_pid=
 cleanup() {
   if test -n "$fixture_keyring_pid"; then
@@ -44,6 +49,9 @@ printf '%s' 'codeshell-ci-readiness' |
 timeout 15s secret-tool lookup codeshell-fixture readiness > "$fixture_keyring_root/readiness"
 test "$(cat "$fixture_keyring_root/readiness")" = codeshell-ci-readiness
 secret-tool clear codeshell-fixture readiness
+export CODESHELL_LINUX_KEYRING_REFERENCE="$fixture_keyring_root/keyring-reference.json"
+node "$fixture_keyring_helper" --capture "$CODESHELL_LINUX_KEYRING_REFERENCE" \
+  --wrapper-pid "$$" --daemon-pid "$fixture_keyring_pid"
 echo 'Electron CI: private SecretService unlocked and verified'
 
 if test "$#" -gt 0; then

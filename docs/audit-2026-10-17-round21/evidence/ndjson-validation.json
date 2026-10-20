@@ -1,0 +1,90 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "guardedRuns": [
+    {
+      "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round21/evidence/ndjson-focused.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "elapsedSeconds": 0.162,
+      "raw": "docs/audit-2026-10-17-round21/evidence/ndjson-first.raw.log",
+      "rawBytes": 2032,
+      "rawSha256": "66b5c30a498d68b0aee0cf443220aff93f104350f44dbf99ad6c3dfe19ce56a8",
+      "combinedStdoutStderr": true,
+      "rawSavedBeforeInspection": true,
+      "reruns": 0,
+      "rawAndExitSavedBeforeInspection": true,
+      "completedGuard": true,
+      "pass": 15,
+      "expect": 30,
+      "fail": 0,
+      "errors": 0,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 15,
+      "startGrammarCases": 7,
+      "iteratorGrammarCases": 5,
+      "lifecycleCases": 3,
+      "actualProductionLeafCalls": true,
+      "manualMirroredCliRecipe": false
+    }
+  ],
+  "totals": {
+    "cleanRuns": 1,
+    "failedRuns": 0,
+    "runtimeAttempts": 1,
+    "pass": 15,
+    "expect": 30,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 0,
+    "focusedTests": 15,
+    "productRetryCount": 0
+  },
+  "firstRunHandling": "Combined first raw stdout/stderr plus exit saved before inspection; one first attempt, no failed shard, repair, rerun or alternative validation.",
+  "actualScope": [
+    "Exact absolute actual NdjsonReader leaf import, node:readline, explicitly owned in-memory PassThrough and Readable.from streams. No module or runtime mocks.",
+    "Message/ping order, blank/malformed JSON skip, escaped newline/whitespace and empty string content, JSON syntax chunks, CRLF split, every-byte UTF-8 chunks including combining accent and emoji, final line at EOF.",
+    "Leaf lifecycle controls stop-before-start, duplicate start idempotence, EOF close and stop preventing later lines. Abort callback is only a leaf close signal; no abort input message or real action."
+  ],
+  "staticOnly": [
+    "Full current 79-line reader source and 36-line existing tests (tests static only).",
+    "main.ts selected option/task route and run.ts selected imports/options/header; modules never imported/executed.",
+    "Repository packages/scripts/tests specific NdjsonReader/ndjson-reader reference navigation only found leaf/test; not proof against computed, external SDK or generated consumers."
+  ],
+  "excluded": [
+    "Existing test file uses setTimeout(5), so it was only statically read; no existing test is counted as run.",
+    "No process.stdin/default constructor/native input/PTY/CLI/real SDK/Engine/model/account/network/files/actual application timer/watchdog.",
+    "No approval/auth/security input or actual abort command; no invalid schema/type, handler throw, multiple handler, restart, mixed iterator/callback or stress experiments.",
+    "Old failed CLI data/read-stdin and other dynamic directions remain skipped.",
+    "No full build/typecheck/lint/suite/E2E or product fixes."
+  ],
+  "metadataAdjustments": [
+    {
+      "kind": "Over-broad historical navigation",
+      "detail": "An initial rg over docs/bugs included giant single-line JSON values and its tool display was truncated. It was not used as complete history evidence; saved recursive scalar scan and bounded contexts replace that navigation only, without product retries."
+    },
+    {
+      "kind": "Guessed receipt navigation",
+      "detail": "Two guessed prior names positiveint-source.json and positiveint-artifacts.json did not exist; after rg --files the actual source-manifest/artifact-receipt were read. Metadata only."
+    },
+    {
+      "kind": "Preparation chat count correction",
+      "detail": "A preparation message guessed 8 start/4 iterator; actual fixture/raw are 7 start/5 iterator/3 lifecycle =15. Final receipt uses raw counts. Fixture/raw unchanged."
+    }
+  ],
+  "limitations": [
+    "Passing small owned-stream controls do not prove ordinary CLI integration, schema safety, all lifecycle/resource cases, native stdin behavior or browser/platform behavior.",
+    "No ordinary production caller was established, consistent with historical May30 note. Dormancy alone is not recorded as a product bug.",
+    "The two source-only existing tests informed no-timer focused controls; this is added validation, not two new defect reproductions."
+  ]
+}

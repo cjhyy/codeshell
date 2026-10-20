@@ -1,0 +1,1027 @@
+{
+  "storedPatternChecks": [
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/history.json",
+      "bytes": 814642,
+      "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d",
+      "patterns": [
+        {
+          "name": "helper",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": []
+        },
+        {
+          "name": "local_marketplace",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 13,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            },
+            {
+              "index": 24,
+              "nextCodepoints": [
+                92,
+                34,
+                92,
+                120,
+                50
+              ]
+            },
+            {
+              "index": 26,
+              "nextCodepoints": [
+                92,
+                120,
+                50,
+                55,
+                93
+              ]
+            },
+            {
+              "index": 37,
+              "nextCodepoints": [
+                92,
+                34,
+                92,
+                120,
+                50
+              ]
+            },
+            {
+              "index": 39,
+              "nextCodepoints": [
+                92,
+                120,
+                50,
+                55,
+                93
+              ]
+            },
+            {
+              "index": 46,
+              "nextCodepoints": [
+                92,
+                34,
+                92,
+                120,
+                50
+              ]
+            },
+            {
+              "index": 48,
+              "nextCodepoints": [
+                92,
+                120,
+                50,
+                55,
+                93
+              ]
+            },
+            {
+              "index": 59,
+              "nextCodepoints": [
+                92,
+                34,
+                92,
+                120,
+                50
+              ]
+            },
+            {
+              "index": 61,
+              "nextCodepoints": [
+                92,
+                120,
+                50,
+                55,
+                93
+              ]
+            },
+            {
+              "index": 68,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        },
+        {
+          "name": "literal_namespace",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 30,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            },
+            {
+              "index": 141,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        },
+        {
+          "name": "old_branch",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 38,
+              "nextCodepoints": [
+                92,
+                115,
+                42,
+                40,
+                63
+              ]
+            },
+            {
+              "index": 56,
+              "nextCodepoints": [
+                92,
+                115,
+                42,
+                91,
+                92
+              ]
+            },
+            {
+              "index": 60,
+              "nextCodepoints": [
+                92,
+                34,
+                92,
+                120,
+                50
+              ]
+            },
+            {
+              "index": 62,
+              "nextCodepoints": [
+                92,
+                120,
+                50,
+                55,
+                93
+              ]
+            },
+            {
+              "index": 73,
+              "nextCodepoints": [
+                92,
+                34,
+                92,
+                120,
+                50
+              ]
+            },
+            {
+              "index": 75,
+              "nextCodepoints": [
+                92,
+                120,
+                50,
+                55,
+                93
+              ]
+            }
+          ]
+        },
+        {
+          "name": "source_name",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 30,
+              "nextCodepoints": [
+                92,
+                115,
+                43,
+                110,
+                97
+              ]
+            },
+            {
+              "index": 59,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected.json",
+      "bytes": 2807,
+      "sha256": "71c8fda1b2eeb6c8cfb649753536eb2c26e14672e8139bfccf90c4db5eb23615",
+      "patterns": [
+        {
+          "name": "helper",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": []
+        },
+        {
+          "name": "quoted_marketplace_local",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 13,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            },
+            {
+              "index": 56,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        },
+        {
+          "name": "literal_namespace",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 30,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            },
+            {
+              "index": 141,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        },
+        {
+          "name": "old_branch",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 38,
+              "nextCodepoints": [
+                92,
+                115,
+                42,
+                40,
+                63
+              ]
+            },
+            {
+              "index": 56,
+              "nextCodepoints": [
+                92,
+                115,
+                42,
+                91,
+                34
+              ]
+            }
+          ]
+        },
+        {
+          "name": "source_name",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 30,
+              "nextCodepoints": [
+                92,
+                115,
+                43,
+                110,
+                97
+              ]
+            },
+            {
+              "index": 51,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                42,
+                110
+              ]
+            },
+            {
+              "index": 63,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        },
+        {
+          "name": "unquoted_marketplace_local",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 28,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            },
+            {
+              "index": 51,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        },
+        {
+          "name": "name_local_literal",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 16,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        },
+        {
+          "name": "local_collision",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 41,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            },
+            {
+              "index": 64,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        },
+        {
+          "name": "chinese_market_local",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 11,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            },
+            {
+              "index": 34,
+              "nextCodepoints": [
+                92,
+                110,
+                93,
+                123,
+                48
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/focused-history.json",
+      "bytes": 6910,
+      "sha256": "8bc2021a68a6c82075089c79eb543c22fa04658a4b67be5e626d2196e7bd80fc",
+      "patterns": [
+        {
+          "name": "literal-local-comparison",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 11,
+              "nextCodepoints": [
+                92,
+                115,
+                42,
+                61,
+                123
+              ]
+            },
+            {
+              "index": 20,
+              "nextCodepoints": [
+                92,
+                115,
+                42,
+                91,
+                34
+              ]
+            }
+          ]
+        },
+        {
+          "name": "named-local",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 75,
+              "nextCodepoints": [
+                92,
+                115,
+                42,
+                91,
+                58
+              ]
+            },
+            {
+              "index": 125,
+              "nextCodepoints": [
+                92,
+                115,
+                42,
+                58,
+                92
+              ]
+            },
+            {
+              "index": 129,
+              "nextCodepoints": [
+                92,
+                115,
+                42,
+                91,
+                34
+              ]
+            }
+          ]
+        },
+        {
+          "name": "namespace-local",
+          "consecutiveBackslashPairs": 0,
+          "backslashPositions": [
+            {
+              "index": 56,
+              "nextCodepoints": [
+                92,
+                98,
+                108,
+                111,
+                99
+              ]
+            },
+            {
+              "index": 63,
+              "nextCodepoints": [
+                92,
+                98,
+                124,
+                92,
+                98
+              ]
+            },
+            {
+              "index": 66,
+              "nextCodepoints": [
+                92,
+                98,
+                108,
+                111,
+                99
+              ]
+            },
+            {
+              "index": 73,
+              "nextCodepoints": [
+                92,
+                98,
+                46,
+                123,
+                48
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sourceAstLiterals": [
+    {
+      "line": 19,
+      "consecutiveBackslashPairs": 0,
+      "codepoints": [
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101,
+        91,
+        94,
+        92,
+        110,
+        93,
+        123,
+        48,
+        44,
+        49,
+        48,
+        48,
+        125,
+        91,
+        92,
+        34,
+        92,
+        120,
+        50,
+        55,
+        93,
+        108,
+        111,
+        99,
+        97,
+        108,
+        91,
+        92,
+        34,
+        92,
+        120,
+        50,
+        55,
+        93,
+        124,
+        91,
+        92,
+        34,
+        92,
+        120,
+        50,
+        55,
+        93,
+        108,
+        111,
+        99,
+        97,
+        108,
+        91,
+        92,
+        34,
+        92,
+        120,
+        50,
+        55,
+        93,
+        91,
+        94,
+        92,
+        110,
+        93,
+        123,
+        48,
+        44,
+        49,
+        48,
+        48,
+        125,
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101
+      ]
+    },
+    {
+      "line": 20,
+      "consecutiveBackslashPairs": 0,
+      "codepoints": [
+        40,
+        63,
+        58,
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101,
+        124,
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101,
+        115,
+        41,
+        91,
+        94,
+        92,
+        110,
+        93,
+        123,
+        48,
+        44,
+        49,
+        56,
+        48,
+        125,
+        40,
+        63,
+        58,
+        99,
+        111,
+        108,
+        108,
+        105,
+        115,
+        105,
+        111,
+        110,
+        124,
+        114,
+        101,
+        115,
+        101,
+        114,
+        118,
+        101,
+        100,
+        124,
+        108,
+        105,
+        116,
+        101,
+        114,
+        97,
+        108,
+        124,
+        110,
+        97,
+        109,
+        101,
+        115,
+        112,
+        97,
+        99,
+        101,
+        124,
+        21516,
+        21517,
+        124,
+        30896,
+        25758,
+        124,
+        20445,
+        30041,
+        41,
+        124,
+        40,
+        63,
+        58,
+        99,
+        111,
+        108,
+        108,
+        105,
+        115,
+        105,
+        111,
+        110,
+        124,
+        114,
+        101,
+        115,
+        101,
+        114,
+        118,
+        101,
+        100,
+        124,
+        108,
+        105,
+        116,
+        101,
+        114,
+        97,
+        108,
+        124,
+        110,
+        97,
+        109,
+        101,
+        115,
+        112,
+        97,
+        99,
+        101,
+        124,
+        21516,
+        21517,
+        124,
+        30896,
+        25758,
+        124,
+        20445,
+        30041,
+        41,
+        91,
+        94,
+        92,
+        110,
+        93,
+        123,
+        48,
+        44,
+        49,
+        56,
+        48,
+        125,
+        40,
+        63,
+        58,
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101,
+        124,
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101,
+        115,
+        41
+      ]
+    },
+    {
+      "line": 21,
+      "consecutiveBackslashPairs": 0,
+      "codepoints": [
+        109,
+        105,
+        115,
+        115,
+        105,
+        110,
+        103,
+        46,
+        108,
+        111,
+        99,
+        97,
+        108,
+        124,
+        116,
+        114,
+        117,
+        116,
+        104,
+        121,
+        46,
+        108,
+        111,
+        99,
+        97,
+        108,
+        124,
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101,
+        92,
+        115,
+        42,
+        40,
+        63,
+        58,
+        61,
+        61,
+        61,
+        124,
+        33,
+        61,
+        61,
+        124,
+        58,
+        124,
+        61,
+        41,
+        92,
+        115,
+        42,
+        91,
+        92,
+        34,
+        92,
+        120,
+        50,
+        55,
+        93,
+        108,
+        111,
+        99,
+        97,
+        108,
+        91,
+        92,
+        34,
+        92,
+        120,
+        50,
+        55,
+        93
+      ]
+    },
+    {
+      "line": 22,
+      "consecutiveBackslashPairs": 0,
+      "codepoints": [
+        40,
+        63,
+        58,
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101,
+        78,
+        97,
+        109,
+        101,
+        124,
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101,
+        92,
+        115,
+        43,
+        110,
+        97,
+        109,
+        101,
+        124,
+        109,
+        97,
+        114,
+        107,
+        101,
+        116,
+        112,
+        108,
+        97,
+        99,
+        101,
+        46,
+        42,
+        110,
+        97,
+        109,
+        101,
+        100,
+        41,
+        91,
+        94,
+        92,
+        110,
+        93,
+        123,
+        48,
+        44,
+        49,
+        50,
+        48,
+        125,
+        108,
+        111,
+        99,
+        97,
+        108
+      ]
+    }
+  ],
+  "conclusion": "Original author child source/stored patterns and independent focused patterns have normal single backslashes. Prior double-escape diagnosis was a display-layer misreading. New scan is an expanded query supplement, not an established regex repair.",
+  "parentOriginalClaimsPreserved": true,
+  "rootUserCorrectionIssued": true,
+  "productRuns": 0
+}

@@ -1,0 +1,103 @@
+{
+  "frozenAt": "2026-10-17T19:00:33.163193+00:00",
+  "scope": "prep134 finite static ordinary title write/list/update; author packet only",
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 787,
+      "sha256": "a71143c892e02a327ec77a93fbec4bb1ff264374af325ad3b2e34ac66a7a2c31"
+    },
+    {
+      "path": "consumer-before-pins.json",
+      "bytes": 1075,
+      "sha256": "be5c4c3bbcb806b3217096705160e41cd6adfedc09b7efd224f793e1914c32bd"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 1110,
+      "sha256": "f5f4d86a005b0ef596253b4f9d29059f16422199a267cb7192c6aeab3fa2644d"
+    },
+    {
+      "path": "ending.json",
+      "bytes": 5336,
+      "sha256": "342bde461cbe325dc3d2334d1d03eedf88582a40e5572722f67dec54e72c61ce"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 14104,
+      "sha256": "d7ed79c99b635a609b93551cb8e5fe38125b6d171eb6384e5bca487defc939d9"
+    },
+    {
+      "path": "history-projection.json",
+      "bytes": 39388,
+      "sha256": "c9fcdb34ba26de22fbd866d20afb4ae1b057de77a8dacedad74a449dfb34b62e"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 888,
+      "sha256": "053d86aeed597e045ed552d103bd865c5291cfc771a2db7fa60a842db0be13d2"
+    },
+    {
+      "path": "metadata-checks.json",
+      "bytes": 621,
+      "sha256": "07d88b0c2b048943df13552f5c3cb8d710c03878bab1ab98432a1e7074e34590"
+    },
+    {
+      "path": "prior-canonical.json",
+      "bytes": 3427,
+      "sha256": "949db329a74ad11cee6a9e8b8b08e5f6a9d32e45496c3c743f20592db99b1f55"
+    },
+    {
+      "path": "prior-r22-metadata.json",
+      "bytes": 1488,
+      "sha256": "46607471be975f80c13497c8c3111b69d250b3b4eeb707c3bf7af9afec953155"
+    },
+    {
+      "path": "prior-report-metadata.json",
+      "bytes": 336,
+      "sha256": "99c213420ee96daf2de5d649e5ab3cb923e64631e815629bf6e890ad958d8b0d"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2697,
+      "sha256": "08bc155ba259e376af8defd9bf845de40f5e474312336f025d7fcd942aed175c"
+    },
+    {
+      "path": "shared-history-reference.json",
+      "bytes": 397,
+      "sha256": "2ab7862884eec20af496c00d4029ec1b7f31a21d4bce1d65ab143f1aaef8df87"
+    },
+    {
+      "path": "source-excerpts.txt",
+      "bytes": 44533,
+      "sha256": "87dddfc418063185d1e08132045ca6213ab8cb903fa9f30def95e1347ea6de63"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 19537,
+      "sha256": "bb686df4a25de2df6851224f2e343e30309a91c3cda0a120a29e29eb11ae08e8"
+    },
+    {
+      "path": "test-before-pin.json",
+      "bytes": 238,
+      "sha256": "fa53b197c374a620f6f53bbe04a70fef3ac7b1b76e849da570c5ad267a76186a"
+    },
+    {
+      "path": "ui-before-pins.json",
+      "bytes": 749,
+      "sha256": "6f0d4adfc9641d75e7f739b564b835cda4f4ff7fe9228e6061a7707fbefee02c"
+    }
+  ],
+  "fileCountExcludingSelf": 17,
+  "selfExcluded": "artifact-receipt.json",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "productExecutionAttempts": 0,
+  "gitCalls": 0,
+  "sourceReadingEndedBeforeFinalMetadata": true,
+  "authorIdentity": "/root/snapshot_round27_resume; same author as old prep65/R48 packet",
+  "immutableAfterThisReceipt": true
+}

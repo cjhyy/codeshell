@@ -1,0 +1,54 @@
+{
+  "capturedUTC": "2026-10-17T12:06:32.785309+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "lineCount": 928,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "timing": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage"
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lineCount": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "timing": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "bytes": 109011,
+      "lineCount": 2831,
+      "sha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "timing": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210013,
+      "lineCount": 5072,
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "timing": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage"
+    },
+    {
+      "path": "packages/desktop/src/main/transcript-reader.ts",
+      "bytes": 30529,
+      "lineCount": 792,
+      "sha256": "0d5873f4c80692ea57271a2ea689c6421c00f6ef54de741588e66e7e1ba94124",
+      "timing": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lineCount": 1892,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "timing": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage"
+    },
+    {
+      "path": "packages/desktop/src/renderer/contextSelection.test.ts",
+      "bytes": 8019,
+      "lineCount": 223,
+      "sha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "timing": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage"
+    }
+  ]
+}

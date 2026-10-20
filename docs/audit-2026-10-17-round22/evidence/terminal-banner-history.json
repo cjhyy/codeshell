@@ -1,0 +1,382 @@
+{
+  "basisInventory": "evidence/terminal-history.json",
+  "sameInventoryFiles": 2232,
+  "pattern": "(?:banner|边框|边界|横框|padding|pad =).{0,100}(?:56|60|\\+ ?4|错位|对齐|width|align)|(?:56|60).{0,40}(?:banner|padding)",
+  "totalOccurrences": 74,
+  "savedContexts": 74,
+  "maxSavedContexts": 100,
+  "parseErrors": [],
+  "hits": [
+    {
+      "path": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+      "location": "line:254",
+      "context": "Transcript 已经使用 append-mode descriptor 避免并发写覆盖，在崩溃造成末行撕裂时修复记录边界，并在非 Windows 平台将文件权限设为 `0600`（`packages/core/src/session/transcript.ts:29`）。SessionManager 具备 process-local ephemeral session、原子 rename、generation/revision 冲突控制、full/summary/side fork、父子谱系和 archive（`packages/core/src/session/session-manager.ts:1260`、`:1611`、`:1698`）。"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "location": "$[128][\"fix\"]",
+      "context": "Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "location": "$[86][\"fix\"]",
+      "context": "Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "location": "$[128][\"fix\"]",
+      "context": "Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[207][\"fix\"]",
+      "context": "Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "location": "$[55][\"fix\"]",
+      "context": "Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width."
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "location": "line:66",
+      "context": "| S2 | turn 顶部预检 | `this.turnCount < this.config.maxTurns` 成立；递增 turnCount、清本 turn usage。 | abort 直接返回；否则消费 steer、发请求边界、跑 on_turn_start 和上限提醒。 | `packages/core/src/engine/turn-loop.ts:556`、`packages/core/src/engine/turn-loop.ts:566`、`packages/core/src/engine/turn-loop.ts:581`、`packages/core/src/engine/turn-loop.ts:596`、`packages/core/src/engine/turn-loop.ts:603`、`packages/core/src/engine/turn-loop.ts:618`、`packages/core/src"
+    },
+    {
+      "path": "docs/audit-2026-10-16/desktop.md",
+      "location": "line:29",
+      "context": "- 触发：已授权 Chrome Native Messaging 连接传递包含中文或 emoji 的正常 JSON，loopback TCP 在一个 UTF-8 多字节字符内部切开 chunk。TCP 的合法分片边界没有字符对齐承诺；不需要畸形 JSON、未授权消息或恶意内容。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"truncate_unicode\"][27][\"snippet\"]",
+      "context": "`slice`；其余 `.length/.slice` 只用于数组计数、分钟桶或日志预览，不参与这两个字符预算。\n- 1600 单项边界测试断言结果恰为 1600 code points 且没有孤立 surrogate（`goal-stop-hook.test.ts:318-327`）。8000 总证据边界测试解析 JSON 后检查 evidence 不超过 8000 code points、含截断标记且没有孤立 surrogate（`:329-360`）。\n\n### 6. 绿线未破坏 — **通过**\n\n- fail-closed：judge throw 或输出不可解析都返回 `continueSession:true`（`goa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"truncate_unicode\"][27][\"snippet\"]",
+      "context": "`slice`；其余 `.length/.slice` 只用于数组计数、分钟桶或日志预览，不参与这两个字符预算。\n- 1600 单项边界测试断言结果恰为 1600 code points 且没有孤立 surrogate（`goal-stop-hook.test.ts:318-327`）。8000 总证据边界测试解析 JSON 后检查 evidence 不超过 8000 code points、含截断标记且没有孤立 surrogate（`:329-360`）。\n\n### 6. 绿线未破坏 — **通过**\n\n- fail-closed：judge throw 或输出不可解析都返回 `continueSession:true`（`goal-stop-hook.ts:498-537`），不会误判完成。\n- waiting guard：只有 `verdict.waiting && runningWork.length > 0` 才允许等待；空列表落回 not_met 并继续（`:553-577`）。定向单测与 Eng"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "location": "$[\"matches\"][175][\"text\"]",
+      "context": "`slice`；其余 `.length/.slice` 只用于数组计数、分钟桶或日志预览，不参与这两个字符预算。\n- 1600 单项边界测试断言结果恰为 1600 code points 且没有孤立 surrogate（`goal-stop-hook.test.ts:318-327`）。8000 总证据边界测试解析 JSON 后检查 evidence 不超过 8000 code points、含截断标记且没有孤立 surrogate（`:329-360`）。\n\n### 6. 绿线未破坏 — **通过**\n\n- fail-closed：judge throw 或输出不可解析都返回 `continueSession:true`（`goa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "location": "$[\"matches\"][175][\"text\"]",
+      "context": "`slice`；其余 `.length/.slice` 只用于数组计数、分钟桶或日志预览，不参与这两个字符预算。\n- 1600 单项边界测试断言结果恰为 1600 code points 且没有孤立 surrogate（`goal-stop-hook.test.ts:318-327`）。8000 总证据边界测试解析 JSON 后检查 evidence 不超过 8000 code points、含截断标记且没有孤立 surrogate（`:329-360`）。\n\n### 6. 绿线未破坏 — **通过**\n\n- fail-closed：judge throw 或输出不可解析都返回 `continueSession:true`（`goal-stop-hook.ts:498-537`），不会误判完成。\n- waiting guard：只有 `verdict.waiting && runningWork.length > 0` 才允许等待；空列表落回 not_met 并继续（`:553-577`）。定向单测与 Eng"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "location": "$[\"matches\"][282][\"text\"]",
+      "context": "- 1600 单项边界测试断言结果恰为 1600 code points 且没有孤立 surrogate（`goal-stop-hook.test.ts:318-327`）。8000 总证据边界测试解析 JSON 后检查 evidence 不超过 8000 code points、含截断标记且没有孤立 surrogate（`:329-360`）。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "location": "$[\"matches\"][282][\"text\"]",
+      "context": "- 1600 单项边界测试断言结果恰为 1600 code points 且没有孤立 surrogate（`goal-stop-hook.test.ts:318-327`）。8000 总证据边界测试解析 JSON 后检查 evidence 不超过 8000 code points、含截断标记且没有孤立 surrogate（`:329-360`）。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][3][\"matches\"][0][\"match\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Line 154 checks"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][3][\"matches\"][0][\"context\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Line 154 checks"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][4][\"matches\"][0][\"match\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\", \"_id\": 128}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Lin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][4][\"matches\"][0][\"context\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\", \"_id\": 128}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Lin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][5][\"matches\"][0][\"match\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][5][\"matches\"][0][\"context\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][6][\"matches\"][0][\"match\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Line 154 checks"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][6][\"matches\"][0][\"context\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Line 154 checks"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][8][\"matches\"][0][\"match\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\", \"_id\": 128}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Lin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][8][\"matches\"][0][\"context\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\", \"_id\": 128}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Lin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][9][\"matches\"][0][\"match\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][9][\"matches\"][0][\"context\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][10][\"matches\"][0][\"match\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Line 154 checks"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][10][\"matches\"][0][\"context\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Line 154 checks"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][12][\"matches\"][0][\"match\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\", \"_id\": 128}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Lin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][12][\"matches\"][0][\"context\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\", \"_id\": 128}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Lin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][13][\"matches\"][0][\"match\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][13][\"matches\"][0][\"context\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/candidates.json",
+      "location": "$[\"candidates\"][1][\"observed\"]",
+      "context": "Actual whole emoji width 2 and styled whole prefix width 2, but text-token widths 2+2 cause tab padding 6→4; actual styled expanded line width 7."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-candidates.json",
+      "location": "$[1][\"observed\"]",
+      "context": "Actual whole emoji width 2 and styled whole prefix width 2, but text-token widths 2+2 cause tab padding 6→4; actual styled expanded line width 7."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/tabstops.md",
+      "location": "line:9",
+      "context": "实际 [expandTabs:22](../../packages/tui/src/render/tabstops.ts#L22) 从 `column = 0` 累积相对文本列，[31](../../packages/tui/src/render/tabstops.ts#L31) 将 tab 展开到下一个 8 列边界。实际纯函数对 `aaaaaaa\\tX` 得到 `aaaaaaa X`，真实 Bun `stringWidth` 测得 **9**。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/review-undo.md",
+      "location": "line:12",
+      "context": "| 静态消费者边界 | 选读 TUI `utility-commands.ts:35–160`、FileHistory `:138–185`、`:306–324`、`:850–892`。当前 TUI 最近一轮调用 `getLatestTurnUndoPlan`；不能由 `latestTurnUndoTargets` 的通过证明当前 plan、命令预览或真实恢复。`latestUndoTarget` 不排除 undone 的线索没有在缺普通消费者合同下被提升为用户 bug。 |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/coverage.md",
+      "location": "line:7",
+      "context": "唯一related为旧预算floor source concern的新手工边界，不是旧正式finding ID或新候选：302text slots于正600chars/200estimated-token allowance变602分隔符字符，301slots为600。真实caller allowance只静态证明；普通302slot producer与aggregate gate未证明，默认单result预算是30000chars/10000tokens，不能把600当默认或从heuristic推精确provider上下文拒绝。实际manager/compaction/storage/tool/模型全未运行。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"logs\"][1][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Line 154 checks"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"logs\"][2][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\", \"_id\": 128}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Lin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"logs\"][3][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"settings-navigation\"][0][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Line 154 checks"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"settings-navigation\"][1][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"verify_note\": \"This is a real cosmetic/UI defect, not a functional bug. The code renders without errors, but the box borders will visually misalign. The severity is low because this is purely visual and doesn't affect application funct"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"settings-navigation\"][2][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\", \"_id\": 128}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Lin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"settings-navigation\"][3][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][8][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Line 154 checks"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][9][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"verify_note\": \"This is a real cosmetic/UI defect, not a functional bug. The code renders without errors, but the box borders will visually misalign. The severity is low because this is purely visual and doesn't affect application funct"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][10][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"pkg\": \"tui\", \"_id\": 128}, {\"file\": \"packages/tui/src/ui/components/CommandInput.tsx\", \"line\": \"154\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Dead condition in handleSubmit logic\", \"detail\": \"Lin"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][11][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\"}, {\"file\": \"packages/tui/src/ui/components/AskUserPrompt.tsx\", \"line\": \"63-98\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated logic for filtering and sorting selected indices\", \"detail\": \"The code "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][12][\"text\"]",
+      "context": "n with the bottom.\", \"fix\": \"Calculate a consistent border width. Use the same logic for both borders, or measure the actual content width and apply consistent padding. For example, both should use 44 dashes, or calculate based on actual terminal width.\", \"verify_note\": \"This is a real cosmetic/UI defect, not a functional bug. The code renders without errors, but the box borders will visually misalign. The severity is low because this is purely visual and doesn't affect application funct"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/candidates.json",
+      "location": "$[\"candidates\"][4][\"reason\"]",
+      "context": "Same failed Diff fixture; terminal-column padding prediction has no successful renderer/width observation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "location": "$[\"hits\"][326][\"matches\"][3][\"text\"]",
+      "context": " 个独立临时场景联合 **47 pass / 94 assertions / 4 files**（包含上一条的重叠集合）。两个 bucket 的独立恢复通过；独立复现并由 runtime 修复了超限后本地输入丢失、已有流式指针掩盖序号缺口、首个超大 batch 取消时删除失败窗口、换 epoch 后旧指针误接新后缀四类边界。正式用例已覆盖这些修复；独立日志为 `/tmp/codeshell-polish-20260911/hydration-cross-review.log`。恢复失败时继续展示已有内容，未通过“推进高游标”冒充前缀已恢复。"
+    },
+    {
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "location": "line:53",
+      "context": "- system prompt 明确把 `untrustedToolEvidence` 定义为引用的不可信数据，并禁止遵循其中的指令、角色声明、边界文本、伪造裁决和 `met:true` 要求（`goal-stop-hook.ts:155-160`）。"
+    },
+    {
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "location": "line:76",
+      "context": "- 1600 单项边界测试断言结果恰为 1600 code points 且没有孤立 surrogate（`goal-stop-hook.test.ts:318-327`）。8000 总证据边界测试解析 JSON 后检查 evidence 不超过 8000 code points、含截断标记且没有孤立 surrogate（`:329-360`）。"
+    },
+    {
+      "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "location": "line:76",
+      "context": "- 1600 单项边界测试断言结果恰为 1600 code points 且没有孤立 surrogate（`goal-stop-hook.test.ts:318-327`）。8000 总证据边界测试解析 JSON 后检查 evidence 不超过 8000 code points、含截断标记且没有孤立 surrogate（`:329-360`）。"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-quality-round21.md",
+      "location": "line:19",
+      "context": "- `BrowserPanel.tsx:347–379` 的正式Chrome按钮：有granted/pairing即revoke，否则beginPairing。按钮`:575–580`、banner`:618–623`均只读granted/pairing；connected虽在`:264`类型和Host回包中存在，没有用于该反馈。`:609–615`只显示已有error。"
+    },
+    {
+      "path": "docs/review-2026-10-12/collections-round6.md",
+      "location": "line:32",
+      "context": "差异边界：笼统错误分支在 `84740d56` 的 uploads-only corpus 实现已存在；本次新增共享 Collection 跨 scope 查询复用了它。旧基线 `readSourceTool` 明确拒绝 Collection 的 `resources` 参数，故“共享资料集原件编辑后跨文件查询丢失恢复原因”是本次新增可达路径。若只接受全新错误分支，可将此项归为已验证改善项，不宣称字符串本身是新写。"
+    },
+    {
+      "path": "docs/review-2026-10-12/model-native-round20.md",
+      "location": "line:75",
+      "context": "nch20秒超时；maintained Playwright loader（已只读安装源码）在entry评估完成后才释放其app.whenReady Promise，自有entry顶层await whenReady导致harness互等。改临时entry为 `.then(async...)` 注册后返回，不改产品或安全边界。失败launch的owned PID60204事后不存在、privateHOME已删；不把启动夹具失败列为产品发现或成功验证。"
+    },
+    {
+      "path": "docs/review-2026-10-12/progress.md",
+      "location": "line:116",
+      "context": "05:52第十八轮最终只读整合审计通过，无实质矛盾，新增执行0；76项分级、79/236通用收据、恢复边界及851/563链接记录一致。已追加真实Engine marker field-level写入的静态反证，未冒称完整Engine动态flush。报告准备保存docs-only阶段检查点；第十九轮native file-mutex仍仅/tmp调查，不计本轮发现。heartbeat保持ACTIVE到11:00，不提前complete/停用。"
+    },
+    {
+      "path": "docs/review-2026-10-12/progress.md",
+      "location": "line:138",
+      "context": "r/model/network/CLI。主审冻结同源两基线各1文件3测试40expect/Completed，新增1/3，通用81/243，正式80=1P1/51P2/28P3；作者重复不累计，首次错误文字期望harness0/3/17归档。child/撤权/owner关闭只读盘点新增0，parent Stop仅未验证边界。所有改动仅本任务docs，原工作区6034df8a保持；06:23origin仍a66f、07:10–07:20再核对，11:00未到不complete/停用。"
+    },
+    {
+      "path": "docs/review-2026-10-12/progress.md",
+      "location": "line:148",
+      "context": "07:38第二十二轮最终独立整合语义核验完成（新增执行0），正式81=1P1/52P2/28P3、Bun两基线各81/243、三native各66及只读重试0/2/1分账一致，无未解决实质问题。五份launch前历史审计已加阶段banner，preflight指向当时真实SHA源码，plan便携命令和作者/root时序修正；17份逐字重复顶层副本去重映射保留，六次失败及最终作者/root独立原始收据全部保留。原工作区仍6034df8a且clean。第23轮服务端/Web重连与资源归属只读预审已委派web_remote_review，仅/tmp、当前新增执行0/未确认新finding。11:00未到，继续heartbeat，不提前complete/停用；07:07 origin仍a66f，下次08:00–08:10。"
+    },
+    {
+      "path": "docs/review-2026-10-12/progress.md",
+      "location": "line:180",
+      "context": "09:55第二十七轮最终独立整合语义QC通过，新增执行0；86=1/52/33、双common86/251、三final各1/29/Completed及55d3从未执行、作者失败/重跑0分账无实质矛盾。静态摘要/归档SHA与拟收录历史banner小修关闭，原字节保存；产品tracked diff均空，原工作区6034df8a仍clean。本轮get_goal仍历史blocked（未请求/实际review无阻塞），TOML ACTIVE整点半点，继续11:00、不提前complete/停用。第28轮blankFiles只读反证已完成新增0/执行0，材料仅/tmp；后续将归档正常链并审查修复交接顺序，不为增加数量新建fixture。09:39origin仍a66f，下次10:25–10:35。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-lifecycle-round21/codeshell-review-20261012-browser-quality-round21.md",
+      "location": "line:19",
+      "context": "- `BrowserPanel.tsx:347–379` 的正式Chrome按钮：有granted/pairing即revoke，否则beginPairing。按钮`:575–580`、banner`:618–623`均只读granted/pairing；connected虽在`:264`类型和Host回包中存在，没有用于该反馈。`:609–615`只显示已有error。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-model-native-round20/report.md",
+      "location": "line:75",
+      "context": "nch20秒超时；maintained Playwright loader（已只读安装源码）在entry评估完成后才释放其app.whenReady Promise，自有entry顶层await whenReady导致harness互等。改临时entry为 `.then(async...)` 注册后返回，不改产品或安全边界。失败launch的owned PID60204事后不存在、privateHOME已删；不把启动夹具失败列为产品发现或成功验证。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-session-continuation-round26/fork-binding-counterreview.md",
+      "location": "line:3",
+      "context": "本稿按父任务后续分工仅补 FilesPanel；Review/design 由另一独立代理核查。只读冻结 84740d56/a66f4ef2，当前正式 banner 85/250。新增 fixture、产品 import、Git subprocess、模型、worker、coding/provider CLI、网络、构建安装及动态验证均为 0。不提升 finding，不改产品或主报告。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-session-continuation-round26/hub-export-static.md",
+      "location": "line:3",
+      "context": "审查冻结产品树 84740d56 与 a66f4ef2。当前父任务正式 banner 为 85 findings / 250 tests；此稿不改变计数。已读 CODESHELL、审查 README、第十二轮 transfer 正常控制、第十八轮 Hub session operations 及独立质量稿。新增 fixture、产品 import、模型、worker、provider/coding CLI、构建安装、网络、Git subprocess 与动态产品验证均为 0；仅源文件/文档读取与本 `/tmp` 稿件写入，产品及主报告未改。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-23-electron-mvp-broker.md",
+      "location": "line:1141",
+      "context": "  padding: 16px; min-width: 480px; max-width: 80vw;"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-06-mobile-remote-control.md",
+      "location": "line:1009",
+      "context": "    button { border: 0; border-radius: 999px; background: #60a5fa; color: #06111f; padding: 10px 16px; font-weight: 700; }"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-23-electron-mvp-broker-design.md",
+      "location": "line:371",
+      "context": "✅ Killing the agent worker 4× in 60s shows a \"gave up\" banner"
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "location": "line:139",
+      "context": " 个独立临时场景联合 **47 pass / 94 assertions / 4 files**（包含上一条的重叠集合）。两个 bucket 的独立恢复通过；独立复现并由 runtime 修复了超限后本地输入丢失、已有流式指针掩盖序号缺口、首个超大 batch 取消时删除失败窗口、换 epoch 后旧指针误接新后缀四类边界。正式用例已覆盖这些修复；独立日志为 `/tmp/codeshell-polish-20260911/hydration-cross-review.log`。恢复失败时继续展示已有内容，未通过“推进高游标”冒充前缀已恢复。"
+    },
+    {
+      "path": "docs/todo/architecture-debt.md",
+      "location": "line:25",
+      "context": "- **④ 凭证加密边界 `EncryptionCipher` + `PlaintextCipher`** — core 定义接口,`CredentialStore` 在磁盘边界 read 解密 / write 加密,默认 `PlaintextCipher`(= 现状 0o600 明文);旧明文文件仍可读、下次保存自动迁移。`grep safeStorage packages/core/src` 仅注释无代码。"
+    },
+    {
+      "path": "docs/todo/codeshell-hub-iteration-design.md",
+      "location": "line:308",
+      "context": "2. lint 边界维持：renderer 运行时 import 白名单（`eslint.config.js:53-56`）按需逐条加，"
+    },
+    {
+      "path": "docs/todo/panel-plugin-host-capability-audit-2026-09-12.md",
+      "location": "line:94",
+      "context": "time.ts)、[Desktop 上下文类型](https://github.com/cjhyy/codeshell/blob/538b29b516899378476ab32bac1556413f9eb47d/packages/desktop/src/shared/panel-apps.ts)、[Desktop 请求边界](https://github.com/cjhyy/codeshell/blob/538b29b516899378476ab32bac1556413f9eb47d/packages/desktop/src/main/panel-app-bridge.ts)，面板仓库 `apps/quant-lab/app/modules/panel-host-call-scheduler.mjs` 和 `apps/video-studio/src/local-voice-process.ts`。"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/mcp-http-oauth.md",
+      "location": "line:348",
+      "context": "- `packages/core/src/credentials/oauth.test.ts`：expiry 边界（恰好 60 秒）、无 expiry、refresh token rotation、响应缺 refresh token、"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/prompt-cache-deepen.md",
+      "location": "line:384",
+      "context": "- **内存边界**：继续限制 256 sid，state 只存数值和短 hash。无需写入 session state.json；进程重启后重新 warm baseline 即可。"
+    }
+  ],
+  "limits": "Broad supplemental banner wording; includes unrelated boundary and padding mentions. Not semantic issue or novelty proof."
+}

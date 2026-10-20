@@ -1,0 +1,63 @@
+[
+  {
+    "location": "$[104]",
+    "value": {
+      "file": "packages/tui/src/cli/input/ndjson-reader.ts",
+      "line": "30-50",
+      "category": "correctness",
+      "severity": "medium",
+      "confidence": "high",
+      "title": "Unclosed readline interface resource leak in start() method",
+      "detail": "The readline interface created at line 31 (const rl = createInterface(...)) is never closed. When start() is called multiple times or in long-running processes, this leaks file descriptors. The interface should be closed with rl.close() after use, or the method should return the interface for caller management.",
+      "fix": "Add rl.close() in the 'close' event handler, or return a cleanup function from start() that closes the readline interface when done.",
+      "pkg": "tui"
+    },
+    "path": "docs/archive/review-2026-05-30/backlog.json"
+  },
+  {
+    "location": "$[27]",
+    "value": {
+      "pkg": "tui",
+      "file": "packages/tui/src/cli/input/ndjson-reader.ts",
+      "line": "30-50",
+      "category": "correctness",
+      "severity": "medium",
+      "title": "Unclosed readline interface resource leak in start() method",
+      "detail": "The readline interface created at line 31 (const rl = createInterface(...)) is never closed. When start() is called multiple times or in long-running processes, this leaks file descriptors. The interface should be closed with rl.close() after use, or the method should return the interface for caller management.",
+      "fix": "Add rl.close() in the 'close' event handler, or return a cleanup function from start() that closes the readline interface when done.",
+      "verify_note": "The severity is medium rather than high because: (1) the file is apparently unused in the codebase (no callers found), suggesting it may be dead code; (2) the leak manifests primarily when start() is called multiple times or in edge cases, not on every invocation; (3) if stdin does close (typical usage), some cleanup occurs. However, it is a real resource leak that should be fixed by adding rl.close() in the close event handler or returning a cleanup function.",
+      "verify_reason": "The readline interface created at line 31 is never explicitly closed. While the 'close' event handler at line 45 triggers abort handlers when the input stream closes, it does not call rl.close(). This creates a resource leak if: (1) start() is called multiple times on the same instance (creating multiple readline interfaces), or (2) the input stream remains open indefinitely. The async messages() method (line 54) properly manages readline cleanup via the for-await loop, but the start() method does not. The missing rl.close() call means file descriptors are not properly released."
+    },
+    "path": "docs/archive/review-2026-05-30/backlog_confirmed.json"
+  },
+  {
+    "location": "$[104]",
+    "value": {
+      "file": "packages/tui/src/cli/input/ndjson-reader.ts",
+      "line": "30-50",
+      "category": "correctness",
+      "severity": "medium",
+      "confidence": "high",
+      "title": "Unclosed readline interface resource leak in start() method",
+      "detail": "The readline interface created at line 31 (const rl = createInterface(...)) is never closed. When start() is called multiple times or in long-running processes, this leaks file descriptors. The interface should be closed with rl.close() after use, or the method should return the interface for caller management.",
+      "fix": "Add rl.close() in the 'close' event handler, or return a cleanup function from start() that closes the readline interface when done.",
+      "pkg": "tui",
+      "_id": 104
+    },
+    "path": "docs/archive/review-2026-05-30/backlog_ided.json"
+  },
+  {
+    "location": "$[154]",
+    "value": {
+      "file": "packages/tui/src/cli/input/ndjson-reader.ts",
+      "line": "30-50",
+      "category": "correctness",
+      "severity": "medium",
+      "confidence": "high",
+      "title": "Unclosed readline interface resource leak in start() method",
+      "detail": "The readline interface created at line 31 (const rl = createInterface(...)) is never closed. When start() is called multiple times or in long-running processes, this leaks file descriptors. The interface should be closed with rl.close() after use, or the method should return the interface for caller management.",
+      "fix": "Add rl.close() in the 'close' event handler, or return a cleanup function from start() that closes the readline interface when done."
+    },
+    "path": "docs/archive/review-2026-05-30/findings.json"
+  }
+]

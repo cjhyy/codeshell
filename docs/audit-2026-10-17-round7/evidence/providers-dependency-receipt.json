@@ -1,0 +1,49 @@
+{
+  "package": "@anthropic-ai/sdk",
+  "installedVersion": "0.39.0",
+  "declaredRange": "^0.39.0",
+  "scope": "already installed dependency, not a frozen Git source blob; no dependency installation or build",
+  "fixtureImport": "../../../packages/core/node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs",
+  "files": [
+    {
+      "relativePath": "packages/core/node_modules/@anthropic-ai/sdk/package.json",
+      "resolvedAbsolutePath": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@anthropic-ai+sdk@0.39.0+d56b95ac411b1cdd/node_modules/@anthropic-ai/sdk/package.json",
+      "bytes": 3011,
+      "lines": 124,
+      "sha256": "14ebfce75c1883e518016392a936f5f36ba67f15e327f2791f408dbd4bc44be6",
+      "role": "installed version metadata"
+    },
+    {
+      "relativePath": "packages/core/node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs",
+      "resolvedAbsolutePath": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@anthropic-ai+sdk@0.39.0+d56b95ac411b1cdd/node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs",
+      "bytes": 26840,
+      "lines": 545,
+      "sha256": "b4ff654c783a75dfc6de48f2beccf6926fdd0a8c2065443267d27059ce28de16",
+      "role": "runtime imported by the successful stream fixture"
+    },
+    {
+      "relativePath": "packages/core/node_modules/@anthropic-ai/sdk/streaming.mjs",
+      "resolvedAbsolutePath": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@anthropic-ai+sdk@0.39.0+d56b95ac411b1cdd/node_modules/@anthropic-ai/sdk/streaming.mjs",
+      "bytes": 9554,
+      "lines": 272,
+      "sha256": "06fee028c2e5f36d9e383835331a17b179af09485b661f828679aa66569fb22b",
+      "role": "runtime in-memory newline decoder used by MessageStream"
+    },
+    {
+      "relativePath": "packages/core/node_modules/@anthropic-ai/sdk/src/lib/MessageStream.ts",
+      "resolvedAbsolutePath": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@anthropic-ai+sdk@0.39.0+d56b95ac411b1cdd/node_modules/@anthropic-ai/sdk/src/lib/MessageStream.ts",
+      "bytes": 21432,
+      "lines": 665,
+      "sha256": "3d24406fa8149e66b6c2895767701973065addd96b1dabe25651b4947ce639d6",
+      "role": "primary installed SDK event semantics source, selected lines 409-469 and fromReadableStream path"
+    },
+    {
+      "relativePath": "packages/core/node_modules/@anthropic-ai/sdk/src/streaming.ts",
+      "resolvedAbsolutePath": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@anthropic-ai+sdk@0.39.0+d56b95ac411b1cdd/node_modules/@anthropic-ai/sdk/src/streaming.ts",
+      "bytes": 8988,
+      "lines": 326,
+      "sha256": "6d5dbf2e6b10d9cba0db299b58de8beb9c58f6a536a14d8a69631af310a3faa3",
+      "role": "primary installed SDK newline stream source, selected fromReadableStream path"
+    }
+  ]
+}

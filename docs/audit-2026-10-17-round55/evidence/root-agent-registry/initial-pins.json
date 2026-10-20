@@ -1,0 +1,20 @@
+{
+  "atUTC": "2026-10-17T18:26:52.374185+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "bytes": 4696,
+      "lines": 124,
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "bytes": 6078,
+      "lines": 147,
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "productExecution": 0
+}

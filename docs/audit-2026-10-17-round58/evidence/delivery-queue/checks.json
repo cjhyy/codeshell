@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-17T19:33:21.257109+00:00",
+  "reportInternalLinks": 11,
+  "allCurrentTargetsPresent": true,
+  "selfReceiptTargetGeneratedLast": "reviewer-receipt.json",
+  "sourcePinCount": 14,
+  "sourceUnchanged": true,
+  "selectedHistoryPinCount": 7,
+  "selectedHistoryUnchanged": true,
+  "sharedBatchUnchanged": true,
+  "rangeSubsetOfDisplayed": true,
+  "totals": {
+    "productFiles": 9,
+    "productSemanticLines": 1153,
+    "testDeclarationFiles": 2,
+    "testDeclarationLines": 98,
+    "fullFiles": 1,
+    "selectedFiles": 10,
+    "semanticFilesDisplayedLines": 1984,
+    "packageMetadataLines": 7,
+    "packageMetadataDisplayedLines": 38,
+    "hashOnlyFiles": 2,
+    "navigationOnlyFiles": 0
+  },
+  "classificationCounts": {
+    "formal": 0,
+    "candidate": 1,
+    "newRelated": 0
+  },
+  "productExecutions": 0,
+  "testsRun": 0,
+  "GitCalls": 0,
+  "receiptSelfExcluded": true
+}

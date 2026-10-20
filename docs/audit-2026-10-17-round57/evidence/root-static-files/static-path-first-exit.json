@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round57/evidence/static-path.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 0.38715483294799924,
+  "completedUTC": "2026-10-17T19:05:07.272259+00:00",
+  "firstAttempt": true,
+  "reruns": 0,
+  "logsPersistedBeforeInspection": true
+}

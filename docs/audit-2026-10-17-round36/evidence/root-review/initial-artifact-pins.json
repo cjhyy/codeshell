@@ -1,0 +1,41 @@
+{
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/report.md",
+      "bytes": 6408,
+      "sha256": "96de25be63fb54a3c12c6e137fe0b86efb964359f97e40b69a6c7936a4e74d39",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/source-manifest.json",
+      "bytes": 20864,
+      "sha256": "ad334f20513f2dcedb9be323028da3d329bbcc527c8e3449aee0ee1e8d4263c4",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/artifact-receipt.json",
+      "bytes": 3474,
+      "sha256": "528cfb3956dc927e31a4f927ba1137045adb7b587298a63a6404631027165d28",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-ui-state-frontier/review.md",
+      "bytes": 4860,
+      "sha256": "a516fab53cb19b4e472c67dcd00e7280ee3954f9e02e8fa17e5b78cc2e290600",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-ui-state-frontier/source-manifest.json",
+      "bytes": 16514,
+      "sha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33",
+      "pinBeforeRootReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-ui-state-frontier/reviewer-receipt.json",
+      "bytes": 3638,
+      "sha256": "490eb50abafdd78a93350c1a751e45fe25bb4641506cdea05583badad64cf0da",
+      "pinBeforeRootReportRead": true
+    }
+  ],
+  "productRuns": 0
+}

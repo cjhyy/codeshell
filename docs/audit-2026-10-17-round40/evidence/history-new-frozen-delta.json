@@ -1,0 +1,39 @@
+{
+  "addedFiles": 72,
+  "patterns": {
+    "project-options": "projectOptions|project options|项目选项",
+    "utf8-case": "UTF8-R34-C1|completeUtf8PrefixLength",
+    "incremental-tail": "(?:incremental|增量|peek).{0,140}(?:UTF.?8|尾字节|不完整)|(?:UTF.?8|尾字节|不完整).{0,140}(?:incremental|增量|peek)",
+    "shortcut-hints": "keyboardShortcutHints|e15848ee4075aa6a"
+  },
+  "counts": {
+    "project-options": 0,
+    "utf8-case": 0,
+    "incremental-tail": 2,
+    "shortcut-hints": 0
+  },
+  "hits": {
+    "project-options": [],
+    "utf8-case": [],
+    "incremental-tail": [
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/worktrees-before.json",
+        "at": "$[\"text\"]",
+        "context": "ds/codex/ci/utf8-output-frontier-gate-20261017\n\nworktree /private/tmp/codeshell-incremental-output-utf8-fix-20261017\nHEAD 38494198cf56098f82d471f4ab1ad24e771b596b\nbranch refs/heads/codex/core/incremental-output-utf8-frontier-20261017\n\nworktree /private/tmp/codeshell-nsis-checkpoint-diagnostics-20261017\nHEAD f8a63b63b3208c1ae90a21bc3eca45bbf8969f14\nbranch refs/heads/codex/desktop/n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/worktrees-before.json",
+        "at": "$[\"text\"]",
+        "context": "1017\nHEAD 38494198cf56098f82d471f4ab1ad24e771b596b\nbranch refs/heads/codex/core/incremental-output-utf8-frontier-20261017\n\nworktree /private/tmp/codeshell-nsis-checkpoint-diagnostics-20261017\nHEAD f8a63b63b3208c1ae90a21bc3eca45bbf8969f14\nbranch refs/heads/codex/desktop/nsis-checkpoint-ci17-diagnostics-20261017\n\nworktree /private/tmp/codeshell-real-panel-operations\nHEAD d1abe3a4647"
+      }
+    ],
+    "shortcut-hints": []
+  },
+  "contextCapEach": 80,
+  "productRuns": 0,
+  "limitations": [
+    "Only exact frozen39 new72 delta; original3509 prep snapshots and Root3581 original scan unchanged.",
+    "Shortcut scope was added before staging; its delta query is supplemental, not backfilled into original Root three queries.",
+    "Bounded matching and context reading are not full history semantic exhaustion."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "priorAuditCommit": "c466dca42b9e4f1677ee2c386126d72312e5e8f7",
+  "beginBaseline": "0b17496707e0f4d679a86a9d8b4c22477093e8a6",
+  "paths": [
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "scripts/run-isolated-node-smoke.test.mjs"
+  ],
+  "review": "Path inventory only, neither concurrent script nor release prose read as product semantics. Finite context and appearance source paths disjoint. Workers independently record releaseMD history-byte drift."
+}

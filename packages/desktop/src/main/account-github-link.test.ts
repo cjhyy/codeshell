@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createAccountGitHubLinkPreparer } from "./account-github-link.js";
 import type { NativeLinkAuthorizationInput } from "./remote-link-manager.js";
 
@@ -168,7 +169,7 @@ test("account Link preparation is lazy and adoption uses the original native OAu
   expect(await f.opened.onCallback(f.callback())).toBe(true);
   expect(await continuation).toBe("connected");
   expect(f.store.list()).toHaveLength(1);
-  expect(f.store.list()[0]?.meta).toMatchObject({
+  expect(linkConnectionMetadata(f.store.list()[0]?.meta)).toMatchObject({
     linkProvider: "github",
     linkExecutionRuntime: "server",
   });

@@ -1,0 +1,66 @@
+[
+  {
+    "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+    "bytes": 31923,
+    "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+    "readAt": "2026-10-17T18:27:28.055455+00:00",
+    "selectedLines": [
+      {
+        "line": 207,
+        "text": "The following lists identify files actually read at the stated level. Prefix all relative paths with the source root above. A source-directed review means the production entry, normal and error/stop/recovery path were followed; it does not imply every renderer layout branch or every existing test was executed."
+      },
+      {
+        "line": 208,
+        "text": ""
+      },
+      {
+        "line": 209,
+        "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/apply-patch/{index,applier}.ts`; `src/git/{parse-log,worktree/crud,worktree/git-exec}.ts`."
+      },
+      {
+        "line": 210,
+        "text": ""
+      },
+      {
+        "line": 211,
+        "text": "**coding — partial/supporting inspection:** `src/cc-orchestrator/session-history.ts` first200lines and discovery/session-store parser portions; `src/external-runtimes/shared/mcp-bridge.ts` entry/setup and close call chains; runtime/lifecycle tests; worktree CRUD initial210lines; apply-patch parser/types/backup helper inventory and references. Event translator internals, remaining session relevance/history parsers, git query/diff/slug and leaf prompt/review helpers were inventoried but not claimed dynamically covered. Quota endpoints were statically traced with credential source/timeout/cancellation; no provider quota endpoint called. CC orchestration driver's process tree teardown and DriveAgent foreground/background/abort/worktree-finalization flow were read; its real CLI integrations were not run. No new confirmed quota/orchestrator finding. Old R35 worktree create rollback race is excluded as duplicate."
+      },
+      {
+        "line": 212,
+        "text": ""
+      }
+    ]
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+    "bytes": 29988,
+    "sha256": "a4a54aad6a044d4caaff4a9fa0027cb76b943b3704264bcf396fadcaae606da5",
+    "readAt": "2026-10-17T18:27:28.056705+00:00",
+    "selectedLines": [
+      {
+        "line": 207,
+        "text": "The following lists identify files actually read at the stated level. Prefix all relative paths with the source root above. A source-directed review means the production entry, normal and error/stop/recovery path were followed; it does not imply every renderer layout branch or every existing test was executed."
+      },
+      {
+        "line": 208,
+        "text": ""
+      },
+      {
+        "line": 209,
+        "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/apply-patch/{index,applier}.ts`; `src/git/{parse-log,worktree/crud,worktree/git-exec}.ts`."
+      },
+      {
+        "line": 210,
+        "text": ""
+      },
+      {
+        "line": 211,
+        "text": "**coding — partial/supporting inspection:** `src/cc-orchestrator/session-history.ts` first200lines and discovery/session-store parser portions; `src/external-runtimes/shared/mcp-bridge.ts` entry/setup and close call chains; runtime/lifecycle tests; worktree CRUD initial210lines; apply-patch parser/types/backup helper inventory and references. Event translator internals, remaining session relevance/history parsers, git query/diff/slug and leaf prompt/review helpers were inventoried but not claimed dynamically covered. Quota endpoints were statically traced with credential source/timeout/cancellation; no provider quota endpoint called. CC orchestration driver's process tree teardown and DriveAgent foreground/background/abort/worktree-finalization flow were read; its real CLI integrations were not run. No new confirmed quota/orchestrator finding. Old R35 worktree create rollback race is excluded as duplicate."
+      },
+      {
+        "line": 212,
+        "text": ""
+      }
+    ]
+  }
+]

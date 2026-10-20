@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/ui-web-project-case.test.ts:
+{"observation":"posix-case-variant-owner","requested":"/srv/example/src","expectedCaseSensitiveProject":"lower","actualProject":"upper","reversedOrderProject":"lower"}
+(pass) round 3: exact second POSIX project is incorrectly mapped to first case variant [3.25ms]
+{"observation":"posix-case-variant-groups","groups":[{"cwd":"/srv/Example","projectId":"upper","name":"Upper project","items":[{"id":"upper-session","cwd":"/srv/Example","updatedAt":1},{"id":"lower-session","cwd":"/srv/example","updatedAt":2}],"updatedAt":2}]}
+(pass) round 3: session groups for distinct case-sensitive directories collapse into one [0.54ms]
+(pass) round 3 control: distinct ordinary roots and nested longest prefix work [0.34ms]
+
+ 3 pass
+ 0 fail
+ 8 expect() calls
+Ran 3 tests across 1 file. [161.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

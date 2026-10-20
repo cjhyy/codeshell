@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ExternalLink, Music2, Pause, Play, SkipForward, Upload, Volume2 } from "lucide-react";
+import { Music2, Pause, Play, SkipForward, Upload, Volume2 } from "lucide-react";
 import type { ThemeSoundEvent } from "../../shared/theme-packs";
 import type { ThemePack } from "../theme-packs";
 import {
@@ -12,6 +12,7 @@ import {
 import { themeMusic } from "../theme-music";
 import { useT } from "../i18n/I18nProvider";
 import { Button } from "../components/ui/button";
+import { SimpleSelect } from "../components/ui/simple-select";
 
 const EVENTS: ThemeSoundEvent[] = ["send", "complete", "approval", "error"];
 
@@ -21,12 +22,10 @@ export function ThemeAudioSection({ pack }: { pack: ThemePack }) {
   const [preferences, setPreferences] = useState(loadThemeAudioPreferences);
   const state = useSyncExternalStore(themeMusic.subscribe, themeMusic.getSnapshot);
   const { tracks, selected, playing, pending, repeat } = state;
-  const [linkError, setLinkError] = useState<string | null>(null);
   const previews = useRef<ThemeSoundPlayer | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const track = tracks[selected];
   const soundEvents = EVENTS.filter((event) => pack.sounds?.[event]);
-  const error = linkError ?? (state.error ? t(`settingsX.appearance.audio.${state.error}`) : null);
+  const error = state.error ? t(`settingsX.appearance.audio.${state.error}`) : null;
 
   useEffect(() => {
     previews.current = new ThemeSoundPlayer();
@@ -53,7 +52,6 @@ export function ThemeAudioSection({ pack }: { pack: ThemePack }) {
   useEffect(() => {
     previews.current?.setPack(pack);
     themeMusic.setPack(pack);
-    setLinkError(null);
   }, [audioSignature]);
 
   useEffect(() => {
@@ -65,20 +63,6 @@ export function ThemeAudioSection({ pack }: { pack: ThemePack }) {
     const next = { ...preferences, ...patch };
     setPreferences(next);
     saveThemeAudioPreferences(next);
-  };
-
-  const chooseTrack = (index: number): void => {
-    themeMusic.select(index);
-    setLinkError(null);
-  };
-
-  const openTrack = async (): Promise<void> => {
-    if (!track?.url) return;
-    try {
-      await window.codeshell.openExternal(track.url);
-    } catch {
-      setLinkError(t("settingsX.appearance.audio.openFailed"));
-    }
   };
 
   const importFiles = (files: FileList | null): void => {
@@ -174,52 +158,36 @@ export function ThemeAudioSection({ pack }: { pack: ThemePack }) {
         {tracks.length ? (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <select
-                className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"
-                aria-label={t("settingsX.appearance.audio.chooseTrack")}
-                value={selected}
-                data-theme-music-select
-                onChange={(event) => chooseTrack(Number(event.target.value))}
+              <SimpleSelect
+                className="min-w-0 flex-1 basis-48"
+                icon={<Music2 size={14} />}
+                ariaLabel={t("settingsX.appearance.audio.chooseTrack")}
+                value={String(selected)}
+                triggerProps={{ "data-theme-music-select": true }}
+                onChange={(value) => themeMusic.select(Number(value))}
+                options={tracks.map((item, index) => ({
+                  value: String(index),
+                  label: item.title,
+                  description: item.artist,
+                }))}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={pending}
+                data-theme-music-play
+                onClick={() => void themeMusic.toggle()}
               >
-                {tracks.map((item, index) => (
-                  <option key={index} value={index}>
-                    {item.title}
-                    {item.artist ? ` · ${item.artist}` : ""}
-                  </option>
-                ))}
-              </select>
-              {track?.file ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  data-theme-music-play
-                  onClick={() => void themeMusic.toggle()}
-                >
-                  {playing ? (
-                    <Pause size={13} aria-hidden="true" />
-                  ) : (
-                    <Play size={13} aria-hidden="true" />
-                  )}
-                  {t(
-                    playing
-                      ? "settingsX.appearance.audio.pause"
-                      : "settingsX.appearance.audio.play",
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  data-theme-music-open
-                  onClick={() => void openTrack()}
-                >
-                  <ExternalLink size={13} aria-hidden="true" />
-                  {t("settingsX.appearance.audio.openOfficial")}
-                </Button>
-              )}
+                {playing ? (
+                  <Pause size={13} aria-hidden="true" />
+                ) : (
+                  <Play size={13} aria-hidden="true" />
+                )}
+                {t(
+                  playing ? "settingsX.appearance.audio.pause" : "settingsX.appearance.audio.play",
+                )}
+              </Button>
               <Button
                 type="button"
                 variant="ghost"

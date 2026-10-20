@@ -1,0 +1,14 @@
+{
+  "toolChunk": "4f20c3",
+  "exitCode": 1,
+  "stage": "Python parse before any metadata script statements execute",
+  "stderrExcerpt": "SyntaxError: closing parenthesis ')' does not match opening parenthesis '{'",
+  "line": 42,
+  "firstScript": "finalize-metadata.first.py",
+  "firstScriptSha256": "0e3961e8c798bfbf7dcc23c645ecd036546d10c92046cda06dd1e6c5ab8d6868",
+  "stdoutBeforeFailure": "",
+  "rawStatus": "Original full tool transcript is authoritative; this JSON is explicit diagnostic excerpt, not a pre-captured raw stderr claim.",
+  "cause": "Missing sharedBatch dictionary closing brace in own metadata generator",
+  "productOrSourceExecution": false,
+  "action": "Repair metadata brace only, then run independent metadata generator; no product retry."
+}

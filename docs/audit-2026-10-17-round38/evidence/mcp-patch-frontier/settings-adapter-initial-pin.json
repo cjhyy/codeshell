@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "totalLines": 25,
+      "pinTimeUTC": "2026-10-17T13:13:49.301524+00:00",
+      "purpose": "before selected patch read/update data forwarding boundary; no authority experiment"
+    }
+  ]
+}

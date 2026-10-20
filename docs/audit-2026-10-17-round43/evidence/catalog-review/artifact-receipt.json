@@ -1,0 +1,23 @@
+{
+  "frozenUTC": "2026-10-17T14:51:36.015174+00:00",
+  "scope": "Independent historical formal findings catalog metadata only",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 42789,
+      "sha256": "f1b2c6d5f696ca5affb719c71e72e2c95488c1ab3a0cda128318ca106108a0bf"
+    },
+    {
+      "path": "review.md",
+      "bytes": 1845,
+      "sha256": "3d2a917f17a1e1debf0658a71548748e10453da0ef6c7785daede283bbda1c21"
+    }
+  ],
+  "receiptSelfExcluded": true,
+  "totalFilesIncludingSelf": 3,
+  "catalogRows": 111,
+  "canonicalMetadataDocuments": 42,
+  "productSourceReads": 0,
+  "gitCommands": 0,
+  "productRuns": 0
+}

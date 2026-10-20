@@ -1,0 +1,234 @@
+{
+  "kind": "Frozen future44 author prep; self excluded",
+  "directory": "/tmp/codeshell-audit-round44-data-frontier",
+  "frozenUTC": "2026-10-17T14:29:28.221621+00:00",
+  "files": [
+    {
+      "path": "actual-ui-entry-pins.json",
+      "bytes": 641,
+      "sha256": "945d1328adf8718db7a3e2c8c59e0cba10c06f68e10c64c3c82089c51a92d35f"
+    },
+    {
+      "path": "cause-history-method.py",
+      "bytes": 3160,
+      "sha256": "1ed5ea46b75a6b7290e36dfd53e3aafe3cc1645d821bba46bf2eaf2e00edec61"
+    },
+    {
+      "path": "cause-history.json",
+      "bytes": 51369,
+      "sha256": "63f03abddb91e12e145c66e7074a7b15b74541db5c7380569c5239105b5c26a7"
+    },
+    {
+      "path": "chain-initial-pins.json",
+      "bytes": 942,
+      "sha256": "bd833d5a074dc8859135d7dc3c7309b9332a59c7b8b29259703af51838b15a12"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1350,
+      "sha256": "060e23cabce0ac8329cfd6f1813a32f560de5ac494f7693be4d3e0d43d081e31"
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 217032,
+      "sha256": "cedb82a1ae6e9c2b8530fd59f6bdb67c7bde1353388fc9c697c0810e66328075"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 7471,
+      "sha256": "9bd59b6230587c526c2e1abf5c0f66598a02d8809eaa137aa4e66b2f53dff147"
+    },
+    {
+      "path": "display-consumer-pin.json",
+      "bytes": 348,
+      "sha256": "871b4bb48b7c86d0043943046d8359863f24b088b1043cc290887743201dd745"
+    },
+    {
+      "path": "engine-entry-pins.json",
+      "bytes": 673,
+      "sha256": "c9618c87657eb43cf0baad5062ba0367ad93620e216d9f0fd22ebf8f922aa078"
+    },
+    {
+      "path": "finish-checks.json",
+      "bytes": 5305,
+      "sha256": "bb719539956a0c2e49bf2b689739805bf7ec4e0f735ec6311c96bfacb3b50815"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 114124,
+      "sha256": "b579cdb280d0ab316d85fce27b85e658bb6bd56cd84d26347afd869bdb7456f4"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 4039,
+      "sha256": "8813ee38cee463692733ac46ea0263f63be04e1ac690489bb9c10501a5c4f936"
+    },
+    {
+      "path": "history.json",
+      "bytes": 732826,
+      "sha256": "7f6e1871319cee24d0eb14c78eebace6d4db98dcd473ae93fd9c6462c526a05f"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 771,
+      "sha256": "2c72676e33b9c15f96d7f8338f93ed1e4423176bdd3cf899e296305781ee0ddf"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1617,
+      "sha256": "00cb8d07687a577d5c4211e6924c4d7fd6a85fea5e984566e27d3ddacce73089"
+    },
+    {
+      "path": "render-consumer-pins.json",
+      "bytes": 695,
+      "sha256": "30a0655486dfc10d2092482485d2d8384f360f0c558de6b08ac11658648920f3"
+    },
+    {
+      "path": "repl-entry-pin.json",
+      "bytes": 334,
+      "sha256": "4c6f41915bc03d8bcadfc146b03f900667e4dacc483435c407b1d7a8194560b1"
+    },
+    {
+      "path": "report.md",
+      "bytes": 6813,
+      "sha256": "dd1ba43bb51f45ca2300112a3c46ac3ea81d983c9c01dda0dde1dcd55a9ba0a3"
+    },
+    {
+      "path": "selected-history-method.py",
+      "bytes": 3067,
+      "sha256": "ff822142a8d05550fcbd4619239521b429ba928cc7288eb22532855d6cb539f9"
+    },
+    {
+      "path": "selected-history.json",
+      "bytes": 52669,
+      "sha256": "58ac76f872b7f7e12498cce9a04473db1910b90b11cafb8065d993aa1881c215"
+    },
+    {
+      "path": "selected-leaf-pin.json",
+      "bytes": 461,
+      "sha256": "fa1c49f507e6fccc2920748e865aa4232404edced1728175bcfb4b920d697711"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 92198,
+      "sha256": "717b27c7b186997a6c38ff167e7cf5378e002888cfae5ec61c49b366bc62ceb4"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 24611,
+      "sha256": "d0a7b31fb0f173907178aa3cbc85856251394f4557a036b38011222b3128e784"
+    },
+    {
+      "path": "spawner-pin.json",
+      "bytes": 360,
+      "sha256": "7380b52dbf105665cb2695fa7b8a49cf7e20a60cb63b18b9b9df53eee23ee4c9"
+    },
+    {
+      "path": "storage-consumer-pins.json",
+      "bytes": 685,
+      "sha256": "3ceaa3a44b2a43274c96ad3f6d535ed55adeab0a096fd7316dfdf7289ddab224"
+    },
+    {
+      "path": "tui-entry-pins.json",
+      "bytes": 636,
+      "sha256": "e1a34676d92fe702a86d0480a1c8774bf3fdebfcd833dece15c29d1250c49862"
+    }
+  ],
+  "fileCountExcludingSelf": 26,
+  "totalFilesIncludingSelf": 27,
+  "proposalAlias": "TRANSCRIPT-R44-C1",
+  "authorClassification": {
+    "formal": 0,
+    "candidate": 1,
+    "newRelated": 0
+  },
+  "rootReportedFormalIntent": "TRANSCRIPT-R42-01 same item only",
+  "sourceCounts": {
+    "sourceSemanticRows": 16,
+    "currentProductAndEntryRows": 15,
+    "historicalReportRows": 1,
+    "currentSemanticLines": 749,
+    "oldReportSemanticLines": 8,
+    "totalSemanticLines": 757,
+    "displayedLines": 1791,
+    "navigationOnlyFiles": 2,
+    "hashOnlyExcludedFiles": 2,
+    "testSourceLines": 0,
+    "testRuns": 0
+  },
+  "sourceAndMetadataByteChecks": 20,
+  "allBytePinsStable": true,
+  "historyFiles": 3696,
+  "historyScope": "frozen40 includes archives/excludes41–44",
+  "endingHistoryAddedRemovedChanged": 0,
+  "causeQueryHits": [
+    16,
+    3,
+    23
+  ],
+  "causeBoundedWindowsActuallyRead": 21,
+  "allRetainedContextsNotClaimedSemanticExhaustion": true,
+  "testsRead": 0,
+  "testsRun": 0,
+  "productRuns": 0,
+  "fixtures": 0,
+  "gitCommands": 0,
+  "onlyExactTmpWrites": true,
+  "metadataLocatorFailureExit2Preserved": true,
+  "oldFailedDirectionsReopened": false,
+  "runtimePassesClaimed": 0,
+  "reportLinks": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts:163",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/engine/turn-loop.ts:2103",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/builtin/agent.ts:507",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/ui/App.tsx:2145",
+      "existsOrSelf": true
+    },
+    {
+      "target": "history.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "cause-history.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/archive/review-2026-07-09/03-optimization-findings.md:20",
+      "existsOrSelf": true
+    },
+    {
+      "target": "decisions.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "source-manifest.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "finish-checks.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "metadata-notes.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "classification.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "artifact-receipt.json",
+      "existsOrSelf": true
+    }
+  ]
+}

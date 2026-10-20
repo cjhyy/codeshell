@@ -1,0 +1,92 @@
+{
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/2851",
+      "row": {
+        "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+        "bytes": 5067,
+        "lines": 142,
+        "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+      "jsonPointer": "/files/4",
+      "row": {
+        "rank": 5,
+        "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+        "bytes": 5067,
+        "lines": 142,
+        "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+        "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitSelectedClaimIds": [],
+        "historicalClaimIds": [
+          "C011400",
+          "C011401"
+        ],
+        "whySuggested": "Tab label/order/selected display metadata; no panel runtime/native action.",
+        "notUnreadClaim": true,
+        "sourceBodyOpened": false,
+        "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/3172",
+      "row": {
+        "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+        "bytes": 5067,
+        "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+        "lines": 142,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C011400",
+          "C011401"
+        ],
+        "claimKindCounts": {
+          "incidental-path-or-pin-object": 2
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "jsonPointer": "/rankChecks/4",
+      "row": {
+        "rank": 5,
+        "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+        "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+        "matchesDatedCandidate": true,
+        "inDrift": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/3172",
+      "row": {
+        "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+        "bytes": 5067,
+        "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+        "lines": 142
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/3173",
+      "row": {
+        "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+        "bytes": 5067,
+        "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+        "lines": 142,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      }
+    }
+  ],
+  "filenameProse": [],
+  "scope": "Only metadata source/full/old-cause gate, no source semantic inference from unknown or no-row"
+}

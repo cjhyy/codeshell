@@ -1,0 +1,282 @@
+{
+  "at": "2026-10-17T18:27:06.498099+00:00",
+  "scope": "recursive JSON values only in bounded literal/oldcause matching frozen history files, excludes formal55+; not full repository scan",
+  "counts": {
+    "json": 44,
+    "md": 8,
+    "strings": 330266,
+    "scalars": 512089,
+    "objects": 194561,
+    "arrays": 50572
+  },
+  "hits": {
+    "path": 11,
+    "sha256": 5,
+    "filename": 30,
+    "oldcause": 105
+  },
+  "capPerQuery": 50,
+  "parseErrors": [],
+  "files": [
+    {
+      "path": "docs/archive/architecture/18-core-vs-cc-vs-codex.md",
+      "bytes": 19246,
+      "sha256": "d4eeef2a706c2654b03dd06fbe38eb4fee80eacdb148e6ba6e9c0e77f7cdd8b1"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "bytes": 112336,
+      "sha256": "e0fd4e2cf69ef0ac2cf43d6b16b61ec2725605d4b856e9139a76ca6922e6d9ee"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "bytes": 169286,
+      "sha256": "dc8abb277b00dfb57b898e77623deef973e01cee67dd21295f8fdd8d3c38c864"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "bytes": 113942,
+      "sha256": "89770332d75d998120bd9469cb63b328377656caa4bbb34d8c1e715b1e4acba3"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/confirmed.json",
+      "bytes": 61409,
+      "sha256": "4b2bd66512c968f13df1a761db60418be65853871eb0635741d1d9413f4d099a"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "bytes": 222261,
+      "sha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "bytes": 111340,
+      "sha256": "99d2ef32a15255c9d22fe21b2a9f2c7e8cf00c71e7bde5902718c012b6f834fd"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "bytes": 159179,
+      "sha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "bytes": 292557,
+      "sha256": "ec3a14e8bf7f899e3377d352d26aca0d11647cae28f96bfd64a2953870318a64"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "bytes": 420481,
+      "sha256": "d834db5819494b3b73facc06df297a8a04a7f1e2ac07e84c5e373287c301dfff"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "bytes": 231726,
+      "sha256": "c58ff1751f433e8afe81d51281b8e3d7bf854e39727a9616c2396c2b5ade67a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/terminal-commands.json",
+      "bytes": 142682,
+      "sha256": "0761bd3b105a628fd8a622eefacabc7ee7253c0ae7f783b80beca3951a3112d8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup-navigation.json",
+      "bytes": 144446,
+      "sha256": "7b9ad6d49579d972637ab9f83796971eacc093c75653d7d28925b5b2418f671c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json",
+      "bytes": 148897,
+      "sha256": "5d68a33d710902998e4bc9b5a28c905ac9694bf2a5d1fb6563167b003a7a0fa9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "bytes": 3805925,
+      "sha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+      "bytes": 11203,
+      "sha256": "fb1125257ef65f78a3c4c36b8f0248645e86ef856db73aa3fc88629e2b7200ae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/selected-source.json",
+      "bytes": 35707,
+      "sha256": "ccd0d213bc7fc8fc679c3d9fb8567b3e25a29960538ed6a3294ff30e53c584e9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/renderer-status-frontier/history.json",
+      "bytes": 676981,
+      "sha256": "07734928474836a66ef5761c706f716f3ca2c8ade0baaddd3f83a149aa7adae2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+      "bytes": 1282080,
+      "sha256": "b218716d4491136aa1ccc8847db3b49c1d9587dd44a34e30045d4ca817c14bfd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+      "bytes": 304709,
+      "sha256": "7c93b9d3e7fea99c8ea8359a8315e89e35214a878cf368e086acb8c280c96ba7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "bytes": 1618153,
+      "sha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "bytes": 5530631,
+      "sha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/report.md",
+      "bytes": 9783,
+      "sha256": "ba19c8152289e1c987031e1e7b6f691ac0b70313f062461bbf6bc2475b0612ec"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/root-mcp-rename-frontier/source-excerpts.json",
+      "bytes": 6651,
+      "sha256": "100c7b57fc19375dafe8b097360688a77ef69591d9e6d9e90e8ad3489ba54d97"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+      "bytes": 66903,
+      "sha256": "601243c73ff99ad53d52cc854d91de123c0fb71ea6a2253586f40b609f3ae16f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/settings.md",
+      "bytes": 11043,
+      "sha256": "8a4ab7ddf090f8bf811aba57139210b0f8e7477c3d2cf8fae85bad64a252f044"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/root-history.json",
+      "bytes": 844868,
+      "sha256": "13cfbd6d4aae0d93965511c3d18e239c1318457b26c6db3de781bd4e5959876f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/root-transcript-review/history.json",
+      "bytes": 831475,
+      "sha256": "90c8e25676b1b1ca6fa83d0d96e3229025ee1802b0adc8e44281d7f681c3cac9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-contexts.json",
+      "bytes": 197477,
+      "sha256": "1f57f0c5acf76253ff044fefbe015b46b44bb890f7070dba2c49c1e30f0047c4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-selected-contexts.json",
+      "bytes": 114285,
+      "sha256": "24f168f763cbda444c4fa30db8feaaf31359bf1be92db766bb4e50bdff967f14"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/active-history.json",
+      "bytes": 13170,
+      "sha256": "23baf1ae701b99635addf190db082d9da91e39d245da668df6b9f73e9b575543"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/cause-history.json",
+      "bytes": 212673,
+      "sha256": "d83a12126679daefd7f3e0818aadb3eb0a7e27bead653551a37f03816bea9027"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "bytes": 280965,
+      "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/agent-definition-gate/history-contexts.json",
+      "bytes": 372237,
+      "sha256": "3d4cc3c5b5ac3d5b48460599699275a98a4aa408151db06d746b84aa1cc5c0ce"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "bytes": 1022216,
+      "sha256": "e735288c7b19232b8587dff2c49f644a81ab5c301e9d92e768c577d8d5fe2cd3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/composer-suggestions/history-contexts.json",
+      "bytes": 36480,
+      "sha256": "b9976fb5a18c642e9130a956db9d243f3d1e53b861622f728cfa172fe938861d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "bytes": 55115,
+      "sha256": "6af43da261dc93167818c69ae61e617944803d97b4acc8f4a6ec3a4c115ca55d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+      "bytes": 8360442,
+      "sha256": "5d305e80e52ba9c6b72e028a8e33520279b3685a431eaa96329c71715e33f536"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+      "bytes": 7214709,
+      "sha256": "80519801d422fc88ca05a647175ab07626a1c9093f495ef28af105f22db74329"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/trace-history/history-contexts.json",
+      "bytes": 191666,
+      "sha256": "f355cf0eb97c47cddc373d4d6931311e566fda9c0cebd4980cdf9c6c313af93f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "bytes": 2363950,
+      "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+    },
+    {
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "bytes": 39768,
+      "sha256": "42c8f884357a6a97714b0e5da7504428b2d6e1f5823b91f7863d2e7a16f83d2b"
+    },
+    {
+      "path": "docs/review-2026-10-12/model-switch-round18.md",
+      "bytes": 16246,
+      "sha256": "e70836526062a86067744225ab94f99f16aba9f25b62aaf8d2d5371559d968f5"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-model-native-round20/first-launch-harness-failed.cleanup.json",
+      "bytes": 3255,
+      "sha256": "6e357020e17a62db03046a3ff108c05351879f389f151b2bf7f985f14bb8ee62"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-model-switch-round18/report.md",
+      "bytes": 14378,
+      "sha256": "f5ea9004cbeeb1a08bc86861a10d4d6ff2dc6b8f470b8db32ce6430588f27d1a"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "bytes": 31923,
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+      "bytes": 29988,
+      "sha256": "a4a54aad6a044d4caaff4a9fa0027cb76b943b3704264bcf396fadcaae606da5"
+    }
+  ]
+}

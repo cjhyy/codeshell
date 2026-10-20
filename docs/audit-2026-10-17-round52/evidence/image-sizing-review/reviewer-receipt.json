@@ -1,0 +1,140 @@
+{
+  "frozenUTC": "2026-10-17T17:42:58.097603+00:00",
+  "directory": "/tmp/codeshell-audit-round104-image-sizing-review",
+  "selfExcluded": "reviewer-receipt.json",
+  "files": [
+    {
+      "path": "canonical-gate-read.json",
+      "bytes": 751,
+      "sha256": "6f3d3b2d99103ecf8987869ad22478b0235147e0f64cea32cfdff1afcaf583d7"
+    },
+    {
+      "path": "clarity-filename-inventory.json",
+      "bytes": 735,
+      "sha256": "452cc7517c19e8c0e7f93d1e507861ea6294936b13e87b07866fd5c4282cd36d"
+    },
+    {
+      "path": "clarity-initial-pins.json",
+      "bytes": 295,
+      "sha256": "dd7937b4074956e69801676f08a3f84c4a9b92051998ad373d4ba267db6389b1"
+    },
+    {
+      "path": "clarity-navigation.json",
+      "bytes": 596,
+      "sha256": "2941daa5c5c20406cad414f8502c6f9bb6dcc89498c83d00bef38cc808fc9326"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1825,
+      "sha256": "52cd2f0bfc1ebfc933d5e1e8379d03bd6737e591195ef815c5dbaec3408bacc9"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1027,
+      "sha256": "68b5047896ca194c9e2d229d2cd5c430d82702deaad390577744206fa67858d4"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 86012,
+      "sha256": "559ea3385ff942e7d0b372baf1781e3119c3ec93a82f97bdb4549643b331ca5e"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1944,
+      "sha256": "38d258d53ef419fc46729430ea71a1ff9a2612764851860b89a1194a37c8849c"
+    },
+    {
+      "path": "external-standard.json",
+      "bytes": 929,
+      "sha256": "845396a83a24e32d279fa3b22080b82c2b3117eb8928eed9fadef8e9ab4b5bd8"
+    },
+    {
+      "path": "finalizer-first-diagnostic.json",
+      "bytes": 967,
+      "sha256": "0eb0512e383cf382e1748680a4b94aa554a768ed6b1065fd049a1232ef8102e7"
+    },
+    {
+      "path": "first-reader-diagnostic.json",
+      "bytes": 1322,
+      "sha256": "2baff606024c4dae941b2b5e08deaec3a6f0e63e4ef874fc7074d474ba5d9eda"
+    },
+    {
+      "path": "focused-history.json",
+      "bytes": 17886,
+      "sha256": "db0060c341f2fce09419af9236f37c4dcb6c6ef97dab6e1cbf21565ab05a8403"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 502,
+      "sha256": "174aadf3a7bb41d8b96bddca27913f420d82555ce147a5cd163293b514cc957a"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 148297,
+      "sha256": "9dd9ec66e5ce75a32ff4c96275afadb9f4898ac5418c407231c3e386ac1f94c1"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 7624,
+      "sha256": "f476f8b30cd14871795e24fc8b58b83720606f72a7c09c523d5345d339550774"
+    },
+    {
+      "path": "history-selected.json",
+      "bytes": 645,
+      "sha256": "8b8021da4e1dc1e87d30286820a52ef39c77ec51cbac14379cecc081094a25dd"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1009539,
+      "sha256": "8689522f482f0615715e62eff630a660ac1eb47e7325898d32bbee4d1b44794d"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1125,
+      "sha256": "e79dd0c5193c1832d253a2642bddd6d4967301a6ce4f6e5c17c82c242c9473cd"
+    },
+    {
+      "path": "producer-navigation.json",
+      "bytes": 4924,
+      "sha256": "bd75fedf92d0900e6e252febec7a5c41f91503c15fa9c75c7fd6fb1728a9f0c1"
+    },
+    {
+      "path": "review.md",
+      "bytes": 5680,
+      "sha256": "383d27959ad7040cbfa921d6c1a9fbee15c2baee42ad8e60b47c6be62960bc19"
+    },
+    {
+      "path": "source-display-pins.json",
+      "bytes": 2827,
+      "sha256": "faf80533c233f1b9a58202c1a844de7fdb1ef7602d078b5e758eab960f2c7dc5"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 23505,
+      "sha256": "c4d704569d1ee3dd079687cd4a19ce6d12eb80433b33ea93c8c2b142e7b7ac5c"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 14285,
+      "sha256": "adf953e3d9ba903f596a1366b844054ad76d6dbaef26a0985e15573c1fd2eafe"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 906,
+      "sha256": "eb548de2872410801967730e22910d076bb076c76956e3588e122c48bf95c512"
+    }
+  ],
+  "role": "Independent static support of knownsameRootlead;notblind,noRoot103packetread",
+  "newIndependentId": null,
+  "parentReportedAlias": "IMAGE-R103-C1",
+  "parentPlannedFormalId": "DESKTOP-R52-01",
+  "semanticLines": 449,
+  "productSemanticLines": 367,
+  "testDeclarationLines": 82,
+  "testsExecuted": 0,
+  "reportLocalLinks": 19,
+  "officialDocumentationLinks": 1,
+  "productExecutions": 0,
+  "Git": 0,
+  "externalOfficialDocsWebCalls": 3
+}

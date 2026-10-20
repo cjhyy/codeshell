@@ -1,0 +1,10 @@
+{
+  "capturedUTC": "2026-10-17T15:29:47.779972+00:00",
+  "currentFailures": [],
+  "currentOutputTruncations": 0,
+  "currentStaticToolExitCodes": 0,
+  "selectionCorrection": "Initial filename/feature-domain assumption corrected after95 source display lines; not an exception or product defect.",
+  "originalBroadContractCapped": true,
+  "rawEvidence": "Actual numbered source displays retained in source-excerpts.json; inventories and exact scope/hit records retained separately. No runtime logs because0runs.",
+  "oldFailedDirectionsRetried": 0
+}

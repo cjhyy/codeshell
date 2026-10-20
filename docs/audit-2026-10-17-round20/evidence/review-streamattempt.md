@@ -1,0 +1,11 @@
+# Root independent review: StreamAttempt
+
+Root read the actual leaf and maintained tests, focused fixture, report, validation, raw/exit, receipt, selected App/store/TurnLoop context and dedup decisions. This review writes only this note, executes no product/test or Git write, and uses read-only Git blobs for metadata.
+
+- Accept 0 formal / 0 candidate / 0 related. Matching/wrong tombstone IDs, replacement baselines, same-correlation reopening, child and non-provisional preservation, identity/order/immutability and independent instances support only this leaf's stated filtering contract. No synthetic reorder or duplicate-ID sequence is elevated to ordinary production failure.
+- Raw and exit agree on the guarded first command, Completed/exit0 and **12 pass / 28 expect / 0 fail / 0 skip**, two maintained plus ten focused cases. Original maintained controls were already run in round7; this is disclosed. Actual store import is type-only, and App/React/Engine/provider/transport were neither imported nor mirrored by the test.
+- Independently matched all **14 author artifact byte lengths/SHA** and **10 source pins against frozen Git blobs** `d40dd06987a2e0c20c377e243cf5c4e4b549c9ec`. Raw/fixture stay unchanged; source pinning does not claim the large App/TurnLoop files were fully read or executed.
+- Static producer selections supply the correlation ID, emit tombstones before the replacement request start, and the App selected handler filters only the main attempt. Those source observations do not prove async end-to-end retry, real UI presentation, durability or accounting. Optional undefined IDs and hypothetical mutation of baseline row contents have no ordinary bug claim.
+- Dedup separates the 2,109-file historical corpus, string/scalar counts, matches and capped contexts. Old round7 baseline, Desktop F-01, round17 mapper and round9 pairing scopes stay exclusions. The missing guessed Core directory and historical output truncation are labeled metadata, not Bun failures or permission to rerun old TUI Diff/Question/provider directions.
+
+No correction requested. Final aggregate metadata verification will check every Markdown target/line after all review notes are indexed. This review establishes evidence integrity and limited claim boundaries, not correctness of all TUI streams or provider fallback.

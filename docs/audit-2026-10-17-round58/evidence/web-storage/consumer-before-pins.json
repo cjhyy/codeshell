@@ -1,0 +1,69 @@
+{
+  "files": [
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "bytes": 12268,
+      "lineCount": 321,
+      "sha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "pinnedAtUTC": "2026-10-17T19:17:09.637409+00:00",
+      "timing": "before any own body/navigation; filename-only navigation1729b6"
+    },
+    {
+      "path": "packages/web/app/api-context.ts",
+      "bytes": 2725,
+      "lineCount": 74,
+      "sha256": "684933352b87dd2477b9f27784435f8dd6af82e1e8728f829f40d269c8ec0037",
+      "pinnedAtUTC": "2026-10-17T19:17:09.638272+00:00",
+      "timing": "before any own body/navigation; filename-only navigation1729b6"
+    },
+    {
+      "path": "packages/web/app/environments.ts",
+      "bytes": 3934,
+      "lineCount": 110,
+      "sha256": "788bc33467203f6c90cb78495af2e548e6b8b12602e3c5b04e3aed6fffe53563",
+      "pinnedAtUTC": "2026-10-17T19:17:09.638530+00:00",
+      "timing": "before any own body/navigation; filename-only navigation1729b6"
+    },
+    {
+      "path": "packages/web/app/WebsiteShell.tsx",
+      "bytes": 14309,
+      "lineCount": 383,
+      "sha256": "41845e6b1a22a38865286d5359401b43af14023cfd080fcb9679f60bede825b3",
+      "pinnedAtUTC": "2026-10-17T19:17:09.638835+00:00",
+      "timing": "before any own body/navigation; filename-only navigation1729b6"
+    },
+    {
+      "path": "packages/web/app/EnvironmentMenu.tsx",
+      "bytes": 7042,
+      "lineCount": 207,
+      "sha256": "9948e9d1fd7863aa2f9d9984ef54d0d8d19d7b68ec275c30a9b09f8078722c61",
+      "pinnedAtUTC": "2026-10-17T19:17:09.639173+00:00",
+      "timing": "before any own body/navigation; filename-only navigation1729b6"
+    },
+    {
+      "path": "packages/web/app/DesktopApp.tsx",
+      "bytes": 21945,
+      "lineCount": 574,
+      "sha256": "b20bfff8716b4a987eb1acb12db43cde66ec63e18ea41c092f8422a3a6ac43da",
+      "pinnedAtUTC": "2026-10-17T19:17:09.639654+00:00",
+      "timing": "before any own body/navigation; filename-only navigation1729b6"
+    },
+    {
+      "path": "packages/web/src/lib/deviceCredential.test.ts",
+      "bytes": 696,
+      "lineCount": 20,
+      "sha256": "f829c4daa6a45b83f1e33c7717bb28937bbd80b82ec3f3c9a22e54ad09b6d856",
+      "pinnedAtUTC": "2026-10-17T19:17:09.639870+00:00",
+      "timing": "before any own body/navigation; filename-only navigation1729b6"
+    },
+    {
+      "path": "packages/web/app/environments.test.ts",
+      "bytes": 3016,
+      "lineCount": 90,
+      "sha256": "783d0c9a371790b55baaef41397926876eecbc91770c14c92b92112c3f2b1f62",
+      "pinnedAtUTC": "2026-10-17T19:17:09.640102+00:00",
+      "timing": "before any own body/navigation; filename-only navigation1729b6"
+    }
+  ],
+  "unusedPolicy": "Any source not subsequently selected remains hash-only; not all these bodies are promised or required."
+}

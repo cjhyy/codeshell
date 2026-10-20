@@ -1,0 +1,358 @@
+packages/desktop/src/preload/index.ts:1115–1126
+1115:     id: string,
+1116:     on: boolean,
+1117:     opts?: { scope?: "user" | "project" },
+1118:   ) => ipcRenderer.invoke("capabilities:setEnabled", target, id, on, opts),
+1119:   setCapabilityOverride: (
+1120:     target: RendererConfigurationTarget,
+1121:     id: string,
+1122:     state: "inherit" | "on" | "off",
+1123:   ) => ipcRenderer.invoke("capabilities:setOverride", target, id, state),
+1124:   listSourceCatalog: () => ipcRenderer.invoke("sources:catalogList"),
+1125:   linkedFileSources: {
+1126:     snapshot: (projectId: string) => ipcRenderer.invoke("sources:linkedFiles:snapshot", projectId),
+
+packages/desktop/src/main/index.ts:3834–3850
+3834:     const resolvedCwd = await rendererOptionalConfigurationCwd(target, "");
+3835:     if (typeof id !== "string") throw new Error("capabilities:setEnabled requires id");
+3836:     setCapabilityEnabled(resolvedCwd, id, Boolean(on), { scope });
+3837:   },
+3838: );
+3839: ipcMain.handle(
+3840:   "capabilities:setOverride",
+3841:   async (_e, target: RendererConfigurationTarget, id: string, state: "inherit" | "on" | "off") => {
+3842:     const cwd = await rendererConfigurationCwd(target);
+3843:     if (typeof id !== "string") throw new Error("capabilities:setOverride requires id");
+3844:     if (state !== "inherit" && state !== "on" && state !== "off")
+3845:       throw new Error("capabilities:setOverride requires state inherit|on|off");
+3846:     setCapabilityOverride(cwd, id, state);
+3847:   },
+3848: );
+3849: registerSourceCollectionIpc({
+3850:   ipcMain,
+
+packages/desktop/src/main/capabilities-service.ts:70–120
+70:     builtinToolHost: "desktop",
+71:   });
+72: }
+73: 
+74: export function listCapabilities(cwd: string): CapabilityDescriptor[] {
+75:   // A non-empty cwd → project view (descriptors carry the tri-state overlay
+76:   // via globalEnabled/projectOverride/effectiveSource). Empty cwd → user view.
+77:   // Let IPC reject on a read failure so Settings can show the error instead of
+78:   // presenting a broken inventory as an empty, successfully loaded list.
+79:   return makeService(cwd).list(cwd || undefined);
+80: }
+81: 
+82: /** Unfolded switch baseline and inventory for a reviewed Profile configuration plan. */
+83: export function profileSwitchCapabilitySnapshot(cwd: string) {
+84:   const capabilities = makeService(cwd, true).list();
+85:   return {
+86:     capabilities: capabilities.map(({ kind, name, enabled }) => ({ kind, name, enabled })),
+87:     installed: {
+88:       skills: [...new Set(scanSkills(cwd).map((skill) => skill.name))].sort(),
+89:       plugins: capabilities
+90:         .filter((item) => item.kind === "plugin")
+91:         .map((item) => item.name)
+92:         .sort(),
+93:       mcp: capabilities
+94:         .filter((item) => item.kind === "mcp")
+95:         .map((item) => item.name)
+96:         .sort(),
+97:       agents: capabilities
+98:         .filter((item) => item.kind === "agent")
+99:         .map((item) => item.name)
+100:         .sort(),
+101:     },
+102:   };
+103: }
+104: 
+105: export function setCapabilityEnabled(
+106:   cwd: string,
+107:   id: string,
+108:   on: boolean,
+109:   opts?: { scope?: "user" | "project" },
+110: ): void {
+111:   makeService(cwd).setEnabled(id, on, { scope: opts?.scope ?? "user", cwd });
+112: }
+113: 
+114: export function setCapabilityOverride(
+115:   cwd: string,
+116:   id: string,
+117:   state: "inherit" | "on" | "off",
+118: ): void {
+119:   makeService(cwd).setOverride(id, state, { scope: "project", cwd });
+120: }
+
+packages/core/src/settings/schema.ts:55–81
+55:  *                 capabilities design (spec §4).
+56:  */
+57: export const CapabilityOverrideSchema = z.enum(["inherit", "on", "off"]);
+58: export type CapabilityOverride = z.infer<typeof CapabilityOverrideSchema>;
+59: 
+60: export const CapabilityOverridesSchema = z
+61:   .object({
+62:     skills: z.record(CapabilityOverrideSchema).optional(),
+63:     plugins: z.record(CapabilityOverrideSchema).optional(),
+64:     agents: z.record(CapabilityOverrideSchema).optional(),
+65:     mcp: z.record(CapabilityOverrideSchema).optional(),
+66:     builtin: z.record(CapabilityOverrideSchema).optional(),
+67:     /** Per-project Pet capability preferences layered over the user baseline. */
+68:     pet: z.record(CapabilityOverrideSchema).optional(),
+69:     /**
+70:      * Per-hook overlay for PLUGIN-provided hooks, keyed by
+71:      * `pluginHookKey()` (`<plugin>:<RawEvent>:<command>`). Finer-grained
+72:      * than `plugins` (which kills a whole plugin): "off" suppresses one
+73:      * hook for this project only. Only "off" is meaningful today — plugin
+74:      * hooks have no global disable list to force back "on" from.
+75:      */
+76:     pluginHooks: z.record(CapabilityOverrideSchema).optional(),
+77:   })
+78:   .optional();
+79: export type CapabilityOverrides = z.infer<typeof CapabilityOverridesSchema>;
+80: 
+81: const WorktreeBranchPrefixSchema = z
+
+packages/core/src/settings/schema.ts:345–380
+345:     // The record key IS the server name at runtime (MCPManager.connectAll
+346:     // uses Object.entries keys; desktop's persist strips the `name` field and
+347:     // keys by it via stripNameFromServer). So `name` here is optional and
+348:     // backfilled from the key — a config keyed `{"23": {…}}` with no `name`
+349:     // field is valid, not a crash. The preprocess also tolerates a legacy
+350:     // array form (`[{name, …}]`) by re-keying it into a name → config record.
+351:     mcpServers: z
+352:       .preprocess(
+353:         (value) => {
+354:           const entries: Array<[string, unknown]> = Array.isArray(value)
+355:             ? value
+356:                 .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
+357:                 .map((v, i) => [String(v.name ?? i), v])
+358:             : value && typeof value === "object"
+359:               ? Object.entries(value as Record<string, unknown>)
+360:               : [];
+361:           return Object.fromEntries(
+362:             entries.map(([key, raw]) => [
+363:               key,
+364:               raw && typeof raw === "object"
+365:                 ? { ...raw, name: (raw as { name?: unknown }).name ?? key }
+366:                 : raw,
+367:             ]),
+368:           );
+369:         },
+370:         z.record(
+371:           z.object({
+372:             // Always present here: the preprocess above backfills it from the
+373:             // record key, so a stored entry that omits `name` (the common
+374:             // desktop case, which strips it) still validates.
+375:             name: z.string(),
+376:             command: z.string().optional(),
+377:             args: z.array(z.string()).optional(),
+378:             env: z.record(z.string()).optional(),
+379:             url: z.string().optional(),
+380:             transport: z.enum(["stdio", "sse", "streamable-http", "inprocess"]).optional(),
+
+packages/core/src/settings/manager.ts:870–892
+870:    * mutates it in place; returning false skips the write.
+871:    */
+872:   private mutateSettingsFile(
+873:     path: string,
+874:     mutate: (current: Record<string, unknown>) => boolean | void,
+875:   ): void {
+876:     this.clearHookOrigins();
+877:     assertSafeSettingsWriteTarget(path);
+878:     const release = acquireFileLock(path);
+879:     try {
+880:       assertSafeSettingsWriteTarget(path);
+881:       // Re-read INSIDE the lock: a snapshot taken before acquiring it would be
+882:       // exactly the stale value that drops the other writer's key. Strict read:
+883:       // an existing-but-unreadable file must abort the mutation rather than be
+884:       // rewritten from {} — see readConfigFileForMutation.
+885:       const current = this.readJsonObjectForMutation(path);
+886:       if (mutate(current) === false) return;
+887:       this.atomicWriteJson(path, current);
+888:     } finally {
+889:       release();
+890:     }
+891:   }
+892: 
+
+packages/core/src/settings/manager.ts:400–450
+400:    * Writes back (with a .bak, like the models[] migration above) ONLY when a
+401:    * step changed actual content — the configVersion stamp alone doesn't
+402:    * justify touching the file. On write-back the in-memory source is updated
+403:    * so this load() already sees the migrated shape.
+404:    */
+405:   private applyConfigMigration(path: string, sourceName: SettingsSourceName, persist = true): void {
+406:     if (resolveConfigPath(path) !== path) return;
+407:     try {
+408:       const source = this.sources.find((s) => s.name === sourceName);
+409:       // The opt-in read-only path migrates its actual same-buffer load. Ordinary
+410:       // loads retain their historical reread, but cannot retain the old origin.
+411:       const paired = !persist && source?.origin !== undefined;
+412:       if (!paired) this.clearSourceOrigin(sourceName);
+413:       const parsed = paired ? source.data : parseConfigFile(path);
+414:       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+415:       const raw = sanitizeSettingsObject(parsed as Record<string, unknown>);
+416:       const result = migrateConfig(raw);
+417:       if (!result.changed) return;
+418:       // Compare content with the version stamp normalized away — stamp-only
+419:       // changes are not persisted.
+420:       const stripStamp = (c: Record<string, unknown>): Record<string, unknown> => {
+421:         const { [CONFIG_VERSION_KEY]: _v, ...rest } = c;
+422:         return rest;
+423:       };
+424:       if (JSON.stringify(stripStamp(raw)) === JSON.stringify(stripStamp(result.config))) return;
+425:       // Atomic write (tmp+rename) so a concurrent load can't read a half-written
+426:       // migrated file — matches the normal save path (atomicWriteJson). The file
+427:       // exists here (existsSync guard above), so the recursive mkdir is a no-op.
+428:       const sanitized = sanitizeSettingsObject(result.config as Record<string, unknown>);
+429:       if (persist) {
+430:         this.writeBackup(path);
+431:         this.atomicWriteJson(path, sanitized);
+432:       }
+433:       this.replaceSource(sourceName, sanitized, paired ? source.origin : undefined);
+434:     } catch {
+435:       // Best-effort — fall through to normal merge/validate.
+436:     }
+437:   }
+438: 
+439:   /**
+440:    * Get current effective settings.
+441:    */
+442:   get(): ValidatedSettings {
+443:     if (!this.merged) return this.load();
+444:     return this.merged;
+445:   }
+446: 
+447:   /**
+448:    * Invalidate cached merge.
+449:    */
+450:   invalidate(): void {
+
+packages/core/src/capability-control/overlay.ts:89–112
+89:  * everything is disabled UNLESS the project override bucket explicitly marks it
+90:  * `"on"`. This is the opposite of the normal denylist (default-enabled) model.
+91:  *
+92:  * Given the full set of installed names and an override bucket:
+93:  *   - a name explicitly `"on"`  → kept enabled (NOT in the returned list)
+94:  *   - everything else (`"off"`, inherit/absent, garbage) → disabled (in the list)
+95:  *
+96:  * The returned list is the effective disabled list to feed run-time
+97:  * skill/plugin filtering. Order follows `allInstalledNames`; duplicates are
+98:  * collapsed.
+99:  */
+100: export function whitelistDisabledList(
+101:   allInstalledNames: string[],
+102:   bucket: Record<string, CapabilityOverride> | undefined,
+103: ): string[] {
+104:   const disabled: string[] = [];
+105:   const seen = new Set<string>();
+106:   for (const name of allInstalledNames) {
+107:     if (seen.has(name)) continue;
+108:     seen.add(name);
+109:     if (bucket?.[name] === "on") continue; // explicit allow → stays enabled
+110:     disabled.push(name);
+111:   }
+112:   return disabled;
+
+packages/core/src/capability-control/overlay.ts:180–211
+180:  * 项目 overrides 的唯一读取咽喉：profile 快照垫底、项目设置覆盖、本地设置优先。
+181:  * 所有折叠消费方（engine / disabled-lists / capability service）必须
+182:  * 经这里读，不得再直接 getForScope().capabilityOverrides。
+183:  */
+184: export function effectiveProjectOverrides(
+185:   settings: Pick<SettingsManager, "getForScope">,
+186:   cwd: string | undefined,
+187:   explicitProfileOverrides?: CapabilityOverrides,
+188: ): CapabilityOverrides | undefined {
+189:   if (!cwd) return undefined;
+190:   try {
+191:     const scoped = settings.getForScope("project", cwd) as {
+192:       capabilityOverrides?: CapabilityOverrides;
+193:       profile?: { overrides?: CapabilityOverrides };
+194:     };
+195:     const local = settings.getForScope("local", cwd) as {
+196:       capabilityOverrides?: CapabilityOverrides;
+197:     };
+198:     // Both project layers are direct settings, unlike portable profile
+199:     // overrides. Preserve their host visibility keys while merging per token.
+200:     const direct = mergeCapabilityOverrides(scoped.capabilityOverrides, {
+201:       ...local.capabilityOverrides,
+202:       pet: {
+203:         ...scoped.capabilityOverrides?.pet,
+204:         ...local.capabilityOverrides?.pet,
+205:       },
+206:     });
+207:     return mergeCapabilityOverrides(explicitProfileOverrides ?? scoped.profile?.overrides, direct);
+208:   } catch {
+209:     return undefined;
+210:   }
+211: }
+
+packages/core/src/capability-control/service.ts:60–125
+60: }
+61: 
+62: export class CapabilityService {
+63:   constructor(private readonly deps: CapabilityServiceDeps) {}
+64: 
+65:   /**
+66:    * List capability descriptors. With no `cwd` this is the user/global view
+67:    * (enabled === global baseline). With a `cwd` it's that project's view:
+68:    * each descriptor gains globalEnabled / projectOverride / effectiveSource
+69:    * and `enabled` reflects the tri-state overlay (spec §6.1).
+70:    */
+71:   list(cwd?: string): CapabilityDescriptor[] {
+72:     const s = this.deps.settings.get() as Record<string, any>;
+73:     const agent = (s.agent ?? {}) as Record<string, any>;
+74:     const tools = this.deps.registry.listToolsDetailed();
+75:     const preset: string | undefined = agent.preset;
+76:     const host = this.deps.builtinToolHost;
+77: 
+78:     const base: CapabilityDescriptor[] = [
+79:       ...projectBuiltin({
+80:         tools: tools.filter((t) => t.source === "builtin"),
+81:         presetDefaults: this.deps.resolveBuiltinToolNames({ preset, host }),
+82:         effective: this.deps.resolveBuiltinToolNames({
+83:           preset,
+84:           host,
+85:           enabledBuiltinTools: agent.enabledBuiltinTools ?? [],
+86:           disabledBuiltinTools: agent.disabledBuiltinTools ?? [],
+87:         }),
+88:       }),
+89:       ...projectMcp({
+90:         mcpServers: s.mcpServers ?? {},
+91:         mcpTools: tools.filter((t) => t.source === "mcp"),
+92:       }),
+93:       ...projectSkills({
+94:         skills: this.deps.scanSkills(this.deps.cwd, {}),
+95:         disabledSkills: s.disabledSkills ?? [],
+96:       }),
+97:       ...projectPlugins({
+98:         installed: this.deps.readInstalledPlugins().plugins,
+99:         disabledPlugins: s.disabledPlugins ?? [],
+100:       }),
+101:       ...projectAgents({
+102:         agents: this.deps.scanAgents(this.deps.cwd),
+103:         disabledAgents: s.disabledAgents ?? [],
+104:       }),
+105:     ];
+106: 
+107:     const userOverrides: CapabilityOverrides | undefined = cwd
+108:       ? (this.deps.settings.getForScope("project", cwd).capabilityOverrides as CapabilityOverrides)
+109:       : undefined;
+110:     const foldedOverrides = cwd ? effectiveProjectOverrides(this.deps.settings, cwd) : undefined;
+111: 
+112:     return base.map((d) => {
+113:       const globalEnabled = d.enabled;
+114:       const token = overrideTokenForId(d.id);
+115:       const ov = cwd ? overrideFor(foldedOverrides, d.kind, token) : undefined;
+116:       const userOverride = cwd ? overrideFor(userOverrides, d.kind, token) : undefined;
+117:       const enabled = applyOverride(globalEnabled, ov);
+118:       return {
+119:         ...d,
+120:         enabled,
+121:         globalEnabled,
+122:         projectOverride: userOverride,
+123:         effectiveSource: ov ? "project" : cwd ? "default" : "user",
+124:       } as CapabilityDescriptor;
+125:     });

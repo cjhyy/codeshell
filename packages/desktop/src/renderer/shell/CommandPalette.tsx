@@ -6,6 +6,8 @@ import { useT } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
 import { SearchDialog } from "./SearchDialog";
+import { ACTIVITY_PAGES } from "../activity/activityPages";
+import { formatModifierShortcut } from "../keyboardShortcutHints";
 
 export interface PaletteCommand {
   id: string;
@@ -60,7 +62,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
           {filtered.length === 0 ? (
             <div
               role="status"
-              className="flex flex-col items-center gap-3 px-4 py-10 text-center text-sm text-muted-foreground"
+              className="cs-search-state flex flex-col items-center gap-3 px-4 py-10 text-center text-sm text-muted-foreground"
             >
               <CommandIcon className="size-6 opacity-60" aria-hidden />
               {t("panels.palette.noMatch")}
@@ -112,18 +114,18 @@ export function buildCommands(opts: {
   // the language switch on the next render.
   const lang = loadUILanguage();
   const tt = (key: string) => translate(lang, key);
+  const platform = globalThis.window?.codeshell?.platform;
+  const isMac = platform === "darwin";
   const commands: PaletteCommand[] = [
     { id: "go.chat", label: tt("panels.palette.openChat"), run: () => setViewMode("chat") },
     {
       id: "go.files",
       label: tt("panels.palette.openFiles"),
-      hint: "Cmd+Shift+E",
       run: () => openPanel("files"),
     },
     {
       id: "go.browser",
       label: tt("panels.palette.openBrowser"),
-      hint: "Cmd+T",
       run: () => openPanel("browser"),
     },
     ...(opts.gitReviewAvailable
@@ -138,7 +140,6 @@ export function buildCommands(opts: {
     {
       id: "go.terminal",
       label: tt("panels.palette.openTerminal"),
-      hint: "Ctrl+`",
       run: () => openPanel("terminal"),
     },
     {
@@ -146,50 +147,43 @@ export function buildCommands(opts: {
       label: tt("panels.palette.openQuickChat"),
       run: () => openPanel("quickChat"),
     },
-    {
-      id: "go.sessions",
-      label: tt("panels.palette.openSessions"),
-      run: () => setViewMode("sessions"),
-    },
-    {
-      id: "go.approvals",
-      label: tt("panels.palette.openApprovals"),
-      run: () => setViewMode("approvals"),
-    },
-    { id: "go.runs", label: tt("panels.palette.openRuns"), run: () => setViewMode("runs") },
-    ...(opts.taskInboxEnabled !== false
-      ? [{ id: "go.taskInbox", label: tt("taskInbox.title"), run: () => setViewMode("task_inbox") }]
-      : []),
+    ...ACTIVITY_PAGES.filter(
+      (entry) => entry.page !== "task_inbox" || opts.taskInboxEnabled !== false,
+    ).map(({ page, label }) => ({
+      id: page === "task_inbox" ? "go.taskInbox" : `go.${page}`,
+      label: tt(label),
+      run: () => setViewMode(page),
+    })),
     // 扩展并入设置中心(双门收口)— palette 直达设置页,扩展在其左侧导航里。
     {
       id: "go.settings",
       label: tt("panels.palette.openSettings"),
       run: () => setViewMode("settings_page"),
     },
-    { id: "go.logs", label: tt("panels.palette.openLogs"), run: () => setViewMode("logs") },
     {
       id: "toggle.sidebar",
       label: tt("panels.palette.toggleSidebar"),
-      hint: "Cmd+B",
+      hint: formatModifierShortcut(platform, "B"),
       run: toggleSidebar,
     },
     {
       id: "toggle.inspector",
-      label: tt("panels.palette.toggleInspector"),
-      hint: "Cmd+I",
+      label: tt("activity.inspectSession"),
+      // This accelerator belongs to the native menu, installed only on macOS.
+      hint: isMac ? formatModifierShortcut(platform, "I") : undefined,
       run: toggleInspector,
     },
     { id: "transcript.clear", label: tt("panels.palette.clearTranscript"), run: clearTranscript },
     {
       id: "search.open",
       label: tt("panels.palette.searchTranscript"),
-      hint: "Cmd+F",
+      hint: formatModifierShortcut(platform, "F"),
       run: openSearch,
     },
     {
       id: "window.new",
       label: tt("panels.palette.newWindow"),
-      hint: "Cmd+Shift+N",
+      hint: isMac ? formatModifierShortcut(platform, "Shift+N") : undefined,
       run: () => {
         void window.codeshell.newWindow();
       },

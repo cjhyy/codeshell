@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { browserProfileIdForBucket, browserProfileLabel } from "../../shared/browser-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,11 @@ import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import type { MaskedCredentialView } from "./types";
 import { useT } from "../i18n/I18nProvider";
 import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
+import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
 import { cookiePlatformName } from "./cookie-platform";
+import { useCredentialList } from "./useCredentialList";
+import { CredentialListStatus } from "./CredentialListStatus";
+import { useCredentialMutation } from "./useCredentialMutation";
 
 type SwitchMode = "clear" | "merge";
 
@@ -78,9 +82,9 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     if (scope === "temporary") return t("ext.cookie.profileScopeTemporary");
     return name;
   };
-  const [items, setItems] = useState<MaskedCredentialView[]>([]);
+  const { items, loading, error: loadError, reload: load } = useCredentialList(cwd, "cookie");
   const [url, setUrl] = useState("");
-  const [busy, setBusy] = useState(false);
+  const { busy, run } = useCredentialMutation();
   const [urlHistory, setUrlHistory] = useState<string[]>(() => readUrlHistory());
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -89,15 +93,6 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     setQuery("");
     searchRef.current?.focus();
   };
-
-  const load = useCallback(() => {
-    return window.codeshell.credentials
-      .list(cwd)
-      .then((all) => setItems(all.filter((c) => c.type === "cookie")));
-  }, [cwd]);
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   /** platform__slug(label):同一平台多账号不撞键;slug 只保留安全字符。 */
   const buildId = (platform: string, name: string): string => {
@@ -149,8 +144,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     const fullUrl = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
     const d = normalizeDomain(raw);
     const platform = platformOf(d);
-    setBusy(true);
-    try {
+    const result = await run(async () => {
       const res = await window.codeshell.credentials.loginCapture({
         url: fullUrl,
         platform,
@@ -193,11 +187,10 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
           count: res.jar.length,
         }),
       });
-      load();
+      await load();
       return true;
-    } finally {
-      setBusy(false);
-    }
+    });
+    return result.ok && result.value;
   };
 
   /** 顶部表单:新建账号(弹窗登录)。成功则记输入历史 + 清表单。 */
@@ -214,23 +207,22 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     capture: () => Promise<{ jar: unknown[]; count: number }>;
     emptyMessage: string;
   }) => {
-    // Name the identity being captured. The jar's scope is not obvious — a
-    // project profile is shared by every session in that project — so the user
-    // has to see it before deciding what to call the credential.
-    const profileText = activeBucket ? describeProfile(activeBucket) : null;
-    const name = await prompt({
-      title: t("ext.cookie.captureBrowserTitle"),
-      message: profileText
-        ? `${t("ext.cookie.captureBrowserMessage")}\n${t("ext.cookie.captureBrowserFromProfile", {
-            profile: profileText,
-          })}`
-        : t("ext.cookie.captureBrowserMessage"),
-      defaultValue: "",
-    });
-    if (name === null) return;
-    const accountName = name.trim() || t("ext.cookie.defaultAccountName");
-    setBusy(true);
-    try {
+    await run(async () => {
+      // Name the identity being captured. The jar's scope is not obvious — a
+      // project profile is shared by every session in that project — so the user
+      // has to see it before deciding what to call the credential.
+      const profileText = activeBucket ? describeProfile(activeBucket) : null;
+      const name = await prompt({
+        title: t("ext.cookie.captureBrowserTitle"),
+        message: profileText
+          ? `${t("ext.cookie.captureBrowserMessage")}\n${t("ext.cookie.captureBrowserFromProfile", {
+              profile: profileText,
+            })}`
+          : t("ext.cookie.captureBrowserMessage"),
+        defaultValue: "",
+      });
+      if (name === null) return;
+      const accountName = name.trim() || t("ext.cookie.defaultAccountName");
       const { jar, count } = await opts.capture();
       if (count === 0) {
         toast({ message: opts.emptyMessage, variant: "error" });
@@ -244,10 +236,8 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
         meta: { platform: "browser", scope: "all", switchMode: "merge" },
       });
       toast({ message: t("ext.cookie.capturedAllToast", { label: accountName, count }) });
-      load();
-    } finally {
-      setBusy(false);
-    }
+      await load();
+    });
   };
 
   /** 抓打开凭证页的当前 chat session 浏览器分区。 */
@@ -292,58 +282,50 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
   };
 
   const switchTo = async (c: MaskedCredentialView) => {
-    const merge = c.meta?.switchMode !== "clear";
-    const ok = await confirm({
-      title: t("ext.cookie.switchTitle"),
-      message: t("ext.cookie.switchMessage", { label: c.label }),
-      // Say WHERE the jar lands. A project profile is shared by every session in
-      // that project, so switching accounts here changes the login for all of
-      // them — the user must see that before confirming.
-      detail: [
-        merge ? t("ext.cookie.switchDetailMerge") : t("ext.cookie.switchDetailClear"),
-        activeBucket
-          ? t("ext.cookie.switchIntoProfile", { profile: describeProfile(activeBucket) })
-          : "",
-      ]
-        .filter(Boolean)
-        .join("\n"),
-      confirmLabel: t("ext.cookie.switchConfirm"),
-    });
-    if (!ok) return;
-    setBusy(true);
-    try {
+    await run(async () => {
+      const merge = c.meta?.switchMode !== "clear";
+      const ok = await confirm({
+        title: t("ext.cookie.switchTitle"),
+        message: t("ext.cookie.switchMessage", { label: c.label }),
+        // Say WHERE the jar lands. A project profile is shared by every session in
+        // that project, so switching accounts here changes the login for all of
+        // them — the user must see that before confirming.
+        detail: [
+          merge ? t("ext.cookie.switchDetailMerge") : t("ext.cookie.switchDetailClear"),
+          activeBucket
+            ? t("ext.cookie.switchIntoProfile", { profile: describeProfile(activeBucket) })
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        confirmLabel: t("ext.cookie.switchConfirm"),
+      });
+      if (!ok) return;
       const { count } = await window.codeshell.credentials.restoreCookieToBrowser(
         cwd,
         c.id,
         activeBucket ?? undefined,
       );
       toast({ message: t("ext.cookie.switchedToast", { label: c.label, count }) });
-    } catch (e) {
-      toast({ message: t("ext.cookie.switchFailed", { error: String(e) }), variant: "error" });
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   /** 编辑:重命名账号(id 不变,只改展示 label)。 */
   const rename = async (c: MaskedCredentialView) => {
-    const next = await prompt({
-      title: t("ext.cookie.renameTitle"),
-      message: t("ext.cookie.renameMessage"),
-      defaultValue: c.label,
-    });
-    if (next === null) return;
-    const trimmed = next.trim();
-    if (!trimmed || trimmed === c.label) return;
-    setBusy(true);
-    try {
+    await run(async () => {
+      const next = await prompt({
+        title: t("ext.cookie.renameTitle"),
+        message: t("ext.cookie.renameMessage"),
+        defaultValue: c.label,
+      });
+      if (next === null) return;
+      const trimmed = next.trim();
+      if (!trimmed || trimmed === c.label) return;
       await window.codeshell.credentials.patchMeta(cwd, c.storeScope ?? "user", c.id, {
         label: trimmed,
       });
-      load();
-    } finally {
-      setBusy(false);
-    }
+      await load();
+    });
   };
 
   /** 逐条 meta 开关/选择写回(只改元数据,保留 secret)。 */
@@ -356,16 +338,11 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     },
     toastMsg?: string,
   ) => {
-    setBusy(true);
-    try {
+    await run(async () => {
       await window.codeshell.credentials.patchMeta(cwd, c.storeScope ?? "user", c.id, fields);
       await load();
       if (toastMsg) toast({ message: toastMsg });
-    } catch (error) {
-      toast({ message: t("ext.cookie.updateFailed", { error: String(error) }), variant: "error" });
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   const toggleAiUse = (c: MaskedCredentialView, next: boolean) =>
@@ -400,15 +377,17 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     void patch(c, { meta: { ...c.meta, switchMode: mode } });
 
   const del = async (c: MaskedCredentialView) => {
-    if (
-      !(await confirm({
-        message: t("ext.cookie.deleteConfirm", { label: c.label }),
-        destructive: true,
-      }))
-    )
-      return;
-    await window.codeshell.credentials.remove(cwd, c.storeScope ?? "user", c.id);
-    load();
+    await run(async () => {
+      if (
+        !(await confirm({
+          message: t("ext.cookie.deleteConfirm", { label: c.label }),
+          destructive: true,
+        }))
+      )
+        return;
+      await window.codeshell.credentials.remove(cwd, c.storeScope ?? "user", c.id);
+      await load();
+    });
   };
 
   // 按 platform 分组
@@ -430,37 +409,21 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
 
   return (
     <div className="min-w-0 space-y-5" data-cookie-page>
-      <section className="credential-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-600 shadow-sm dark:text-amber-400">
-              <CookieIcon className="size-6" aria-hidden />
-            </div>
-            <div className="min-w-0 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
-                  {t("ext.cookie.eyebrow")}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
-                  <ShieldCheck className="size-3" aria-hidden />
-                  {t("ext.cookie.localStorage")}
-                </span>
-              </div>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
-                {t("ext.cookie.title")}
-              </h2>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                {t("ext.cookie.description")}
-              </p>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-3 gap-2 lg:min-w-72">
-            <CookieStat value={items.length} label={t("ext.cookie.accountCount")} />
-            <CookieStat value={groups.size} label={t("ext.cookie.platformCount")} />
-            <CookieStat value={autoInjectCount} label={t("ext.cookie.autoInjectCount")} />
-          </div>
-        </div>
-      </section>
+      <CredentialsSectionHeader
+        title={t("ext.cookie.title")}
+        description={t("ext.cookie.description")}
+        stats={[
+          { value: items.length, label: t("ext.cookie.accountCount") },
+          { value: groups.size, label: t("ext.cookie.platformCount") },
+          { value: autoInjectCount, label: t("ext.cookie.autoInjectCount") },
+        ]}
+        badge={
+          <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
+            <ShieldCheck className="size-3" aria-hidden />
+            {t("ext.cookie.localStorage")}
+          </span>
+        }
+      />
 
       <section className="space-y-4" aria-labelledby="cookie-add-title">
         <div className="flex items-start gap-2.5">
@@ -499,6 +462,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
               <Input
                 ref={loginUrlRef}
                 id="cookie-login-url"
+                disabled={busy}
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 placeholder={t("ext.cookie.urlPlaceholder")}
@@ -518,6 +482,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
                         size="sm"
                         className="h-6 max-w-full rounded-full bg-muted/35 px-2 text-[11px] font-normal text-muted-foreground"
                         onClick={() => setUrl(historyUrl)}
+                        disabled={busy}
                         title={t("ext.cookie.historyChipTip")}
                       >
                         <span className="truncate">{historyUrl}</span>
@@ -613,7 +578,9 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
           />
         )}
 
-        {items.length === 0 ? (
+        <CredentialListStatus loading={loading} error={loadError} onRetry={() => void load()} />
+
+        {items.length === 0 && (loading || loadError) ? null : items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted/15 px-5 py-10 text-center">
             <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
               <CookieIcon className="size-5" aria-hidden />
@@ -786,17 +753,6 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function CookieStat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-      <div className="text-lg font-semibold leading-none tabular-nums text-foreground">{value}</div>
-      <div className="mt-1 truncate text-[10px] text-muted-foreground" title={label}>
-        {label}
-      </div>
     </div>
   );
 }

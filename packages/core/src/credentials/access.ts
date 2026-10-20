@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { existsSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -35,9 +36,15 @@ import {
   type LocalOAuthLinkActionRequest,
 } from "../links/local-oauth.js";
 import { refreshToken } from "../services/oauth.js";
+import { assertMcpOAuthCredentialBinding } from "./mcp-binding.js";
 import type { SettingsScope } from "../settings/manager.js";
-import type { RpcMessage } from "../protocol/types.js";
+import type { RpcMessage, RpcResponse } from "../protocol/types.js";
 import type { Transport } from "../protocol/transport.js";
+import {
+  isFigmaMcpCredential,
+  McpLinkActionError,
+  type McpLinkActionRequest,
+} from "../links/figma-mcp-contract.js";
 
 export type CredentialAccessScope = "full" | "project";
 
@@ -56,6 +63,10 @@ export interface CredentialMetadata {
 }
 
 export interface CredentialAccess {
+  executeMcpLinkAction?(
+    request: McpLinkActionRequest,
+    options?: { signal?: AbortSignal; assertAuthorized?: () => void },
+  ): Promise<unknown>;
   executeLocalOAuthLinkAction?(
     request: LocalOAuthLinkActionRequest,
     options?: { signal?: AbortSignal; assertAuthorized?: () => void },
@@ -91,6 +102,7 @@ export interface CredentialAccess {
   resolveOAuthAccess?(req: {
     id: string;
     scope: "full";
+    serverUrl: string;
     forceRefresh?: boolean;
   }): Promise<{ accessToken: string; expiresAt?: string }>;
   materializeCookie?(req: {
@@ -114,6 +126,11 @@ export interface CredentialSnapshotEntry {
 export interface CredentialSnapshot {
   revision: number;
   entries: CredentialSnapshotEntry[];
+}
+
+/** Host metadata and its Link Action outcome arrive as one ordered update. */
+export interface RemoteLinkActionReply extends RpcResponse {
+  credentialSnapshot?: CredentialSnapshot;
 }
 
 const COOKIE_FILE_PREFIX = "codeshell-cred-cookie-";
@@ -145,39 +162,113 @@ export function createIpcCredentialAccess(
       cleanup?: () => void;
     }
   >();
+  // The Host can still finish an already-sent Action after the calling task
+  // cancels or times out. Keep only bounded, short-lived receipt IDs so that
+  // its current status reaches other tasks without reviving the old request.
+  const isStateAction = (method: string) =>
+    ["desktop/remoteLinkAction", "desktop/localOAuthLinkAction", "desktop/mcpLinkAction"].includes(
+      method,
+    );
+  const abandonedStateReplies = new Map<string, number>();
+  const rememberAbandonedReply = (id: string, method: string) => {
+    if (!isStateAction(method)) return;
+    const now = Date.now();
+    for (const [key, expiresAt] of abandonedStateReplies) {
+      if (expiresAt <= now) abandonedStateReplies.delete(key);
+    }
+    if (abandonedStateReplies.size >= 128)
+      abandonedStateReplies.delete(abandonedStateReplies.keys().next().value!);
+    abandonedStateReplies.set(id, now + 60_000);
+  };
+
+  const applySnapshot = (value: unknown) => {
+    const params = value as Partial<CredentialSnapshot> | undefined;
+    // Delayed or replayed Host snapshots must not restore a superseded grant.
+    if (
+      params &&
+      typeof params.revision === "number" &&
+      Number.isSafeInteger(params.revision) &&
+      params.revision > snapshot.revision &&
+      Array.isArray(params.entries)
+    ) {
+      snapshot = {
+        revision: params.revision,
+        entries: params.entries as CredentialSnapshotEntry[],
+      };
+      for (const listener of subscribers) {
+        try {
+          listener();
+        } catch {
+          // One consumer must not break the credential snapshot transport.
+        }
+      }
+    }
+  };
 
   transport.onMessage((msg: RpcMessage) => {
     if ("method" in msg && msg.method === "desktop/credentialSnapshot") {
-      const params = msg.params as Partial<CredentialSnapshot> | undefined;
-      if (params && typeof params.revision === "number" && Array.isArray(params.entries)) {
-        snapshot = {
-          revision: params.revision,
-          entries: params.entries as CredentialSnapshotEntry[],
-        };
-        for (const listener of subscribers) {
-          try {
-            listener();
-          } catch {
-            // One consumer must not break the credential snapshot transport.
-          }
-        }
-      }
+      applySnapshot(msg.params);
       return;
     }
     if (!("id" in msg) || "method" in msg) return;
     const id = String(msg.id);
     const waiter = pending.get(id);
-    if (!waiter) return;
+    if (!waiter) {
+      const expiresAt = abandonedStateReplies.get(id);
+      abandonedStateReplies.delete(id);
+      if (expiresAt !== undefined && expiresAt > Date.now())
+        applySnapshot((msg as RemoteLinkActionReply).credentialSnapshot);
+      return;
+    }
     pending.delete(id);
     clearTimeout(waiter.timer);
     waiter.cleanup?.();
+    // Snapshot subscribers may abort other Actions when authority changes. This
+    // reply's waiter is already retired so its reviewed error cannot be replaced
+    // by that derived cancellation. Successful results still recheck authority.
+    if (isStateAction(waiter.method))
+      applySnapshot((msg as RemoteLinkActionReply).credentialSnapshot);
     if ("error" in msg && msg.error) {
-      const data = msg.error.data as { remoteLinkCode?: unknown } | undefined;
+      const data = msg.error.data as
+        | { remoteLinkCode?: unknown; mcpLinkCode?: unknown }
+        | undefined;
+      const remoteLinkCode =
+        waiter.method === "desktop/remoteLinkAction" ? data?.remoteLinkCode : undefined;
+      const mcpLinkCode = waiter.method === "desktop/mcpLinkAction" ? data?.mcpLinkCode : undefined;
       waiter.reject(
-        waiter.method === "desktop/remoteLinkAction" &&
-          data?.remoteLinkCode === "file_not_authorized"
-          ? new RemoteLinkError("file_not_authorized")
-          : new Error(msg.error.message),
+        typeof mcpLinkCode === "string" &&
+          [
+            "invalid_request",
+            "changed",
+            "forbidden",
+            "reconnect",
+            "unsupported",
+            "response_too_large",
+            "resource_not_discovered",
+            "provider_error",
+          ].includes(mcpLinkCode)
+          ? new McpLinkActionError(
+              mcpLinkCode as ConstructorParameters<typeof McpLinkActionError>[0],
+            )
+          : typeof remoteLinkCode === "string" &&
+              [
+                "invalid_request",
+                "unavailable",
+                "configuration_error",
+                "refresh_outcome_unknown",
+                "reconnect",
+                "changed",
+                "forbidden",
+                "file_not_authorized",
+                "unsupported_file_type",
+                "response_too_large",
+                "content_unavailable",
+                "busy",
+              ].includes(remoteLinkCode)
+            ? new RemoteLinkError(
+                remoteLinkCode as ConstructorParameters<typeof RemoteLinkError>[0],
+              )
+            : new Error(msg.error.message),
       );
     } else {
       waiter.resolve(msg.result);
@@ -195,6 +286,7 @@ export function createIpcCredentialAccess(
       const cancel = () => {
         if (!pending.has(id)) return;
         pending.delete(id);
+        rememberAbandonedReply(id, method);
         clearTimeout(timer);
         cleanup();
         transport.send({
@@ -207,9 +299,11 @@ export function createIpcCredentialAccess(
       const cleanup = () => signal?.removeEventListener("abort", cancel);
       const timer = setTimeout(
         () => {
+          if (!pending.has(id)) return;
           pending.delete(id);
+          rememberAbandonedReply(id, method);
           cleanup();
-          if (method === "desktop/localOAuthLinkAction")
+          if (method === "desktop/localOAuthLinkAction" || method === "desktop/mcpLinkAction")
             transport.send({
               jsonrpc: "2.0",
               method: "desktop/localOAuthLinkActionCancel",
@@ -217,7 +311,7 @@ export function createIpcCredentialAccess(
             });
           reject(new Error(`${method} timed out`));
         },
-        method === "desktop/localOAuthLinkAction"
+        method === "desktop/localOAuthLinkAction" || method === "desktop/mcpLinkAction"
           ? 90_000
           : method === "desktop/remoteLinkAction"
             ? 45_000
@@ -235,6 +329,18 @@ export function createIpcCredentialAccess(
   };
 
   return {
+    executeMcpLinkAction: async (input, options) => {
+      options?.signal?.throwIfAborted();
+      options?.assertAuthorized?.();
+      const result = await request(
+        "desktop/mcpLinkAction",
+        input as unknown as Record<string, unknown>,
+        options?.signal,
+      );
+      options?.signal?.throwIfAborted();
+      options?.assertAuthorized?.();
+      return result;
+    },
     executeLocalOAuthLinkAction: async (input, options) => {
       options?.signal?.throwIfAborted();
       options?.assertAuthorized?.();
@@ -339,6 +445,7 @@ function toMetadata(cred: Credential): CredentialMetadata {
   const { secret: _secret, ...rest } = cred;
   return {
     ...rest,
+    meta: cred.meta ? linkConnectionMetadata(cred.meta) : undefined,
     ...(credentialAllowsEnvExposure(cred.type) ? {} : { exposeAsEnv: undefined }),
     hasSecret: available,
     secretHint: available ? credentialSecretHint(cred.type, secret) : undefined,
@@ -350,7 +457,10 @@ function toMetadata(cred: Credential): CredentialMetadata {
 }
 
 function cloneMetadata(list: CredentialMetadata[]): CredentialMetadata[] {
-  return list.map((cred) => ({ ...cred, meta: cred.meta ? { ...cred.meta } : undefined }));
+  return list.map((cred) => ({
+    ...cred,
+    meta: cred.meta ? linkConnectionMetadata(cred.meta) : undefined,
+  }));
 }
 
 function storeFor(cwd: string | undefined): CredentialStore {
@@ -358,6 +468,15 @@ function storeFor(cwd: string | undefined): CredentialStore {
 }
 
 export const localCredentialAccess: CredentialAccess = {
+  executeMcpLinkAction: async (input, options) => {
+    // Metadata discovery also runs while the builtin catalog is initializing.
+    // Load the MCP/tool execution graph only for an actual action request.
+    const { executeFigmaMcpLinkAction } = await import("../links/figma-mcp.js");
+    return executeFigmaMcpLinkAction(input, {
+      ...options,
+      resolveOAuthAccess: (request) => localCredentialAccess.resolveOAuthAccess!(request),
+    });
+  },
   executeLocalOAuthLinkAction,
   executeRemoteLinkAction,
   subscribe(listener, context) {
@@ -389,20 +508,25 @@ export const localCredentialAccess: CredentialAccess = {
     if (!cred || !isCredentialSecretAvailable(cred.secret)) {
       throw new Error(`credential "${req.id}" is unavailable`);
     }
-    if (isRemoteLinkCredential(cred) || isBrowserOAuthLinkCredential(cred))
+    if (
+      isRemoteLinkCredential(cred) ||
+      isBrowserOAuthLinkCredential(cred) ||
+      isFigmaMcpCredential(cred) ||
+      (req.purpose !== "link" && cred.meta?.agentExposable === false)
+    )
       throw new Error("OAuth Link credentials only support Host-owned actions");
     if (
       req.purpose === "link" &&
       (cred.type !== "link" ||
-        cred.meta?.linkExecutionRuntime !== "local" ||
-        !cred.meta.linkProvider)
+        linkConnectionMetadata(cred.meta).linkExecutionRuntime !== "local" ||
+        !cred.meta?.linkProvider)
     ) {
       throw new Error(`credential "${req.id}" is not a local Link credential`);
     }
     return req.purpose === "link" ? resolveLinkCredentialAccessToken(cred)! : cred.secret;
   },
   async resolveOAuthAccess(req) {
-    return resolveLocalOAuthAccess(req.id, Boolean(req.forceRefresh));
+    return resolveLocalOAuthAccess(req.id, req.serverUrl, Boolean(req.forceRefresh));
   },
   async materializeCookie(req) {
     const cred = storeFor(req.cwd).resolve(req.id, req.scope);
@@ -417,6 +541,7 @@ const localOAuthRefreshes = new Map<string, Promise<{ accessToken: string; expir
 
 async function resolveLocalOAuthAccess(
   id: string,
+  serverUrl: string,
   forceRefresh: boolean,
 ): Promise<{ accessToken: string; expiresAt?: string }> {
   const store = new CredentialStore(undefined);
@@ -427,6 +552,7 @@ async function resolveLocalOAuthAccess(
   if (isRemoteLinkCredential(cred))
     throw new Error("Remote Link credentials cannot be used as MCP bearer tokens");
   const parsed = parseOAuthCredentialSecret(cred.secret);
+  assertMcpOAuthCredentialBinding(cred, serverUrl, parsed);
   const decision = shouldRefreshOAuthCredential(parsed);
   if (!forceRefresh && decision === "no") {
     return { accessToken: parsed.accessToken, expiresAt: parsed.expiresAt };
@@ -435,13 +561,20 @@ async function resolveLocalOAuthAccess(
     throw new Error(`oauth credential "${id}" requires login`);
   }
   const inflight = localOAuthRefreshes.get(id);
-  if (inflight) return inflight;
+  if (inflight) {
+    const result = await inflight;
+    const current = store.resolve(id, "full");
+    if (!current?.secret) throw new Error("MCP OAuth credential is unavailable");
+    assertMcpOAuthCredentialBinding(current, serverUrl, parseOAuthCredentialSecret(current.secret));
+    return result;
+  }
   const pending = (async () => {
     const latestCred = store.resolve(id, "full");
     if (!latestCred || latestCred.type !== "oauth" || !latestCred.secret) {
       throw new Error(`oauth credential "${id}" requires login`);
     }
     const latest = parseOAuthCredentialSecret(latestCred.secret);
+    assertMcpOAuthCredentialBinding(latestCred, serverUrl, latest);
     if (!forceRefresh && shouldRefreshOAuthCredential(latest) === "no") {
       return { accessToken: latest.accessToken, expiresAt: latest.expiresAt };
     }
@@ -467,11 +600,15 @@ async function resolveLocalOAuthAccess(
       tokenType: tokens.tokenType,
       scope: tokens.scope ?? latest.scope,
     };
-    store.save("user", {
-      ...latestCred,
-      secret: JSON.stringify(next),
-      meta: { ...latestCred.meta, lastRefreshAt: new Date().toISOString() },
-    });
+    assertMcpOAuthCredentialBinding(latestCred, serverUrl, next);
+    if (
+      !store.compareAndSwap("user", id, latestCred, {
+        ...latestCred,
+        secret: JSON.stringify(next),
+        meta: { ...latestCred.meta, lastRefreshAt: new Date().toISOString() },
+      })
+    )
+      throw new Error("MCP OAuth credential changed during refresh");
     return { accessToken: next.accessToken, expiresAt: next.expiresAt };
   })().finally(() => localOAuthRefreshes.delete(id));
   localOAuthRefreshes.set(id, pending);

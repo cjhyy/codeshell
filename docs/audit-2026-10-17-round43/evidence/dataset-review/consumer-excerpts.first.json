@@ -1,0 +1,68 @@
+{
+  "rows": [
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "sha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "range": [
+        210,
+        230
+      ],
+      "text": "210:   disabled?: boolean;\n211: }) {\n212:   const { t } = useT();\n213:   const [mode, setMode] = useState<\"form\" | \"json\">(\"form\");\n214:   const [expandedCase, setExpandedCase] = useState(0);\n215:   const parsed = parseEditableDataset(value);\n216:   const dataset = parsed.ok ? parsed.dataset : null;\n217:   const summary = dataset ? summarizeEditableDataset(dataset) : null;\n218:   const emit = (next: NonNullable<typeof dataset>) => onChange(serializeEditableDataset(next));\n219:   const updateCase = (index: number, patch: Partial<EditableCase>) => {\n220:     if (dataset)\n221:       emit({\n222:         ...dataset,\n223:         cases: dataset.cases.map((item, i) => (i === index ? { ...item, ...patch } : item)),\n224:       });\n225:   };\n226:   const caseIssues = (index: number) =>\n227:     validation?.issues.filter((issue) =>\n228:       issue.caseId\n229:         ? issue.caseId === dataset?.cases[index]?.id\n230:         : issue.message.startsWith(`cases.${index}.`),"
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "sha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "range": [
+        286,
+        330
+      ],
+      "text": "286:         aria-label={t(\"optimizationLab.editor.mode\")}\n287:       >\n288:         <Button\n289:           type=\"button\"\n290:           variant={mode === \"form\" ? \"default\" : \"outline\"}\n291:           data-testid={testId(\"dataset-form\")}\n292:           disabled={disabled}\n293:           aria-pressed={mode === \"form\"}\n294:           onClick={() => setMode(\"form\")}\n295:         >\n296:           {t(\"optimizationLab.editor.form\")}\n297:         </Button>\n298:         <Button\n299:           type=\"button\"\n300:           variant={mode === \"json\" ? \"default\" : \"outline\"}\n301:           data-testid={testId(\"dataset-json\")}\n302:           disabled={disabled}\n303:           aria-pressed={mode === \"json\"}\n304:           onClick={() => setMode(\"json\")}\n305:         >\n306:           {t(\"optimizationLab.editor.json\")}\n307:         </Button>\n308:       </div>\n309:       {!parsed.ok && (\n310:         <p\n311:           role=\"alert\"\n312:           data-testid={testId(\"dataset-unsupported\")}\n313:           className=\"rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm\"\n314:         >\n315:           {t(`optimizationLab.editor.unsupported.${parsed.reason}`)} ({parsed.path}){\" \"}\n316:           {t(\"optimizationLab.editor.fixJson\")}\n317:         </p>\n318:       )}\n319:       {mode === \"json\" || !dataset ? (\n320:         <textarea\n321:           data-testid={testId(\"dataset\")}\n322:           aria-label={t(\"optimizationLab.dataset\")}\n323:           className={`${inputClass} min-h-64 font-mono text-xs`}\n324:           disabled={disabled}\n325:           value={value}\n326:           onChange={(event) => onChange(event.target.value)}\n327:         />\n328:       ) : (\n329:         <fieldset disabled={disabled} className=\"space-y-4\" data-testid={testId(\"dataset-fields\")}>\n330:           <div className=\"grid gap-3 sm:grid-cols-2\">"
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "sha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "range": [
+        394,
+        407
+      ],
+      "text": "394:                       <Button\n395:                         type=\"button\"\n396:                         variant=\"outline\"\n397:                         data-testid={testId(`case-${index}-duplicate`)}\n398:                         disabled={dataset.cases.length >= 200}\n399:                         onClick={() => {\n400:                           setExpandedCase(dataset.cases.length);\n401:                           emit({\n402:                             ...dataset,\n403:                             cases: [...dataset.cases, duplicateEditableCase(dataset, index)],\n404:                           });\n405:                         }}\n406:                       >\n407:                         {t(\"optimizationLab.editor.duplicate\")}"
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "sha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "range": [
+        647,
+        660
+      ],
+      "text": "647:           <Button\n648:             type=\"button\"\n649:             variant=\"outline\"\n650:             data-testid={testId(\"case-add\")}\n651:             disabled={dataset.cases.length >= 200}\n652:             onClick={() => {\n653:               setExpandedCase(dataset.cases.length);\n654:               emit({ ...dataset, cases: [...dataset.cases, createEditableCase(dataset)] });\n655:             }}\n656:           >\n657:             {t(\"optimizationLab.editor.addCase\")}\n658:           </Button>\n659:         </fieldset>\n660:       )}"
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "sha256": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "range": [
+        77,
+        79
+      ],
+      "text": "77:   const [datasetText, setDatasetText] = useState(\n78:     () => (activeProjectId && datasetDrafts.get(activeProjectId)) ?? sampleDataset,\n79:   );"
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "sha256": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "range": [
+        121,
+        125
+      ],
+      "text": "121:   const editDataset = (text: string) => {\n122:     datasetRevision.current++;\n123:     setDatasetText(text);\n124:     setValidation(null);\n125:     if (activeProjectId) datasetDrafts.set(activeProjectId, text);"
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "sha256": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "range": [
+        584,
+        591
+      ],
+      "text": "584:             </div>\n585:             <p className=\"text-xs text-muted-foreground\">{t(\"optimizationLab.draftHelp\")}</p>\n586:             <DatasetEditor\n587:               value={datasetText}\n588:               onChange={editDataset}\n589:               validation={validation}\n590:               disabled={pending}\n591:             />"
+    }
+  ],
+  "productRuns": 0
+}

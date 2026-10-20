@@ -1,0 +1,35 @@
+{
+  "baseline": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "count": 1,
+  "observations": [
+    {
+      "id": "TOOLSUMMARY-R20-R1",
+      "title": "工具摘要 catch 仍直接把捕获值当 Error 读取；仅手工拒绝边界的旧机制关联",
+      "file": "packages/core/src/engine/tool-summary.ts",
+      "line": 48,
+      "status": "related weak trigger, not a new formal or candidate",
+      "oldRecords": [
+        {
+          "file": "docs/archive/review-2026-05-30/findings.json",
+          "jsonPath": "$[36]",
+          "mechanism": "non-Error caught value direct .message in openrouter-sync"
+        },
+        {
+          "file": "docs/archive/review-2026-05-30/findings.json",
+          "jsonPath": "$[119]",
+          "mechanism": "non-Error caught value direct .message in old Arena tool"
+        }
+      ],
+      "contract": "Leaf comment says returns null on failure; callback slot Promise<string> places no rejection-type annotation, but ordinary provider rejection producer not established.",
+      "trigger": "Owned fake async callback throws null or undefined while ordinary owned ToolCall/ToolResult arrays remain aligned.",
+      "observed": "Actual leaf rejects TypeError before warn spy; normal Error control resolves null with one warn; string rejection resolves null with error undefined.",
+      "dynamicEvidence": "docs/audit-2026-10-17-round20/evidence/toolsummary-first.raw.log",
+      "limitations": [
+        "Handcrafted callback rejection; no ordinary provider/aux client producing null/undefined proven.",
+        "TurnLoop imports/catch/dispatch and provider callback producer static only; no actual UI/run/LLM/transport outcome.",
+        "Old generic non-Error catch mechanism; no novel count or severity assigned."
+      ]
+    }
+  ],
+  "note": "Old non-Error catch mechanism in tool summary; hand-crafted callback rejection, no ordinary provider producer established."
+}

@@ -1,0 +1,102 @@
+[
+  {
+    "path": "packages/core/src/model-catalog/types.ts",
+    "range": [
+      66,
+      112
+    ],
+    "text": "export const modelPresetSchema = z.object({\n  value: id,\n  label: shortText.optional(),\n  maxContextTokens: boundedNumber.optional(),\n  maxOutputTokens: boundedNumber.optional(),\n  supportsVision: z.boolean().optional(),\n  /** Params this model supports; absent → no adjustable knobs. */\n  params: z.array(paramSpecSchema).max(64).optional(),\n});\n\nexport type ModelPreset = z.infer<typeof modelPresetSchema>;\n\nexport const catalogEntrySchema = z.object({\n  /** Template id, e.g. \"openai\" / \"openai-images\" / \"fal-video\". */\n  id,\n  /** Which 连接 page group this lands in. (audio = speech-to-text / voice input.) */\n  tag: z.enum([\"text\", \"image\", \"video\", \"audio\", \"speech\"]),\n  /**\n   * Provider/gateway identity for text (distinct from `protocol`), or concrete\n   * runtime adapter for image/video. OpenRouter is `openrouter` even though its\n   * text protocol is `openai-compat`.\n   */\n  adapterKind: id,\n  /** LLM client protocol (text entries). */\n  protocol: z.enum([\"openai-compat\", \"anthropic-style\"]).optional(),\n  /** HTTP shape — documentation/future only; runtime dispatches on adapterKind. */\n  shape: z.enum([\"generic-sync\", \"fal-queue\"]).optional(),\n  displayName: z.string().min(1).max(256),\n  description: z.string().max(4_096),\n  defaultBaseUrl: z.string().max(4_096),\n  defaultModel: shortText.optional(),\n  /** Whether this provider needs an API key (ollama/local = false). */\n  needsKey: z.boolean().optional(),\n  /**\n   * How a user entry with the same id as a built-in provider contributes model\n   * presets. Absent/\"replace\" preserves the legacy full-override behavior;\n   * \"merge\" treats modelPresets as per-model additions/overrides keyed by\n   * `value`, so future built-in models remain visible.\n   */\n  modelPresetsMode: z.enum([\"replace\", \"merge\"]).optional(),\n  modelPresets: z.array(modelPresetSchema).max(512).optional(),\n  signupUrl: z.string().max(4_096).optional(),\n  /** Whether the 连接 card offers a \"测试\" button (image=true, video=false). */\n  test: z.boolean().optional(),\n  /**\n   * Natural-language note on the params/usage this entry supports — surfaced to\n   * the agent via the dynamic GenerateImage/GenerateVideo tool description so it\n",
+    "selectedTextSha256": "46611f6e149de708722bbf480130358007ba49951836c140f53585e8f6529211",
+    "bytes": 2199
+  },
+  {
+    "path": "packages/core/src/model-catalog/index.ts",
+    "range": [
+      68,
+      106
+    ],
+    "text": "export function getMergedCatalog(): CatalogEntry[] {\n  const byId = new Map<string, CatalogEntry>();\n  for (const e of BUILTIN_CATALOG) byId.set(e.id, e);\n  for (const userEntry of loadUserCatalog()) {\n    const base = byId.get(userEntry.id);\n    if (!base || userEntry.modelPresetsMode !== \"merge\") {\n      byId.set(userEntry.id, userEntry); // legacy/full user override\n      continue;\n    }\n\n    const presets = new Map((base.modelPresets ?? []).map((preset) => [preset.value, preset]));\n    for (const preset of userEntry.modelPresets ?? []) presets.set(preset.value, preset);\n    byId.set(userEntry.id, {\n      ...base,\n      ...userEntry,\n      modelPresets: [...presets.values()],\n    });\n  }\n  return [...byId.values()];\n}\n\n/**\n * Look up a catalog entry by id (e.g. an instance's `catalogId`), falling back\n * to the first entry whose `adapterKind` matches `kindFallback`. Since an\n * adapterKind (e.g. \"openai\") can now back both a text and an image entry,\n * `tagFallback` disambiguates the fallback to the right group.\n */\nexport function findCatalogEntry(\n  catalog: CatalogEntry[],\n  id: string | undefined,\n  kindFallback?: string,\n  tagFallback?: CatalogEntry[\"tag\"],\n): CatalogEntry | undefined {\n  if (id) {\n    const exact = catalog.find((e) => e.id === id);\n    if (exact) return exact;\n  }\n  if (kindFallback) {\n    return catalog.find(\n",
+    "selectedTextSha256": "9628425e9e974ca20cedc517bc9b0d8f09241cbfff39ee2c3202d319b59a6b07",
+    "bytes": 1358
+  },
+  {
+    "path": "packages/core/src/model-catalog/save-entry.ts",
+    "range": [
+      118,
+      141
+    ],
+    "text": "export function saveCatalogEntry(\n  entry: unknown,\n  opts: { path: string; stamp: string },\n): SaveCatalogResult {\n  // Validate the incoming entry first — never write a malformed catalog.\n  const parsed = catalogEntrySchema.safeParse(entry);\n  if (!parsed.success) {\n    return { ok: false, error: `invalid catalog entry: ${parsed.error.issues.map((i) => i.message).join(\"; \")}` };\n  }\n  const valid: CatalogEntry = parsed.data;\n  if (!BACKUP_STAMP_RE.test(opts.stamp)) return { ok: false, error: \"invalid backup stamp\" };\n  let release: (() => void) | undefined;\n  try {\n    release = acquireFileLock(opts.path);\n    const existing = readExistingCatalog(opts.path);\n    let backup = existing ? `${opts.path}.bak-${opts.stamp}` : undefined;\n    if (existing && !writeBackup(backup!, existing.raw)) backup = undefined;\n    const action: \"added\" | \"updated\" = existing?.entries.some((e) => e.id === valid.id)\n      ? \"updated\"\n      : \"added\";\n    writeCatalogAtomic(opts.path, upsertCatalogEntry(existing?.entries ?? [], valid));\n    return { ok: true, action, backup };\n  } catch (e) {\n    return { ok: false, error: `could not write catalog: ${e instanceof Error ? e.message : String(e)}` };\n",
+    "selectedTextSha256": "05946275058a40e0419fa01af92cf8c34183cd4bd978801f133c2e1097beab15",
+    "bytes": 1197
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+    "range": [
+      186,
+      241
+    ],
+    "text": "function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvider | null {\n  const settings = new SettingsManager(cwd, \"full\").get();\n\n  // 0. Unified store (统一模型接入方案): modelConnections (tag=image) +\n  // credentials. Takes precedence over the legacy imageGen.providers[] so the\n  // unified connection page drives image generation. Falls through to the\n  // legacy paths below when no image connection is configured.\n  const conns = (settings as { modelConnections?: GenInstanceSource[] }).modelConnections;\n  const creds = (settings as { credentials?: CredentialSource[] }).credentials;\n  if (Array.isArray(conns) && conns.some((c) => c.tag === \"image\")) {\n    const list = genInstancesFromConnections(\n      conns as never[],\n      (Array.isArray(creds) ? creds : []) as never[],\n      getMergedCatalog(),\n      \"image\",\n    ) as unknown as GenInstance[];\n    const def = (settings as { defaults?: { image?: string } }).defaults?.image;\n    const resolved = resolveFromGenList(list, prefer, def);\n    if (resolved) return resolved;\n    if (prefer) return null; // explicit request not usable → don't silently fall back\n  }\n\n  // 1. Canonical imageGen config.\n  const imageGen = (\n    settings as { imageGen?: { defaultProvider?: string; providers?: GenInstance[] } }\n  ).imageGen;\n  if (imageGen && Array.isArray(imageGen.providers) && imageGen.providers.length > 0) {\n    const list = imageGen.providers;\n    const usable = (p: GenInstance): boolean =>\n      !!effectiveApiKey(p, list) && getImageProvider(p.kind) !== null;\n    const credsOf = (p: GenInstance): ImageProviderCreds => ({\n      baseUrl: p.baseUrl,\n      apiKey: effectiveApiKey(p, list)!,\n    });\n\n    if (prefer) {\n      // Explicit request — respect the user's intent. If that exact instance\n      // isn't usable (no key / no adapter), DON'T silently use another one.\n      const chosen = list.find((p) => p.id === prefer);\n      if (chosen && usable(chosen)) {\n        return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };\n      }\n      return null;\n    }\n\n    // No explicit request: prefer defaultProvider, but if it isn't usable\n    // (e.g. configured but no key yet) fall back to the first usable entry,\n    // rather than erroring. (User-confirmed: default-with-no-key → fall back.)\n    const preferred = imageGen.defaultProvider\n      ? list.find((p) => p.id === imageGen.defaultProvider)\n      : undefined;\n    const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);\n    if (chosen) {\n      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };\n    }\n    return null;\n",
+    "selectedTextSha256": "a1f2ac6ea4518f2f6bef40c577080e3d195928a4c685cd85143190a599bde2d0",
+    "bytes": 2696
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+    "range": [
+      424,
+      445
+    ],
+    "text": "  const resolved = resolveImageProvider(cwd, preferKind);\n  if (!resolved) {\n    return preferKind\n      ? `Error: no image provider \"${preferKind}\" is available (unknown id/kind, or it has no API key). Configure it in your code-shell settings, or omit \\`provider\\` to use the default.`\n      : \"Error: no image provider available. Configure an image provider (including an apiKey) \" +\n          \"in your code-shell settings to use GenerateImage.\";\n  }\n\n  const adapter = getImageProvider(resolved.kind, modelTraceFetch(globalThis.fetch));\n  if (!adapter) {\n    return `Error: image generation is not supported for provider kind \"${resolved.kind}\".`;\n  }\n\n  // Model precedence: call arg > instance defaultModel (imageGen) > kind default.\n  const model =\n    overrideModel ?? resolved.defaultModel ?? DEFAULT_IMAGE_MODEL[resolved.kind] ?? \"gpt-image-2\";\n\n  let result: ImageGenerateResult | undefined;\n  try {\n    await withModelTraceContext({ workspacePath: cwd, purpose: \"image_generation\" }, () =>\n      withModelTrace(\n        {\n",
+    "selectedTextSha256": "d3bd3994c4b7cf88c8d0994010ee72161e21e31050baeb9bb44558c4c5d2b4cc",
+    "bytes": 1033
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/generate-video.ts",
+    "range": [
+      234,
+      265
+    ],
+    "text": "function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoProvider | null {\n  const settings = new SettingsManager(cwd, \"full\").get();\n\n  // 0. Unified store (统一模型接入方案): modelConnections (tag=video) +\n  // credentials, taking precedence over legacy videoGen.providers[].\n  const conns = (settings as { modelConnections?: { tag?: string }[] }).modelConnections;\n  const creds = (settings as { credentials?: unknown[] }).credentials;\n  if (Array.isArray(conns) && conns.some((c) => c.tag === \"video\")) {\n    const list = genInstancesFromConnections(\n      conns as never[],\n      (Array.isArray(creds) ? creds : []) as never[],\n      getMergedCatalog(),\n      \"video\",\n    ) as unknown as VideoInstance[];\n    const def = (settings as { defaults?: { video?: string } }).defaults?.video;\n    const usable = (p: VideoInstance): boolean => !!p.apiKey && getVideoProvider(p.kind) !== null;\n    const credsOf = (p: VideoInstance): VideoProviderCreds => ({\n      baseUrl: p.baseUrl,\n      apiKey: p.apiKey!,\n    });\n    if (preferKind) {\n      const chosen = list.find((p) => (p.id === preferKind || p.kind === preferKind) && usable(p));\n      if (chosen)\n        return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };\n      return null;\n    }\n    const preferred = def ? list.find((p) => p.id === def) : undefined;\n    const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);\n    if (chosen)\n      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };\n    if (def || preferKind) return null;\n  }\n",
+    "selectedTextSha256": "21b89d9221040353ce0d928fa7faad233c31f775e67540cf1af7d62cd63a924b",
+    "bytes": 1631
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/generate-video.ts",
+    "range": [
+      350,
+      374
+    ],
+    "text": "  let defaultModel: string | undefined;\n  if (injectedProvider) {\n    adapter = injectedProvider;\n    kind = injectedProvider.kind;\n    creds = { baseUrl: \"test\", apiKey: \"test\" };\n  } else {\n    const resolved = resolveVideoProvider(cwd, preferKind);\n    if (!resolved) {\n      return preferKind\n        ? `Error: no video provider of kind \"${preferKind}\" available. Configure it (with an apiKey) in settings.`\n        : \"Error: no video provider available. Video generation requires a configured video provider (none are wired yet).\";\n    }\n    const a = getVideoProvider(resolved.kind);\n    if (!a) return `Error: video generation is not supported for provider kind \"${resolved.kind}\".`;\n    adapter = a;\n    kind = resolved.kind;\n    creds = resolved.creds;\n    defaultModel = resolved.defaultModel;\n  }\n\n  const model = overrideModel ?? defaultModel ?? DEFAULT_VIDEO_MODEL[kind] ?? kind;\n\n  // Normalize image inputs (local paths → uploaded URLs) before submit. The\n  // provider only ever receives URLs and routes t2v/i2v/ref2v by count.\n  const uploader = getImageUploader(kind) ?? getImageUploader(\"fal\")!;\n",
+    "selectedTextSha256": "7b824d4d6c0a161cb13bc932d3b1c3de77c3e641845e03886b0e3106ef95f53e",
+    "bytes": 1117
+  },
+  {
+    "path": "packages/core/src/model-catalog/gen-connections.test.ts",
+    "range": [
+      1,
+      60
+    ],
+    "text": "/**\n * genInstancesFromConnections — project unified modelConnections (tag=image or\n * video) + credentials into the {kind, baseUrl, apiKey, defaultModel} shape the\n * image/video runtime resolvers consume, so image/video also flow through the\n * unified credentials store. Key comes from the referenced credential.\n * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §6.\n */\nimport { describe, test, expect } from \"bun:test\";\nimport { genInstancesFromConnections } from \"./gen-connections.js\";\nimport type { CatalogEntry } from \"./types.js\";\nimport type { ModelInstance, Credential } from \"./resolve.js\";\n\nconst CATALOG: CatalogEntry[] = [\n  {\n    id: \"openai-images\",\n    tag: \"image\",\n    adapterKind: \"openai\",\n    displayName: \"OpenAI Images\",\n    description: \"x\",\n    defaultBaseUrl: \"https://api.openai.com/v1\",\n    defaultModel: \"gpt-image-2\",\n  },\n  {\n    id: \"fal-video\",\n    tag: \"video\",\n    adapterKind: \"fal\",\n    displayName: \"fal\",\n    description: \"x\",\n    defaultBaseUrl: \"https://queue.fal.run\",\n  },\n];\n\nconst CREDS: Credential[] = [\n  { id: \"openai-acct\", catalogId: \"openai-images\", apiKey: \"sk-img\" },\n  { id: \"fal-acct\", catalogId: \"fal-video\", apiKey: \"sk-fal\" },\n];\n\ndescribe(\"genInstancesFromConnections\", () => {\n  test(\"projects image connections to {id, kind, baseUrl, apiKey, defaultModel}\", () => {\n    const conns: ModelInstance[] = [\n      { id: \"img1\", catalogId: \"openai-images\", tag: \"image\", model: \"gpt-image-2\", credentialId: \"openai-acct\" },\n    ];\n    const out = genInstancesFromConnections(conns, CREDS, CATALOG, \"image\");\n    expect(out).toHaveLength(1);\n    expect(out[0]).toMatchObject({\n      id: \"img1\",\n      kind: \"openai\",\n      baseUrl: \"https://api.openai.com/v1\",\n      apiKey: \"sk-img\",\n      defaultModel: \"gpt-image-2\",\n    });\n  });\n\n  test(\"filters by tag (image vs video)\", () => {\n    const conns: ModelInstance[] = [\n      { id: \"img1\", catalogId: \"openai-images\", tag: \"image\", model: \"m\", credentialId: \"openai-acct\" },\n      { id: \"vid1\", catalogId: \"fal-video\", tag: \"video\", model: \"m\", credentialId: \"fal-acct\" },\n    ];\n    expect(genInstancesFromConnections(conns, CREDS, CATALOG, \"image\").map((i) => i.id)).toEqual([\"img1\"]);\n    expect(genInstancesFromConnections(conns, CREDS, CATALOG, \"video\").map((i) => i.id)).toEqual([\"vid1\"]);\n",
+    "selectedTextSha256": "fea5b4fa7fdfc36b203938f832e5037860ca4caee50c5d89f79fb21f92049279",
+    "bytes": 2331
+  },
+  {
+    "path": "packages/core/src/model-catalog/gen-connections.test.ts",
+    "range": [
+      72,
+      85
+    ],
+    "text": "  test(\"connection model overrides the catalog defaultModel\", () => {\n    const conns: ModelInstance[] = [\n      { id: \"a\", catalogId: \"openai-images\", tag: \"image\", model: \"dall-e-3\", credentialId: \"openai-acct\" },\n    ];\n    expect(genInstancesFromConnections(conns, CREDS, CATALOG, \"image\")[0]!.defaultModel).toBe(\"dall-e-3\");\n  });\n\n  test(\"unknown catalogId connection is skipped\", () => {\n    const conns: ModelInstance[] = [\n      { id: \"ok\", catalogId: \"openai-images\", tag: \"image\", model: \"m\", credentialId: \"openai-acct\" },\n      { id: \"bad\", catalogId: \"ghost\", tag: \"image\", model: \"m\", credentialId: \"openai-acct\" },\n    ];\n    expect(genInstancesFromConnections(conns, CREDS, CATALOG, \"image\").map((i) => i.id)).toEqual([\"ok\"]);\n  });\n",
+    "selectedTextSha256": "a52ee27d3b4446a2c8ef87b86273643ffd6b65aa91e2e8dbf4949d7b127c5965",
+    "bytes": 750
+  },
+  {
+    "path": "packages/core/src/model-catalog/upsert.test.ts",
+    "range": [
+      29,
+      76
+    ],
+    "text": "describe(\"upsertCatalogEntry\", () => {\n  test(\"adds a new entry to an empty list\", () => {\n    const out = upsertCatalogEntry([], A);\n    expect(out).toEqual([A]);\n  });\n\n  test(\"appends when the id is new\", () => {\n    const out = upsertCatalogEntry([A], B);\n    expect(out.map((e) => e.id)).toEqual([\"prov-a\", \"prov-b\"]);\n  });\n\n  test(\"replaces the existing entry with the same id (update), in place\", () => {\n    const updated: CatalogEntry = { ...A, displayName: \"A renamed\", defaultModel: \"m1\" };\n    const out = upsertCatalogEntry([A, B], updated);\n    expect(out).toHaveLength(2);\n    expect(out[0]!.displayName).toBe(\"A renamed\");\n    expect(out[0]!.defaultModel).toBe(\"m1\");\n    expect(out[1]).toEqual(B); // others untouched, order preserved\n  });\n\n  test(\"does not mutate the input array\", () => {\n    const input = [A];\n    upsertCatalogEntry(input, B);\n    expect(input).toEqual([A]);\n  });\n});\n\ndescribe(\"upsertModelPreset\", () => {\n  test(\"appends a new model without changing existing presets\", () => {\n    const existing = [{ value: \"model-a\", label: \"A\" }];\n    expect(upsertModelPreset(existing, { value: \"model-b\", label: \"B\" })).toEqual([\n      { value: \"model-a\", label: \"A\" },\n      { value: \"model-b\", label: \"B\" },\n    ]);\n    expect(existing).toEqual([{ value: \"model-a\", label: \"A\" }]);\n  });\n\n  test(\"updates an existing model by value without duplicating it\", () => {\n    expect(\n      upsertModelPreset(\n        [\n          { value: \"model-a\", label: \"Old\" },\n          { value: \"model-b\", label: \"B\" },\n        ],\n        { value: \"model-a\", label: \"New\" },\n      ),\n    ).toEqual([\n      { value: \"model-a\", label: \"New\" },\n",
+    "selectedTextSha256": "21bc6b3c41cbab914aa076f524139486f6d3763b554227a31c2068bdc8aac18f",
+    "bytes": 1657
+  }
+]

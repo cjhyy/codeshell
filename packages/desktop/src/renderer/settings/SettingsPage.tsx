@@ -38,6 +38,7 @@ import { MemorySection } from "./MemorySection";
 import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
 import { ComputerUseSettings } from "./ComputerUseSettings";
+import { CloudAccountSettings } from "./CloudAccountSettings";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { ProjectInstructionsSection } from "../project-config/ProjectInstructionsSection";
 import { ProjectOverviewSection } from "./ProjectOverviewSection";
@@ -69,11 +70,13 @@ import type { TFunction } from "../i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
+import { useSettingsNavigationFocus } from "./useSettingsNavigationFocus";
 import { cn } from "@/lib/utils";
 import { NotificationHistory } from "../ui/NotificationHistory";
 
 export type SettingsModuleId =
   | "project-overview"
+  | "account"
   | "general"
   | "computer-use"
   | "appearance"
@@ -130,7 +133,7 @@ function SettingsSearchField({
 }) {
   const { t } = useT();
   return (
-    <div className="relative">
+    <div className="relative" data-settings-search-field>
       <Search
         className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
         aria-hidden
@@ -242,6 +245,7 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
           Icon: SettingsIcon,
           scopes: ["user", "project"],
         },
+        { id: "account", label: t("settingsX.cloudAccount.manage"), Icon: User },
         { id: "appearance", label: t("settingsX.page.appearance"), Icon: Sun },
         {
           id: "config",
@@ -410,9 +414,16 @@ export function SettingsPage({
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const narrowSearchRef = useRef<HTMLInputElement>(null);
+  const desktopNavigationRef = useRef<HTMLElement>(null);
+  const narrowNavigationRef = useRef<HTMLDivElement>(null);
   const moduleHeadingRef = useRef<HTMLHeadingElement>(null);
   const contentRef = useRef<HTMLElement>(null);
-  const focusModuleHeading = useRef(false);
+  const focusModuleHeading = useRef<HTMLElement | null>(null);
+  const focusInitialModuleHeading = useRef(!!initialModule);
+  const restoreNavigationAfterPopupClose = useSettingsNavigationFocus(
+    desktopNavigationRef,
+    narrowNavigationRef,
+  );
   const [scopeState, setScopeState] = useState<SettingsScope>(() =>
     initialProjectPath ? { kind: "project", path: initialProjectPath } : { kind: "user" },
   );
@@ -462,6 +473,12 @@ export function SettingsPage({
     // A newly selected module starts at its heading, even when the previous
     // module was scrolled far down or the window is short.
     if (contentRef.current) contentRef.current.scrollTop = 0;
+    // Explicit links replace the surface that owned focus (e.g. the account
+    // menu). Start keyboard navigation at the destination, once per visit.
+    if (focusInitialModuleHeading.current) {
+      focusInitialModuleHeading.current = false;
+      moduleHeadingRef.current?.focus({ preventScroll: true });
+    }
   }, [contentTargetKey]);
 
   useEffect(() => {
@@ -510,10 +527,12 @@ export function SettingsPage({
   };
 
   useLayoutEffect(() => {
-    if (!focusModuleHeading.current) return;
-    focusModuleHeading.current = false;
-    moduleHeadingRef.current?.focus();
-  }, [active]);
+    const source = focusModuleHeading.current;
+    focusModuleHeading.current = null;
+    if (source && (document.activeElement === source || document.activeElement === document.body)) {
+      moduleHeadingRef.current?.focus();
+    }
+  }, [active, query]);
 
   const changeScope = (next: SettingsScope) => {
     setActive((current) =>
@@ -569,7 +588,13 @@ export function SettingsPage({
                   : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
               )}
               aria-current={active === id ? "page" : undefined}
-              onClick={() => selectModule(id)}
+              data-settings-module={id}
+              onClick={(event) => {
+                if (narrowNavigationRef.current?.contains(event.currentTarget)) {
+                  focusModuleHeading.current = event.currentTarget;
+                }
+                selectModule(id);
+              }}
             >
               <Icon size={15} className="shrink-0" />
               <span className="min-w-0 flex-1 truncate text-left">{label}</span>
@@ -592,7 +617,12 @@ export function SettingsPage({
             variant="outline"
             size="sm"
             className="mt-3 h-7 rounded-lg text-xs"
-            onClick={() => setQuery("")}
+            onClick={() => {
+              setQuery("");
+              [searchRef.current, narrowSearchRef.current]
+                .find((input) => input?.getClientRects().length)
+                ?.focus();
+            }}
           >
             {t("settingsX.page.clearSearch")}
           </Button>
@@ -605,6 +635,7 @@ export function SettingsPage({
     <div className="h-full min-h-0 min-w-0 overflow-hidden bg-background">
       <div className="flex h-full min-h-0 max-[720px]:flex-col">
         <nav
+          ref={desktopNavigationRef}
           aria-label={t("settingsX.page.settingsNav")}
           className={cn(
             "flex min-h-0 w-60 shrink-0 flex-col border-r border-border/70 bg-muted/25 max-[1100px]:w-56 max-[720px]:hidden",
@@ -616,6 +647,7 @@ export function SettingsPage({
               variant="ghost"
               size="sm"
               className="mb-3 h-8 w-full justify-start gap-2 rounded-lg px-2 text-xs text-muted-foreground"
+              data-settings-back
               onClick={onBack}
             >
               <ArrowLeft size={14} />
@@ -630,7 +662,7 @@ export function SettingsPage({
                 {t("settingsX.page.settings")}
               </span>
               <span className="ml-auto">
-                <NotificationHistory />
+                <NotificationHistory onCloseAutoFocus={restoreNavigationAfterPopupClose} />
               </span>
             </div>
 
@@ -643,6 +675,7 @@ export function SettingsPage({
         </nav>
 
         <div
+          ref={narrowNavigationRef}
           className={cn(
             "hidden shrink-0 border-b border-border/70 bg-muted/25 px-3 pb-3 max-[720px]:flex max-[720px]:flex-col max-[720px]:gap-2",
             showTrafficLightGutter ? "pt-9" : "pt-3",
@@ -654,6 +687,7 @@ export function SettingsPage({
               size="icon"
               className="size-8 shrink-0"
               aria-label={t("settingsX.page.back")}
+              data-settings-back
               onClick={onBack}
             >
               <ArrowLeft className="size-4" aria-hidden />
@@ -663,9 +697,11 @@ export function SettingsPage({
               options={mobileOptions}
               ariaLabel={t("settingsX.page.settingsNav")}
               className="min-w-0 flex-1 rounded-lg bg-background"
+              triggerProps={{ "data-settings-module-picker": true }}
+              onCloseAutoFocus={restoreNavigationAfterPopupClose}
               onChange={selectModule}
             />
-            <NotificationHistory />
+            <NotificationHistory onCloseAutoFocus={restoreNavigationAfterPopupClose} />
           </div>
           <SettingsSearchField inputRef={narrowSearchRef} query={query} onChange={setQuery} />
           {query.trim() && (
@@ -729,7 +765,7 @@ export function SettingsPage({
                     ),
                   }))}
                   onSelect={(id) => {
-                    focusModuleHeading.current = true;
+                    focusModuleHeading.current = document.activeElement as HTMLElement;
                     selectModule(id);
                   }}
                 />
@@ -741,6 +777,7 @@ export function SettingsPage({
                 />
               )}
               {active === "computer-use" && <ComputerUseSettings />}
+              {active === "account" && <CloudAccountSettings />}
               {active === "appearance" && <AppearanceSection />}
               {active === "config" && (
                 <>

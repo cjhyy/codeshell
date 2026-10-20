@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-10-17T16:06:06.688861+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lines": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "beforeRootCurrentBodyAndNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/run-tooling.ts",
+      "bytes": 25457,
+      "lines": 586,
+      "sha256": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "beforeRootCurrentBodyAndNavigation": true
+    }
+  ]
+}

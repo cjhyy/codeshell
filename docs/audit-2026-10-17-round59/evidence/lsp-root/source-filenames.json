@@ -1,0 +1,10 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "packages/coding/src/lsp"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/coding/src/lsp/manager-lifecycle.test.ts\npackages/coding/src/lsp/client.ts\npackages/coding/src/lsp/servers.ts\npackages/coding/src/lsp/root-path.ts\npackages/coding/src/lsp/root-path.test.ts\npackages/coding/src/lsp/manager.test.ts\npackages/coding/src/lsp/manager.ts\n",
+  "stderr": ""
+}

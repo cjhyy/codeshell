@@ -1,0 +1,53 @@
+{
+  "frozenCommit": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "formalCount": 0,
+  "candidateCount": 1,
+  "cleanFirstRuns": [
+    {
+      "name": "room history existing baseline",
+      "files": [
+        "packages/web/src/lib/roomHistory.test.ts"
+      ],
+      "pass": 8,
+      "fail": 0,
+      "skip": 0,
+      "expect": 9,
+      "completed": true,
+      "rawLog": "evidence/web-room-history.first.raw.log",
+      "exitReceipt": "evidence/web-room-history.first.exit.json"
+    }
+  ],
+  "failedFirstRuns": [
+    {
+      "name": "user display focused fixture",
+      "file": "evidence/web-user-display.test.ts",
+      "pass": 0,
+      "fail": 1,
+      "error": 1,
+      "skip": null,
+      "expect": null,
+      "completed": false,
+      "exitCode": 1,
+      "reason": "Owned fixture import path has one too many parent traversals; module loading failed before test bodies",
+      "disposition": "SKIP entire display projection direction; original fixture preserved, no correction, rerun, extraction or existing-display alternate validation",
+      "rawLog": "evidence/web-user-display.first.raw.log",
+      "exitReceipt": "evidence/web-user-display.first.exit.json"
+    }
+  ],
+  "successfulTotals": {
+    "files": 1,
+    "tests": 8,
+    "expect": 9,
+    "failed": 0,
+    "skipped": 0
+  },
+  "newFocusedSuccessfulTests": 0,
+  "productWrites": 0,
+  "reruns": 0,
+  "dynamicScope": "Existing pure room history baseline only",
+  "staticScope": "Web format and user display projection, related normal producers/consumers and contracts",
+  "excluded": [
+    "Old i18n/Diff/Questions/JSON summary/recorder/Discord failed directions",
+    "Real storage/browser/UI/network/Engine/provider/account/native execution"
+  ]
+}

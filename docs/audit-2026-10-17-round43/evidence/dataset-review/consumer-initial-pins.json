@@ -1,0 +1,20 @@
+{
+  "atUTC": "2026-10-17T14:41:22.430235+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "bytes": 27688,
+      "sha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "lineCount": 672,
+      "beforeCurrentNavigationAndBody": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "bytes": 41600,
+      "sha256": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "lineCount": 995,
+      "beforeCurrentNavigationAndBody": true
+    }
+  ],
+  "productRuns": 0
+}

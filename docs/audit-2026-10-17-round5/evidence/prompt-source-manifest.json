@@ -1,0 +1,230 @@
+{
+  "frozenHead": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "branch": "codex/audit/prompt-profile-web-round5-20261017",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/composer.ts",
+      "bytes": 18842,
+      "sha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "frozenBlobSha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/instruction-scanner.ts",
+      "bytes": 7750,
+      "sha256": "a29098029f2ed38898b8ede238d6e4f20d14278a49c9200c79e3f74da6730e6d",
+      "frozenBlobSha256": "a29098029f2ed38898b8ede238d6e4f20d14278a49c9200c79e3f74da6730e6d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/instruction-scanner.test.ts",
+      "bytes": 4107,
+      "sha256": "c99c1a17f8163fda9beeb172b128f001d64ad4c43a741142d14267bedde7426d",
+      "frozenBlobSha256": "c99c1a17f8163fda9beeb172b128f001d64ad4c43a741142d14267bedde7426d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/section-loader.ts",
+      "bytes": 1723,
+      "sha256": "aafec0a8f91a7b9c6a54f10d337bcca74aa9c52c18e81cb6ab671e60c4c586bb",
+      "frozenBlobSha256": "aafec0a8f91a7b9c6a54f10d337bcca74aa9c52c18e81cb6ab671e60c4c586bb",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/section-cache.ts",
+      "bytes": 970,
+      "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "frozenBlobSha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/composer-tool-listing.test.ts",
+      "bytes": 3793,
+      "sha256": "693008e80411e780b4465e6dc62f52d84e7469b0efe98125c472955a08d35606",
+      "frozenBlobSha256": "693008e80411e780b4465e6dc62f52d84e7469b0efe98125c472955a08d35606",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/__tests__/composer-instructions-compat.test.ts",
+      "bytes": 1437,
+      "sha256": "94bec4c72b493c59ad7de42ecfdae61e608a141137d26272541f4a8874f335b2",
+      "frozenBlobSha256": "94bec4c72b493c59ad7de42ecfdae61e608a141137d26272541f4a8874f335b2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/preset/index.ts",
+      "bytes": 10423,
+      "sha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "frozenBlobSha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/preset/browser-section-gate.test.ts",
+      "bytes": 1156,
+      "sha256": "ee8f6b9033ea61de58bd6f3efebffb277c52f5a858f17ddf61ae1997678da6ef",
+      "frozenBlobSha256": "ee8f6b9033ea61de58bd6f3efebffb277c52f5a858f17ddf61ae1997678da6ef",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/sections/base.md",
+      "bytes": 6818,
+      "sha256": "b7bc93f3583a455b9aae6e204429ad225ecc53d91336de6be3baed365303ca5a",
+      "frozenBlobSha256": "b7bc93f3583a455b9aae6e204429ad225ecc53d91336de6be3baed365303ca5a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/sections/harness-base.md",
+      "bytes": 870,
+      "sha256": "35ade568a2cc97cd3cf084ee392ab88edd32be2ca40a557e7c8f07f9740e4f6c",
+      "frozenBlobSha256": "35ade568a2cc97cd3cf084ee392ab88edd32be2ca40a557e7c8f07f9740e4f6c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/sections/orchestration.md",
+      "bytes": 5137,
+      "sha256": "b2fac538e38b30af1c67e7ff72b32c0c916c681b33891fb4916a3264a863ee7e",
+      "frozenBlobSha256": "b2fac538e38b30af1c67e7ff72b32c0c916c681b33891fb4916a3264a863ee7e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/sections/browser.md",
+      "bytes": 7582,
+      "sha256": "3c060e86a0d2e6c468ca487e6616c1ff7c5e17d30630d319579b8b5241b46a17",
+      "frozenBlobSha256": "3c060e86a0d2e6c468ca487e6616c1ff7c5e17d30630d319579b8b5241b46a17",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/sections/tone.md",
+      "bytes": 1008,
+      "sha256": "7cfc0fbfa1399c01d5b551a11f868d08e39c4e6b801982286af15f22b9a7abce",
+      "frozenBlobSha256": "7cfc0fbfa1399c01d5b551a11f868d08e39c4e6b801982286af15f22b9a7abce",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/sections/context-notes.md",
+      "bytes": 1510,
+      "sha256": "dd9513d6fb887619588b12aae91cf2d9ed37b90185103aca94d704a97eda5ca8",
+      "frozenBlobSha256": "dd9513d6fb887619588b12aae91cf2d9ed37b90185103aca94d704a97eda5ca8",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "bytes": 3951,
+      "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "frozenBlobSha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 208949,
+      "sha256": "a976791ffcc88f68a7106960d397cff2fec872dc0390d91f2b7c97731cbe78c3",
+      "frozenBlobSha256": "a976791ffcc88f68a7106960d397cff2fec872dc0390d91f2b7c97731cbe78c3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-setup.ts",
+      "bytes": 5936,
+      "sha256": "a1bd2efe2a676b7091de0095f6acd9efee2ebbadd9696fe1617308d909126d4a",
+      "frozenBlobSha256": "a1bd2efe2a676b7091de0095f6acd9efee2ebbadd9696fe1617308d909126d4a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-tooling.ts",
+      "bytes": 24624,
+      "sha256": "068f79fd00a123973b3da416e7f1773790d8da9d310a8f11b94c377e7076afeb",
+      "frozenBlobSha256": "068f79fd00a123973b3da416e7f1773790d8da9d310a8f11b94c377e7076afeb",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/product/types.ts",
+      "bytes": 4091,
+      "sha256": "df7cfd80072fb9e5942eb6d1d4608e1c2ed30570920fa37d46424d693f3bc6fa",
+      "frozenBlobSha256": "df7cfd80072fb9e5942eb6d1d4608e1c2ed30570920fa37d46424d693f3bc6fa",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/product/define.ts",
+      "bytes": 6752,
+      "sha256": "a6c80d1da8413b86d9baa954aad66d9892718ac49b86b3dea827bbe503aa09e1",
+      "frozenBlobSha256": "a6c80d1da8413b86d9baa954aad66d9892718ac49b86b3dea827bbe503aa09e1",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "bytes": 10967,
+      "sha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "frozenBlobSha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/capability-runtime.ts",
+      "bytes": 3681,
+      "sha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "frozenBlobSha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/prompt/coding.md",
+      "bytes": 5065,
+      "sha256": "00b2f4c4bf89ff2330968a6eb2718338755a4db16e51e9d3329575a0f5baf821",
+      "frozenBlobSha256": "00b2f4c4bf89ff2330968a6eb2718338755a4db16e51e9d3329575a0f5baf821",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/preset.test.ts",
+      "bytes": 2147,
+      "sha256": "0df703d67624827da7f4c2478d8f0962ef69f0a8c4300f3a80349dd7e7aca048",
+      "frozenBlobSha256": "0df703d67624827da7f4c2478d8f0962ef69f0a8c4300f3a80349dd7e7aca048",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBlobSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "bytes": 6518,
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "frozenBlobSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  ]
+}

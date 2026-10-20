@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round18/evidence/root-environment.test.ts:
+(pass) ordinary discovery descriptor shape only; no identity/storage/navigation > accepts the three statically documented producer shapes [1.42ms]
+(pass) ordinary discovery descriptor shape only; no identity/storage/navigation > ordinary localized display names retain their source values [0.14ms]
+(pass) ordinary discovery descriptor shape only; no identity/storage/navigation > checking a frozen normal descriptor does not change it [0.17ms]
+(pass) ordinary discovery descriptor shape only; no identity/storage/navigation > nonempty display-name length contract has ordinary boundary controls
+(pass) ordinary discovery descriptor shape only; no identity/storage/navigation > version and kind-to-entryPath shape are checked without any destination use
+(pass) ordinary discovery descriptor shape only; no identity/storage/navigation > plain non-descriptor values are negative structural controls
+
+ 6 pass
+ 0 fail
+ 22 expect() calls
+Ran 6 tests across 1 file. [111.00ms]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.

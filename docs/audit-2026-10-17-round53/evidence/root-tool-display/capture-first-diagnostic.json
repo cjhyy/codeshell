@@ -1,0 +1,10 @@
+{
+  "tool": "cd4c16",
+  "exitCode": 1,
+  "kind": "Metadata excerpt capture IndexError",
+  "cause": "Reader requested renderer.ts through165 although initialpin reports163lines; source sed displayed only existing bytes, capture stopped before writing output.",
+  "rawStderrSaved": false,
+  "stderrTranscription": "IndexError: list index out of range",
+  "productFailure": false,
+  "productRerun": false
+}

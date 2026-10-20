@@ -1,0 +1,11 @@
+{
+  "atUTC": "2026-10-17T16:58:31.796803+00:00",
+  "path": "packages/desktop/src/renderer/app/useRunController.ts",
+  "displayedLineRanges": [
+    [
+      1110,
+      1132
+    ]
+  ],
+  "numbered": "1110:       })\n1111:       .finally(() => setCompactingForKey(bucket, false));\n1112:   };\n1113: \n1114:   // Extend the running goal (TODO 3.1). Fired by the \"approaching limit\" extend\n1115:   // button; opts target whichever ceiling is closest (turns or stop-blocks).\n1116:   const extendGoal = (opts: {\n1117:     addTurns?: number;\n1118:     addStopBlocks?: number;\n1119:     addTokenBudget?: number;\n1120:     addTimeBudgetMs?: number;\n1121:   }): void => {\n1122:     const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);\n1123:     if (!engineSessionId) return;\n1124:     void window.codeshell\n1125:       .goalExtend(engineSessionId, opts)\n1126:       .catch((e) => window.codeshell.log(\"goal.extend.failed\", { error: String(e) }));\n1127:   };\n1128: \n1129:   const decideEnvelope = (\n1130:     env: ApprovalRequestEnvelope,\n1131:     decision: \"approve\" | \"deny\",\n1132:     reason?: string,"
+}

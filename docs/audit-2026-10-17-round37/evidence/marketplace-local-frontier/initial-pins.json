@@ -1,0 +1,121 @@
+{
+  "capturedUTC": "2026-10-17T12:43:35.170046+00:00",
+  "scope": "Before any product semantic read by this frontier. CODESHELL was read first per instruction and is late-pinned metadata. Other entries are pins, not coverage.",
+  "parentContext": "99e9 (Root supplied frozen Round34 abbreviation; no Git verification by this reviewer)",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "semanticReadBeforeThisPin": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "lineCount": 236,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/core/src/plugins/schemas.ts",
+      "bytes": 6630,
+      "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "lineCount": 183,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/core/src/plugins/types.ts",
+      "bytes": 3237,
+      "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+      "lineCount": 98,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 5601,
+      "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "lineCount": 157,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "bytes": 6280,
+      "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "lineCount": 161,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "bytes": 3079,
+      "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "lineCount": 89,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "lineCount": 612,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "lineCount": 323,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "lineCount": 39,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "bytes": 2011,
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "lineCount": 39,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+      "bytes": 26214,
+      "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "lineCount": 711,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "lineCount": 530,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+      "bytes": 20113,
+      "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "lineCount": 500,
+      "semanticReadBeforeThisPin": false
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-commands-registration.ts",
+      "bytes": 1289,
+      "sha256": "04a2532a74dbec89d006ed3707fcc300d8fc8a106d2f7f3e7f98a400da7cd31b",
+      "lineCount": 38,
+      "semanticReadBeforeThisPin": false
+    }
+  ]
+}

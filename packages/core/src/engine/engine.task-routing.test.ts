@@ -115,7 +115,7 @@ afterEach(async () => {
 });
 
 describe("Engine task routing consumer", () => {
-  test("routes local files and source reading independently at each Run boundary", async () => {
+  test("retains loaded schemas while adding tools for a new user intent", async () => {
     const f = fixture();
     expect((await f.run("read file")).reason).toBe("completed");
     expect((await f.run("读取资料集文档")).reason).toBe("completed");
@@ -123,11 +123,12 @@ describe("Engine task routing consumer", () => {
     const [files, sources] = f.requests.map(names);
     for (const selected of [files, sources]) {
       expect(selected.length).toBeGreaterThanOrEqual(8);
-      expect(selected.length).toBeLessThanOrEqual(15);
       expect(selected).toContain("ToolSearch");
     }
     expect(files).toContain("Glob");
     expect(files).toContain("Grep");
+    expect(files.length).toBeLessThanOrEqual(15);
+    expect(sources.slice(0, files.length)).toEqual(files);
     expect(sources).toContain("ReadSource");
     expect(sources).not.toEqual(files);
     // Routing changes schemas, not registry installation or the full prompt catalog.

@@ -1,0 +1,70 @@
+{
+  "atUTC": "2026-10-17T21:10:38.275512+00:00",
+  "scope": "One finite shared-inventory query: MD lines and recursive JSON values, archive-inclusive, formal64+ absent; no source/fixture execution",
+  "pattern": "cleanupAttachments|latestAttachmentState|DRAFT_ATTACHMENT_TTL_MS|SENT_ATTACHMENT_TTL_MS|(?:same|shared|dedup).{0,100}(?:file|path|attachment).{0,100}(?:TTL|expir|clean)|(?:共享|同.{0,10}(?:哈希|hash)).{0,100}(?:附件|文件).{0,100}(?:清理|过期|TTL)",
+  "inventoryDocuments": 6801,
+  "totalMatches": 6,
+  "cap": 180,
+  "retained": 6,
+  "matchedDocumentCounts": {
+    "docs/archive/todo/review-master-2026-07-08.md": 1,
+    "docs/archive/todo/review-tests-deps-2026-07-08.md": 1,
+    "docs/audit-2026-10-17-round12/evidence/patch-dedup.json": 1,
+    "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json": 1,
+    "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json": 1,
+    "docs/todo/cloud-account-management-delivery.md": 1
+  },
+  "hits": [
+    {
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "pointer": 39,
+      "value": "| 🟠 | Async context management skips always-on cleanup | `packages/core/src/context/manager.ts:419` | Production `manageAsync()` skips `dedupeFileReads` and `maskOldObservations`, unlike sync `manage()`. | Run both cleanup passes in `manageAsync()` before microcompaction. | `review-core-2026-07-08.md` |",
+      "valueWindowStart": 0,
+      "fullValueLength": 304,
+      "windowTruncated": false
+    },
+    {
+      "path": "docs/archive/todo/review-tests-deps-2026-07-08.md",
+      "pointer": 38,
+      "value": "ut `manageAsync()` jumps from tool-result budgeting directly to microcompaction (`packages/core/src/context/manager.ts:406-430`). Existing tests cover the pure helper behavior for dedupe/masking and cover many turn-loop behaviors, but they do not assert that the async production path applies the always-on cleanup passes.",
+      "valueWindowStart": 169,
+      "fullValueLength": 491,
+      "windowTruncated": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "pointer": "/hits/226/excerpt",
+      "value": "| 🟠 | Async context management skips always-on cleanup | `packages/core/src/context/manager.ts:419` | Production `manageAsync()` skips `dedupeFileReads` and `maskOldObservations`, unlike sync `manage()`. | Run both cleanup passes in `manageAsync()` before microcompaction. | `review-core-2026-07-08.md` |",
+      "valueWindowStart": 0,
+      "fullValueLength": 304,
+      "windowTruncated": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+      "pointer": "/contexts/glob-status-count/2/text",
+      "value": " filtering. | `review-core-2026-07-08.md` |\n| 🟠 | Async context management skips always-on cleanup | `packages/core/src/context/manager.ts:419` | Production `manageAsync()` skips `dedupeFileReads` and `maskOldObservations`, unlike sync `manage()`. | Run both cleanup passes in `manageAsync()` before microcompaction. | `review-core-2026-07-08.md` |\n| 🟠 | MCP image spills have no retained-file cap | `packages/core/src/tool-system/mcp-manager.ts:191` | The code caps individual images but never garbage-collects accumulated `mcp_images`. | Enforce max count/bytes per `(server, tool)` or session and delete oldest spills. | `review-core-2026-07-08.md` |\n| 🟠 | Brow",
+      "valueWindowStart": 3338,
+      "fullValueLength": 15593,
+      "windowTruncated": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+      "pointer": "/causeContexts/glob-wrong-count/5/text",
+      "value": " filtering. | `review-core-2026-07-08.md` |\n| 🟠 | Async context management skips always-on cleanup | `packages/core/src/context/manager.ts:419` | Production `manageAsync()` skips `dedupeFileReads` and `maskOldObservations`, unlike sync `manage()`. | Run both cleanup passes in `manageAsync()` before microcompaction. | `review-core-2026-07-08.md` |\n| 🟠 | MCP image spills have no retained-file cap | `packages/core/src/tool-system/mcp-manager.ts:191` | The code caps individual images but never garbage-collects accumulated `mcp_images`. | Enforce max count/bytes per `(server, tool)` or session and delete oldest spills. | `review-core-2026-07-08.md` |\n| 🟠 | Brow",
+      "valueWindowStart": 3338,
+      "fullValueLength": 15593,
+      "windowTruncated": true
+    },
+    {
+      "path": "docs/todo/cloud-account-management-delivery.md",
+      "pointer": 69,
+      "value": "SameSite=Strict, path `/` and expiry no later than the session deadline, in a",
+      "valueWindowStart": 0,
+      "fullValueLength": 77,
+      "windowTruncated": false
+    }
+  ],
+  "errors": [],
+  "metadataDrift": [],
+  "machineNavigationOnly": true
+}

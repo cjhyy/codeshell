@@ -8,6 +8,22 @@ import {
 } from "./PageRegistry";
 
 describe("PageRegistry", () => {
+  it("routes execution, session and request deep links to the observability page", () => {
+    const onOpenSession = () => true;
+    const element = PAGE_REGISTRY.get("traces")!.render!({
+      activeProjectPath: null,
+      tracesInitialSessionId: "original-session",
+      tracesInitialTraceId: "actual-execution",
+      tracesInitialRequestId: "actual-model-call",
+      onOpenSession,
+    }) as ReactElement<Record<string, unknown>>;
+    expect(element.props).toEqual({
+      initialSessionId: "original-session",
+      initialTraceId: "actual-execution",
+      initialRequestId: "actual-model-call",
+      onOpenSession,
+    });
+  });
   it("pins the builtin sidebar nav in product order", () => {
     // Settings remains reachable from the fixed footer menu, so it is not
     // duplicated in the first-level navigation.
@@ -15,6 +31,7 @@ describe("PageRegistry", () => {
       "extensions",
       "digital_humans",
       "automation",
+      "traces",
     ]);
   });
 
@@ -24,6 +41,7 @@ describe("PageRegistry", () => {
       { kind: "i18n", key: "sidebar.extensions" },
       { kind: "i18n", key: "sidebar.digitalHumans" },
       { kind: "i18n", key: "sidebar.automation" },
+      { kind: "i18n", key: "observability.title" },
     ]);
   });
 
@@ -62,7 +80,6 @@ describe("PageRegistry", () => {
     });
     expect(extensions.nav!.isActive("extensions")).toBe(true);
     const element = extensions.render!({
-      runsInitialRunId: null,
       activeProjectPath: "/repo/example",
     }) as ReactElement<{ activeProjectPath: string | null; showDiscover?: boolean }>;
     expect(element.props).toEqual({
@@ -113,8 +130,8 @@ describe("PageRegistry", () => {
 });
 
 describe("migrated builtin pages", () => {
-  it("registers logs, runs, and sessions as render-only pages (no nav item)", () => {
-    for (const key of ["logs", "runs", "sessions"]) {
+  it("registers logs and sessions as render-only pages (no nav item)", () => {
+    for (const key of ["logs", "sessions"]) {
       const page = PAGE_REGISTRY.get(key)!;
       expect(PAGE_REGISTRY.has(key)).toBe(true);
       expect(page.nav).toBeUndefined();
@@ -125,15 +142,12 @@ describe("migrated builtin pages", () => {
       "extensions",
       "digital_humans",
       "automation",
+      "traces",
     ]);
   });
 
-  it("threads the runs deep-link through the render context", () => {
-    const element = PAGE_REGISTRY.get("runs")!.render!({
-      runsInitialRunId: "run-42",
-      activeProjectPath: null,
-    }) as ReactElement<{ initialRunId?: string | null }>;
-    expect(element.props.initialRunId).toBe("run-42");
+  it("removes the obsolete runs page", () => {
+    expect(PAGE_REGISTRY.has("runs")).toBe(false);
   });
 
   it("passes session mutation notifications through the history route", () => {
@@ -142,7 +156,6 @@ describe("migrated builtin pages", () => {
       onSessionDeleted: (_id: string) => undefined,
     };
     const element = PAGE_REGISTRY.get("sessions")!.render!({
-      runsInitialRunId: null,
       activeProjectPath: null,
       ...notifications,
     }) as ReactElement<PageRenderContext>;

@@ -1,0 +1,41 @@
+{
+  "ranges": [
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "start": 1,
+      "end": 11,
+      "text": "/**\n * JSON Schema export for the settings file.\n *\n * Editors (VS Code et al.) can point a `$schema` at the emitted\n * `settings.schema.json` to get autocomplete + validation when hand-editing\n * `~/.code-shell/settings.json` or `<project>/.code-shell/settings.json`.\n *\n * This module is side-effect free: it only EXPOSES the generator and a writer.\n * `manager.load()` deliberately does NOT call these — emitting a file during\n * load would pollute test HOMEs and add disk I/O to every settings read. Hosts\n * write it explicitly during startup as a best-effort editor aid."
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "start": 371,
+      "end": 400,
+      "text": "          z.object({\n            // Always present here: the preprocess above backfills it from the\n            // record key, so a stored entry that omits `name` (the common\n            // desktop case, which strips it) still validates.\n            name: z.string(),\n            command: z.string().optional(),\n            args: z.array(z.string()).optional(),\n            env: z.record(z.string()).optional(),\n            url: z.string().optional(),\n            transport: z.enum([\"stdio\", \"sse\", \"streamable-http\", \"inprocess\"]).optional(),\n            headers: z.record(z.string()).optional(),\n            // Codex-style env-secret handling: store env-var NAMES, read the\n            // secret from process.env at connect time (never plaintext here).\n            envVars: z.array(z.string()).optional(), // (stdio) forward these env vars\n            bearerTokenEnvVar: z.string().optional(), // (HTTP) → Authorization: Bearer <env value>\n            envHeaders: z.record(z.string()).optional(), // (HTTP) header-name → env-var-name\n            credentialRef: z.string().optional(), // (HTTP) id of a stored credential → Bearer, resolved at connect time\n            // Codex-style on/off switch. Absent or true → connected; only\n            // literal false disables. Filtered in MCPManager.connectAll.\n            enabled: z.boolean().optional(),\n            allowedTools: McpToolNameListSchema.optional(),\n            disabledTools: McpToolNameListSchema.optional(),\n            connectTimeoutMs: z.number().int().min(1).max(MAX_MCP_CONNECT_TIMEOUT_MS).optional(),\n            connectRetries: z.number().int().min(0).max(MAX_MCP_CONNECT_RETRIES).optional(),\n            // Opt-in: deliver MCP image content to vision models inline.\n            inlineImages: z.boolean().optional(),\n          }),\n        ),\n      )\n      .default({}),"
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "start": 181,
+      "end": 215,
+      "text": "function deepMerge(\n  a: Record<string, unknown>,\n  b: Record<string, unknown>,\n): Record<string, unknown> {\n  const out: Record<string, unknown> = { ...a };\n  for (const [k, v] of Object.entries(b)) {\n    if (v === null) {\n      delete out[k];\n    } else if (\n      v &&\n      typeof v === \"object\" &&\n      !Array.isArray(v) &&\n      typeof out[k] === \"object\" &&\n      out[k] !== null &&\n      !Array.isArray(out[k])\n    ) {\n      out[k] = deepMerge(out[k] as Record<string, unknown>, v as Record<string, unknown>);\n    } else {\n      out[k] = stripNulls(v);\n    }\n  }\n  return out;\n}\n\n/** Drop null-valued keys from a plain object recursively; other values pass through. */\nfunction stripNulls(value: unknown): unknown {\n  if (!value || typeof value !== \"object\" || Array.isArray(value)) return value;\n  const out: Record<string, unknown> = {};\n  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {\n    if (FORBIDDEN_SETTING_KEYS.has(k)) continue;\n    if (v === null) continue;\n    out[k] = stripNulls(v);\n  }\n  return out;\n}"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "start": 429,
+      "end": 436,
+      "text": "      const record: Record<string, unknown> = {\n        [next.name]: buildMcpSettingsPatch(\n          next,\n          servers.find((server) => server.name === originalName),\n        ),\n        ...(originalName && originalName !== next.name ? { [originalName]: null } : {}),\n      };\n      await updateScopedSettings(scope, { mcpServers: record }, projectPath);"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "start": 1375,
+      "end": 1395,
+      "text": "      : {\n          name: trimmedName,\n          transport,\n          enabled: initial?.enabled,\n          allowedTools,\n          disabledTools,\n          ...(isStdio\n            ? {\n                command: command.trim(),\n                args: args.trim() ? splitArgs(args.trim()) : undefined,\n                env: env && Object.keys(env).length ? env : undefined,\n                envVars: envVars && envVars.length ? envVars : undefined,\n              }\n            : {\n                url: url.trim(),\n                headers: nextHeaders,\n                credentialRef: nextCredentialRef,\n                bearerTokenEnvVar: nextBearerEnvVar,\n                envHeaders: nextEnvHeaders,\n              }),\n        };"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "start": 1428,
+      "end": 1445,
+      "text": "      {isOverride && (\n        <p className=\"mb-4 rounded-md bg-muted/50 p-2.5 text-xs text-muted-foreground\">\n          {t(\"settingsX.mcp.overrideNote\")}\n        </p>\n      )}\n\n      <div className=\"grid grid-cols-1 gap-4 md:grid-cols-2\">\n        <label className=\"flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5\">\n          <span>{t(\"settingsX.mcp.fieldName\")}</span>\n          <Input\n            value={name}\n            onChange={(e) => setName(e.target.value)}\n            placeholder=\"my-server\"\n            disabled={isOverride}\n          />\n        </label>\n        <label className=\"flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5\">\n          <span>Transport</span>"
+    }
+  ],
+  "productRuns": 0
+}

@@ -1,0 +1,61 @@
+{
+  "scope": "before selected ordinary render/type/reducer text; prior rg navigation not semantic",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/index.tsx",
+      "bytes": 4127,
+      "sha256": "cab980926182770a7160afefcd4ad993136c0771ff68fe7b1eb7db306b0faf52",
+      "lineCount": 149,
+      "pinUTC": "2026-10-17T15:20:23.256460+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/GenericToolCard.tsx",
+      "bytes": 4953,
+      "sha256": "4df0ba5b484540c6340e53d4f7fae03f7d52612f479291865bb13b86e4623655",
+      "lineCount": 128,
+      "pinUTC": "2026-10-17T15:20:23.258424+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "lineCount": 928,
+      "pinUTC": "2026-10-17T15:20:23.259464+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/ToolGroupCard.tsx",
+      "bytes": 3781,
+      "sha256": "c4e30acf0be148683b65cabf4fd570a2c309696a2b7528a9269db0cca1e2b987",
+      "lineCount": 90,
+      "pinUTC": "2026-10-17T15:20:23.260317+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 92113,
+      "sha256": "345b05e12819f499643fd628ebcc02541e50386fede974856f4a8333a8928984",
+      "lineCount": 2442,
+      "pinUTC": "2026-10-17T15:20:23.261381+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "bytes": 2633,
+      "sha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "lineCount": 72,
+      "pinUTC": "2026-10-17T15:20:23.262028+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/StatusDot.tsx",
+      "bytes": 595,
+      "sha256": "363fbdd51a9f07839f1e87e21c5afa08aba185e22a9cfed47ce3540b00b85ff9",
+      "lineCount": 22,
+      "pinUTC": "2026-10-17T15:20:23.262935+00:00",
+      "semanticRead": false
+    }
+  ]
+}

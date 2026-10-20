@@ -1,0 +1,252 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalRound33Baseline": null,
+  "prepOnly": true,
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "bytes": 3079,
+      "lines": 89,
+      "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "semanticLines": 89,
+      "initialFilesystemSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "initialSemanticReadSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "initialCaptureUtc": "2026-10-17T12:10:57.856896+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "bytes": 6234,
+      "lines": 193,
+      "sha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          193
+        ]
+      ],
+      "semanticLines": 193,
+      "initialFilesystemSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "initialSemanticReadSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "initialCaptureUtc": "2026-10-17T12:10:57.858026+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.test.ts",
+      "bytes": 709,
+      "lines": 20,
+      "sha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          20
+        ]
+      ],
+      "semanticLines": 20,
+      "initialFilesystemSha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "initialSemanticReadSha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "initialCaptureUtc": "2026-10-17T12:11:29.035201+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.test.ts",
+      "bytes": 5287,
+      "lines": 162,
+      "sha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          162
+        ]
+      ],
+      "semanticLines": 162,
+      "initialFilesystemSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "initialSemanticReadSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "initialCaptureUtc": "2026-10-17T12:11:29.037544+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/plugins/gitOps.ts",
+      "bytes": 9285,
+      "lines": 208,
+      "sha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          122,
+          153
+        ],
+        [
+          206,
+          208
+        ]
+      ],
+      "semanticLines": 35,
+      "initialFilesystemSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "initialSemanticReadSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "initialCaptureUtc": "2026-10-17T12:11:29.038518+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "lines": 236,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          78,
+          120
+        ]
+      ],
+      "semanticLines": 43,
+      "initialFilesystemSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "initialSemanticReadSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "initialCaptureUtc": "2026-10-17T12:11:29.039469+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/installFromSource.ts",
+      "bytes": 2888,
+      "lines": 67,
+      "sha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          15,
+          42
+        ]
+      ],
+      "semanticLines": 28,
+      "initialFilesystemSha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "initialSemanticReadSha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "initialCaptureUtc": "2026-10-17T12:11:29.040406+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+      "bytes": 20113,
+      "lines": 500,
+      "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          107,
+          125
+        ]
+      ],
+      "semanticLines": 19,
+      "initialFilesystemSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "initialSemanticReadSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "initialCaptureUtc": "2026-10-17T12:11:29.041482+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/tui/src/cli/commands/plugin.ts",
+      "bytes": 3576,
+      "lines": 107,
+      "sha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "semanticLines": 55,
+      "initialFilesystemSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "initialSemanticReadSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "initialCaptureUtc": "2026-10-17T12:11:29.042393+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "lines": 612,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          344,
+          360
+        ]
+      ],
+      "semanticLines": 17,
+      "initialFilesystemSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "initialSemanticReadSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "initialCaptureUtc": "2026-10-17T12:11:29.043695+00:00",
+      "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+      "pinBeforeIndependentRead": true,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps were not recorded.",
+      "gitBlobCompared": false
+    }
+  ],
+  "stats": {
+    "sourcePaths": 10,
+    "fullPaths": 4,
+    "selectedPaths": 6,
+    "semanticLines": 661,
+    "productSemanticLines": 479,
+    "testDeclarationLines": 182,
+    "lateSemanticPins": 0
+  },
+  "limits": [
+    "All source files were pinned before independent semantic reads.",
+    "One source-reader range precheck rejected planned gitOps206-213 before printing that range because EOF208. Actual later first read was206-208; no reread of122-153 or product runtime.",
+    "CLI install action1-55 includes actual remote forwarding branch41-46; other selected consumers forward parsed source/name and clone URL. None was executed.",
+    "No installation/update/check/git/network/config/custody/auth/native procedure was run or audited beyond the static source boundary.",
+    "Existing test declarations are static reads; no module, semver, URL constructor, helper, language fixture or tests executed.",
+    "Current source pins match Root initial leaf SHAs and dated leaf inventory; pin-only metadata does not imply historical unread."
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

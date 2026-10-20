@@ -1,0 +1,29 @@
+{
+  "id": "STATUSLINE-R64-C1",
+  "classification": "static-candidate",
+  "suggestedPriority": "P3",
+  "formalCount": 0,
+  "candidateCount": 1,
+  "newRelatedCount": 0,
+  "title": "同一前台查询仍运行时，后台忙闲变化重置共享耗时起点",
+  "ordinaryCondition": [
+    "A normal foreground query remains active. A normal background agent was already running.",
+    "The last background agent finishes, so hasRunningBgAgents changes true to false while isQueryActive stays true.",
+    "The ordinary UI commits this store-state change before that same foreground query ends. No forced React scheduling or actual frame was observed."
+  ],
+  "cause": "App.tsx436–439/446 depends on isRunning, isQueryActive and hasRunningBgAgents and rewrites runStartRef whenever any dependency changes while isRunning. OR remains true, but changing the background flag alone still rewrites the origin.",
+  "consumers": [
+    "StatusLine.tsx125–126/167–171 computes and displays current elapsed from this ref.",
+    "App.tsx1669–1681 uses the same ref for the system turn_duration entry."
+  ],
+  "symbolicConsequence": "For one foreground query with original origin t0, background completion committed at t1 and foreground completion at t2 (t0<t1<t2), these consumers use t1 instead of t0 and omit t1-t0. This is source arithmetic, not an executed fixture or observed UI trace.",
+  "counterevidence": [
+    "Starting a new foreground query legitimately needs a new origin and is not this proposed bug.",
+    "Stable running/query/background flags do not retrigger this effect.",
+    "Background Agent path requests runYield after the tool batch (agent.ts711–714); not every first-spawn transition is asserted to have a separately committed visible render.",
+    "No continuous session-wide or background-agent lifetime timing contract is asserted.",
+    "No React/Ink timing, actual elapsed display, task execution, persistent session message damage or billing impact was validated."
+  ],
+  "dedup": "Fresh4255 history, literal path/hash and focused ordinary elapsed/cost queries. No exact same-condition old issue established in actually read bounded windows. Old COST-R9-01 model-id pricing, old ctx run/runs and permanent rendering/import failures excluded; this does not prove all history semantically exhausted.",
+  "status": "Proposal only; parent targeted review may retain, narrow, withdraw or formalize separately. No formal ID issued here."
+}

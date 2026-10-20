@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,10 @@ import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
 import type { MaskedCredentialView } from "./types";
 import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
+import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
+import { useCredentialList } from "./useCredentialList";
+import { CredentialListStatus } from "./CredentialListStatus";
+import { useCredentialMutation } from "./useCredentialMutation";
 
 /**
  * Standalone Permission Token credential CRUD. Link authorization has its own
@@ -28,8 +32,8 @@ export function TokenTab({ cwd }: { cwd: string }) {
   const toast = useToast();
   const confirm = useConfirm();
   const prompt = usePrompt();
-  const [items, setItems] = useState<MaskedCredentialView[]>([]);
-  const [busy, setBusy] = useState(false);
+  const { items, loading, error: loadError, reload: load } = useCredentialList(cwd, "token");
+  const { busy, run } = useCredentialMutation();
   const [id, setId] = useState("");
   const [label, setLabel] = useState("");
   const [secret, setSecret] = useState("");
@@ -42,54 +46,50 @@ export function TokenTab({ cwd }: { cwd: string }) {
     searchRef.current?.focus();
   };
 
-  const load = useCallback(() => {
-    void window.codeshell.credentials
-      .list(cwd)
-      .then((all) => setItems(all.filter((c) => c.type === "token")));
-  }, [cwd]);
-  useEffect(load, [load]);
-
   const save = async () => {
     if (!id.trim() || !label.trim()) {
       toast({ message: t("ext.token.idRequired"), variant: "error" });
       return;
     }
-    await window.codeshell.credentials.save(cwd, "user", {
-      id: id.trim(),
-      type: "token",
-      label: label.trim(),
-      secret: secret || undefined,
-      exposeAsEnv: exposeAsEnv.trim() || undefined,
+    await run(async () => {
+      await window.codeshell.credentials.save(cwd, "user", {
+        id: id.trim(),
+        type: "token",
+        label: label.trim(),
+        secret: secret || undefined,
+        exposeAsEnv: exposeAsEnv.trim() || undefined,
+      });
+      toast({ message: t("ext.token.saved") });
+      setId("");
+      setLabel("");
+      setSecret("");
+      setExposeAsEnv("");
+      await load();
     });
-    toast({ message: t("ext.token.saved") });
-    setId("");
-    setLabel("");
-    setSecret("");
-    setExposeAsEnv("");
-    load();
   };
 
   const del = async (cid: string) => {
-    if (!(await confirm({ message: t("ext.token.deleteConfirm", { id: cid }), destructive: true })))
-      return;
-    await window.codeshell.credentials.remove(cwd, "user", cid);
-    load();
+    await run(async () => {
+      if (
+        !(await confirm({ message: t("ext.token.deleteConfirm", { id: cid }), destructive: true }))
+      )
+        return;
+      await window.codeshell.credentials.remove(cwd, "user", cid);
+      await load();
+    });
   };
 
   /** 逐条「AI 可自动取用」开关:写回 autoUseByAI(只改元数据,保留 secret)。 */
   const toggleAiUse = async (c: MaskedCredentialView, next: boolean) => {
-    setBusy(true);
-    try {
+    await run(async () => {
       await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { autoUseByAI: next });
-      load();
+      await load();
       toast({
         message: next
           ? t("ext.token.aiAutoUseOnToast", { label: c.label })
           : t("ext.token.aiAutoUseOffToast", { label: c.label }),
       });
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   /**
@@ -97,37 +97,29 @@ export function TokenTab({ cwd }: { cwd: string }) {
    * 关 → 清空 exposeAsEnv(传 ""，patchMeta 写入空串即不再注入)。
    */
   const toggleExposeEnv = async (c: MaskedCredentialView, next: boolean) => {
-    if (next) {
-      const suggested = c.id
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "");
-      const name = await prompt({
-        title: t("ext.token.exposeEnvTitle"),
-        message: t("ext.token.exposeEnvMessage"),
-        defaultValue: suggested,
-      });
-      if (name === null) return;
-      const v = name.trim();
-      if (!v) return;
-      setBusy(true);
-      try {
+    await run(async () => {
+      if (next) {
+        const suggested = c.id
+          .toUpperCase()
+          .replace(/[^A-Z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "");
+        const name = await prompt({
+          title: t("ext.token.exposeEnvTitle"),
+          message: t("ext.token.exposeEnvMessage"),
+          defaultValue: suggested,
+        });
+        if (name === null) return;
+        const v = name.trim();
+        if (!v) return;
         await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { exposeAsEnv: v });
-        load();
+        await load();
         toast({ message: t("ext.token.exposeEnvOnToast", { name: v }) });
-      } finally {
-        setBusy(false);
-      }
-    } else {
-      setBusy(true);
-      try {
+      } else {
         await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { exposeAsEnv: "" });
-        load();
+        await load();
         toast({ message: t("ext.token.exposeEnvOffToast", { label: c.label }) });
-      } finally {
-        setBusy(false);
       }
-    }
+    });
   };
 
   const autoUseCount = items.filter((item) => item.autoUseByAI === true).length;
@@ -136,37 +128,21 @@ export function TokenTab({ cwd }: { cwd: string }) {
 
   return (
     <div className="min-w-0 space-y-5" data-token-page>
-      <section className="credential-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/10 text-violet-600 shadow-sm dark:text-violet-400">
-              <KeyRound className="size-6" aria-hidden />
-            </div>
-            <div className="min-w-0 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-600 dark:text-violet-400">
-                  {t("ext.token.eyebrow")}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
-                  <ShieldCheck className="size-3" aria-hidden />
-                  {t("ext.token.localStorage")}
-                </span>
-              </div>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
-                {t("ext.token.title")}
-              </h2>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                {t("ext.token.description")}
-              </p>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-3 gap-2 lg:min-w-72">
-            <CredentialStat value={items.length} label={t("ext.token.storedCount")} />
-            <CredentialStat value={autoUseCount} label={t("ext.token.autoUseCount")} />
-            <CredentialStat value={envCount} label={t("ext.token.envCount")} />
-          </div>
-        </div>
-      </section>
+      <CredentialsSectionHeader
+        title={t("ext.token.title")}
+        description={t("ext.token.description")}
+        stats={[
+          { value: items.length, label: t("ext.token.storedCount") },
+          { value: autoUseCount, label: t("ext.token.autoUseCount") },
+          { value: envCount, label: t("ext.token.envCount") },
+        ]}
+        badge={
+          <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
+            <ShieldCheck className="size-3" aria-hidden />
+            {t("ext.token.localStorage")}
+          </span>
+        }
+      />
 
       <section className="space-y-4" aria-labelledby="token-create-title">
         <div className="flex items-start gap-2.5">
@@ -190,6 +166,7 @@ export function TokenTab({ cwd }: { cwd: string }) {
               <Input
                 ref={idInputRef}
                 id="token-id"
+                disabled={busy}
                 value={id}
                 onChange={(event) => setId(event.target.value)}
                 placeholder={t("ext.token.idPlaceholder")}
@@ -202,6 +179,7 @@ export function TokenTab({ cwd }: { cwd: string }) {
               <Label htmlFor="token-name">{t("ext.token.nameLabel")}</Label>
               <Input
                 id="token-name"
+                disabled={busy}
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
                 placeholder={t("ext.token.namePlaceholder")}
@@ -216,6 +194,7 @@ export function TokenTab({ cwd }: { cwd: string }) {
                 />
                 <Input
                   id="token-secret"
+                  disabled={busy}
                   type="password"
                   className="pl-9"
                   value={secret}
@@ -233,6 +212,7 @@ export function TokenTab({ cwd }: { cwd: string }) {
                 />
                 <Input
                   id="token-env"
+                  disabled={busy}
                   className="pl-9 font-mono"
                   value={exposeAsEnv}
                   onChange={(event) => setExposeAsEnv(event.target.value)}
@@ -246,7 +226,7 @@ export function TokenTab({ cwd }: { cwd: string }) {
               <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-status-ok" aria-hidden />
               {t("ext.token.securityNote")}
             </p>
-            <Button className="shrink-0" onClick={() => void save()}>
+            <Button className="shrink-0" disabled={busy} onClick={() => void save()}>
               <Plus className="size-4" aria-hidden />
               {t("ext.token.save")}
             </Button>
@@ -286,7 +266,9 @@ export function TokenTab({ cwd }: { cwd: string }) {
           />
         )}
 
-        {items.length === 0 ? (
+        <CredentialListStatus loading={loading} error={loadError} onRetry={() => void load()} />
+
+        {items.length === 0 && (loading || loadError) ? null : items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted/15 px-5 py-10 text-center">
             <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
               <KeyRound className="size-5" aria-hidden />
@@ -387,17 +369,6 @@ export function TokenTab({ cwd }: { cwd: string }) {
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function CredentialStat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
-      <div className="text-lg font-semibold leading-none tabular-nums text-foreground">{value}</div>
-      <div className="mt-1 truncate text-[10px] text-muted-foreground" title={label}>
-        {label}
-      </div>
     </div>
   );
 }

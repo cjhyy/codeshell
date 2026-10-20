@@ -27,9 +27,11 @@ export const bashOutputToolDef: ToolDefinition = {
   description:
     "Read output from a background shell started via Bash(run_in_background=true). " +
     "Returns new output since your last read (incremental by default). ANSI colors and progress bars are stripped. " +
-    "Use this only for an on-demand peek at a STILL-RUNNING process — you do NOT need to poll it to wait for " +
-    "completion: when the background command finishes you are automatically woken with the result, so end your " +
-    "turn instead of looping Sleep + BashOutput.",
+    "Use it on demand to inspect startup logs, errors, or retained output after exit. A service launched " +
+    "with background_behavior=continue leaves the turn running so you can check readiness and use it " +
+    "without waiting for the service to exit. A running status or detected port is not proof of readiness; " +
+    "verify the required endpoint or UI. For a finite command launched with wait_for_exit, completion " +
+    "automatically wakes you; do not loop Sleep + BashOutput to wait for its exit.",
   inputSchema: {
     type: "object",
     properties: {

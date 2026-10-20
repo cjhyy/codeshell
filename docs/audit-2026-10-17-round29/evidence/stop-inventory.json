@@ -1,0 +1,19 @@
+{
+  "parentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "argv": [
+    "rg",
+    "--files",
+    "packages/desktop/src/renderer"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "paths": [
+    "packages/desktop/src/renderer/stopRouting.test.ts",
+    "packages/desktop/src/renderer/app/useRunController.approvals.test.tsx",
+    "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+    "packages/desktop/src/renderer/app/useRunController.ts",
+    "packages/desktop/src/renderer/stopRouting.ts"
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

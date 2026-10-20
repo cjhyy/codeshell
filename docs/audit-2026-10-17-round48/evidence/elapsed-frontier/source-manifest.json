@@ -1,0 +1,402 @@
+{
+  "schema": "static-source-manifest-v1",
+  "createdUTC": "2026-10-17T15:57:04.975721+00:00",
+  "rootReportedInitialContext": "c3a9ece2e6f183671b00e07322a9722fad6bda54",
+  "rootReportedLateContext": "2735100f81f4d12cbb3e610da0e3977eaf74727c",
+  "contextVerification": "Parent reported contexts only; reviewer performed no Git. Late change reportedly docs47 only; initial history snapshot not rewritten.",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "bytes": 7462,
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "lines": 227,
+      "pinnedBeforeDisplayUTC": "2026-10-17T15:52:14.992111+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          227
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          17,
+          49
+        ],
+        [
+          125,
+          126
+        ],
+        [
+          136,
+          146
+        ],
+        [
+          157,
+          177
+        ],
+        [
+          180,
+          227
+        ]
+      ],
+      "semanticLineCount": 115,
+      "displayedLineCount": 227,
+      "purpose": "Ordinary props/context/elapsed/model/cost text only. Whole 227 lines displayed, 115 selected semantic lines; interval, perf instrumentation, logging/UI-event and renderer/TTY mechanism excluded. No full-file claim.",
+      "endingBytes": 7462,
+      "endingSha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T15:57:04.975721+00:00",
+      "initialSemanticReadSha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "initialTextObservation": "leaf/test before content pin; core files initial navigation before dedicated semantic pin disclosed in purpose"
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lines": 2318,
+      "pinnedBeforeDisplayUTC": "2026-10-17T15:52:27.409506+00:00",
+      "displayedLineRanges": [
+        [
+          340,
+          365
+        ],
+        [
+          385,
+          398
+        ],
+        [
+          428,
+          447
+        ],
+        [
+          728,
+          748
+        ],
+        [
+          793,
+          810
+        ],
+        [
+          2278,
+          2300
+        ],
+        [
+          211,
+          219
+        ],
+        [
+          290,
+          295
+        ],
+        [
+          698,
+          715
+        ],
+        [
+          1058,
+          1085
+        ],
+        [
+          1659,
+          1691
+        ],
+        [
+          1532,
+          1548
+        ],
+        [
+          1558,
+          1565
+        ],
+        [
+          1617,
+          1653
+        ],
+        [
+          1717,
+          1723
+        ]
+      ],
+      "additionalBeforeDisplayPinUTC": "2026-10-17T15:52:48.105206+00:00",
+      "additionalPinSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lastAdditionalBeforeDisplayUTC": "2026-10-17T15:54:38.960308+00:00",
+      "lastAdditionalSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          213,
+          218
+        ],
+        [
+          292,
+          293
+        ],
+        [
+          355,
+          363
+        ],
+        [
+          389,
+          393
+        ],
+        [
+          436,
+          439
+        ],
+        [
+          446,
+          446
+        ],
+        [
+          701,
+          705
+        ],
+        [
+          711,
+          711
+        ],
+        [
+          739,
+          741
+        ],
+        [
+          800,
+          803
+        ],
+        [
+          1063,
+          1063
+        ],
+        [
+          1066,
+          1066
+        ],
+        [
+          1070,
+          1073
+        ],
+        [
+          1078,
+          1082
+        ],
+        [
+          1543,
+          1544
+        ],
+        [
+          1547,
+          1547
+        ],
+        [
+          1559,
+          1564
+        ],
+        [
+          1626,
+          1629
+        ],
+        [
+          1636,
+          1652
+        ],
+        [
+          1666,
+          1681
+        ],
+        [
+          1717,
+          1721
+        ],
+        [
+          2286,
+          2297
+        ]
+      ],
+      "semanticLineCount": 114,
+      "displayedLineCount": 285,
+      "purpose": "Ordinary prop/event/ref flow and foreground submission/response/duration labels only. QueryGuard internals, cancellation ownership, permission UI, transport, renderer and native mechanisms not reviewed. Initial rg navigation matches preceded dedicated pin, conservatively initialSemanticReadSha256=null; dedicated pin preceded selected block display.",
+      "endingBytes": 90976,
+      "endingSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T15:57:04.975721+00:00",
+      "initialSemanticReadSha256": null,
+      "initialTextObservation": "unpinned rg navigation before dedicated pin; no first-read hash invented"
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.test.tsx",
+      "bytes": 710,
+      "sha256": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "lines": 23,
+      "pinnedBeforeDisplayUTC": "2026-10-17T15:52:27.411286+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "coverage": "full-test-declaration-text",
+      "selectedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "semanticLineCount": 23,
+      "displayedLineCount": 23,
+      "purpose": "Full 23-line existing test declaration text read; mounts/flush/assertions never executed. This is not a pass/result.",
+      "endingBytes": 710,
+      "endingSha256": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T15:57:04.975721+00:00",
+      "initialSemanticReadSha256": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "initialTextObservation": "leaf/test before content pin; core files initial navigation before dedicated semantic pin disclosed in purpose"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "lines": 445,
+      "pinnedBeforeDisplayUTC": "2026-10-17T15:53:52.722413+00:00",
+      "displayedLineRanges": [
+        [
+          119,
+          135
+        ],
+        [
+          148,
+          158
+        ],
+        [
+          360,
+          370
+        ],
+        [
+          176,
+          177
+        ]
+      ],
+      "lastAdditionalBeforeDisplayUTC": "2026-10-17T15:54:38.962314+00:00",
+      "lastAdditionalSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          120,
+          133
+        ],
+        [
+          148,
+          157
+        ],
+        [
+          176,
+          177
+        ],
+        [
+          360,
+          362
+        ],
+        [
+          370,
+          370
+        ]
+      ],
+      "semanticLineCount": 30,
+      "displayedLineCount": 41,
+      "purpose": "Only status aggregation, collection insertion/snapshot notification, terminal status/date fields. Adjacent 363–369 lease/direction fields accidentally displayed and excluded from semantic read; no authority/custody assessment. Initial navigation preceded dedicated pin; semantic selected body followed pin.",
+      "endingBytes": 15679,
+      "endingSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T15:57:04.975721+00:00",
+      "initialSemanticReadSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "initialTextObservation": "leaf/test before content pin; core files initial navigation before dedicated semantic pin disclosed in purpose"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "lines": 1571,
+      "pinnedBeforeDisplayUTC": "2026-10-17T15:53:52.723817+00:00",
+      "displayedLineRanges": [
+        [
+          226,
+          236
+        ],
+        [
+          269,
+          276
+        ],
+        [
+          487,
+          493
+        ],
+        [
+          704,
+          720
+        ],
+        [
+          499,
+          499
+        ]
+      ],
+      "lastAdditionalBeforeDisplayUTC": "2026-10-17T15:54:38.963279+00:00",
+      "lastAdditionalSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          230,
+          236
+        ],
+        [
+          269,
+          273
+        ],
+        [
+          487,
+          492
+        ],
+        [
+          499,
+          499
+        ],
+        [
+          711,
+          720
+        ]
+      ],
+      "semanticLineCount": 29,
+      "displayedLineCount": 44,
+      "purpose": "Only declared ordinary background option, registration fields/status and foreground notification return/yield. Identity/session-tag/owner/abort/spawn/engine/transport mechanisms not reviewed. Initial navigation preceded dedicated pin; selected semantic blocks followed pin.",
+      "endingBytes": 62377,
+      "endingSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T15:57:04.975721+00:00",
+      "initialSemanticReadSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "initialTextObservation": "leaf/test before content pin; core files initial navigation before dedicated semantic pin disclosed in purpose"
+    }
+  ],
+  "summary": {
+    "sourceRows": 5,
+    "fullProductRows": 0,
+    "selectedProductRows": 4,
+    "fullTestDeclarationTextRows": 1,
+    "productSemanticLines": 288,
+    "testDeclarationSemanticLines": 23,
+    "allSemanticLines": 311,
+    "allDisplayedLines": 620,
+    "uniqueAcrossAuditClaim": false
+  },
+  "historyReads": {
+    "pinSource": "history.json inventory pins precede saved windows",
+    "initialGate": "8 explicit metadata rows +17 path windows +7 SHA windows read; duplicate locators do not create independent coverage",
+    "focusedSelectedRows": 14,
+    "focusedReadFile": "history-focused-selected.json",
+    "notClaimed": "No semantic exhaustion of full MD/JSON corpus, full original giant scalar values, all cap30 windows or every old cause."
+  },
+  "exclusions": [
+    "No product execution or Git",
+    "No authority/identity/custody mechanisms",
+    "No timer/React/Ink/TTY renderer behavior observed",
+    "Existing permanent failed runtime directions not reopened"
+  ]
+}

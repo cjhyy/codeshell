@@ -1,0 +1,104 @@
+{
+  "atUTC": "2026-10-17T20:56:46.598516+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/panels/resources/clone.ts",
+      "bytes": 4395,
+      "sha256": "d6f14fc6e4e4aa970907e4b275694f8ce59daaa6ae736feff097a414124725c9",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/storage.ts",
+      "bytes": 4053,
+      "sha256": "de74f5ccaa902ce091969da7612dce1ab3650cf47c59232296e1f9534b070e07",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/directories.ts",
+      "bytes": 3764,
+      "sha256": "4a0740ca54f8ffc24443e6d81583d82580dddddc74c5baa18344f05456a8b53e",
+      "unchanged": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/service.ts",
+      "bytes": 19533,
+      "sha256": "d9963d5969e65b9e031d36784f9677d12040647feae444177fd21c9c4781f237",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/library.ts",
+      "bytes": 18818,
+      "sha256": "f86bcfac1a7ea9ca43292e6abb33588254cb2fc0b6e92d85fe80a04bb3921a41",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/types.ts",
+      "bytes": 774,
+      "sha256": "2ebb6856caeff775d4f6e0cec85b797764bf1bd27816395e2715632d81e728c2",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/clone.test.ts",
+      "bytes": 3025,
+      "sha256": "a191cc2afa9119e16a5c7db1bf45f8a4389c8ec0ee2e38ce9ba404b7e75c9c67",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/http.ts",
+      "bytes": 2882,
+      "sha256": "fea3a39ff42cf6747bb351bda0675f7e678fc1491ea1746b7f0d6e758d06bb5a",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "bytes": 27329,
+      "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/panels/resources/resources.test.ts",
+      "bytes": 22838,
+      "sha256": "07e4b9dad86296ea680600416754bee085b4e048b1559a755305ab294e428d1f",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "bytes": 159179,
+      "sha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+      "bytes": 80193,
+      "sha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61",
+      "unchanged": true
+    }
+  ],
+  "sharedHistory": {
+    "path": "/tmp/codeshell-audit-round171-coverage62/history-batch.json",
+    "bytes": 1553692,
+    "sha256": "819a414f68c2331ea87455754e0cc724d7ba623b3daa40b1de5137638c571bd0",
+    "unchanged": true
+  },
+  "sourceInstructionPins": 12,
+  "canonicalMetadataPins": 3,
+  "noWholeHistoryEndingClaim": true
+}

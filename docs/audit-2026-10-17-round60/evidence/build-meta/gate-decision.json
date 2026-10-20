@@ -1,0 +1,62 @@
+{
+  "sameShaFullEvidence": [
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "pointer": "/sources/131",
+      "exactCoverage": "full static, never executed",
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-source-manifest.json",
+      "pointer": "/files/11",
+      "exactCoverage": "full1–38, initial/finish matches, build-script-source-only",
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849"
+    }
+  ],
+  "selectedOnlyEarlierEvidence": {
+    "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+    "pointer": "/files/87",
+    "limits": "Hash equality plus selected inventory scope is not same-SHA full proof by itself."
+  },
+  "canonicalReadWindows": [
+    {
+      "path": "docs/audit-2026-10-17-round6/root-package.md",
+      "ranges": [
+        [
+          1,
+          26
+        ]
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "pointers": [
+        "/files/87",
+        "/note"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "pointers": [
+        "/sources/131",
+        "/note"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-source-manifest.json",
+      "pointers": [
+        "/files/11",
+        "/sourceFinishChecks/11"
+      ],
+      "note": "Read matching original rows/scope fields only; no source-excerpts/old CLI fixture."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/package-summary.json",
+      "limits": "Parsed for matching path/object/scope fields; no substantive matching path row, no semantic full-summary claim."
+    }
+  ],
+  "rootScopeSteering": "Retain original directed current root config→meta output contract; do not mechanically search a new leaf. Known full script reread is old overlap.",
+  "sharedCap": "6126 snapshot,109total matches, only first100 retained at cap100; no full matching-context semantic claim.",
+  "unknownIsUnread": false,
+  "hashIsFullReading": false
+}

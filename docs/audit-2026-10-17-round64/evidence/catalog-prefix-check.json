@@ -1,0 +1,14 @@
+{
+  "priorPath": "docs/audit-2026-10-17-round61/recorded-findings-catalog.json",
+  "priorBytes": 81283,
+  "priorSha256": "47cbdd93b49496566227409117ab8c01a835ba23e6eff46ee7ae5707cfc1d28b",
+  "originalRows": 119,
+  "originalObjectsPreserved": true,
+  "newId": "ATTACH-R64-01",
+  "formalRecordRows": 120,
+  "byPriority": {
+    "P2": 47,
+    "P3": 73
+  },
+  "currentOpenCountCertified": false
+}

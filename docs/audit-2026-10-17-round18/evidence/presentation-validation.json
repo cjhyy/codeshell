@@ -1,0 +1,57 @@
+{
+  "base": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "cleanShards": 1,
+  "failedBunShards": 0,
+  "successfulTests": 10,
+  "expectations": 58,
+  "existingTests": 5,
+  "focusedTests": 5,
+  "skippedTests": 0,
+  "productReruns": 0,
+  "executions": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/web/src/components/model-trace-presentation.test.ts",
+        "docs/audit-2026-10-17-round18/evidence/presentation-focused.test.ts"
+      ],
+      "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+      "exitCode": 0,
+      "elapsedSeconds": 0.23,
+      "rawLog": "evidence/presentation-pure.first.raw.log",
+      "firstExecution": true,
+      "savedBeforeInspection": true,
+      "reruns": 0,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "expectations": 58,
+      "existingTests": 5,
+      "focusedTests": 5,
+      "guardCompleted": true,
+      "fixture": "evidence/presentation-focused.test.ts",
+      "actualProductRuntime": "Web model-trace-presentation leaf only; type-only imports erased"
+    }
+  ],
+  "metadataNavigationFailures": {
+    "count": 2,
+    "evidence": "evidence/presentation-navigation-skip.md",
+    "noProductRuntime": true
+  },
+  "keptSkippedDirections": [
+    "old Core model-trace backend guessed-folder dynamic direction",
+    "old i18n dynamic direction"
+  ],
+  "limits": [
+    "No React/UI/Host/backend/storage/provider/model/network/native execution",
+    "No classification, context, native-process or store import/execution; selected ranges static only",
+    "No full build/typecheck/lint/suite",
+    "Pins do not establish transitive/full-file runtime coverage"
+  ]
+}

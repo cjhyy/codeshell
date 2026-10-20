@@ -1,0 +1,19 @@
+{
+  "fatalMetadataErrors": 0,
+  "toolOutputTruncations": 0,
+  "navigationNoMatch": [
+    {
+      "artifact": "guard-test-navigation.json",
+      "query": "wakeFollowUp|pet-followup in main/index.ts",
+      "exitCode": 1,
+      "meaning": "No matching spelling in main; actual factory composition located by createPetFollowUpRuntime in same already-pinned source. Not product failure or runtime retry."
+    }
+  ],
+  "firstFocusedLocator": {
+    "filesReturned": 14,
+    "MDJSONActuallyParsed": 12,
+    "otherExtensions": "One .test.ts and one.log filename matched rg locator only, never opened/executed as source evidence; later scan explicitly admitted MD/JSON recursive values only."
+  },
+  "rawOutputs": "Persisted rg commands/stdout/stderr/exits retained; no fabricated missing raw test log or execution. First outer command outputs are tool records only.",
+  "productFailures": 0
+}

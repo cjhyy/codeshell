@@ -1,0 +1,27 @@
+690: async function findExistingSessionFile(sessionDir: string, sha16: string): Promise<string | null> {
+691:   let entries: string[];
+692:   try {
+693:     entries = await readdir(sessionDir);
+694:   } catch {
+695:     return null;
+696:   }
+697:   for (const entry of entries) {
+698:     if (!entry.startsWith(`${sha16}-`) || entry === MANIFEST_FILE) continue;
+699:     const info = await lstat(join(sessionDir, entry));
+700:     if (info.isSymbolicLink() || !info.isFile()) {
+701:       throw new Error("existing attachment hash entry must be a regular file, not a symlink");
+702:     }
+703:     return entry;
+704:   }
+705:   return null;
+706: }
+707: 
+708: async function appendManifest(sessionDir: string, record: ManifestRecord): Promise<void> {
+709:   const manifest = await safeJoin(sessionDir, MANIFEST_FILE, sessionDir);
+710:   const serialized = JSON.stringify(record);
+711:   if (Buffer.byteLength(serialized, "utf8") > MAX_MANIFEST_LINE_BYTES) {
+712:     throw new Error("attachment manifest record exceeds the size limit");
+713:   }
+714:   await appendFile(manifest, `${serialized}\n`, { encoding: "utf-8", mode: 0o600 });
+715: }
+716: 

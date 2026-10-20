@@ -1,0 +1,27 @@
+{
+  "id": "TRANSCRIPT-R42-01",
+  "severity": "P3",
+  "title": "后台子代理转录把撤销当作封口，保留已经作废的部分回复",
+  "location": {
+    "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+    "line": 165,
+    "endLine": 174
+  },
+  "proposalAlias": "TRANSCRIPT-R44-C1",
+  "aliasDisposition": "Same item promoted once; not counted again as candidate or related",
+  "validation": "Static production-source proof and independent review; no runtime/UI/model/fixture/test execution",
+  "runtimeValidated": false,
+  "condition": "An active background subagent emits partial text, then an eligible recoverable non-abort streaming failure enters ordinary non-streaming fallback while its TUI detail remains viewed/available.",
+  "expected": "Revoke the failed attempt display entries before showing replacement content.",
+  "actual": "tombstone shares the turn_complete branch, seals the old assistant row and clears the local pointer without deleting its text. Replacement deltas create a separate row; the registry transcript still includes revoked partial content.",
+  "producer": "TurnLoop2103–2115 and2197–2228 emits revocation then a correlated replacement start/text delta. Default child callbacks deliver tombstone through the background detailSink.",
+  "consumer": "TUI App2145–2169 reads registry transcript and passes entries to VirtualMessageList; agent-scoped tombstones are skipped by main-feed reduction, not a cleanup of this transcript.",
+  "impact": "Incorrect stale/redundant partial text in active background-agent detail during fallback or subsequent work. No claim of observed UI frames, persistent/raw session corruption or continued visibility after successful completion.",
+  "deduplication": "Old July09F01 explicitly covers Desktop correlation-ID/final-upsert mismatch; current producer already has stable IDs and replacement deltas. R20 StreamAttempt covers main attempt filtering and preserves child rows. This separate translator consumer does not apply revocation; same family acknowledged without reissuing old Desktop bug.",
+  "fixDirection": "Track current request/message correlation and remove its temporary transcript entries on a matching tombstone, preserving prior completed turns and normal turn_complete sealing.",
+  "evidence": [
+    "evidence/transcript-frontier/report.md",
+    "evidence/transcript-review/review.md",
+    "evidence/root-transcript-review/review.md"
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "role": "Original prior human audit metadata, not new product execution evidence",
+  "records": [
+    {
+      "path": "docs/review-2026-10-12/runtime-round3.md",
+      "bytes": 8292,
+      "sha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7",
+      "actualSelectedLineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "# Runtime review round 3"
+        },
+        {
+          "line": 2,
+          "text": ""
+        },
+        {
+          "line": 3,
+          "text": "Baseline: `84740d56e55517b004948a0a0e07649ad6fbf998`."
+        },
+        {
+          "line": 4,
+          "text": "Product files were not changed. Reproduction ran under the guarded runner with isolated HOME and temporary local files; no model or external service was used."
+        },
+        {
+          "line": 5,
+          "text": ""
+        },
+        {
+          "line": 6,
+          "text": "## Confirmed: P2 — A failed final job-record write silently leaves a completed native task running"
+        },
+        {
+          "line": 7,
+          "text": ""
+        },
+        {
+          "line": 8,
+          "text": "- Primary source: `packages/server/src/panels/tool-jobs.ts:768-774` (the rejected `run()` is swallowed after removing its active executor), `:806-830` (terminal state/result only become visible through `commit`), `:430-434` (job map changes only after storage write succeeds)."
+        },
+        {
+          "line": 9,
+          "text": "- Trigger: A native/background Panel task completes while its job directory cannot be written (for example filesystem permission or disk availability changes). The fixture makes the temporary job directory mode `0500` immediately before releasing a controlled executor. It observes the original storage method rejecting with real `EACCES`; it does not inject an error."
+        },
+        {
+          "line": 10,
+          "text": "- Observed: The executor has settled and `active.size === 0`, but `get()` and `job.json` still report `running`, no result or error exists, and subscribers only received `queued` then `running`. `activeCount() === 1`. Explicit retry rejects with `tool job must finish stopping before retry`."
+        },
+        {
+          "line": 11,
+          "text": "- User impact: The task remains spinning with no indication that final persistence failed. Its completed result is lost, and the host continues treating it as active. Hub configuration mutations use this count (`packages/server/src/panels/runtime.ts:1850-1853`, `packages/server/src/serve/headless-server.ts:546`) so configuration stays blocked until a manual cancellation or restart repairs the stale job state. A restored writable disk alone does not republish the completion. This is a silent status/result failure, not an unrecoverable task."
+        },
+        {
+          "line": 12,
+          "text": "- Recovery verified: After restoring directory mode `0700`, `get()` still reports `running`. Explicit `cancel()` then changes it to `cancelled`, clears `activeCount`, and `retry()` can succeed. A second fixture runs a real separate Host process, leaves the stale checkpoint and exits without service shutdown; after permission restoration a new service marks it `interrupted` / `HOST_INTERRUPTED` with `activeCount=0` and does not automatically rerun it."
+        },
+        {
+          "line": 13,
+          "text": "- Existing error presentation checked: `ToolJob.error` and commit/subscriber events support ordinary executor failures, and the transport maps rejected request methods into error replies. This completion occurs after `start()` has returned; `pump()` swallows the asynchronous final-write rejection before any error event, logger or other storage-failure callback runs. The fixture subscriber sees only `queued` and `running`."
+        },
+        {
+          "line": 14,
+          "text": "- Reproduction: `node scripts/run-bun-test-shard.mjs --timeout 30000 /tmp/codeshell-review-20261012-runtime-round3/tool-job-final-write.test.ts`"
+        },
+        {
+          "line": 15,
+          "text": "- Evidence: `/tmp/codeshell-review-20261012-runtime-round3/tool-job-final-write.test.ts`, `/tmp/codeshell-review-20261012-runtime-round3/tool-job-write-crash-child.ts`, `/tmp/codeshell-review-20261012-runtime-round3/tool-job-final-write.log`; 2 tests passed, 0 failed, including assertion that write error is `EACCES`."
+        }
+      ],
+      "hashCaptureTiming": "After actual canonical metadata reading, not a source pre-read pin."
+    },
+    {
+      "path": "docs/review-2026-10-12/resource-quality-round8.md",
+      "bytes": 11479,
+      "sha256": "144f503bca6049c11ef1eca2faa108998d2d0ef5a4eafaaca3ea0946e9913975",
+      "actualSelectedLineRanges": [
+        [
+          31,
+          41
+        ]
+      ],
+      "lines": [
+        {
+          "line": 31,
+          "text": "已有保护/影响：Hub staging 在 worker run 之前，失败通过 JSON-RPC -32602 回到浏览器（headless-server.ts:1001–1019），不会向真实模型递交超限图片；未编辑过的新 draft 会恢复，用户移除/缩小再传可继续。该问题是 late admission UX，不是发送超限到模型、无提示成功或永久丢稿。原日志 11MiB PUT 201 后 prepare size rejection；同文件 2 tests / 21 assertions / pass（与 R17 共享）。P3 合理。"
+        },
+        {
+          "line": 32,
+          "text": ""
+        },
+        {
+          "line": 33,
+          "text": "## R30 — 保留 P2；结果字段丢失与虚假活动状态成立，但可恢复"
+        },
+        {
+          "line": 34,
+          "text": ""
+        },
+        {
+          "line": 35,
+          "text": "[tool-jobs.ts:806](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/panels/tool-jobs.ts:806) executor 完成后以 clone 构造 terminal outcome；commit 430–434 行必须 write 成功才更新 map。最终 write 拒绝后 [tool-jobs.ts:768](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/panels/tool-jobs.ts:768) finally 清 active executor、resolve done，随后 catch 吞掉错误。result 局部变量退出，job map/disk/subscriber 都只到 running。"
+        },
+        {
+          "line": 36,
+          "text": ""
+        },
+        {
+          "line": 37,
+          "text": "activeCount 322–333 行计入所有非 terminal job，并非仅 active executor；最新 [runtime.ts:1888](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/panels/runtime.ts:1888) 将 count 传到 Host；[headless-server.ts:542](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/headless-server.ts:542) configuration mutation 门禁据此 409。这条影响不是仅测试 private map 的推断，真实 gate 有连接。"
+        },
+        {
+          "line": 38,
+          "text": ""
+        },
+        {
+          "line": 39,
+          "text": "原 fixture 用真实 mode 0500 导致 EACCES，包装 storage.write 只记录原错误并重抛，不是注入异常；最新 log 明确 EACCES、activeExecutors=0、activeCount=1、仅 queued/running 事件、无 result/error。权限修复不会自动补写。已有保护：修复存储后 cancel 提交 cancelled、activeCount=0，再 retry 成功；新 Host 将 stale running checkpoint 标 interrupted/HOST_INTERRUPTED，不自动执行。"
+        },
+        {
+          "line": 40,
+          "text": ""
+        },
+        {
+          "line": 41,
+          "text": "范围建议：把“结果丢失”理解为返回的 job result/outcome 字段未保留，不能扩展为执行器已写出的所有 output 文件也丢失。不能写“永远不能恢复”或“取消无效”；主报告现有可恢复说明准确。最新 fixture 2 tests / 18 assertions / pass。"
+        }
+      ],
+      "hashCaptureTiming": "After actual canonical metadata reading, not a source pre-read pin."
+    }
+  ],
+  "cause": "Legacy R30/P2: final job-record persistence rejection after native completion is swallowed by pump cleanup, state remains running/noresult. Exact source cause already documented; this review does not reopen permission/disk fixture or count it again.",
+  "otherCoverage": "No canonical same-current-SHA full/ranges for entire tool-jobs established by targeted examined records; this is not proof of unread. Current task permits actual lifecycle review even with old overlap."
+}

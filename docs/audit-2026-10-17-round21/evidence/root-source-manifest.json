@@ -1,0 +1,123 @@
+{
+  "baseline": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "files": [
+    {
+      "path": "packages/coding/src/git/worktree/slug.ts",
+      "bytes": 2358,
+      "sha256": "83e7df4c69bf669d427fa6c1ec3d7b1e01b50d6df0f2865f1bf215fc012f701b",
+      "scope": "Full static leaf; actual normalizeWorktreeBranchPrefix/managedBranchPrefixes only on ordinary valid labels. No direct validator/gate/applyPrefix call.",
+      "lineCount": 58,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/coding/src/git/worktree/slug.test.ts",
+      "bytes": 1557,
+      "sha256": "911bb457b2c24f206c22cbb7d6968da02838bb0dba5f7738397241be694d3cd2",
+      "scope": "Full existing five tests static only; historical baselines acknowledged, not rerun.",
+      "lineCount": 35,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "scope": "Selected32-47,80-89,336-347 and DEFAULT prefix references only; no Zod/settings import or parse.",
+      "lineCount": 731,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/coding/src/tools/worktree.ts",
+      "bytes": 18076,
+      "sha256": "a8fd4ddde6610c40ce81f253d22ae738310bdcff6b135130760df161a53c9b0e",
+      "scope": "Selected130-168 prefix producer/wiring only; no tool/session/native operation/import.",
+      "lineCount": 525,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/coding/src/git/worktree/query.ts",
+      "bytes": 5697,
+      "sha256": "50a9f03677270ea624638bb0e5a6eb8f0331f64d2572c5520d81bf857c5d1641",
+      "scope": "Selected140-165 namespace consumer only; no Git/query/ownership decision run.",
+      "lineCount": 191,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/coding/src/git/worktree/crud.ts",
+      "bytes": 19959,
+      "sha256": "f7b913cdb9ce309bfdb4fc3428c1549da79a153ecdc718c4ac38471b1c2f59fb",
+      "scope": "Selected112-130 naming consumer only; no create/cleanup/native/Host import/run.",
+      "lineCount": 574,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/input/ndjson-reader.ts",
+      "bytes": 2364,
+      "sha256": "72bf81860af854bab65e8e3f3318205b815252a72ce1294d761e618a6ae4febc",
+      "scope": "Full initial static read only by Root; separate worker lane owns runtime scope.",
+      "lineCount": 79,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "bytes": 5744,
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "scope": "Initial command up to190 displayed source; static only by Root, separate worker JSON scope.",
+      "lineCount": 163,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "bytes": 6990,
+      "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "scope": "Initial command up to220 displayed source; static only by Root, separate worker budget scope.",
+      "lineCount": 173,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/context/token-counter.ts",
+      "bytes": 3978,
+      "sha256": "f11e4c6175922b1396f2eb622d6e98a62cfc63801c2cd96750339879b5f01328",
+      "scope": "Selected first160 static only by Root; no provider tokenizer or calibration claim.",
+      "lineCount": 133,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "scope": "Full static source only; compaction/retention/image bytes not imported or exercised.",
+      "lineCount": 86,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/root-git.md",
+      "bytes": 4169,
+      "sha256": "504ee8494972f681836843f14a82974b9f86e9d06ac97ceb8c1f196d10ebbb16",
+      "scope": "Selected14-27 prior slug+parser baseline receipts and exclusions; no old runtime recovery.",
+      "lineCount": 25,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/git-text.md",
+      "bytes": 4460,
+      "sha256": "6208adc46883bb44a9d20bc77f23be2e17992b5213ec0531f19a7ed8e90aa2b8",
+      "scope": "Selected10-22 prior existing baseline and source-only query limits; no old runtime recovery.",
+      "lineCount": 33,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    }
+  ],
+  "note": "Read-command bounds are not nonexistent line claims; actual lineCount recorded. Exploratory static scope separated from actual prefix helper calls."
+}

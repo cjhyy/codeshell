@@ -1,0 +1,112 @@
+{
+  "atUTC": "2026-10-17T16:58:10.030685+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "displayedLineRanges": [
+        [
+          1036,
+          1075
+        ],
+        [
+          2648,
+          2662
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1036,
+          "end": 1075,
+          "text": "1036:       setApproval,\n1037:       setPermissionOverrides,\n1038:     },\n1039:     sessions: {\n1040:       setQueuedInputs,\n1041:       setUnreadBuckets,\n1042:       setSessionIndices,\n1043:       setProjects,\n1044:       setQuickChatSessions,\n1045:       setCollapsedProjects,\n1046:       setRevealedSessionIds,\n1047:     },\n1048:     activity: { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys },\n1049:   });\n1050: \n1051:   const {\n1052:     send,\n1053:     sendQuickChat,\n1054:     queueInput,\n1055:     forceSend,\n1056:     clearActiveQueuedInput,\n1057:     removeActiveQueuedInputAt,\n1058:     guideActiveQueuedInput,\n1059:     stop,\n1060:     resolveEngineSessionIdForBucket,\n1061:     compactActiveSession,\n1062:     extendGoal,\n1063:     decideEnvelope,\n1064:     showWelcome,\n1065:     visibleApproval,\n1066:     approvalForBucket,\n1067:     setViewMode,\n1068:   } = useRunController({\n1069:     shell: { t, lang, toast, setView },\n1070:     session: {\n1071:       activeProjectId,\n1072:       activeSessionId,\n1073:       activeBucket,\n1074:       projects,\n1075:       sessionIndices,"
+        },
+        {
+          "start": 2648,
+          "end": 2662,
+          "text": "2648:                     onComposerSeedConsumed={onComposerSeedConsumed}\n2649:                     draft={composerDraft.text}\n2650:                     onDraftChange={setComposerDraftText}\n2651:                     attachments={composerDraft.attachments}\n2652:                     onAttachmentsChange={setComposerDraftAttachments}\n2653:                     anchors={anchors}\n2654:                     onRemoveAnchor={removeAnchor}\n2655:                     onClearAnchors={clearAnchors}\n2656:                     onAskUserAnswer={handleAskUserAnswer}\n2657:                     onExtendGoal={extendGoal}\n2658:                     onAttachImagePath={(p) => void attachImageByPath(p)}\n2659:                     onPrepareAttachmentSession={prepareAttachmentSession}\n2660:                     imageDetail={imageDetail}\n2661:                     pendingApproval={visibleApproval}\n2662:                     onApprovalDecide={"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "displayedLineRanges": [
+        [
+          1794,
+          1807
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1794,
+          "end": 1807,
+          "text": "1794:                   </Button>\n1795:                 </div>\n1796:               ) : undefined\n1797:             }\n1798:             turnEpoch={turnEpoch}\n1799:             localRuntime={localRuntime}\n1800:             engineSessionId={engineSessionId}\n1801:             liveTurnActive={liveTurnActive}\n1802:             onAskUserAnswer={onAskUserAnswer}\n1803:             onExtendGoal={onExtendGoal}\n1804:             trailing={\n1805:               <>\n1806:                 {inlineApproval}\n1807:                 {chatLinkResources}"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "displayedLineRanges": [
+        [
+          80,
+          92
+        ],
+        [
+          590,
+          601
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 80,
+          "end": 92,
+          "text": "80:   readOnly?: boolean;\n81:   localRuntime?: boolean;\n82:   onAskUserAnswer?: (requestId: string, answer: string) => void | Promise<void>;\n83:   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */\n84:   onExtendGoal?: (opts: {\n85:     addTurns?: number;\n86:     addStopBlocks?: number;\n87:     addTokenBudget?: number;\n88:     addTimeBudgetMs?: number;\n89:   }) => void;\n90:   /**\n91:    * Optional trailing slot rendered after the last message but still\n92:    * inside the scrollable stream. Used by the chat shell to drop a"
+        },
+        {
+          "start": 590,
+          "end": 601,
+          "text": "590:       case \"agent\":\n591:         return <AgentMessageView key={m.id} message={m} />;\n592:       case \"task_list\":\n593:         return null;\n594:       case \"context_boundary\":\n595:         return <ContextBoundaryView key={m.id} message={m} />;\n596:       case \"goal_progress\":\n597:         return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;\n598:       case \"ask_user\":\n599:         return m.answer !== undefined || m.asynchronous ? (\n600:           <AskUserMessageView key={m.id} message={m} onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER} />\n601:         ) : null;"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "displayedLineRanges": [
+        [
+          189,
+          211
+        ],
+        [
+          1764,
+          1818
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 189,
+          "end": 211,
+          "text": "189: export interface GoalProgressMessage {\n190:   kind: \"goal_progress\";\n191:   id: string;\n192:   goalId?: string;\n193:   status: \"not_met\" | \"met\" | \"exhausted\" | \"approaching_limit\";\n194:   round: number;\n195:   gaps?: string;\n196:   /** For \"approaching_limit\": turns left before the maxTurns cap (TODO 3.1). */\n197:   turnsRemaining?: number;\n198:   /** For \"approaching_limit\": consecutive blocks left before maxStopBlocks (TODO 3.1). */\n199:   stopBlocksRemaining?: number;\n200:   /** For \"approaching_limit\": which ceiling is closest — drives UI copy + extend default. */\n201:   nearest?: \"turns\" | \"stopBlocks\";\n202: }\n203: \n204: /** Renderer projection of the session's persisted Goal state. */\n205: export interface ActiveGoal {\n206:   objective: string;\n207:   goalId?: string;\n208:   /** Monotonic edit/pause generation used to fence late terminal events. */\n209:   revision?: number;\n210:   round: number;\n211:   paused: boolean;"
+        },
+        {
+          "start": 1764,
+          "end": 1818,
+          "text": "1764:             id: freshId(\"ctx\"),\n1765:             strategy: event.strategy,\n1766:             before: event.before,\n1767:             after: event.after,\n1768:             ...(contextTransfer ? { contextTransfer } : {}),\n1769:           },\n1770:         ],\n1771:       };\n1772:     }\n1773: \n1774:     case \"goal_progress\": {\n1775:       if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event)) {\n1776:         return state;\n1777:       }\n1778:       const msg: GoalProgressMessage = {\n1779:         kind: \"goal_progress\",\n1780:         id: freshId(\"goal\"),\n1781:         goalId: event.goalId,\n1782:         status: event.status,\n1783:         round: event.round,\n1784:         gaps: event.gaps,\n1785:         turnsRemaining: event.turnsRemaining,\n1786:         stopBlocksRemaining: event.stopBlocksRemaining,\n1787:         nearest: event.nearest,\n1788:       };\n1789:       // The \"approaching_limit\" marker carries the \"再续\" button. Only prune it\n1790:       // when the moment has TRULY passed:\n1791:       //  - met/exhausted → the limit dimension settled / the run stopped.\n1792:       //  - a NEW approaching_limit → never stack two (re-announced after extend).\n1793:       // A \"not_met\" event means the goal is still advancing and may still be\n1794:       // nearing the cap, so the button must stay (fixes B2: previously not_met\n1795:       // pruned the button within the same turn it appeared).\n1796:       const dropApproaching =\n1797:         event.status === \"met\" ||\n1798:         event.status === \"exhausted\" ||\n1799:         event.status === \"approaching_limit\";\n1800:       const base = dropApproaching\n1801:         ? state.messages.filter(\n1802:             (m) => !(m.kind === \"goal_progress\" && m.status === \"approaching_limit\"),\n1803:           )\n1804:         : state.messages;\n1805:       // Track the active goal's round; clear it when the goal settles\n1806:       // (met = achieved, exhausted = gave up). not_met/approaching_limit keep\n1807:       // it active and bump the round so the popover shows \"第 N 轮\".\n1808:       const activeGoal =\n1809:         event.status === \"met\" || event.status === \"exhausted\"\n1810:           ? null\n1811:           : state.activeGoal\n1812:             ? {\n1813:                 ...state.activeGoal,\n1814:                 round: event.round,\n1815:                 revision: event.revision ?? state.activeGoal.revision,\n1816:               }\n1817:             : state.activeGoal;\n1818:       return { ...state, messages: [...base, msg], activeGoal };"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "displayedLineRanges": [
+        [
+          180,
+          195
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 180,
+          "end": 195,
+          "text": "180:     }\n181:     if (m.kind === \"agent\") {\n182:       return <AgentMessageView key={m.id} message={m} />;\n183:     }\n184:     if (m.kind === \"agent_group\") {\n185:       return <AgentGroupCard key={m.id} group={m} />;\n186:     }\n187:     if (m.kind === \"context_boundary\") {\n188:       return <ContextBoundaryView key={m.id} message={m} />;\n189:     }\n190:     if (m.kind === \"goal_progress\") {\n191:       return <GoalProgressView key={m.id} message={m} />;\n192:     }\n193:     return null;\n194:   };\n195:   const activityNodes = parts.map((part) =>"
+        }
+      ]
+    }
+  ]
+}

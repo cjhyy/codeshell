@@ -1,0 +1,13 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+      "bytes": 5067,
+      "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "lines": 142,
+      "capturedUTC": "2026-10-17T15:26:14.569427+00:00",
+      "timing": "before55 fallback semantic/body/navigation read after Root confirmed54 hash-only/body0"
+    }
+  ],
+  "authorization": "Root allowed established Panel fallback;54 author+independent no semantic occupation; no further fallback if oldfull"
+}

@@ -1,0 +1,13 @@
+# Root正式54归档复核
+
+115–120全部冻结，Root已读六份完整报告。有限普通数据范围没有建立新反例，0新增正式问题/候选/关联。116旧incidental physical full与no semantic review限定保留，本轮选读允许但不说成第一次；118有旧普通审查重叠，目标全显示278行只认9–146语义，后半auth/filter仅相邻展示。120 recipes旧full有限目的排除，operations旧pin/selected没有被升级为全读。
+
+真实调用链反驳两条猜想：118任意深JSON不按有schema对象的prototype禁键处理，有类型与现有声明测试支持；120远端normalize仍收到原params，结果过滤后按limit切片，prepare空对象不等于最终limit丢失。没有用任意坏DTO、无活跃consumer或旧测试pass补可达性。
+
+115与119各两个旧全文门槛在正文前排除；117的旧全文仅普通shape/mapping/lifecycle范围，不升级为完整Host权限执行认证。历史扫描5311成员与百万scalar机器遍历，不等于每条语义阅读。只按各包实际compact对象/MD行读取核对。
+
+117份原件、228receipt/copy核验、18锚点，33唯一pins，21语义/元数据记录、6相邻导航、20hash记录。源和指令/元数据混合，不能将33写成新读产品文件数，跨包selected与原历史有重叠。原始null、首pin时序、truncation和声明测试0执行全部保留。Root第一次汇总工具总输出截断，后单独完整读116项目录，没有凭截断内容确认清单。
+
+读取基线16c1a40，冻结后refresh main0d2d5418有4并发路径，33pin无漂移。原5311历史中release-real-operations文档变更，不倒填旧inventory；其余无missing/change。所有产品执行0，元数据首整理exit0，不重跑产品。冻结空白例外0。
+
+累计116=44P2+72P3，为历史发现数不是当前未修复数。旧统一45覆盖304full/169selected/4170unknown仍仅dated4643分母，后续尚未整体回填。新覆盖核对121独立进行且不借未冻结果。本批只owned54 docs，dirty primary按不相交路径与字节保留，no push，目标active。

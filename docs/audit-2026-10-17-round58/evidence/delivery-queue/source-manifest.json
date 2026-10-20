@@ -1,0 +1,669 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "context": {
+    "rootReportedHead": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+    "branchReported": "58",
+    "GitVerified": false,
+    "sourceReadType": "static-only",
+    "productRuntimeExecutions": 0,
+    "GitCalls": 0
+  },
+  "files": [
+    {
+      "path": "packages/chat/src/delivery-queue.ts",
+      "bytes": 28387,
+      "lines": 769,
+      "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "pinAt": "2026-10-17T19:16:31.989120+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          7,
+          57
+        ],
+        [
+          91,
+          315
+        ],
+        [
+          318,
+          338
+        ],
+        [
+          482,
+          603
+        ],
+        [
+          605,
+          620
+        ],
+        [
+          700,
+          721
+        ]
+      ],
+      "semanticLineCount": 457,
+      "displayedLineRanges": [
+        [
+          1,
+          620
+        ],
+        [
+          700,
+          742
+        ]
+      ],
+      "displayedLineCount": 663,
+      "displayArtifacts": [
+        "entry-lifecycle-display.json",
+        "queue-bound-display.json",
+        "queue-display-first.json"
+      ],
+      "scope": "Lifecycle, durable acceptance, instance mutation and complete-state persistence. Spool/security helper display is excluded; directory helpers read only to identify absence of queue writer coordination in this call path.",
+      "endingSha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.ts",
+      "bytes": 3817,
+      "lines": 99,
+      "sha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "pinAt": "2026-10-17T19:16:31.989587+00:00",
+      "coverage": "full",
+      "initialPinArtifact": "initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "semanticLineCount": 99,
+      "displayedLineRanges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "displayedLineCount": 99,
+      "displayArtifacts": [
+        "queue-bound-display.json"
+      ],
+      "scope": "Ordinary accepted/not-bound routing and reply disposition; no actual host/session operation or enforcement certification.",
+      "endingSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "lines": 301,
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "pinAt": "2026-10-17T19:23:01.823875+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "adjacent-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          54,
+          61
+        ],
+        [
+          79,
+          95
+        ],
+        [
+          102,
+          186
+        ],
+        [
+          199,
+          231
+        ]
+      ],
+      "semanticLineCount": 143,
+      "displayedLineRanges": [
+        [
+          54,
+          234
+        ]
+      ],
+      "displayedLineCount": 181,
+      "displayArtifacts": [
+        "producer-gateway-lifecycle-display.json"
+      ],
+      "scope": "Actual queue creation, middleware dispatch, adapter-handler acceptance, runner shutdown and queue.stop consumer.",
+      "endingSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "bytes": 11645,
+      "lines": 320,
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "pinAt": "2026-10-17T19:23:01.825883+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "adjacent-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          1
+        ],
+        [
+          66,
+          145
+        ],
+        [
+          317,
+          320
+        ]
+      ],
+      "semanticLineCount": 85,
+      "displayedLineRanges": [
+        [
+          1,
+          213
+        ],
+        [
+          250,
+          306
+        ],
+        [
+          317,
+          320
+        ]
+      ],
+      "displayedLineCount": 274,
+      "displayArtifacts": [
+        "contract-stop-test-display.json",
+        "entry-lifecycle-display.json",
+        "producer-gateway-lifecycle-display.json"
+      ],
+      "scope": "Actual Node entry, same-config lock/inbox wiring, shutdown signal, watcher/gateway finalization and exitCode-only error handler. WeChat login/service/canary adjacent display excluded.",
+      "endingSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "bytes": 12790,
+      "lines": 362,
+      "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "pinAt": "2026-10-17T19:23:01.827850+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "adjacent-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          91,
+          133
+        ],
+        [
+          150,
+          174
+        ],
+        [
+          184,
+          200
+        ],
+        [
+          212,
+          222
+        ],
+        [
+          267,
+          280
+        ]
+      ],
+      "semanticLineCount": 110,
+      "displayedLineRanges": [
+        [
+          90,
+          133
+        ],
+        [
+          150,
+          222
+        ],
+        [
+          267,
+          289
+        ]
+      ],
+      "displayedLineCount": 140,
+      "displayArtifacts": [
+        "inflight-lifecycle-display.json",
+        "producer-gateway-lifecycle-display.json",
+        "sender-error-display.json"
+      ],
+      "scope": "Normal text producer and ACK/offset order, abortable inbound polling, reply send local timeout and ordinary Error propagation. No platform connection or account behavior tested.",
+      "endingSha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "lines": 193,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "pinAt": "2026-10-17T19:23:01.825083+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "adjacent-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          109,
+          119
+        ],
+        [
+          144,
+          164
+        ]
+      ],
+      "semanticLineCount": 32,
+      "displayedLineRanges": [
+        [
+          1,
+          105
+        ],
+        [
+          109,
+          193
+        ]
+      ],
+      "displayedLineCount": 190,
+      "displayArtifacts": [
+        "contract-stop-test-display.json",
+        "producer-gateway-lifecycle-display.json"
+      ],
+      "scope": "Inbound message fields and sender/adapter signatures. Capability matrix display not claimed as new full semantic review.",
+      "endingSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "lines": 347,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "pinAt": "2026-10-17T19:25:31.205223+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "inflight-lifecycle-pins-navigation.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          129,
+          148
+        ],
+        [
+          198,
+          204
+        ],
+        [
+          224,
+          244
+        ]
+      ],
+      "semanticLineCount": 48,
+      "displayedLineRanges": [
+        [
+          129,
+          218
+        ],
+        [
+          224,
+          244
+        ]
+      ],
+      "displayedLineCount": 111,
+      "displayArtifacts": [
+        "entry-lifecycle-display.json",
+        "inflight-lifecycle-display.json"
+      ],
+      "scope": "Real Mimi middleware await/reply and petChat input forwarding only; cached reply/sendTask internals incidentally displayed but not reviewed as a new cache finding.",
+      "endingSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "bytes": 15174,
+      "lines": 446,
+      "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "pinAt": "2026-10-17T19:25:31.212433+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "inflight-lifecycle-pins-navigation.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          101,
+          131
+        ],
+        [
+          139,
+          148
+        ],
+        [
+          151,
+          190
+        ],
+        [
+          208,
+          218
+        ],
+        [
+          258,
+          263
+        ],
+        [
+          275,
+          291
+        ],
+        [
+          316,
+          321
+        ]
+      ],
+      "semanticLineCount": 121,
+      "displayedLineRanges": [
+        [
+          101,
+          190
+        ],
+        [
+          208,
+          218
+        ],
+        [
+          258,
+          321
+        ]
+      ],
+      "displayedLineCount": 165,
+      "displayArtifacts": [
+        "entry-lifecycle-display.json",
+        "inflight-lifecycle-display.json",
+        "watch-abort-display.json",
+        "watch-signal-forwarding-display.json"
+      ],
+      "scope": "petChat pending polling lacks caller abort; watcher does forward its signal; request local timeout cleanup. Descriptor/credential/startup mechanism display excluded and not certified.",
+      "endingSha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/instance-lock.ts",
+      "bytes": 4712,
+      "lines": 159,
+      "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "pinAt": "2026-10-17T19:25:31.218502+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "inflight-lifecycle-pins-navigation.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          27,
+          30
+        ],
+        [
+          47,
+          50
+        ],
+        [
+          52,
+          90
+        ],
+        [
+          95,
+          101
+        ],
+        [
+          156,
+          159
+        ]
+      ],
+      "semanticLineCount": 58,
+      "displayedLineRanges": [
+        [
+          27,
+          30
+        ],
+        [
+          47,
+          101
+        ],
+        [
+          156,
+          159
+        ]
+      ],
+      "displayedLineCount": 63,
+      "displayArtifacts": [
+        "entry-lifecycle-display.json",
+        "inflight-lifecycle-display.json"
+      ],
+      "scope": "Static single-owner lease comment, normal marker creation/close/release and token-checked removal only; no OS/process/custody enforcement experiment.",
+      "endingSha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/delivery-queue.test.ts",
+      "bytes": 18029,
+      "lines": 524,
+      "sha256": "14338213d386fd4ea2ff12c6202f6c1d2bbe4b7f8694f2182830bfe2e91228ff",
+      "pinAt": "2026-10-17T19:23:01.826741+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "adjacent-initial-pins.json",
+      "sourceKind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          34,
+          104
+        ]
+      ],
+      "semanticLineCount": 71,
+      "displayedLineRanges": [
+        [
+          34,
+          104
+        ]
+      ],
+      "displayedLineCount": 71,
+      "displayArtifacts": [
+        "contract-stop-test-display.json"
+      ],
+      "scope": "Existing persistence/retry/dedupe/recovery/backpressure declarations only; no tests run and no shutdown race execution.",
+      "endingSha256": "14338213d386fd4ea2ff12c6202f6c1d2bbe4b7f8694f2182830bfe2e91228ff",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.test.ts",
+      "bytes": 4481,
+      "lines": 126,
+      "sha256": "51fb1b92c9506431403e0883582a8c6e1be940a26deb3b9aeb567a774cd4e081",
+      "pinAt": "2026-10-17T19:23:01.827311+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "adjacent-initial-pins.json",
+      "sourceKind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          68,
+          94
+        ]
+      ],
+      "semanticLineCount": 27,
+      "displayedLineRanges": [
+        [
+          68,
+          94
+        ]
+      ],
+      "displayedLineCount": 27,
+      "displayArtifacts": [
+        "contract-stop-test-display.json"
+      ],
+      "scope": "Existing route-error retry and accepted-immediate-reply declarations only; no tests run.",
+      "endingSha256": "51fb1b92c9506431403e0883582a8c6e1be940a26deb3b9aeb567a774cd4e081",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    }
+  ],
+  "metadataFiles": [
+    {
+      "path": "packages/chat/package.json",
+      "bytes": 2936,
+      "lines": 123,
+      "sha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "pinAt": "2026-10-17T19:29:16.914395+00:00",
+      "coverage": "selected",
+      "initialPinArtifact": "entry-lifecycle-navigation.json",
+      "sourceKind": "package-entry-metadata",
+      "selectedLineRanges": [
+        [
+          1,
+          4
+        ],
+        [
+          70,
+          72
+        ]
+      ],
+      "semanticLineCount": 7,
+      "displayedLineRanges": [
+        [
+          1,
+          35
+        ],
+        [
+          70,
+          72
+        ]
+      ],
+      "displayedLineCount": 38,
+      "scope": "Package identifies Node/Bun standalone gateway and bin maps code-shell-chat to dist/cli.js. This is metadata, not product runtime."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T19:16:31.986563+00:00",
+      "coverage": "hash-only",
+      "initialPinArtifact": "initial-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Instructions read previously; same SHA reused, no new full instruction read."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T19:16:31.988285+00:00",
+      "coverage": "hash-only",
+      "initialPinArtifact": "initial-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Instructions read previously; same SHA reused, no new full instruction read."
+    }
+  ],
+  "historyReferences": [
+    {
+      "path": "docs/audit-2026-10-16/source-manifest.json",
+      "sha256": "9a624ccb9a02c21474a563b4b7382799a95cf7961f5ee6d2cf7f36da54c666d9",
+      "bytes": 2815,
+      "selectionArtifact": "prior-canonical-read.json",
+      "scope": "Only explicitly saved selected old lines/objects were read; no whole-history semantic exhaustion."
+    },
+    {
+      "path": "docs/audit-2026-10-16/server-web-chat.md",
+      "sha256": "e12916c5a52bc6bee7ccb78acf25788fcc68a160283523fa32f52e2f74098de0",
+      "bytes": 16408,
+      "selectionArtifact": "prior-canonical-read.json",
+      "scope": "Only explicitly saved selected old lines/objects were read; no whole-history semantic exhaustion."
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "bytes": 31923,
+      "selectionArtifact": "prior-canonical-read.json",
+      "scope": "Only explicitly saved selected old lines/objects were read; no whole-history semantic exhaustion."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "sha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "bytes": 6965,
+      "selectionArtifact": "entry-and-old-r11-display.json",
+      "scope": "Only explicitly saved selected old lines/objects were read; no whole-history semantic exhaustion."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/findings.json",
+      "sha256": "623dceaf7d194fb747529ffdd59994416111d78f5ba43925a505c8a7d93a1aa8",
+      "bytes": 1542,
+      "selectionArtifact": "entry-and-old-r11-display.json",
+      "scope": "Only explicitly saved selected old lines/objects were read; no whole-history semantic exhaustion."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-findings.json",
+      "sha256": "b5867052aeb00ce829b4ba4c2244d2abcebdf36f9acf669a6e255b5ec898f06b",
+      "bytes": 3130,
+      "selectionArtifact": "entry-and-old-r11-display.json",
+      "scope": "Only explicitly saved selected old lines/objects were read; no whole-history semantic exhaustion."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+      "sha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e",
+      "bytes": 548101,
+      "selectionArtifact": "prior-shutdown-bounded.json",
+      "scope": "Two derived bounded contexts read in full at later metadata check; not the entire 548101-byte old scanner output or original source report."
+    }
+  ],
+  "sharedHistory": {
+    "input": {
+      "path": "/tmp/codeshell-audit-round141-pairing/history-batch.json",
+      "bytes": 1396813,
+      "sha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b",
+      "pinAt": "2026-10-17T19:23:01.866438+00:00"
+    },
+    "snapshotAt": "2026-10-17T19:16:56.757474+00:00",
+    "sharedHistoryFiles": 5850,
+    "machineValueScalarVisits": 4251467,
+    "excludedFormalAtOrAbove": 58,
+    "targetHitCounts": {
+      "delivery-queue": 79,
+      "bound-session-chat": 68
+    },
+    "cap": 100,
+    "targetHitsAllSaved": true,
+    "allSavedHitsSemanticallyRead": false,
+    "note": "Shared recursive JSON value/MD machine navigation only. Root owns full inventory binding. This author only read the identified canonical lines/objects and two derived windows."
+  },
+  "totals": {
+    "productFiles": 9,
+    "productSemanticLines": 1153,
+    "testDeclarationFiles": 2,
+    "testDeclarationLines": 98,
+    "fullFiles": 1,
+    "selectedFiles": 10,
+    "semanticFilesDisplayedLines": 1984,
+    "packageMetadataLines": 7,
+    "packageMetadataDisplayedLines": 38,
+    "hashOnlyFiles": 2,
+    "navigationOnlyFiles": 0
+  },
+  "limitations": [
+    "Range sums are declared static reading, include known prior overlap and are not global unique new coverage.",
+    "Full bound-session-chat read does not certify host/session authority or actual routing execution.",
+    "Displayed but excluded adjacent code is not semantic review. Test declarations are not test results."
+  ],
+  "endingAt": "2026-10-17T19:33:21.249658+00:00"
+}

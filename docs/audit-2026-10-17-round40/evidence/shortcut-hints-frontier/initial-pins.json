@@ -1,0 +1,18 @@
+{
+  "capturedUTC": "2026-10-17T13:52:21.718695+00:00",
+  "firstPinUTC": "2026-10-17T13:51:44.538026+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "rootTaskContext": "Root39 docs integration mutable at assignment. Include frozen38, exclude39/40/41/42 history. No Git observation.",
+  "files": [
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "lineCount": 140,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "coverage": "hash-only before active leaf body",
+      "pinBeforeBodyRead": true,
+      "priorCoverage": "Dated R28 current-sha pin-only/unknown scope with older version pins; fresh full history gate required. Not never-read."
+    }
+  ]
+}

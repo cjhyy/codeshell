@@ -1,0 +1,127 @@
+
+DOCUMENT docs/audit-2026-10-17-round10/catalog.md TOTAL 35 DISPLAY 1-35
+1: # 第十批：模型目录与缓存数据
+2: 
+3: 冻结提交：`6966dc0f98d21dbc2ecced6cdd6467d17b81bc39`。本分项新增 **0 个正式缺陷、0 个候选**。3 个首次 guarded Bun shard 均完整通过：**55 pass、0 fail、0 skip、278 expect**，其中 51 个既有测试、4 个新增普通数据控制。另有 1 次静态读取命令失败，已保留并跳过该方向。
+4: 
+5: ## 审查与验证范围
+6: 
+7: - 阅读 Catalog schema、参数 wire 投影、按 id/value 的 upsert、用户目录加载/合并/来源、保存/删除实现和模型缓存读写/TTL，以及连接到 ModelPool 的纯数据桥。静态阅读不代表执行对应 provider、凭证或保存路径。
+8: - 实际执行目录 schema、merge、upsert、来源、参数投影及内置文本 preset 的既有测试；其中 user catalog 文件只位于测试自建临时 HOME。`builtin-text.test.ts` 的厂商模型窗口/vision 断言仅表示冻结仓库内部一致，没有重新核验厂商事实。
+9: - 实际执行 cache 缺失、写读、畸形 JSON、TTL、建目录和首次 context backfill/显式覆盖控制，文件只位于测试自建临时目录。没有 HTTP 请求、provider fetch 或真实模型调用。
+10: - 新增 [catalog-data-controls.test.ts](evidence/catalog-data-controls.test.ts) 验证 `false`、`0`、空文本、未设置值、同层多个 dotted path、schema 通过的 `vendor/model:revision` 替换、输入数组保持和参数文档格式。它们是正常行为控制，没有故意失败断言，也没有修产品代码。
+11: - 冻结已包含 `304781e52c0ab18b79514d8e51c6dbf9da672421`（`fix(core): honor current model capabilities across tools and requests`）对所读模型目录/池的最近改动。本分项以冻结版本为准，不将先前 vision 行为当成当前缺陷。
+12: 
+13: ## 未升级的观察
+14: 
+15: `ModelPool.reloadCachedContextWindows()` 在 [model-pool.ts](../../packages/core/src/llm/model-pool.ts#L145) 只填未设 `maxContextTokens` 的条目，并将推断结果写入同一字段。不能仅凭方法名认定缓存更新后必须刷新已推断值：源码注释明确保留 prior code path 的已有值，尚缺正常调用者触发与产品契约。推断来源丢失已有 [归档设计记录](../refactor/_archive/goal-judge-context-refactor-FINAL.md#L129)。因此没有新增 bug 或候选，首次 backfill baseline 也不证明后续 refresh。
+16: 
+17: `applyParams` 的父/子 wire path 冲突虽可由自造参数表构成，但未找到正常内置 producer 或重叠优先级要求；没有将接受的任意配置冲突升级成产品缺陷。
+18: 
+19: 全历史查重覆盖先前 `docs/`、`bugs/` 中 audit/review/archive/_archive 的 Markdown 行和解析后的 JSON 字符串，排除本批。扫描 1,054 文件；[初始命中](evidence/catalog-dedup-initial.json) 和 [去除元数据噪声后的摘要](evidence/catalog-dedup-summary.json) 保留。`round9` 独立 CostTracker 身份估价问题未重复审查或重新计数。
+20: 
+21: ## 首次失败与跳过
+22: 
+23: 一次静态调用链读取误写了不存在的 `packages/core/src/engine.ts`，`rg` exit 2，后面的 `&& sed` 未执行。保留 [工具输出转录](evidence/catalog-static-read-failure.md) 后跳过 cache refresh 调用链方向；未修改路径重试，也没有替代读取恢复该验证。这是静态命令失败，**不是 Bun shard 或产品 bug**。
+24: 
+25: 没有执行 `save-entry.test.ts` 的进程并发/链接路径组、凭证解析测试、真实 settings、真实 provider、Desktop/TUI 页面、共享 dist 构建或全套测试。保存/删除实现只有静态阅读，不声明其运行正确性。
+26: 
+27: ## 材料
+28: 
+29: - [validation](evidence/catalog-validation.json)：命令、计数、范围、静态跳过。
+30: - [目录 baseline 原始日志](evidence/catalog-existing.first.log) / [首次退出码](evidence/catalog-existing.first.exit.json)：44 pass、258 expect，6 文件。
+31: - [缓存 baseline 原始日志](evidence/catalog-cache-existing.first.log) / [首次退出码](evidence/catalog-cache-existing.first.exit.json)：7 pass、10 expect，2 文件。
+32: - [新增控制原始日志](evidence/catalog-data-controls.first.log) / [首次退出码](evidence/catalog-data-controls.first.exit.json)：4 pass、10 expect，1 文件。
+33: - [findings](evidence/catalog-findings.json)、[候选与排除](evidence/catalog-candidates.json)、[冻结源码散列](evidence/catalog-source-manifest.json)、[产物收据](evidence/catalog-artifact-receipts.json)。源码清单限实际读取的直接文件，不宣称完整传递依赖覆盖。
+34: 
+35: 所有首次测试的 stdout/stderr 合并流与退出码先保存后查看。无失败 Bun shard、无重跑；本分项没有产品或 Git 写入。
+
+DOCUMENT docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md TOTAL 10 DISPLAY 1-10
+1: # 首次静态读取失败转录
+2: 
+3: 以下为工具返回的原文转录，非 Bun 测试原始日志。首次命令使用错误的 `packages/core/src/engine.ts` 路径，`rg` exit 2，`&&` 后两个 sed 未执行。保留此材料后跳过 cache refresh 调用链方向；没有改路径、重跑或用另一方法恢复验证。
+4: 
+5: ```text
+6: rg: packages/core/src/engine.ts: No such file or directory (os error 2)
+7: packages/core/src/llm/model-pool.ts:145:  reloadCachedContextWindows(): void {
+8: ```
+9: 
+10: 工具 exit_code: 2。此失败不计为产品 bug，不计为 Bun shard。
+
+DOCUMENT docs/audit-2026-10-17-round17/catalog.md TOTAL 43 DISPLAY 1-43
+1: # Panel Agent Task 模型目录审查
+2: 
+3: 冻结基线：`d86db33012dffd5d1849e76b869fa15eb260324f`。本方向新增 **0 项确认缺陷、2 项候选**。首次 guarded shard **12 个测试、36 次断言通过，0 失败、0 跳过**；全部为本批聚焦测试，未运行现有 Desktop 测试入口，也未执行 Host、Engine、模型请求或界面。
+4: 
+5: ## CATALOG-R17-C1：目录 default 与 Core 的有效默认值回退不同
+6: 
+7: 实际 [目录 leaf](../../packages/server/src/panels/agent-task-models.ts#L75) 仅在 `defaults.text` 命中本次输出连接 id 时返回 `defaultModel`。有一个正常 text connection，但 `defaults.text` 未设置或仍指向已移除 id 时，实际调用都返回一个模型行，且没有 `defaultModel` 属性；同一连接配上精确的默认 id 则返回该 id。见首次 [fixture](evidence/catalog-pure.test.ts)、[原始输出](evidence/catalog-pure.first.raw.log) 和 [exit receipt](evidence/catalog-pure.first.exit.json)。这些是实际纯函数结果，fixture 没有模拟执行 Host 分支。
+8: 
+9: [Panel 合同](../../docs/panel-apps.md#L373) 写明返回 effective `defaultModel`，省略 `agent.task.start.model` 应继续使用有效 CodeShell 默认值。静态读到的 [Engine](../../packages/core/src/engine/engine.ts#L936)、[共享 Runtime](../../packages/core/src/engine/runtime.ts#L94) 和 [CLI 解析器](../../packages/core/src/engine/resolve-llm-config.ts#L37) 在默认 id 缺失或失效时会选择首个可用/已注册连接；[schema](../../packages/core/src/settings/schema.ts#L265) 允许没有 `defaults.text`。服务器 [任务入口](../../packages/server/src/panels/agent-task-host.ts#L348) 则直接取 `input.model ?? catalog.defaultModel`，为空即抛出“配置并选择可用的默认模型”。这使“目录有模型却没有默认值”具有具体消费者，而不是仅展示差异。
+10: 
+11: 保留候选：现有 [Desktop 测试](../../packages/desktop/src/main/panel-app-agent-task-models.test.ts#L48) 明确期望失效 default 被省略，可能代表 Panel 有意要求显式选择。配置省略默认值和目录输出在本批已执行，但普通 UI 新增连接会 [主动填入默认值](../../packages/desktop/src/renderer/settings/useModelConnections.ts#L215)；本批未运行设置加载、CLI、Engine、Host 或任务工作进程，不能声称已经实际触发完整任务失败。需要统一“有效默认值”合同与现有测试政策后再定性，不计确认缺陷。
+12: 
+13: ## CATALOG-R17-C2：目录 trim 改写了实际连接身份
+14: 
+15: 最小普通输入为手动目录编辑器可填写的自定义 provider id `" local "`。实际 [validateEntry](../../packages/desktop/src/renderer/settings/catalogEditor.ts#L53) 返回 `[]`，实际 [buildInstance](../../packages/desktop/src/renderer/settings/textConnections.ts#L78) 生成 `id` 和 `catalogId` 都是原样 `" local "`；实际 [catalogModelOptions](../../packages/desktop/src/renderer/settings/textConnections.ts#L169) 也保留原始 picker key。把这些实际 helper 生成的普通内存对象传入目录 leaf 后，输出 id/default 变成 `"local"`，不再等于输入连接 id。去掉首尾空格的对照保持身份一致。
+16: 
+17: 根因位置为 [boundedText 的 trim](../../packages/server/src/panels/agent-task-models.ts#L27) 及其在 [connection id、catalog id、model](../../packages/server/src/panels/agent-task-models.ts#L60) 上的使用。同一机制的补充表征也已实际执行：两个真实 helper 创建的不同 id `" local "` 和 `"local"` 在目录中被折叠为一行；preset value `" one "` 经真实 buildInstance 保留并在真实 picker 得到 `Padded preset`，目录却把 model 改成 `"one"`，随后精确 preset lookup 失配，label 回退成 `"one"`。这些补充均归入同一候选，不另计问题。
+18: 
+19: 普通生产路径静态证据：[编辑器 id onChange](../../packages/desktop/src/renderer/settings/ModelCatalogPanel.tsx#L583)、[preset value onChange](../../packages/desktop/src/renderer/settings/ModelCatalogPanel.tsx#L732) 都直接保存输入；[save](../../packages/desktop/src/renderer/settings/ModelCatalogPanel.tsx#L215) 原样传 draft；[schema](../../packages/core/src/model-catalog/types.ts#L17) 的 id 和 preset value 限制长度但没有 trim；[saveCatalogEntry](../../packages/core/src/model-catalog/save-entry.ts#L123) 验证后保存 parsed data。Core [findCatalogEntry](../../packages/core/src/model-catalog/index.ts#L101) 精确匹配 catalog id，[池条目](../../packages/core/src/engine/model-connections-pool.ts#L61) 用 `inst.id` 作 key，符合 leaf 注释“connections 是真实 pool keys”与 Panel 文档“返回 id 可用于选择连接”的合同。
+20: 
+21: 保留候选：本批实际执行的是目录和三个纯 UI helper；React 编辑器、IPC 保存、schema.safeParse、Core 池注册/选择与 Panel 工作进程全部仅静态阅读。实际 [任务服务](../../packages/server/src/panels/agent-task-service.ts#L183) 也 trim 入参 id，可能意味着 Panel 对首尾空格身份另有刻意限制；仓库缺少覆盖此配置跨边界行为的明确政策。因此不把静态推导的“返回 id 无法选中原池条目”写成已执行的任务失败，也不认定真实网络模型接受带空格 model value。
+22: 
+23: ## 验证与覆盖边界
+24: 
+25: 唯一实际命令：
+26: 
+27: ```text
+28: node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts
+29: ```
+30: 
+31: 三个 fixture imports 都是绝对路径 leaf，server 目录源码无 imports；两个 Desktop helper 仅有 type import。前置检查只读取实际文件与冻结 Git bytes，见 [preflight](evidence/catalog-preflight.json)，没有依赖路径猜测或 resolver 探测。首次 combined stdout/stderr 直接写入 raw 文件、exit 保存后才检查内容；没有失败修复、重试或替代运行。通过测试刻画现有行为，并不表示候选已修复。
+32: 
+33: 对照覆盖精确默认 connection id、多个连接顺序、auxText 与 text 区分、无 label 的 preset、自定义 model fallback、非 text/失效 catalog 过滤、重复 exact id 的首项保留、Unicode label 和输入不变性。没有 null catalog 元素、真实 credential/provider availability、浏览器/原生进程、SettingsManager、Host、扫描器、server barrel 或用户文件实验。
+34: 
+35: Desktop [re-export](../../packages/desktop/src/main/panel-app-agent-task-models.ts#L1) 指向 server `/panels`；现有测试入口仅静态阅读，避免通过该大 barrel 导入 Host。服务器 [catalog provider](../../packages/server/src/panels/agent-task-host.ts#L136)、[models 方法](../../packages/server/src/panels/agent-task-host.ts#L510)、Desktop [catalog callback](../../packages/desktop/src/main/index.ts#L697) 和 [bridge 分支](../../packages/desktop/src/main/panel-app-bridge.ts#L2111) 都仅静态定位。此处不是完整 Panel/模型链路验证。
+36: 
+37: ## 去重与元数据
+38: 
+39: [去重脚本](evidence/catalog-dedup.py) 递归读取此前 `docs/`、`bugs/` 下全部 MD 和 JSON，包括 archive/_archive，排除本批。共 **1,134 个 MD、804 个 JSON**，JSON **239,449 个 string leaves / 335,081 个 scalar leaves**，解析错误 0。三个查询分别匹配 17、29、12 次，最多保留 120 个上下文；匹配次数不是新缺陷数。见 [完整库存/命中](evidence/catalog-dedup.json)。命中主要是已有目录路径库存、Panel 文档、旧 Core 回退说明和无关文本空格问题；没有找到这两个具体 Panel 目录机制的既有缺陷记录。关键词检索不证明全语义去重穷尽。
+40: 
+41: 一处猜测的 shell glob 未匹配，另一处 receipt 生成前的前向链接检查失败，均为元数据错误，不是测试/import 失败；完整首次响应转录与后续独立真实库存、文件检查边界见 [navigation skip](evidence/catalog-navigation-skip.md)。已跳过那条猜测路径，receipt 顺序仅修正元数据，没有运行任何替代产品验证。
+42: 
+43: [机器验证摘要](evidence/catalog-validation.json)、[空 findings](evidence/catalog-findings.json)、[候选明细](evidence/catalog-candidates.json)、[源码 pin/阅读范围](evidence/catalog-source-manifest.json) 与 [artifact receipt](evidence/catalog-artifact-receipt.json) 分开记录冻结字节、静态阅读和实际执行；pin 存在不代表整文件或所有传递依赖均已验证。
+
+DOCUMENT docs/audit-2026-10-17-round17/evidence/catalog-navigation-skip.md TOTAL 31 DISPLAY 1-31
+1: # Catalog navigation metadata skip
+2: 
+3: 这是首次工具响应的明确转录，未改写产品运行结果。
+4: 
+5: 读取已库存的 `agent-task-host.ts`、Desktop `index.ts` 和 bridge 局部后，同一只读 shell 请求的末条命令曾包含猜测 glob：
+6: 
+7: ```text
+8: rg -n 'agent.task.models|agentTasks.models|agentTaskModels|defaultModel' packages/core/src/browser/panel-app* packages/server/src/panels --glob '*.ts'
+9: ```
+10: 
+11: zsh 在执行该 rg 之前返回：
+12: 
+13: ```text
+14: zsh:4: no matches found: packages/core/src/browser/panel-app*
+15: ```
+16: 
+17: `exec_command` 首次 exit code 为 `1`。前面的三个 `sed` 静态输出已返回；末条 rg 没有执行。该猜测 glob 立即跳过，不据此断言 Core 没有 Panel 实现，也不计为 failed Bun shard、resolver failure 或 test-body execution。
+18: 
+19: 后续独立的 `rg --files packages/core/src` 库存返回实际 `packages/core/src/panel-apps/*`。本方向没有导入或运行这些模块；消费者只使用已真实库存的 server/Desktop 文件和 Core model/settings 文件作静态阅读。没有修复/重跑该猜测 glob，也没有替代动态验证。
+20: 
+21: ## Receipt 组装顺序诊断
+22: 
+23: 首次本地链接元数据检查在生成 artifact receipt 之前检查了报告中对该 receipt 的前向链接。Python 返回如下原始诊断；随后同一 shell 中独立的 mappers 库存命令成功，所以外层 shell exit 为 `0`，不是 Python 检查成功。
+24: 
+25: ```text
+26: Traceback (most recent call last):
+27:   File "<stdin>", line 9, in <module>
+28: AssertionError: evidence/catalog-artifact-receipt.json
+29: ```
+30: 
+31: 这只说明尚未生成的 receipt 被提前检查，不涉及任何产品模块、fixture 或 Bun 执行。之后先生成 receipt，再完成纯文件链接/哈希检查；没有修改测试和 raw/exit，也没有产品重跑。

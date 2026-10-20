@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "createMimiPetChat|class DesktopControlClient",
+    "packages/chat/src"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/chat/src/cli.ts\npackages/chat/src/bound-session-chat.ts\npackages/chat/src/mimi-wechat-replay.test.ts\npackages/chat/src/gateway.ts\npackages/chat/src/desktop-control-client.ts\npackages/chat/src/gateway.test.ts\n",
+  "stderr": ""
+}

@@ -1,0 +1,47 @@
+{
+  "atUTC": "2026-10-17T19:18:06.349349+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+      "bytes": 25828,
+      "lines": 649,
+      "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+      "bytes": 18225,
+      "lines": 434,
+      "sha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "bytes": 25666,
+      "lines": 666,
+      "sha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lines": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.test.ts",
+      "bytes": 5224,
+      "lines": 147,
+      "sha256": "a5ccceb55dfdcf39f9132b0624de40d11a2a5d2f18ec311dd72f459fcc1055e6",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pairing.test.ts",
+      "bytes": 3169,
+      "lines": 85,
+      "sha256": "76935704b1443dab971196d1e9952804a4b46b76042176f57b21acaf59d97c3f",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

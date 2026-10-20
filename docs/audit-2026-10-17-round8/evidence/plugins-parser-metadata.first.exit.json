@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "startedAt": "2026-10-17T05:45:58.751332+00:00",
+  "finishedAt": "2026-10-17T05:45:59.126163+00:00",
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.first.log",
+  "attempt": 1
+}

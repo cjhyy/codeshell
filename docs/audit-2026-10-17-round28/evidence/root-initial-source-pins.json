@@ -1,0 +1,27 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "files": [
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+      "bytes": 2142,
+      "lineCount": 58,
+      "firstFilesystemSha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "coverage": "before-read metadata pin only"
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.ts",
+      "bytes": 574,
+      "lineCount": 14,
+      "firstFilesystemSha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "coverage": "before-read metadata pin only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.ts",
+      "bytes": 813,
+      "lineCount": 26,
+      "firstFilesystemSha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "coverage": "before-read metadata pin only"
+    }
+  ],
+  "productExecution": false
+}

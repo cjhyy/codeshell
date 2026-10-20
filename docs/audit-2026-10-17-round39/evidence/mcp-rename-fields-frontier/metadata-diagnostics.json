@@ -1,0 +1,20 @@
+{
+  "diagnostics": [
+    {
+      "kind": "excessive metadata output truncated",
+      "toolChunk": "92b1ec",
+      "detail": "Broad direct string value matching captured large serialized old audit log values as objects; output truncated. First raw69-object artifact preserved, no claim all147 focused contexts or all69 objects were read. Narrowed direct file/path objects selected without repeating full history or any product execution.",
+      "timeUTC": "2026-10-17T13:27:26.297508+00:00"
+    },
+    {
+      "kind": "metadata output truncated",
+      "toolChunk": "b739db",
+      "detail": "All12 direct-path objects appeared before the long focused row index; focused index truncated, so no all147 context semantic claim. No new product action."
+    },
+    {
+      "kind": "metadata output truncated",
+      "toolChunk": "a47c9b",
+      "detail": "Attempted focused indices30–81 still exceeded requested output budget. Partial navigation only; not counted as complete reading. Did not broaden or rerun any product/failed fixture direction."
+    }
+  ]
+}

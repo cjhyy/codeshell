@@ -1,0 +1,44 @@
+[
+  {
+    "path": "packages/core/tsconfig.json",
+    "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+    "readAt": "2026-10-17T19:57:33.711913+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        22
+      ]
+    ],
+    "coverage": "configuration-metadata-text",
+    "text": "1: {\n2:   \"compilerOptions\": {\n3:     \"target\": \"ES2022\",\n4:     \"module\": \"ESNext\",\n5:     \"moduleResolution\": \"bundler\",\n6:     \"lib\": [\"ES2022\"],\n7:     \"outDir\": \"./dist\",\n8:     \"rootDir\": \"./src\",\n9:     \"strict\": true,\n10:     \"noImplicitAny\": false,\n11:     \"esModuleInterop\": true,\n12:     \"skipLibCheck\": true,\n13:     \"forceConsistentCasingInFileNames\": true,\n14:     \"resolveJsonModule\": true,\n15:     \"declaration\": true,\n16:     \"declarationMap\": false,\n17:     \"sourceMap\": false,\n18:     \"types\": [\"node\"]\n19:   },\n20:   \"include\": [\"src/**/*.ts\"],\n21:   \"exclude\": [\"node_modules\", \"dist\", \"src/**/*.test.ts\"]\n22: }",
+    "pinReference": "tsconfig-pins.json"
+  },
+  {
+    "path": "packages/coding/tsconfig.json",
+    "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+    "readAt": "2026-10-17T19:57:33.712132+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        22
+      ]
+    ],
+    "coverage": "configuration-metadata-text",
+    "text": "1: {\n2:   \"compilerOptions\": {\n3:     \"target\": \"ES2022\",\n4:     \"module\": \"ESNext\",\n5:     \"moduleResolution\": \"bundler\",\n6:     \"lib\": [\"ES2022\"],\n7:     \"outDir\": \"./dist\",\n8:     \"rootDir\": \"./src\",\n9:     \"strict\": true,\n10:     \"noImplicitAny\": false,\n11:     \"esModuleInterop\": true,\n12:     \"skipLibCheck\": true,\n13:     \"forceConsistentCasingInFileNames\": true,\n14:     \"resolveJsonModule\": true,\n15:     \"declaration\": true,\n16:     \"declarationMap\": false,\n17:     \"sourceMap\": false,\n18:     \"types\": [\"node\"]\n19:   },\n20:   \"include\": [\"src/**/*.ts\"],\n21:   \"exclude\": [\"node_modules\", \"dist\", \"src/**/*.test.ts\"]\n22: }",
+    "pinReference": "tsconfig-pins.json"
+  },
+  {
+    "path": "packages/tui/tsconfig.json",
+    "sha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+    "readAt": "2026-10-17T19:57:33.712335+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        34
+      ]
+    ],
+    "coverage": "configuration-metadata-text",
+    "text": "1: {\n2:   \"compilerOptions\": {\n3:     \"target\": \"ES2022\",\n4:     \"module\": \"ESNext\",\n5:     \"moduleResolution\": \"bundler\",\n6:     \"lib\": [\"ES2022\"],\n7:     \"outDir\": \"./dist\",\n8:     \"rootDir\": \"./src\",\n9:     \"strict\": true,\n10:     \"noImplicitAny\": false,\n11:     \"esModuleInterop\": true,\n12:     \"skipLibCheck\": true,\n13:     \"forceConsistentCasingInFileNames\": true,\n14:     \"resolveJsonModule\": true,\n15:     \"declaration\": true,\n16:     \"declarationMap\": false,\n17:     \"sourceMap\": false,\n18:     \"jsx\": \"react-jsx\",\n19:     \"types\": [\"node\"],\n20:     \"paths\": {\n21:       \"react/compiler-runtime\": [\"./src/react-compiler-runtime-shim.js\"]\n22:     }\n23:   },\n24:   \"include\": [\"src/**/*.ts\", \"src/**/*.tsx\"],\n25:   // Keep the dormant Arena command source for its private capability package;\n26:   // it is not a terminal entry point and must not ship in the public TUI.\n27:   \"exclude\": [\n28:     \"node_modules\",\n29:     \"dist\",\n30:     \"src/**/*.test.ts\",\n31:     \"src/**/*.test.tsx\",\n32:     \"src/cli/commands/arena.ts\"\n33:   ]\n34: }",
+    "pinReference": "tsconfig-pins.json"
+  }
+]

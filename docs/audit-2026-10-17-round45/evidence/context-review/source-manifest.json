@@ -1,0 +1,485 @@
+{
+  "createdUTC": "2026-10-17T15:17:21.571430+00:00",
+  "parentReportedBaseline": "4d5e81a27ac0481113bc523bfbf588d10672ef38",
+  "contextCertification": "Root-supplied, no own Git",
+  "reviewRole": "Independent source review. No current author mutable/final report or finding read/copied. No root/source-author coverage borrowed.",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "bytes": 12329,
+      "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "initialSemanticReadSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          341
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          341
+        ]
+      ],
+      "semanticLineCount": 341,
+      "displayedLineCount": 341,
+      "scope": "Full ordinary percentage form, drafts/validation/load/save/reset and displayed labels; no React/DOM function invoked.",
+      "pinOrigin": "initial-pins.json",
+      "pinUTC": "2026-10-17T15:13:36.004909+00:00",
+      "endingUTC": "2026-10-17T15:17:21.555267+00:00",
+      "endingBytes": 12329,
+      "endingSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "bytes": 1037,
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "initialSemanticReadSha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "semanticLineCount": 29,
+      "displayedLineCount": 29,
+      "scope": "Full ordinary write wrapper and settings-change event source; no event dispatch executed or live reconfigure certified.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:14:27.059076+00:00",
+      "endingUTC": "2026-10-17T15:17:21.557671+00:00",
+      "endingBytes": 1037,
+      "endingSha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "initialSemanticReadSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          131,
+          135
+        ],
+        [
+          151,
+          152
+        ],
+        [
+          181,
+          209
+        ],
+        [
+          211,
+          215
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          131,
+          161
+        ],
+        [
+          181,
+          223
+        ]
+      ],
+      "semanticLineCount": 41,
+      "displayedLineCount": 74,
+      "scope": "Only ordinary patch merge, null deletion and object replacement; adjacent file lock/atomic write/prototype guard mechanisms displayed but excluded.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:14:27.060144+00:00",
+      "endingUTC": "2026-10-17T15:17:21.558519+00:00",
+      "endingBytes": 10247,
+      "endingSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "initialSemanticReadSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          305,
+          330
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          300,
+          331
+        ]
+      ],
+      "semanticLineCount": 26,
+      "displayedLineCount": 32,
+      "scope": "Only ordinary context ratio ranges/defaults and context object default, no schema function invoked.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:14:27.061063+00:00",
+      "endingUTC": "2026-10-17T15:17:21.559875+00:00",
+      "endingBytes": 29767,
+      "endingSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "bytes": 43905,
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "initialSemanticReadSha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          228,
+          261
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          228,
+          262
+        ]
+      ],
+      "semanticLineCount": 34,
+      "displayedLineCount": 35,
+      "scope": "Only clampContextRatios data contract/order adjustment; old runtime/import directions remain skipped.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:14:27.061544+00:00",
+      "endingUTC": "2026-10-17T15:17:21.561373+00:00",
+      "endingBytes": 43905,
+      "endingSha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "initialSemanticReadSha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          80,
+          82
+        ],
+        [
+          96,
+          96
+        ],
+        [
+          430,
+          434
+        ],
+        [
+          847,
+          862
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          76,
+          98
+        ],
+        [
+          428,
+          438
+        ],
+        [
+          845,
+          867
+        ]
+      ],
+      "semanticLineCount": 25,
+      "displayedLineCount": 57,
+      "scope": "Ordinary defaults and numeric gates only; no compaction/model/tool execution.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:14:27.061847+00:00",
+      "endingUTC": "2026-10-17T15:17:21.562692+00:00",
+      "endingBytes": 34508,
+      "endingSha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "initialSemanticReadSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          502,
+          538
+        ],
+        [
+          2496,
+          2498
+        ],
+        [
+          4449,
+          4454
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          502,
+          540
+        ],
+        [
+          2488,
+          2502
+        ],
+        [
+          4445,
+          4457
+        ]
+      ],
+      "semanticLineCount": 46,
+      "displayedLineCount": 67,
+      "scope": "Settings ratios resolve/clamp and construction payload; adjacent model/session/native/permission context excluded.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:14:27.062673+00:00",
+      "endingUTC": "2026-10-17T15:17:21.564318+00:00",
+      "endingBytes": 210666,
+      "endingSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "initialSemanticReadSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          348,
+          348
+        ],
+        [
+          442,
+          445
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          348,
+          360
+        ],
+        [
+          442,
+          448
+        ]
+      ],
+      "semanticLineCount": 5,
+      "displayedLineCount": 20,
+      "scope": "Only existing merged-settings get/load data boundary. Migration/provenance/readUser scope comments displayed but excluded; no filesystem or authority audit.",
+      "pinOrigin": "chain-pins.json",
+      "pinUTC": "2026-10-17T15:14:27.060673+00:00",
+      "endingUTC": "2026-10-17T15:17:21.565372+00:00",
+      "endingBytes": 46928,
+      "endingSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "initialSemanticReadSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          14,
+          20
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          14,
+          20
+        ]
+      ],
+      "semanticLineCount": 7,
+      "displayedLineCount": 7,
+      "scope": "Only the ordinary user branch forwards patch to updateSettings; project/configuration authority mechanisms not read.",
+      "pinOrigin": "entry-pins.json",
+      "pinUTC": "2026-10-17T15:15:02.067831+00:00",
+      "endingUTC": "2026-10-17T15:17:21.565902+00:00",
+      "endingBytes": 765,
+      "endingSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          975,
+          975
+        ],
+        [
+          978,
+          979
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          975,
+          979
+        ]
+      ],
+      "semanticLineCount": 3,
+      "displayedLineCount": 5,
+      "scope": "Only user get/set IPC channel and patch shape; configuration branch displayed not audited, no IPC operation.",
+      "pinOrigin": "entry-pins.json",
+      "pinUTC": "2026-10-17T15:15:02.070492+00:00",
+      "endingUTC": "2026-10-17T15:17:21.567018+00:00",
+      "endingBytes": 86436,
+      "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "initialSemanticReadSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          6707,
+          6708
+        ],
+        [
+          6710,
+          6710
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          6707,
+          6712
+        ]
+      ],
+      "semanticLineCount": 3,
+      "displayedLineCount": 6,
+      "scope": "Only actual user set handler dispatch to writeSettings. Validator and side-effect calls are boundaries, not audited or invoked.",
+      "pinOrigin": "entry-pins.json",
+      "pinUTC": "2026-10-17T15:15:02.072648+00:00",
+      "endingUTC": "2026-10-17T15:17:21.568644+00:00",
+      "endingBytes": 299337,
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "bytes": 132800,
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "initialSemanticReadSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          441,
+          458
+        ],
+        [
+          1642,
+          1661
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          441,
+          458
+        ],
+        [
+          1642,
+          1661
+        ]
+      ],
+      "semanticLineCount": 38,
+      "displayedLineCount": 38,
+      "scope": "Only bilingual percentage/range/order/reset/success/error text.",
+      "pinOrigin": "entry-pins.json",
+      "pinUTC": "2026-10-17T15:15:02.074523+00:00",
+      "endingUTC": "2026-10-17T15:17:21.569965+00:00",
+      "endingBytes": 132800,
+      "endingSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/run-context.ts",
+      "bytes": 5588,
+      "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "initialSemanticReadSha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          23,
+          29
+        ],
+        [
+          35,
+          41
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          23,
+          42
+        ]
+      ],
+      "semanticLineCount": 14,
+      "displayedLineCount": 20,
+      "scope": "Only ordinary numeric ratios propagated into ContextManager with undefined values dropped; no engine/model execution.",
+      "pinOrigin": "consumer-pins.json",
+      "pinUTC": "2026-10-17T15:15:27.515884+00:00",
+      "endingUTC": "2026-10-17T15:17:21.570786+00:00",
+      "endingBytes": 5588,
+      "endingSha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "unchanged": true
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "bytes": 12083,
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "lineCount": 321,
+      "pinUTC": "2026-10-17T15:13:36.006904+00:00",
+      "semanticRead": false,
+      "pinOrigin": "initial-pins.json",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "scope": "Fallback not used because Context did not meet full-receipt exclusion gate; current product body0. Old capability/identity mechanisms not pursued.",
+      "endingSha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "unchanged": true
+    }
+  ],
+  "navigationOnlyFiles": [],
+  "semanticProductLines": 612,
+  "displayedProductLines": 731,
+  "fullFiles": 2,
+  "selectedFiles": 11,
+  "uniqueRepositoryCoverageNotClaimed": true,
+  "runtime": {
+    "productImports": 0,
+    "productFunctions": 0,
+    "languageFixtures": 0,
+    "testsSemanticRead": 0,
+    "testsExecuted": 0,
+    "reactDOMUI": 0,
+    "nativeNetworkModel": 0,
+    "git": 0
+  },
+  "boundary": "Only ordinary numeric/text settings DTO form and selected save/consumer data. Permission, identity, authority, custody/native/worker/file-lock correctness stopped at visible call boundaries."
+}

@@ -1,0 +1,11 @@
+{
+  "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+  "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+  "displayedLineRanges": [
+    [
+      1078,
+      1109
+    ]
+  ],
+  "pinReference": "entry-initial-pins.json"
+}

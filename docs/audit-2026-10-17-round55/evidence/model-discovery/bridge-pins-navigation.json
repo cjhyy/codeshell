@@ -1,0 +1,36 @@
+{
+  "filenameNavigation": {
+    "command": [
+      "rg",
+      "-l",
+      "externalRuntime:models",
+      "packages/desktop/src/preload"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/desktop/src/preload/index.ts\n",
+    "stderr": ""
+  },
+  "pins": [
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lines": 1892,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "pinAt": "2026-10-17T18:28:57.016638+00:00",
+      "coverage": "hash-only before exact bridge navigation"
+    }
+  ],
+  "lineNavigation": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "externalRuntime:models",
+        "packages/desktop/src/preload/index.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "1606:      ipcRenderer.invoke(\"externalRuntime:models\"),\n",
+      "stderr": ""
+    }
+  ]
+}

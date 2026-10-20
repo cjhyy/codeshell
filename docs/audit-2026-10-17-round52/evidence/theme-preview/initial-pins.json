@@ -1,0 +1,41 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedContextOnly": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "GitVerified": false,
+  "sourceBytesReportedSameAs424ef": true,
+  "pins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:30:26.302661+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:30:26.303546+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "bytes": 4694,
+      "lines": 121,
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:30:26.304156+00:00"
+    }
+  ],
+  "filenameInventory": {
+    "command": [
+      "rg",
+      "--files",
+      "packages/desktop/src/renderer/settings"
+    ],
+    "exitCode": 0,
+    "stderr": "",
+    "exactNames": [
+      "packages/desktop/src/renderer/settings/ThemePackPreview.tsx"
+    ]
+  }
+}

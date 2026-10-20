@@ -1,0 +1,13 @@
+{
+  "path": "packages/core/src/engine/engine.ts",
+  "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+  "displayAt": "2026-10-17T19:48:18.174179+00:00",
+  "displayedLineRanges": [
+    [
+      2616,
+      2648
+    ]
+  ],
+  "pinReference": "engine-before-pin.json",
+  "text": "2616:     const subAgentSpawner = createSubAgentSpawner({\n2617:       parentConfig: {\n2618:         ...this.config,\n2619:         usageLedger: this.usageLedger,\n2620:         ...(options?.allowBackgroundShells === false ? { allowBackgroundShells: false } : {}),\n2621:       },\n2622:       getParentSessionId: () => getSession().state.sessionId,\n2623:       parentSandbox: sandboxConfig,\n2624:       presetName: this.preset.name,\n2625:       cwd,\n2626:       workspaceContext,\n2627:       permissionMode: runPermissionMode,\n2628:       modelPool: this.modelPool,\n2629:       parentStream: options?.onStream,\n2630:       appendParentSubagent: (agentId, description) => {\n2631:         getSession().transcript.appendSubagent(agentId, undefined, description);\n2632:       },\n2633:       sessionExists: (sessionId) => this.sessionManager.exists(sessionId),\n2634:       getSessionParentId: (sessionId) => this.sessionManager.readParentSessionId(sessionId),\n2635:       getSessionContinuation: (sessionId) =>\n2636:         this.sessionManager.readSubAgentContinuation(sessionId),\n2637:       childRunner: {\n2638:         createChild: (config) => new Engine(config),\n2639:         runChild: async (config, childTask, childOptions) => {\n2640:           const child = new Engine(config);\n2641:           try {\n2642:             return await child.run(childTask, childOptions);\n2643:           } finally {\n2644:             await child.dispose();\n2645:           }\n2646:         },\n2647:       },\n2648:     });"
+}

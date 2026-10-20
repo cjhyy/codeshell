@@ -1,0 +1,16 @@
+{
+  "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "mainHead": "021f4e3b477fea9b0c46da2fb672ba57ac2c24c7",
+  "originMain": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "commits": [
+    "021f4e3b4 Merge commit 'ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f' into codex/desktop/real-operation-cycles-20261016",
+    "78e8c60e2 docs(audit): retain CI12 Windows failure and verified platform evidence",
+    "73e3bfc03 test(ci): retain bounded panel failure diagnostics"
+  ],
+  "changedPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md"
+  ],
+  "primaryDirtyPreserved": true,
+  "productReruns": false
+}

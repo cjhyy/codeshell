@@ -985,6 +985,65 @@ export function buildContextPackagePromptFromSerialized(
   );
 }
 
+/** Whether a context-package request plus its output reserve fits a model window. */
+export function contextPackageRequestFits(systemPrompt: string, maxContextTokens: number) {
+  return (conversation: string, priorSummary?: string): boolean => {
+    const prompt = buildContextPackagePromptFromSerialized(conversation, priorSummary);
+    const requestTokens = estimateTokens([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
+    ]);
+    return requestTokens + CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS <= maxContextTokens;
+  };
+}
+
+/**
+ * Take the next rolling-merge input from serialized API rounds. Complete rounds
+ * are preserved whenever they fit; a single round larger than the window is
+ * split losslessly at its largest fitting prefix, leaving the remainder queued.
+ */
+export function takeContextPackageWindow(
+  pending: string[],
+  fits: (conversation: string) => boolean,
+  maxContextTokens: number,
+): string {
+  let conversation = "";
+  while (pending.length > 0) {
+    const next = pending[0]!;
+    const candidate = conversation ? `${conversation}\n${next}` : next;
+    if (fits(candidate)) {
+      conversation = candidate;
+      pending.shift();
+      continue;
+    }
+    if (conversation) break;
+
+    let low = 1;
+    let high = next.length;
+    let fitLength = 0;
+    while (low <= high) {
+      const middle = Math.floor((low + high) / 2);
+      if (fits(next.slice(0, middle))) {
+        fitLength = middle;
+        low = middle + 1;
+      } else {
+        high = middle - 1;
+      }
+    }
+    if (fitLength === 0) {
+      throw new Error(
+        `Auxiliary model context window (${maxContextTokens}) cannot fit the rolling context package prompt`,
+      );
+    }
+    conversation = next.slice(0, fitLength);
+    const remainder = next.slice(fitLength);
+    if (remainder) pending[0] = remainder;
+    else pending.shift();
+    break;
+  }
+  return conversation;
+}
+
 /**
  * Build the session-transfer variant on top of the same structured prompt used
  * by /compact. Keeping this wrapper small makes changes to the canonical nine

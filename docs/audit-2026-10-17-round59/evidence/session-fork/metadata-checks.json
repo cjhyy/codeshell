@@ -1,0 +1,25 @@
+{
+  "atUTC": "2026-10-17T19:46:50.383293+00:00",
+  "kind": "Own stdlib metadata/range checks only; not product validation",
+  "sourceRows": 11,
+  "sourceInstructionPins": 11,
+  "selectedSubsetAndEOF": true,
+  "canonicalDisplayUnion": true,
+  "allComparedEndingSameSHA": true,
+  "reportLinks": [
+    "source-manifest.json",
+    "source-excerpts.txt",
+    "classification.json",
+    "old-session-r9-input.json",
+    "old-ctx-input.json",
+    "r9-canonical-inputs.json",
+    "r32-canonical-input.json",
+    "prior-navigation-late.json",
+    "history-projection.json",
+    "diagnostics.json",
+    "ending.json",
+    "artifact-receipt.json"
+  ],
+  "reportLinkCount": 12,
+  "receiptSelfLinkWillExist": true
+}

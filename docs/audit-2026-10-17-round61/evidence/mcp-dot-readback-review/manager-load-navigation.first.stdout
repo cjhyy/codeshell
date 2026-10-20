@@ -1,0 +1,34 @@
+15:  readFileSync,
+26:  readSettingsHookSnapshot,
+261:  load(
+279:      this.loadJsonFile(join(this.userConfigDir(), "settings.managed.json"), "managed", 0);
+287:      this.loadJsonFile(join(this.userConfigDir(), "settings.json"), "user", 1);
+293:      if (projectPath) this.loadJsonFile(projectPath, "project", 2);
+299:      if (localPath) this.loadJsonFile(localPath, "local", 3);
+403:   * so this load() already sees the migrated shape.
+442:  get(): ValidatedSettings {
+443:    if (!this.merged) return this.load();
+450:  invalidate(): void {
+456:   * Host-only parallel view of validated get().hooks. No Settings values are
+534:   * The merged cache is invalidated so the next get() picks up the change.
+539:    assertSafeSettingsWriteTarget(path);
+563:    this.invalidate();
+574:    this.validateProjectCwd(cwd, "project");
+584:    this.invalidate();
+596:    this.validateProjectCwd(cwd, "local");
+602:    this.invalidate();
+629:      this.validateProjectCwd(cwd, scope);
+642:    this.invalidate();
+689:    this.invalidate();
+695:   * separately — the merged get() collapses provenance and can't express
+734:    // Same workspace-trust gate as load(): project/local scope reads bypass the
+755:  private validateProjectCwd(cwd: string, layer: "project" | "local"): void {
+770:      this.validateProjectCwd(cwd, filename === "settings.json" ? "project" : "local");
+836:    assertSafeSettingsWriteTarget(path);
+851:    assertSafeSettingsWriteTarget(backupPath);
+877:    assertSafeSettingsWriteTarget(path);
+880:      assertSafeSettingsWriteTarget(path);
+893:  private loadJsonFile(path: string, name: SettingsSourceName, priority: number): void {
+896:        const snapshot = readSettingsHookSnapshot(path);
+1046:    return readFileSync(fd, "utf8");
+1060:function assertSafeSettingsWriteTarget(path: string): void {

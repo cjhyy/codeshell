@@ -44,6 +44,23 @@ describe("scaledDimensions", () => {
     expect(height).toBe(1087);
     expect(Math.abs(width / height - 5123 / 2718)).toBeLessThan(0.01);
   });
+
+  test.each([
+    ["low", 1, 4096, 1, 1024],
+    ["low", 4096, 1, 1024, 1],
+    ["standard", 1, 4096, 1, 1568],
+    ["standard", 4096, 1, 1568, 1],
+    ["high", 1, 8192, 1, 2576],
+    ["high", 8192, 1, 2576, 1],
+  ] as const)(
+    "keeps a positive bitmap for %s detail at %d×%d",
+    (detail, width, height, expectedWidth, expectedHeight) => {
+      expect(scaledDimensions(width, height, capForDetail(detail))).toEqual({
+        width: expectedWidth,
+        height: expectedHeight,
+      });
+    },
+  );
 });
 
 describe("constants are sane defaults", () => {

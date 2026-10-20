@@ -1,0 +1,1847 @@
+[
+  {
+    "path": "packages/chat/src/media.ts",
+    "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+    "captureTiming": "After actual displays4fc47e/0b0fa7/e3cc6f/966444/eca4e2/cb1832/84b5e9/da4370. Only originally displayed body/navigation lines, regex nav reproduces those same search matches; not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 9,
+        "text": "export const MAX_CHANNEL_ATTACHMENTS = 4;"
+      },
+      {
+        "line": 10,
+        "text": "export const MAX_CHANNEL_ATTACHMENT_BYTES = 10 * 1024 * 1024;"
+      },
+      {
+        "line": 12,
+        "text": "export interface RemoteAttachmentOptions {"
+      },
+      {
+        "line": 26,
+        "text": "export function mediaKind(mimeType?: string, name?: string): ChatAttachmentKind {"
+      },
+      {
+        "line": 50,
+        "text": "/** Create a lazy platform attachment; no network request occurs before load(). */"
+      },
+      {
+        "line": 51,
+        "text": "export function remoteAttachment(options: RemoteAttachmentOptions): ChatAttachment {"
+      },
+      {
+        "line": 73,
+        "text": "export async function downloadRemoteAttachment("
+      },
+      {
+        "line": 198,
+        "text": "export function outgoingAttachments("
+      },
+      {
+        "line": 199,
+        "text": "  message: OutgoingMessage,"
+      },
+      {
+        "line": 200,
+        "text": "  supported: readonly ChatAttachmentKind[],"
+      },
+      {
+        "line": 201,
+        "text": "): readonly OutgoingAttachment[] {"
+      },
+      {
+        "line": 202,
+        "text": "  const attachments = message.attachments ?? [];"
+      },
+      {
+        "line": 203,
+        "text": "  if (attachments.length > MAX_CHANNEL_ATTACHMENTS) {"
+      },
+      {
+        "line": 204,
+        "text": "    throw new Error(`单条消息最多发送 ${MAX_CHANNEL_ATTACHMENTS} 个附件`);"
+      },
+      {
+        "line": 205,
+        "text": "  }"
+      },
+      {
+        "line": 206,
+        "text": "  for (const attachment of attachments) {"
+      },
+      {
+        "line": 207,
+        "text": "    if (!supported.includes(attachment.kind)) {"
+      },
+      {
+        "line": 208,
+        "text": "      throw new Error(`当前渠道不支持发送 ${attachment.kind} 附件`);"
+      },
+      {
+        "line": 209,
+        "text": "    }"
+      },
+      {
+        "line": 210,
+        "text": "    if ("
+      },
+      {
+        "line": 211,
+        "text": "      !(attachment.data instanceof Uint8Array) ||"
+      },
+      {
+        "line": 212,
+        "text": "      attachment.data.byteLength < 1 ||"
+      },
+      {
+        "line": 213,
+        "text": "      attachment.data.byteLength > MAX_CHANNEL_ATTACHMENT_BYTES"
+      },
+      {
+        "line": 214,
+        "text": "    ) {"
+      },
+      {
+        "line": 215,
+        "text": "      throw new Error(`附件 ${attachment.name || \"attachment\"} 的大小不受支持`);"
+      },
+      {
+        "line": 216,
+        "text": "    }"
+      },
+      {
+        "line": 217,
+        "text": "    if (!attachment.mimeType.trim()) throw new Error(\"附件 MIME 类型不能为空\");"
+      },
+      {
+        "line": 218,
+        "text": "    if (attachment.kind === \"image\" && !attachment.mimeType.startsWith(\"image/\")) {"
+      },
+      {
+        "line": 219,
+        "text": "      throw new Error(`图片 ${attachment.name} 的 MIME 类型无效`);"
+      },
+      {
+        "line": 220,
+        "text": "    }"
+      },
+      {
+        "line": 221,
+        "text": "  }"
+      },
+      {
+        "line": 222,
+        "text": "  return attachments;"
+      },
+      {
+        "line": 225,
+        "text": "export function safeAttachmentName(value: string | undefined, fallback = \"attachment\"): string {"
+      },
+      {
+        "line": 234,
+        "text": "    normalized || fallback.replace(/[\\u0000-\\u001f\\u007f]/gu, \"\").slice(0, 255) || \"attachment\""
+      },
+      {
+        "line": 239,
+        "text": "  steps: Promise<readonly (() => Promise<void>)[]>;"
+      },
+      {
+        "line": 240,
+        "text": "  next: number;"
+      },
+      {
+        "line": 241,
+        "text": "}"
+      },
+      {
+        "line": 242,
+        "text": ""
+      },
+      {
+        "line": 243,
+        "text": "/**"
+      },
+      {
+        "line": 244,
+        "text": " * Resume a multi-request adapter send at the first unfinished visible step."
+      },
+      {
+        "line": 245,
+        "text": " * DeliveryQueue retries the same cached OutgoingMessage object for Mimi turns,"
+      },
+      {
+        "line": 246,
+        "text": " * so this prevents a failed second attachment from duplicating earlier text."
+      },
+      {
+        "line": 247,
+        "text": " * A failure while awaiting one platform call remains honestly at-least-once:"
+      },
+      {
+        "line": 248,
+        "text": " * the remote service may have accepted it without returning an acknowledgement."
+      },
+      {
+        "line": 249,
+        "text": " */"
+      },
+      {
+        "line": 250,
+        "text": "export class OutgoingDeliveryTracker {"
+      },
+      {
+        "line": 251,
+        "text": "  private readonly plans = new WeakMap<OutgoingMessage, OutgoingDeliveryPlan>();"
+      },
+      {
+        "line": 252,
+        "text": ""
+      },
+      {
+        "line": 253,
+        "text": "  async run("
+      },
+      {
+        "line": 254,
+        "text": "    message: OutgoingMessage,"
+      },
+      {
+        "line": 255,
+        "text": "    createSteps: () => readonly (() => Promise<void>)[] | Promise<readonly (() => Promise<void>)[]>,"
+      },
+      {
+        "line": 256,
+        "text": "  ): Promise<void> {"
+      },
+      {
+        "line": 257,
+        "text": "    let plan = this.plans.get(message);"
+      },
+      {
+        "line": 258,
+        "text": "    if (!plan) {"
+      },
+      {
+        "line": 259,
+        "text": "      plan = { steps: Promise.resolve().then(createSteps), next: 0 };"
+      },
+      {
+        "line": 260,
+        "text": "      this.plans.set(message, plan);"
+      },
+      {
+        "line": 261,
+        "text": "      plan.steps.catch(() => {"
+      },
+      {
+        "line": 262,
+        "text": "        if (this.plans.get(message) === plan) this.plans.delete(message);"
+      },
+      {
+        "line": 263,
+        "text": "      });"
+      },
+      {
+        "line": 264,
+        "text": "    }"
+      },
+      {
+        "line": 265,
+        "text": "    const steps = await plan.steps;"
+      },
+      {
+        "line": 266,
+        "text": "    while (plan.next < steps.length) {"
+      },
+      {
+        "line": 267,
+        "text": "      await steps[plan.next]!();"
+      },
+      {
+        "line": 268,
+        "text": "      plan.next += 1;"
+      },
+      {
+        "line": 269,
+        "text": "    }"
+      },
+      {
+        "line": 270,
+        "text": "    if (this.plans.get(message) === plan) this.plans.delete(message);"
+      },
+      {
+        "line": 271,
+        "text": "  }"
+      },
+      {
+        "line": 272,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/channel.ts",
+    "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+    "captureTiming": "After actual displays4fc47e/0b0fa7/e3cc6f/966444/eca4e2/cb1832/84b5e9/da4370. Only originally displayed body/navigation lines, regex nav reproduces those same search matches; not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 3,
+        "text": "export type ChatAttachmentKind = \"image\" | \"file\" | \"audio\" | \"video\";"
+      },
+      {
+        "line": 14,
+        "text": "    text: true;"
+      },
+      {
+        "line": 15,
+        "text": "    attachments: readonly ChatAttachmentKind[];"
+      },
+      {
+        "line": 18,
+        "text": "    text: true;"
+      },
+      {
+        "line": 22,
+        "text": "     * needs a persisted inbound context token and exposes dynamic readiness in"
+      },
+      {
+        "line": 26,
+        "text": "    /** Whether send() works on a fresh adapter without run() being active. */"
+      },
+      {
+        "line": 28,
+        "text": "    /** Maximum complete GatewayReply text before transport-safe chunking. */"
+      },
+      {
+        "line": 30,
+        "text": "    /** Native interactive button, or a normal labelled URL rendered in text/markdown. */"
+      },
+      {
+        "line": 32,
+        "text": "    attachments: readonly ChatAttachmentKind[];"
+      },
+      {
+        "line": 43,
+        "text": "  inboundAttachments: readonly ChatAttachmentKind[] = [],"
+      },
+      {
+        "line": 44,
+        "text": "  outboundAttachments: readonly ChatAttachmentKind[] = [],"
+      },
+      {
+        "line": 53,
+        "text": "    inbound: { text: true, attachments: inboundAttachments },"
+      },
+      {
+        "line": 55,
+        "text": "      text: true,"
+      },
+      {
+        "line": 60,
+        "text": "      attachments: outboundAttachments,"
+      },
+      {
+        "line": 76,
+        "text": "  // A fresh adapter can reuse a persisted inbound context_token. Stale tokens"
+      },
+      {
+        "line": 99,
+        "text": "export interface ChatAttachment {"
+      },
+      {
+        "line": 100,
+        "text": "  id: string;"
+      },
+      {
+        "line": 101,
+        "text": "  kind: ChatAttachmentKind;"
+      },
+      {
+        "line": 102,
+        "text": "  name?: string;"
+      },
+      {
+        "line": 103,
+        "text": "  mimeType?: string;"
+      },
+      {
+        "line": 104,
+        "text": "  size?: number;"
+      },
+      {
+        "line": 105,
+        "text": "  load(signal?: AbortSignal): Promise<Uint8Array>;"
+      },
+      {
+        "line": 106,
+        "text": "}"
+      },
+      {
+        "line": 107,
+        "text": ""
+      },
+      {
+        "line": 108,
+        "text": "export interface ChannelMessage {"
+      },
+      {
+        "line": 109,
+        "text": "  channel: string;"
+      },
+      {
+        "line": 110,
+        "text": "  target: string;"
+      },
+      {
+        "line": 111,
+        "text": "  senderId: string;"
+      },
+      {
+        "line": 112,
+        "text": "  /** Adapter-authenticated conversation kind; missing means unknown, never private. */"
+      },
+      {
+        "line": 113,
+        "text": "  isDirectMessage?: boolean;"
+      },
+      {
+        "line": 114,
+        "text": "  text: string;"
+      },
+      {
+        "line": 115,
+        "text": "  attachments?: readonly ChatAttachment[];"
+      },
+      {
+        "line": 116,
+        "text": "  messageId?: string;"
+      },
+      {
+        "line": 117,
+        "text": "  threadId?: string;"
+      },
+      {
+        "line": 118,
+        "text": "  metadata?: Readonly<Record<string, unknown>>;"
+      },
+      {
+        "line": 119,
+        "text": "}"
+      },
+      {
+        "line": 120,
+        "text": ""
+      },
+      {
+        "line": 121,
+        "text": "export interface OutgoingMessage {"
+      },
+      {
+        "line": 122,
+        "text": "  text: string;"
+      },
+      {
+        "line": 123,
+        "text": "  title?: string;"
+      },
+      {
+        "line": 124,
+        "text": "  button?: {"
+      },
+      {
+        "line": 125,
+        "text": "    text: string;"
+      },
+      {
+        "line": 126,
+        "text": "    url: string;"
+      },
+      {
+        "line": 127,
+        "text": "  };"
+      },
+      {
+        "line": 128,
+        "text": "  /** Materialized outbound media bytes. Adapters may support a bounded subset. */"
+      },
+      {
+        "line": 129,
+        "text": "  attachments?: readonly OutgoingAttachment[];"
+      },
+      {
+        "line": 130,
+        "text": "}"
+      },
+      {
+        "line": 131,
+        "text": ""
+      },
+      {
+        "line": 132,
+        "text": "export interface OutgoingAttachment {"
+      },
+      {
+        "line": 133,
+        "text": "  kind: ChatAttachmentKind;"
+      },
+      {
+        "line": 134,
+        "text": "  name: string;"
+      },
+      {
+        "line": 135,
+        "text": "  mimeType: string;"
+      },
+      {
+        "line": 136,
+        "text": "  data: Uint8Array;"
+      },
+      {
+        "line": 137,
+        "text": "}"
+      },
+      {
+        "line": 138,
+        "text": ""
+      },
+      {
+        "line": 139,
+        "text": "export type ChannelMessageHandler = (message: ChannelMessage) => Promise<void>;"
+      },
+      {
+        "line": 140,
+        "text": ""
+      },
+      {
+        "line": 141,
+        "text": "export interface ChannelAdapter {"
+      },
+      {
+        "line": 142,
+        "text": "  readonly channel: string;"
+      },
+      {
+        "line": 143,
+        "text": "  readonly capabilities?: ChannelCapabilities;"
+      },
+      {
+        "line": 144,
+        "text": "  /**"
+      },
+      {
+        "line": 145,
+        "text": "   * True only when one visible platform request atomically publishes both the"
+      },
+      {
+        "line": 146,
+        "text": "   * text and every attachment. Retry coordinators default to separate sends;"
+      },
+      {
+        "line": 147,
+        "text": "   * optimistic combination would duplicate accepted text after a media error."
+      },
+      {
+        "line": 148,
+        "text": "   */"
+      },
+      {
+        "line": 149,
+        "text": "  readonly combinesTextAndAttachmentsAtomically?: boolean;"
+      },
+      {
+        "line": 150,
+        "text": "  /** @deprecated Use capabilities.outbound.attachments or supportsOutgoingAttachment(). */"
+      },
+      {
+        "line": 151,
+        "text": "  readonly supportsOutgoingAttachments?: boolean;"
+      },
+      {
+        "line": 152,
+        "text": "  run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void>;"
+      },
+      {
+        "line": 153,
+        "text": "  send(target: string, message: OutgoingMessage): Promise<void>;"
+      },
+      {
+        "line": 154,
+        "text": "}"
+      },
+      {
+        "line": 168,
+        "text": "  kind: ChatAttachmentKind,"
+      },
+      {
+        "line": 170,
+        "text": "  return channelCapabilities(adapter).outbound.attachments.includes(kind);"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/telegram.ts",
+    "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+    "captureTiming": "After actual displays4fc47e/0b0fa7/e3cc6f/966444/eca4e2/cb1832/84b5e9/da4370. Only originally displayed body/navigation lines, regex nav reproduces those same search matches; not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 9,
+        "text": "import { OutgoingDeliveryTracker, outgoingAttachments } from \"./media.js\";"
+      },
+      {
+        "line": 22,
+        "text": "    caption?: string;"
+      },
+      {
+        "line": 70,
+        "text": "  private readonly delivery = new OutgoingDeliveryTracker();"
+      },
+      {
+        "line": 150,
+        "text": "  async send(target: string, message: OutgoingMessage): Promise<void> {"
+      },
+      {
+        "line": 151,
+        "text": "    const attachments = outgoingAttachments(message, this.capabilities.outbound.attachments);"
+      },
+      {
+        "line": 152,
+        "text": "    await this.delivery.run(message, () => ["
+      },
+      {
+        "line": 153,
+        "text": "      ...(message.text || message.button"
+      },
+      {
+        "line": 154,
+        "text": "        ? ["
+      },
+      {
+        "line": 155,
+        "text": "            () =>"
+      },
+      {
+        "line": 156,
+        "text": "              this.call("
+      },
+      {
+        "line": 157,
+        "text": "                \"sendMessage\","
+      },
+      {
+        "line": 158,
+        "text": "                {"
+      },
+      {
+        "line": 159,
+        "text": "                  chat_id: target,"
+      },
+      {
+        "line": 160,
+        "text": "                  text: message.text,"
+      },
+      {
+        "line": 161,
+        "text": "                  ...(message.button"
+      },
+      {
+        "line": 162,
+        "text": "                    ? {"
+      },
+      {
+        "line": 163,
+        "text": "                        reply_markup: {"
+      },
+      {
+        "line": 164,
+        "text": "                          inline_keyboard: ["
+      },
+      {
+        "line": 165,
+        "text": "                            [{ text: message.button.text, url: message.button.url }],"
+      },
+      {
+        "line": 166,
+        "text": "                          ],"
+      },
+      {
+        "line": 167,
+        "text": "                        },"
+      },
+      {
+        "line": 168,
+        "text": "                      }"
+      },
+      {
+        "line": 169,
+        "text": "                    : {}),"
+      },
+      {
+        "line": 170,
+        "text": "                },"
+      },
+      {
+        "line": 171,
+        "text": "                AbortSignal.timeout(15_000),"
+      },
+      {
+        "line": 172,
+        "text": "              ).then(() => undefined),"
+      },
+      {
+        "line": 173,
+        "text": "          ]"
+      },
+      {
+        "line": 174,
+        "text": "        : []),"
+      },
+      {
+        "line": 175,
+        "text": "      ...attachments.map((attachment) => async () => {"
+      },
+      {
+        "line": 176,
+        "text": "        if ("
+      },
+      {
+        "line": 177,
+        "text": "          attachment.kind === \"image\" &&"
+      },
+      {
+        "line": 178,
+        "text": "          ![\"image/png\", \"image/jpeg\", \"image/gif\", \"image/webp\"].includes(attachment.mimeType)"
+      },
+      {
+        "line": 179,
+        "text": "        ) {"
+      },
+      {
+        "line": 180,
+        "text": "          throw new Error(\"Telegram 待发送图片的类型不受支持\");"
+      },
+      {
+        "line": 181,
+        "text": "        }"
+      },
+      {
+        "line": 182,
+        "text": "        const media = telegramOutboundMethod(attachment.kind, attachment.mimeType);"
+      },
+      {
+        "line": 183,
+        "text": "        const form = new FormData();"
+      },
+      {
+        "line": 184,
+        "text": "        const bytes = new Uint8Array(attachment.data.byteLength);"
+      },
+      {
+        "line": 185,
+        "text": "        bytes.set(attachment.data);"
+      },
+      {
+        "line": 186,
+        "text": "        form.set(\"chat_id\", target);"
+      },
+      {
+        "line": 187,
+        "text": "        form.set(media.field, new Blob([bytes], { type: attachment.mimeType }), attachment.name);"
+      },
+      {
+        "line": 188,
+        "text": "        await this.callMultipart(media.method, form, AbortSignal.timeout(30_000));"
+      },
+      {
+        "line": 189,
+        "text": "      }),"
+      },
+      {
+        "line": 190,
+        "text": "    ]);"
+      },
+      {
+        "line": 191,
+        "text": "  }"
+      },
+      {
+        "line": 192,
+        "text": ""
+      },
+      {
+        "line": 193,
+        "text": "  private async call<T>(method: string, body: unknown, signal: AbortSignal): Promise<T> {"
+      },
+      {
+        "line": 194,
+        "text": "    const response = await this.fetchFn(`${this.apiBaseUrl}/bot${this.config.botToken}/${method}`, {"
+      },
+      {
+        "line": 195,
+        "text": "      method: \"POST\","
+      },
+      {
+        "line": 196,
+        "text": "      headers: { \"content-type\": \"application/json\" },"
+      },
+      {
+        "line": 197,
+        "text": "      body: JSON.stringify(body),"
+      },
+      {
+        "line": 198,
+        "text": "      signal,"
+      },
+      {
+        "line": 264,
+        "text": "): ChannelMessage | undefined {"
+      },
+      {
+        "line": 265,
+        "text": "  const message = update.message;"
+      },
+      {
+        "line": 266,
+        "text": "  if (!message) return undefined;"
+      },
+      {
+        "line": 267,
+        "text": "  const sender = message.from?.id ?? message.sender_chat?.id;"
+      },
+      {
+        "line": 268,
+        "text": "  if (sender === undefined) return undefined;"
+      },
+      {
+        "line": 269,
+        "text": "  const attachments = telegramAttachments(message, download);"
+      },
+      {
+        "line": 270,
+        "text": "  const text = message.text ?? message.caption ?? \"\";"
+      },
+      {
+        "line": 271,
+        "text": "  if (!text && attachments.length === 0) return undefined;"
+      },
+      {
+        "line": 272,
+        "text": "  return {"
+      },
+      {
+        "line": 273,
+        "text": "    channel: \"telegram\","
+      },
+      {
+        "line": 274,
+        "text": "    target: String(message.chat.id),"
+      },
+      {
+        "line": 275,
+        "text": "    senderId: String(sender),"
+      },
+      {
+        "line": 276,
+        "text": "    isDirectMessage: message.chat.type === \"private\","
+      },
+      {
+        "line": 277,
+        "text": "    text,"
+      },
+      {
+        "line": 278,
+        "text": "    ...(attachments.length > 0 ? { attachments } : {}),"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/gateway.ts",
+    "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+    "captureTiming": "After actual displays4fc47e/0b0fa7/e3cc6f/966444/eca4e2/cb1832/84b5e9/da4370. Only originally displayed body/navigation lines, regex nav reproduces those same search matches; not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 11,
+        "text": "import { materializeChatAttachments } from \"./attachments.js\";"
+      },
+      {
+        "line": 42,
+        "text": "  outgoing: Promise<OutgoingMessage[]>;"
+      },
+      {
+        "line": 69,
+        "text": "        await reply({"
+      },
+      {
+        "line": 78,
+        "text": "          ...(qr ? { attachments: [qr] } : {}),"
+      },
+      {
+        "line": 85,
+        "text": "        await reply({ text: \"公网隧道已关闭。\" });"
+      },
+      {
+        "line": 90,
+        "text": "      await reply({ text: formatStatus(status) });"
+      },
+      {
+        "line": 93,
+        "text": "        await reply({ text: `桌面端未在线：${error.message}` });"
+      },
+      {
+        "line": 97,
+        "text": "        await reply({ text: `操作失败：${error.message}` });"
+      },
+      {
+        "line": 100,
+        "text": "      await reply({"
+      },
+      {
+        "line": 124,
+        "text": "export function parseGatewayIntent(text: string): GatewayCommand {"
+      },
+      {
+        "line": 125,
+        "text": "  return parseGatewayCommand(text);"
+      },
+      {
+        "line": 126,
+        "text": "}"
+      },
+      {
+        "line": 127,
+        "text": ""
+      },
+      {
+        "line": 128,
+        "text": "/** Final middleware: route ordinary text/media turns into the durable Mimi Pet session. */"
+      },
+      {
+        "line": 129,
+        "text": "export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {"
+      },
+      {
+        "line": 130,
+        "text": "  // DeliveryQueue retries the same platform message after adapter.send fails."
+      },
+      {
+        "line": 131,
+        "text": "  // Cache the fully materialized reply (including attachment bytes) before the"
+      },
+      {
+        "line": 132,
+        "text": "  // first send so retrying cannot re-run Mimi or any already-executed host"
+      },
+      {
+        "line": 133,
+        "text": "  // action. Failed desktop/materialization work is evicted and remains retryable."
+      },
+      {
+        "line": 134,
+        "text": "  const replies = new Map<string, MimiCachedReply>();"
+      },
+      {
+        "line": 135,
+        "text": "  const configuredChannels = options.channels ?? [];"
+      },
+      {
+        "line": 136,
+        "text": "  return async ({ message, adapter, reply }) => {"
+      },
+      {
+        "line": 137,
+        "text": "    if (!message.text.trim() && !message.attachments?.length) return;"
+      },
+      {
+        "line": 138,
+        "text": "    const cacheKey = mimiReplyCacheKey(message);"
+      },
+      {
+        "line": 139,
+        "text": "    let cacheEntry: MimiCachedReply | undefined;"
+      },
+      {
+        "line": 140,
+        "text": "    let outgoing: OutgoingMessage[];"
+      },
+      {
+        "line": 141,
+        "text": "    try {"
+      },
+      {
+        "line": 142,
+        "text": "      if (!cacheKey) {"
+      },
+      {
+        "line": 143,
+        "text": "        outgoing = await buildMimiOutgoingReplies("
+      },
+      {
+        "line": 144,
+        "text": "          options,"
+      },
+      {
+        "line": 145,
+        "text": "          message,"
+      },
+      {
+        "line": 156,
+        "text": "          outgoing = await cached.outgoing;"
+      },
+      {
+        "line": 165,
+        "text": "            outgoing: pending,"
+      },
+      {
+        "line": 178,
+        "text": "          outgoing = await pending;"
+      },
+      {
+        "line": 179,
+        "text": "        }"
+      },
+      {
+        "line": 180,
+        "text": "      }"
+      },
+      {
+        "line": 181,
+        "text": "    } catch (error) {"
+      },
+      {
+        "line": 182,
+        "text": "      if (error instanceof DesktopControlUnavailableError) {"
+      },
+      {
+        "line": 183,
+        "text": "        // Preserve accepted work on ambiguous disconnects. The durable inbox"
+      },
+      {
+        "line": 184,
+        "text": "        // retries with the same message identity and recovers the real reply."
+      },
+      {
+        "line": 185,
+        "text": "        throw error;"
+      },
+      {
+        "line": 186,
+        "text": "      }"
+      },
+      {
+        "line": 187,
+        "text": "      if (error instanceof DesktopControlOperationError) {"
+      },
+      {
+        "line": 188,
+        "text": "        await reply({ text: `Mimi Pet 处理失败：${error.message}` });"
+      },
+      {
+        "line": 189,
+        "text": "        return;"
+      },
+      {
+        "line": 190,
+        "text": "      }"
+      },
+      {
+        "line": 191,
+        "text": "      await reply({"
+      },
+      {
+        "line": 192,
+        "text": "        text: `Mimi Pet 处理失败：${error instanceof Error ? error.message : String(error)}`,"
+      },
+      {
+        "line": 193,
+        "text": "      });"
+      },
+      {
+        "line": 194,
+        "text": "      return;"
+      },
+      {
+        "line": 195,
+        "text": "    }"
+      },
+      {
+        "line": 196,
+        "text": "    // Adapter failures must escape to DeliveryQueue. Catching them above would"
+      },
+      {
+        "line": 197,
+        "text": "    // turn a failed real reply into a successful generic error and lose it."
+      },
+      {
+        "line": 198,
+        "text": "    const sendOutgoing = async () => {"
+      },
+      {
+        "line": 199,
+        "text": "      let index = cacheEntry?.nextSendIndex ?? 0;"
+      },
+      {
+        "line": 200,
+        "text": "      while (index < outgoing.length) {"
+      },
+      {
+        "line": 201,
+        "text": "        await reply(outgoing[index]!);"
+      },
+      {
+        "line": 202,
+        "text": "        index += 1;"
+      },
+      {
+        "line": 203,
+        "text": "        if (cacheEntry) cacheEntry.nextSendIndex = index;"
+      },
+      {
+        "line": 204,
+        "text": "      }"
+      },
+      {
+        "line": 205,
+        "text": "    };"
+      },
+      {
+        "line": 229,
+        "text": "): Promise<OutgoingMessage[]> {"
+      },
+      {
+        "line": 230,
+        "text": "  const attachments = await materializeChatAttachments(message.attachments);"
+      },
+      {
+        "line": 231,
+        "text": "  const result = await options.desktop.petChat({"
+      },
+      {
+        "line": 232,
+        "text": "    message: message.text,"
+      },
+      {
+        "line": 233,
+        "text": "    ...(attachments.length > 0 ? { attachments } : {}),"
+      },
+      {
+        "line": 234,
+        "text": "    origin: {"
+      },
+      {
+        "line": 235,
+        "text": "      channel: message.channel,"
+      },
+      {
+        "line": 236,
+        "text": "      target: message.target,"
+      },
+      {
+        "line": 237,
+        "text": "      senderId: message.senderId,"
+      },
+      {
+        "line": 238,
+        "text": "      isDirectMessage: message.isDirectMessage === true,"
+      },
+      {
+        "line": 239,
+        "text": "      ...(message.messageId ? { messageId: message.messageId } : {}),"
+      },
+      {
+        "line": 240,
+        "text": "      capabilities,"
+      },
+      {
+        "line": 241,
+        "text": "      channels: gatewayChannelCatalog(message.channel, capabilities, configuredChannels),"
+      },
+      {
+        "line": 242,
+        "text": "    },"
+      },
+      {
+        "line": 243,
+        "text": "  });"
+      },
+      {
+        "line": 244,
+        "text": "  if (result.suppressReply) return [];"
+      },
+      {
+        "line": 245,
+        "text": "  const chunks = splitNotificationTextForChannel("
+      },
+      {
+        "line": 246,
+        "text": "    result.text || \"Mimi Pet 已处理，但没有返回文字内容。\","
+      },
+      {
+        "line": 247,
+        "text": "    message.channel,"
+      },
+      {
+        "line": 248,
+        "text": "    capabilities,"
+      },
+      {
+        "line": 249,
+        "text": "  );"
+      },
+      {
+        "line": 250,
+        "text": "  const outgoing = chunks.map((text): OutgoingMessage => ({ text }));"
+      },
+      {
+        "line": 251,
+        "text": "  const last = outgoing.at(-1)!;"
+      },
+      {
+        "line": 252,
+        "text": "  const button = normalizePetReplyButton(result.button);"
+      },
+      {
+        "line": 253,
+        "text": "  if (button) last.button = button;"
+      },
+      {
+        "line": 254,
+        "text": "  if (result.attachments?.length && capabilities.outbound.attachments.length > 0) {"
+      },
+      {
+        "line": 255,
+        "text": "    try {"
+      },
+      {
+        "line": 256,
+        "text": "      const supported = result.attachments.filter((attachment) =>"
+      },
+      {
+        "line": 257,
+        "text": "        capabilities.outbound.attachments.includes(attachment.kind),"
+      },
+      {
+        "line": 258,
+        "text": "      );"
+      },
+      {
+        "line": 259,
+        "text": "      const materialized = await materializeOutgoingAttachments(supported);"
+      },
+      {
+        "line": 260,
+        "text": "      if (materialized.length > 0) last.attachments = materialized;"
+      },
+      {
+        "line": 261,
+        "text": "    } catch {"
+      },
+      {
+        "line": 262,
+        "text": "      // A stale or invalid host file must not drop Mimi's text reply."
+      },
+      {
+        "line": 263,
+        "text": "    }"
+      },
+      {
+        "line": 264,
+        "text": "  }"
+      },
+      {
+        "line": 265,
+        "text": "  return outgoing;"
+      },
+      {
+        "line": 266,
+        "text": "}"
+      },
+      {
+        "line": 267,
+        "text": ""
+      },
+      {
+        "line": 268,
+        "text": "function gatewayChannelCatalog("
+      },
+      {
+        "line": 269,
+        "text": "  currentChannel: string,"
+      },
+      {
+        "line": 270,
+        "text": "  currentCapabilities: ChannelCapabilities,"
+      },
+      {
+        "line": 271,
+        "text": "  adapters: readonly ChannelAdapter[],"
+      },
+      {
+        "line": 272,
+        "text": "): Array<{ channel: string; capabilities: ChannelCapabilities }> {"
+      },
+      {
+        "line": 273,
+        "text": "  const channels = new Map<string, ChannelCapabilities>();"
+      },
+      {
+        "line": 274,
+        "text": "  for (const adapter of adapters) {"
+      },
+      {
+        "line": 275,
+        "text": "    if (!channels.has(adapter.channel)) {"
+      },
+      {
+        "line": 276,
+        "text": "      channels.set(adapter.channel, channelCapabilities(adapter));"
+      },
+      {
+        "line": 277,
+        "text": "    }"
+      },
+      {
+        "line": 278,
+        "text": "  }"
+      },
+      {
+        "line": 279,
+        "text": "  if (!channels.has(currentChannel) && channels.size >= 32) {"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/chat-gateway.ts",
+    "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+    "captureTiming": "After actual displays4fc47e/0b0fa7/e3cc6f/966444/eca4e2/cb1832/84b5e9/da4370. Only originally displayed body/navigation lines, regex nav reproduces those same search matches; not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 18,
+        "text": "  reply(message: OutgoingMessage): Promise<void>;"
+      },
+      {
+        "line": 107,
+        "text": "    }"
+      },
+      {
+        "line": 108,
+        "text": "    const context: ChatContext = {"
+      },
+      {
+        "line": 109,
+        "text": "      message,"
+      },
+      {
+        "line": 110,
+        "text": "      adapter,"
+      },
+      {
+        "line": 111,
+        "text": "      reply: (outgoing) => adapter.send(message.target, outgoing),"
+      },
+      {
+        "line": 112,
+        "text": "    };"
+      },
+      {
+        "line": 113,
+        "text": "    let index = -1;"
+      },
+      {
+        "line": 114,
+        "text": "    const next = async (position: number): Promise<void> => {"
+      },
+      {
+        "line": 115,
+        "text": "      if (position <= index) throw new Error(\"Chat middleware called next() more than once\");"
+      },
+      {
+        "line": 116,
+        "text": "      index = position;"
+      },
+      {
+        "line": 117,
+        "text": "      const current = this.middleware[position];"
+      },
+      {
+        "line": 118,
+        "text": "      if (current) await current(context, () => next(position + 1));"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/telegram.test.ts",
+    "sha256": "5da19870067e2e5c7db973f248e86e6713d1903c38b014625b26408b3b156145",
+    "captureTiming": "After actual displays4fc47e/0b0fa7/e3cc6f/966444/eca4e2/cb1832/84b5e9/da4370. Only originally displayed body/navigation lines, regex nav reproduces those same search matches; not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 5,
+        "text": "  test(\"maps updates into the channel abstraction and advances the offset\", async () => {"
+      },
+      {
+        "line": 7,
+        "text": "    const calls: Array<{ url: string; body: any }> = [];"
+      },
+      {
+        "line": 10,
+        "text": "        calls.push({ url: String(url), body: JSON.parse(String(init?.body)) });"
+      },
+      {
+        "line": 31,
+        "text": "    expect(calls[0]?.body.allowed_updates).toEqual([\"message\"]);"
+      },
+      {
+        "line": 34,
+        "text": "  test(\"sends a URL inline keyboard with the pairing link\", async () => {"
+      },
+      {
+        "line": 35,
+        "text": "    let body: any;"
+      },
+      {
+        "line": 38,
+        "text": "        body = JSON.parse(String(init?.body));"
+      },
+      {
+        "line": 46,
+        "text": "    expect(body.chat_id).toBe(\"123\");"
+      },
+      {
+        "line": 47,
+        "text": "    expect(body.reply_markup.inline_keyboard[0][0].url).toContain(\"pairing=x\");"
+      },
+      {
+        "line": 50,
+        "text": "  test(\"sends generated images through Telegram sendPhoto\", async () => {"
+      },
+      {
+        "line": 51,
+        "text": "    let endpoint = \"\";"
+      },
+      {
+        "line": 52,
+        "text": "    let form: FormData | undefined;"
+      },
+      {
+        "line": 53,
+        "text": "    const adapter = new TelegramAdapter(baseConfig(), {"
+      },
+      {
+        "line": 54,
+        "text": "      fetch: async (url, init) => {"
+      },
+      {
+        "line": 55,
+        "text": "        endpoint = String(url);"
+      },
+      {
+        "line": 56,
+        "text": "        form = init?.body as FormData;"
+      },
+      {
+        "line": 57,
+        "text": "        return Response.json({ ok: true, result: {} });"
+      },
+      {
+        "line": 58,
+        "text": "      },"
+      },
+      {
+        "line": 59,
+        "text": "    });"
+      },
+      {
+        "line": 60,
+        "text": ""
+      },
+      {
+        "line": 61,
+        "text": "    await adapter.send(\"123\", {"
+      },
+      {
+        "line": 62,
+        "text": "      text: \"\","
+      },
+      {
+        "line": 63,
+        "text": "      attachments: ["
+      },
+      {
+        "line": 64,
+        "text": "        {"
+      },
+      {
+        "line": 65,
+        "text": "          kind: \"image\","
+      },
+      {
+        "line": 66,
+        "text": "          name: \"comic.png\","
+      },
+      {
+        "line": 67,
+        "text": "          mimeType: \"image/png\","
+      },
+      {
+        "line": 68,
+        "text": "          data: Uint8Array.from([1, 2, 3]),"
+      },
+      {
+        "line": 69,
+        "text": "        },"
+      },
+      {
+        "line": 70,
+        "text": "      ],"
+      },
+      {
+        "line": 71,
+        "text": "    });"
+      },
+      {
+        "line": 72,
+        "text": ""
+      },
+      {
+        "line": 73,
+        "text": "    expect(endpoint).toEndWith(\"/botsecret/sendPhoto\");"
+      },
+      {
+        "line": 74,
+        "text": "    expect(form?.get(\"chat_id\")).toBe(\"123\");"
+      },
+      {
+        "line": 75,
+        "text": "    const photo = form?.get(\"photo\") as File;"
+      },
+      {
+        "line": 76,
+        "text": "    expect(photo.name).toBe(\"comic.png\");"
+      },
+      {
+        "line": 77,
+        "text": "    expect(photo.type).toBe(\"image/png\");"
+      },
+      {
+        "line": 78,
+        "text": "    expect(new Uint8Array(await photo.arrayBuffer())).toEqual(Uint8Array.from([1, 2, 3]));"
+      },
+      {
+        "line": 79,
+        "text": "  });"
+      },
+      {
+        "line": 80,
+        "text": ""
+      },
+      {
+        "line": 81,
+        "text": "  test(\"sends ordinary files through Telegram sendDocument\", async () => {"
+      },
+      {
+        "line": 87,
+        "text": "        form = init?.body as FormData;"
+      },
+      {
+        "line": 94,
+        "text": "      attachments: ["
+      },
+      {
+        "line": 114,
+        "text": "    \"sends %s attachments through Telegram native media\","
+      },
+      {
+        "line": 121,
+        "text": "          form = init?.body as FormData;"
+      },
+      {
+        "line": 128,
+        "text": "        attachments: [{ kind, name, mimeType, data: Uint8Array.from([1, 2]) }],"
+      },
+      {
+        "line": 136,
+        "text": "  test(\"redacts the bot token from polling failures\", async () => {"
+      },
+      {
+        "line": 152,
+        "text": "  test(\"does not advance the polling cursor until the durable handler accepts an update\", async () => {"
+      },
+      {
+        "line": 158,
+        "text": "        offsets.push(JSON.parse(String(init?.body)).offset);"
+      },
+      {
+        "line": 181,
+        "text": "  test(\"backs off before re-polling when the handler keeps failing\", async () => {"
+      },
+      {
+        "line": 216,
+        "text": "  test(\"does not replay stale control commands after a polling restart\", async () => {"
+      },
+      {
+        "line": 242,
+        "text": "  test(\"exposes Telegram media lazily and downloads it only after dispatch\", async () => {"
+      },
+      {
+        "line": 256,
+        "text": "                  caption: \"inspect\","
+      },
+      {
+        "line": 284,
+        "text": "      expect(message.attachments?.[0]).toMatchObject({"
+      },
+      {
+        "line": 290,
+        "text": "      expect(await message.attachments![0]!.load()).toEqual(Uint8Array.from([1, 2, 3]));"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/platform-media.test.ts",
+    "sha256": "b7da4a3fa5a122b61cb05eb501eee4f50da6fab0d8b799dab53062305c6eba61",
+    "captureTiming": "After actual displays4fc47e/0b0fa7/e3cc6f/966444/eca4e2/cb1832/84b5e9/da4370. Only originally displayed body/navigation lines, regex nav reproduces those same search matches; not first-read/pre-read capture.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import { describe, expect, test } from \"bun:test\";"
+      },
+      {
+        "line": 2,
+        "text": "import { DiscordAdapter } from \"./discord.js\";"
+      },
+      {
+        "line": 3,
+        "text": "import { LarkAdapter } from \"./lark.js\";"
+      },
+      {
+        "line": 4,
+        "text": "import { MatrixAdapter } from \"./matrix.js\";"
+      },
+      {
+        "line": 5,
+        "text": "import { MattermostAdapter } from \"./mattermost.js\";"
+      },
+      {
+        "line": 6,
+        "text": "import { SlackAdapter } from \"./slack.js\";"
+      },
+      {
+        "line": 7,
+        "text": "import { TeamsAdapter } from \"./teams.js\";"
+      },
+      {
+        "line": 8,
+        "text": "import { WeComAdapter } from \"./wecom.js\";"
+      },
+      {
+        "line": 9,
+        "text": ""
+      },
+      {
+        "line": 10,
+        "text": "const imageMessage = {"
+      },
+      {
+        "line": 11,
+        "text": "  text: \"caption\","
+      },
+      {
+        "line": 12,
+        "text": "  attachments: ["
+      },
+      {
+        "line": 13,
+        "text": "    {"
+      },
+      {
+        "line": 14,
+        "text": "      kind: \"image\" as const,"
+      },
+      {
+        "line": 15,
+        "text": "      name: \"comic.png\","
+      },
+      {
+        "line": 16,
+        "text": "      mimeType: \"image/png\","
+      },
+      {
+        "line": 17,
+        "text": "      data: Uint8Array.from([1, 2, 3]),"
+      },
+      {
+        "line": 18,
+        "text": "    },"
+      },
+      {
+        "line": 19,
+        "text": "  ],"
+      },
+      {
+        "line": 20,
+        "text": "};"
+      },
+      {
+        "line": 21,
+        "text": ""
+      },
+      {
+        "line": 22,
+        "text": "describe(\"native media adapters\", () => {"
+      },
+      {
+        "line": 23,
+        "text": "  test(\"Discord sends text and files in one platform request\", async () => {"
+      },
+      {
+        "line": 24,
+        "text": "    let payload: any;"
+      },
+      {
+        "line": 25,
+        "text": "    const adapter = new DiscordAdapter({ botToken: \"discord-token\" });"
+      },
+      {
+        "line": 26,
+        "text": "    (adapter as any).client.channels.fetch = async () => ({"
+      },
+      {
+        "line": 27,
+        "text": "      type: 0,"
+      },
+      {
+        "line": 28,
+        "text": "      isSendable: () => true,"
+      },
+      {
+        "line": 29,
+        "text": "      send: async (value: unknown) => void (payload = value),"
+      },
+      {
+        "line": 30,
+        "text": "    });"
+      },
+      {
+        "line": 31,
+        "text": ""
+      },
+      {
+        "line": 32,
+        "text": "    await adapter.send(\"channel-1\", imageMessage);"
+      },
+      {
+        "line": 33,
+        "text": ""
+      },
+      {
+        "line": 34,
+        "text": "    expect(payload.content).toBe(\"caption\");"
+      },
+      {
+        "line": 35,
+        "text": "    expect(payload.files[0]).toMatchObject({ name: \"comic.png\" });"
+      },
+      {
+        "line": 36,
+        "text": "    expect(new Uint8Array(payload.files[0].attachment)).toEqual(Uint8Array.from([1, 2, 3]));"
+      },
+      {
+        "line": 37,
+        "text": "  });"
+      },
+      {
+        "line": 38,
+        "text": ""
+      },
+      {
+        "line": 39,
+        "text": "  test(\"Slack publishes uploads with an atomic initial comment\", async () => {"
+      },
+      {
+        "line": 40,
+        "text": "    let payload: any;"
+      },
+      {
+        "line": 41,
+        "text": "    const adapter = new SlackAdapter({ botToken: \"xoxb-token\", appToken: \"xapp-token\" });"
+      },
+      {
+        "line": 42,
+        "text": "    (adapter as any).web.filesUploadV2 = async (value: unknown) => void (payload = value);"
+      },
+      {
+        "line": 43,
+        "text": ""
+      },
+      {
+        "line": 44,
+        "text": "    await adapter.send(\"C1\", imageMessage);"
+      },
+      {
+        "line": 45,
+        "text": ""
+      },
+      {
+        "line": 46,
+        "text": "    expect(payload).toMatchObject({ channel_id: \"C1\", initial_comment: \"caption\" });"
+      },
+      {
+        "line": 47,
+        "text": "    expect(payload.file_uploads[0].filename).toBe(\"comic.png\");"
+      },
+      {
+        "line": 48,
+        "text": "  });"
+      },
+      {
+        "line": 49,
+        "text": ""
+      },
+      {
+        "line": 50,
+        "text": "  test(\"Lark uploads an image key before creating the media message\", async () => {"
+      },
+      {
+        "line": 69,
+        "text": "  test(\"WeCom uploads and proactively sends native media\", async () => {"
+      },
+      {
+        "line": 82,
+        "text": "  test(\"Matrix uploads MXC media and sends a typed room event\", async () => {"
+      },
+      {
+        "line": 107,
+        "text": "  test(\"Mattermost uploads first and publishes one post with file_ids\", async () => {"
+      },
+      {
+        "line": 124,
+        "text": "      message: \"caption\","
+      },
+      {
+        "line": 129,
+        "text": "  test(\"Teams sends inline Bot Framework attachments\", async () => {"
+      },
+      {
+        "line": 132,
+        "text": "    (adapter as any).contexts.set(\"conversation-1\", {"
+      },
+      {
+        "line": 138,
+        "text": "    expect(activity).toMatchObject({ type: \"message\", text: \"caption\" });"
+      },
+      {
+        "line": 139,
+        "text": "    expect(activity.attachments[0].contentUrl).toStartWith(\"data:image/png;base64,\");"
+      },
+      {
+        "line": 142,
+        "text": "  test(\"Teams enforces the platform inline-picture limit\", async () => {"
+      },
+      {
+        "line": 147,
+        "text": "        text: \"\","
+      },
+      {
+        "line": 148,
+        "text": "        attachments: ["
+      }
+    ]
+  }
+]

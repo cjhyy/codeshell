@@ -2,6 +2,7 @@ export const digitalHumans = {
   zh: {
     digitalHumans: {
       title: "数字人",
+      close: "关闭",
       switchPreview: {
         unknown: "未知（旧定义不可用）",
         unavailableDefault: "当前默认数字人「{name}」的定义不可用，可确认取消此默认配置。",
@@ -483,6 +484,7 @@ export const digitalHumans = {
   en: {
     digitalHumans: {
       title: "Digital Humans",
+      close: "Close",
       switchPreview: {
         unknown: "Unknown (old definition unavailable)",
         unavailableDefault:

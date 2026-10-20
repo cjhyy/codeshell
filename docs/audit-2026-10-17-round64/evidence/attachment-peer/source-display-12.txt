@@ -1,0 +1,45 @@
+108:   onRemoveRemoteFile?: (id: string) => void;
+171:   onRemoveQueuedInput?: (index: number) => void;
+190:   onAttachImagePath?: (absPath: string) => void;
+258:   onAttachmentsChange: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
+261:   onRemoveAnchor?: (id: string) => void;
+282:     .filter((img) => !!img.path && !!img.absPath)
+289:       absPath: img.absPath!,
+293:       sha256: img.sha256 ?? "",
+307:   const absPath = joinCwdPath(cwd, hit.path);
+314:     absPath,
+318:     sha256: "",
+325:   absPath: string,
+331:   const relPath = relativeBrowserPath(cwd, absPath);
+337:     id: `ref_file_${hashKey(absPath)}_${Date.now().toString(36)}`,
+342:     absPath,
+345:     sha256: "",
+346:     originalName: absPath.split(/[\\/]/).pop() || absPath,
+356: function relativeBrowserPath(cwd: string, absPath: string): string | null {
+358:   const target = absPath.replace(/\\/g, "/");
+387:   onRemoveRemoteFile,
+414:   onRemoveQueuedInput,
+457:   onAttachmentsChange,
+459:   onRemoveAnchor,
+490:   const setAttachments = onAttachmentsChange;
+523:       linkProvenance.current = linkProvenance.current.filter(
+530:     setLinkIntents((previous) => previous.filter((intent) => !sameLinkIntent(intent, consumed)));
+559:       ...linkProvenance.current.filter(
+568:         ...previous.filter(
+994:     const accepted = combined.filter((path) => !localFilePaths.includes(path));
+1018:     setLocalFilePaths((current) => current.filter((item) => item !== path));
+1020:       current.filter((item) => item.absPath !== path || item.origin === "mention"),
+1267:                 absPath: meta.absPath,
+1268:                 sha256: meta.sha256,
+1305:     setAttachments((cur) => cur.filter((a) => a.id !== id));
+1522:           .filter((intent) => intent.bucket === sendBucket && intent.cwd === conversationRoot)
+1530:         .filter(([, outcome]) => outcome === "succeeded")
+1565:   const visibleLinkIntents = linkIntents.filter(
+1609:     ].filter((element): element is HTMLDivElement => element !== null);
+1815:                 .filter(Boolean)
+1954:                       {onRemoveQueuedInput && (
+1962:                           onClick={() => onRemoveQueuedInput(i)}
+2032:                       onClick={() => onRemoveAnchor?.(a.id)}
+2112:                       aria-label={t("chat.composer.removeImageAria", { name: a.name })}
+2320:                       aria-label={t("chat.composer.removeImageAria", { name: file.name })}
+2321:                       onClick={() => onRemoveRemoteFile?.(file.id)}

@@ -1,0 +1,27 @@
+{
+  "base": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "scope": "Documents input/result formatting and sources context summary; static source review only",
+  "firstExecutions": [],
+  "cleanShards": 0,
+  "failedBunShards": 0,
+  "successfulTests": 0,
+  "expectations": 0,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "metadataPreflightFailures": [
+    {
+      "tool": "exec_command",
+      "exitCode": 1,
+      "firstResponse": "docinput-preflight-skip.md",
+      "nature": "assertion over metadata presence of guessed checkout root package.json paths; no product import or Bun execution",
+      "action": "skip entire parseDocument dynamic direction; no retry/repair/alternate validation"
+    }
+  ],
+  "navigationNotes": [
+    "docinput-navigation-skip.md"
+  ],
+  "runtimeExecuted": false,
+  "productEdits": false,
+  "gitWrites": false,
+  "networkOrNativeExecuted": false
+}

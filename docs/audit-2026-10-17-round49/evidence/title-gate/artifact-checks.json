@@ -1,0 +1,63 @@
+{
+  "capturedUTC": "2026-10-17T16:19:27.597200+00:00",
+  "files": [],
+  "role": "Metadata gate with no product source body read",
+  "links": [
+    {
+      "target": "initial-pins.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "coverage-gate-detail.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "history.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "history-method.py",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "old-scope-selected.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "classification.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": true,
+      "canonicalInside": true
+    }
+  ],
+  "allLinksValid": true,
+  "sourceSemanticFilesEmpty": true,
+  "sameSHAExplicitFullOriginalObjectChecks": 2,
+  "allSourceInstructionAndMetadataEndPinsSame": true,
+  "historyDrift": 0,
+  "noProductOrGitExecution": true
+}

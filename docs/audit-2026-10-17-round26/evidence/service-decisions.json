@@ -1,0 +1,154 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "conclusion": "No new formal/candidate/related established in bounded static service review",
+  "ordinaryContracts": [
+    {
+      "topic": "Scopes and repositories",
+      "source": "packages/desktop/src/main/review-service.ts",
+      "ranges": [
+        [
+          115,
+          135
+        ],
+        [
+          237,
+          305
+        ],
+        [
+          317,
+          351
+        ]
+      ],
+      "decision": "Working mode,branch base and root+commit selection are explicit;canonical repo fan-in retains rootIds and repository labels. Unknown manually forged selectors excluded;workspace authority runtime not tested."
+    },
+    {
+      "topic": "Prompt snapshot/errors/size/binary",
+      "source": "packages/desktop/src/main/review-service.ts",
+      "ranges": [
+        [
+          157,
+          235
+        ]
+      ],
+      "decision": "Git preparation rejects any returned repository error and empty content;snapshot uses supplied historical text after workspace resolution without querying live diff. Binary coverage warning and bounded draft branch exist. Actual buildReviewPrompt leaf behavior belongs to another direction,not dynamically tested here."
+    },
+    {
+      "topic": "Diff additions,unborn,limits",
+      "source": "packages/desktop/src/main/desktop-services.ts",
+      "ranges": [
+        [
+          595,
+          810
+        ]
+      ],
+      "decision": "Untracked/current-vs-index data flow,unborn detection,explicit conflict/size/count/read errors,empty/binary metadata and UTF8 text branches are source counterevidence. Real Git/FS/persistence/identity semantics not exercised."
+    },
+    {
+      "topic": "Root and merge commit",
+      "source": "packages/desktop/src/main/desktop-services.ts",
+      "ranges": [
+        [
+          812,
+          852
+        ]
+      ],
+      "decision": "Current helper uses show --root --first-parent;existing tests explicitly cover root and merge commits. This is static source change compared with oldR59,not a new finding or fix validation."
+    }
+  ],
+  "notPromoted": [
+    {
+      "topic": "Unselected repository discovery error affects selected-commit preparation",
+      "source": "packages/desktop/src/main/review-service.ts",
+      "ranges": [
+        [
+          117,
+          133
+        ],
+        [
+          172,
+          179
+        ],
+        [
+          253,
+          281
+        ],
+        [
+          344,
+          351
+        ]
+      ],
+      "decision": "Source does carry all discovery errors through selected scope,but operation fails visibly and service explicitly rejects partial review. No stronger ordinary selected-scope success contract or concrete new false-success established;0candidate."
+    },
+    {
+      "topic": "Branch with no base falls back to HEAD",
+      "source": "packages/desktop/src/main/review-service.ts",
+      "ranges": [
+        [
+          187,
+          192
+        ],
+        [
+          247,
+          250
+        ]
+      ],
+      "decision": "Explicit fallback implementation and label boundary only;absence of base does not establish an expected complete branch range. No fabricated repo/unsupported OS/CLI behavior used to promote."
+    },
+    {
+      "topic": "Recent commit errors collapse to empty lists",
+      "source": "packages/desktop/src/main/review-service.ts",
+      "ranges": [
+        [
+          138,
+          154
+        ]
+      ],
+      "decision": "Public return type is list,existing helper is best effort;no opposite per-repo error-reporting contract established for this operation. Not treated as silent successful diff."
+    },
+    {
+      "topic": "Historical bigger design/PR workflow",
+      "decision": "June workbench text explicitly spec/backlog phase;September PR design future scope. Do not upgrade absent planned endpoint or broader architecture expectation to new product defect."
+    }
+  ],
+  "oldExcluded": [
+    {
+      "id": "R59",
+      "path": "docs/review-2026-10-12/terminal-review-round13.md",
+      "ranges": [
+        [
+          21,
+          35
+        ]
+      ],
+      "reason": "Old root-commit range swallowing failure;no replay or newcount."
+    },
+    {
+      "id": "R2-09/10/11 and DESKTOP-R12-R1",
+      "paths": [
+        "docs/audit-2026-10-17/root.md",
+        "docs/audit-2026-10-17-round12/desktop.md",
+        "docs/audit-2026-10-17/evidence/quality-ui-review.md"
+      ],
+      "reason": "Existing hunk-header/path/quoted/header-only parser issues and prior evidence. New synthetic header/tests not proof all old parser failures fixed. No parser/OS/Git execution or repeated issue count."
+    }
+  ],
+  "history": {
+    "files": 2509,
+    "markdown": 1241,
+    "json": 1268,
+    "stringLeaves": 426811,
+    "scalarLeaves": 609678,
+    "parseErrors": 0,
+    "totalMatches": {
+      "exact": 106,
+      "scope": 478,
+      "mechanism": 315
+    },
+    "savedContextsEach": 100,
+    "selectedSavedContexts": 13,
+    "limits": "Exact regex also matches suffix preview-service names and inventory copies;scope/mechanism contain unrelated review/authority noise. No semantic exhaustion/novelty proof;currentround26 excluded."
+  },
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "gitCommands": 0
+}

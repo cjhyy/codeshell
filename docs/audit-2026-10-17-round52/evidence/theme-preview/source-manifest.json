@@ -1,0 +1,445 @@
+{
+  "schema": "static-source-manifest-v1",
+  "rootReportedContextOnly": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "GitIndependentlyVerified": false,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "bytes": 4694,
+      "lines": 121,
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:30:26.304156+00:00",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          121
+        ]
+      ],
+      "semanticLineCount": 121,
+      "displayedLineRanges": [
+        [
+          1,
+          121
+        ]
+      ],
+      "bodyDisplayedLineCount": 121,
+      "navigationLineRanges": [],
+      "displayedUnionIncludingNavigationLineCount": 121,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Full current121-line static source reading of the miniature preview module: light/dark, palette overlays, foreground/accent/frame fallbacks, surface DTO-to-style/image-field mapping and ordinary markup. No physical layout, image loading/security/custody/resource/native/Host correctness inferred.",
+      "initialSemanticReadSha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "dedicatedInitialPinBeforeAnyBodyOrLineNavigation": true,
+      "endingSha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "endingBytes": 4694,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-appearance.ts",
+      "bytes": 1412,
+      "lines": 35,
+      "sha256": "7a33b00e4a4b726495d638220c4eb42fa3f559d8c0d58d1b12c5bd091e071039",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:31:44.830652+00:00",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "semanticLineCount": 35,
+      "displayedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "bodyDisplayedLineCount": 35,
+      "navigationLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          33,
+          33
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 35,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Full current35-line ordinary surface resolver static reading. Only token/background/image DTO fallback and defaults; URI/image bytes and Host resource or policy mechanisms not validated. Necessary helper reading is not claimed first ever.",
+      "initialSemanticReadSha256": "7a33b00e4a4b726495d638220c4eb42fa3f559d8c0d58d1b12c5bd091e071039",
+      "dedicatedInitialPinBeforeAnyBodyOrLineNavigation": true,
+      "endingSha256": "7a33b00e4a4b726495d638220c4eb42fa3f559d8c0d58d1b12c5bd091e071039",
+      "endingBytes": 1412,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "lines": 245,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:31:44.829780+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          83,
+          128
+        ],
+        [
+          131,
+          136
+        ],
+        [
+          165,
+          180
+        ]
+      ],
+      "semanticLineCount": 78,
+      "displayedLineRanges": [
+        [
+          1,
+          9
+        ],
+        [
+          54,
+          180
+        ]
+      ],
+      "bodyDisplayedLineCount": 136,
+      "navigationLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          100,
+          100
+        ],
+        [
+          102,
+          102
+        ],
+        [
+          118,
+          118
+        ],
+        [
+          123,
+          123
+        ],
+        [
+          124,
+          124
+        ],
+        [
+          125,
+          125
+        ],
+        [
+          126,
+          126
+        ],
+        [
+          127,
+          127
+        ],
+        [
+          134,
+          134
+        ],
+        [
+          174,
+          174
+        ],
+        [
+          179,
+          179
+        ],
+        [
+          180,
+          180
+        ],
+        [
+          186,
+          186
+        ],
+        [
+          187,
+          187
+        ],
+        [
+          204,
+          204
+        ],
+        [
+          205,
+          205
+        ],
+        [
+          222,
+          222
+        ],
+        [
+          223,
+          223
+        ],
+        [
+          243,
+          243
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 143,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          55,
+          82
+        ],
+        [
+          129,
+          130
+        ],
+        [
+          137,
+          164
+        ],
+        [
+          186,
+          187
+        ],
+        [
+          204,
+          205
+        ],
+        [
+          222,
+          223
+        ],
+        [
+          243,
+          243
+        ]
+      ],
+      "purpose": "Unitless HSL palette contract, ordinary wallpaper/surface/frame fields, ThemePack identity/color fields, default ID and first builtin default pack. Pet/audio/music/source path commentary/body incidental display only; no import/resource/native mechanisms read or executed. Prior R45 sameSHA selected overlap retained.",
+      "initialSemanticReadSha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "dedicatedInitialPinBeforeAnyBodyOrLineNavigation": true,
+      "endingSha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "endingBytes": 7737,
+      "unchanged": true,
+      "firstEverReadingClaimed": false,
+      "knownPriorR45SelectedOverlap": {
+        "sameSha256": true,
+        "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+        "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+        "pointer": "/files/3",
+        "exactOverlapRanges": [
+          [
+            118,
+            128
+          ],
+          [
+            165,
+            180
+          ]
+        ],
+        "exactOverlapLines": 27,
+        "scope": "Known lower bound only; no complete all-history consumer fullness or unique frontier claim."
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "bytes": 14267,
+      "lines": 362,
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:31:44.831013+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          24,
+          30
+        ],
+        [
+          211,
+          212
+        ],
+        [
+          287,
+          290
+        ],
+        [
+          292,
+          311
+        ]
+      ],
+      "semanticLineCount": 33,
+      "displayedLineRanges": [
+        [
+          24,
+          50
+        ],
+        [
+          207,
+          215
+        ],
+        [
+          283,
+          314
+        ]
+      ],
+      "bodyDisplayedLineCount": 68,
+      "navigationLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          13,
+          13
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          306,
+          306
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 72,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          13,
+          14
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          31,
+          50
+        ],
+        [
+          207,
+          210
+        ],
+        [
+          213,
+          215
+        ],
+        [
+          283,
+          286
+        ],
+        [
+          291,
+          291
+        ],
+        [
+          312,
+          314
+        ]
+      ],
+      "purpose": "Actual name mapping, builtin+installed list composition, same pack forwarded to preview in mapped picker with normal ID/pressed/swatch fields. choosePack is call boundary only, removal/installation/focus/Host mechanisms adjacent display excluded. Prior selected overlap not new unique coverage.",
+      "initialSemanticReadSha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "dedicatedInitialPinBeforeAnyBodyOrLineNavigation": true,
+      "endingSha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "endingBytes": 14267,
+      "unchanged": true,
+      "firstEverReadingClaimed": false,
+      "knownPriorR45SelectedOverlap": {
+        "sameSha256": true,
+        "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+        "documentSha256": "227c17d6112b6e77f2d600dd728ab9ca16a482fe9c5d3a592f9907bb03c625e4",
+        "pointer": "/files/0",
+        "exactOverlapRanges": [
+          [
+            24,
+            30
+          ],
+          [
+            211,
+            211
+          ],
+          [
+            287,
+            290
+          ],
+          [
+            292,
+            311
+          ]
+        ],
+        "exactOverlapLines": 32,
+        "scope": "Known lower bound only; no complete all-history consumer fullness or unique frontier claim."
+      }
+    }
+  ],
+  "counts": {
+    "semanticSourceFiles": 4,
+    "full": 2,
+    "selected": 2,
+    "productSemanticLines": 267,
+    "bodyDisplayedLines": 360,
+    "displayedUnionIncludingNavigationLines": 371,
+    "testDeclarationLines": 0,
+    "knownR45ConsumerSelectedOverlapLines": 59,
+    "notAllHistoryUniqueSourceCoverage": true
+  },
+  "instructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:30:26.302661+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:30:26.303546+00:00"
+    }
+  ],
+  "instructionReading": "CurrentsameSHA56d9/298064 instructions hashchecked only; prior94 current CODESHELL217/AGENTS5 reading reused; no repeated instruction body or new product coverage count.",
+  "globalCoverageUpdated": false,
+  "consumerPriorFullnessLimits": "Necessary current consumers/helpers may have earlier selections; R45 overlap recorded, other consumer histories not semantically exhausted, no first-ever/full unique coverage claim.",
+  "scope": "Only static ordinary preview/palette/DTO behavior; not computed style/render/image load/Host/native/resource permission or installation correctness.",
+  "sourceExcerptTiming": "Postread capture, durable source pins preceded all body and line navigation.",
+  "capturedUTC": "2026-10-17T17:33:38.074562+00:00"
+}

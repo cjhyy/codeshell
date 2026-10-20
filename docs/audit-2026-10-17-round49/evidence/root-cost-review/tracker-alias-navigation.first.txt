@@ -1,0 +1,4 @@
+22:import { costTracker } from "@cjhyy/code-shell-core";
+214:  // CostTracker: fresh shared instance for this process.
+215:  const sessionCostTracker = costTracker;
+223:    costTracker: sessionCostTracker,

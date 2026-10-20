@@ -12,6 +12,8 @@ export const taskInbox = {
       project: "项目或工作区",
       status: "状态",
       all: "全部",
+      filters: "筛选",
+      clearFilters: "清除筛选",
       groups: { waiting: "等待处理", running: "运行中", failed: "失败", done: "已完成" },
       sources: {
         session: "会话",
@@ -42,6 +44,7 @@ export const taskInbox = {
         verify: "验证",
       },
       actionLabel: "{action}：{title}",
+      artifacts: "产物",
       readonly: "仅查看",
       stale: "状态可能已过期，请刷新",
       partialError: "{source}暂时不可用：{message}",
@@ -73,6 +76,8 @@ export const taskInbox = {
       project: "Project or workspace",
       status: "Status",
       all: "All",
+      filters: "Filters",
+      clearFilters: "Clear filters",
       groups: {
         waiting: "Needs attention",
         running: "Running",
@@ -108,6 +113,7 @@ export const taskInbox = {
         verify: "Verify",
       },
       actionLabel: "{action}: {title}",
+      artifacts: "Artifacts",
       readonly: "View only",
       stale: "This status may be stale. Refresh to check.",
       partialError: "{source} is unavailable: {message}",

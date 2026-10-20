@@ -1,0 +1,44 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "16c1a40c7e3f0cf7701fccd723293bfb1291f105",
+  "rootReportedFormal": "53 frozen; excludes54+",
+  "independentGitVerification": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAt": "2026-10-17T18:06:29.872380+00:00",
+      "coverage": "hash-only",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAt": "2026-10-17T18:06:29.873259+00:00",
+      "coverage": "hash-only",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "bytes": 16266,
+      "lines": 439,
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "pinnedAt": "2026-10-17T18:06:29.873762+00:00",
+      "coverage": "hash-only",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "packages/core/src/session/output-storage-prototype/id-index.ts",
+      "bytes": 14929,
+      "lines": 424,
+      "sha256": "d794b760c52318fd51cb9e3bb37b9121bea11907c9126312432756eb023f09c8",
+      "pinnedAt": "2026-10-17T18:06:29.874312+00:00",
+      "coverage": "hash-only",
+      "initialSemanticReadSha256": null
+    }
+  ]
+}

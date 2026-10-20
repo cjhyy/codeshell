@@ -1,0 +1,111 @@
+{
+  "frozenUTC": "2026-10-17T17:20:02.580811+00:00",
+  "directory": "/tmp/codeshell-audit-round94-context-ring",
+  "selfExcluded": "reviewer-receipt.json",
+  "files": [
+    {
+      "path": "canonical-gate-selected.json",
+      "bytes": 5537,
+      "sha256": "6da36c9d0169054b3020bb6231cfae26f878b3c1683f583bd1179787ccaf12e0"
+    },
+    {
+      "path": "consumer-filename-inventory.json",
+      "bytes": 528,
+      "sha256": "ef0afea9d5f1ce0b886b0a88a8073996c6898536f351240fa8854313a0c12b5e"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1150,
+      "sha256": "7e00dbda1b7fb1991efe310e3f637b683ff25de4092766ce0d7991f3e97f9b36"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 200629,
+      "sha256": "6e14237b81bbd6ff771fbc940a48022952ea66c25d1e356296034e964eb55566"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2030,
+      "sha256": "69ed641d7abecbd479bce764a4afdaf8cae85e9bd4fa6beee991b44adfa6771b"
+    },
+    {
+      "path": "filename-inventory.json",
+      "bytes": 173,
+      "sha256": "ebc0b2d820f4dd0aed4dda1fd7d40c3404f613632e083d8ec2df0c38cf2c2cef"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 1986,
+      "sha256": "f93dc865d2f3691cb2cc26c6a391e365be7f62194a8e848728f646232941d04f"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 321578,
+      "sha256": "445e94e62fe74427ccd39c8db1eecb0b4e4ea03d26879f82af54e8788b6f5ff2"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 7682,
+      "sha256": "708583d46bddf0cee5c3d443fb133d082571cd972ed4560aff5d9c73d6d01675"
+    },
+    {
+      "path": "history-selected.json",
+      "bytes": 24802,
+      "sha256": "2de83efabd0f373463c9be7a36c160b65baf59ea343955874fb6aedb6db39cc1"
+    },
+    {
+      "path": "history.json",
+      "bytes": 984006,
+      "sha256": "6a21091f9299ed4254b08b9f166da86a2b3203fcd0a8fb273350adbbf1c42b11"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 991,
+      "sha256": "b6239dac72713845694c05e05a8f5a16686efaea795c46166de65e3d82a5eb8c"
+    },
+    {
+      "path": "producer-navigation.json",
+      "bytes": 3630,
+      "sha256": "bfdba499e800c9f0bc7724ca3d779248c46349d5b3d30d103c99974c122d8d81"
+    },
+    {
+      "path": "report.md",
+      "bytes": 4914,
+      "sha256": "62e237bb609f53dab51d2565a7f4021f6849d3622b59462e050ad0b72771d9f5"
+    },
+    {
+      "path": "source-display-pins.json",
+      "bytes": 1846,
+      "sha256": "3514f4960389e50045af61a83844169c3c2da0141d3b36bd22cb31742b9b8f02"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 23422,
+      "sha256": "c94f79e86236189452cf0c5dc5490f0913799bc7ac900880921e4f218bd04f06"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 13684,
+      "sha256": "6bab3e691f584b5a4649e28465ae075d0bc6b46594e041b1b9f9f54fa092f366"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 828,
+      "sha256": "4a0ac36c0aac4a8c4b0892cf98256d2c47bc614010c8dbbb1715466a16878ce0"
+    }
+  ],
+  "role": "Bounded ordinary static UI/data author; self metadata freeze, no runtime certification.",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "sourceFiles": 5,
+  "semanticProductLines": 364,
+  "fullSourceFiles": 0,
+  "reportLocalLinks": 16,
+  "sourceInitialEndingPinsMatch": 7,
+  "historyOriginalCurrentFiles": 4895,
+  "ownGitOperations": 0,
+  "productExecutions": 0
+}

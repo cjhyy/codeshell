@@ -1,0 +1,25 @@
+{
+  "atUTC": "2026-10-17T16:55:09.242127+00:00",
+  "sourcesUnchanged": 3,
+  "historyFilesUnchanged": 4693,
+  "historySetDriftChecked": false,
+  "historyLimit": "Original4693 inventory bytes checked, not a fresh set scan; original scan universe/caps retained.",
+  "instructions": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only this prep; prior instruction-body reading retained",
+      "currentInstructionBodyRead": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only this prep; prior instruction-body reading retained",
+      "currentInstructionBodyRead": false
+    }
+  ]
+}

@@ -1,0 +1,3476 @@
+[
+  {
+    "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+    "sha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "/**"
+      },
+      {
+        "line": 2,
+        "text": " * Summarise the currently-streaming turn for the TopBar status"
+      },
+      {
+        "line": 3,
+        "text": " * popover. Runs on every render of App while busy, so it has to be"
+      },
+      {
+        "line": 4,
+        "text": " * cheap — single pass from the end of the messages array, no"
+      },
+      {
+        "line": 5,
+        "text": " * allocations beyond the returned object."
+      },
+      {
+        "line": 6,
+        "text": " *"
+      },
+      {
+        "line": 7,
+        "text": " * The \"current turn\" is everything after the most recent UserMessage."
+      },
+      {
+        "line": 8,
+        "text": " * If the user hasn't sent anything yet (no UserMessage in history),"
+      },
+      {
+        "line": 9,
+        "text": " * we walk the whole array — that's the initial system prompt / boot"
+      },
+      {
+        "line": 10,
+        "text": " * tool calls case."
+      },
+      {
+        "line": 11,
+        "text": " */"
+      },
+      {
+        "line": 12,
+        "text": ""
+      },
+      {
+        "line": 13,
+        "text": "import type { Message, ToolMessage } from \"../types\";"
+      },
+      {
+        "line": 14,
+        "text": "import { parsedArgs, basename, truncate } from \"../tool-cards/utils\";"
+      },
+      {
+        "line": 15,
+        "text": "import { translate } from \"../i18n/translate\";"
+      },
+      {
+        "line": 16,
+        "text": "import { loadUILanguage } from \"../uiLanguage\";"
+      },
+      {
+        "line": 17,
+        "text": ""
+      },
+      {
+        "line": 18,
+        "text": "export interface LiveActivity {"
+      },
+      {
+        "line": 19,
+        "text": "  /** Name of the most recent in-flight tool, or the last completed"
+      },
+      {
+        "line": 20,
+        "text": "   *  tool if nothing is in-flight. Empty string while there are no"
+      },
+      {
+        "line": 21,
+        "text": "   *  tools yet (e.g. assistant is just thinking). */"
+      },
+      {
+        "line": 22,
+        "text": "  lastToolName: string;"
+      },
+      {
+        "line": 23,
+        "text": "  /** The most relevant tool message this turn (running tool if any,"
+      },
+      {
+        "line": 24,
+        "text": "   *  else the last completed). Null while the assistant is only"
+      },
+      {
+        "line": 25,
+        "text": "   *  thinking. Lets consumers extract live args (command, file…). */"
+      },
+      {
+        "line": 26,
+        "text": "  lastTool: ToolMessage | null;"
+      },
+      {
+        "line": 27,
+        "text": "  /** Tool calls fired since the most recent user message. */"
+      },
+      {
+        "line": 28,
+        "text": "  toolCount: number;"
+      },
+      {
+        "line": 29,
+        "text": "  /** Earliest tool startedAt in this turn — drives the elapsed"
+      },
+      {
+        "line": 30,
+        "text": "   *  ticker. 0 means no tools yet; consumers should fall back to"
+      },
+      {
+        "line": 31,
+        "text": "   *  the user message timestamp or \"just started\" copy. */"
+      },
+      {
+        "line": 32,
+        "text": "  turnStartedAt: number;"
+      },
+      {
+        "line": 33,
+        "text": "  /** True while there's a tool in-flight (status === \"running\"). */"
+      },
+      {
+        "line": 34,
+        "text": "  toolInFlight: boolean;"
+      },
+      {
+        "line": 35,
+        "text": "}"
+      },
+      {
+        "line": 36,
+        "text": ""
+      },
+      {
+        "line": 37,
+        "text": "export function summarizeLiveActivity(messages: Message[]): LiveActivity {"
+      },
+      {
+        "line": 38,
+        "text": "  // Walk backward to find the last user message; anything after it"
+      },
+      {
+        "line": 39,
+        "text": "  // is the current turn."
+      },
+      {
+        "line": 40,
+        "text": "  let turnStart = 0;"
+      },
+      {
+        "line": 41,
+        "text": "  for (let i = messages.length - 1; i >= 0; i--) {"
+      },
+      {
+        "line": 42,
+        "text": "    if (messages[i]!.kind === \"user\") {"
+      },
+      {
+        "line": 43,
+        "text": "      turnStart = i + 1;"
+      },
+      {
+        "line": 44,
+        "text": "      break;"
+      },
+      {
+        "line": 45,
+        "text": "    }"
+      },
+      {
+        "line": 46,
+        "text": "  }"
+      },
+      {
+        "line": 47,
+        "text": ""
+      },
+      {
+        "line": 48,
+        "text": "  let toolCount = 0;"
+      },
+      {
+        "line": 49,
+        "text": "  let earliestStart = Infinity;"
+      },
+      {
+        "line": 50,
+        "text": "  let lastTool: ToolMessage | null = null;"
+      },
+      {
+        "line": 51,
+        "text": "  let runningTool: ToolMessage | null = null;"
+      },
+      {
+        "line": 52,
+        "text": ""
+      },
+      {
+        "line": 53,
+        "text": "  for (let i = turnStart; i < messages.length; i++) {"
+      },
+      {
+        "line": 54,
+        "text": "    const m = messages[i]!;"
+      },
+      {
+        "line": 55,
+        "text": "    if (m.kind !== \"tool\") continue;"
+      },
+      {
+        "line": 56,
+        "text": "    toolCount += 1;"
+      },
+      {
+        "line": 57,
+        "text": "    if (m.startedAt < earliestStart) earliestStart = m.startedAt;"
+      },
+      {
+        "line": 58,
+        "text": "    lastTool = m;"
+      },
+      {
+        "line": 59,
+        "text": "    if (m.status === \"running\") runningTool = m;"
+      },
+      {
+        "line": 60,
+        "text": "  }"
+      },
+      {
+        "line": 61,
+        "text": ""
+      },
+      {
+        "line": 62,
+        "text": "  const primary = runningTool ?? lastTool;"
+      },
+      {
+        "line": 63,
+        "text": "  return {"
+      },
+      {
+        "line": 64,
+        "text": "    lastToolName: primary?.toolName ?? \"\","
+      },
+      {
+        "line": 65,
+        "text": "    lastTool: primary,"
+      },
+      {
+        "line": 66,
+        "text": "    toolCount,"
+      },
+      {
+        "line": 67,
+        "text": "    turnStartedAt: isFinite(earliestStart) ? earliestStart : 0,"
+      },
+      {
+        "line": 68,
+        "text": "    toolInFlight: runningTool !== null,"
+      },
+      {
+        "line": 69,
+        "text": "  };"
+      },
+      {
+        "line": 70,
+        "text": "}"
+      },
+      {
+        "line": 71,
+        "text": ""
+      },
+      {
+        "line": 72,
+        "text": "/**"
+      },
+      {
+        "line": 73,
+        "text": " * Same shape as summarizeLiveActivity but scoped to ONE sub-agent's own"
+      },
+      {
+        "line": 74,
+        "text": " * toolCalls (which live inside its AgentMessage, not in the top-level feed)."
+      },
+      {
+        "line": 75,
+        "text": " * Lets a subagent card show its own Codex-style \"正在读取 schema.ts\" line"
+      },
+      {
+        "line": 76,
+        "text": " * without scanning the whole conversation. Single pass, no allocations beyond"
+      },
+      {
+        "line": 77,
+        "text": " * the returned object — runs on every 50ms flush while the agent is live."
+      },
+      {
+        "line": 78,
+        "text": " */"
+      },
+      {
+        "line": 79,
+        "text": "export function summarizeAgentActivity(toolCalls: ToolMessage[]): LiveActivity {"
+      },
+      {
+        "line": 80,
+        "text": "  let toolCount = 0;"
+      },
+      {
+        "line": 81,
+        "text": "  let earliestStart = Infinity;"
+      },
+      {
+        "line": 82,
+        "text": "  let lastTool: ToolMessage | null = null;"
+      },
+      {
+        "line": 83,
+        "text": "  let runningTool: ToolMessage | null = null;"
+      },
+      {
+        "line": 84,
+        "text": "  for (const m of toolCalls) {"
+      },
+      {
+        "line": 85,
+        "text": "    toolCount += 1;"
+      },
+      {
+        "line": 86,
+        "text": "    if (m.startedAt < earliestStart) earliestStart = m.startedAt;"
+      },
+      {
+        "line": 87,
+        "text": "    lastTool = m;"
+      },
+      {
+        "line": 88,
+        "text": "    if (m.status === \"running\") runningTool = m;"
+      },
+      {
+        "line": 89,
+        "text": "  }"
+      },
+      {
+        "line": 90,
+        "text": "  const primary = runningTool ?? lastTool;"
+      },
+      {
+        "line": 91,
+        "text": "  return {"
+      },
+      {
+        "line": 92,
+        "text": "    lastToolName: primary?.toolName ?? \"\","
+      },
+      {
+        "line": 93,
+        "text": "    lastTool: primary,"
+      },
+      {
+        "line": 94,
+        "text": "    toolCount,"
+      },
+      {
+        "line": 95,
+        "text": "    turnStartedAt: isFinite(earliestStart) ? earliestStart : 0,"
+      },
+      {
+        "line": 96,
+        "text": "    toolInFlight: runningTool !== null,"
+      },
+      {
+        "line": 97,
+        "text": "  };"
+      },
+      {
+        "line": 98,
+        "text": "}"
+      },
+      {
+        "line": 99,
+        "text": ""
+      },
+      {
+        "line": 100,
+        "text": "/**"
+      },
+      {
+        "line": 101,
+        "text": " * Localized one-line description of what the agent is doing right now, Codex"
+      },
+      {
+        "line": 102,
+        "text": " * style: a verb + the tool's most telling argument (the bash command, the"
+      },
+      {
+        "line": 103,
+        "text": " * file being edited, the search pattern…), or \"正在思考…\" when no tool has"
+      },
+      {
+        "line": 104,
+        "text": " * fired yet. `running` flips the verb between present (\"正在运行\") and a"
+      },
+      {
+        "line": 105,
+        "text": " * neutral past-ish form (\"已运行\") so a finished-but-not-yet-next-step moment"
+      },
+      {
+        "line": 106,
+        "text": " * doesn't read as still-in-flight."
+      },
+      {
+        "line": 107,
+        "text": " *"
+      },
+      {
+        "line": 108,
+        "text": " * Args are read via parsedArgs (prefers the live-streaming snapshot), so the"
+      },
+      {
+        "line": 109,
+        "text": " * line fills in character-by-character as tool_use_args_delta arrives — the"
+      },
+      {
+        "line": 110,
+        "text": " * same source the tool cards use, no new backend signal needed."
+      },
+      {
+        "line": 111,
+        "text": " */"
+      },
+      {
+        "line": 112,
+        "text": "export function describeActivity(activity: LiveActivity): string {"
+      },
+      {
+        "line": 113,
+        "text": "  const lang = loadUILanguage();"
+      },
+      {
+        "line": 114,
+        "text": "  const tr = (key: string): string => translate(lang, key);"
+      },
+      {
+        "line": 115,
+        "text": "  const t = activity.lastTool;"
+      },
+      {
+        "line": 116,
+        "text": "  if (!t) return tr(\"misc.activity.thinking\");"
+      },
+      {
+        "line": 117,
+        "text": "  const a = parsedArgs(t);"
+      },
+      {
+        "line": 118,
+        "text": "  const running = t.status === \"running\";"
+      },
+      {
+        "line": 119,
+        "text": "  const str = (v: unknown): string => (typeof v === \"string\" ? v : \"\");"
+      },
+      {
+        "line": 120,
+        "text": ""
+      },
+      {
+        "line": 121,
+        "text": "  // Per-tool argument pick. Falls through to a bare verb + tool name."
+      },
+      {
+        "line": 122,
+        "text": "  let detail = \"\";"
+      },
+      {
+        "line": 123,
+        "text": "  switch (t.toolName) {"
+      },
+      {
+        "line": 124,
+        "text": "    case \"Bash\":"
+      },
+      {
+        "line": 125,
+        "text": "      detail = str(a.command);"
+      },
+      {
+        "line": 126,
+        "text": "      break;"
+      },
+      {
+        "line": 127,
+        "text": "    case \"Edit\":"
+      },
+      {
+        "line": 128,
+        "text": "    case \"Write\":"
+      },
+      {
+        "line": 129,
+        "text": "    case \"Read\":"
+      },
+      {
+        "line": 130,
+        "text": "    case \"NotebookEdit\": {"
+      },
+      {
+        "line": 131,
+        "text": "      const fp = str(a.file_path) || str(a.notebook_path);"
+      },
+      {
+        "line": 132,
+        "text": "      detail = fp ? basename(fp) : \"\";"
+      },
+      {
+        "line": 133,
+        "text": "      break;"
+      },
+      {
+        "line": 134,
+        "text": "    }"
+      },
+      {
+        "line": 135,
+        "text": "    case \"Grep\":"
+      },
+      {
+        "line": 136,
+        "text": "    case \"Glob\":"
+      },
+      {
+        "line": 137,
+        "text": "      detail = str(a.pattern);"
+      },
+      {
+        "line": 138,
+        "text": "      break;"
+      },
+      {
+        "line": 139,
+        "text": "    case \"Skill\":"
+      },
+      {
+        "line": 140,
+        "text": "      detail = str(a.skill);"
+      },
+      {
+        "line": 141,
+        "text": "      break;"
+      },
+      {
+        "line": 142,
+        "text": "    case \"Agent\":"
+      },
+      {
+        "line": 143,
+        "text": "      detail = str(a.name) || str(a.description);"
+      },
+      {
+        "line": 144,
+        "text": "      break;"
+      },
+      {
+        "line": 145,
+        "text": "    case \"WebFetch\":"
+      },
+      {
+        "line": 146,
+        "text": "      detail = str(a.url);"
+      },
+      {
+        "line": 147,
+        "text": "      break;"
+      },
+      {
+        "line": 148,
+        "text": "    case \"WebSearch\":"
+      },
+      {
+        "line": 149,
+        "text": "      detail = str(a.query);"
+      },
+      {
+        "line": 150,
+        "text": "      break;"
+      },
+      {
+        "line": 151,
+        "text": "    default:"
+      },
+      {
+        "line": 152,
+        "text": "      detail = \"\";"
+      },
+      {
+        "line": 153,
+        "text": "  }"
+      },
+      {
+        "line": 154,
+        "text": ""
+      },
+      {
+        "line": 155,
+        "text": "  const verbs: Record<string, [string, string]> = {"
+      },
+      {
+        "line": 156,
+        "text": "    Bash: [tr(\"misc.activity.running\"), tr(\"misc.activity.ranPast\")],"
+      },
+      {
+        "line": 157,
+        "text": "    Edit: [tr(\"misc.activity.editing\"), tr(\"misc.activity.editedPast\")],"
+      },
+      {
+        "line": 158,
+        "text": "    Write: [tr(\"misc.activity.writing\"), tr(\"misc.activity.wrotePast\")],"
+      },
+      {
+        "line": 159,
+        "text": "    Read: [tr(\"misc.activity.reading\"), tr(\"misc.activity.readPast\")],"
+      },
+      {
+        "line": 160,
+        "text": "    NotebookEdit: [tr(\"misc.activity.editing\"), tr(\"misc.activity.editedPast\")],"
+      },
+      {
+        "line": 161,
+        "text": "    Grep: [tr(\"misc.activity.searching\"), tr(\"misc.activity.searchedPast\")],"
+      },
+      {
+        "line": 162,
+        "text": "    Glob: [tr(\"misc.activity.finding\"), tr(\"misc.activity.foundPast\")],"
+      },
+      {
+        "line": 163,
+        "text": "    Skill: [tr(\"misc.activity.callingSkill\"), tr(\"misc.activity.calledSkill\")],"
+      },
+      {
+        "line": 164,
+        "text": "    Agent: [tr(\"misc.activity.dispatchingAgent\"), tr(\"misc.activity.dispatchedAgent\")],"
+      },
+      {
+        "line": 165,
+        "text": "    WebFetch: [tr(\"misc.activity.fetching\"), tr(\"misc.activity.fetchedPast\")],"
+      },
+      {
+        "line": 166,
+        "text": "    WebSearch: [tr(\"misc.activity.searching\"), tr(\"misc.activity.searchedPast\")],"
+      },
+      {
+        "line": 167,
+        "text": "  };"
+      },
+      {
+        "line": 168,
+        "text": "  const [presentVerb, pastVerb] = verbs[t.toolName] ?? [tr(\"misc.activity.running\"), tr(\"misc.activity.ranPast\")];"
+      },
+      {
+        "line": 169,
+        "text": "  const verb = running ? presentVerb : pastVerb;"
+      },
+      {
+        "line": 170,
+        "text": ""
+      },
+      {
+        "line": 171,
+        "text": "  const label = detail ? `${verb} ${truncate(detail.replace(/\\s+/g, \" \").trim(), 64)}` : `${verb} ${t.toolName}`;"
+      },
+      {
+        "line": 172,
+        "text": "  return label;"
+      },
+      {
+        "line": 173,
+        "text": "}"
+      },
+      {
+        "line": 174,
+        "text": ""
+      },
+      {
+        "line": 175,
+        "text": "/** Format an elapsed millisecond delta like the AgentMessageView ticker. */"
+      },
+      {
+        "line": 176,
+        "text": "export function formatElapsed(ms: number): string {"
+      },
+      {
+        "line": 177,
+        "text": "  if (ms < 1000) return `${Math.max(0, ms)}ms`;"
+      },
+      {
+        "line": 178,
+        "text": "  const s = Math.floor(ms / 1000);"
+      },
+      {
+        "line": 179,
+        "text": "  if (s < 60) return `${s}s`;"
+      },
+      {
+        "line": 180,
+        "text": "  const m = Math.floor(s / 60);"
+      },
+      {
+        "line": 181,
+        "text": "  const rem = s % 60;"
+      },
+      {
+        "line": 182,
+        "text": "  return rem === 0 ? `${m}m` : `${m}m${rem}s`;"
+      },
+      {
+        "line": 183,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+    "sha256": "433814c6c51d8deebbf17d985ca2009a6bab10930a21929e64594c7c646f21b1",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import type { Message } from \"../types\";"
+      },
+      {
+        "line": 2,
+        "text": "import { summarizeLiveActivity, describeActivity } from \"../topbar/liveActivity\";"
+      },
+      {
+        "line": 3,
+        "text": ""
+      },
+      {
+        "line": 4,
+        "text": "/**"
+      },
+      {
+        "line": 5,
+        "text": " * Inline \"current activity\" line shown at the bottom of the message"
+      },
+      {
+        "line": 6,
+        "text": " * stream (Codex style), e.g. \"正在读取 automationMemory.ts\" /"
+      },
+      {
+        "line": 7,
+        "text": " * \"正在搜索 …\" / \"正在思考…\". When the turn is actively running the text"
+      },
+      {
+        "line": 8,
+        "text": " * gets a subtle pulse; when idle it's plain static grey text. No spinner icon."
+      },
+      {
+        "line": 9,
+        "text": " * Pure presentational — no effects or state — so renderToStaticMarkup"
+      },
+      {
+        "line": 10,
+        "text": " * can test it."
+      },
+      {
+        "line": 11,
+        "text": " */"
+      },
+      {
+        "line": 12,
+        "text": "export function LiveActivityLine({"
+      },
+      {
+        "line": 13,
+        "text": "  messages,"
+      },
+      {
+        "line": 14,
+        "text": "  running,"
+      },
+      {
+        "line": 15,
+        "text": "}: {"
+      },
+      {
+        "line": 16,
+        "text": "  messages: Message[];"
+      },
+      {
+        "line": 17,
+        "text": "  running: boolean;"
+      },
+      {
+        "line": 18,
+        "text": "}) {"
+      },
+      {
+        "line": 19,
+        "text": "  const activity = summarizeLiveActivity(messages);"
+      },
+      {
+        "line": 20,
+        "text": "  const text = describeActivity(activity);"
+      },
+      {
+        "line": 21,
+        "text": "  return ("
+      },
+      {
+        "line": 22,
+        "text": "    <div className=\"px-4 py-1 text-sm font-medium text-muted-foreground\">"
+      },
+      {
+        "line": 23,
+        "text": "      <span className={running ? \"animate-pulse\" : undefined}>{text}</span>"
+      },
+      {
+        "line": 24,
+        "text": "    </div>"
+      },
+      {
+        "line": 25,
+        "text": "  );"
+      },
+      {
+        "line": 26,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/App.tsx",
+    "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 29,
+        "text": "import { summarizeLiveActivity } from \"./topbar/liveActivity\";"
+      },
+      {
+        "line": 1048,
+        "text": "    activity: { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys },"
+      },
+      {
+        "line": 1816,
+        "text": "    ],"
+      },
+      {
+        "line": 1817,
+        "text": "  );"
+      },
+      {
+        "line": 1818,
+        "text": ""
+      },
+      {
+        "line": 1819,
+        "text": "  // Live-activity summary for the TopBar status popover. Recomputed"
+      },
+      {
+        "line": 1820,
+        "text": "  // whenever messages change — cheap (single pass from the most"
+      },
+      {
+        "line": 1821,
+        "text": "  // recent user message), no allocations beyond the returned object."
+      },
+      {
+        "line": 1822,
+        "text": "  const liveActivity = useMemo(() => summarizeLiveActivity(state.messages), [state.messages]);"
+      },
+      {
+        "line": 1823,
+        "text": ""
+      },
+      {
+        "line": 1824,
+        "text": "  // Count background sub-agents still running in THIS session. When the model"
+      },
+      {
+        "line": 1825,
+        "text": "  // spawns with run_in_background, the main run resolves immediately (busy"
+      },
+      {
+        "line": 1826,
+        "text": "  // clears, the composer re-enables — by design), but the children keep"
+      },
+      {
+        "line": 1827,
+        "text": "  // working. We surface that with a separate \"后台 N 个子代理运行中\" indicator"
+      },
+      {
+        "line": 2218,
+        "text": "            // Opening a panel is allowed from a draft and materializes its"
+      },
+      {
+        "line": 2219,
+        "text": "            // session on demand. Non-chat pages still have no panel dock."
+      },
+      {
+        "line": 2220,
+        "text": "            panelAvailable={isChatView && !cloudSelected}"
+      },
+      {
+        "line": 2221,
+        "text": "            statusAvailable={sessionChromeVisible && !cloudSelected}"
+      },
+      {
+        "line": 2222,
+        "text": "            contextSelectionAvailable={"
+      },
+      {
+        "line": 2223,
+        "text": "              !cloudSelected &&"
+      },
+      {
+        "line": 2224,
+        "text": "              activeSessionId !== null &&"
+      },
+      {
+        "line": 2225,
+        "text": "              isChatView &&"
+      },
+      {
+        "line": 2226,
+        "text": "              !busy &&"
+      },
+      {
+        "line": 2227,
+        "text": "              !awaitingHydration"
+      },
+      {
+        "line": 2228,
+        "text": "            }"
+      },
+      {
+        "line": 2229,
+        "text": "            onSelectContext={requestContextSelection}"
+      },
+      {
+        "line": 2230,
+        "text": "            activity={sessionChromeVisible && !cloudSelected ? liveActivity : undefined}"
+      },
+      {
+        "line": 2231,
+        "text": "            tasks={sessionChromeVisible && !cloudSelected ? latestTasks : null}"
+      },
+      {
+        "line": 2232,
+        "text": "            activeGoal={sessionChromeVisible && !cloudSelected ? state.activeGoal : null}"
+      },
+      {
+        "line": 2233,
+        "text": "            onUpdateGoal={handleUpdateGoal}"
+      },
+      {
+        "line": 2234,
+        "text": "            onGoalPausedChange={handleGoalPausedChange}"
+      },
+      {
+        "line": 2235,
+        "text": "            onDeleteGoal={handleDeleteGoal}"
+      },
+      {
+        "line": 2236,
+        "text": "          />"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/TopBar.tsx",
+    "sha256": "f49c82911bb653ea455040ea56e14e8488581ba94837ab0a67412a173db8e38a",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 9,
+        "text": "import type { LiveActivity } from \"./topbar/liveActivity\";"
+      },
+      {
+        "line": 49,
+        "text": "  activity?: LiveActivity;"
+      },
+      {
+        "line": 101,
+        "text": "  activity,"
+      },
+      {
+        "line": 212,
+        "text": "            )}"
+      },
+      {
+        "line": 213,
+        "text": "          </span>"
+      },
+      {
+        "line": 214,
+        "text": "        )}"
+      },
+      {
+        "line": 215,
+        "text": "      </div>"
+      },
+      {
+        "line": 216,
+        "text": "      <div className=\"flex shrink-0 items-center gap-1 border-l border-border/60 pl-2\">"
+      },
+      {
+        "line": 217,
+        "text": "        <NotificationHistory />"
+      },
+      {
+        "line": 218,
+        "text": "        {contextSelectionAvailable && onSelectContext && ("
+      },
+      {
+        "line": 219,
+        "text": "          <span style={{ WebkitAppRegion: \"no-drag\" } as React.CSSProperties}>"
+      },
+      {
+        "line": 220,
+        "text": "            <IconButton"
+      },
+      {
+        "line": 221,
+        "text": "              label={t(\"chat.contextPackage.select\")}"
+      },
+      {
+        "line": 222,
+        "text": "              data-context-action=\"open\""
+      },
+      {
+        "line": 223,
+        "text": "              onClick={onSelectContext}"
+      },
+      {
+        "line": 224,
+        "text": "            >"
+      },
+      {
+        "line": 225,
+        "text": "              <Forward size={14} />"
+      },
+      {
+        "line": 226,
+        "text": "            </IconButton>"
+      },
+      {
+        "line": 227,
+        "text": "          </span>"
+      },
+      {
+        "line": 228,
+        "text": "        )}"
+      },
+      {
+        "line": 229,
+        "text": "        {statusAvailable && ("
+      },
+      {
+        "line": 230,
+        "text": "          <StatusBadge"
+      },
+      {
+        "line": 231,
+        "text": "            busy={busy}"
+      },
+      {
+        "line": 232,
+        "text": "            activity={activity}"
+      },
+      {
+        "line": 233,
+        "text": "            tasks={tasks ?? null}"
+      },
+      {
+        "line": 234,
+        "text": "            activeGoal={activeGoal ?? null}"
+      },
+      {
+        "line": 235,
+        "text": "            onClearGoal={onClearGoal}"
+      },
+      {
+        "line": 236,
+        "text": "            onUpdateGoal={onUpdateGoal}"
+      },
+      {
+        "line": 237,
+        "text": "            onGoalPausedChange={onGoalPausedChange}"
+      },
+      {
+        "line": 238,
+        "text": "            onDeleteGoal={onDeleteGoal}"
+      },
+      {
+        "line": 239,
+        "text": "          />"
+      },
+      {
+        "line": 240,
+        "text": "        )}"
+      },
+      {
+        "line": 241,
+        "text": "        {panelAvailable && ("
+      },
+      {
+        "line": 242,
+        "text": "          <span style={{ WebkitAppRegion: \"no-drag\" } as React.CSSProperties}>"
+      },
+      {
+        "line": 267,
+        "text": "  activity,"
+      },
+      {
+        "line": 276,
+        "text": "  activity?: LiveActivity;"
+      },
+      {
+        "line": 388,
+        "text": "      {open &&"
+      },
+      {
+        "line": 389,
+        "text": "        hasStatusDetail &&"
+      },
+      {
+        "line": 390,
+        "text": "        createPortal("
+      },
+      {
+        "line": 391,
+        "text": "          <div"
+      },
+      {
+        "line": 392,
+        "text": "            ref={popoverRef}"
+      },
+      {
+        "line": 393,
+        "text": "            style={popoverStyle}"
+      },
+      {
+        "line": 394,
+        "text": "            className=\"w-max\""
+      },
+      {
+        "line": 395,
+        "text": "            data-status-popover=\"true\""
+      },
+      {
+        "line": 396,
+        "text": "            onMouseEnter={cancelClose}"
+      },
+      {
+        "line": 397,
+        "text": "            onMouseLeave={scheduleClose}"
+      },
+      {
+        "line": 398,
+        "text": "            onFocus={cancelClose}"
+      },
+      {
+        "line": 399,
+        "text": "            onBlur={scheduleClose}"
+      },
+      {
+        "line": 400,
+        "text": "          >"
+      },
+      {
+        "line": 401,
+        "text": "            <StatusPopover"
+      },
+      {
+        "line": 402,
+        "text": "              activity={"
+      },
+      {
+        "line": 403,
+        "text": "                activity ?? {"
+      },
+      {
+        "line": 404,
+        "text": "                  lastToolName: \"\","
+      },
+      {
+        "line": 405,
+        "text": "                  lastTool: null,"
+      },
+      {
+        "line": 406,
+        "text": "                  toolCount: 0,"
+      },
+      {
+        "line": 407,
+        "text": "                  turnStartedAt: 0,"
+      },
+      {
+        "line": 408,
+        "text": "                  toolInFlight: false,"
+      },
+      {
+        "line": 409,
+        "text": "                }"
+      },
+      {
+        "line": 410,
+        "text": "              }"
+      },
+      {
+        "line": 411,
+        "text": "              busy={busy}"
+      },
+      {
+        "line": 412,
+        "text": "              tasks={tasks}"
+      },
+      {
+        "line": 413,
+        "text": "              activeGoal={activeGoal}"
+      },
+      {
+        "line": 414,
+        "text": "              onClearGoal={onClearGoal}"
+      },
+      {
+        "line": 415,
+        "text": "              onUpdateGoal={onUpdateGoal}"
+      },
+      {
+        "line": 416,
+        "text": "              onGoalPausedChange={onGoalPausedChange}"
+      },
+      {
+        "line": 427,
+        "text": " * Memoized with a value-based comparator. App recomputes `activity` (and the"
+      },
+      {
+        "line": 434,
+        "text": " * `activity`/`tasks` objects feed only the hover popover. So we re-render only"
+      },
+      {
+        "line": 435,
+        "text": " * when a *meaningful* field changes — the activity's current tool / in-flight /"
+      },
+      {
+        "line": 462,
+        "text": "    a.activity?.lastToolName === b.activity?.lastToolName &&"
+      },
+      {
+        "line": 463,
+        "text": "    a.activity?.toolInFlight === b.activity?.toolInFlight &&"
+      },
+      {
+        "line": 464,
+        "text": "    a.activity?.toolCount === b.activity?.toolCount &&"
+      },
+      {
+        "line": 465,
+        "text": "    a.activity?.lastTool?.id === b.activity?.lastTool?.id &&"
+      },
+      {
+        "line": 466,
+        "text": "    a.activity?.lastTool?.status === b.activity?.lastTool?.status &&"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/topbar/StatusPopover.tsx",
+    "sha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import React from \"react\";"
+      },
+      {
+        "line": 2,
+        "text": "import type { LiveActivity } from \"./liveActivity\";"
+      },
+      {
+        "line": 3,
+        "text": "import type { ActiveGoal, TaskListMessage } from \"../types\";"
+      },
+      {
+        "line": 4,
+        "text": "import { useT } from \"../i18n/I18nProvider\";"
+      },
+      {
+        "line": 5,
+        "text": ""
+      },
+      {
+        "line": 6,
+        "text": "interface Props {"
+      },
+      {
+        "line": 7,
+        "text": "  /** Kept for prop compatibility with TopBar; the popover no longer renders a"
+      },
+      {
+        "line": 8,
+        "text": "   *  live-activity summary (that moved inline into the message stream — see"
+      },
+      {
+        "line": 9,
+        "text": "   *  messages/LiveActivityLine). */"
+      },
+      {
+        "line": 10,
+        "text": "  activity?: LiveActivity;"
+      },
+      {
+        "line": 11,
+        "text": "  busy: boolean;"
+      },
+      {
+        "line": 12,
+        "text": "  tasks: TaskListMessage | null;"
+      },
+      {
+        "line": 13,
+        "text": "  /** The session's active persistent goal (CC /goal), or null. */"
+      },
+      {
+        "line": 14,
+        "text": "  activeGoal?: ActiveGoal | null;"
+      },
+      {
+        "line": 15,
+        "text": "  /** Legacy clear callback retained for callers not yet on goalDelete. */"
+      },
+      {
+        "line": 16,
+        "text": "  onClearGoal?: () => void;"
+      },
+      {
+        "line": 17,
+        "text": "  onUpdateGoal?: (objective: string) => void;"
+      },
+      {
+        "line": 18,
+        "text": "  onGoalPausedChange?: (paused: boolean) => void;"
+      },
+      {
+        "line": 19,
+        "text": "  onDeleteGoal?: () => void;"
+      },
+      {
+        "line": 20,
+        "text": "}"
+      },
+      {
+        "line": 21,
+        "text": ""
+      },
+      {
+        "line": 22,
+        "text": "/**"
+      },
+      {
+        "line": 23,
+        "text": " * Status popover anchored under the TopBar's status dot. Shows ONLY the"
+      },
+      {
+        "line": 24,
+        "text": " * current task list (the in-flight plan emitted via TodoWrite/task_update)."
+      },
+      {
+        "line": 25,
+        "text": " *"
+      },
+      {
+        "line": 26,
+        "text": " * The old \"current tool / step count / elapsed\" summary was removed: that"
+      },
+      {
+        "line": 27,
+        "text": " * live \"what's happening right now\" signal now renders inline at the bottom"
+      },
+      {
+        "line": 28,
+        "text": " * of the message stream (LiveActivityLine), Codex-style, instead of hiding in"
+      },
+      {
+        "line": 29,
+        "text": " * a hover popover. When there are no tasks the popover is a small"
+      },
+      {
+        "line": 30,
+        "text": " * idle/running placeholder."
+      },
+      {
+        "line": 31,
+        "text": " */"
+      },
+      {
+        "line": 32,
+        "text": "export function StatusPopover({"
+      },
+      {
+        "line": 33,
+        "text": "  busy,"
+      },
+      {
+        "line": 34,
+        "text": "  tasks,"
+      },
+      {
+        "line": 35,
+        "text": "  activeGoal,"
+      },
+      {
+        "line": 36,
+        "text": "  onClearGoal,"
+      },
+      {
+        "line": 37,
+        "text": "  onUpdateGoal,"
+      },
+      {
+        "line": 38,
+        "text": "  onGoalPausedChange,"
+      },
+      {
+        "line": 39,
+        "text": "  onDeleteGoal,"
+      },
+      {
+        "line": 40,
+        "text": "}: Props) {"
+      },
+      {
+        "line": 41,
+        "text": "  const { t } = useT();"
+      },
+      {
+        "line": 42,
+        "text": "  const markerColor = (s: string) =>"
+      },
+      {
+        "line": 43,
+        "text": "    s === \"completed\""
+      },
+      {
+        "line": 44,
+        "text": "      ? \"text-status-ok\""
+      },
+      {
+        "line": 45,
+        "text": "      : s === \"in_progress\""
+      },
+      {
+        "line": 46,
+        "text": "        ? \"text-status-running\""
+      },
+      {
+        "line": 47,
+        "text": "        : \"text-muted-foreground\";"
+      },
+      {
+        "line": 48,
+        "text": ""
+      },
+      {
+        "line": 49,
+        "text": "  const hasTasks = !!tasks && tasks.tasks.length > 0;"
+      },
+      {
+        "line": 50,
+        "text": ""
+      },
+      {
+        "line": 51,
+        "text": "  // With an active goal OR a task list, render the wide panel: Goal block on"
+      },
+      {
+        "line": 52,
+        "text": "  // top (when present), then the task overview. With neither, fall back to the"
+      },
+      {
+        "line": 53,
+        "text": "  // minimal idle/running placeholder."
+      },
+      {
+        "line": 54,
+        "text": "  if (activeGoal || hasTasks) {"
+      },
+      {
+        "line": 55,
+        "text": "    return ("
+      },
+      {
+        "line": 56,
+        "text": "      <div className=\"w-[300px] max-w-full rounded-md border bg-popover p-2.5 text-sm text-popover-foreground shadow-lg\">"
+      },
+      {
+        "line": 57,
+        "text": "        {activeGoal && ("
+      },
+      {
+        "line": 58,
+        "text": "          <GoalBlock"
+      },
+      {
+        "line": 59,
+        "text": "            goal={activeGoal}"
+      },
+      {
+        "line": 60,
+        "text": "            onUpdate={onUpdateGoal}"
+      },
+      {
+        "line": 61,
+        "text": "            onPausedChange={onGoalPausedChange}"
+      },
+      {
+        "line": 62,
+        "text": "            onDelete={onDeleteGoal ?? onClearGoal}"
+      },
+      {
+        "line": 63,
+        "text": "          />"
+      },
+      {
+        "line": 64,
+        "text": "        )}"
+      },
+      {
+        "line": 65,
+        "text": "        {hasTasks && <TaskBlock tasks={tasks!} markerColor={markerColor} />}"
+      },
+      {
+        "line": 66,
+        "text": "      </div>"
+      },
+      {
+        "line": 67,
+        "text": "    );"
+      },
+      {
+        "line": 68,
+        "text": "  }"
+      },
+      {
+        "line": 69,
+        "text": ""
+      },
+      {
+        "line": 70,
+        "text": "  // No goal, no task list — a minimal placeholder. Live activity is shown"
+      },
+      {
+        "line": 71,
+        "text": "  // inline in the stream, so there's nothing tool-by-tool to surface here."
+      },
+      {
+        "line": 72,
+        "text": "  return ("
+      },
+      {
+        "line": 73,
+        "text": "    <div className=\"w-[140px] rounded-md border bg-popover p-2.5 text-center text-sm text-muted-foreground shadow-lg\">"
+      },
+      {
+        "line": 74,
+        "text": "      {busy ? t(\"misc.status.running\") : t(\"misc.status.idle\")}"
+      },
+      {
+        "line": 75,
+        "text": "    </div>"
+      },
+      {
+        "line": 76,
+        "text": "  );"
+      },
+      {
+        "line": 77,
+        "text": "}"
+      },
+      {
+        "line": 78,
+        "text": ""
+      },
+      {
+        "line": 79,
+        "text": "function GoalBlock({"
+      },
+      {
+        "line": 80,
+        "text": "  goal,"
+      },
+      {
+        "line": 81,
+        "text": "  onUpdate,"
+      },
+      {
+        "line": 82,
+        "text": "  onPausedChange,"
+      },
+      {
+        "line": 83,
+        "text": "  onDelete,"
+      },
+      {
+        "line": 84,
+        "text": "}: {"
+      },
+      {
+        "line": 85,
+        "text": "  goal: ActiveGoal;"
+      },
+      {
+        "line": 148,
+        "text": "            aria-label={t(\"misc.status.editGoalInput\")}"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/types.ts",
+    "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 31,
+        "text": "    completed?: boolean;"
+      },
+      {
+        "line": 32,
+        "text": "    completedCleanly?: boolean;"
+      },
+      {
+        "line": 33,
+        "text": "  };"
+      },
+      {
+        "line": 34,
+        "text": "  /** True when this send established/advanced a persistent goal (CC /goal)."
+      },
+      {
+        "line": 35,
+        "text": "   *  Drives the ◎ goal marker on the message bubble. */"
+      },
+      {
+        "line": 36,
+        "text": "  isGoal?: boolean;"
+      },
+      {
+        "line": 37,
+        "text": "  /** True when this \"user\" message was INJECTED by the engine (step-gap steering"
+      },
+      {
+        "line": 38,
+        "text": "   *  / goal wakeup continuation), not typed by the user. The file-change"
+      },
+      {
+        "line": 39,
+        "text": "   *  aggregator treats it as transparent so a goal-driven task that spans many"
+      },
+      {
+        "line": 40,
+        "text": "   *  engine.run boundaries still summarizes ALL its edits, not just the last"
+      },
+      {
+        "line": 41,
+        "text": "   *  run's (TODO-background-panel #9). */"
+      },
+      {
+        "line": 42,
+        "text": "  injected?: boolean;"
+      },
+      {
+        "line": 43,
+        "text": "  /** Stable queued-steer id for optimistic step-in bubbles. */"
+      },
+      {
+        "line": 44,
+        "text": "  steerId?: string;"
+      },
+      {
+        "line": 45,
+        "text": "  /** Stable submit-intent id used to merge duplicate local/server echoes. */"
+      },
+      {
+        "line": 46,
+        "text": "  clientMessageId?: string;"
+      },
+      {
+        "line": 47,
+        "text": "  /** Original persisted user event when replayed from a transcript window. */"
+      },
+      {
+        "line": 48,
+        "text": "  sourceEventId?: string;"
+      },
+      {
+        "line": 49,
+        "text": "  /** True until the engine echoes steer_injected for this steerId. */"
+      },
+      {
+        "line": 50,
+        "text": "  pending?: boolean;"
+      },
+      {
+        "line": 51,
+        "text": "  /** User-supplied Mimi attachments projected for chat rendering. */"
+      },
+      {
+        "line": 52,
+        "text": "  attachments?: PetChatAttachment[];"
+      },
+      {
+        "line": 58,
+        "text": "  text: string;"
+      },
+      {
+        "line": 59,
+        "text": "  done: boolean;"
+      },
+      {
+        "line": 60,
+        "text": "  /** Epoch ms this assistant segment began streaming. */"
+      },
+      {
+        "line": 61,
+        "text": "  createdAt?: number;"
+      },
+      {
+        "line": 62,
+        "text": "  /** Epoch ms this segment closed. Whole-run timing lives on its user anchor. */"
+      },
+      {
+        "line": 63,
+        "text": "  doneAt?: number;"
+      },
+      {
+        "line": 64,
+        "text": "}"
+      },
+      {
+        "line": 65,
+        "text": ""
+      },
+      {
+        "line": 66,
+        "text": "export interface ThinkingMessage {"
+      },
+      {
+        "line": 67,
+        "text": "  kind: \"thinking\";"
+      },
+      {
+        "line": 68,
+        "text": "  id: string;"
+      },
+      {
+        "line": 69,
+        "text": "  text: string;"
+      },
+      {
+        "line": 70,
+        "text": "  done: boolean;"
+      },
+      {
+        "line": 71,
+        "text": "  agentId?: string;"
+      },
+      {
+        "line": 72,
+        "text": "}"
+      },
+      {
+        "line": 73,
+        "text": ""
+      },
+      {
+        "line": 74,
+        "text": "/** A base64 image returned in a tool result (browser_observe vision/image,"
+      },
+      {
+        "line": 75,
+        "text": " *  view_image). Minimal renderer-local shape — we only need to render it. */"
+      },
+      {
+        "line": 76,
+        "text": "export interface ToolImageBlock {"
+      },
+      {
+        "line": 77,
+        "text": "  mediaType: string;"
+      },
+      {
+        "line": 78,
+        "text": "  /** base64 (no data: prefix). */"
+      },
+      {
+        "line": 79,
+        "text": "  data: string;"
+      },
+      {
+        "line": 80,
+        "text": "}"
+      },
+      {
+        "line": 81,
+        "text": ""
+      },
+      {
+        "line": 82,
+        "text": "export interface ToolMessage {"
+      },
+      {
+        "line": 83,
+        "text": "  kind: \"tool\";"
+      },
+      {
+        "line": 84,
+        "text": "  id: string;"
+      },
+      {
+        "line": 85,
+        "text": "  toolName: string;"
+      },
+      {
+        "line": 86,
+        "text": "  uiVisibility?: \"hidden\" | \"milestones\" | \"full\";"
+      },
+      {
+        "line": 87,
+        "text": "  args: string; // serialized JSON snapshot at tool_use_start"
+      },
+      {
+        "line": 88,
+        "text": "  argsLive?: Record<string, unknown>; // updates while tool_use_args_delta streams"
+      },
+      {
+        "line": 89,
+        "text": "  result?: string;"
+      },
+      {
+        "line": 90,
+        "text": "  /** Image blocks the tool returned (screenshots etc.) — rendered as thumbnails. */"
+      },
+      {
+        "line": 91,
+        "text": "  images?: ToolImageBlock[];"
+      },
+      {
+        "line": 92,
+        "text": "  error?: string;"
+      },
+      {
+        "line": 93,
+        "text": "  status: ToolStatus;"
+      },
+      {
+        "line": 94,
+        "text": "  startedAt: number;"
+      },
+      {
+        "line": 95,
+        "text": "  endedAt?: number;"
+      },
+      {
+        "line": 96,
+        "text": "  durationMs?: number;"
+      },
+      {
+        "line": 97,
+        "text": "  /** Optional natural-language summary emitted via `tool_summary`. */"
+      },
+      {
+        "line": 98,
+        "text": "  summary?: string;"
+      },
+      {
+        "line": 99,
+        "text": "  /**"
+      },
+      {
+        "line": 100,
+        "text": "   * Sandbox info for tools with sandbox visibility (Bash / background shell /"
+      },
+      {
+        "line": 101,
+        "text": "   * worktree / PowerShell). `backend: \"off\"` is set explicitly so the card"
+      },
+      {
+        "line": 102,
+        "text": "   * shows「未隔离」rather than nothing. Undefined for tools that don't expose it."
+      },
+      {
+        "line": 103,
+        "text": "   */"
+      },
+      {
+        "line": 104,
+        "text": "  sandbox?: {"
+      },
+      {
+        "line": 105,
+        "text": "    backend: \"off\" | \"seatbelt\" | \"bwrap\";"
+      },
+      {
+        "line": 106,
+        "text": "    network?: \"allow\" | \"deny\";"
+      },
+      {
+        "line": 269,
+        "text": "   * routes back to that exact session's pending-approval map — deriving it from"
+      },
+      {
+        "line": 555,
+        "text": "    if (message.kind === \"user\" && !message.pending && !message.steerId) {"
+      },
+      {
+        "line": 563,
+        "text": "      const injected = message.injected === true || isSystemReminderText(message.text);"
+      },
+      {
+        "line": 564,
+        "text": "      if (!injected || index < 0 || completed) {"
+      },
+      {
+        "line": 646,
+        "text": "      !message.injected &&"
+      },
+      {
+        "line": 653,
+        "text": "    .findIndex((message) => message.kind === \"user\" && !message.injected);"
+      },
+      {
+        "line": 731,
+        "text": "    if (message.kind === \"user\" && !message.injected) break;"
+      },
+      {
+        "line": 737,
+        "text": "    if (message.kind === \"user\" && !message.injected) break;"
+      },
+      {
+        "line": 794,
+        "text": "      !message.injected &&"
+      },
+      {
+        "line": 802,
+        "text": "    if (message.kind === \"user\" && !message.injected) {"
+      },
+      {
+        "line": 942,
+        "text": "    (event.type === \"session_user_message\" || event.type === \"steer_injected\") &&"
+      },
+      {
+        "line": 951,
+        "text": "    event.type === \"session_user_message\" ||"
+      },
+      {
+        "line": 952,
+        "text": "    event.type === \"steer_injected\""
+      },
+      {
+        "line": 972,
+        "text": "    .find((message) => message.kind === \"user\" && !message.injected && !message.pending);"
+      },
+      {
+        "line": 988,
+        "text": "        !owner.injected &&"
+      },
+      {
+        "line": 1019,
+        "text": "    .findIndex((message) => message.kind === \"user\" && !message.injected && !message.pending);"
+      },
+      {
+        "line": 1139,
+        "text": "    .find((message) => message.kind === \"user\" && !message.injected && !message.pending);"
+      },
+      {
+        "line": 1172,
+        "text": "  event: Extract<StreamEvent, { type: \"session_user_message\" | \"steer_injected\" }>,"
+      },
+      {
+        "line": 1201,
+        "text": "    case \"session_user_message\": {"
+      },
+      {
+        "line": 1203,
+        "text": "        event.injected === true ||"
+      },
+      {
+        "line": 1279,
+        "text": "    case \"steer_injected\": {"
+      },
+      {
+        "line": 1280,
+        "text": "      const attachments = outputUserAttachments(state, event);"
+      },
+      {
+        "line": 1281,
+        "text": "      // Older Host envelopes can carry the parent run's clientMessageId."
+      },
+      {
+        "line": 1282,
+        "text": "      // New producers bind the queued message to its own Session identity."
+      },
+      {
+        "line": 1283,
+        "text": "      const clientMessageId ="
+      },
+      {
+        "line": 1284,
+        "text": "        event.sessionId && event.sessionId === state.sessionId ? event.clientMessageId : undefined;"
+      },
+      {
+        "line": 1285,
+        "text": "      if (event.id) {"
+      },
+      {
+        "line": 1286,
+        "text": "        let matched = false;"
+      },
+      {
+        "line": 1287,
+        "text": "        const messages = state.messages.map((m) => {"
+      },
+      {
+        "line": 1288,
+        "text": "          if (m.kind === \"user\" && (m.steerId === event.id || m.clientMessageId === event.id)) {"
+      },
+      {
+        "line": 1289,
+        "text": "            matched = true;"
+      },
+      {
+        "line": 1290,
+        "text": "            return {"
+      },
+      {
+        "line": 1291,
+        "text": "              ...m,"
+      },
+      {
+        "line": 1292,
+        "text": "              pending: false,"
+      },
+      {
+        "line": 1293,
+        "text": "              text: event.text,"
+      },
+      {
+        "line": 1294,
+        "text": "              injected: true,"
+      },
+      {
+        "line": 1295,
+        "text": "              clientMessageId: clientMessageId ?? m.clientMessageId,"
+      },
+      {
+        "line": 1296,
+        "text": "              attachments: attachments ?? m.attachments,"
+      },
+      {
+        "line": 1297,
+        "text": "            };"
+      },
+      {
+        "line": 1298,
+        "text": "          }"
+      },
+      {
+        "line": 1299,
+        "text": "          return m;"
+      },
+      {
+        "line": 1300,
+        "text": "        });"
+      },
+      {
+        "line": 1301,
+        "text": "        if (matched) return { ...state, messages };"
+      },
+      {
+        "line": 1302,
+        "text": "      }"
+      },
+      {
+        "line": 1303,
+        "text": "      // 引导(不打断): the host queued this user message and the engine spliced"
+      },
+      {
+        "line": 1304,
+        "text": "      // it into the running turn at a step boundary. Render it as a user bubble"
+      },
+      {
+        "line": 1305,
+        "text": "      // in the feed so the injected guidance is visible inline (it really did"
+      },
+      {
+        "line": 1306,
+        "text": "      // join the conversation — it's persisted to the transcript core-side)."
+      },
+      {
+        "line": 1307,
+        "text": "      // Mark injected so it doesn't reset the file-change aggregation boundary"
+      },
+      {
+        "line": 1308,
+        "text": "      // (a goal-driven task steers/wakes across many runs — #9). Carry the"
+      },
+      {
+        "line": 1309,
+        "text": "      // steerId (event.id) so this bubble is protected by hydrate's steer guard"
+      },
+      {
+        "line": 1310,
+        "text": "      // and dedupes against the disk replay of the SAME steerId — otherwise a"
+      },
+      {
+        "line": 1311,
+        "text": "      // lagging snapshot would wipe it (the s-mr8s3w5i loss bug) or a later"
+      },
+      {
+        "line": 1312,
+        "text": "      // hydrate would duplicate it. Since queueInput no longer plants an"
+      },
+      {
+        "line": 1313,
+        "text": "      // optimistic bubble, this append IS the bubble's first appearance."
+      },
+      {
+        "line": 1314,
+        "text": "      return appendUserMessage("
+      },
+      {
+        "line": 1315,
+        "text": "        state,"
+      },
+      {
+        "line": 1316,
+        "text": "        event.text,"
+      },
+      {
+        "line": 1317,
+        "text": "        now(),"
+      },
+      {
+        "line": 1318,
+        "text": "        false,"
+      },
+      {
+        "line": 1319,
+        "text": "        true,"
+      },
+      {
+        "line": 1320,
+        "text": "        event.id,"
+      },
+      {
+        "line": 1321,
+        "text": "        false,"
+      },
+      {
+        "line": 1322,
+        "text": "        clientMessageId,"
+      },
+      {
+        "line": 1323,
+        "text": "        attachments,"
+      },
+      {
+        "line": 1324,
+        "text": "      );"
+      },
+      {
+        "line": 1398,
+        "text": "    case \"tool_use_start\": {"
+      },
+      {
+        "line": 1399,
+        "text": "      const id = event.toolCall.id;"
+      },
+      {
+        "line": 1400,
+        "text": "      const startedAt = now();"
+      },
+      {
+        "line": 1401,
+        "text": "      const toolMsg: ToolMessage = {"
+      },
+      {
+        "line": 1402,
+        "text": "        kind: \"tool\","
+      },
+      {
+        "line": 1403,
+        "text": "        id,"
+      },
+      {
+        "line": 1404,
+        "text": "        toolName: event.toolCall.toolName,"
+      },
+      {
+        "line": 1405,
+        "text": "        uiVisibility: event.toolCall.uiVisibility,"
+      },
+      {
+        "line": 1406,
+        "text": "        args: JSON.stringify(event.toolCall.args ?? {}),"
+      },
+      {
+        "line": 1407,
+        "text": "        status: \"running\","
+      },
+      {
+        "line": 1408,
+        "text": "        // Use the clock, not a hard-coded Date.now(): on replay `now()` returns"
+      },
+      {
+        "line": 1409,
+        "text": "        // the PERSISTED timestamp so a tool's startedAt reflects when it really"
+      },
+      {
+        "line": 1410,
+        "text": "        // ran, not the replay moment. Hard-coding Date.now() made the turn span"
+      },
+      {
+        "line": 1411,
+        "text": "        // stretch to \"now\" and grow on every reopen. Fall back to 0 (never the"
+      },
+      {
+        "line": 1412,
+        "text": "        // replay clock) for legacy items with no timestamp. Process grouping"
+      },
+      {
+        "line": 1413,
+        "text": "        // filters missing/non-finite wall-clock stamps out."
+      },
+      {
+        "line": 1414,
+        "text": "        startedAt: startedAt ?? 0,"
+      },
+      {
+        "line": 1415,
+        "text": "      };"
+      },
+      {
+        "line": 1416,
+        "text": "      if (event.agentId) {"
+      },
+      {
+        "line": 1417,
+        "text": "        const idx = state.agentMessageIndex[event.agentId];"
+      },
+      {
+        "line": 1418,
+        "text": "        if (idx === undefined) return state;"
+      },
+      {
+        "line": 1419,
+        "text": "        const msgs = state.messages.slice();"
+      },
+      {
+        "line": 1420,
+        "text": "        const m = msgs[idx];"
+      },
+      {
+        "line": 1468,
+        "text": "    case \"tool_use_args_delta\": {"
+      },
+      {
+        "line": 1469,
+        "text": "      if (event.agentId) {"
+      },
+      {
+        "line": 1470,
+        "text": "        const idx = state.agentMessageIndex[event.agentId];"
+      },
+      {
+        "line": 1471,
+        "text": "        if (idx === undefined) return state;"
+      },
+      {
+        "line": 1472,
+        "text": "        const msgs = state.messages.slice();"
+      },
+      {
+        "line": 1473,
+        "text": "        const m = msgs[idx];"
+      },
+      {
+        "line": 1474,
+        "text": "        if (!m || m.kind !== \"agent\") return state;"
+      },
+      {
+        "line": 1475,
+        "text": "        msgs[idx] = {"
+      },
+      {
+        "line": 1476,
+        "text": "          ...m,"
+      },
+      {
+        "line": 1477,
+        "text": "          toolCalls: m.toolCalls.map((t) =>"
+      },
+      {
+        "line": 1478,
+        "text": "            t.id === event.toolCallId"
+      },
+      {
+        "line": 1479,
+        "text": "              ? { ...t, argsLive: { ...(t.argsLive ?? {}), ...event.args } }"
+      },
+      {
+        "line": 1480,
+        "text": "              : t,"
+      },
+      {
+        "line": 1481,
+        "text": "          ),"
+      },
+      {
+        "line": 1482,
+        "text": "        };"
+      },
+      {
+        "line": 1483,
+        "text": "        return { ...state, messages: msgs };"
+      },
+      {
+        "line": 1484,
+        "text": "      }"
+      },
+      {
+        "line": 1485,
+        "text": "      return {"
+      },
+      {
+        "line": 1486,
+        "text": "        ...state,"
+      },
+      {
+        "line": 1487,
+        "text": "        messages: state.messages.map((m) =>"
+      },
+      {
+        "line": 1488,
+        "text": "          m.kind === \"tool\" && m.id === event.toolCallId"
+      },
+      {
+        "line": 1489,
+        "text": "            ? { ...m, argsLive: { ...(m.argsLive ?? {}), ...event.args } }"
+      },
+      {
+        "line": 1490,
+        "text": "            : m,"
+      },
+      {
+        "line": 1491,
+        "text": "        ),"
+      },
+      {
+        "line": 1507,
+        "text": "        )"
+      },
+      {
+        "line": 1508,
+        "text": "        .map((b) => ({ mediaType: b.source.media_type, data: b.source.data }));"
+      },
+      {
+        "line": 1509,
+        "text": "      const patch = (t: ToolMessage): ToolMessage => {"
+      },
+      {
+        "line": 1510,
+        "text": "        const failed = event.result.error !== undefined || event.result.isError === true;"
+      },
+      {
+        "line": 1511,
+        "text": "        const end = endedAt ?? t.startedAt;"
+      },
+      {
+        "line": 1512,
+        "text": "        return {"
+      },
+      {
+        "line": 1513,
+        "text": "          ...t,"
+      },
+      {
+        "line": 1514,
+        "text": "          result: event.result.result,"
+      },
+      {
+        "line": 1515,
+        "text": "          images: images && images.length > 0 ? images : t.images,"
+      },
+      {
+        "line": 1516,
+        "text": "          error: event.result.error,"
+      },
+      {
+        "line": 1517,
+        "text": "          sandbox: event.result.sandbox,"
+      },
+      {
+        "line": 1518,
+        "text": "          uiVisibility: event.result.uiVisibility ?? t.uiVisibility,"
+      },
+      {
+        "line": 1519,
+        "text": "          status: failed ? \"failed\" : \"succeeded\","
+      },
+      {
+        "line": 1520,
+        "text": "          endedAt: end,"
+      },
+      {
+        "line": 1521,
+        "text": "          durationMs: toolDurationMs(t.startedAt, end),"
+      },
+      {
+        "line": 1522,
+        "text": "        };"
+      },
+      {
+        "line": 1523,
+        "text": "      };"
+      },
+      {
+        "line": 1524,
+        "text": "      if (event.agentId) {"
+      },
+      {
+        "line": 1525,
+        "text": "        const idx = state.agentMessageIndex[event.agentId];"
+      },
+      {
+        "line": 2070,
+        "text": "      //    scope to the last NON-injected user message. A goal/steer task spans"
+      },
+      {
+        "line": 2071,
+        "text": "      //    many engine.run boundaries — each inserts an injected user turn — and"
+      },
+      {
+        "line": 2074,
+        "text": "      //    runs' cards standing (they sit before the injected user turn), so a"
+      },
+      {
+        "line": 2079,
+        "text": "        if (m.kind === \"user\" && !m.injected) {"
+      },
+      {
+        "line": 2245,
+        "text": "  // A pending approval snapshot can race persisted history hydration. The"
+      },
+      {
+        "line": 2276,
+        "text": "  /** True for engine-injected user turns (steer / goal wakeup) — see"
+      },
+      {
+        "line": 2277,
+        "text": "   *  UserMessage.injected. */"
+      },
+      {
+        "line": 2278,
+        "text": "  injected?: boolean,"
+      },
+      {
+        "line": 2279,
+        "text": "  steerId?: string,"
+      },
+      {
+        "line": 2280,
+        "text": "  pending?: boolean,"
+      },
+      {
+        "line": 2295,
+        "text": "          injected: injected ?? m.injected,"
+      },
+      {
+        "line": 2296,
+        "text": "          steerId: steerId ?? m.steerId,"
+      },
+      {
+        "line": 2297,
+        "text": "          pending: pending ?? m.pending,"
+      },
+      {
+        "line": 2309,
+        "text": "    ...(!injected && !pending"
+      },
+      {
+        "line": 2324,
+        "text": "        injected,"
+      },
+      {
+        "line": 2325,
+        "text": "        steerId,"
+      },
+      {
+        "line": 2326,
+        "text": "        pending,"
+      },
+      {
+        "line": 2338,
+        "text": "    if (messages[i]!.kind === \"user\" && !(messages[i] as UserMessage).injected) {"
+      },
+      {
+        "line": 2363,
+        "text": "  steerIds: Iterable<string>,"
+      },
+      {
+        "line": 2365,
+        "text": "  const ids = new Set(steerIds);"
+      },
+      {
+        "line": 2369,
+        "text": "    if (m.kind === \"user\" && m.pending && m.steerId && ids.has(m.steerId)) {"
+      },
+      {
+        "line": 2403,
+        "text": "    if (message.kind === \"user\" && !message.injected && !message.pending) {"
+      },
+      {
+        "line": 2464,
+        "text": "    .find((message) => message.kind === \"user\" && !message.injected && !message.pending);"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/app/useRunController.ts",
+    "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 670,
+        "text": "        if (reason === \"image_error\" || reason === \"model_error\" || reason === \"prompt_too_long\") {"
+      },
+      {
+        "line": 671,
+        "text": "          playThemeSound(\"error\");"
+      },
+      {
+        "line": 672,
+        "text": "          const detail = result?.text?.replace(/^ERROR:\\s*/, \"\") || t(\"misc.app.requestRejected\");"
+      },
+      {
+        "line": 673,
+        "text": "          dispatch({ type: \"turn_end\", bucket, reason: \"error\", detail });"
+      },
+      {
+        "line": 674,
+        "text": "          toast({ message: detail, variant: \"error\" });"
+      },
+      {
+        "line": 675,
+        "text": "        }"
+      },
+      {
+        "line": 676,
+        "text": "      })"
+      },
+      {
+        "line": 677,
+        "text": "      .catch((err) => {"
+      },
+      {
+        "line": 678,
+        "text": "        if (!isLiveGeneration()) return;"
+      },
+      {
+        "line": 679,
+        "text": "        playThemeSound(\"error\");"
+      },
+      {
+        "line": 680,
+        "text": "        setBusyForKey(bucket, false);"
+      },
+      {
+        "line": 681,
+        "text": "        if (runningBucketRef.current === bucket) {"
+      },
+      {
+        "line": 682,
+        "text": "          runningBucketRef.current = null;"
+      },
+      {
+        "line": 683,
+        "text": "        }"
+      },
+      {
+        "line": 684,
+        "text": "        window.codeshell.log(\"quick_chat.run.rejected\", {"
+      },
+      {
+        "line": 685,
+        "text": "          bucket,"
+      },
+      {
+        "line": 686,
+        "text": "          sessionId: engineSessionId,"
+      },
+      {
+        "line": 687,
+        "text": "          error: String((err as Error)?.message ?? err),"
+      },
+      {
+        "line": 688,
+        "text": "        });"
+      },
+      {
+        "line": 689,
+        "text": "        const detail = String((err as Error)?.message ?? err) || t(\"misc.app.requestRejected\");"
+      },
+      {
+        "line": 690,
+        "text": "        dispatch({ type: \"turn_end\", bucket, reason: \"error\", detail });"
+      },
+      {
+        "line": 691,
+        "text": "        toast({ message: detail, variant: \"error\" });"
+      },
+      {
+        "line": 692,
+        "text": "      });"
+      },
+      {
+        "line": 693,
+        "text": "  };"
+      },
+      {
+        "line": 694,
+        "text": ""
+      },
+      {
+        "line": 695,
+        "text": "  useEffect(() => {"
+      },
+      {
+        "line": 696,
+        "text": "    if (!activeSessionId) return;"
+      },
+      {
+        "line": 697,
+        "text": "    const queued = queuedInputs[activeBucket];"
+      },
+      {
+        "line": 698,
+        "text": "    if (!queued || queued.length === 0) return;"
+      },
+      {
+        "line": 699,
+        "text": ""
+      },
+      {
+        "line": 700,
+        "text": "    if (busy) {"
+      },
+      {
+        "line": 701,
+        "text": "      // A relay (打断重发) was requested for this bucket: don't steer — the abort"
+      },
+      {
+        "line": 702,
+        "text": "      // is in flight and the !busy branch will drain+re-send once it lands."
+      },
+      {
+        "line": 703,
+        "text": "      if (relayingBuckets.has(activeBucket)) return;"
+      },
+      {
+        "line": 704,
+        "text": "      // External runtimes do not implement the native Engine's step-boundary"
+      },
+      {
+        "line": 705,
+        "text": "      // steer RPC. Leave the draft in the queue; the !busy branch sends it as"
+      },
+      {
+        "line": 706,
+        "text": "      // the next serialized turn after the current provider turn completes."
+      },
+      {
+        "line": 707,
+        "text": "      const queuedModelKey = modelOverrides[activeBucket] ?? defaultActiveModelKey;"
+      },
+      {
+        "line": 708,
+        "text": "      if (parseExternalRuntimeModelKey(queuedModelKey)) return;"
+      },
+      {
+        "line": 709,
+        "text": "      // Step-gap steering (默认, 不打断): hand each not-yet-sent queued draft to"
+      },
+      {
+        "line": 710,
+        "text": "      // the engine, which splices it into the running turn at its NEXT step"
+      },
+      {
+        "line": 711,
+        "text": "      // boundary. The item STAYS in the panel (visible + revocable) — it's only"
+      },
+      {
+        "line": 712,
+        "text": "      // removed when the engine's steer_injected event confirms it, at which"
+      },
+      {
+        "line": 713,
+        "text": "      // point it renders as a user bubble. Send each id exactly once."
+      },
+      {
+        "line": 714,
+        "text": "      //"
+      },
+      {
+        "line": 715,
+        "text": "      // Resolve the engine session from activeBucket (the bucket this effect"
+      },
+      {
+        "line": 716,
+        "text": "      // operates on), NOT resolveActiveEngineSessionId() — the latter prefers"
+      },
+      {
+        "line": 717,
+        "text": "      // runningBucketRef, which points at the LAST-started run. With two busy"
+      },
+      {
+        "line": 718,
+        "text": "      // sessions (B started after A, user switches back to A and queues), that"
+      },
+      {
+        "line": 719,
+        "text": "      // would steer A's text into B's engine session (cross-session串投)."
+      },
+      {
+        "line": 720,
+        "text": "      const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);"
+      },
+      {
+        "line": 721,
+        "text": "      if (!engineSessionId) return; // run starting up; re-fires once it resolves"
+      },
+      {
+        "line": 722,
+        "text": "      const bucket = activeBucket;"
+      },
+      {
+        "line": 723,
+        "text": "      for (const item of queued) {"
+      },
+      {
+        "line": 724,
+        "text": "        if (injectedSteerIdsRef.current.has(item.id) || steeredIdsRef.current.has(item.id)) {"
+      },
+      {
+        "line": 725,
+        "text": "          continue;"
+      },
+      {
+        "line": 726,
+        "text": "        }"
+      },
+      {
+        "line": 727,
+        "text": "        if (!canSteerQueuedItem(item)) {"
+      },
+      {
+        "line": 728,
+        "text": "          break;"
+      },
+      {
+        "line": 729,
+        "text": "        }"
+      },
+      {
+        "line": 730,
+        "text": "        steeredIdsRef.current.add(item.id);"
+      },
+      {
+        "line": 731,
+        "text": "        void window.codeshell"
+      },
+      {
+        "line": 732,
+        "text": "          .steer(engineSessionId, item.text, item.id, item.clientMessageId, item.attachments)"
+      },
+      {
+        "line": 733,
+        "text": "          .then((res) => {"
+      },
+      {
+        "line": 734,
+        "text": "            const accepted = (res as { result?: { accepted?: boolean } })?.result?.accepted;"
+      },
+      {
+        "line": 735,
+        "text": "            if (accepted !== false) return;"
+      },
+      {
+        "line": 736,
+        "text": "            if (!steeredIdsRef.current.has(item.id)) return;"
+      },
+      {
+        "line": 737,
+        "text": "            void enqueueSerialTask(downgradeRunQueueRef.current, async () => {"
+      },
+      {
+        "line": 738,
+        "text": "              if (!steeredIdsRef.current.has(item.id)) return;"
+      },
+      {
+        "line": 739,
+        "text": "              steeredIdsRef.current.delete(item.id);"
+      },
+      {
+        "line": 740,
+        "text": "              injectedSteerIdsRef.current.delete(item.id);"
+      },
+      {
+        "line": 741,
+        "text": "              setQueuedInputs((prev) => removeQueuedInputById(prev, bucket, item.id));"
+      },
+      {
+        "line": 742,
+        "text": "              dispatch({ type: \"remove_pending_steers\", bucket, steerIds: [item.id] });"
+      },
+      {
+        "line": 743,
+        "text": "              window.codeshell.log(\"steer.idle_downgrade.run_started\", {"
+      },
+      {
+        "line": 744,
+        "text": "                bucket,"
+      },
+      {
+        "line": 745,
+        "text": "                engineSessionId,"
+      },
+      {
+        "line": 746,
+        "text": "                steerId: item.id,"
+      },
+      {
+        "line": 747,
+        "text": "                clientMessageId: item.clientMessageId,"
+      },
+      {
+        "line": 748,
+        "text": "              });"
+      },
+      {
+        "line": 749,
+        "text": "              await send(item.text, {"
+      },
+      {
+        "line": 750,
+        "text": "                bucket,"
+      },
+      {
+        "line": 751,
+        "text": "                clientMessageId: item.clientMessageId,"
+      },
+      {
+        "line": 752,
+        "text": "                attachments: item.attachments,"
+      },
+      {
+        "line": 753,
+        "text": "                displayText: item.displayText,"
+      },
+      {
+        "line": 754,
+        "text": "              });"
+      },
+      {
+        "line": 755,
+        "text": "            });"
+      },
+      {
+        "line": 756,
+        "text": "          })"
+      },
+      {
+        "line": 757,
+        "text": "          .catch((err) => {"
+      },
+      {
+        "line": 758,
+        "text": "            steeredIdsRef.current.delete(item.id);"
+      },
+      {
+        "line": 759,
+        "text": "            window.codeshell.log(\"steer.enqueue_failed\", {"
+      },
+      {
+        "line": 760,
+        "text": "              bucket,"
+      },
+      {
+        "line": 761,
+        "text": "              engineSessionId,"
+      },
+      {
+        "line": 762,
+        "text": "              steerId: item.id,"
+      },
+      {
+        "line": 763,
+        "text": "              clientMessageId: item.clientMessageId,"
+      },
+      {
+        "line": 764,
+        "text": "              error: String((err as Error)?.message ?? err),"
+      },
+      {
+        "line": 765,
+        "text": "            });"
+      },
+      {
+        "line": 766,
+        "text": "          });"
+      },
+      {
+        "line": 767,
+        "text": "      }"
+      },
+      {
+        "line": 768,
+        "text": "      return;"
+      },
+      {
+        "line": 769,
+        "text": "    }"
+      },
+      {
+        "line": 770,
+        "text": ""
+      },
+      {
+        "line": 771,
+        "text": "    // !busy: no live run. Either a 引导打断 relay handoff (drain the WHOLE queue"
+      },
+      {
+        "line": 772,
+        "text": "    // as one merged re-send) or a leftover queue typed while idle (take the next"
+      },
+      {
+        "line": 773,
+        "text": "    // item). Clear the relay marker once we fire."
+      },
+      {
+        "line": 774,
+        "text": "    const isRelay = relayingBuckets.has(activeBucket);"
+      },
+      {
+        "line": 787,
+        "text": "      dispatch({ type: \"remove_pending_steers\", bucket: activeBucket, steerIds: ids });"
+      },
+      {
+        "line": 818,
+        "text": "    dispatch({ type: \"remove_pending_steers\", bucket: activeBucket, steerIds: [item.id] });"
+      },
+      {
+        "line": 916,
+        "text": "    dispatch({ type: \"remove_pending_steers\", bucket: activeBucket, steerIds: ids });"
+      },
+      {
+        "line": 928,
+        "text": "      dispatch({ type: \"remove_pending_steers\", bucket, steerIds: [item.id] });"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+    "sha256": "2eac012a698703372f238c9a4afb5828faf492437f12aafec7602930a417052c",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 21,
+        "text": "describe(\"summarizeLiveActivity\", () => {"
+      },
+      {
+        "line": 22,
+        "text": "  test(\"returns the running tool as primary, only counting the current turn\", () => {"
+      },
+      {
+        "line": 23,
+        "text": "    const msgs: Message[] = ["
+      },
+      {
+        "line": 24,
+        "text": "      tool({ id: \"old\", toolName: \"Read\", status: \"succeeded\", startedAt: 1 }),"
+      },
+      {
+        "line": 25,
+        "text": "      user(\"u1\"),"
+      },
+      {
+        "line": 26,
+        "text": "      tool({ id: \"a\", toolName: \"Glob\", status: \"succeeded\", startedAt: 100 }),"
+      },
+      {
+        "line": 27,
+        "text": "      tool({ id: \"b\", toolName: \"Bash\", status: \"running\", startedAt: 200 }),"
+      },
+      {
+        "line": 28,
+        "text": "    ];"
+      },
+      {
+        "line": 29,
+        "text": "    const a = summarizeLiveActivity(msgs);"
+      },
+      {
+        "line": 30,
+        "text": "    expect(a.toolCount).toBe(2); // pre-user Read excluded"
+      },
+      {
+        "line": 31,
+        "text": "    expect(a.toolInFlight).toBe(true);"
+      },
+      {
+        "line": 32,
+        "text": "    expect(a.lastToolName).toBe(\"Bash\");"
+      },
+      {
+        "line": 33,
+        "text": "    expect(a.lastTool?.id).toBe(\"b\");"
+      },
+      {
+        "line": 34,
+        "text": "    expect(a.turnStartedAt).toBe(100);"
+      },
+      {
+        "line": 35,
+        "text": "  });"
+      },
+      {
+        "line": 36,
+        "text": ""
+      },
+      {
+        "line": 37,
+        "text": "  test(\"no tools yet → thinking state\", () => {"
+      },
+      {
+        "line": 38,
+        "text": "    const a = summarizeLiveActivity([user(\"u1\")]);"
+      },
+      {
+        "line": 39,
+        "text": "    expect(a.lastTool).toBeNull();"
+      },
+      {
+        "line": 40,
+        "text": "    expect(a.toolInFlight).toBe(false);"
+      },
+      {
+        "line": 41,
+        "text": "    expect(a.toolCount).toBe(0);"
+      },
+      {
+        "line": 42,
+        "text": "  });"
+      },
+      {
+        "line": 43,
+        "text": "});"
+      },
+      {
+        "line": 44,
+        "text": ""
+      },
+      {
+        "line": 45,
+        "text": "describe(\"describeActivity\", () => {"
+      },
+      {
+        "line": 46,
+        "text": "  test(\"thinking when no tool\", () => {"
+      },
+      {
+        "line": 47,
+        "text": "    expect(describeActivity(summarizeLiveActivity([user(\"u\")]))).toBe(\"正在思考…\");"
+      },
+      {
+        "line": 48,
+        "text": "  });"
+      },
+      {
+        "line": 49,
+        "text": ""
+      },
+      {
+        "line": 50,
+        "text": "  test(\"Bash shows the command with a present-tense verb while running\", () => {"
+      },
+      {
+        "line": 51,
+        "text": "    const a = summarizeLiveActivity(["
+      },
+      {
+        "line": 52,
+        "text": "      user(\"u\"),"
+      },
+      {
+        "line": 53,
+        "text": "      tool({ toolName: \"Bash\", status: \"running\", args: JSON.stringify({ command: \"bunx vite --host 127.0.0.1\" }) }),"
+      },
+      {
+        "line": 54,
+        "text": "    ]);"
+      },
+      {
+        "line": 55,
+        "text": "    expect(describeActivity(a)).toBe(\"正在运行 bunx vite --host 127.0.0.1\");"
+      },
+      {
+        "line": 56,
+        "text": "  });"
+      },
+      {
+        "line": 57,
+        "text": ""
+      },
+      {
+        "line": 58,
+        "text": "  test(\"Edit shows just the basename, not the full path\", () => {"
+      },
+      {
+        "line": 59,
+        "text": "    const a = summarizeLiveActivity(["
+      },
+      {
+        "line": 60,
+        "text": "      user(\"u\"),"
+      },
+      {
+        "line": 61,
+        "text": "      tool({ toolName: \"Edit\", status: \"running\", args: JSON.stringify({ file_path: \"/a/b/ChatView.tsx\" }) }),"
+      },
+      {
+        "line": 62,
+        "text": "    ]);"
+      },
+      {
+        "line": 63,
+        "text": "    expect(describeActivity(a)).toBe(\"正在编辑 ChatView.tsx\");"
+      },
+      {
+        "line": 64,
+        "text": "  });"
+      },
+      {
+        "line": 65,
+        "text": ""
+      },
+      {
+        "line": 66,
+        "text": "  test(\"completed tool uses the past-ish verb\", () => {"
+      },
+      {
+        "line": 67,
+        "text": "    const a = summarizeLiveActivity(["
+      },
+      {
+        "line": 68,
+        "text": "      user(\"u\"),"
+      },
+      {
+        "line": 69,
+        "text": "      tool({ toolName: \"Read\", status: \"succeeded\", args: JSON.stringify({ file_path: \"x/types.ts\" }) }),"
+      },
+      {
+        "line": 70,
+        "text": "    ]);"
+      },
+      {
+        "line": 71,
+        "text": "    expect(describeActivity(a)).toBe(\"已读取 types.ts\");"
+      },
+      {
+        "line": 72,
+        "text": "  });"
+      },
+      {
+        "line": 73,
+        "text": ""
+      },
+      {
+        "line": 74,
+        "text": "  test(\"prefers argsLive (streaming) over the frozen args snapshot\", () => {"
+      },
+      {
+        "line": 75,
+        "text": "    const a = summarizeLiveActivity(["
+      },
+      {
+        "line": 76,
+        "text": "      user(\"u\"),"
+      },
+      {
+        "line": 77,
+        "text": "      tool({"
+      },
+      {
+        "line": 78,
+        "text": "        toolName: \"Bash\","
+      },
+      {
+        "line": 79,
+        "text": "        status: \"running\","
+      },
+      {
+        "line": 80,
+        "text": "        args: JSON.stringify({ command: \"ol\" }),"
+      },
+      {
+        "line": 81,
+        "text": "        argsLive: { command: \"older-then-newer\" },"
+      },
+      {
+        "line": 82,
+        "text": "      }),"
+      },
+      {
+        "line": 83,
+        "text": "    ]);"
+      },
+      {
+        "line": 84,
+        "text": "    expect(describeActivity(a)).toBe(\"正在运行 older-then-newer\");"
+      },
+      {
+        "line": 85,
+        "text": "  });"
+      },
+      {
+        "line": 86,
+        "text": ""
+      },
+      {
+        "line": 87,
+        "text": "  test(\"unknown tool with no recognized arg falls back to verb + tool name\", () => {"
+      },
+      {
+        "line": 88,
+        "text": "    const a = summarizeLiveActivity(["
+      },
+      {
+        "line": 89,
+        "text": "      user(\"u\"),"
+      },
+      {
+        "line": 90,
+        "text": "      tool({ toolName: \"TodoWrite\", status: \"running\", args: \"{}\" }),"
+      },
+      {
+        "line": 91,
+        "text": "    ]);"
+      },
+      {
+        "line": 92,
+        "text": "    expect(describeActivity(a)).toBe(\"正在运行 TodoWrite\");"
+      },
+      {
+        "line": 93,
+        "text": "  });"
+      },
+      {
+        "line": 94,
+        "text": "});"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/MessageStream.tsx",
+    "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 814,
+        "text": "                    }"
+      },
+      {
+        "line": 815,
+        "text": "                  >"
+      },
+      {
+        "line": 816,
+        "text": "                    {node}"
+      },
+      {
+        "line": 817,
+        "text": "                  </div>"
+      },
+      {
+        "line": 818,
+        "text": "                );"
+      },
+      {
+        "line": 819,
+        "text": "              })}"
+      },
+      {
+        "line": 820,
+        "text": "            {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}"
+      },
+      {
+        "line": 821,
+        "text": "            {trailing}"
+      },
+      {
+        "line": 822,
+        "text": "          </div>"
+      },
+      {
+        "line": 823,
+        "text": "        </div>"
+      },
+      {
+        "line": 824,
+        "text": "        {selectionOpen && ("
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+    "sha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+    "captureTiming": "After actual source displays7ba784/f18120/4d2f6a/2a958f/8b0867/ea4662/5e0f04/00c99c/4b09ad. Only already displayed lines, not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 11,
+        "text": "export function truncate(s: string, max: number): string {"
+      },
+      {
+        "line": 12,
+        "text": "  if (s.length <= max) return s;"
+      },
+      {
+        "line": 13,
+        "text": "  let end = max - 1;"
+      },
+      {
+        "line": 14,
+        "text": "  // Keep the existing UTF-16 display budget without cutting a valid pair in half."
+      },
+      {
+        "line": 15,
+        "text": "  const before = s.charCodeAt(end - 1);"
+      },
+      {
+        "line": 16,
+        "text": "  const after = s.charCodeAt(end);"
+      },
+      {
+        "line": 17,
+        "text": "  if (before >= 0xd800 && before <= 0xdbff && after >= 0xdc00 && after <= 0xdfff) end--;"
+      },
+      {
+        "line": 18,
+        "text": "  return s.slice(0, end) + \"…\";"
+      },
+      {
+        "line": 19,
+        "text": "}"
+      },
+      {
+        "line": 20,
+        "text": ""
+      },
+      {
+        "line": 21,
+        "text": "/**"
+      },
+      {
+        "line": 22,
+        "text": " * Last path segment of a file path — `docs/a/b.svg` → `b.svg`. Handles both"
+      },
+      {
+        "line": 27,
+        "text": "export function basename(p: string): string {"
+      },
+      {
+        "line": 28,
+        "text": "  const trimmed = p.replace(/[/\\\\]+$/, \"\");"
+      },
+      {
+        "line": 29,
+        "text": "  const seg = trimmed.split(/[/\\\\]/).pop();"
+      },
+      {
+        "line": 30,
+        "text": "  return seg && seg.length > 0 ? seg : p;"
+      },
+      {
+        "line": 31,
+        "text": "}"
+      },
+      {
+        "line": 32,
+        "text": ""
+      },
+      {
+        "line": 33,
+        "text": "/** Parsed args object, preferring argsLive if present (live streaming). */"
+      },
+      {
+        "line": 34,
+        "text": "export function parsedArgs(m: ToolMessage): Record<string, unknown> {"
+      },
+      {
+        "line": 35,
+        "text": "  if (m.argsLive) return m.argsLive;"
+      },
+      {
+        "line": 36,
+        "text": "  try {"
+      },
+      {
+        "line": 37,
+        "text": "    const obj = JSON.parse(m.args);"
+      },
+      {
+        "line": 38,
+        "text": "    return typeof obj === \"object\" && obj !== null ? (obj as Record<string, unknown>) : {};"
+      },
+      {
+        "line": 39,
+        "text": "  } catch {"
+      },
+      {
+        "line": 40,
+        "text": "    return {};"
+      },
+      {
+        "line": 41,
+        "text": "  }"
+      },
+      {
+        "line": 42,
+        "text": "}"
+      },
+      {
+        "line": 43,
+        "text": ""
+      },
+      {
+        "line": 44,
+        "text": "/**"
+      }
+    ]
+  }
+]

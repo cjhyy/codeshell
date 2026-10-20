@@ -1,0 +1,15 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "conclusion": "Finite negative for the reviewed ordinary source/ref/manifest/version/cache contracts; no global Panel App/GitHub/FS/security correctness claim.",
+  "rootFormalRound": 64,
+  "prep": 173,
+  "runtimeValidation": 0,
+  "publicHelperBoundary": "resolveGitHubPanelAppCommit has public core/barrel exports and existing tests. Filename-only inventory found no non-test production caller beyond exports; installed download shown uses codeload helper. This is not a claim of runtime installation exercising the Git advertisement parser."
+}

@@ -1,0 +1,152 @@
+bun test v1.3.11 (af24e281)
+
+packages/web/app/approvals.test.ts:
+(pass) Hub approval synchronization > reconnect snapshot replaces stale approvals and restores every session [0.12ms]
+(pass) Hub approval synchronization > leases retain the card and release it for another decision after failure [0.03ms]
+(pass) Hub approval synchronization > late leases cannot resurrect an approval already resolved elsewhere
+
+packages/web/app/api-context.test.ts:
+(pass) Cloud website environment discovery stays at its control plane after project selection [1.13ms]
+(pass) project API scoping is idempotent and keeps account/lifecycle requests at the root [1.08ms]
+(pass) project paths reject nonlocal URLs, traversal and invalid identifiers [0.07ms]
+(pass) model probe cancellation and upload scope remain in the original project [0.49ms]
+(pass) the shared protocol scopes WebSockets while preserving root legacy connections [0.05ms]
+(pass) workspace headers encode Unicode while download links preserve exact paths [0.12ms]
+(pass) a pending model probe cancels the original workspace after navigation [0.13ms]
+(pass) Desktop cookie exchange uses the paired credential exactly without hashing or storing it [0.09ms]
+
+packages/web/app/remote-link-authorization.test.ts:
+(pass) authorization stores only routing state and callback preserves the originating project [0.47ms]
+(pass) unmatched state, expiry and foreign routing cannot turn a callback into a write [0.14ms]
+(pass) provider denial retains routing but does not become a token exchange [0.04ms]
+(pass) only the configured HTTPS or development loopback authorization page can open [0.06ms]
+(pass) paired callback returns to the captured workspace and cleans the mobile callback route [0.07ms]
+(pass) paired callback refuses a different workspace return or a root callback record [0.10ms]
+(pass) the shared redirect step retains provider identity without legacy redirect metadata [0.05ms]
+(pass) callback exchange, reconciliation and denial keep a captured root Host after a later project selection [0.43ms]
+
+packages/web/src/hooks/connectionLiveness.test.tsx:
+(pass) Hub foreground probes a still-OPEN wire with a read-only request, never another Run [0.75ms]
+(pass) Hub retire invalidates a resolved read before its promise adopter runs [0.27ms]
+(pass) Hub close invalidates a resolved read before its promise adopter runs [0.03ms]
+(pass) Hub auth invalidates a resolved read before its promise adopter runs [0.01ms]
+(pass) paired Mobile foreground probes an authenticated OPEN wire without an approval write [16.90ms]
+(pass) Hub missing probe ACK retires immediately without close, rejects uncertain Run, and redials once [0.42ms]
+(pass) Hub unsupported and permission error replies prove liveness; foreground checks are single-flight [0.15ms]
+(pass) Hub late callbacks from a retired socket cannot clear a new deadline or adopt its state [0.13ms]
+(pass) Hub hidden pages pause deadlines; queued old expiry cannot kill the resumed wire [0.09ms]
+(pass) Hub revocation 4401 and explicit close stop probes, timers and page listeners [0.08ms]
+(pass) Hub revocation 4403 and explicit close stop probes, timers and page listeners [0.03ms]
+(pass) Hub a CONNECTING wire with no close event has a bounded handshake [0.05ms]
+(pass) Hub unrelated downlink traffic cannot acknowledge a missing upstream probe [0.07ms]
+(pass) Hub explicit connect after authority loss reinstalls exactly one page listener set [0.05ms]
+(pass) paired Mobile missing ACK retires an OPEN wire; old generations and foreground storms cannot write twice [0.84ms]
+(pass) paired Mobile background expiry, rejected read-only probe, logout and no-auth deadlines preserve lifetime [0.57ms]
+(pass) paired Mobile auth.failed cannot restart from foreground [0.40ms]
+(pass) paired Mobile pair.failed cannot restart from foreground [0.41ms]
+(pass) paired Mobile unrelated downstream worker/approval traffic cannot acknowledge a dropped read-only probe [0.37ms]
+(pass) paired Mobile slow connect leaves a full bounded auth phase (ACK=%s) [0.42ms]
+(pass) paired Mobile slow connect leaves a full bounded auth phase (ACK=%s) [0.34ms]
+
+packages/web/src/hooks/mobileOutputClient.test.ts:
+(pass) true snapshot head recovers a coalesced live gap without inventing output or another producer request [69.84ms]
+(pass) wrong cursor domain leaves previous display and sticky barrier rather than accepting a fabricated snapshot [60.72ms]
+(pass) a different or cancelled conversation cannot be resumed by a late snapshot pointer [32.90ms]
+(pass) terminal observed during the last bounded catch-up round gets one delayed reconciliation without another event [112.70ms]
+(pass) a live authority revocation invalidates an already joined selection and preserves its display [32.03ms]
+(pass) successive moving-head budgets retain their private prefix and reconcile only on cursor advancement [227.01ms]
+(pass) revocation during the capacity backoff remains sticky and cancels its pending continuation [144.73ms]
+(pass) an explicitly journal-owned producer waits for its first real cursor instead of revoking the initial command selection [49.88ms]
+(pass) first commit racing an unavailable read rechecks actual pages rather than losing the selected producer [51.31ms]
+(pass) published journal loss never uses the initial passive wait exception [35.07ms]
+
+packages/web/src/hooks/useRemoteSocket.test.tsx:
+(pass) useRemoteSocket resync > send reports failure unless the same authenticated connection generation is open [1.96ms]
+(pass) useRemoteSocket resync > visible/focus/pageshow resync an already-open authenticated socket [0.51ms]
+
+packages/web/src/lib/deviceCredential.test.ts:
+(pass) generateSecret 产出 64 位小写 hex(32 字节) [0.27ms]
+(pass) 不同随机源 → 不同 secret [0.20ms]
+(pass) 默认用 crypto.getRandomValues,长度 64 hex [0.06ms]
+
+packages/web/src/lib/mobileAttachments.test.ts:
+(pass) prepareMobileAttachments > encodes small images inline without requesting an upload ticket [1.29ms]
+(pass) prepareMobileAttachments > uploads large images with a ticket and preserves descriptor order [0.13ms]
+(pass) prepareMobileAttachments > moves later small images to HTTP when the inline message budget is exhausted [8.67ms]
+(pass) prepareMobileAttachments > rejects unsupported images when browser conversion is unavailable [0.71ms]
+
+packages/web/src/lib/transcriptReplay.test.ts:
+(pass) Core transcript browser replay > real Transcript events reproduce live user, reasoning, tool and assistant content without duplicate tools [0.84ms]
+(pass) Core transcript browser replay > restores attachment-only images without putting base64 or model path hints into visible text [0.18ms]
+(pass) Core transcript browser replay > restores files and human displayText while preserving ordinary user-written XML [0.21ms]
+(pass) Core transcript browser replay > filters engine-injected user messages, checkpoints and duplicate event IDs [0.08ms]
+(pass) Core transcript browser replay > replays tool errors, structured text results and out-of-order results by ID [0.11ms]
+(pass) Core transcript browser replay > provider-shaped tool_result messages never become phantom user bubbles [0.05ms]
+(pass) Core transcript browser replay > subagent anchors remain visible without claiming an old child is still running [0.05ms]
+(pass) Core transcript browser replay > start-of-turn boundaries never finish the following tool prematurely [0.02ms]
+(pass) Core transcript browser replay > clientMessageId deduplicates a persisted or broadcast local echo but preserves repeated deliberate text [0.04ms]
+
+packages/web/src/lib/roomHistory.test.ts:
+(pass) collects multiple frozen pages before committing a complete range [0.20ms]
+(pass) rejects gaps [0.13ms]
+(pass) rejects duplicates
+(pass) rejects incomplete final [0.02ms]
+(pass) rejects snapshot switch
+(pass) rejects boundary switch
+(pass) rejects loop
+(pass) rejects empty intermediate
+
+packages/web/src/lib/outputJournalRecovery.test.ts:
+(pass) frozen multipage recovery reconstructs UTF-8 fragments and leaves unfinished runs unfinished [71.07ms]
+(pass) duplicate, skipped, replaced and incomplete pages preserve an explicit recovery barrier [30.99ms]
+
+packages/web/src/lib/streamReducer.test.ts:
+(pass) text_delta 合并到同一条 assistant [0.22ms]
+(pass) text_delta 在没有 stream_request_start 时自开一条
+(pass) thinking_delta 累计到 reasoning
+(pass) tool_use_start + tool_result 配对
+(pass) tool_result 带 isError → error 标记
+(pass) tool_result 在 tool_use_start 之前到达(乱序)→ 不丢,start 落地时回填
+(pass) assistant_message 即封口 done(不必等 turn_complete)
+(pass) 重复 tool_use_start 幂等 [0.20ms]
+(pass) tool_summary 挂到最后一个 tool
+(pass) tool_summary 优先按 toolCallIds 挂到目标 tool
+(pass) tool_summary 带 agentId 时只更新同一 agent 的 tool
+(pass) tool_summary 有 target id 但 miss 时不 fallback 到最新 tool
+(pass) turn_complete completed → run completed,封口 assistant
+(pass) turn_complete aborted → run idle(不算 error) [0.18ms]
+(pass) turn_complete model_error → run error
+(pass) turn_complete replay_incomplete never reports a recovered run as completed [0.03ms]
+(pass) turn_complete unverified_write cannot report the task completed
+(pass) turn_complete max_turns/goal_budget_exhausted → 正常完成,非 error [0.03ms]
+(pass) subagent turn_complete 不翻转全局 run(父轮仍在跑)
+(pass) goal_progress 更新 goal 行
+(pass) goal_set 显示目标,goal_cleared 清掉,met 也清
+(pass) goal_updated 更新目标与暂停状态
+(pass) 编辑后忽略旧 revision 的 met/clear
+(pass) 旧 goal A 的终态事件晚到时不隐藏当前 goal B
+(pass) goal_progress(exhausted) 按 goalId 清掉 mobile goal 指示器
+(pass) agent_start/agent_end 维护单条 subagent 行(按 agentId) [0.17ms]
+(pass) task_update 按 agentId 隔离,不新增重复行
+(pass) task_update 无 agentId(主代理 TodoWrite)不渲染为子代理行
+(pass) task_update 空任务列表不算 completed
+(pass) tool_use_args_delta 增量合并进 tool 的 args [0.14ms]
+(pass) 并发子代理 text_delta 不串进主气泡(按 agentId 路由) [0.01ms]
+(pass) error 事件追加系统错误并置 run error [0.05ms]
+(pass) sessionId 从 envelope 带入 [0.02ms]
+(pass) session_title 更新标题
+(pass) session_user_message 显示目标 Session 的普通用户消息 [0.04ms]
+(pass) bare event(history 回放)也被消费
+(pass) appendUserMessage 追加用户气泡
+(pass) user_message(history 回放)重建用户气泡 [0.05ms]
+(pass) 完整 history 回放重建一轮对话 [0.01ms]
+(pass) ids 确定性(不依赖 Date.now/random)
+(pass) server echo enriches optimistic attachment paths without duplicating or rewriting the user message
+(pass) fallback tombstone removes only its assistant and reasoning before the replacement stream [0.22ms]
+(pass) tombstone drops an unexecuted tool placeholder and permits its replacement to reuse the ID [0.04ms]
+
+ 121 pass
+ 0 fail
+ 355 expect() calls
+Ran 121 tests across 12 files. [1140.00ms]
+Completed Bun shard: 121 tests, 0 skipped; 0 failures.

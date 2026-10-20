@@ -1,0 +1,23 @@
+{
+  "baseline": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "count": 1,
+  "runtimeRetested": false,
+  "sourceChanges": [
+    {
+      "id": "WEB-R8-02",
+      "path": "packages/web/src/lib/mobileAttachments.ts",
+      "changeCommit": "c1bee99b4",
+      "disposition": "Other-task source change inspected in main; no old-case/new-regression runtime rerun",
+      "report": "docs/audit-2026-10-17-round8/web.md",
+      "frozenSha256": "58f22a8212072b9fa7dce830b008d464d0ef112c733dc0433e326c3d0c5045b1",
+      "mainSha256": "7aa02eda6e660c5c7fa05722036b4c7e177dc98fa10ca81822d58b3db83468c7",
+      "regressionSource": {
+        "path": "packages/web/src/lib/mobileAttachments.alias-limit.test.ts",
+        "mainBytes": 6084,
+        "mainSha256": "cacb028831d904f9761015afccf177a33c637e8c178d72e9d872a1bdb98c4115",
+        "scope": "New other-task source read in diff only, never executed in this batch; not present at frozen baseline"
+      }
+    }
+  ],
+  "note": "Separate source-status update, not a new finding/candidate/related count."
+}

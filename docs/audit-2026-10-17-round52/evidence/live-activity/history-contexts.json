@@ -1,0 +1,1730 @@
+{
+  "targetPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1794",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3173/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12783/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12783/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12784/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12784/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3494/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3494/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3200",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3495/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "pointer": "/files/26/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+      "pointer": "/files/19/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+      "pointer": "/products/26/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/61/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/236/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/237/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/267/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/297/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/327/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/67/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/183/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/184/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/616/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/617/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/618/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/619/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/620/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/679/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/680/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/739/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/740/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/770/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/829/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/830/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "pointer": "/files/26/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "pointer": "/packets/3/manifestRangeChecks/26/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/67/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/hashOnlyChecks/30/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    }
+  ],
+  "targetSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3173/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12784/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3494/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3494/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3495/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "pointer": "/files/26/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "pointer": "/files/26/oldInventoryRow/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+      "pointer": "/files/19/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+      "pointer": "/products/26/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/61/hashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/267/hashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/297/hashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/327/hashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "pointer": "/files/26/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "pointer": "/files/26/endingSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "pointer": "/packets/3/manifestRangeChecks/26/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/67/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/67/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/67/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/hashOnlyChecks/30/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "completeScalar": true
+    }
+  ],
+  "targetFilename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1794",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3172/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3173/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12780/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12780/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12781/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12781/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12782/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12782/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12783/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12783/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12784/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12784/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3493/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3494/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3493/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3494/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3199",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3200",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3494/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3495/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "pointer": "/files/26/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+      "pointer": "/files/19/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+      "pointer": "/products/26/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/61/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/236/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/237/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/267/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/297/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/327/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/67/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/183/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/184/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/616/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/617/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/618/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/619/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/620/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/679/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/680/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/739/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/740/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/770/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/829/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/830/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4480,
+      "context": "12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/dropdown-menu.tsx` | 175 | old hash / different SHA |\n| 28 | `settings/SettingsMenu.tsx` | 294 | ambiguous: over EOF |\n| 29 | `settings/useSettingsNavigationFocus.ts` | 141 | ambiguous: bounded full |\n| 30 | `messages/StreamingMarkdown.tsx` | 165 | old full / different SHA |\n\nExact SHA, original document SHA/JSON pointer, qualifiers, ancestor limitations and per-path hit counts are in [candidates](candidates.json) and [original metadata reading](canonical-metadata-read.json). This does not change global coverage counts or any old index.\n\nThe first metadata pres",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "pointer": "/files/26/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "pointer": "/packets/3/manifestRangeChecks/26/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/67/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/hashOnlyChecks/30/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/context-boundary/history-contexts.json",
+      "pointer": "/targetFilename/74/context",
+      "kind": "json-value-scalar",
+      "offset": 1397,
+      "context": "12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/context-boundary/history-contexts.json",
+      "pointer": "/oldCause/93/context",
+      "kind": "json-value-scalar",
+      "offset": 1397,
+      "context": "12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/shortcuts-reference/canonical-gate-read.json",
+      "pointer": "/uncappedMarkdownBasenameContexts/0/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 724,
+      "context": "12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/drop",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "pointer": "/267/file",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "pointer": "/groups/1/rawLogs/267/file",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "pointer": "/logs/408/file",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 30487,
+      "context": ":92-100` 的 Bot 头像位置或 `AssistantBubble` 文本前加 `Loader2 size-3/3.5 animate-spin text-status-running`。\n  - 如果 `running === true` 但还没有 assistant item 或最后一条还是 user，可在 `MessageStream.tsx:224-227` 列表尾部渲染一个轻量 assistant placeholder（Bot + spinner + `mobile.stream.thinking`），避免用户发送后到 `stream_request_start` 之间没有反馈。\n- 保留现有 `▋` 光标：它表达“当前 bubble 正在流式补字”，spinner 表达“turn/agent busy”。二者语义不同。\n- 量级：S。主要改 `MessageStream.tsx` + `App.tsx` 传参 + `mobile.ts` 增加一条可选文案；如做更接近桌面的 live activity 文案（正在读文件/正在执行工具）再升到 M，因为要复用/移植 `topbar/liveActivity` 或 mobile mapper。\n\n#### 未读圆点\n\n- 先对齐桌面端为“会话级未读”，不要做消息级 unread。桌面触发/清除都是 session bucket 维度：完成于非当前会话时标记，选择该会话时清除。\n- 普通 session 推荐在 `useRemoteApp` 增加 `unreadSessionIds: Set<string>` 和可选 `runningSessionIds: Set<string>`：\n  - 在 `session.stream` 分支收到非当前 `event.sessionId` 时，不 reduce 到当前 chat，但可以检查 `event.event.type`。`stream_request_start` 标 running；顶层 `turn_complete` / `error` 清 running 并把该 session 加 unread；如果是当前 bound session，只更新当前 chat，不加 unread。\n  - `selectSession` 时清除该 id 的 unread：对应当前 `useRemoteApp.ts:714-727`。\n  - `session.list.ok` 可用来裁剪不存在的 unread id：`useRemoteApp.ts:321-330`。\n- UI 落点：\n  - `SessionList` 增加 `statusFor?: (id:string) => \"running\" | \"unread\" | undefined` 或 `unreadSessionIds/runningSessionIds` prop，在 `SessionList.tsx:200-209` 标题行右侧加 `Loader2 animate-spin` 或 `h-2 w-2 rounded-full bg-primary`，样式可直接模仿桌面 `Sidebar.tsx:589-605`。\n  - `MobileSessionSwitcher` 可加 tab 级小圆点/count：当 sessi",
+      "completeScalar": false
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/archive/todo/plan-group-c-worktree-panels.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 13405,
+      "context": "gnature + 少量测试更新。\n\n## 4. 顶栏 worktree 切换器视觉/语义梳理\n\n### 真实锚点\n\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:117`：`WorkspaceIndicator` 主组件。\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:392`：`list.worktrees` 直接 flat map 成 rows。\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:481`：`WorkspaceRow`。\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:497`：当前项通过 `workspaceRowDisabledReason()` 禁用，但没有明确 active 样式。\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:504`：main row label 固定 `topbar.workspace.main`。\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:548`、`:553`、`:558`：已有 occupied/external/dirty badges，但没有“当前项 / 本会话拥有”badge。\n- `packages/core/src/git/worktree/query.ts:123`、`:130`：`listWorktreesFast()` 已可返回 `occupiedBySessionIds` / `occupiedByOtherSession`。\n\n### 当前实现分析\n\n下拉里所有 worktree 混在一个列表里。当前项只是 disabled + tooltip，视觉上和“不可切换项”混在一起；main、CodeShell 管理 worktree、外部/ detached worktree 没分组。对于“这个 worktree 是当前会话正在用、另一个会话占用、还是只是一个可切换目标”，用户需要靠 path 和 badge 猜。\n\n### 具体改动步骤\n\n1. 在 `WorkspaceIndicator` 渲染前派生分组。\n\n```ts\nconst rows = list?.worktrees ?? [];\nconst mainRows = rows.filter((r) => r.isMain);\nconst managedRows = rows.filter((r) => !r.isMain && r.isManaged);\nconst externalRows = rows.filter((r) => !r.isMain && !r.isManaged);\n```\n\n渲染结构：\n\n```tsx\n<WorkspaceGroup title={t(\"topbar.workspace.groupMain\")}>{mainRows.map(...)}</WorkspaceGroup>\n<WorkspaceGroup ti",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1554",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1794",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2777/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2778/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3172/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3173/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+      "pointer": "/contexts/history-mapping/48/context",
+      "kind": "json-value-scalar",
+      "offset": 460,
+      "context": "m_request_start` 设置 `run: \"running\"`：`streamReducer.ts:143-161`，`text_delta` / `thinking_delta` 保持 running：`:164-226`，`tool_use_start` 设置 running：`:229-257`，CC/room 的 `assistant_text` 也设置 running：`:491-516`；顶层 `turn_complete` 把 run 设成 completed/idle/error：`:368-384`，`error` 设成 error：`:463-474`。\n- `App.tsx:116-120` 用 `app.chat.run === \"running\" || app.chat.run === \"waiting\"` 控制 Composer 的 Stop 按钮；`packages/desktop/src/mobile/components/StatusBar.tsx:45-67` 顶栏也把 running 显示为脉冲小点。缺口是 MessageStream 内没有桌面同类的 running spinner/活跃行。\n\n#### 未读圆点\n\n- `SessionList` 当前没有 unread/running/asking 状态点，列表行只显示标题、automation badge、cwd 和相对时间：`packages/desktop/src/mobile/components/SessionList.tsx:190-218`。\n- `MobileSessionSwitcher` 只有“会话 / CC”两个 tab，没有 tab badge 或圆点：`packages/desktop/src/mobi",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused-selected.json",
+      "pointer": "/rows/11/context",
+      "kind": "json-value-scalar",
+      "offset": 1277,
+      "context": ".tsx:2020-2028`。\n  - 收到 `session_started` 时也置 busy，覆盖 core 主动唤醒或重挂载路由场景：`App.tsx:1498-1510`。\n  - 顶层 `turn_complete` / `error` 清 busy，子代理事件因有 `agentId` 不清：`App.tsx:1544-1553`。\n  - run promise 兜底清 busy：`App.tsx:2100-2108`；异常 reject 也清：`App.tsx:2130-2139`；手动 stop 清：`App.tsx:2398-2405`。\n  - automation/mobile session announce 也会先点亮 running：`App.tsx:1655-1664`、`App.tsx:1737-1740`。\n- 桌面端消息流内不是 spinner 圈，而是 live activity line：`packages/desktop/src/renderer/MessageStream.tsx:291` 在 `liveTurnActive` 时渲染 `LiveActivityLine`；`pack",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused.json",
+      "pointer": "/hits/helper_names/11/context",
+      "kind": "json-value-scalar",
+      "offset": 1277,
+      "context": ".tsx:2020-2028`。\n  - 收到 `session_started` 时也置 busy，覆盖 core 主动唤醒或重挂载路由场景：`App.tsx:1498-1510`。\n  - 顶层 `turn_complete` / `error` 清 busy，子代理事件因有 `agentId` 不清：`App.tsx:1544-1553`。\n  - run promise 兜底清 busy：`App.tsx:2100-2108`；异常 reject 也清：`App.tsx:2130-2139`；手动 stop 清：`App.tsx:2398-2405`。\n  - automation/mobile session announce 也会先点亮 running：`App.tsx:1655-1664`、`App.tsx:1737-1740`。\n- 桌面端消息流内不是 spinner 圈，而是 live activity line：`packages/desktop/src/renderer/MessageStream.tsx:291` 在 `liveTurnActive` 时渲染 `LiveActivityLine`；`pack",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11107/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11107/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11108/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11108/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11109/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11109/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11110/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11110/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11111/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11111/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12780/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12780/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12781/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12781/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12782/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12782/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12783/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12783/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12784/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/12784/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3097/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3098/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3493/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3494/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3097/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3098/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3493/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3494/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/2836",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/2837",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3199",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3200",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3098/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3099/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3494/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3495/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "pointer": "/files/26/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+      "pointer": "/files/19/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+      "pointer": "/products/26/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/61/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/236/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/237/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/267/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/297/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "pointer": "/claims/327/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/67/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/183/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/184/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/616/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/617/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/618/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/619/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/620/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/679/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/680/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/739/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/740/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/770/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/829/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "pointer": "/locators/830/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4480,
+      "context": "12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/dropdown-menu.tsx` | 175 | old hash / different SHA |\n| 28 | `settings/SettingsMenu.tsx` | 294 | ambiguous: over EOF |\n| 29 | `settings/useSettingsNavigationFocus.ts` | 141 | ambiguous: bounded full |\n| 30 | `messages/StreamingMarkdown.tsx` | 165 | old full / different SHA |\n\nExact SHA, original document SHA/JSON pointer, qualifiers, ancestor limitations and per-path hit counts are in [candidates](candidates.json) and [original metadata reading](canonical-metadata-read.json). This does not change global coverage counts or any old index.\n\nThe first metadata pres",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "pointer": "/files/26/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-excerpts.json",
+      "pointer": "/1/displayedLines/116/text",
+      "kind": "json-value-scalar",
+      "offset": 32,
+      "context": "            {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "pointer": "/packets/3/manifestRangeChecks/26/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/67/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/hashOnlyChecks/30/path",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/context-boundary/history-contexts.json",
+      "pointer": "/targetFilename/74/context",
+      "kind": "json-value-scalar",
+      "offset": 1397,
+      "context": "12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/context-boundary/history-contexts.json",
+      "pointer": "/oldCause/93/context",
+      "kind": "json-value-scalar",
+      "offset": 1397,
+      "context": "12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/shortcuts-reference/canonical-gate-read.json",
+      "pointer": "/uncappedMarkdownBasenameContexts/0/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 724,
+      "context": "12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` | 132 | scope unconfirmed |\n| 19 | `builtin-character-themes.ts` | 132 | scope unconfirmed |\n| 20 | `topbar/liveActivity.ts` | 183 | scope unconfirmed |\n| 21 | `chat/compress.ts` | 218 | scope unconfirmed |\n| 22 | `app/appUtils.ts` | 133 | selected |\n| 23 | `chat/ModelPill.tsx` | 321 | selected |\n| 24 | `shell/CommandPalette.tsx` | 206 | selected |\n| 25 | `theme.ts` | 155 | selected |\n| 26 | `theme-packs.ts` | 245 | selected |\n| 27 | `components/ui/drop",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/141/text",
+      "kind": "json-value-scalar",
+      "offset": 2719,
+      "context": "-hidden=\\\"true\\\"><path d=\\\"M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z\\\"></path></svg><span>Fixture</span></div><div class=\\\"rail-section-label history-label\\\"><span>最近对话</span><span>0</span></div><ul class=\\\"sessions\\\" aria-label=\\\"最近对话\\\"><li class=\\\"empty\\\">开始对话后，记录会保存在这里。</li></ul><div class=\\\"rail-footer\\\"><div class=\\\"host-label\\\"><span class=\\\"dot open\\\"></span><span>桌面已连接</span></div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\">Describe the modern image<span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div c",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/141/text",
+      "kind": "json-value-scalar",
+      "offset": 3142,
+      "context": "</div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\">Describe the modern image<span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></s",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/142/text",
+      "kind": "json-value-scalar",
+      "offset": 2719,
+      "context": "-hidden=\\\"true\\\"><path d=\\\"M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z\\\"></path></svg><span>Fixture</span></div><div class=\\\"rail-section-label history-label\\\"><span>最近对话</span><span>0</span></div><ul class=\\\"sessions\\\" aria-label=\\\"最近对话\\\"><li class=\\\"empty\\\">开始对话后，记录会保存在这里。</li></ul><div class=\\\"rail-footer\\\"><div class=\\\"host-label\\\"><span class=\\\"dot open\\\"></span><span>桌面已连接</span></div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\"><span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\">",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/142/text",
+      "kind": "json-value-scalar",
+      "offset": 3142,
+      "context": "</div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\"><span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/202/text",
+      "kind": "json-value-scalar",
+      "offset": 2719,
+      "context": "-hidden=\\\"true\\\"><path d=\\\"M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z\\\"></path></svg><span>Fixture</span></div><div class=\\\"rail-section-label history-label\\\"><span>最近对话</span><span>0</span></div><ul class=\\\"sessions\\\" aria-label=\\\"最近对话\\\"><li class=\\\"empty\\\">开始对话后，记录会保存在这里。</li></ul><div class=\\\"rail-footer\\\"><div class=\\\"host-label\\\"><span class=\\\"dot open\\\"></span><span>桌面已连接</span></div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\">Describe the modern image<span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div c",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/202/text",
+      "kind": "json-value-scalar",
+      "offset": 3142,
+      "context": "</div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\">Describe the modern image<span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></s",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/203/text",
+      "kind": "json-value-scalar",
+      "offset": 2719,
+      "context": "-hidden=\\\"true\\\"><path d=\\\"M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z\\\"></path></svg><span>Fixture</span></div><div class=\\\"rail-section-label history-label\\\"><span>最近对话</span><span>0</span></div><ul class=\\\"sessions\\\" aria-label=\\\"最近对话\\\"><li class=\\\"empty\\\">开始对话后，记录会保存在这里。</li></ul><div class=\\\"rail-footer\\\"><div class=\\\"host-label\\\"><span class=\\\"dot open\\\"></span><span>桌面已连接</span></div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\"><span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\">",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/203/text",
+      "kind": "json-value-scalar",
+      "offset": 3142,
+      "context": "</div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\"><span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/336/text",
+      "kind": "json-value-scalar",
+      "offset": 2719,
+      "context": "-hidden=\\\"true\\\"><path d=\\\"M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z\\\"></path></svg><span>Fixture</span></div><div class=\\\"rail-section-label history-label\\\"><span>最近对话</span><span>0</span></div><ul class=\\\"sessions\\\" aria-label=\\\"最近对话\\\"><li class=\\\"empty\\\">开始对话后，记录会保存在这里。</li></ul><div class=\\\"rail-footer\\\"><div class=\\\"host-label\\\"><span class=\\\"dot open\\\"></span><span>桌面已连接</span></div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\">Describe the modern image<span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div c",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/336/text",
+      "kind": "json-value-scalar",
+      "offset": 3142,
+      "context": "</div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\">Describe the modern image<span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></s",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/337/text",
+      "kind": "json-value-scalar",
+      "offset": 2719,
+      "context": "-hidden=\\\"true\\\"><path d=\\\"M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z\\\"></path></svg><span>Fixture</span></div><div class=\\\"rail-section-label history-label\\\"><span>最近对话</span><span>0</span></div><ul class=\\\"sessions\\\" aria-label=\\\"最近对话\\\"><li class=\\\"empty\\\">开始对话后，记录会保存在这里。</li></ul><div class=\\\"rail-footer\\\"><div class=\\\"host-label\\\"><span class=\\\"dot open\\\"></span><span>桌面已连接</span></div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\"><span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\">",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "pointer": "/hits/sidebar-projection/337/text",
+      "kind": "json-value-scalar",
+      "offset": 3142,
+      "context": "</div></div></aside><main class=\\\"workbench-main\\\"><header class=\\\"workbench-topbar\\\"><button class=\\\"icon-button\\\" aria-label=\\\"收起侧栏\\\" aria-expanded=\\\"true\\\" aria-controls=\\\"workbench-sidebar\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><rect x=\\\"3\\\" y=\\\"4\\\" width=\\\"18\\\" height=\\\"16\\\" rx=\\\"2\\\"></rect><path d=\\\"M9 4v16\\\"></path></svg></button><div class=\\\"topbar-context\\\"><span class=\\\"topbar-project\\\" aria-label=\\\"当前项目\\\" title=\\\"Fixture\\\">Fixture</span><span class=\\\"topbar-title\\\" title=\\\"Modern image\\\">Modern image</span></div><span class=\\\"connection-pill\\\" title=\\\"任务在桌面工作区执行\\\"><span class=\\\"dot open\\\"></span><span>桌面</span></span></header><section class=\\\"chat\\\" aria-label=\\\"对话\\\"><div class=\\\"messages\\\"><div class=\\\"transcript\\\"><div class=\\\"msg user\\\"><span class=\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/hub-session-operations-quality-round18.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 9891,
+      "context": " 消费和对应 DOM 提交，正常控制明确等待错误/保存结果；它不能扩成 native 浏览器布局/焦点或完整多设备 UI 并发覆盖。\n\n两冻结产品基线的静态比较中，HubSessions、session-management、async-user-answer、Core server/ChatSession、回答卡及 controller 的相关路径一致；headless-server 的变化仅为无关的 Panel projectScope 导入及路由处理，不改变本候选的 running 登记、帧透传或归档 gate。本文精确行号按 a66f latest；84740 在无关新增代码之后有行号偏移。两基线动态适用以 root 自有 guarded 复跑收据为准，不把外部报告的复跑混入本审计或作者原始计数。\n\n## 去重和修复范围\n\n与 R73 独立：R73 是 configuration mutation admission 之前 submit lease，合法答案未派发、重试/重连排除旧题；本候选配置不变，approve ACK 成功且真实第二 turn 正在运行，缺的是 Host 活动投影与归档门禁。改 submit/admission 次序不能修这里的 running 误判。\n\n与 R72 独立：R72 是 Desktop Settings 恢复仅改 renderer catalog，Core archivedAt 仍在并使 root 使用保护误判；这里 API 真正写/清了权威 marker，问题发生在 active turn 时错误放行归档，没有工作区 root 移除或 catalog/marker 不一致证据。R14 的未回答异步问题阻塞新任务也不是该已回答后实际 follow-up 场景。\n\n建议把 Host runtime activity 的来源覆盖到真实 Core 的内生 turn，并保留多个并发 run/queued follow-up、automation ownership 和终态身份保护；不能简单用每个 stream frame 无条件 toggle boolean。归档 HTTP/UI 使用同一权威活动态，无须为本候选另造数据损坏发现。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "pointer": "/observations/0/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 2524,
+      "context": "linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z\"></path></svg><span>Fixture</span></div><div class=\"rail-section-label history-label\"><span>最近对话</span><span>0</span></div><ul class=\"sessions\" aria-label=\"最近对话\"><li class=\"empty\">开始对话后，记录会保存在这里。</li></ul><div class=\"rail-footer\"><div class=\"host-label\"><span class=\"dot open\"></span><span>桌面已连接</span></div></div></aside><main class=\"workbench-main\"><header class=\"workbench-topbar\"><button class=\"icon-button\" aria-label=\"收起侧栏\" aria-expanded=\"true\" aria-controls=\"workbench-sidebar\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M9 4v16\"></path></svg></button><div class=\"topbar-context\"><span class=\"topbar-project\" aria-label=\"当前项目\" title=\"Fixture\">Fixture</span><span class=\"topbar-title\" title=\"Modern image\">Modern image</span></div><span class=\"connection-pill\" title=\"任务在桌面工作区执行\"><span class=\"dot open\"></span><span>桌面</span></span></header><section class=\"chat\" aria-label=\"对话\"><div class=\"messages\"><div class=\"transcript\"><div class=\"msg user\">Describe the modern image<span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "pointer": "/observations/0/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 2907,
+      "context": " class=\"dot open\"></span><span>桌面已连接</span></div></div></aside><main class=\"workbench-main\"><header class=\"workbench-topbar\"><button class=\"icon-button\" aria-label=\"收起侧栏\" aria-expanded=\"true\" aria-controls=\"workbench-sidebar\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M9 4v16\"></path></svg></button><div class=\"topbar-context\"><span class=\"topbar-project\" aria-label=\"当前项目\" title=\"Fixture\">Fixture</span><span class=\"topbar-title\" title=\"Modern image\">Modern image</span></div><span class=\"connection-pill\" title=\"任务在桌面工作区执行\"><span class=\"dot open\"></span><span>桌面</span></span></header><section class=\"chat\" aria-label=\"对话\"><div class=\"messages\"><div class=\"transcript\"><div class=\"msg user\">Describe the modern image<span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "pointer": "/observations/1/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 2524,
+      "context": "linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z\"></path></svg><span>Fixture</span></div><div class=\"rail-section-label history-label\"><span>最近对话</span><span>0</span></div><ul class=\"sessions\" aria-label=\"最近对话\"><li class=\"empty\">开始对话后，记录会保存在这里。</li></ul><div class=\"rail-footer\"><div class=\"host-label\"><span class=\"dot open\"></span><span>桌面已连接</span></div></div></aside><main class=\"workbench-main\"><header class=\"workbench-topbar\"><button class=\"icon-button\" aria-label=\"收起侧栏\" aria-expanded=\"true\" aria-controls=\"workbench-sidebar\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M9 4v16\"></path></svg></button><div class=\"topbar-context\"><span class=\"topbar-project\" aria-label=\"当前项目\" title=\"Fixture\">Fixture</span><span class=\"topbar-title\" title=\"Modern image\">Modern image</span></div><span class=\"connection-pill\" title=\"任务在桌面工作区执行\"><span class=\"dot open\"></span><span>桌面</span></span></header><section class=\"chat\" aria-label=\"对话\"><div class=\"messages\"><div class=\"transcript\"><div class=\"msg user\"><span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "pointer": "/observations/1/pairedWebMarkup",
+      "kind": "json-value-scalar",
+      "offset": 2907,
+      "context": " class=\"dot open\"></span><span>桌面已连接</span></div></div></aside><main class=\"workbench-main\"><header class=\"workbench-topbar\"><button class=\"icon-button\" aria-label=\"收起侧栏\" aria-expanded=\"true\" aria-controls=\"workbench-sidebar\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M9 4v16\"></path></svg></button><div class=\"topbar-context\"><span class=\"topbar-project\" aria-label=\"当前项目\" title=\"Fixture\">Fixture</span><span class=\"topbar-title\" title=\"Modern image\">Modern image</span></div><span class=\"connection-pill\" title=\"任务在桌面工作区执行\"><span class=\"dot open\"></span><span>桌面</span></span></header><section class=\"chat\" aria-label=\"对话\"><div class=\"messages\"><div class=\"transcript\"><div class=\"msg user\"><span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "pointer": "/122/file",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/LiveActivityLine.test.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "pointer": "/122/log",
+      "kind": "json-value-scalar",
+      "offset": 52,
+      "context": "/tmp/codeshell-review-20261012/desktop-baseline/122-LiveActivityLine.test.tsx.log",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "pointer": "/267/file",
+      "kind": "json-value-scalar",
+      "offset": 30,
+      "context": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "pointer": "/267/log",
+      "kind": "json-value-scalar",
+      "offset": 52,
+      "context": "/tmp/codeshell-review-20261012/desktop-baseline/267-liveActivity.test.ts.log",
+      "completeScalar": true
+    }
+  ]
+}

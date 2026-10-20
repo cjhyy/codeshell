@@ -1,0 +1,14 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round15/evidence/migration-config-pure.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 0.2617,
+  "rawLog": "docs/audit-2026-10-17-round15/evidence/migration-config-pure.first.log",
+  "rawSha256": "f9a9cd718da6ea954281d67c4ac845e2ecc9cbe6f9128ed83808e3f66b0441c0",
+  "firstAttempt": true
+}

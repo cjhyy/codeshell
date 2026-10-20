@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-10-17T16:18:51.983523+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "bytes": 2251,
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "lines": 92,
+      "beforeRootCurrentNavigationAndBody": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/store.ts",
+      "bytes": 17975,
+      "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "lines": 498,
+      "beforeRootCurrentNavigationAndBody": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "bytes": 18125,
+      "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "lines": 435,
+      "beforeRootCurrentNavigationAndBody": true
+    }
+  ]
+}

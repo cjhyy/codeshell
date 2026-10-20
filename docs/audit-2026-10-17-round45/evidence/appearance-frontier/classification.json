@@ -1,0 +1,21 @@
+{
+  "capturedAtUTC": "2026-10-17T15:23:23.927998+00:00",
+  "newFormal": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "priorScopeDeferrals": [
+    {
+      "path": "packages/desktop/src/renderer/logs/LogsView.tsx",
+      "sameSha256": "4799aa28eaef52b4d59aef1cfd04b57e862401001c6ba91d4df4713c603fd21a",
+      "originalManifest": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json sources[1]",
+      "originalCoverage": "full; bucket/filter/loading/copy/read projection",
+      "lines": 355,
+      "bodyReadThisPrep": 0
+    }
+  ],
+  "boundedConclusion": "No new ordinary preference DTO/cached-card/name/save/display counterexample established in the selected Appearance chain. No whole-component or runtime correctness certification.",
+  "oldFailedDirectionsReopened": false
+}

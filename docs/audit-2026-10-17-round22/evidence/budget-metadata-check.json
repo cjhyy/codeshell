@@ -1,0 +1,99 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "sourceChecks": [
+    {
+      "path": "packages/core/src/engine/token-budget.ts",
+      "sha256": "f014815be3c3d40a441b93cdc7c9e6f257d1c7ca394202f24f471fb89965d104",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/reactive-threshold.ts",
+      "sha256": "10eea56bde55e555a5b649b2aaa631ecc37e217b5f4b4d99b7c56a5c3da0c843",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/reactive-threshold.test.ts",
+      "sha256": "9f39063ecb056feb3de5c6ee19bb7b99c0547722c75b3ba6adf33bbda253e20d",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "matchesFrozen": true
+    }
+  ],
+  "reportLinks": [
+    {
+      "reference": "evidence/budget-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-source-manifest.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/budget-reactive-focused.test.ts",
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-reactive-focused.test.ts",
+      "exists": true
+    },
+    {
+      "reference": "../audit-2026-10-17-round9/usage.md",
+      "path": "docs/audit-2026-10-17-round9/usage.md",
+      "exists": true
+    },
+    {
+      "reference": "../core-deep-dive/v2-02-engine-turn-loop-deep-dive.md#L218",
+      "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../core-deep-dive/02-engine-turn-loop.md#L88",
+      "path": "docs/core-deep-dive/02-engine-turn-loop.md",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../archive/core-complete-review.md#L386",
+      "path": "docs/archive/core-complete-review.md",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "../archive/review-2026-07-09/06-turn-loop-state-machine.md#L211",
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "exists": true,
+      "lineInBounds": true
+    },
+    {
+      "reference": "evidence/budget-dedup.json",
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/budget-dedup-decisions.json",
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup-decisions.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/budget-first.raw.log",
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-first.raw.log",
+      "exists": true
+    },
+    {
+      "reference": "evidence/budget-first.exit.json",
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-first.exit.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/budget-validation.json",
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-validation.json",
+      "exists": true
+    }
+  ],
+  "rawHashMatchesExit": true,
+  "jsonParseErrors": [],
+  "productReruns": 0
+}

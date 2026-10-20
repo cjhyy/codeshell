@@ -1,0 +1,41 @@
+{
+  "scope": "Metadata only: actual inventoried files and frozen Git bytes; no product imports or dependency resolver.",
+  "base": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "checked": [
+    {
+      "path": "packages/tui/src/render/tabstops.ts",
+      "sha256": "c042f512eb4817fae1de9b46c75f8487ebfe9f30cfb6ad87fab4fad2f5531484",
+      "bytes": 1113
+    },
+    {
+      "path": "packages/tui/src/render/stringWidth.ts",
+      "sha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "bytes": 7186
+    },
+    {
+      "path": "packages/tui/src/render/termio/tokenize.ts",
+      "sha256": "227dfde6faa53250aa1c71a407ebb4b5cceaddb6f99ab52fb6ea33c749ba1735",
+      "bytes": 9284
+    },
+    {
+      "path": "packages/tui/src/render/termio/ansi.ts",
+      "sha256": "aaec4c43878bc28293f96583ebe4211c8de92afc76191cc788a8bddf695a4644",
+      "bytes": 1490
+    },
+    {
+      "path": "packages/tui/src/render/termio/csi.ts",
+      "sha256": "76171009bf287df27c330845fe4e8b5a07c2eecfe892229e88bca195be7236b6",
+      "bytes": 8677
+    },
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "sha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "bytes": 2824
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "bytes": 233
+    }
+  ]
+}

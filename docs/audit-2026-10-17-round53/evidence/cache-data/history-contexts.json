@@ -1,0 +1,2976 @@
+{
+  "perQueryCap": 100,
+  "totalHits": {
+    "filename": 111,
+    "oldCause": 112,
+    "path": 71,
+    "sha": 24
+  },
+  "retained": {
+    "path": 71,
+    "sha": 24,
+    "filename": 100,
+    "oldCause": 100
+  },
+  "contexts": {
+    "path": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+        "pointer": "/source_inventory/478",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "documentSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c",
+        "pointer": "/files/907",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+        "documentSha256": "37ab3b5d4ce268623ce57065af587d5476f4f340ca31ad5e16d0cc5966edc7f2",
+        "pointer": "/sourceChecks/16/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/root-prep/proposal.json",
+        "documentSha256": "52d3db58b66d4f6eb41edb7c532ccac9f085027f49ff5cde63ce9f0afe1019c0",
+        "pointer": "/sources/5/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/files/21/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/priorPrepHashOnlyChecks/16/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/86/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/171/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/173/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/174/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/178/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/179/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+        "documentSha256": "fb1125257ef65f78a3c4c36b8f0248645e86ef856db73aa3fc88629e2b7200ae",
+        "pointer": "/paths/7",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+        "pointer": "/files/364/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "documentSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+        "pointer": "/rankedCandidates/177/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+        "pointer": "/files/955/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4393/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4393/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4394/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4394/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4395/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4395/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4396/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4396/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4397/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4397/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4398/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4398/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4399/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4399/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+        "pointer": "/files/1267/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+        "pointer": "/files/1267/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+        "pointer": "/fullPaths/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+        "pointer": "/files/1267/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182",
+        "pointer": "/dated49/fullPaths/74",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182",
+        "pointer": "/current51/fullPaths/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/old49-current/full/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/plus-frozen45/full/74",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+        "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12",
+        "pointer": "/files/5/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "documentSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+        "pointer": "/files/63/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/final/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/final/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "documentSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f",
+        "pointer": "/snapshot/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/final/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "documentSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676",
+        "pointer": "/snapshot/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "documentSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90",
+        "pointer": "/snapshot/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "documentSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37",
+        "pointer": "/snapshot/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      }
+    ],
+    "sha": [
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+        "documentSha256": "37ab3b5d4ce268623ce57065af587d5476f4f340ca31ad5e16d0cc5966edc7f2",
+        "pointer": "/sourceChecks/16/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/root-prep/proposal.json",
+        "documentSha256": "52d3db58b66d4f6eb41edb7c532ccac9f085027f49ff5cde63ce9f0afe1019c0",
+        "pointer": "/sources/5/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/files/21/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/files/21/currentSha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/files/21/mainSha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/priorPrepHashOnlyChecks/16/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+        "pointer": "/files/364/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+        "pointer": "/files/364/claims/0/sourceSha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "documentSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+        "pointer": "/rankedCandidates/177/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+        "pointer": "/files/955/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4393/sourceHashFields/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4395/sourceHashFields/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4396/sourceHashFields/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4396/sourceHashFields/currentSha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4396/sourceHashFields/mainSha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4398/sourceHashFields/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4399/sourceHashFields/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4399/sourceHashFields/frozenBlobSha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+        "pointer": "/files/1267/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+        "pointer": "/files/1267/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+        "pointer": "/files/1267/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+        "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12",
+        "pointer": "/files/5/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+        "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12",
+        "pointer": "/files/5/frozenBlobSha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "documentSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+        "pointer": "/files/63/sha256",
+        "text": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "valueCharacters": 64,
+        "windowStart": 0,
+        "windowEnd": 64,
+        "boundedWindowNotFullValue": false
+      }
+    ],
+    "filename": [
+      {
+        "document": "docs/architecture/05-presets-prompt-hooks-skills.md",
+        "documentSha256": "7aa11503a717c1962cf597ce7025ace67511dad2d55b116645da52e704462d9e",
+        "pointer": "markdown-text",
+        "text": "----------------------------------------------------------------- | --- |\n| `prompt/composer.ts`            | `PromptComposer` — stable system prefix, user instruction context, volatile dynamic context | 310 |\n| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |\n| `prompt/section-loader.ts`      | `loadSection`/`loadSections`/`registerSection` over builtin and custom markdown sections    | 62  |\n| `prompt/instruction-scanner.ts` | `scanInstructions`/`combineInstructions` for user/project/local instruction files           | 241 |\n\nEngine-level assembly happens in `Engine.run()`, not inside the composer alone. The engine emits `on_session_start` and `user_prompt_submit` first (`engine/engine.ts:1498`, `engine/engine.ts:1508`), builds a `PromptCompos",
+        "valueCharacters": 22510,
+        "windowStart": 3537,
+        "windowEnd": 4377,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/archive/core-complete-review.md",
+        "documentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9",
+        "pointer": "markdown-text",
+        "text": "当前 turn 的 user message 之前或附近，让模型拿到项目约束。\n\n### 13.5 Instruction scanner\n\n`instruction-scanner.ts` 扫描项目内指令文件。它是 CodeShell 支持项目级指导文本的关键入口。\n\n### 13.6 Section loader/cache\n\n- `section-loader.ts` 加载 prompt section markdown。\n- `section-cache.ts` 缓存 resolved sections。\n\n风险：PromptComposer 对 instructions/memory 的异常通常选择吞掉并返回空串。这提升鲁棒性，但也可能让用户不知项目指令/memory 没注入成功。\n\n## 14. Hooks 与 Plugins 模块\n\nHooks 和 Plugins 是 CodeShell 的扩展层。\n\n### 14.1 Hook events\n\n`src/hooks/events.ts` 定义 HookEventName。当前实际 emit 的事件包括：\n\n- `on_session_start`\n- `on_session_end`\n- `on_agent_start`\n- `on_agent_end`\n- `user_prompt_submit`\n- `on_turn_start`\n- `on_turn_end`\n- `on_stop`\n- `pre_tool_use`\n- `post_tool_use`\n- `on_tool_start`\n- `on_tool_end`\n- `file_changed`\n- `on_permission_check`\n- `post_compact`\n- `notification`\n\n`pre_compact` 是 reserved/not-yet-emitted。\n\n### 14.2 HookR",
+        "valueCharacters": 96025,
+        "windowStart": 33542,
+        "windowEnd": 34382,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/archive/core-modules/prompt.md",
+        "documentSha256": "35d204fd69eec1a6d8772723ff21a67a2cb52f59a0255c7e17a2264bb4214a3f",
+        "pointer": "markdown-text",
+        "text": "om `ComposerOptions`. |\n| `section-loader.ts` | Loads `sections/*.md` markdown from disk; registry for runtime-registered custom sections. Exports `loadSection`/`loadSections`/`availableSections`/`registerSection`. |\n| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |\n| `instruction-scanner.ts` | Discovers layered instruction files (managed/user/project/local) walking from git root down to cwd; `scanInstructions` + `combineInstructions`. |\n| `sections/base.md`, `coding.md`, `orchestration.md`, `tone.md` | Built-in behavioral prompt sections; a preset declares which it includes. |\n| `sections/md.d.ts` | Ambient `*.md` module declaration (for editor/typecheck; sections are read via `readFileSync`, not imported as modules). |\n\n",
+        "valueCharacters": 7891,
+        "windowStart": 1149,
+        "windowEnd": 1989,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+        "pointer": "/source_inventory/478",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d",
+        "pointer": "/matches/1/text",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d",
+        "pointer": "/matches/18/text",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d",
+        "pointer": "/matches/200/text",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/4/context",
+        "text": " 10. Settings / Prompt / Hooks / Plugins / Skills\n\n### 文件\n\n- `settings/schema.ts`、`settings/manager.ts`\n- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`\n- `hooks/events.ts`、`registry.ts`、`shell-runner.ts`、`goal-stop-hook.ts`\n- `plugins/loadPluginHooks.ts`、`pluginCommandHook.ts`、`pluginInstaller.ts`、`marketplaceManager.ts`、`varRewrite.ts`\n- `skills/scanner.ts`、`frontmatter.ts`\n\n### 入口\n\n- `SettingsManager.load/getForScope/save",
+        "valueCharacters": 466,
+        "windowStart": 0,
+        "windowEnd": 466,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/30/context",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/32/context",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/43/context",
+        "text": "06-presets-prompt-hooks-skills.md`\n- **拟标题**：《行为即配置：preset、prompt 拼装、hooks 与 skills》\n- **源码入口**：`preset/index.ts`、`prompt/{composer,section-cache,section-loader,instruction-scanner}.ts`、`hooks/{registry,events,inject,shell-runner}.ts`、`skills/scanner.ts`。\n- **核心问题**：core 怎么保持「通用」？「会写代码」到底配在哪？system prompt 怎么围绕 cache 断点拼？16 个 hook 事件如何聚合（严格者胜）？skill 怎么被发现与隔离？\n- **为什么这样设计**：preset 选「prompt 段 + 工具白名单 + 权限默认」四件套；工具白名单是「会编程」与「不会」的开关；prompt 分缓存前缀 + 动态上下文（跨断点）以省 token；hooks 是唯一跨层数组拼接（特例，勿推广）。\n- **带来的好处**：换 agent 行为不 fork core；tool-",
+        "valueCharacters": 530,
+        "windowStart": 0,
+        "windowEnd": 530,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/45/context",
+        "text": "s`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n",
+        "valueCharacters": 453,
+        "windowStart": 0,
+        "windowEnd": 453,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "documentSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c",
+        "pointer": "/files/907",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+        "documentSha256": "37ab3b5d4ce268623ce57065af587d5476f4f340ca31ad5e16d0cc5966edc7f2",
+        "pointer": "/sourceChecks/16/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/root-prep/proposal.json",
+        "documentSha256": "52d3db58b66d4f6eb41edb7c532ccac9f085027f49ff5cde63ce9f0afe1019c0",
+        "pointer": "/sources/5/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/files/21/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/priorPrepHashOnlyChecks/16/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/patterns/prompt",
+        "text": "prompt/(?:composer|section-cache|section-loader)|PromptComposer|SectionCache|composeSystemPrompt",
+        "valueCharacters": 96,
+        "windowStart": 0,
+        "windowEnd": 96,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/3/excerpt",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/4/excerpt",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/16/excerpt",
+        "text": "`SectionCache.resolve()` caches by section name, but a section with `cacheBreak` bypasses reuse and recomputes before being stored again (`prompt/section-cache.ts:15`). The `behavior` section deliberately sets `cacheBreak: true` because its content depends on the active tool set (`prompt/composer.ts:240`).",
+        "valueCharacters": 307,
+        "windowStart": 0,
+        "windowEnd": 307,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/17/excerpt",
+        "text": "`SectionCache.resolve()` caches by section name, but a section with `cacheBreak` bypasses reuse and recomputes before being stored again (`prompt/section-cache.ts:15`). The `behavior` section deliberately sets `cacheBreak: true` because its content depends on the active tool set (`prompt/composer.ts:240`).",
+        "valueCharacters": 307,
+        "windowStart": 0,
+        "windowEnd": 307,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/18/excerpt",
+        "text": "g stored again (`prompt/section-cache.ts:15`). The `behavior` section deliberately sets `cacheBreak: true` because its content depends on the active tool set (`prompt/composer.ts:240`).",
+        "valueCharacters": 185,
+        "windowStart": 0,
+        "windowEnd": 185,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/53/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/58/excerpt",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/86/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/88/excerpt",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/89/excerpt",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/92/excerpt",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/93/excerpt",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/120/excerpt",
+        "text": " 10. Settings / Prompt / Hooks / Plugins / Skills\n\n### 文件\n\n- `settings/schema.ts`、`settings/manager.ts`\n- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`\n- `hooks/events.ts`、`registry.ts`、`shell-runner.ts`、`goal-stop-hook.ts`\n- `plugins/loadPluginHooks.ts`、`pluginCommandHook.ts`、`pluginInstaller.ts`、`marketplaceManager.ts`、`varRewrite.ts`\n- `skills/scanner.ts`、`frontmatter.ts`\n\n### 入口\n\n- `SettingsManager.load/getForScope/save",
+        "valueCharacters": 466,
+        "windowStart": 0,
+        "windowEnd": 466,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/122/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/124/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/125/excerpt",
+        "text": "s`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n",
+        "valueCharacters": 453,
+        "windowStart": 0,
+        "windowEnd": 453,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/126/excerpt",
+        "text": "s`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n",
+        "valueCharacters": 453,
+        "windowStart": 0,
+        "windowEnd": 453,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/171/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/173/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/174/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/178/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/179/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+        "documentSha256": "fb1125257ef65f78a3c4c36b8f0248645e86ef856db73aa3fc88629e2b7200ae",
+        "pointer": "/paths/7",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+        "pointer": "/files/364/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "documentSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+        "pointer": "/rankedCandidates/177/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+        "pointer": "/files/955/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round34/evidence/memoize-frontier/history.json",
+        "documentSha256": "a90cbbfabddce9b1218f4dfe6f0d728c0383771227a8776f492223af3d2389cc",
+        "pointer": "/hits/ordinary-cache-text/1/context",
+        "text": " system prefix, user instruction context, volatile dynamic context | 310 |\n| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |\n| `prompt/section-loader.ts`      | `loadSection`/`loadSections`/`registerSection` over builtin and custom markdown sections    | 62  |\n| `prompt/instruction-scanner.ts` | `scanInstructions`/`com",
+        "valueCharacters": 406,
+        "windowStart": 0,
+        "windowEnd": 406,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round34/evidence/memoize-frontier/history.json",
+        "documentSha256": "a90cbbfabddce9b1218f4dfe6f0d728c0383771227a8776f492223af3d2389cc",
+        "pointer": "/hits/ordinary-cache-text/14/context",
+        "text": "Section`/`loadSections`/`availableSections`/`registerSection`. |\n| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |\n| `instruction-scanner.ts` | Discovers layered instruction files (managed/user/project/local) walking from git root down to cwd; `scanInstructions` + `combineInstructions`. |\n| `secti",
+        "valueCharacters": 406,
+        "windowStart": 0,
+        "windowEnd": 406,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4393/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4393/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4394/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4394/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4395/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4395/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4396/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4396/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4397/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4397/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4398/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4398/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4399/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4399/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+        "pointer": "/files/1267/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+        "pointer": "/files/1267/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+        "pointer": "/fullPaths/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+        "pointer": "/files/1267/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182",
+        "pointer": "/dated49/fullPaths/74",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182",
+        "pointer": "/current51/fullPaths/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/old49-current/full/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/plus-frozen45/full/74",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/agent-definition-gate/history-contexts.json",
+        "documentSha256": "3d4cc3c5b5ac3d5b48460599699275a98a4aa408151db06d746b84aa1cc5c0ce",
+        "pointer": "/oldCause/5/context",
+        "text": "ization`: response language and user profile (`prompt/composer.ts:270`).\n\n`SectionCache.resolve()` caches by section name, but a section with `cacheBreak` bypasses reuse and recomputes before being stored again (`prompt/section-cache.ts:15`). The `behavior` section deliberately sets `cacheBreak: true` because its content depends on the active tool set (`prompt/composer.ts:240`).\n\nPrompt section files are loaded from `prompt/sections/*.md` at module load (`prompt/section-loader.ts:11`, `prompt/se",
+        "valueCharacters": 1423,
+        "windowStart": 923,
+        "windowEnd": 1423,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/instruction_local_order/6/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/section_or_preset_contract/11/excerpt",
+        "text": "- `section-cache.ts` 缓存 resolved sections。",
+        "valueCharacters": 42,
+        "windowStart": 0,
+        "windowEnd": 42,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/section_or_preset_contract/16/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/section_or_preset_contract/27/excerpt",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/section_or_preset_contract/28/excerpt",
+        "text": "// section-cache.ts",
+        "valueCharacters": 19,
+        "windowStart": 0,
+        "windowEnd": 19,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+        "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12",
+        "pointer": "/files/5/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "documentSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+        "pointer": "/files/63/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/core-deep-dive/00-writing-plan.md",
+        "documentSha256": "cf7a52829f806181f12267de0d84df054e2e348b3752ec0b0ac527253da159dd",
+        "pointer": "markdown-text",
+        "text": "「几乎所有 run 经协议接缝，**asyncAgentRegistry 里的 sub-agent 例外**：它们各自起带独立白名单的 Engine」。\n\n### 06 · `06-presets-prompt-hooks-skills.md`\n- **拟标题**：《行为即配置：preset、prompt 拼装、hooks 与 skills》\n- **源码入口**：`preset/index.ts`、`prompt/{composer,section-cache,section-loader,instruction-scanner}.ts`、`hooks/{registry,events,inject,shell-runner}.ts`、`skills/scanner.ts`。\n- **核心问题**：core 怎么保持「通用」？「会写代码」到底配在哪？system prompt 怎么围绕 cache 断点拼？16 个 hook 事件如何聚合（严格者胜）？skill 怎么被发现与隔离？\n- **为什么这样设计**：preset 选「prompt 段 + 工具白名单 + 权限默认」四件套；工具白名单是「会编程」与「不会」的开关；prompt 分缓存前缀 + 动态上下文（跨断点）以省 token；hooks 是唯一跨层数组拼接（特例，勿推广）。\n- **带来的好处**：换 agent 行为不 fork core；tool-gated section 让模型不读用不上的指令；shell hook 是受信任代码（配了即信任）但 fail-silent 不崩 turn。\n- **建议配图（1 张）**：\n  - `prompt-presets-hooks-skills.svg`（必备）——preset → 工具白名单 + prompt 段；prompt 拼装（缓存前缀 | 动态上下文）；hook 链严格者胜。\n- **⚠️ 注意**：这是「**core 是通用编排",
+        "valueCharacters": 14802,
+        "windowStart": 5892,
+        "windowEnd": 6732,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/core-deep-dive/REWRITE-PLAN.md",
+        "documentSha256": "762949df7f980572e0f0628ede544a895c9e5262e2988d3ac0d79e80c7860e3f",
+        "pointer": "markdown-text",
+        "text": "ream watchdog。\n- `packages/core/src/llm/capabilities/rules.ts`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n- `packages/core/src/session/memory.ts`、`services/dream-consolidation.ts`、`services/auto-dream.ts`：memory/Dream。\n- `packages/core/src/onboarding.ts`、`data/model-metadata.json`：模型元数据外移。\n\n**AI image 配图方案**：\n\n1. 建议文件名：`assets/v2-04-model-resolution-capabilities.png`  \n   尺寸：`1536x1024`  \n   用途：解释模型 tag 如何变成 provider request，差异是数",
+        "valueCharacters": 27623,
+        "windowStart": 16992,
+        "windowEnd": 17832,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/core-deep-dive/v2-04-model-context-memory-deep-dive.md",
+        "documentSha256": "58436dd611f6ffed8125f4c889fea00c6f9bafaaaa577639a696b3e60cc4edf9",
+        "pointer": "markdown-text",
+        "text": "runtime_header(模型/cwd/平台/shell)\n  → custom_system\n  → tool_definitions(工具名 + 一行描述；完整 schema 走 native tools 字段)\n  → behavior(preset 各段，带工具门控过滤)\n  → append_system\n  → personalization(语言 + 用户画像)\n```\n\n`SectionCache`（`prompt/section-cache.ts`）给每段做记忆化。其中 `behavior` 段设了 `cacheBreak: true`——因为 section cache 是**按段名 key** 的，而 behavior 段的内容会随激活工具集变化（preset 的工具门控段，见第 06 篇）；不打 cacheBreak，一个被复用的 composer 可能拿到陈旧缓存。\n\n### 3.2 动态上下文：放在断点之后\n\n`buildDynamicContextMessage()` 产出一条 user 角色的 `<system-reminder>` 消息，**放在消息数组末尾**，内容是：\n\n- **skills 列表**（`buildSkillListing`，按命名空间分组）。\n- **git 状态**（如果 preset 开了 `injectGitStatus`）。\n- **记忆索引**（`buildInjectionIndex`，下文 §6）。\n\n为什么这三样要放在断点之后、不进缓存前缀？因为它们在**会话内会变**：装一个 skill、改一个文件、提取一条记忆，这些内容都会变。如果把它们放进缓存前缀，每次变动都会让前缀的缓存失效、整段重新计费。放在断点之后，前缀的缓存命中不受影响，只有这条尾部消息重新计费。\n\n这就是「**skills listing / git status / memory index 为什么放动态上下",
+        "valueCharacters": 18633,
+        "windowStart": 7229,
+        "windowEnd": 8069,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/final/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/final/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "documentSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f",
+        "pointer": "/snapshot/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      }
+    ],
+    "oldCause": [
+      {
+        "document": "docs/architecture/05-presets-prompt-hooks-skills.md",
+        "documentSha256": "7aa11503a717c1962cf597ce7025ace67511dad2d55b116645da52e704462d9e",
+        "pointer": "markdown-text",
+        "text": "----------------------------------------------------------------- | --- |\n| `prompt/composer.ts`            | `PromptComposer` — stable system prefix, user instruction context, volatile dynamic context | 310 |\n| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |\n| `prompt/section-loader.ts`      | `loadSection`/`loadSections`/`registerSection` over builtin and custom markdown sections    | 62  |\n| `prompt/instruction-scanner.ts` | `scanInstructions`/`combineInstructions` for user/project/local instruction files           | 241 |\n\nEngine-level assembly happens in `Engine.run()`, not inside the composer alone. The engine emits `on_session_start` and `user_prompt_submit` first (`engine/engine.ts:1498`, `engine/engine.ts:1508`), builds a `PromptCompos",
+        "valueCharacters": 22510,
+        "windowStart": 3537,
+        "windowEnd": 4377,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/archive/core-complete-review.md",
+        "documentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9",
+        "pointer": "markdown-text",
+        "text": "当前 turn 的 user message 之前或附近，让模型拿到项目约束。\n\n### 13.5 Instruction scanner\n\n`instruction-scanner.ts` 扫描项目内指令文件。它是 CodeShell 支持项目级指导文本的关键入口。\n\n### 13.6 Section loader/cache\n\n- `section-loader.ts` 加载 prompt section markdown。\n- `section-cache.ts` 缓存 resolved sections。\n\n风险：PromptComposer 对 instructions/memory 的异常通常选择吞掉并返回空串。这提升鲁棒性，但也可能让用户不知项目指令/memory 没注入成功。\n\n## 14. Hooks 与 Plugins 模块\n\nHooks 和 Plugins 是 CodeShell 的扩展层。\n\n### 14.1 Hook events\n\n`src/hooks/events.ts` 定义 HookEventName。当前实际 emit 的事件包括：\n\n- `on_session_start`\n- `on_session_end`\n- `on_agent_start`\n- `on_agent_end`\n- `user_prompt_submit`\n- `on_turn_start`\n- `on_turn_end`\n- `on_stop`\n- `pre_tool_use`\n- `post_tool_use`\n- `on_tool_start`\n- `on_tool_end`\n- `file_changed`\n- `on_permission_check`\n- `post_compact`\n- `notification`\n\n`pre_compact` 是 reserved/not-yet-emitted。\n\n### 14.2 HookR",
+        "valueCharacters": 96025,
+        "windowStart": 33542,
+        "windowEnd": 34382,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/archive/core-modules/prompt.md",
+        "documentSha256": "35d204fd69eec1a6d8772723ff21a67a2cb52f59a0255c7e17a2264bb4214a3f",
+        "pointer": "markdown-text",
+        "text": "om `ComposerOptions`. |\n| `section-loader.ts` | Loads `sections/*.md` markdown from disk; registry for runtime-registered custom sections. Exports `loadSection`/`loadSections`/`availableSections`/`registerSection`. |\n| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |\n| `instruction-scanner.ts` | Discovers layered instruction files (managed/user/project/local) walking from git root down to cwd; `scanInstructions` + `combineInstructions`. |\n| `sections/base.md`, `coding.md`, `orchestration.md`, `tone.md` | Built-in behavioral prompt sections; a preset declares which it includes. |\n| `sections/md.d.ts` | Ambient `*.md` module declaration (for editor/typecheck; sections are read via `readFileSync`, not imported as modules). |\n\n",
+        "valueCharacters": 7891,
+        "windowStart": 1149,
+        "windowEnd": 1989,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "documentSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+        "pointer": "/source_inventory/478",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d",
+        "pointer": "/matches/1/text",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d",
+        "pointer": "/matches/18/text",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "documentSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d",
+        "pointer": "/matches/200/text",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/4/context",
+        "text": " 10. Settings / Prompt / Hooks / Plugins / Skills\n\n### 文件\n\n- `settings/schema.ts`、`settings/manager.ts`\n- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`\n- `hooks/events.ts`、`registry.ts`、`shell-runner.ts`、`goal-stop-hook.ts`\n- `plugins/loadPluginHooks.ts`、`pluginCommandHook.ts`、`pluginInstaller.ts`、`marketplaceManager.ts`、`varRewrite.ts`\n- `skills/scanner.ts`、`frontmatter.ts`\n\n### 入口\n\n- `SettingsManager.load/getForScope/save",
+        "valueCharacters": 466,
+        "windowStart": 0,
+        "windowEnd": 466,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/30/context",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/32/context",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/43/context",
+        "text": "06-presets-prompt-hooks-skills.md`\n- **拟标题**：《行为即配置：preset、prompt 拼装、hooks 与 skills》\n- **源码入口**：`preset/index.ts`、`prompt/{composer,section-cache,section-loader,instruction-scanner}.ts`、`hooks/{registry,events,inject,shell-runner}.ts`、`skills/scanner.ts`。\n- **核心问题**：core 怎么保持「通用」？「会写代码」到底配在哪？system prompt 怎么围绕 cache 断点拼？16 个 hook 事件如何聚合（严格者胜）？skill 怎么被发现与隔离？\n- **为什么这样设计**：preset 选「prompt 段 + 工具白名单 + 权限默认」四件套；工具白名单是「会编程」与「不会」的开关；prompt 分缓存前缀 + 动态上下文（跨断点）以省 token；hooks 是唯一跨层数组拼接（特例，勿推广）。\n- **带来的好处**：换 agent 行为不 fork core；tool-",
+        "valueCharacters": 530,
+        "windowStart": 0,
+        "windowEnd": 530,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "documentSha256": "5b56a7c74558055cc731c7221ef81aa04542407b9b0ee881a069c2702c492d75",
+        "pointer": "/hits/scan_invalidation/45/context",
+        "text": "s`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n",
+        "valueCharacters": 453,
+        "windowStart": 0,
+        "windowEnd": 453,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "documentSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c",
+        "pointer": "/files/907",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+        "documentSha256": "37ab3b5d4ce268623ce57065af587d5476f4f340ca31ad5e16d0cc5966edc7f2",
+        "pointer": "/sourceChecks/16/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/root-prep/proposal.json",
+        "documentSha256": "52d3db58b66d4f6eb41edb7c532ccac9f085027f49ff5cde63ce9f0afe1019c0",
+        "pointer": "/sources/5/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/files/21/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/source-manifest.json",
+        "documentSha256": "f6ad2e66b2e01e3ead154e86047a8c0c8a890dcc933fa3551f16e7df3d6c5fea",
+        "pointer": "/priorPrepHashOnlyChecks/16/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/patterns/prompt",
+        "text": "prompt/(?:composer|section-cache|section-loader)|PromptComposer|SectionCache|composeSystemPrompt",
+        "valueCharacters": 96,
+        "windowStart": 0,
+        "windowEnd": 96,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/3/excerpt",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/4/excerpt",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/16/excerpt",
+        "text": "`SectionCache.resolve()` caches by section name, but a section with `cacheBreak` bypasses reuse and recomputes before being stored again (`prompt/section-cache.ts:15`). The `behavior` section deliberately sets `cacheBreak: true` because its content depends on the active tool set (`prompt/composer.ts:240`).",
+        "valueCharacters": 307,
+        "windowStart": 0,
+        "windowEnd": 307,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/17/excerpt",
+        "text": "`SectionCache.resolve()` caches by section name, but a section with `cacheBreak` bypasses reuse and recomputes before being stored again (`prompt/section-cache.ts:15`). The `behavior` section deliberately sets `cacheBreak: true` because its content depends on the active tool set (`prompt/composer.ts:240`).",
+        "valueCharacters": 307,
+        "windowStart": 0,
+        "windowEnd": 307,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/18/excerpt",
+        "text": "g stored again (`prompt/section-cache.ts:15`). The `behavior` section deliberately sets `cacheBreak: true` because its content depends on the active tool set (`prompt/composer.ts:240`).",
+        "valueCharacters": 185,
+        "windowStart": 0,
+        "windowEnd": 185,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/53/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/58/excerpt",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/86/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/88/excerpt",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/89/excerpt",
+        "text": "| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |",
+        "valueCharacters": 135,
+        "windowStart": 0,
+        "windowEnd": 135,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/92/excerpt",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/93/excerpt",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/120/excerpt",
+        "text": " 10. Settings / Prompt / Hooks / Plugins / Skills\n\n### 文件\n\n- `settings/schema.ts`、`settings/manager.ts`\n- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`\n- `hooks/events.ts`、`registry.ts`、`shell-runner.ts`、`goal-stop-hook.ts`\n- `plugins/loadPluginHooks.ts`、`pluginCommandHook.ts`、`pluginInstaller.ts`、`marketplaceManager.ts`、`varRewrite.ts`\n- `skills/scanner.ts`、`frontmatter.ts`\n\n### 入口\n\n- `SettingsManager.load/getForScope/save",
+        "valueCharacters": 466,
+        "windowStart": 0,
+        "windowEnd": 466,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/122/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/124/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/125/excerpt",
+        "text": "s`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n",
+        "valueCharacters": 453,
+        "windowStart": 0,
+        "windowEnd": 453,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/126/excerpt",
+        "text": "s`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n",
+        "valueCharacters": 453,
+        "windowStart": 0,
+        "windowEnd": 453,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/171/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/173/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/174/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/178/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "documentSha256": "a3a24e72771f7f5a210b16fcde039637cf7f480787e1cdb146f85a9181ef0ef5",
+        "pointer": "/matches/prompt/179/excerpt",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+        "documentSha256": "fb1125257ef65f78a3c4c36b8f0248645e86ef856db73aa3fc88629e2b7200ae",
+        "pointer": "/paths/7",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+        "pointer": "/files/364/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "documentSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+        "pointer": "/rankedCandidates/177/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+        "pointer": "/files/955/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round34/evidence/memoize-frontier/history.json",
+        "documentSha256": "a90cbbfabddce9b1218f4dfe6f0d728c0383771227a8776f492223af3d2389cc",
+        "pointer": "/hits/ordinary-cache-text/1/context",
+        "text": " system prefix, user instruction context, volatile dynamic context | 310 |\n| `prompt/section-cache.ts`       | `SectionCache` — per-section memoization with `cacheBreak` bypass                           | 43  |\n| `prompt/section-loader.ts`      | `loadSection`/`loadSections`/`registerSection` over builtin and custom markdown sections    | 62  |\n| `prompt/instruction-scanner.ts` | `scanInstructions`/`com",
+        "valueCharacters": 406,
+        "windowStart": 0,
+        "windowEnd": 406,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round34/evidence/memoize-frontier/history.json",
+        "documentSha256": "a90cbbfabddce9b1218f4dfe6f0d728c0383771227a8776f492223af3d2389cc",
+        "pointer": "/hits/ordinary-cache-text/14/context",
+        "text": "Section`/`loadSections`/`availableSections`/`registerSection`. |\n| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |\n| `instruction-scanner.ts` | Discovers layered instruction files (managed/user/project/local) walking from git root down to cwd; `scanInstructions` + `combineInstructions`. |\n| `secti",
+        "valueCharacters": 406,
+        "windowStart": 0,
+        "windowEnd": 406,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4393/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4393/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4394/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4394/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4395/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4395/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4396/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4396/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4397/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4397/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4398/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4398/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4399/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+        "pointer": "/claims/4399/directSourcePathsInObject/0",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+        "pointer": "/files/1267/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+        "pointer": "/files/1267/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "documentSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+        "pointer": "/fullPaths/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+        "pointer": "/files/1267/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182",
+        "pointer": "/dated49/fullPaths/74",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "documentSha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182",
+        "pointer": "/current51/fullPaths/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/old49-current/full/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/73",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "documentSha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+        "pointer": "/stageFullSelectedSets/plus-frozen45/full/74",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/agent-definition-gate/history-contexts.json",
+        "documentSha256": "3d4cc3c5b5ac3d5b48460599699275a98a4aa408151db06d746b84aa1cc5c0ce",
+        "pointer": "/oldCause/5/context",
+        "text": "ization`: response language and user profile (`prompt/composer.ts:270`).\n\n`SectionCache.resolve()` caches by section name, but a section with `cacheBreak` bypasses reuse and recomputes before being stored again (`prompt/section-cache.ts:15`). The `behavior` section deliberately sets `cacheBreak: true` because its content depends on the active tool set (`prompt/composer.ts:240`).\n\nPrompt section files are loaded from `prompt/sections/*.md` at module load (`prompt/section-loader.ts:11`, `prompt/se",
+        "valueCharacters": 1423,
+        "windowStart": 923,
+        "windowEnd": 1423,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/instruction_local_order/6/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/section_or_preset_contract/11/excerpt",
+        "text": "- `section-cache.ts` 缓存 resolved sections。",
+        "valueCharacters": 42,
+        "windowStart": 0,
+        "windowEnd": 42,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/section_or_preset_contract/16/excerpt",
+        "text": "- `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`",
+        "valueCharacters": 86,
+        "windowStart": 0,
+        "windowEnd": 86,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/section_or_preset_contract/27/excerpt",
+        "text": "| `section-cache.ts` | `SectionCache` + `PromptSection` type — per-section memoization keyed by section name, with `cacheBreak` opt-out and `invalidate()`. |",
+        "valueCharacters": 157,
+        "windowStart": 0,
+        "windowEnd": 157,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-dedup.json",
+        "documentSha256": "b1ad821f3ad6b4975b5130242fe942bd6a77d922b281723ac3a8267a2720b683",
+        "pointer": "/matched_markdown/section_or_preset_contract/28/excerpt",
+        "text": "// section-cache.ts",
+        "valueCharacters": 19,
+        "windowStart": 0,
+        "windowEnd": 19,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+        "documentSha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12",
+        "pointer": "/files/5/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "documentSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+        "pointer": "/files/63/path",
+        "text": "packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 41,
+        "windowStart": 0,
+        "windowEnd": 41,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/core-deep-dive/00-writing-plan.md",
+        "documentSha256": "cf7a52829f806181f12267de0d84df054e2e348b3752ec0b0ac527253da159dd",
+        "pointer": "markdown-text",
+        "text": "「几乎所有 run 经协议接缝，**asyncAgentRegistry 里的 sub-agent 例外**：它们各自起带独立白名单的 Engine」。\n\n### 06 · `06-presets-prompt-hooks-skills.md`\n- **拟标题**：《行为即配置：preset、prompt 拼装、hooks 与 skills》\n- **源码入口**：`preset/index.ts`、`prompt/{composer,section-cache,section-loader,instruction-scanner}.ts`、`hooks/{registry,events,inject,shell-runner}.ts`、`skills/scanner.ts`。\n- **核心问题**：core 怎么保持「通用」？「会写代码」到底配在哪？system prompt 怎么围绕 cache 断点拼？16 个 hook 事件如何聚合（严格者胜）？skill 怎么被发现与隔离？\n- **为什么这样设计**：preset 选「prompt 段 + 工具白名单 + 权限默认」四件套；工具白名单是「会编程」与「不会」的开关；prompt 分缓存前缀 + 动态上下文（跨断点）以省 token；hooks 是唯一跨层数组拼接（特例，勿推广）。\n- **带来的好处**：换 agent 行为不 fork core；tool-gated section 让模型不读用不上的指令；shell hook 是受信任代码（配了即信任）但 fail-silent 不崩 turn。\n- **建议配图（1 张）**：\n  - `prompt-presets-hooks-skills.svg`（必备）——preset → 工具白名单 + prompt 段；prompt 拼装（缓存前缀 | 动态上下文）；hook 链严格者胜。\n- **⚠️ 注意**：这是「**core 是通用编排",
+        "valueCharacters": 14802,
+        "windowStart": 5892,
+        "windowEnd": 6732,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/core-deep-dive/REWRITE-PLAN.md",
+        "documentSha256": "762949df7f980572e0f0628ede544a895c9e5262e2988d3ac0d79e80c7860e3f",
+        "pointer": "markdown-text",
+        "text": "ream watchdog。\n- `packages/core/src/llm/capabilities/rules.ts`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n- `packages/core/src/session/memory.ts`、`services/dream-consolidation.ts`、`services/auto-dream.ts`：memory/Dream。\n- `packages/core/src/onboarding.ts`、`data/model-metadata.json`：模型元数据外移。\n\n**AI image 配图方案**：\n\n1. 建议文件名：`assets/v2-04-model-resolution-capabilities.png`  \n   尺寸：`1536x1024`  \n   用途：解释模型 tag 如何变成 provider request，差异是数",
+        "valueCharacters": 27623,
+        "windowStart": 16992,
+        "windowEnd": 17832,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/core-deep-dive/v2-04-model-context-memory-deep-dive.md",
+        "documentSha256": "58436dd611f6ffed8125f4c889fea00c6f9bafaaaa577639a696b3e60cc4edf9",
+        "pointer": "markdown-text",
+        "text": "runtime_header(模型/cwd/平台/shell)\n  → custom_system\n  → tool_definitions(工具名 + 一行描述；完整 schema 走 native tools 字段)\n  → behavior(preset 各段，带工具门控过滤)\n  → append_system\n  → personalization(语言 + 用户画像)\n```\n\n`SectionCache`（`prompt/section-cache.ts`）给每段做记忆化。其中 `behavior` 段设了 `cacheBreak: true`——因为 section cache 是**按段名 key** 的，而 behavior 段的内容会随激活工具集变化（preset 的工具门控段，见第 06 篇）；不打 cacheBreak，一个被复用的 composer 可能拿到陈旧缓存。\n\n### 3.2 动态上下文：放在断点之后\n\n`buildDynamicContextMessage()` 产出一条 user 角色的 `<system-reminder>` 消息，**放在消息数组末尾**，内容是：\n\n- **skills 列表**（`buildSkillListing`，按命名空间分组）。\n- **git 状态**（如果 preset 开了 `injectGitStatus`）。\n- **记忆索引**（`buildInjectionIndex`，下文 §6）。\n\n为什么这三样要放在断点之后、不进缓存前缀？因为它们在**会话内会变**：装一个 skill、改一个文件、提取一条记忆，这些内容都会变。如果把它们放进缓存前缀，每次变动都会让前缀的缓存失效、整段重新计费。放在断点之后，前缀的缓存命中不受影响，只有这条尾部消息重新计费。\n\n这就是「**skills listing / git status / memory index 为什么放动态上下",
+        "valueCharacters": 18633,
+        "windowStart": 7229,
+        "windowEnd": 8069,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/nightly-2026-07-10/large-feature-breakdown.md",
+        "documentSha256": "cdf3148f26db28c8c69e102335e8f44f479c2f9bb2471244c056b3c8a78652cf",
+        "pointer": "markdown-text",
+        "text": "ssifier timing 等放进 per-run metrics store；reset 只影响当前 run/session。 | AD-12 | M | `packages/core/src/state.ts:83`、`:162`；`packages/core/src/engine/runtime.ts:21` | 否 |\n| AD-15 | **收口剩余 cache/interaction/feature/skill 状态**：section cache 归 Composer、invoked skills 归 agent/session、feature flags 归 host config；删无消费者 stub 或留显式 no-op adapter。 | AD-11、AD-13、AD-14 | M | `packages/core/src/state.ts:55`、`:200`、`:253`、`:261`；`packages/core/src/prompt/composer.ts:60` | 否 |\n| AD-16 | **cron parser DST/闰日/不可能日期表测**：覆盖春季跳时、秋季重复时、Feb 29、Feb 30、DOM/DOW OR 和无效 timezone；固定时区和 timestamp。 | 无 | S | `packages/core/src/automation/cron-expr.ts:120`；`cron-expr.test.ts:1`；`docs/todo/architecture-debt.md:66` | **是** |\n| AD-17 | **sleep/wake/misfire 集成测试**：以 fake clock 验证休眠跨多个触发点、恢复只补应补任务、不双跑，与 DST 边界联动。 | AD-16 | S | `packages/core/src/automation/scheduler-re",
+        "valueCharacters": 36990,
+        "windowStart": 32931,
+        "windowEnd": 33771,
+        "boundedWindowNotFullValue": true
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "documentSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+        "pointer": "/final/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 112,
+        "windowStart": 0,
+        "windowEnd": 112,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/1/directSettled/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/2/normal/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "documentSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+        "pointer": "/final/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "documentSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f",
+        "pointer": "/snapshot/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/0/preStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/0/postStop/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "documentSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+        "pointer": "/observations/0/afterEnable/loadedWorkspaceModules/273",
+        "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/prompt/section-cache.ts",
+        "valueCharacters": 104,
+        "windowStart": 0,
+        "windowEnd": 104,
+        "boundedWindowNotFullValue": false
+      }
+    ]
+  },
+  "machineOnlyNoWindowsYetClaimedSemanticallyRead": true
+}

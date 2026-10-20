@@ -1,0 +1,44 @@
+{
+  "recordedUTC": "2026-10-17T12:43:51.027097+00:00",
+  "locatorFirstAttempt": {
+    "exitCode": 2,
+    "diagnosticFile": "locator-first.stderr.txt",
+    "cause": "Brace expansion combined uninstallTarget with .tsx despite inventory showing .ts. Other rg matches printed; output was truncated. No product execution. Correct targeted file paths are used below.",
+    "stdoutTruncated": true,
+    "productFailure": false
+  },
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "historyRegexCorrection": {
+    "identifiedUTC": "2026-10-17T12:57:48.459466+00:00",
+    "originalFrozenChildReceiptSha256": "1a16808467fd91f28dcad362af53e43bf1236a025fa7e9b0ed187ce99c60fa0e",
+    "issue": "Some raw regex strings in child scanner were doubly escaped (newline class / quote syntax). Their saved patterns, hit counts and receipt are preserved; do not infer intended single-line or single-quote coverage merely from their labels.",
+    "resolution": "Added history-corrected-scan.py and a separate full current dated MD/recursive JSON value scan with direct quote class and single escaped regex syntax. All inputs pinned before that scan; child original bytes unchanged.",
+    "correctedScanExitCode": 0,
+    "correctedScanSessionId": 15648,
+    "correctedHistory": "history-corrected.json",
+    "selectedContexts": "history-corrected-selection.json",
+    "correctedHits": {
+      "helper": 55,
+      "quoted_marketplace_local": 8,
+      "literal_namespace": 13,
+      "old_branch": 2,
+      "source_name": 0,
+      "unquoted_marketplace_local": 68,
+      "name_local_literal": 4,
+      "local_collision": 32,
+      "chinese_market_local": 5
+    },
+    "capPerPattern": 400,
+    "allUnderCap": true,
+    "rootReportedReleaseDrift": "Root attributes release TODO change to unrelated main integration cecd79dc8; not independently Git-verified here.",
+    "productRetry": false
+  },
+  "firstMainPackagingAttempt": {
+    "exitCode": 1,
+    "rawDiagnostic": "packaging-first.stderr.txt",
+    "cause": "A metadata text-edit precondition asserted that a spaced phrase was absent before removing it; the phrase was present, so it stopped before draft edit or receipt creation.",
+    "resolution": "Remove the exact phrase in the mutable draft and package metadata. Source, child frozen artifacts and history snapshots unchanged.",
+    "productFailure": false
+  }
+}

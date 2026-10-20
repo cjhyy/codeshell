@@ -1,0 +1,255 @@
+{
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3005",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "lines": 321,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/groupChecks/0/separateHashOnlyRows/116",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "jsonPointer": "/files/136",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "totalLines": 321,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "jsonPointer": "/hashOnlyFiles/116",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "totalLines": 321,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/author-metadata-checks.json",
+      "jsonPointer": "/sourceByteChecks/145",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "kind": "hashOnlyFiles",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "matches": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "jsonPointer": "/files/128",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "currentBytes": 12083,
+        "currentSha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "mainBytes": 12083,
+        "mainSha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "jsonPointer": "/hashOnlyChecks/118",
+      "row": {
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+      "jsonPointer": "/files/2",
+      "row": {
+        "rank": 3,
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "lines": 321,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitSelectedClaimIds": [],
+        "historicalClaimIds": [
+          "C011927",
+          "C011928",
+          "C011929",
+          "C011930",
+          "C011931"
+        ],
+        "whySuggested": "Conversation preference form serialization/display only; stop at any authority boundary.",
+        "notUnreadClaim": true,
+        "sourceBodyOpened": false,
+        "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "jsonPointer": "/files/3326",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "lines": 321,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C011927",
+          "C011928",
+          "C011929",
+          "C011930",
+          "C011931"
+        ],
+        "claimKindCounts": {
+          "explicit-nonsemantic-or-hash-only": 2,
+          "incidental-path-or-pin-object": 3
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "jsonPointer": "/rankChecks/2",
+      "row": {
+        "rank": 3,
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "matchesDatedCandidate": true,
+        "inDrift": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "jsonPointer": "/files/3326",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "lines": 321
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "jsonPointer": "/files/3327",
+      "row": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "lines": 321,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      }
+    }
+  ],
+  "filenameNarrativeRecords": [
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "jsonPointer": null,
+      "line": 150,
+      "needle": "conversationsettingssection",
+      "context": "edSections.tsx:935`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:288` | 设置页选 Environment |\n| **沙箱策略** | 配置隔离模式、网络策略和项目覆盖 | `packages/desktop/src/renderer/settings/SandboxSection.tsx:39`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:292` | 设置页选 Sandbox |\n| **对话设置** | 管理对话级设置，例如自动记忆抽取等 | `packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx:59`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:297` | 设置页选 Conversation |\n| **上下文设置** | 管理上下文策略与 token 预算相关配置 | `packages/desktop/src/renderer/settings/ContextSettingsSection.tsx:79`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:298` | 设置页选 Context |\n| **手机遥控** | 启停远程主机、设备、配对、passcode、tunnel/cloudflared | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:1475`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:299` | 设置页选 Mobile Remote |\n| **记忆** | 选择全局/项目 store，查看、编辑、Pin、批量处理 pending memory，手动 Dream | `packages/desktop/src/renderer/settings/MemorySection.tsx:87`，`packages/desktop/src/renderer/settings/MemorySection.tsx:163`，`packages/desktop/sr",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/groupChecks/0/separateHashOnlyRows/116/path",
+      "line": 1,
+      "needle": "conversationsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "sourceSha256": "a3047874d9017eba08b4c125d3596baff258da8d47f759bf65779b8083ec38ae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/author-metadata-checks.json",
+      "jsonPointer": "/sourceByteChecks/145/path",
+      "line": 1,
+      "needle": "conversationsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "kind": "hashOnlyFiles",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "matches": true
+      },
+      "sourceSha256": "cd2e0bfe680df1633c509110a9210e57b8cbed0c269291cda0e09e6581233604"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/report.md",
+      "jsonPointer": null,
+      "line": 11,
+      "needle": "conversationsettingssection",
+      "context": "anged, with no overlap with those ten affected source paths. No new version body or release prose was read.\n\n[Rank 20](candidate-ranking.json) consists only of 100–1000 line ordinary UI/data filename-domain suggestions without a current-at-capture explicit-full JSON object. Examples at the top are ContextSettingsSection 341, AppearanceSection 362, ConversationSettingsSection 321 and LogsView 355; suggestions also span Web and TUI. This is no claim of novelty, verified ordinary behavior or permission to run a fixture. Each next target requires its own fresh exact MD+JSON full/old-cause gate and normal producer/consumer review. [Pending scopes](pending-scopes.json) keeps 46 dataset-editor/47 ChatView/48 MarketList and selected 48 consumers separate; tmp semantic reads were not backfilled.\n\n[Checks](checks.json) resolved all 51548 provenance pointers in 1213 JSON documents, validated 683 full/455 selected same-object SHA/single-path bindings against the captured snapshot, joined every claim ID, and checked rank bounds, exclusions and ending hashes. First draft bui",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "980123513213a2538d592475628fea9710dfe166c60bae0d0e83cc01dad23c3f"
+    },
+    {
+      "path": "docs/nightly-2026-07-10/large-feature-breakdown.md",
+      "jsonPointer": null,
+      "line": 123,
+      "needle": "conversationsettingssection",
+      "context": "omotion/soft-delete 边界；确保 dream 不跨 Profile 污染且不改 manual。 | WP-10 | M | `packages/core/src/services/memory-orchestrator.ts:416`；`dream-consolidation.ts:87`；`docs/todo/memory-final-design.md:25` | 否 |\n| WP-12 | **Profile Switcher UI**：显示当前 Profile、影响摘要、switch/close 确认与失败回滚；同 cwd 多工位明确为互斥切换。 | WP-07、WP-09 | M | `packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx`；讨论稿 §Profile Switcher | 否 |\n| WP-13 | **Profile Builder UI**：编辑 schema 支持的字段、选择已有能力、预览并本地保存；不接 marketplace。 | WP-04、WP-09 | M | `packages/desktop/src/renderer/extensions/`；讨论稿 §Profile Builder | 否 |\n| WP-14 | **Team v1 schema/store**：定义 team/workstation（cwd + profile + label），路径 canonicalize、重复成员规则和全局存储；不引入运行时调度。 | WP-01、WP-04 | S | `docs/todo/workspace-profile-讨论稿.md:306`、`:328` | 否 |\n| WP-15 | **Team Board 总览与导航**：列工位/当前数字人/状态，点击进入 workspace；同 cwd 工位先执行 Profile switch，再导航，失败不改变当前页。 | WP-12、WP-14 | M | `docs/todo/workspace-profile-讨论稿.md:328`；`packages/desktop/src/renderer/panels/PanelArea.tsx:108` | 否 |\n| WP-16 | **轻量 handoff note**：用户显式把当前摘要带到另一个工位；只存/复制 note，不自动派活或汇总。 | WP-15 | S |",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "cdf3148f26db28c8c69e102335e8f44f479c2f9bb2471244c056b3c8a78652cf"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-11-conversation-settings-page-design.md",
+      "jsonPointer": null,
+      "line": 58,
+      "needle": "conversationsettingssection",
+      "context": "kill on → 仅它放行);(c) 真实项目 cwd 不受影响(仍 denylist);(d) 新装 skill 默认关;(e) plugin 反转 → superpowers 进 disabledPlugins → loadPluginHooks 不注册其 hook(复用现有 loadPluginHooks 测试模式)。\n\n## 4. desktop 新增「对话」设置页\n\n- **导航**:`SettingsPage.tsx` 的 `MODULE_GROUPS`「环境与连接」组加一项 `{ id: \"conversation\", label: \"对话\", Icon: ... }`,渲染分支加 `active === \"conversation\"`。\n- **页面组件**(新文件,如 `ConversationSettingsSection.tsx`):\n  - 启动时经新 IPC 拿 no-repo cwd,`listCapabilities(noRepoCwd)` 取能力列表。\n  - **顶部**:说明文案(\"以下设置只影响无项目的纯聊天对话\")+ 「全部关闭」按钮(把所有 skill/plugin override 清回默认全关 = 删除所有 `on`,回到 inherit/全关态)。\n  - **skill 列表**:每行一个开关。有效态默认关;开 = `setCapabilityOverride(noRepoCwd, \"skill:x\", \"on\")`;关 = 设回 `\"inherit\"`(等效全关)。\n  - **plugin 列表**:同 skill。superpowers 出现在这里,默认关。\n  - **builtin 区**:列出 builtin。不依赖 cwd 的显示为默认开(可不提供开关或显示只读\"默认开\");**依赖 cwd 的置灰禁用**,点不动,标注\"对话无项目目录,不可用\"。cwd 依赖清单:`read` / `write` / `edit` / `glob` / `grep` / `apply-patch` / `enter-worktree` / `exit-worktree` / `lsp` / `notebook-edit`。\n  - agent / mcp:本期不渲染。\n- **UI 规范**(desktop CLAUDE.md):shadcn/ui + Tailwind;开关用 `@/components/ui/switch`;按钮 `Button`;不手写原生控件;",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "30f95570928ab5f9749df1066de409491d0d4c74fcfdad6a30af0d07a05cdc5a"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-07-30-panel-app-project-binding-ux-design.md",
+      "jsonPointer": null,
+      "line": 191,
+      "needle": "conversationsettingssection",
+      "context": "`\n设置 →（项目 scope：my-app）→ 能力总览\n\n  ▸ 内置工具        12 项\n  ▸ 技能            8 项\n  ▸ 插件            3 项\n  ▸ MCP 服务        2 项\n  ▸ 面板应用        2 / 3 项          ← 新增\n    ├ Design Studio      [●]\n    ├ Quant Lab          [●]\n    └ Starter            [○]\n```\n\n**两态开关，不用三态「继承/开/关」。** 三态语义是「继承全局基线或在本项目覆盖」，\n而面板应用没有全局基线可继承——它默认全关、由项目显式绑定。硬套三态会造出一个\n含义为空的「继承」档。\n\n先例：`ConversationSettingsSection.tsx:112-126` 使用同一套 `setCapabilityOverride`\nIPC 但只渲染两态（只写 `on`/`inherit`，永不写 `off`），因为该场景同样是\n默认全关 + 白名单。面板应用是同一形状。\n\n**数据源：直读写 `panelAppBindings`**（已确认的决定）。该分组走专用读写路径，\n绕开 `setCapabilityEnabled` / `setCapabilityOverride`。\n\n代价是 `CapabilitiesOverviewSection` 中多一个特例分支。收益是单一数据源：扩展页与\n设置页写同一个 key，永不打架。被否决的替代方案是新增\n`capabilityOverrides.panelApps` bucket 并在运行时读两个 key——那会让两个 key 表达\n同一状态，是 `panelAppOverrides` 遗留问题的翻版。\n\n**实现约束（读代码后发现，必须在实现时决策）**：\n`CapabilityKind = CapabilityDescriptor[\"kind\"]`（`capabilitiesOverview.ts:14`）\n是 **core 类型**，不是 renderer 本地联合类型。因此面板应用分组不能简单地加进\n`CAPABILITY_GROUP_ORDER`。两条路：\n\n- **(a) 渲染层并列**（推荐）：面板应用作为一个独立的组，在\n  `CapabilitiesOverviewSection` 里与 `groupCapabilities()` 的结果并列渲染，\n  不进",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "33971d2872005cbff08693937946b4b04a024ebec89b0c2d54f16345d5d74bb6"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+      "jsonPointer": null,
+      "line": 380,
+      "needle": "conversationsettingssection",
+      "context": "ngs-service.ts`\n- `packages/desktop/src/main/index.ts`（仅 `settings:get/set` handlers）\n- `packages/desktop/src/preload/index.ts`\n- `packages/desktop/src/preload/types.d.ts`\n- `packages/desktop/src/renderer/settings/SettingsView.tsx`\n- `packages/desktop/src/renderer/settings/SettingsPage.tsx`\n- `packages/desktop/src/renderer/settings/{GeneralSection,ConversationSettingsSection,PermissionSection,McpSection,MemorySection,ModelCatalogPanel,TextConnectionsPanel,SearchConnectionsPanel,PluginsAndSkillsSection,AdvancedSections}.tsx`\n- `packages/desktop/src/main/settings-service.test.ts`（若尚无则新增）\n- `packages/core/src/settings/schema.ts`\n- `packages/core/src/settings/manager.test.ts`\n\n**改动**\n\n- renderer/main/preload 的 project-specific locals 和 props 改名；channel、scope、参数位置不变。\n- Core API 的 cwd 保留，只修正文档和测试描述。\n- 不把 `.code-shell/settings.json` 放到 worktree root；调用方继续传 tracked project path。若业务确实需要 worktree-local settings，另立 feature，\n  不借命名迁移改变语义。\n\n**合并门槛**\n\nuser scope 写 `~/.code-shell/settings.json`；project scope 写 `<projectPath>/.code-shell/settings.json`；切到 worktree 后 project se",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "477c24aef56dbe14ebb40abab482aa9fc606e9a338bd6e85d065a21f4c32ce58"
+    }
+  ],
+  "scope": "Metadata/source-scope gate only, no unknown/no-row-never-read inference"
+}

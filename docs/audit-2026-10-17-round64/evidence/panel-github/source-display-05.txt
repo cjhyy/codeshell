@@ -1,0 +1,171 @@
+1: import { constants } from "node:fs";
+2: import { lstat, open, realpath, stat } from "node:fs/promises";
+3: import { dirname, extname, join } from "node:path";
+4: import { compare, valid } from "semver";
+5: import { findPanelAppRoot } from "./discovery.js";
+6: import { MAX_PANEL_UPDATE_MANIFEST_BYTES, readGitHubPanelAppManifest } from "./github-manifest.js";
+7: import type { InstalledPanelAppSource } from "./installer.js";
+8: import { PANEL_APP_MANIFEST_FILE, PanelAppManifest } from "./manifest.js";
+9: import { assertSafePanelAppId, panelAppInstallDir } from "./paths.js";
+10: import { readInstalledPanelAppsRegistry } from "./registry.js";
+11: 
+12: export interface PanelAppUpdateCheck {
+13:   id: string;
+14:   currentVersion: string;
+15:   latestVersion?: string;
+16:   status: "update-available" | "up-to-date" | "source-older" | "unsupported" | "error";
+17:   checkedAt: string;
+18:   sourceKind: "git" | "dir" | "zip";
+19:   message?: string;
+20: }
+21: 
+22: export interface InstalledPanelAppUpdateIdentity {
+23:   id: string;
+24:   version: string;
+25:   source: InstalledPanelAppSource;
+26:   lastUpdated: string;
+27: }
+28: 
+29: async function readLocalManifest(root: string): Promise<string> {
+30:   const path = join(root, PANEL_APP_MANIFEST_FILE);
+31:   for (const directory of [root, dirname(path)]) {
+32:     const metadata = await lstat(directory);
+33:     if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
+34:       throw new Error("Panel App manifest directories must be ordinary directories");
+35:     }
+36:   }
+37:   const file = await lstat(path);
+38:   if (!file.isFile() || file.isSymbolicLink() || file.size > MAX_PANEL_UPDATE_MANIFEST_BYTES) {
+39:     throw new Error("Panel App manifest must be a regular file within the 1 MiB limit");
+40:   }
+41:   const handle = await open(
+42:     path,
+43:     constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+44:   );
+45:   try {
+46:     const metadata = await handle.stat();
+47:     if (!metadata.isFile() || metadata.size > MAX_PANEL_UPDATE_MANIFEST_BYTES) {
+48:       throw new Error("Panel App manifest must be a regular file within the 1 MiB limit");
+49:     }
+50:     // Read at most the budget plus one byte, even if a local source grows after stat().
+51:     const bytes = Buffer.alloc(MAX_PANEL_UPDATE_MANIFEST_BYTES + 1);
+52:     let total = 0;
+53:     while (total < bytes.length) {
+54:       const { bytesRead } = await handle.read(bytes, total, bytes.length - total, total);
+55:       if (bytesRead === 0) break;
+56:       total += bytesRead;
+57:     }
+58:     if (total > MAX_PANEL_UPDATE_MANIFEST_BYTES) {
+59:       throw new Error("Panel App manifest exceeds the 1 MiB limit");
+60:     }
+61:     return bytes.subarray(0, total).toString("utf8");
+62:   } finally {
+63:     await handle.close();
+64:   }
+65: }
+66: 
+67: function manifestVersion(text: string, id: string): string {
+68:   const manifest = PanelAppManifest.safeParse(JSON.parse(text));
+69:   if (!manifest.success) throw new Error("Panel App source manifest is invalid");
+70:   if (manifest.data.id !== id)
+71:     throw new Error("Panel App source manifest ID does not match the installed app");
+72:   const version = manifest.data.version;
+73:   // semver accepts a leading v for compatibility, but package manifests require strict SemVer.
+74:   if (version !== version.trim() || !/^[0-9]/.test(version) || !valid(version)) {
+75:     throw new Error("Panel App manifest version is not a valid semantic version");
+76:   }
+77:   return version;
+78: }
+79: 
+80: /** Read only the target manifest and registry record, without inspecting or hashing package assets. */
+81: export async function getInstalledPanelAppUpdateIdentity(
+82:   id: string,
+83: ): Promise<InstalledPanelAppUpdateIdentity | undefined> {
+84:   try {
+85:     assertSafePanelAppId(id);
+86:     const record = (await readInstalledPanelAppsRegistry()).find((entry) => entry.id === id);
+87:     if (!record) return undefined;
+88:     return {
+89:       id,
+90:       version: manifestVersion(await readLocalManifest(panelAppInstallDir(id)), id),
+91:       source: record.source,
+92:       lastUpdated: record.lastUpdated,
+93:     };
+94:   } catch {
+95:     return undefined;
+96:   }
+97: }
+98: 
+99: /**
+100:  * Read-only version discovery. It neither grants permissions nor reviews/installs package code;
+101:  * the existing full package review remains mandatory before applying any update.
+102:  */
+103: async function checkPanelAppSource(
+104:   id: string,
+105:   selected?: InstalledPanelAppUpdateIdentity,
+106: ): Promise<PanelAppUpdateCheck> {
+107:   const result: PanelAppUpdateCheck = {
+108:     id,
+109:     currentVersion: "",
+110:     status: "error",
+111:     checkedAt: new Date().toISOString(),
+112:     sourceKind: "dir",
+113:   };
+114:   try {
+115:     assertSafePanelAppId(id);
+116:     const record =
+117:       selected ?? (await readInstalledPanelAppsRegistry()).find((entry) => entry.id === id);
+118:     if (!record) throw new Error("Panel App has no installed source record");
+119:     result.sourceKind =
+120:       typeof record.source === "string"
+121:         ? extname(record.source).toLowerCase() === ".zip"
+122:           ? "zip"
+123:           : "dir"
+124:         : "git";
+125:     // The registry can be stale: compare the package that is actually installed.
+126:     result.currentVersion = selected
+127:       ? selected.version
+128:       : manifestVersion(await readLocalManifest(panelAppInstallDir(id)), id);
+129:     if (typeof record.source === "string" && result.sourceKind === "zip") {
+130:       // Source records predate a separate local kind field; a folder can also end in .zip.
+131:       const metadata = await stat(record.source).catch((error: NodeJS.ErrnoException) => {
+132:         if (error.code === "ENOENT") return null;
+133:         throw error;
+134:       });
+135:       if (metadata?.isDirectory()) result.sourceKind = "dir";
+136:     }
+137:     if (result.sourceKind === "zip") {
+138:       return {
+139:         ...result,
+140:         status: "unsupported",
+141:         message: "ZIP sources require a manual package review to check for changes",
+142:       };
+143:     }
+144:     const latest =
+145:       typeof record.source === "string"
+146:         ? await readLocalManifest(await findPanelAppRoot(await realpath(record.source)))
+147:         : await readGitHubPanelAppManifest(record.source);
+148:     result.latestVersion = manifestVersion(latest, id);
+149:     const difference = compare(result.latestVersion, result.currentVersion);
+150:     result.status =
+151:       difference > 0 ? "update-available" : difference === 0 ? "up-to-date" : "source-older";
+152:     return result;
+153:   } catch (error) {
+154:     return {
+155:       ...result,
+156:       status: "error",
+157:       message: error instanceof Error ? error.message : String(error),
+158:     };
+159:   }
+160: }
+161: 
+162: export function checkInstalledPanelAppUpdate(id: string): Promise<PanelAppUpdateCheck> {
+163:   return checkPanelAppSource(id);
+164: }
+165: 
+166: /** The Host passes the identity of an already verified project-selected package. */
+167: export function checkSelectedPanelAppUpdate(
+168:   identity: InstalledPanelAppUpdateIdentity,
+169: ): Promise<PanelAppUpdateCheck> {
+170:   return checkPanelAppSource(identity.id, identity);
+171: }

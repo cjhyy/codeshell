@@ -1,9 +1,13 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setDefaultCredentialAccess, type CredentialMetadata } from "../../credentials/access.js";
 import { LOCAL_LINK_PROVIDERS } from "../../links/providers.js";
+import { isFigmaMcpAction } from "@cjhyy/code-shell-link";
 import { SettingsManager } from "../../settings/manager.js";
 import type { ToolContext } from "../../tool-system/context.js";
 import { listSourcesTool, readSourceTool } from "../../tool-system/builtin/sources.js";
@@ -68,6 +72,104 @@ async function read(
   });
   return String(result.isError ? `Error: ${result.error}` : result.result);
 }
+const fixtureResources: Record<string, { group: string; id: string }> = {
+  github: { group: "repositories", id: "acme/approved" },
+  gitlab: { group: "projects", id: "42" },
+  sentry: { group: "organizations", id: "fixture-org" },
+  vercel: { group: "projects", id: "prj_fixture" },
+  slack: { group: "channels", id: "C123" },
+  notion: { group: "pages", id: "12345678123412341234123456789abc" },
+  linear: { group: "teams", id: "12345678-1234-1234-1234-123456789abc" },
+  todoist: { group: "projects", id: "42" },
+  airtable: { group: "bases", id: "app1234567890" },
+  figma: { group: "files", id: "FixtureFile123" },
+};
+
+function fixtureParams(providerId: string, action: string): Record<string, unknown> {
+  const id = fixtureResources[providerId].id;
+  if (providerId === "github") {
+    const repository = { owner: "acme", repo: "approved" };
+    switch (action) {
+      case "list_repositories":
+        return { limit: 5 };
+      case "get_repository":
+      case "get_starred":
+      case "get_readme":
+        return repository;
+      case "get_file":
+        return { ...repository, path: "README.md" };
+      case "get_issue":
+        return { ...repository, issue_number: 1 };
+      case "get_pull_request":
+        return { ...repository, pull_number: 1 };
+      case "list_pull_request_files":
+      case "list_pull_request_commits":
+        return { ...repository, pull_number: 1, limit: 5 };
+      case "get_commit":
+        return { ...repository, sha: "a".repeat(40), limit: 5 };
+      default:
+        return { ...repository, limit: 5 };
+    }
+  }
+  if (providerId === "figma")
+    return {
+      file_key: id,
+      ...(["get_nodes", "get_images"].includes(action) ? { ids: "1:2" } : {}),
+    };
+  if (providerId === "slack") {
+    if (action === "get_message")
+      return { permalink: `https://fixture.slack.com/archives/${id}/p1234567890123456` };
+    if (action === "get_thread") return { channel: id, ts: "1234567890.123456", limit: 5 };
+    if (action === "get_channel_history") return { channel: id, limit: 5 };
+  }
+  if (providerId === "notion" && action === "get_page") return { page_id: id };
+  if (providerId === "sentry") return action === "list_projects" ? { organization: id } : {};
+  if (providerId === "airtable") return action === "list_tables" ? { base_id: id } : {};
+  return { limit: 5 };
+}
+
+function fixtureResult(providerId: string, action: string, value: string) {
+  const id = fixtureResources[providerId].id;
+  if (providerId === "github" && ["get_file", "get_readme"].includes(action))
+    return { content: value, truncated: false };
+  if (providerId === "github" && action === "get_starred") return { starred: false, value };
+  if (providerId === "figma") {
+    if (action === "get_file") return { pages: [{ name: value }], truncated: false };
+    if (action === "read_design_content") return { document: { name: value } };
+    if (action === "get_nodes") return { nodes: { "1:2": { name: value } } };
+    if (action === "get_images") return { images: { "1:2": value } };
+    if (action === "get_image_fills") return { meta: { images: { fixture: value } } };
+    if (action === "get_comments") return { comments: [{ message: value }] };
+  }
+  const collection =
+    action === "list_pull_request_files"
+      ? "files"
+      : action === "list_pull_request_commits"
+        ? "commits"
+        : action === "get_channel_history"
+          ? "messages"
+          : action === "search"
+            ? "results"
+            : action.startsWith("list_")
+              ? action.slice("list_".length)
+              : undefined;
+  if (!collection) return { value };
+  const identity =
+    providerId === "github"
+      ? { full_name: id }
+      : providerId === "sentry"
+        ? { slug: id }
+        : (providerId === "gitlab" && action === "list_issues") ||
+            (providerId === "todoist" && action === "list_tasks")
+          ? { project_id: id }
+          : providerId === "linear" && action === "list_issues"
+            ? { team: { id } }
+            : providerId === "vercel" && action === "list_deployments"
+              ? { projectId: id }
+              : { id };
+  return { [collection]: [{ ...identity, value }] };
+}
+
 function definition(providerId = "github", action = "list_repositories"): SourceDefinition {
   return {
     id: "link-view",
@@ -75,7 +177,7 @@ function definition(providerId = "github", action = "list_repositories"): Source
     label: "Pinned view",
     enabled: true,
     credentialRef: "connection-1",
-    adapterConfig: { providerId, action, params: { limit: 5 } },
+    adapterConfig: { providerId, action, params: fixtureParams(providerId, action) },
   };
 }
 function credential(providerId = "github", action = "list_repositories"): CredentialMetadata {
@@ -91,6 +193,12 @@ function credential(providerId = "github", action = "list_repositories"): Creden
       linkExecutionBackend: "remote",
       linkRemoteState: "connected",
       linkRemoteGrantId: "grant-1",
+      linkResourceGroups: [
+        {
+          id: fixtureResources[providerId].group,
+          items: [{ id: fixtureResources[providerId].id, label: "Fixture selected resource" }],
+        },
+      ],
       linkCapabilityIds: [`${providerId}.${action}`],
       linkLastVerifiedAt: "2026-10-09T00:00:00Z",
     },
@@ -114,7 +222,7 @@ test("ReadSource's bound LinkAction remains permission-gated without loading its
     envExposures: () => ({}),
     executeRemoteLinkAction: async () => {
       reads++;
-      return { value: "bound fixture" };
+      return fixtureResult("github", "list_repositories", "bound fixture");
     },
   });
   bind();
@@ -141,10 +249,13 @@ test("ReadSource's bound LinkAction remains permission-gated without loading its
   expect(reads).toBe(1);
 });
 
-test("all 10 providers/32 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
+test("all 10 providers/36 read actions reuse exact saved grant and caller credential scope, metadata does no IO", async () => {
   let calls = 0;
   for (const provider of LOCAL_LINK_PROVIDERS)
-    for (const action of provider.actions.filter((item) => item.risk !== "write")) {
+    // Remote grants cannot authorize the independent Host-owned Figma MCP channel.
+    for (const action of provider.actions.filter(
+      (item) => item.risk !== "write" && !(provider.id === "figma" && isFigmaMcpAction(item.id)),
+    )) {
       const def = definition(provider.id, action.id);
       const meta = credential(provider.id, action.id);
       setDefaultCredentialAccess({
@@ -162,9 +273,9 @@ test("all 10 providers/32 read actions reuse exact saved grant and caller creden
             id: meta.id,
             grantId: "grant-1",
             action: action.id,
-            params: { limit: 5 },
+            params: fixtureParams(provider.id, action.id),
           });
-          return { value: `fixture ${provider.id}/${action.id}` };
+          return fixtureResult(provider.id, action.id, `fixture ${provider.id}/${action.id}`);
         },
       });
       bind(def);
@@ -179,7 +290,8 @@ test("all 10 providers/32 read actions reuse exact saved grant and caller creden
       expect(output).toContain(`fixture ${provider.id}/${action.id}`);
       expect(output).toContain("untrusted");
     }
-  expect(calls).toBe(32);
+  expect(LOCAL_LINK_PROVIDERS).toHaveLength(10);
+  expect(calls).toBe(36);
 }, 30_000);
 
 test.each(["http-token", "cli"] as const)(
@@ -321,7 +433,7 @@ test("disconnect and source parameter replacement while Link IO awaits suppress 
               params: { limit: 6 },
             },
           });
-        return { value: "must not escape" };
+        return fixtureResult("github", "list_repositories", "must not escape");
       },
     });
     bind();
@@ -344,7 +456,7 @@ test("ReadSource cannot bypass LinkAction hard deny, exact args deny, run surfac
     envExposures: () => ({}),
     executeRemoteLinkAction: async () => {
       calls++;
-      return { value: "secret fixture" };
+      return fixtureResult("github", "list_repositories", "secret fixture");
     },
   });
   bind();
@@ -378,7 +490,7 @@ test("fixed view rejects hook rewrites and rechecks source authority after neste
     envExposures: () => ({}),
     executeRemoteLinkAction: async () => {
       calls++;
-      return { value: "must not escape" };
+      return fixtureResult("github", "list_repositories", "must not escape");
     },
   });
   bind();
@@ -466,7 +578,9 @@ test("fixed view handler input has no nested references retained by hooks during
     [],
     hooks,
   );
-  expect(urls).toEqual(["https://api.github.com/repos/acme/approved/issues?per_page=5"]);
+  expect(urls).toEqual([
+    "https://api.github.com/repos/acme/approved/issues?per_page=5&page=1&state=open",
+  ]);
   expect(output).toContain("Approved repository");
 });
 
@@ -484,7 +598,7 @@ test("nested Link execution completes inside the production single-slot sequenti
       maxConcurrency = Math.max(maxConcurrency, ++inFlight);
       await Promise.resolve();
       inFlight--;
-      return { value: "sequential fixture" };
+      return fixtureResult("github", "list_repositories", "sequential fixture");
     },
   });
   bind();

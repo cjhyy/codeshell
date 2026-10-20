@@ -140,6 +140,27 @@ assert.equal("Arena" in internalApi, false);
 // Include the already-exported process-launch and missed-cron contracts;
 // the compiled declaration pin must describe the current Host surface.
 const expectedInternalTypeExports = [
+  // Main's model tracing and Link authority contracts remain Host-only.
+  "ExternalModelTraceInput",
+  "LegacyLinkCleanupEntry",
+  "McpLinkActionOptions",
+  "McpLinkActionRequest",
+  "ModelTraceAttempt",
+  "ModelTraceCallType",
+  "ModelTraceConfig",
+  "ModelTraceConfigPatch",
+  "ModelTraceContentState",
+  "ModelTraceContext",
+  "ModelTraceEvent",
+  "ModelTraceEventInput",
+  "ModelTraceListQuery",
+  "ModelTraceOutput",
+  "ModelTracePage",
+  "ModelTraceRecord",
+  "ModelTraceSessionPage",
+  "ModelTraceSessionSummary",
+  "ModelTraceStatus",
+  "ModelTraceSummary",
   "SessionOutputCoverageProof",
   "ConstrainedDockerRuntime",
   "ConstrainedProcessHost",

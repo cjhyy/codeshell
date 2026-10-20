@@ -1,0 +1,43 @@
+{
+  "capturedAtUTC": "2026-10-17T15:23:23.927998+00:00",
+  "mode": "static selected ordinary DTO/producer/consumer review",
+  "productFunctions": 0,
+  "imports": 0,
+  "helperExecutions": 0,
+  "testsRun": 0,
+  "testDeclarationsReadAsIntent": 2,
+  "languageFixtures": 0,
+  "reactDomOrBrowser": 0,
+  "audioOrSystemThemeOperations": 0,
+  "nativeHostOrPermissionOperations": 0,
+  "network": 0,
+  "gitCommands": 0,
+  "repositoryOrProductWrites": 0,
+  "oldFailedDirectionsRetried": 0,
+  "runtimePassOrExpectClaims": 0,
+  "sourceCoverage": {
+    "semanticFiles": 6,
+    "selectedFiles": 6,
+    "fullFiles": 0,
+    "productSemanticLines": 265,
+    "testSemanticLines": 71,
+    "allSemanticLines": 336,
+    "allDisplayedLines": 713,
+    "hashOnlyFiles": 2,
+    "instructionHashPins": 2
+  },
+  "sourcePinsAtEnd": 10,
+  "sourcePinByteChanges": 0,
+  "historySetChanges": {
+    "added": 0,
+    "removed": 0,
+    "byteChanged": 1
+  },
+  "metadataFirstDiagnostics": "initial-pins.json and metadata-diagnostics.first.json preserve two optional fallback path misses, all exits0; history-first.log/exit preserve first scanner run exit0. No product failure.",
+  "limits": [
+    "No theme selection click/storage mutation/render, fixture, native/theme/audio/import/remove action invoked.",
+    "Test171-line display is not171semantic lines; only71 ordinary intent lines counted, two declarations never executed.",
+    "No whole362-line Appearance semantic claim; only166 ordinary semantic lines, with333display/nav.",
+    "No global version/Git verification, no history novelty proof, and no runtime fix/current-state conclusion."
+  ]
+}

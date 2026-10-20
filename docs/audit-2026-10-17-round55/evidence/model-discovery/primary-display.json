@@ -1,0 +1,12 @@
+{
+  "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+  "bytes": 3492,
+  "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+  "displayRange": [
+    1,
+    99
+  ],
+  "purpose": "ordinary model projection; SDK/protocol/process/config access code incidental display only, not executed or certified",
+  "beforeReadPinReference": "initial-pins.json",
+  "displayAt": "2026-10-17T18:27:28.149140+00:00"
+}

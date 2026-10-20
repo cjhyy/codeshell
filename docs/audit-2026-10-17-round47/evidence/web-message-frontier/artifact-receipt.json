@@ -1,0 +1,121 @@
+{
+  "capturedUTC": "2026-10-17T15:40:22.528818+00:00",
+  "scope": "Final prep59 author artifacts. Receipt itself excluded to avoid recursion. No other paths modified.",
+  "files": [
+    {
+      "path": "artifact-checks.json",
+      "bytes": 1343,
+      "sha256": "62c65eb631b62f75f6f29c97aa17bf5743eb32fa63e23d87070e253a0f9a6b16"
+    },
+    {
+      "path": "body-initial-pins.json",
+      "bytes": 585,
+      "sha256": "d14b2bcaaa36a7db09e138ec2f5f0c9e8d89557d97c64b8bca628b95ac818cc0"
+    },
+    {
+      "path": "build-final-metadata.py",
+      "bytes": 8824,
+      "sha256": "667b0c39f2ddbf1b04dcbf36cb8e6d25db42d39049a62f15e42c933f914f3049"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 898,
+      "sha256": "613ae64cba2d911a168750dca65ccba052018357e00b41e2e7a144baeb428dfa"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 2071,
+      "sha256": "43884802ef046c92ea9534ba024cad4672ba17d9c2a93a35553a2b1dc66f43ae"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2486,
+      "sha256": "af7a4e5c1dec94789465cf451824306fbc4d95d4924769232f98762ba3839294"
+    },
+    {
+      "path": "history-cause-selected.json",
+      "bytes": 4960,
+      "sha256": "3d436d47506547434cdbe488893c68f3efb78d5ae43036ef1e33602c25c6d325"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 165979,
+      "sha256": "cd4537e869a7f16d62d71686439effe4f8d49a08a6470020a043ebac57b2f2a1"
+    },
+    {
+      "path": "history-display-causes.json",
+      "bytes": 63997,
+      "sha256": "cc6ee0416d2e23e55c77bdf3f94ef70e806a6eaa12a05edfba883a930fd990b2"
+    },
+    {
+      "path": "history-filename-scope-selected.json",
+      "bytes": 50091,
+      "sha256": "bd163d4eef1867a8cf2d68baeea6b9a9dd911bde5eb62b6348b13325f65fc312"
+    },
+    {
+      "path": "history-gate-selected.json",
+      "bytes": 6782,
+      "sha256": "a0f97df18af6dccbdd8a2cfa12dd4279cbad07dd4eac0a1cb908f47e5ed93463"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 917216,
+      "sha256": "ee315f0d84e7044a4f99e8680d0c05257133a7925de26bcaaeae550510794920"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 270160,
+      "sha256": "8ef6e0f082ec6e8985325ca96bc4850df8aae4610cf9aa92a63d35dd50a7b3b3"
+    },
+    {
+      "path": "history.json",
+      "bytes": 918476,
+      "sha256": "2fe5857d259b74e147bd6f139d5e228686e4d010f74dd8ea8e1eda012ca9a45b"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1051,
+      "sha256": "615fd9b643ccd89a6bb1ffb85b35f2171cbe61cc2005ca241fc8d2ba1e5cf15f"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 1153,
+      "sha256": "9ad1d2aaa879e39495d39a728cb5d9e5cc0fce0c9317c3b014f0ac5de96c4f17"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5665,
+      "sha256": "0b8b392f53414293863efd31b346304d751031aa7cc203e28a2cbd01ac4f367b"
+    },
+    {
+      "path": "scan-display-causes.py",
+      "bytes": 2484,
+      "sha256": "8f6cd7054216c701504a79c14378b808448252acc04fbaea4d40b75462b97b24"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5568,
+      "sha256": "99716ed35dc3bd4b34cc9339134bbed193a02023cab7c0c43c695a46cdd4c4e6"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 36469,
+      "sha256": "b0dcc53b637121807517474e01ee2ee8b0bc326344177a67aaa804ac8c76656e"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 13259,
+      "sha256": "ae862a2e9372bd5df41686c5f5583c0817499be44f4c7e8a58ea4e41c243db95"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 511,
+      "sha256": "b8995dc9e47c219e8643640c52495776bf4b75dc352e638595ce557a9107ec8a"
+    }
+  ],
+  "artifactCountExcludingReceipt": 22,
+  "totalFilesIncludingReceipt": 23,
+  "sourcePins": 7,
+  "productRuns": 0,
+  "gitCommands": 0
+}

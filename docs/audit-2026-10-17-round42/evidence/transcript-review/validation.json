@@ -1,0 +1,54 @@
+{
+  "mode": "Independent pure static ordinary StreamEvent/transcript/display review and filesystem metadata",
+  "productExecutions": 0,
+  "productImports": 0,
+  "helpersOrLanguageFixturesEvaluated": 0,
+  "testsExecuted": 0,
+  "testSourceLinesRead": 0,
+  "BufferTimerPromiseFixtures": 0,
+  "ReactTuiRendererNativeRealStreamModelNetworkStateIdentityPermissionExperiments": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round44-transcript-review",
+  "productRuns": [],
+  "metadataRuns": [
+    {
+      "name": "fresh full3696 history gate",
+      "sessionId": 76179,
+      "sameHandleExitCode": 0
+    },
+    {
+      "name": "precise same-cause full3696 value/paragraph scan",
+      "sessionId": 97304,
+      "sameHandleExitCode": 0
+    }
+  ],
+  "negativeMetadataLookupExit1": {
+    "toolChunk": "ba49cb",
+    "detail": "No matches in Desktop App/MessageStream; wrong ambiguous App candidate hash-only. Correct TUI consumers separately pinned before read. Not product or oldnative rerun."
+  },
+  "metadataExceptionFailures": 0,
+  "metadataOutputTruncations": 0,
+  "sourceCounts": {
+    "semanticProductFiles": 10,
+    "fullFiles": 1,
+    "selectedFiles": 9,
+    "productSemanticLines": 479,
+    "testSemanticLines": 0,
+    "historicalDocReadLinesSeparate": 66,
+    "hashOnlyNavigationProductFiles": 7,
+    "allProductBytePins": 17,
+    "instructionHashChecks": 2,
+    "displayedProductLinesIncludingNav": 799
+  },
+  "all17ProductPinsStable": true,
+  "authorArtifactsIncludingReceipt": 27,
+  "authorReceiptRows": 26,
+  "authorSourceHashOnlyCheckRows": 20,
+  "authorSourceByteChecksAddSemanticLines": false,
+  "historyInitialFinishChangedFiles": 0,
+  "historyIncludedPathSetSame": true,
+  "historicalPassesBorrowed": false,
+  "oldFailedDirectionsReopened": false,
+  "parentReportReadOnlyAfterDeclaredFreezeAndOwnSourceOpinion": true
+}

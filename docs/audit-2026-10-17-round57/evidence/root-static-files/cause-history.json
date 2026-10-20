@@ -1,0 +1,553 @@
+{
+  "historyFiles": 5676,
+  "count": 66,
+  "cap": 100,
+  "hits": [
+    {
+      "document": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "location": "/hits/history_identity/27/context",
+      "context": "ire` 保留完整评论，但 `extractAnnotations` 按行解析，只把 `评论:` 当作单行字段。第二行无冒号被丢掉，第三行变成 locator `{ key: \"reason\", value: \"该字段是评论内容\" }`；显示评论只剩 `第一行说明`。\n- 影响：历史消息里的用户评论被截断/误分类，用户复核先前要求时看到不完整甚至错误的定位信息。模型实际收到的 wire 保留全文，因此不声称请求文本或磁盘数据已丢失。\n- 证据：`evidence/ui-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/to",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/review-aggregate.md",
+      "location": 11,
+      "context": "- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round15/documents.md",
+      "location": 9,
+      "context": "源码在通用文本解码之前，只比较起始 `PK` 或 `%P` 两个字节，满足就抛出 `Unsupported uploaded document format`。因此静态推导上述文字会进入拒绝分支，增加首行换行、改变大小写或换成其他普通前缀则不会满足该条件。该推导**尚未执行真实 parseDocument**，没有已观测的错误输出、成功对照或用户上传事实，不能作为本轮确认缺陷计数。预期是支持范围内的普通 UTF-8 文本可提取原文；真正不支持的二进制格式仍应拒绝。候选只涉及格式分类过宽，不涉及权限、原件修改、解析器隔离或安全绕过。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round15/documents.md",
+      "location": 11,
+      "context": "静态生产链：[parser-entry.ts:108](../../packages/core/src/sources/documents/parser-entry.ts:108) 把解码后的字节和 filename 交给 parseDocument；[index-store.ts:122](../../packages/core/src/sources/documents/index-store.ts:122) 等待 parser 结果才构建索引。本轮未启动入口、worker、完整 ReadSource 或 UI，因此不声称这些层已经实际返回错误。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "location": "/hits/identity_cache/18/context",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round15/migration.md",
+      "location": 30,
+      "context": "e.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "location": "/hits/github-suffix/25/context",
+      "context": "e.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。\n\nmetadata 查询有三次失败：猜历史 fixture / runner 环境模块路径，以及首次测试通过后可选的 Node root semver packag",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/selected-history-contexts.json",
+      "location": "/matches/8/context",
+      "context": "e.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。\n\nmetadata 查询有三次失败：猜历史 fixture / runner 环境模块路径，以及首次测试通过后可选的 Node root semver packag",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/selected-history-contexts.json",
+      "location": "/actualInspected/4/context",
+      "context": "e.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。\n\nmetadata 查询有三次失败：猜历史 fixture / runner 环境模块路径，以及首次测试通过后可选的 Node root semver packag",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round34/README.md",
+      "location": 3,
+      "context": "本批 **0新增正式问题、1静态候选 UTF8-R34-C1/P3、0新关联**。候选：小于16KiB的增量输出若停在UTF8字符中间，直接解码并推进全部byte游标，下一次读取可能无法重组该字符。真实BashOutput允许对仍运行进程peek；尚未观察当前宿主的分块/peek时序，未升级formal、未修产品。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.first.md",
+      "location": 7,
+      "context": "静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观察真实宿主chunk/peek时序，没有输出/Buffer/语言fixture。保留P3候选，未升级formal。完整snapshot仍可能在原始bytes保留后恢复字符，因此不声称磁盘损坏、原始buffer永久丢失或每次输出必错。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "location": 7,
+      "context": "静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观察真实宿主chunk/peek时序，没有输出/Buffer/语言fixture。保留P3候选，未升级formal。完整snapshot仍可能在原始bytes保留后恢复字符，因此不声称磁盘损坏、原始buffer永久丢失或每次输出必错。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "location": "/hits/utf8-case/0/context",
+      "context": "# 第34批：缓存、版本与UTF8增量输出\n\n本批 **0新增正式问题、1静态候选 UTF8-R34-C1/P3、0新关联**。候选：小于16KiB的增量输出若停在UTF8字符中间，直接解码并推进全部byte游标，下一次读取可能无法重组该字符。真实BashOutput允许对仍运行进程peek；尚未观察当前宿主的分块/peek时序，未升级formal、未修产品。\n\n- [Root候选与限制](evidence/utf8-frontier/proposal.md)、[独立UTF8线索](evidence/utf8-review/review.md)：独立review保留未分类强度，Root单独记录为候选。普通完整buffer的safe-cut helper没有新反例。\n- [memoize](evidence/memoize-frontier/review.md)、[semver](evidence/semver-frontier/proposal.md)、[renderer状态/cache](evidence/renderer-status-frontier/report.md)：同版本旧覆盖或有限普通合同复核，均无新增项；task-sanitizer仅hash-only。\n\n冻结父提交 `40d79ff2190a98aa31067eb07006099c2726b21a`，原prep4be/646f上下文与2",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "location": "/hits/utf8-case/7/context",
+      "context": "选是邻接小burst尾部，不把NaN/分数cap/任意invalid Buffer当普通输入。\n\nBashOutput源码明确允许STILL-RUNNING on-demand peek，默认incremental直连manager.readOutput。child stdout/stderr的data listener把原始Buffer直接write给RingFile；内存tail按原byte合并。reader从绝对offset取当前尾部，只有长度大于16KiB才调用safe-cut；小burst直接toString(utf8)，再把本次全部bytes加入agentReadOffset。\n\n静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观察真实宿主chunk/peek时序，没有输出/Buffer/语言fixture。保留P3候选，未升级formal。完整snap",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "location": "/hits/utf8-case/8/context",
+      "context": "选是邻接小burst尾部，不把NaN/分数cap/任意invalid Buffer当普通输入。\n\nBashOutput源码明确允许STILL-RUNNING on-demand peek，默认incremental直连manager.readOutput。child stdout/stderr的data listener把原始Buffer直接write给RingFile；内存tail按原byte合并。reader从绝对offset取当前尾部，只有长度大于16KiB才调用safe-cut；小burst直接toString(utf8)，再把本次全部bytes加入agentReadOffset。\n\n静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观察真实宿主chunk/peek时序，没有输出/Buffer/语言fixture。保留P3候选，未升级formal。完整snap",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "location": "/hits/incremental-tail/0/context",
+      "context": "# 第34批：缓存、版本与UTF8增量输出\n\n本批 **0新增正式问题、1静态候选 UTF8-R34-C1/P3、0新关联**。候选：小于16KiB的增量输出若停在UTF8字符中间，直接解码并推进全部byte游标，下一次读取可能无法重组该字符。真实BashOutput允许对仍运行进程peek；尚未观察当前宿主的分块/peek时序，未升级formal、未修产品。\n\n- [Root候选与限制](evidence/utf8-frontier/proposal.md)、[独立UTF8线索](evidence/utf8-review/review.md)：独立review保留未分类强度，Root单独记录为候选。普通完整buffer的safe-cut helper没有新反例。\n- [memoize](evidence/memoize-frontier/review.md)、[semver](evidence/semver-frontier/proposal.md)、[renderer状态/cache](evidence/renderer-status-frontier/report.md)：同版本旧覆盖或有限普通合同复核，均无新增项；task-sanitizer仅hash-only。\n\n冻结父提交 `40d79ff2190a98aa31067eb070",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "location": "/hits/incremental-tail/1/context",
+      "context": "# 第34批：缓存、版本与UTF8增量输出\n\n本批 **0新增正式问题、1静态候选 UTF8-R34-C1/P3、0新关联**。候选：小于16KiB的增量输出若停在UTF8字符中间，直接解码并推进全部byte游标，下一次读取可能无法重组该字符。真实BashOutput允许对仍运行进程peek；尚未观察当前宿主的分块/peek时序，未升级formal、未修产品。\n\n- [Root候选与限制](evidence/utf8-frontier/proposal.md)、[独立UTF8线索](evidence/utf8-review/review.md)：独立review保留未分类强度，Root单独记录为候选。普通完整buffer的safe-cut helper没有新反例。\n- [memoize](evidence/memoize-frontier/review.md)、[semver](evidence/semver-frontier/proposal.md)、[renderer状态/cache](evidence/renderer-status-frontier/report.md)：同版本旧覆盖或有限普通合同复核，均无新增项；task-sanitizer仅hash-only。\n\n冻结父提交 `40d79ff2190a98aa31067eb07006099c2726b21a`，原prep4be/646f上下文与2988/3063历史时点原样保留。正式history3137含冻结33，74新增文档单独补查。30唯一source/metadata指纹、29语义rows、4hash-only、1selected-JSON metada",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "location": "/hits/incremental-tail/10/context",
+      "context": "选是邻接小burst尾部，不把NaN/分数cap/任意invalid Buffer当普通输入。\n\nBashOutput源码明确允许STILL-RUNNING on-demand peek，默认incremental直连manager.readOutput。child stdout/stderr的data listener把原始Buffer直接write给RingFile；内存tail按原byte合并。reader从绝对offset取当前尾部，只有长度大于16KiB才调用safe-cut；小burst直接toString(utf8)，再把本次全部bytes加入agentReadOffset。\n\n静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "location": "/hits/incremental-tail/11/context",
+      "context": "ata listener把原始Buffer直接write给RingFile；内存tail按原byte合并。reader从绝对offset取当前尾部，只有长度大于16KiB才调用safe-cut；小burst直接toString(utf8)，再把本次全部bytes加入agentReadOffset。\n\n静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观察真实宿主chunk/peek时序，没有输出/Buffer/语言fixture。保留P3候选，未升级formal。完整snapshot仍可能在原始bytes保留后恢复字符，因此不声称磁盘损坏、原始buffer永久丢失或每次输出必错。\n\n[Node Buffer文档](https://nodejs.org/api/buffer.html#buftostringencoding-start-end)说明UTF8错误序列替换，[StringDecoder文档](https://nodejs.org/api/string_decoder.html)说明跨writes缓存不完整尾字符。只读资料为v26.12.0，不验证安装Bun/Node版本；未执行资料示例。独立review的同一邻接线索仍保留其未分类强度，Root单独拥有候选分类。\n\n[source manifest](source-manifest.json)5实际semantic paths482行=431product+51tests（5现有test声明0run）。Background locator早于pin，initialSemanticReadSha256保留null；完整ring188虽读取FS代码文本，仅用于内存byte生产链，不声称审验权限/native或文件实效。too",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "location": "/hits/incremental-tail/12/context",
+      "context": "选是邻接小burst尾部，不把NaN/分数cap/任意invalid Buffer当普通输入。\n\nBashOutput源码明确允许STILL-RUNNING on-demand peek，默认incremental直连manager.readOutput。child stdout/stderr的data listener把原始Buffer直接write给RingFile；内存tail按原byte合并。reader从绝对offset取当前尾部，只有长度大于16KiB才调用safe-cut；小burst直接toString(utf8)，再把本次全部bytes加入agentReadOffset。\n\n静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "location": "/hits/incremental-tail/13/context",
+      "context": "ata listener把原始Buffer直接write给RingFile；内存tail按原byte合并。reader从绝对offset取当前尾部，只有长度大于16KiB才调用safe-cut；小burst直接toString(utf8)，再把本次全部bytes加入agentReadOffset。\n\n静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观察真实宿主chunk/peek时序，没有输出/Buffer/语言fixture。保留P3候选，未升级formal。完整snapshot仍可能在原始bytes保留后恢复字符，因此不声称磁盘损坏、原始buffer永久丢失或每次输出必错。\n\n[Node Buffer文档](https://nodejs.org/api/buffer.html#buftostringencoding-start-end)说明UTF8错误序列替换，[StringDecoder文档](https://nodejs.org/api/string_decoder.html)说明跨writes缓存不完整尾字符。只读资料为v26.12.0，不验证安装Bun/Node版本；未执行资料示例。独立review的同一邻接线索仍保留其未分类强度，Root单独拥有候选分类。\n\n[source manifest](source-manifest.json)5实际semantic paths482行=431product+51tests（5现有test声明0run）。Background locator早于pin，initialSemanticReadSha256保留null；完整ring188虽读取FS代码文本，仅用于内存byte生产链，不声称审验权限/native或文件实效。too",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "/hits/source_path/59/context",
+      "context": "-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "/hits/source_filename/63/context",
+      "context": "trip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "/hits/format_contract/41/context",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source-only 已变化状态与本批 bug/candidate/related 分账，runtimeRetested=false。旧实验或其他任务的 UI/native 验收没有被借算为本批证据。\n- 根 source-manifest 的 **62 个唯一 source/contract pins**逐条重新从冻结 Git blob读取：bytes、SHA-256 和当前文件相符，",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "/hits/format_contract/156/context",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "/rows/8/context",
+      "context": "-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "/rows/16/context",
+      "context": "trip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/utf8-source-refresh/history.json",
+      "location": "/hits/exact-candidate/0/excerpt",
+      "context": "本批 **0新增正式问题、1静态候选 UTF8-R34-C1/P3、0新关联**。候选：小于16KiB的增量输出若停在UTF8字符中间，直接解码并推进全部byte游标，下一次读取可能无法重组该字符。真实BashOutput允许对仍运行进程peek；尚未观察当前宿主的分块/peek时序，未升级formal、未修产品。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/utf8-source-refresh/history.json",
+      "location": "/hits/peek-boundary/1/excerpt",
+      "context": "本批 **0新增正式问题、1静态候选 UTF8-R34-C1/P3、0新关联**。候选：小于16KiB的增量输出若停在UTF8字符中间，直接解码并推进全部byte游标，下一次读取可能无法重组该字符。真实BashOutput允许对仍运行进程peek；尚未观察当前宿主的分块/peek时序，未升级formal、未修产品。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/utf8-source-refresh/history.json",
+      "location": "/hits/peek-boundary/10/excerpt",
+      "context": "静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观察真实宿主chunk/peek时序，没有输出/Buffer/语言fixture。保留P3候选，未升级formal。完整snapshot仍可能在原始bytes保留后恢复字符，因此不声称磁盘损坏、原始buffer永久丢失或每次输出必错。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/utf8-source-refresh/history.json",
+      "location": "/hits/peek-boundary/12/excerpt",
+      "context": "静态条件：整体有效UTF8流的一个多字节字符跨两个data event，peek落在两部分之间。第一部分尚不完整却被解码并消耗，第二部分到达后，下一incremental read从已推进游标开始，无法重组原字符。这里是源码与API语义推导，没有观察真实宿主chunk/peek时序，没有输出/Buffer/语言fixture。保留P3候选，未升级formal。完整snapshot仍可能在原始bytes保留后恢复字符，因此不声称磁盘损坏、原始buffer永久丢失或每次输出必错。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+      "location": "/hits/3-path/45/context",
+      "context": "e.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。\n\nmetadata 查询有三次失败：猜历史 fixture / runner 环境模块路径，以及首次测试通过后可选的 Node root semver package metadata resolve，原始",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+      "location": "/hits/3-path/51/context",
+      "context": "e.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。\n\nmetadata 查询有三次失败：猜历史 fixture / runner 环境模块路径，以及首次测试通过后可选的 Node root semver packag",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+      "location": "/hits/3-path/52/context",
+      "context": "e.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。\n\nmetadata 查询有三次失败：猜历史 fixture / runner 环境模块路径，以及首次测试通过后可选的 Node root semver packag",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+      "location": "/hits/3-path/53/context",
+      "context": "e.ts`、`normalizeManifest.ts`、相关 migration/source tests 和 installer manifest types；选读 builtin catalog、manager/schema、CLI 和 import dependencies。具体文件哈希和阅读范围见 [source manifest](evidence/migration-source-manifest.json)，列出的依赖文件不代表完整模块审阅。`normalizePluginManifest` 的导出实现带 manifest/asset 文件读写，超出本轮纯内存元数据范围，因此仅静态核验，没有运行归一化、文件读写或安装。没有测试真实 UI/CLI/Engine、远端 Git/npm、资产解码、普通配置写盘、权限/认证/安全策略或完整 package/repo suite，也没有 build/typecheck/lint。\n\nmetadata 查询有三次失败：猜历史 fixture / runner 环境模块路径，以及首次测试通过后可选的 Node root semver packag",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+      "location": "/hits/toolDisplay/63/excerpt",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+      "location": "/hits/toolDisplay/110/excerpt",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source-only 已变化状态与本批 bug/candidate/related 分账，r",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+      "location": "/hits/toolDisplay/115/excerpt",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+      "location": "/commentbox/3/text",
+      "context": "生产 `encodeAnchorsForWire` 保留完整评论，但 `extractAnnotations` 按行解析，只把 `评论:` 当作单行字段。第二行无冒号被丢掉，第三行变成 locator `{ key: \"reason\", value: \"该字段是评论内容\" }`；显示评论只剩 `第一行说明`。\n- 影响：历史消息里的用户评论被截断/误分类，用户复核先前要求时看到不完整甚至错误的定位信息。模型实际收到的 wire 保留全文，因此不声称请求文本或磁盘数据已丢失。\n- 证据：`evidence/ui-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/Mess",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round49/evidence/title-gate/history-contexts.json",
+      "location": "/oldCause/61/context",
+      "context": "析器隔离或安全绕过。\n\n静态生产链：[parser-entry.ts:108](../../packages/core/src/sources/documents/parser-entry.ts:108) 把解码后的字节和 filename 交给 parseDocument；[index-store.ts:122](../../packages/core/src/sources/documents/index-store.ts:122) 等待 parser 结果才构建索引。本轮未启动入口、worker、完整 ReadSource 或 UI，因此不声称这些层已经实际返回错误。\n\n查重：[完整收据](evidence/docinput-dedup.json) 覆盖本轮以外真实 `docs/`、`bugs/`（以及存在的 archive/_archive 路径）库存：**1,825 文件 = 1,102 Markdown + 723 JSON；281,762 个递归 JSON 叶子，0 解析错误**。对 parseDocument/Office、二进制前缀与普通文本、换行/phonetic、context-summary 分组检索。[prefix 最近匹配上下文](evidence/docinput-prefix-dedup-context.json) 保存了超长 JSON 叶子中实际命中位置附近文字，21 处匹配均为其他领域或覆盖描述，未找到同一文本前缀误判条目；这是关键词和人工核对的查重结论，不是全仓不存在重复问题的证明。\n\n## 首次前失败与未执行边界\n\n[首次 preflight 响应转录](evidence/docinput-preflight-skip.md) 记录 Python metadata 命令 exit 1 / AssertionError。命令仅检查源码文件和**猜测",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round51/evidence/time-full-gate/history-contexts.json",
+      "location": "/contexts/time-format-old-cause/5/excerpt",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source-only 已变化状态与本批 bug/candidate/related 分账，runtimeRetested=false。旧实验或其他任务的 UI/native 验收没有被借算为本批证据。\n- 根 source-manifest 的 **62 个唯一 source/contract pins**逐条重新从冻结 Git blob读取：bytes、SHA-256 和当前文件相符，0 错误。它明确是选定 source ",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round51/evidence/time-full-gate/history-contexts.json",
+      "location": "/contexts/time-format-old-cause/6/excerpt",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round51/evidence/time-full-gate/history-contexts.json",
+      "location": "/contexts/time-format-old-cause/9/excerpt",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source-only 已变化状态与本批 bug/candidate/related 分账，runtimeRetested=false。旧实验或其他任务的 UI/native 验收没有被借算为本批证据。\n- 根 source-manifest 的 **62 个唯一 source/contract pins**逐条重新从冻结 Git blob读取：bytes、SHA-256 和当前文件相符，",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round51/evidence/time-full-gate/history-contexts.json",
+      "location": "/contexts/time-format-old-cause/10/excerpt",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round51/evidence/time-full-gate/history-contexts.json",
+      "location": "/contexts/time-format-old-cause/12/excerpt",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round51/evidence/time-full-gate/history-contexts.json",
+      "location": "/contexts/time-format-old-cause/15/excerpt",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source-only 已变化状态与本批 bug/candidate/related 分账，r",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round51/evidence/time-full-gate/history-contexts.json",
+      "location": "/contexts/time-format-old-cause/16/excerpt",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round52/evidence/character-gate-self-review/checks.first.json",
+      "location": "/originalR7Proof/originalMarkdown/line9",
+      "context": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round52/evidence/character-gate-self-review/checks.json",
+      "location": "/originalR7Proof/originalMarkdown/line9",
+      "context": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/canonical-gate-read.json",
+      "location": "/uncappedMarkdownContexts/1/excerpt",
+      "context": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/history-contexts.json",
+      "location": "/contexts/basename/51/excerpt",
+      "context": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/scope-decision.json",
+      "location": "/originalMarkdownFullQualifier/paragraphs/1/text",
+      "context": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round52/evidence/root-image-compress/report.md",
+      "location": 3,
+      "context": "冻结源码 `00e47e070fdadd6e5882330ba3b0d3962a93a47f`。提出 **1项P3静态确认候选 IMAGE-R103-C1**，由Root统一正式编号；独立104复核不是第二个问题。未执行产品、helper、fixture、测试、DOM/canvas、图片解码、timer、模型、native或业务网络。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/web-format-gate/history-gate.json",
+      "location": "/directSourceRows/144/row/context",
+      "context": "-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/filename/5/text",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/filename/52/text",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/filename/92/text",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/filename/95/text",
+      "context": "/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/oldCause/4/text",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/oldCause/32/text",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/oldCause/64/text",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/oldCause/85/text",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/oldCause/86/text",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "location": "/contexts/oldCause/87/text",
+      "context": "和测试体未进入；源码候选没有实际结果或控制通过的主张。未执行的 cache/semver/toolDisplay fixture 单独记 `attempts=0`，没有对应 launcher/首日志、没有把预期算成观察结果。现有 Core format.test.ts 只有六个 `formatDuration` 案例，不能证明 intl、其他格式器、Slice 或 cache/semver 已动态验证；README 和根 validation 已明确这一限制。\n- 四个 candidate ID 与分区标题/根表格/JSON 相符，全部不定级、不列正式。Slice 两项和普通 XML 一项保持静态；BYTES 项只取得自造 SOF3 序列被实际纯 probe 拒绝的 characterization，不具有独立解码有效性或普通 downstream lossless 支持合同。10 项正常内存 byte controls 和 1 项候选拒绝测试都不能把后者升格为已确认 bug。\n- related 中 Core toolDisplay 的 UTF-16 截断只关联旧 DESKTOP-R12-01 家族；没有把 Desktop 修复当成 Core helper 已修复或已验证。addressed-sources 的两条旧 finding 分别指向 `9925b3282` 和 `3d6a1ec35`，与 baseline-refresh 的实际 diff/八条 incoming commits 相符；source",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round7/root-metadata.md",
+      "location": 9,
+      "context": "完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer 的 `builtin-character-themes.ts`、`theme-packs.ts`。源代码明确限制 manifest HSL 字符串形状、资源字段、PCM WAV 格式和图像尺寸；这些静态 shape/字节识别函数没有足够证据晋升新 bug。没有安装主题、读取真实用户 registry、解码或播放媒体，也没有开展安全、权限或 native 实验。renderer theme 应用调用方的首个导航搜索被 zsh 未匹配 glob 终止，原命令没有重试，应用投影方向不在本批动态覆盖内：[工具响应转录](evidence/root-static-search-skip.md)。",
+      "valueTruncated": false
+    },
+    {
+      "document": "docs/audit-2026-10-17/desktop-data.md",
+      "location": 27,
+      "context": "- 证据：`evidence/ui-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。",
+      "valueTruncated": false
+    }
+  ],
+  "matchedFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "bytes": 457965,
+      "sha256": "18629db3ab4ca36ab600c9742cb23f7835d25cfdea3a055aeb21ba9f4743f977"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/review-aggregate.md",
+      "bytes": 4747,
+      "sha256": "57f9fdc78f39556d1b8e79aa88a927c64cb8e33c061416c78abe34ac0f5686b4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/documents.md",
+      "bytes": 4961,
+      "sha256": "5651ef7737a98944ae24e7acff5c7197175f962cbbc6556d155a7157f1e3112f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "bytes": 814193,
+      "sha256": "7b2a3423fc1d8a4bdf3a2246d2d87541c6eb979c3fe8ff1e7c8d3784d4586968"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/migration.md",
+      "bytes": 7279,
+      "sha256": "5eefb90660b498716c83c12140d0c0723687a516f79457e7705f7fa2aac5f718"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "bytes": 790761,
+      "sha256": "4532310eda13c2e7f770fb61950737eb9251092ef446e7022ad11e5f348cbacb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/selected-history-contexts.json",
+      "bytes": 79645,
+      "sha256": "26e6be05b4bd9d2ce8c8a15c5e6437a760ee47bace5c72ee54c4b2627408d1b9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/README.md",
+      "bytes": 1686,
+      "sha256": "9ffbd2a5142f8e7b63e6233ec4868fa07052a98a47c95be9d01a9319430ffec1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.first.md",
+      "bytes": 2444,
+      "sha256": "6c7a4d8c46065ca5d8175766aeaa420d9c8e89e3eeff25130534a1a4ce66f4e7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/root-history.json",
+      "bytes": 769682,
+      "sha256": "56967f958cc59fe88d8923f46c00c1d20593a72dbe9a55a67eec8fad5c5fa5ae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "bytes": 248147,
+      "sha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "bytes": 59328,
+      "sha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/utf8-source-refresh/history.json",
+      "bytes": 712864,
+      "sha256": "23998c34e21a76313c4d277a4b0f55ad58824493d3693bbf2690a1f5fbc34672"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/selection-frontier/history.json",
+      "bytes": 820963,
+      "sha256": "441f44954dd52babf3e6f2353347b9473bce32d71b03f0d3ada487ae7d1474f3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history.json",
+      "bytes": 834246,
+      "sha256": "d7f5b39ed23b4d5ec4fdc6f199e53150465cf0190f38a664b3a159fdafd630d5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+      "bytes": 240532,
+      "sha256": "24521cc48937990df3f7354716a15dc0045eab96fc171ef7227ecbd544437cc3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/title-gate/history-contexts.json",
+      "bytes": 288500,
+      "sha256": "3fea8b39395a6dd538123850446f667e4131725c038da3acc2b4ef0edf17cc83"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/time-full-gate/history-contexts.json",
+      "bytes": 110808,
+      "sha256": "36a7faad44efd3c5af826beeab862c565a6c3b1ec80e98068e9ceb026053e076"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/character-gate-self-review/checks.first.json",
+      "bytes": 15192,
+      "sha256": "7d844df5854b24b9ff6713b74cc352f8f621a7978936e2e0ada17e4ce50db691"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/character-gate-self-review/checks.json",
+      "bytes": 15520,
+      "sha256": "aa1ad3335b214ac00394079b1cf6211ce8c34b920bc61959cea4195d08c29dc0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/canonical-gate-read.json",
+      "bytes": 9390,
+      "sha256": "dd58495158fc17a719474a38935a99d25ee81a41e82adff5f48de578418c10cd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/history-contexts.json",
+      "bytes": 53428,
+      "sha256": "4a7b85c84736b3eb0868da7d0a0dd2d05ec6b192c66aee8dd0b1992725f1761b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/scope-decision.json",
+      "bytes": 3188,
+      "sha256": "ac36568c65e6d5c515bb3780919f022a4977826d3cb9a3591efe1bf8fe0911a8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/root-image-compress/report.md",
+      "bytes": 2710,
+      "sha256": "e651a8de8c4c89541f52f5babbaecd20b6e9d4185d23e983572b58cbd525c1cd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/web-format-gate/history-gate.json",
+      "bytes": 863148,
+      "sha256": "67f6788d3c827da0e4e96a11b22a2319a22d448e04f6d4dca31aa6bdcdf4202e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/windows-path-review/history-contexts.json",
+      "bytes": 258483,
+      "sha256": "e2f7c8ae24c70d2aa76822519c66e4dd59534e98f5a783a58bde7cced49c36af"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/root-metadata.md",
+      "bytes": 4033,
+      "sha256": "85293596049364a1b941e7e68be4b393f2a97e2d7bca14776ce34aecd01b2e75"
+    },
+    {
+      "path": "docs/audit-2026-10-17/desktop-data.md",
+      "bytes": 11245,
+      "sha256": "71e9ee030f1e0bb0945f67407051fff6238a58b8c054784dd81009af55988ce3"
+    }
+  ],
+  "errors": [],
+  "scope": "Specific static/mobile encoded URI old-cause machine navigation, not full semantic dedup. JSON value strings only, current57 excluded by original inventory.",
+  "productExecution": 0
+}

@@ -1,0 +1,15 @@
+{
+  "prepOnly": true,
+  "rootSuppliedContextShort": "42683054",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/markdown/stripMarkdown.ts",
+      "bytes": 1799,
+      "sha256": "461ef4477c3a2b94d424a5f3dd9238d96603cdbe6b0a1d495b9c5490b4314881",
+      "totalLines": 53,
+      "pinTimeUTC": "2026-10-17T13:35:46.195742+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    }
+  ]
+}

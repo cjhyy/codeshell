@@ -1,0 +1,130 @@
+{
+  "frozenUTC": "2026-10-17T15:30:53.232121+00:00",
+  "scope": "Exact /tmp/codeshell-audit-round55-conversation-settings only. Excludes receipt self. Original selection-boundary plus established authorized fallback.0 product/source/Git operations. Do not mutate after freeze.",
+  "files": [
+    {
+      "path": "history-contexts.json",
+      "bytes": 300640,
+      "sha256": "de6e053daa63b7abb148f1b6c3325ddb2edc79b64bf4392b6afc824d11d37a6f"
+    },
+    {
+      "path": "history-decisions.json",
+      "bytes": 3271,
+      "sha256": "7756424e86f685a5d718fd1059ec97e6a1e0b4ca921add8bdd7cfb54c76d0d65"
+    },
+    {
+      "path": "history-finish-check.json",
+      "bytes": 296,
+      "sha256": "a1de3316cbe2a2a122aa2f0766ba6479b3047782b592667844abc1f368bca829"
+    },
+    {
+      "path": "history-gate-selected.json",
+      "bytes": 19270,
+      "sha256": "5c667a23f8c525aa3d40a159b38a554eff8adbb25e67566a958932c7eb0a9302"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 900725,
+      "sha256": "f0004f13855ebb4b003a911f557ea5be97635c4763271bc8f23104c5081af4bb"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 265157,
+      "sha256": "6613cb240a98ed04abbb8116cf6e44721dcda1afaea50b7606efa9c614fe5c3c"
+    },
+    {
+      "path": "history.json",
+      "bytes": 901662,
+      "sha256": "7bfe5c4e8865bd7a69168896adf0740babb7e5e0d634b53a81fc5b07418a838e"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1107,
+      "sha256": "5f4b18170508a854d25c41811bf6937dbac2aeb5d9e4c8d43bd5ac34f69e87a4"
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 1266,
+      "sha256": "7660ea3b28ede01bf744bc9ccb2417ac3facba9e2241a200385608395f0d786f"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 547,
+      "sha256": "882552e7bed9bf3819d8c7337694ecc1b39198aac2489f19f2e5101eb55c0df0"
+    },
+    {
+      "path": "panel-consumer-initial-pins.json",
+      "bytes": 830,
+      "sha256": "c665d3711465819fcd30d83ec57b7509701c1afbc6b0b0e8e1212ed81310f792"
+    },
+    {
+      "path": "panel-history-contexts.json",
+      "bytes": 62197,
+      "sha256": "0c67e8ab3fd442d6f4b9c4014bbb695bd740ef41213b0b53f9f73a57ee7fa00d"
+    },
+    {
+      "path": "panel-history-contract-selected.json",
+      "bytes": 6317,
+      "sha256": "9d077a0e0afad42299ff522d77517dc88527a30853e33d793f064d4b4de43d16"
+    },
+    {
+      "path": "panel-history-gate-selected.json",
+      "bytes": 3591,
+      "sha256": "58f5c453afba0f4e1907ba337ab4f569909b1ca3c6ede4179a617e64df03b6e2"
+    },
+    {
+      "path": "panel-history-initial-pins.json",
+      "bytes": 906011,
+      "sha256": "e885ea71b7e987be2ba64574b92a49e29283d50b3312052e27357e12c91ab710"
+    },
+    {
+      "path": "panel-history-inventory.raw.txt",
+      "bytes": 269988,
+      "sha256": "97769c69e4933a3459420086d7a1b71312c4faa6dc244ea435789a0873737530"
+    },
+    {
+      "path": "panel-history.json",
+      "bytes": 901564,
+      "sha256": "ce841f3e3bec8e9d4620333310118e58604371c770c51b4db2aa543cdda7b47d"
+    },
+    {
+      "path": "panel-initial-pin.json",
+      "bytes": 531,
+      "sha256": "3cb485600ac58f86c9b82f29fb03b2a711d8b2237e421c18fbfe8903b6408dd4"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5827,
+      "sha256": "996f46854b5fbd6787063a38348f4e51d47787d64ad3db3bca865b64c8d89bd2"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5630,
+      "sha256": "58f4f36272e25d1ba5b2ef1b2b6ccd1385c986c8d2146a4df165b624490748e8"
+    },
+    {
+      "path": "scan-panel-history.py",
+      "bytes": 5574,
+      "sha256": "ceb58eff14d5dc1969c43e9440e8c321321f69e2f4e8dffa90b43468bd802b63"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 18533,
+      "sha256": "833a000676b185a54255215521b940f0002f068bfaf4073b5217dcd58371a808"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 10921,
+      "sha256": "91e9bff80b73ff631d843b71dec2042f1b5d4a64077f3ca6a8c6317f4a4d1c9b"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 607,
+      "sha256": "bd8c5b5b189c0831f217e1195c1a8f355e4c4cf1e147d6453917fcd7066e269e"
+    }
+  ],
+  "artifactCountExcludingSelf": 24,
+  "totalFilesIncludingSelf": 25,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

@@ -1,0 +1,36 @@
+{
+  "target": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+  "canonicalSameShaFullGateEstablished": false,
+  "canonicalRawObjectsRead": [
+    "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json#/files/176",
+    "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json#/files/485"
+  ],
+  "canonicalQualification": "Inventory/index no-full status is not a claim of never read. Original source-directed MD207–212 explicitly retained.",
+  "bodyDecision": "Targeted ordinary source progress in same leaf; no pointless fallback swap.",
+  "ownBoundedHistory": {
+    "matchedFiles": 52,
+    "counts": {
+      "json": 44,
+      "md": 8,
+      "strings": 330266,
+      "scalars": 512089,
+      "objects": 194561,
+      "arrays": 50572
+    },
+    "hits": {
+      "path": 11,
+      "sha256": 5,
+      "filename": 30,
+      "oldcause": 105
+    },
+    "capPerQuery": 50,
+    "actualCanonicalRawObjects": 2,
+    "compactRawPathObjectProjections": 6,
+    "compactFilenameLocators": 30,
+    "compactOldcauseLocators": 25,
+    "actualOldcauseBoundedWindows": 4,
+    "selectedPriorReportLines": 12,
+    "fullHistoryScan": false
+  },
+  "sharedHistory": "Root exact snapshot5433 included frozen54/excluded55+, target16path/SHA matched values. Only target projection read, input hash pinned; not independent all-history semantic review."
+}

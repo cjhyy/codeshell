@@ -1,0 +1,33 @@
+{
+  "mode": "pure static ordinary settings DTO and supported field retention review",
+  "productExecutions": 0,
+  "helperSchemaParserExecutions": 0,
+  "productImports": 0,
+  "testsExecuted": 0,
+  "existingTestDeclarationSyntaxRead": 10,
+  "lifecycleTestEachCasesListed": 13,
+  "languageFixturesEvaluated": 0,
+  "ReactBrowserDOMActions": 0,
+  "userConfigDirectoryOrSettingsAccess": 0,
+  "McpConnectionsServerActions": 0,
+  "nativeCLIProcessNetworkModelAuthCredentialPermissionExperiments": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier",
+  "metadataRuns": [
+    {
+      "name": "full dated history gate",
+      "sessionId": 30183,
+      "exitCode": 0
+    },
+    {
+      "name": "focused current inventory query",
+      "sessionId": 57435,
+      "exitCode": 0
+    }
+  ],
+  "metadataDiagnostics": "metadata-diagnostics.json retains source-free overbroad output truncation; raw first69-object capture kept separately, no all147-context semantic claim.",
+  "sourceInitialFinishStable": true,
+  "historicalPassesBorrowed": false,
+  "oldFailedDirectionsReopened": false
+}

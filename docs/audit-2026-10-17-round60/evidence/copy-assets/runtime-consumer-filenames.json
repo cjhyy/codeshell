@@ -1,0 +1,68 @@
+[
+  {
+    "command": [
+      "rg",
+      "--files",
+      "packages/core/src/prompt",
+      "-g",
+      "*.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/core/src/prompt/composer.sources.test.ts\npackages/core/src/prompt/composer.workspace.test.ts\npackages/core/src/prompt/composer-dynamic-context.test.ts\npackages/core/src/prompt/composer.profile.test.ts\npackages/core/src/prompt/composer.ts\npackages/core/src/prompt/section-loader.ts\npackages/core/src/prompt/composer-tool-listing.test.ts\npackages/core/src/prompt/section-cache.ts\npackages/core/src/prompt/instruction-scanner.test.ts\npackages/core/src/prompt/__tests__/composer-personalization.test.ts\npackages/core/src/prompt/__tests__/composer-instructions-compat.test.ts\npackages/core/src/prompt/subagent-reuse-guidance.test.ts\npackages/core/src/prompt/composer-system-reminder.test.ts\npackages/core/src/prompt/instruction-scanner.ts\npackages/core/src/prompt/sections/md.d.ts\n",
+    "stderr": "",
+    "scope": "Filename-only possible runtime consumer references; no body read."
+  },
+  {
+    "command": [
+      "rg",
+      "--files",
+      "packages/coding/src/prompt",
+      "-g",
+      "*.ts"
+    ],
+    "exitCode": 1,
+    "stdout": "",
+    "stderr": "",
+    "scope": "Filename-only possible runtime consumer references; no body read."
+  },
+  {
+    "command": [
+      "rg",
+      "--files",
+      "packages/tui/src/cli/commands/builtin/init"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/tui/src/cli/commands/builtin/init/index.ts\npackages/tui/src/cli/commands/builtin/init/templates/empty.md\npackages/tui/src/cli/commands/builtin/init/templates/create.md\npackages/tui/src/cli/commands/builtin/init/templates/migrate.md\npackages/tui/src/cli/commands/builtin/init/templates/improve.md\npackages/tui/src/cli/commands/builtin/init/templates/rules-scaffold-suffix.md\npackages/tui/src/cli/commands/builtin/init/detect.ts\n",
+    "stderr": "",
+    "scope": "Filename-only possible runtime consumer references; no body read."
+  },
+  {
+    "command": [
+      "rg",
+      "-l",
+      "prompt/sections|sections.*\\.md|\\.\\./data/|/data/",
+      "packages/core/src",
+      "-g",
+      "*.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/core/src/llm/model-fetcher.ts\npackages/core/src/llm/model-pool.ts\npackages/core/src/index.ts\npackages/core/src/cost-ledger/pricing.ts\npackages/core/src/preset/index.ts\npackages/core/src/onboarding.ts\npackages/core/src/utils/envUtils.ts\npackages/core/src/runtime/constrained-process/docker.ts\npackages/core/src/data/model-metadata.ts\npackages/core/src/data/static-catalogs.ts\npackages/core/src/links/remote.ts\npackages/core/src/links/operation-hooks.ts\npackages/core/src/cost-tracker.ts\npackages/core/src/links/remote-providers.test.ts\npackages/core/src/links/remote.test.ts\npackages/core/src/prompt/section-loader.ts\n",
+    "stderr": "",
+    "scope": "Filename-only possible runtime consumer references; no body read."
+  },
+  {
+    "command": [
+      "rg",
+      "-l",
+      "prompt/|\\.md|NOTICE.md|LICENSE-codex",
+      "packages/coding/src/prompt",
+      "packages/coding/src/tools/apply-patch",
+      "-g",
+      "*.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/coding/src/tools/apply-patch/types.ts\npackages/coding/src/tools/apply-patch/index.ts\npackages/coding/src/tools/apply-patch/atomicity.test.ts\n",
+    "stderr": "",
+    "scope": "Filename-only possible runtime consumer references; no body read."
+  }
+]

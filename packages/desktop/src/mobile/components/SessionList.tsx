@@ -4,12 +4,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import { useT } from "@/i18n";
 import type { MobileProjectMeta, MobileSessionMeta } from "@protocol";
-import { relativeTime, groupByProject, projectForCwd } from "@cjhyy/code-shell-web";
-
-function sameCwd(a?: string | null, b?: string | null): boolean {
-  const norm = (v?: string | null): string => (v ?? "").replace(/[/\\]+$/, "").toLowerCase();
-  return norm(a) === norm(b);
-}
+import {
+  relativeTime,
+  groupByProject,
+  projectForCwd,
+  sameProjectPath,
+} from "@cjhyy/code-shell-web";
 
 /** The desktop sessions the phone can open + drive, GROUPED BY PROJECT (cwd).
  *  When a project is selected (activeProjectCwd) only that project's sessions
@@ -48,14 +48,21 @@ export function SessionList({
   const { t, lang } = useT();
   const [creating, setCreating] = useState(false);
   const allGroups = groupByProject(sessions, projects, lang);
+  const selectedProject = activeProjectId
+    ? projects.find((project) => project.id === activeProjectId)
+    : projectForCwd(activeProjectCwd, projects);
   // When a project is selected, show only its group; otherwise show all (so the
   // screen is never empty on first load before a project is picked).
   const currentGroup = activeProjectCwd
-    ? allGroups.find(
-        (g) =>
-          (activeProjectId && g.projectId === activeProjectId) ||
-          sameCwd(g.cwd, activeProjectCwd) ||
-          sameCwd(projectForCwd(g.cwd, projects)?.path, activeProjectCwd),
+    ? allGroups.find((g) =>
+        selectedProject?.id && g.projectId
+          ? g.projectId === selectedProject.id
+          : sameProjectPath(g.cwd, activeProjectCwd, selectedProject) ||
+            sameProjectPath(
+              projectForCwd(g.cwd, projects)?.path,
+              activeProjectCwd,
+              selectedProject,
+            ),
       )
     : undefined;
   const groups = currentGroup ? [currentGroup] : activeProjectCwd ? [] : allGroups;
@@ -114,7 +121,11 @@ export function SessionList({
               onClick={() => onSelectProject(p.id ?? p.path)}
               className={cn(
                 "max-w-44 shrink-0 truncate rounded-full border px-2.5 py-1 text-[11px]",
-                (p.id && p.id === activeProjectId) || sameCwd(p.path, activeProjectCwd)
+                (
+                  p.id && activeProjectId
+                    ? p.id === activeProjectId
+                    : sameProjectPath(p.path, activeProjectCwd, p)
+                )
                   ? "border-primary bg-primary/15 text-foreground"
                   : "border-border/70 text-muted-foreground",
               )}

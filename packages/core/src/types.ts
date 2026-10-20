@@ -4,6 +4,24 @@
 
 import type { GoalConfig, GoalLifecycleV1, GoalTerminal } from "./goal/lifecycle.js";
 
+/** Trusted lifecycle metadata; never accepted from an Agent tool's model input. */
+export interface SubAgentContinuation {
+  version: 1;
+  parentSessionId: string;
+  /** null explicitly records an ephemeral agent, independent of later role defaults. */
+  agentType: string | null;
+  name?: string;
+  description: string;
+  maxTurns: number;
+  model?: string;
+  toolAllowlist?: string[];
+  skillAllowlist?: string[];
+  sandboxMode?: import("./tool-system/sandbox/index.js").SandboxMode;
+  mcpAllowlist?: string[];
+  appendSystemPrompt?: string;
+  readOnlySession: boolean;
+}
+
 // ─── Content & Messages ───────────────────────────────────────────
 
 export interface ContentBlock {
@@ -200,6 +218,8 @@ export type TranscriptEventType =
   // parent transcript so desktop replay rebuilds the same per-user-turn file
   // summary as the live background_agent_completed stream event.
   | "external_file_changes"
+  // Execution-owned cumulative file changes; display evidence, never model context.
+  | "turn_diff"
   | "turn_boundary"
   // Durable response receipt for a host-supplied clientMessageId. It is never
   // added to model context; duplicate submits replay the original EngineResult
@@ -285,6 +305,12 @@ export interface SessionForkLineage {
   createdAt: number;
 }
 
+export interface SessionToolSelection {
+  version: 1;
+  /** Ordered schema-loading hints; current eligibility and permissions remain authoritative. */
+  names: string[];
+}
+
 export interface SessionState {
   sessionId: string;
   /** Durable local classification. Missing on legacy state and normalized to `work`. */
@@ -301,6 +327,8 @@ export interface SessionState {
    * prompt, not the input box.
    */
   sessionBrief?: string;
+  /** Loaded tool names survive run boundaries without carrying schemas or authority. */
+  toolSelection?: SessionToolSelection;
   /**
    * Monotonic whole-state revision used by SessionManager.saveState as a CAS
    * token. Absent only on legacy state files; the first successful save
@@ -355,10 +383,12 @@ export interface SessionState {
   outputCoverage?: import("./session/output-coverage-state.js").PersistedOutputCoverage;
   clientMessageId?: string;
   /**
-   * Monotonic prompt-cache counters for the whole session. These only increase
-   * from session start and are separate from the resettable tokenUsage window.
+   * Monotonic foreground prompt-cache counters, excluding auxiliary requests.
+   * Separate from billed tokenUsage, which includes every request purpose.
    * Optional on legacy state.json files; SessionManager normalizes them on load.
    */
+  /** Version 1 excludes auxiliary usage; legacy counters are migrated on load. */
+  cacheUsageVersion?: 1;
   cumulativePromptTokens?: number;
   cumulativeCacheReadTokens?: number;
   cumulativeCacheCreationTokens?: number;
@@ -397,6 +427,8 @@ export interface SessionState {
    * "key present && null" to tell a new top-level session apart from legacy.
    */
   parentSessionId?: string | null;
+  /** Frozen, trusted sub-agent spawn scope used for continuation after restart. */
+  subAgentContinuation?: SubAgentContinuation;
   /**
    * Durable archival timestamp (ms). Absent = not archived. Generic session
    * lifecycle marker: list surfaces filter it out by default. Set/cleared via
@@ -626,6 +658,30 @@ export type PromptTokenConfidence = "high" | "medium" | "low";
  */
 export type TurnCompletionKind = "background_wait" | "goal_control_stop" | "limit_stop";
 
+/** Actual file states captured by execution, relative to the logical turn's first mutation. */
+export interface TurnDiffFile {
+  /** Absolute normalized execution path, independent of the client's current cwd. */
+  path: string;
+  status: "added" | "modified" | "deleted";
+  diff: string;
+  added: number;
+  removed: number;
+}
+
+export interface TurnDiffSnapshot {
+  /** Transcript id of the non-injected user input that owns these changes. */
+  turnId: string;
+  cwd: string;
+  /** Actual file capture time; delivery/replay of saved evidence does not advance it. */
+  capturedAt?: number;
+  files: TurnDiffFile[];
+  /** Includes reversals and omitted files: clients must not resurrect tool previews. */
+  trackedPaths: string[];
+  toolCallIds: string[];
+  complete: boolean;
+  omissions: { path: string; reason: string }[];
+}
+
 export type StreamEvent = {
   /** Source wall-clock time (Unix milliseconds), retained across durable replay. */
   timestamp?: number;
@@ -662,6 +718,7 @@ type UserMessageDisplayPayload = {
 };
 
 type StreamEventPayload =
+  | ({ type: "turn_diff"; agentId?: string } & TurnDiffSnapshot)
   // Emitted once per run() as soon as the Engine has resolved the session
   // id (resume vs. create). Lets the client know the authoritative sid
   // *before* run() resolves, which matters for mid-turn `/sid` lookups.
@@ -857,9 +914,11 @@ type StreamEventPayload =
        */
       cacheReadTokens?: number;
       cacheCreationTokens?: number;
+      /** Foreground-only cache counter semantics, including migrated history. */
+      cacheUsageVersion?: 1;
       /**
        * Accumulated prompt-cache metrics for the current user submission/run.
-       * These include all model/tool steps and max-token continuations, and
+       * These include foreground model/tool steps and max-token continuations, and
        * reset for the next submission rather than each model response.
        */
       singleTurnPromptTokens?: number;
@@ -876,13 +935,9 @@ type StreamEventPayload =
       cumulativeCacheCreationTokens?: number;
       cumulativeCacheHitRate?: number;
       /**
-       * SESSION-CUMULATIVE cache counts (sum across every LLM response this
-       * session, across runs and turns), emitted from the engine's turn
-       * boundary off the persisted session.state.tokenUsage. Distinct from the
-       * per-response cacheReadTokens/cacheCreationTokens above: those drive the
-       * live context reading, these drive the "本会话累计命中率" tooltip. Reset
-       * to 0 on a model switch. Present only on the cumulative (turn-boundary)
-       * emit; omitted on per-response / estimate emits.
+       * Legacy aliases of foreground cumulative cache counts across runs.
+       * These drive the "本会话累计命中率" tooltip independently of the billed
+       * tokenUsage window and the per-response provider counts above.
        */
       sessionCacheReadTokens?: number;
       sessionCacheCreationTokens?: number;
@@ -958,6 +1013,10 @@ export type StreamCallback = (event: StreamEvent) => void | Promise<void>;
 export interface LLMConfig {
   provider: string;
   model: string;
+  /** Selected ModelPool/connection key. Re-resolved at run boundaries after hot reload. */
+  modelKey?: string;
+  /** Explicit per-model catalog capability; false overrides family rules too. */
+  supportsVision?: boolean;
   apiKey?: string;
   baseUrl?: string;
   maxTokens?: number;

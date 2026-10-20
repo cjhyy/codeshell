@@ -1,0 +1,41 @@
+{
+  "frozenUTC": "2026-10-17T17:22:47.714658+00:00",
+  "directory": "/tmp/codeshell-audit-round99-time-full-gate-review",
+  "selfExcluded": "reviewer-receipt.json",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 24058,
+      "sha256": "c4fd41d1314a8c28e225ae7b3e50083dbd1c05e7242c3a42309a5d5afa573273"
+    },
+    {
+      "path": "inputs.json",
+      "bytes": 5837,
+      "sha256": "a29108ed168b97049cd8d1808479849814447b3c32b9b2af19d6e96e4f591d20"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3078,
+      "sha256": "957a3c52c2b23c0dc4c0f337c776aa83a0c9cf21c488a4a24439fb705c6d975e"
+    },
+    {
+      "path": "source-manifest.first.json",
+      "bytes": 1212,
+      "sha256": "8fc507c58f94c7602e2a3f636d3b7539dc9b175ba935489566c5fde3b1e79d9f"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 1776,
+      "sha256": "10d6ee72bd3d4c8d6e030b74f61aed8de7bd72cbd8e55fe4e95bf594aee85167"
+    }
+  ],
+  "role": "Independent metadata gate review of96/R13 only;0source semantics",
+  "sourceFiles": [],
+  "hashOnlyProductFiles": 2,
+  "productSemanticLines": 0,
+  "authorMethodsExecuted": 0,
+  "Git": 0,
+  "reportInternalLinks": 5,
+  "supportedTargetExclusions": 1,
+  "testFullSeparatelyActivated": false
+}

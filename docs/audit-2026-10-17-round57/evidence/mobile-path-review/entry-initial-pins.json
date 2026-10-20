@@ -1,0 +1,19 @@
+{
+  "capturedUTC": "2026-10-17T19:05:39.127406+00:00",
+  "files": [
+    {
+      "path": "packages/web/app/DesktopApp.tsx",
+      "bytes": 21945,
+      "lines": 574,
+      "sha256": "b20bfff8716b4a987eb1acb12db43cde66ec63e18ea41c092f8422a3a6ac43da",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/web/app/register-service-worker.ts",
+      "bytes": 289,
+      "lines": 7,
+      "sha256": "1a2a975a9d214489ba1991673d60ffaca0509ab74f524a1931a86c5cfbb9d0f5",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

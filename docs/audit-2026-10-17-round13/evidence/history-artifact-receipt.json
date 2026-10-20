@@ -1,0 +1,60 @@
+{
+  "frozenSource": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round13/history.md",
+      "bytes": 6892,
+      "sha256": "56a3c94f4d463ad12cd9bd0f1f9307dcb0d66279a84a5c78c5936497165230c2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-candidates.json",
+      "bytes": 1177,
+      "sha256": "54ade46895af3e7cc1744a24dbd0deb323150b1359a09a453b3cdc32caebc2c2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-characterization.first.exit.json",
+      "bytes": 334,
+      "sha256": "1dfda1839d778b9ce5c75b8e91d0d1439d7ec21f5e4744319c6f6938a7708d0e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-characterization.first.log",
+      "bytes": 1686,
+      "sha256": "491f629a71f1d3b3335a57940d45298f90b55ff6c9a96ed8efd33a9f0bbbcf7c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-characterization.test.ts",
+      "bytes": 6904,
+      "sha256": "84859c46b7fb78b3c1e16ac99f7b60a03b29eabb8daf0244fbac7231f2592c49"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.json",
+      "bytes": 68926,
+      "sha256": "b480211556ef794469eb1e75a553435c0dd75132b93e96a50f5f019ab48efce2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-dedup.py",
+      "bytes": 2221,
+      "sha256": "4318c1be6e8fc079ad6172cfb2b3fcb7e60e5e41da10e2bb3a063037463c06f0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-findings.json",
+      "bytes": 3928,
+      "sha256": "d7d6cb9e580124182d8470e921a56c806121e8c66352c7cebc6e0f1f3917693a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-navigation-note.md",
+      "bytes": 399,
+      "sha256": "953f01a4dbe7949e0ab0b50ee96094f3ca67065ae7a96c73ff222b5412c2bda1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-source-manifest.json",
+      "bytes": 4956,
+      "sha256": "9891e60aba9bace92a327e5655053596826328d740cfc2a934377160ad6179e5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/history-validation.json",
+      "bytes": 1338,
+      "sha256": "4d02d5f93014212b40aa72e2d059e498cd9cfbdaf68e817f21f2a42ec7ef3303"
+    }
+  ]
+}

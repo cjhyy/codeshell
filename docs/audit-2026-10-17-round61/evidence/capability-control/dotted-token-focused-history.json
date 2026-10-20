@@ -1,0 +1,70 @@
+{
+  "at": "2026-10-17T20:12:30.257375+00:00",
+  "command": [
+    "rg",
+    "-l",
+    "-i",
+    "(?:(?:MCP|mcp|server).{0,100}(?:dotted|dot[- ]?(?:name|key)|dots|含点|带点|点号|句点))|(?:(?:capabilityOverrides|setOverride).{0,120}(?:split|nested|dotted|嵌套|点号))|(?:(?:点号|带点|含点|dotted).{0,100}(?:capabilit|MCP|mcp|skill|plugin|server))",
+    "docs",
+    "bugs",
+    "-g",
+    "*.md",
+    "-g",
+    "*.json"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "excludedFormalAtOrAbove": 61,
+  "queries": {
+    "mcp-literal-dot": "(?:MCP|mcp|server).{0,100}(?:dotted|dot[- ]?(?:name|key)|dots|含点|带点|点号|句点)",
+    "overlay-nested-token": "(?:capabilityOverrides|setOverride).{0,120}(?:split|nested|dotted|嵌套|点号)",
+    "dot-capability": "(?:点号|带点|含点|dotted).{0,100}(?:capabilit|MCP|mcp|skill|plugin|server)"
+  },
+  "matchedFilenameCount": 2,
+  "inventory": [
+    {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "bytes": 13804,
+      "sha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8"
+    },
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241"
+    }
+  ],
+  "jsonScalarsVisitedInMatchedDocuments": 0,
+  "counts": {
+    "mcp-literal-dot": 1,
+    "overlay-nested-token": 0,
+    "dot-capability": 1
+  },
+  "cap": 80,
+  "hits": {
+    "mcp-literal-dot": [
+      {
+        "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+        "location": 200,
+        "windowStart": 0,
+        "windowEnd": 146,
+        "wholeValueCharacters": 146,
+        "window": "- **`setEnabled` 路由单测**（`service.ts`）：四种 mode × 开/关，断言写进 settings 的最终形状（denylist 增删、allowlist 增删、record-flag 翻转、未配置 server 不凭空建、点号路径写到 `agent.*`）。",
+        "windowTruncated": false
+      }
+    ],
+    "overlay-nested-token": [],
+    "dot-capability": [
+      {
+        "document": "docs/archive/bug-followups-2026-08-13.md",
+        "location": 36,
+        "windowStart": 0,
+        "windowEnd": 36,
+        "wholeValueCharacters": 36,
+        "window": "### 2. 带点号的插件/Skill 名会静默 no-op 却报告成功",
+        "windowTruncated": false
+      }
+    ]
+  },
+  "errors": [],
+  "scope": "Focused old-cause lookup over matched frozen MD/recursive JSON values, not a fresh all-history scan. Keys excluded. Saved bounded windows not full giant values; actual reads must be separately declared."
+}

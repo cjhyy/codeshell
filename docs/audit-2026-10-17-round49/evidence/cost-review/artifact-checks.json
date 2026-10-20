@@ -1,0 +1,134 @@
+{
+  "createdUTC": "2026-10-17T16:36:02.264212+00:00",
+  "sourceRangeChecks": [
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "semanticCountMatch": true,
+      "displayUnionMatch": true,
+      "boundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "semanticCountMatch": true,
+      "displayUnionMatch": true,
+      "boundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "semanticCountMatch": true,
+      "displayUnionMatch": true,
+      "boundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "semanticCountMatch": true,
+      "displayUnionMatch": true,
+      "boundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "semanticCountMatch": true,
+      "displayUnionMatch": true,
+      "boundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "semanticCountMatch": true,
+      "displayUnionMatch": true,
+      "boundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "semanticCountMatch": true,
+      "displayUnionMatch": true,
+      "boundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    }
+  ],
+  "reportLinks": [
+    {
+      "target": "assessment.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "old-cause-decision.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "history.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "history-method.py",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "old-scope-selected.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "initial-pins.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "entry-initial-pins.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "binding-initial-pins.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": true,
+      "inside": true
+    }
+  ],
+  "allChecksPass": true,
+  "hypothesisWithdrawn": true,
+  "oldFullDoesNotProveNoBug": true,
+  "noNewUnreadFrontierClaim": true,
+  "Root80MutableInputsRead": false,
+  "productOrGitExecution": 0
+}

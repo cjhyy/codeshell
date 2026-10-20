@@ -1,0 +1,263 @@
+100:   id?: string;
+101:   sessionId: string;
+102:   kind?: InputAttachmentKind;
+103:   origin?: InputAttachmentOrigin;
+104:   path?: string;
+105:   absPath?: string;
+106:   relPath?: string;
+107:   mime?: string;
+108:   size?: number;
+109:   sha256?: string;
+110:   originalName?: string;
+111:   createdAt?: number;
+112:   sentAt?: number;
+113:   removedAt?: number;
+114:   cleanedAt?: number;
+115:   status?: "draft" | "sent";
+116: }
+117: 
+118: const CODE_SHELL_DIR = ".code-shell";
+119: const ATTACHMENTS_DIR = "attachments";
+120: const MANIFEST_FILE = "manifest.jsonl";
+121: const GITIGNORE_CONTENT = "*\n!.gitignore\n";
+122: export const DRAFT_ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;
+123: export const SENT_ATTACHMENT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+124: export const MAX_STAGED_IMAGE_BYTES = 10 * 1024 * 1024;
+125: export const MAX_STAGED_FILE_BYTES = 20 * 1024 * 1024;
+126: const MAX_ATTACHMENT_NAME_CHARS = 1_024;
+127: const MAX_ATTACHMENT_MIME_CHARS = 256;
+128: const MAX_MANIFEST_LINE_BYTES = 128 * 1024;
+129: const MAX_MANIFEST_SCAN_BYTES = 32 * 1024 * 1024;
+130: const MAX_MANIFEST_RECORDS = 50_000;
+131: const MAX_ATTACHMENT_SESSION_DIRS = 10_000;
+132: 
+133: const ATTACHMENT_ORIGINS = new Set<InputAttachmentOrigin>([
+134:   "paste",
+135:   "os-drop",
+136:   "file-panel",
+137:   "picker",
+138:   "mention",
+139:   "generated",
+140:   "mobile",
+141:   "im-gateway",
+142:   "tool",
+143: ]);
+144: 
+145: function assertAttachmentLabels(input: {
+170:   "image/gif": ".gif",
+171: };
+172: 
+173: const ALLOWED_IMAGE_MIMES = new Set(Object.keys(IMAGE_MIME_EXT));
+174: 
+175: let idCounter = 0;
+176: 
+177: export async function stageImageDataUrl(
+178:   input: StageImageDataUrlInput,
+179: ): Promise<InputAttachmentMeta> {
+180:   const parsed = parseDataUrl(input.dataUrl);
+181:   if (!parsed || !ALLOWED_IMAGE_MIMES.has(parsed.mime)) {
+182:     throw new Error(`unsupported image data URL MIME`);
+183:   }
+184:   if (input.mime && normalizeMime(input.mime) !== parsed.mime) {
+185:     throw new Error(`data URL MIME ${parsed.mime} does not match declared MIME ${input.mime}`);
+186:   }
+187:   return stageImageBuffer(input, parsed.mime, parsed.buffer);
+188: }
+189: 
+190: /** Stage already-transferred bytes without expanding them back through base64. */
+191: export async function stageImageBytes(input: StageImageBytesInput): Promise<InputAttachmentMeta> {
+192:   assertAttachmentLabels(input);
+193:   const mime = normalizeMime(input.mime);
+194:   if (!ALLOWED_IMAGE_MIMES.has(mime)) throw new Error(`unsupported image MIME ${input.mime}`);
+195:   if ((input.bytes === undefined) === (input.sourceFile === undefined)) {
+196:     throw new Error("exactly one of bytes or sourceFile is required");
+197:   }
+198:   let buffer: Buffer;
+199:   if (input.sourceFile !== undefined) {
+200:     if (
+201:       typeof input.sourceFile !== "string" ||
+202:       !input.sourceFile ||
+203:       input.sourceFile.length > 32_768 ||
+204:       input.sourceFile.includes("\0")
+205:     ) {
+206:       throw new Error("image source path is invalid");
+207:     }
+208:     const handle = await open(
+209:       input.sourceFile,
+210:       fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0),
+211:     );
+212:     try {
+213:       const source = await handle.stat();
+214:       if (!source.isFile()) throw new Error("image source must be a regular file");
+215:       if (source.size > MAX_STAGED_IMAGE_BYTES) {
+216:         throw new Error(
+217:           `image attachment exceeds size limit (${formatBytes(MAX_STAGED_IMAGE_BYTES)})`,
+218:         );
+219:       }
+220:       buffer = await handle.readFile();
+221:     } finally {
+222:       await handle.close();
+223:     }
+224:   } else {
+225:     buffer = Buffer.from(input.bytes!);
+226:   }
+227:   return stageImageBuffer(input, mime, buffer);
+228: }
+229: 
+230: async function stageImageBuffer(
+231:   input: {
+232:     cwd: string;
+233:     sessionId: string;
+234:     name?: string;
+235:     origin: InputAttachmentOrigin;
+236:   },
+237:   mime: string,
+238:   buffer: Buffer,
+239: ): Promise<InputAttachmentMeta> {
+240:   assertAttachmentLabels(input);
+275:   const relPath = normalizePath(relative(cwd, absPath));
+276:   const createdAt = Date.now();
+277:   idCounter += 1;
+278:   const meta: InputAttachmentMeta = {
+279:     id: `att_${sha16}_${idCounter.toString(36)}`,
+280:     sessionId: input.sessionId,
+281:     kind: "image",
+282:     origin: input.origin,
+283:     path: relPath,
+284:     absPath,
+285:     relPath,
+286:     mime,
+287:     size: buffer.byteLength,
+288:     sha256,
+289:     ...(input.name ? { originalName: input.name } : {}),
+290:     createdAt,
+291:     width: image.width,
+292:     height: image.height,
+293:     vision: { include: true },
+294:   };
+295:   await appendManifest(sessionDir, { event: "staged", status: "draft", ...meta });
+296:   return meta;
+297: }
+298: 
+299: /** Stage an untrusted non-image file inside the canonical attachment root. */
+300: export async function stageFileBytes(input: StageFileBytesInput): Promise<InputAttachmentMeta> {
+301:   assertAttachmentLabels(input);
+302:   const cwd = await resolveExistingDirectory(input.cwd, "cwd");
+303:   assertSafeSessionId(input.sessionId);
+304:   const buffer = Buffer.from(input.bytes);
+305:   if (buffer.byteLength > MAX_STAGED_FILE_BYTES) {
+306:     throw new Error(`file attachment exceeds size limit (${formatBytes(MAX_STAGED_FILE_BYTES)})`);
+387: export async function listRecentAttachments(
+388:   input: AttachmentInspectInput,
+389: ): Promise<InputAttachmentMeta[]> {
+390:   const cwd = await resolveExistingDirectory(input.cwd, "cwd");
+391:   const root = await resolveAttachmentsRoot(cwd);
+392:   if (!root) return [];
+393:   const sessionIds = input.sessionId ? [input.sessionId] : await listSafeSessionDirs(root);
+394:   const staged = new Map<string, InputAttachmentMeta>();
+395:   const sent = new Set<string>();
+396:   for (const sessionId of sessionIds) {
+397:     assertSafeSessionId(sessionId);
+398:     const sessionDir = await safeJoin(root, sessionId, root).catch(() => null);
+399:     if (!sessionDir) continue;
+400:     const records = await readManifest(sessionDir);
+401:     for (const record of records) {
+402:       if (record.event === "staged") {
+403:         const meta = recordToMeta(record);
+404:         if (meta && (await pathExistsInside(meta.absPath, root))) {
+405:           staged.set(meta.id, meta);
+406:         }
+407:       } else if (record.event === "sent" && record.id) {
+408:         sent.add(record.id);
+409:       } else if ((record.event === "removedFromDraft" || record.event === "cleanup") && record.id) {
+410:         staged.delete(record.id);
+411:       }
+412:     }
+413:   }
+414:   return [...staged.values()]
+415:     .filter((meta) => sent.has(meta.id) || meta.kind !== "image")
+416:     .sort((a, b) => b.createdAt - a.createdAt)
+417:     .slice(0, 50);
+418: }
+419: 
+420: export async function cleanupAttachments(input: AttachmentCleanupInput): Promise<{
+421:   removed: string[];
+422:   sessionsRemoved: string[];
+423: }> {
+424:   const cwd = await resolveExistingDirectory(input.cwd, "cwd");
+425:   const root = await resolveAttachmentsRoot(cwd);
+426:   if (!root) return { removed: [], sessionsRemoved: [] };
+427:   const now = input.now ?? Date.now();
+428:   const sessionIds = input.sessionId ? [input.sessionId] : await listSafeSessionDirs(root);
+429:   const removed: string[] = [];
+430:   const sessionsRemoved: string[] = [];
+431: 
+432:   for (const sessionId of sessionIds) {
+433:     assertSafeSessionId(sessionId);
+434:     const sessionDir = await safeJoin(root, sessionId, root).catch(() => null);
+435:     if (!sessionDir) continue;
+459:       await appendManifest(sessionDir, {
+460:         event: "cleanup",
+461:         id: state.id,
+462:         sessionId,
+463:         absPath: state.absPath,
+464:         relPath: state.relPath,
+465:         path: state.path,
+466:         sha256: state.sha256,
+467:         cleanedAt: now,
+468:       });
+469:     }
+470:   }
+471: 
+472:   return { removed, sessionsRemoved };
+473: }
+474: 
+475: export async function cleanupSessionAttachments(cwd: string, sessionId: string): Promise<void> {
+476:   await cleanupAttachments({ cwd, sessionId }).catch(() => undefined);
+477: }
+478: 
+479: function normalizeMime(mime: string | undefined): string {
+480:   return String(mime ?? "")
+481:     .trim()
+482:     .toLowerCase();
+483: }
+484: 
+485: function parseDataUrl(dataUrl: string): { mime: string; buffer: Buffer } | null {
+486:   if (typeof dataUrl !== "string") return null;
+487:   const match = /^data:([^;,]+);base64,([\s\S]*)$/.exec(dataUrl);
+805:     if (item !== undefined && (typeof item !== "number" || !Number.isFinite(item))) return null;
+806:   }
+807:   return raw as unknown as ManifestRecord;
+808: }
+809: 
+810: async function listSafeSessionDirs(root: string): Promise<string[]> {
+811:   let entries: import("node:fs").Dirent[];
+812:   try {
+813:     entries = await readdir(root, { withFileTypes: true });
+814:   } catch {
+815:     return [];
+816:   }
+817:   return entries
+818:     .filter((entry) => entry.isDirectory())
+819:     .slice(0, MAX_ATTACHMENT_SESSION_DIRS)
+820:     .map((entry) => entry.name)
+821:     .filter((name) => {
+822:       try {
+823:         assertSafeSessionId(name);
+824:         return true;
+825:       } catch {
+826:         return false;
+827:       }
+828:     });
+829: }
+830: 
+831: function normalizePath(p: string): string {
+832:   return sep === "\\" ? p.replace(/\\/g, "/") : p;
+833: }
+834: 
+835: function recordToMeta(record: ManifestRecord): InputAttachmentMeta | null {
+836:   if (
+837:     !record.id ||
+838:     !record.sessionId ||
+839:     !record.kind ||
+840:     !record.origin ||

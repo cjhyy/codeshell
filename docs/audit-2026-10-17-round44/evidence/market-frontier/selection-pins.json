@@ -1,0 +1,85 @@
+{
+  "scope": "Inventory ranking metadata only, no no-row or unknown-never-read inference. All candidates pinned before body. Choose only one UI flow after fresh gate.",
+  "metadata": {
+    "path": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-index.json",
+    "bytes": 1891704,
+    "sha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+  },
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "bytes": 7842,
+      "lines": 193,
+      "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "capturedUTC": "2026-10-17T14:40:49.271631+00:00",
+      "coverage": "candidate-selection hash-only before body",
+      "datedR28Rows": []
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "bytes": 20235,
+      "lines": 550,
+      "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "capturedUTC": "2026-10-17T14:40:49.299662+00:00",
+      "coverage": "candidate-selection hash-only before body",
+      "datedR28Rows": []
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemeAudioSection.tsx",
+      "bytes": 9413,
+      "lines": 243,
+      "sha256": "7e2ebf2d0e85a736ac43d17ceb75a6cabd1bd51a0e3f4092dada5801cb71725a",
+      "capturedUTC": "2026-10-17T14:40:49.300790+00:00",
+      "coverage": "candidate-selection hash-only before body",
+      "datedR28Rows": []
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+      "bytes": 2718,
+      "lines": 82,
+      "sha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+      "capturedUTC": "2026-10-17T14:40:49.301490+00:00",
+      "coverage": "candidate-selection hash-only before body",
+      "datedR28Rows": [
+        {
+          "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+          "bytes": 2718,
+          "lines": 82,
+          "sha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+          "status": "current-sha-pin-only-no-semantic-coverage",
+          "currentFullClaimVariants": 0,
+          "currentSelectedClaimVariants": 0,
+          "currentSelectedUnionLines": 0,
+          "currentSelectedUnionRanges": [],
+          "priorVersionClaimVariants": 0,
+          "currentPinOnlyVariants": 1,
+          "claimVariants": 1,
+          "claims": [
+            {
+              "sourceSha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": null,
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+                  "jsonLocation": "$[\"files\"][7]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][45]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                  "jsonLocation": "$[\"workerSourceChecks\"][7]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

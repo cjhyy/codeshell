@@ -1,5 +1,7 @@
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import type {
+  ReviewAiPromptRequest,
+  ReviewAiPromptResult,
   ReviewGitCommit,
   ReviewGitDiffRequest,
   ReviewGitDiffResult,
@@ -11,6 +13,10 @@ type ProjectAuthorityIpcRenderer = Pick<IpcRenderer, "invoke" | "on" | "removeLi
 /** Renderer-safe transport for project registry and Session workspace authority. */
 export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRenderer) {
   return {
+    searchProjectFiles: (projectId: string, query: string, rootId?: string) =>
+      rootId === undefined
+        ? ipcRenderer.invoke("files:searchProject", projectId, query)
+        : ipcRenderer.invoke("files:searchProject", projectId, query, rootId),
     getProjectGitStatus: (projectId: string) => ipcRenderer.invoke("git:projectStatus", projectId),
     getProjectGitBranches: (projectId: string) =>
       ipcRenderer.invoke("git:projectBranches", projectId),
@@ -30,6 +36,12 @@ export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRender
       ipcRenderer.invoke("review:status", sessionId) as Promise<ReviewGitStatusResult>,
     getReviewDiff: (sessionId: string, request: ReviewGitDiffRequest) =>
       ipcRenderer.invoke("review:diff", sessionId, request) as Promise<ReviewGitDiffResult>,
+    prepareReviewPrompt: (sessionId: string, request: ReviewAiPromptRequest) =>
+      ipcRenderer.invoke(
+        "review:preparePrompt",
+        sessionId,
+        request,
+      ) as Promise<ReviewAiPromptResult>,
     getReviewRecentCommits: (sessionId: string, limit?: number) =>
       ipcRenderer.invoke("review:recentCommits", sessionId, limit) as Promise<ReviewGitCommit[]>,
     listSessionProfiles: (sessionId: string) => ipcRenderer.invoke("workspace:profiles", sessionId),

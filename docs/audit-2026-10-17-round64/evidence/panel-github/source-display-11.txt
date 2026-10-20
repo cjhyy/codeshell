@@ -1,0 +1,92 @@
+104: export interface GitPanelAppSourceInput {
+105:   kind: "git";
+106:   url: string;
+107:   ref?: string;
+108:   subdir?: string;
+109: }
+110: 
+111: export type PanelAppSourceInput = LocalPanelAppSourceInput | GitPanelAppSourceInput;
+112: export type InstalledPanelAppSource = string | GitPanelAppSourceInput;
+210: function normalizedGitSourceKey(input: GitPanelAppSourceInput): string {
+211:   return JSON.stringify(normalizeGitPanelAppSource(input));
+212: }
+213: 
+214: function joinedPanelAppSubdirectory(base: string | undefined, nested: string): string | undefined {
+215:   const parts = [base, nested].filter((part): part is string => Boolean(part));
+216:   return parts.length > 0 ? parts.join("/") : undefined;
+217: }
+218: 
+219: async function openGitPanelAppArchive(
+220:   input: GitPanelAppSourceInput,
+221: ): Promise<OpenedGitPanelAppArchive> {
+222:   const source = normalizeGitPanelAppSource(input);
+223:   const temporaryRoot = await mkdtemp(join(tmpdir(), "cs-panel-app-git-"));
+224:   try {
+225:     const archivePath = join(temporaryRoot, "source.zip");
+226:     const extractedRoot = join(temporaryRoot, "source");
+227:     await mkdir(extractedRoot, { recursive: true, mode: 0o700 });
+228:     await downloadGitHubPanelAppArchive(source, archivePath);
+229:     await extractZipSubdirectory(archivePath, extractedRoot, source.subdir);
+230:     await rm(archivePath, { force: true });
+231:     return { source, extractedRoot, temporaryRoot };
+232:   } catch (error) {
+233:     await rm(temporaryRoot, { recursive: true, force: true }).catch(() => undefined);
+234:     throw error;
+235:   }
+236: }
+237: 
+261:   input: GitPanelAppSourceInput,
+262: ): Promise<GitPanelAppDiscovery> {
+263:   const opened = await openGitPanelAppArchive(input);
+264:   try {
+265:     const roots = await discoverPanelAppRoots(opened.extractedRoot);
+266:     if (roots.length === 0) {
+267:       throw new PanelAppInstallError(
+268:         `no Panel App found (expected ${PANEL_APP_MANIFEST_FILE}); ` +
+269:           "check the repository, branch, or optional search subdirectory",
+270:       );
+271:     }
+272:     const panels: GitPanelAppDiscoveryCandidate[] = [];
+273:     const issues: GitPanelAppDiscoveryIssue[] = [];
+274:     for (const root of roots) {
+275:       const nested = relative(opened.extractedRoot, root).split(sep).join(posix.sep);
+276:       const subdir = joinedPanelAppSubdirectory(opened.source.subdir, nested);
+277:       const label = subdir ?? ".";
+278:       try {
+279:         const inspected = await inspectPanelAppSource(root);
+280:         panels.push({
+281:           subdir: label,
+282:           source: {
+283:             kind: "git",
+284:             url: opened.source.url,
+285:             ...(opened.source.ref ? { ref: opened.source.ref } : {}),
+286:             ...(subdir ? { subdir } : {}),
+287:           },
+288:           id: inspected.manifest.id,
+289:           version: inspected.manifest.version,
+290:           title: inspected.manifest.title,
+940:   const staging = await mkdtemp(join(panelAppsRoot(), `.tmp-${inspected.manifest.id}-`));
+941:   let backup: string | undefined;
+942:   let directoryReplaced = false;
+943:   const retainedPackages: PreparedPackage[] = [];
+944:   let legacyPin: PanelAppPackagePin | null | undefined;
+945:   let release: (() => Promise<void>) | undefined;
+946:   try {
+947:     await cp(sourceRoot, staging, { recursive: true });
+948:     const copied = await inspectPanelAppSource(staging);
+949:     if (copied.digest !== expectedReviewToken) throw new PanelAppReviewChangedError();
+950:     const storedSource: InstalledPanelAppSource =
+951:       input.kind === "git"
+952:         ? normalizeGitPanelAppSource({
+953:             ...input,
+954:             ...(options.recordedRef ? { ref: options.recordedRef } : {}),
+955:           })
+956:         : input.path;
+957:     await writeFile(
+958:       join(staging, PANEL_APP_META_FILE),
+959:       `${JSON.stringify(
+960:         {
+961:           schemaVersion: 1,
+962:           id: copied.manifest.id,
+963:           version: copied.manifest.version,
+964:           source: storedSource,

@@ -1,0 +1,61 @@
+{
+  "baseline": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "count": 2,
+  "candidates": [
+    {
+      "id": "HOOK-R11-C1",
+      "status": "observed-candidate",
+      "priority": null,
+      "title": "Registering a higher-priority hook during emit duplicates an existing handler",
+      "source": {
+        "path": "packages/core/src/hooks/registry.ts",
+        "line": 43,
+        "relatedLines": [
+          45,
+          86,
+          92,
+          94
+        ]
+      },
+      "normalInput": "A real HookRegistry with two async-capable handlers; while emit waits on the first, register a third handler at higher priority. All data is in memory and handler results are ordinary messages.",
+      "observed": "Existing-high runs twice, existing-low once, new-high zero times in the same emit. Final registration count is 3 and aggregated messages contain the existing-high message twice.",
+      "controls": [
+        "All handlers registered before emit run once each in descending priority",
+        "The suspended handler with no mid-emit register runs once"
+      ],
+      "evidenceLevel": "actual HookRegistry source + bounded in-memory fake handlers; no Engine or shell runner",
+      "missingContract": "The public SDK exports HookRegistry, but a supported normal Engine/SDK producer timing and an explicit mid-emit registration visibility/once-per-chain contract were not established. Therefore no product bug severity or Engine duplicate-injection claim.",
+      "test": "evidence/hooks-pure-contracts.test.ts",
+      "log": "evidence/hooks-pure-contracts.first.log",
+      "exit": "evidence/hooks-pure-contracts.first.exit.json",
+      "dedup": "evidence/hooks-dedup.json"
+    },
+    {
+      "id": "CHAT-R11-C1",
+      "status": "static-unconfirmed-skipped",
+      "title": "通用 Markdown button URL/标签仅转义右方括号，普通括号或反斜杠是否破坏 labelled link",
+      "source": "packages/chat/src/lifecycle.ts",
+      "line": 14,
+      "evidenceLevel": "static source only; no product fixture",
+      "observation": "formatter 把 HTTP(S) URL 原样放入括号，并仅替换 label 的 ]；gateway.ts:291-312 接受合法 HTTP(S) URL 和普通标签。Mattermost send:97 消费此 formatter。",
+      "missingProof": "尚未取得确切当前 Mattermost renderer grammar/实际解析结果，不能把别的 Markdown parser 当成该平台。",
+      "disposition": "官方文档正文不可读，官方源码树首次 fetch 被拒后 SKIP；未重试、下载、换 parser/方式验证。",
+      "evidence": [
+        "evidence/chat-primary-contracts.json"
+      ]
+    }
+  ],
+  "note": "One actual HookRegistry timing observation with unproven production contract; one static Markdown candidate skipped after official-source access failure. Neither is a confirmed product bug.",
+  "staticNotPromoted": [
+    {
+      "report": "composition.md",
+      "subject": "digest body exclusions and non-ordinary declaration shapes",
+      "reason": "Topology projection is deliberate; no normal producer/stronger accepted contract for null-prototype/complex Map-key shape."
+    },
+    {
+      "report": "host.md",
+      "subject": "mutable caller-owned service references",
+      "reason": "Known HL-C1 and no new normal mutation/snapshot contract; not repeated."
+    }
+  ]
+}

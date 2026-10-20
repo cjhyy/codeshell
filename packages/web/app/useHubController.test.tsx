@@ -73,6 +73,217 @@ function environment() {
   }
 }
 
+test.each([200, 500, 401])(
+  "a late inactive title refresh survives an older session-list response %i",
+  async (status) => {
+    environment();
+    const original = {
+      sessionId: "inactive-title-owner",
+      title: "Original title",
+      cwd: "/owned",
+      startedAt: 1,
+      model: "owned",
+      status: "completed",
+      turnCount: 1,
+    };
+    let latest = original,
+      hold = false,
+      finishOld!: (response: Response) => void;
+    globalThis.fetch = (async (path) => {
+      if (!String(path).includes("/api/v1/sessions")) return Response.json({});
+      if (hold) {
+        hold = false;
+        return new Promise<Response>((resolve) => {
+          finishOld = resolve;
+        });
+      }
+      return Response.json({ sessions: [latest] });
+    }) as typeof fetch;
+    Socket.respond = ({ id, method }) =>
+      method === "serve/approval.snapshot"
+        ? { id, result: { approvals: [], leases: [] } }
+        : { id, result: { type: "sessions", data: [] } };
+    let authLost = 0;
+    const onAuthLost = () => {
+      authLost++;
+    };
+    const hook = await renderHook(() => useHubController({ hub: true, onAuthLost }));
+    cleanups.push(() => hook.unmount());
+    const socket = Socket.instances[0];
+    await act(async () => {
+      socket.readyState = 1;
+      socket.onopen?.();
+      await flushMicrotasks();
+      hook.result.current.setDraft("Current session draft");
+    });
+    const active = hook.result.current.activeId;
+    const version = hook.result.current.sessionsVersion;
+    let older!: Promise<void>;
+    await act(async () => {
+      hold = true;
+      older = hook.result.current.refreshSessions();
+      await flushMicrotasks();
+      latest = { ...original, title: "Authoritative late title" };
+      socket.onmessage?.({
+        data: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "agent/streamEvent",
+          params: {
+            sessionId: original.sessionId,
+            event: { type: "session_title", sessionId: original.sessionId, title: latest.title },
+          },
+        }),
+      });
+      for (let i = 0; i < 4; i++) await flushMicrotasks();
+    });
+    expect(hook.result.current.sessions[0].title).toBe(latest.title);
+    expect(hook.result.current.sessionsVersion).toBe(version + 1);
+    await act(async () => {
+      finishOld(
+        Response.json(status === 200 ? { sessions: [original] } : { error: "Older list failed" }, {
+          status,
+        }),
+      );
+      await older;
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.sessions[0].title).toBe(latest.title);
+    expect(hook.result.current.activeId).toBe(active);
+    expect(hook.result.current.draft).toBe("Current session draft");
+    expect(hook.result.current.chat.title).not.toBe(latest.title);
+    expect(hook.result.current.error).toBe("");
+    expect(authLost).toBe(status === 401 ? 1 : 0);
+  },
+);
+
+test("restoring a session gates sends and an older failed restore cannot replace a later success", async () => {
+  environment();
+  const pending: Array<{ id: number; method: string; params: Record<string, unknown> }> = [];
+  Socket.respond = (request) => {
+    if (request.params.type === "session_detail") {
+      pending.push(request);
+      return;
+    }
+    if (request.params.type === "output_journal")
+      return {
+        id: request.id,
+        error: { code: -32602, message: "Unknown query type: output_journal" },
+      };
+    return {
+      id: request.id,
+      result: {
+        type: "sessions",
+        data: [
+          {
+            sessionId: "saved",
+            cwd: "/owned",
+            startedAt: 1,
+            model: "owned",
+            status: "idle",
+            turnCount: 1,
+          },
+        ],
+      },
+    };
+  };
+  const hook = await renderHook(() => useHubController({}));
+  cleanups.push(() => hook.unmount());
+  const socket = Socket.instances[0];
+  await act(async () => {
+    socket.readyState = 1;
+    socket.onopen?.();
+    await flushMicrotasks();
+    void hook.result.current.selectSession("saved");
+    hook.result.current.setDraft("Draft while restoring");
+    expect(hook.result.current.send()).toBe(false);
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.loading).toBe(true);
+  expect(hook.result.current.draft).toBe("Draft while restoring");
+  await act(async () => {
+    void hook.result.current.selectSession("saved");
+    await flushMicrotasks();
+    socket.onmessage?.({
+      data: JSON.stringify({
+        id: pending[1].id,
+        result: {
+          type: "session_detail",
+          data: {
+            state: {},
+            transcript: [{ message: { role: "assistant", content: "Latest saved response" } }],
+            running: false,
+          },
+        },
+      }),
+    });
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.loading).toBe(false);
+  await act(async () => {
+    socket.onmessage?.({
+      data: JSON.stringify({
+        id: pending[0].id,
+        error: { code: -32000, message: "Older restore failed" },
+      }),
+    });
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.error).toBe("");
+  expect(
+    hook.result.current.chat.items.some(
+      (item) => item.kind === "assistant" && item.text === "Latest saved response",
+    ),
+  ).toBe(true);
+  expect(hook.result.current.draft).toBe("Draft while restoring");
+});
+
+test.each([401, 500])(
+  "an upload failure %i after switching sessions keeps authentication and error scope",
+  async (status) => {
+    environment();
+    Socket.respond = ({ id }) => ({ id, result: { type: "sessions", data: [] } });
+    let rejectUpload!: (response: Response) => void;
+    globalThis.fetch = (() =>
+      new Promise<Response>((resolve) => {
+        rejectUpload = resolve;
+      })) as typeof fetch;
+    let authLost = 0;
+    const onAuthLost = () => {
+      authLost++;
+    };
+    const hook = await renderHook(() => useHubController({ onAuthLost }));
+    cleanups.push(() => hook.unmount());
+    await act(async () => {
+      Socket.instances[0].readyState = 1;
+      Socket.instances[0].onopen?.();
+      await flushMicrotasks();
+      hook.result.current.setDraft("Original session draft");
+    });
+    const origin = hook.result.current.activeId;
+    let uploading!: Promise<void>;
+    await act(async () => {
+      uploading = Promise.resolve(
+        hook.result.current.addFiles([new File(["owned"], "owned.txt")] as unknown as FileList),
+      );
+      hook.result.current.newSession();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      rejectUpload(Response.json({ error: "Owned upload failure" }, { status }));
+      await uploading;
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.error).toBe("");
+    expect(authLost).toBe(status === 401 ? 1 : 0);
+    await act(async () => {
+      await hook.result.current.selectSession(origin);
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.draft).toBe("Original session draft");
+    expect(hook.result.current.error).toBe(status === 401 ? "" : "Owned upload failure");
+  },
+);
+
 test("foreground on one healthy socket restores missed approvals/leases and selected history without repeating a Run", async () => {
   environment();
   const session = {

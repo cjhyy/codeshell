@@ -1,0 +1,38 @@
+{
+  "baseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "reviewer": "aggregator_round27_resume",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/review-root.md",
+      "bytes": 3968,
+      "sha256": "11cefc350a2a999d2e4250f11ebbfc6ea639550d48ea31648be9cc5e355eeaf9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/review-root-source-manifest.json",
+      "bytes": 16669,
+      "sha256": "d69f127653b455f8355da359d229dccab9a4e1893afa7cb2a46713340a3b2d38"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/review-root-prep-copy-receipt.json",
+      "bytes": 1738,
+      "sha256": "bbbda66a3c4342b1fcd2965252fc019f78842d16976e2b7d29cf2b004afa22cf"
+    }
+  ],
+  "artifactCount": 3,
+  "selfExcluded": true,
+  "reviewPrepCopiesSeparateCount": 4,
+  "reviewPrepCopySha256": {
+    "docs/audit-2026-10-17-round30/evidence/root-review-prep/consumer-navigation.txt": "b948d85459a4abc8dc2f5ee27219fdff58d29cc42e92b8365a468eacfced0c84",
+    "docs/audit-2026-10-17-round30/evidence/root-review-prep/review.md": "2b46289c77557f4a3b5de86a21e4379767e1129a638c386a6004b46c40881cda",
+    "docs/audit-2026-10-17-round30/evidence/root-review-prep/source-manifest.json": "2dede9f5dcd716a25d2fe7aefca6d5a7a9e947fccf3ab743716c3994a4538994",
+    "docs/audit-2026-10-17-round30/evidence/root-review-prep/artifact-receipt.json": "b39478a0796b35f4ab26fd1b1080d260567832517395c69418dfb16ed637a840"
+  },
+  "samePrepSemanticReadingNotRecounted": true,
+  "newSemanticSourceReadsDuringFormalReview": 0,
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "authorFilesChanged": 0,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0
+}

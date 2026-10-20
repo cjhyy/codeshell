@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-10-17T16:35:20.228382+00:00",
+  "toolChunk": "e39ab9",
+  "originalPrintedSummary": {
+    "branch": "codex/audit/ordinary-data-and-coverage-gates-round49-20261017",
+    "baseline": "9a2d118502fe184dc0271360f97c8fdbe06deb01",
+    "dirtyPreserved": true,
+    "intermediateOldSourceCheckout": false
+  },
+  "diagnosis": "The begin-script final print retained baseline=main from its template; plan baseline and actual branch CAS correctly use frozen owned head. This wrong printed label is preserved, not used as a source-read version.",
+  "actualOwnedHead": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "planBaseline": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "mainAtBranchSelection": "9a2d118502fe184dc0271360f97c8fdbe06deb01",
+  "initialPlanSha256": "cf33c96ca655820f46c0e6a5e96ab42093de5ca85357e50703f02c8931ee97fe",
+  "productBytesSwitched": false,
+  "productRuns": 0,
+  "metadataOnly": true
+}

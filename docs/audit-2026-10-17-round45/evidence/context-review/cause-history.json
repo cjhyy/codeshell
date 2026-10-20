@@ -1,0 +1,59 @@
+{
+  "startedUTC": "2026-10-17T15:15:59.500960+00:00",
+  "finishedUTC": "2026-10-17T15:16:02.973788+00:00",
+  "inventoryCount": 3979,
+  "scopeInheritedFrom": "history.json",
+  "method": "ASCII-casefold literal/AND queries over MD and recursive JSON string values; keys not searched; cap30; snippets bounded, no semantic exhaustiveness",
+  "queries": {
+    "form-helpers": {
+      "hits": 0,
+      "cap": 30,
+      "retained": 0
+    },
+    "ratio-order": {
+      "hits": 3,
+      "cap": 30,
+      "retained": 3
+    },
+    "ratio-percent": {
+      "hits": 0,
+      "cap": 30,
+      "retained": 0
+    }
+  },
+  "driftFromInitial": [],
+  "parseErrors": [],
+  "hits": {
+    "form-helpers": [],
+    "ratio-order": [
+      {
+        "path": "docs/architecture/01-engine-and-turn-loop.md",
+        "locator": "markdown-text",
+        "valueChars": 27528,
+        "contextStart": 22401,
+        "contextEnd": 23451,
+        "text": "ow/summary helpers, prompt-too-long recovery | ~951 |\n| `packages/core/src/context/tool-result-storage.ts` | Tier-0 persistence: oversized `tool_result` -> disk file + preview block with frozen per-session decisions | ~367 |\n\nDefault thresholds are `compactAtRatio = 0.85`, `summarizeAtRatio = 0.92`, and `microcompactFloorRatio = 0.7` (`packages/core/src/context/manager.ts:53`). User-provided ratios are clamped so floor never exceeds compact and summarize never falls below compact (`packages/core/src/context/compaction.ts:160`, `packages/core/src/engine/engine.ts:451`).\n\n`ContextManager.manageAsync(messages)` (`packages/core/src/context/manager.ts:395`) runs:\n\n- **Tier 0 — always-on waste removal.**\n  - `persistLargeToolResults` writes a single `tool_result` above 50 KB, or enough large results to get a user message below the 200 KB aggregate cap, to `<transcriptDir>/tool-results/<toolUseId>.txt`, replacing the block with a 2 KB preview and path (`packages/core/src/context/tool-result-storage.ts:32`, `packages/core/src/context/tool-res",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "locator": "markdown-text",
+        "valueChars": 96025,
+        "contextStart": 26482,
+        "contextEnd": 27532,
+        "text": "Guard\n\n用于 stale TodoWrite 检查。如果有 in_progress todo 多轮未更新，会提示模型更新任务状态。\n\n## 10. Context 模块：上下文管理、压缩、工具结果预算与存储\n\n`src/context/**` 负责让长期对话不会无限膨胀到超过模型 context window。\n\n### 10.1 ContextManager\n\n`manager.ts` 是 orchestrator。默认配置大致是：\n\n- `maxTokens: 200_000`\n- `compactAtRatio: 0.85`\n- `summarizeAtRatio: 0.92`\n- `maxToolResultChars: 30_000`\n- `microcompactFloorRatio: 0.7`\n- `microcompactKeepRecent`\n\n它有同步 `manage()` 和异步 `manageAsync()` 两条路径。TurnLoop 使用 `manageAsync()`。\n\n### 10.2 Hybrid token estimation\n\nContextManager 会记录 provider 返回的真实 prompt tokens：\n\n```ts\nrecordActualUsage(inputTokens, messageCount)\n```\n\n后续估算时，如果历史消息数匹配，就用：\n\n```text\n上次真实 input tokens + 新增消息估算 tokens\n```\n\n否则 fallback 到纯估算。\n\n这比完全用本地 tokenizer 更稳，因为不同 provider/tokenizer 差异很大。\n\n### 10.3 manageAsync 顺序\n\n一次 context 管理大致按这个顺序：\n\n1. `applyToolResultPersistence()`：大 tool_result 落盘。\n2. `truncateToolResult()`：单条过长结果截断。\n3. `applyToolResultBudget()`：同一 message 内 tool_result 总预算控制。\n4. `microcompact()`：清理旧的 compactable tool results。\n5. 如果达到 compact ratio：尝试 summary compaction。\n6. summary 失败则 fa",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/core-modules/context.md",
+        "locator": "markdown-text",
+        "valueChars": 8124,
+        "contextStart": 2575,
+        "contextEnd": 3625,
+        "text": "activeCompact(messages: Message[], currentResponseTokens: number): boolean;\n  checkLimits(messages: Message[]): { tokens; ratio; needsCompact; needsEmergency };\n}\n\ninterface ContextManagerConfig {\n  maxTokens: number;            // default 200_000\n  compactAtRatio: number;       // default 0.85\n  summarizeAtRatio: number;     // default 0.92\n  maxToolResultChars: number;   // default 30_000\n  microcompactFloorRatio: number;       // default 0.7 — micro idle below this\n  microcompactKeepRecent?: number;      // auto-derived from maxTokens if unset\n}\ntype SummarizeFn = (prompt: string) => Promise<string>;\ntype CompactStrategy = \"micro\" | \"summary\" | \"window\" | \"snip\" | \"emergency\";\ntype OnCompactFn = (info: { strategy: CompactStrategy; before: number; after: number }) => void;\n\n// compaction.ts — used directly by the engine in a few spots\nfunction estimateTokens(messages: Message[]): number;\nfunction microcompact(messages: Message[], options?: MicrocompactOptions): Message[];\nfunction windowCompact(messages: Message[], keepLastN: number",
+        "wholeValueIncluded": false
+      }
+    ],
+    "ratio-percent": []
+  }
+}

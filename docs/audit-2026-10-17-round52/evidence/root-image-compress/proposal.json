@@ -1,0 +1,28 @@
+{
+  "id": "IMAGE-R103-C1",
+  "priority": "P3",
+  "title": "细长图片缩放将短边取整为0，压缩回退原图而忽略所选长边上限",
+  "status": "static-confirmed proposal; no runtime reproduction",
+  "location": {
+    "path": "packages/desktop/src/renderer/chat/compress.ts",
+    "start": 195,
+    "end": 198
+  },
+  "trigger": "Ordinary accepted1×4096 PNG/JPEG/WebP File below2MiB, selected low or standard; valid positive dimensions, no invalid DTO required.",
+  "trace": [
+    "attachments.ts98–151 only count/MIME/size File gates; no aspect-ratio gate",
+    "ChatView1233 buildAttachments→1241 compressBatch→1251–1274 stage resulting dataUrl",
+    "compress.ts112 low/standard bypass byte-only passthrough;118–122 scaledDimensions",
+    "1×4096 atlow1024 gives width Math.round(0.25)=0,height1024; standard1568 also rounds short edge0",
+    "canvas width0; toBlob callback null by WHATWG; quality ladder137 continues,152 original returned (catch/null-context fallback also original)"
+  ],
+  "impact": "Original valid image preserved and staged, but the chosen downsample dimension cap is not applied for this boundary. No data loss, billing amount or all-image failure claim.",
+  "counterexamples": [
+    "Ordinary aspect ratios keep positive scaled dimensions.",
+    "High detail under2MiB returns early by design.",
+    "Staging does use compressed dataUrl and rewrites path metadata."
+  ],
+  "suggestion": "Clamp the rounded short edge to at least1 for positive image dimensions and configured cap; add thin portrait/landscape boundary cases if fixing.",
+  "independentReview": "Prep104 separate author source review; Root did not read mutable104 artifacts before own proposal.",
+  "productRuns": 0
+}

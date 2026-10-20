@@ -1,0 +1,15 @@
+packages/pet/package.json
+packages/optimization-lab/package.json
+packages/link/package.json
+packages/arena/package.json
+packages/coding/package.json
+packages/server/package.json
+packages/browser-devtools/package.json
+packages/desktop/package.json
+packages/chat/package.json
+packages/web/package.json
+packages/host/package.json
+packages/tui/package.json
+packages/desktop/scripts/browser-library-probe/package.json
+packages/cdp/package.json
+packages/core/package.json

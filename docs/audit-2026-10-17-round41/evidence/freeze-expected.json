@@ -1,0 +1,14 @@
+{
+  "process-state-frontier/report.md": "2eb420474dfc97a8b8efbd10457c1dedcf3cdcd8418054150f1a303be4e2fb2b",
+  "process-state-frontier/source-manifest.json": "18af35013b477922d76723fce7d506656831dfa488f328a219eee285b93717d2",
+  "process-state-frontier/artifact-receipt.json": "cfe1397a41c70ac885ab379690c25968a31748914cb914d91377beef36cb1347",
+  "process-state-review/review.md": "e12005ed9f8024d69b0c134ac86afb781836084c137a92c92c194170de9a17b3",
+  "process-state-review/source-manifest.json": "26efe22f5cbeb19f19f2e88965be1a8cdcb651b2bfabd1bd44df1f19f2bbb8f5",
+  "process-state-review/artifact-receipt.json": "8ca64a34150bd23356011c1cc9e79b58b28b24b99d5c44e64377b27ade243d78",
+  "display-clarification/review.md": "116abc3d0495742fe47e14bb9f7c5d27acaf08b2bcf4cf3831e88d2a1bbd03f4",
+  "display-clarification/display-clarification.json": "e78466f5fa7afb6c5168b08a7dbb4fb5f5902bb202ef4088613dcb5fcd25fc29",
+  "display-clarification/artifact-receipt.json": "368239d4af86a552c61550f2363a0032a1efab486c806d3e83b52254e490cbb9",
+  "aggregate-review/review.md": "0ba11348ac91b03357022619d4ddfa9ca41268d0349ada36285adac3134a11e2",
+  "aggregate-review/checks.json": "d3763bc6fbd2bf872dd4ed131216add6f85d2a5034d476e2abcebb5dc5e24ca0",
+  "aggregate-review/artifact-receipt.json": "2fa78d7f7dc3ca0e4c2427e404d97beb9134c330ea5b7202c8c3ea7f41fa6b3b"
+}

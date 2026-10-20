@@ -1,0 +1,176 @@
+{
+  "capturedUTC": "2026-10-17T15:17:59.239606+00:00",
+  "scope": "Same first3979 exactbyte corpus; all MD and recursive JSON strings, no keys; actual ratio names discovered after body used for source-cause navigation, no product execution",
+  "patterns": {
+    "actual_ratio_fields": "microcompactFloorRatio|compactAtRatio|summarizeAtRatio",
+    "context_form_recovery": "(?:context|上下文).{0,90}(?:numeric draft|failed (?:read|save)|save/reset|reset draft|load failure|read failure|数值草稿|保存失败)|(?:numeric draft|failed (?:read|save)|save/reset|reset draft|load failure|read failure).{0,90}(?:context|上下文)"
+  },
+  "totals": {
+    "actual_ratio_fields": 17,
+    "context_form_recovery": 2
+  },
+  "capPerGroup": 120,
+  "retained": {
+    "actual_ratio_fields": 17,
+    "context_form_recovery": 2
+  },
+  "hits": {
+    "actual_ratio_fields": [
+      {
+        "path": "docs/architecture/01-engine-and-turn-loop.md",
+        "jsonPointer": null,
+        "line": 152,
+        "match": "compactAtRatio",
+        "context": "1 |\n| `packages/core/src/context/tool-result-storage.ts` | Tier-0 persistence: oversized `tool_result` -> disk file + preview block with frozen per-session decisions | ~367 |\n\nDefault thresholds are `compactAtRatio = 0.85`, `summarizeAtRatio = 0.92`, and `microcompactFloorRatio = 0.7` (`packages/core/src/context/manager.ts:53`). User-provided ratios are clamped so floor never exceeds compact and summarize never falls below compact (`packages/core/src/context/compaction.ts:160`, `packages/core/src/engine/engine.ts:451`).\n\n`ContextManager.manageAsync(messages)` (`packages/core/src/context/manager.ts:395`) runs:\n\n- **Tier 0 — always-on waste removal.**\n  - `p",
+        "sourceSha256": "36fd105762b8e46ceb59551dff4201fe18fe7a9cd88ab75ec8e0eb4ef1c986ca"
+      },
+      {
+        "path": "docs/architecture/01-engine-and-turn-loop.md",
+        "jsonPointer": null,
+        "line": 152,
+        "match": "summarizeAtRatio",
+        "context": "context/tool-result-storage.ts` | Tier-0 persistence: oversized `tool_result` -> disk file + preview block with frozen per-session decisions | ~367 |\n\nDefault thresholds are `compactAtRatio = 0.85`, `summarizeAtRatio = 0.92`, and `microcompactFloorRatio = 0.7` (`packages/core/src/context/manager.ts:53`). User-provided ratios are clamped so floor never exceeds compact and summarize never falls below compact (`packages/core/src/context/compaction.ts:160`, `packages/core/src/engine/engine.ts:451`).\n\n`ContextManager.manageAsync(messages)` (`packages/core/src/context/manager.ts:395`) runs:\n\n- **Tier 0 — always-on waste removal.**\n  - `persistLargeToolResults` wri",
+        "sourceSha256": "36fd105762b8e46ceb59551dff4201fe18fe7a9cd88ab75ec8e0eb4ef1c986ca"
+      },
+      {
+        "path": "docs/architecture/01-engine-and-turn-loop.md",
+        "jsonPointer": null,
+        "line": 152,
+        "match": "microcompactFloorRatio",
+        "context": " | Tier-0 persistence: oversized `tool_result` -> disk file + preview block with frozen per-session decisions | ~367 |\n\nDefault thresholds are `compactAtRatio = 0.85`, `summarizeAtRatio = 0.92`, and `microcompactFloorRatio = 0.7` (`packages/core/src/context/manager.ts:53`). User-provided ratios are clamped so floor never exceeds compact and summarize never falls below compact (`packages/core/src/context/compaction.ts:160`, `packages/core/src/engine/engine.ts:451`).\n\n`ContextManager.manageAsync(messages)` (`packages/core/src/context/manager.ts:395`) runs:\n\n- **Tier 0 — always-on waste removal.**\n  - `persistLargeToolResults` writes a single `tool_result` above 50 K",
+        "sourceSha256": "36fd105762b8e46ceb59551dff4201fe18fe7a9cd88ab75ec8e0eb4ef1c986ca"
+      },
+      {
+        "path": "docs/architecture/01-engine-and-turn-loop.md",
+        "jsonPointer": null,
+        "line": 165,
+        "match": "compactAtRatio",
+        "context": "sults are left intact (`packages/core/src/context/manager.ts:408`, `packages/core/src/context/compaction.ts:300`, `packages/core/src/context/compaction.ts:391`).\n\n- **Tier 2 — summary.** At or above `compactAtRatio`, or in the 0.70-0.85 band when microcompact did nothing, `trySummaryCompact()` asks the injected summarizer for a rolling 9-section summary (`packages/core/src/context/manager.ts:457`, `packages/core/src/context/manager.ts:168`, `packages/core/src/context/compaction.ts:729`). Existing anchored summaries are merged forward rather than re-summarized from scratch (`packages/core/src/context/compaction.ts:793`).\n\n- **Tier 2 fallback — snip/window.*",
+        "sourceSha256": "36fd105762b8e46ceb59551dff4201fe18fe7a9cd88ab75ec8e0eb4ef1c986ca"
+      },
+      {
+        "path": "docs/architecture/01-engine-and-turn-loop.md",
+        "jsonPointer": null,
+        "line": 169,
+        "match": "summarizeAtRatio",
+        "context": "ent tail if needed (`packages/core/src/context/manager.ts:492`, `packages/core/src/context/compaction.ts:256`, `packages/core/src/context/compaction.ts:289`).\n\n- **Tier 3 — emergency window.** Above `summarizeAtRatio`, the manager keeps only a tiny tail (`windowCompact(result, 6)`) as the last pre-request defense (`packages/core/src/context/manager.ts:509`).\n\nTwo design choices matter:\n\n- **Frozen persistence decisions.** Once a `tool_use_id` is evaluated, its persist-or-not decision is fixed for the session; resumed sessions reconstruct this state from the message history, and existing replacements are byte-identical map lookups (`packages/core/src/context/",
+        "sourceSha256": "36fd105762b8e46ceb59551dff4201fe18fe7a9cd88ab75ec8e0eb4ef1c986ca"
+      },
+      {
+        "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+        "jsonPointer": null,
+        "line": 343,
+        "match": "microcompactFloorRatio",
+        "context": "rompt tokens。\n- compaction 事件会回流到 UI 和 hooks,可解释“为什么上下文变短了”。\n\n### 4.7 Beta 前注意点\n\n- `ContextManager` 依赖 Engine 注入 summarizeFn。没有 aux model 时会退回主模型。\n- 工具结果落盘失败会降级为保留原结果,不会中断主流程。只是在只读文件系统里可能更快触发后续截断。\n- `microcompactFloorRatio` 过低会造成模型重复读取文件;当前默认 0.7 是为了避免早期 churn。\n\n## 5. Session / Memory\n\n### 5.1 Session 职责定位\n\nSession 层负责“当前对话发生了什么”和“如何恢复”。\n\n关键文件:\n\n| 文件 | 角色 |\n|---|---|\n| `session/session-manager.ts` | session 目录、state.json、create/resume/list/fork。 |\n| `session/transcript.ts` | JSONL 事件日志和 `toMessages()` 转换。 |\n| `session/file-history.ts` | Write/Edit/ApplyPatch 前快照,支持 undo/redo。 |\n| `session/simple-diff.ts`、`undo-target.ts` | undo 目标和 diff 辅助。 |\n| `types.ts` | Sessio",
+        "sourceSha256": "0062b0e3780fb581d2b6098790e2f6a363d39bb9237ca537a17c81fe9090c64a"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "jsonPointer": null,
+        "line": 1052,
+        "match": "compactAtRatio",
+        "context": "多轮未更新，会提示模型更新任务状态。\n\n## 10. Context 模块：上下文管理、压缩、工具结果预算与存储\n\n`src/context/**` 负责让长期对话不会无限膨胀到超过模型 context window。\n\n### 10.1 ContextManager\n\n`manager.ts` 是 orchestrator。默认配置大致是：\n\n- `maxTokens: 200_000`\n- `compactAtRatio: 0.85`\n- `summarizeAtRatio: 0.92`\n- `maxToolResultChars: 30_000`\n- `microcompactFloorRatio: 0.7`\n- `microcompactKeepRecent`\n\n它有同步 `manage()` 和异步 `manageAsync()` 两条路径。TurnLoop 使用 `manageAsync()`。\n\n### 10.2 Hybrid token estimation\n\nContextManager 会记录 provider 返回的真实 prompt tokens：\n\n```ts\nrecordActualUsage(inputTokens, messageCount)\n```\n\n后续估算时，如果历史消息数匹配，就用：\n\n```text\n上次真实 input tokens + 新增消息估算 tokens\n```\n\n否则 fallback 到纯估算。\n\n这比完全用本地 tokenizer 更稳，因为不同 ",
+        "sourceSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "jsonPointer": null,
+        "line": 1053,
+        "match": "summarizeAtRatio",
+        "context": ". Context 模块：上下文管理、压缩、工具结果预算与存储\n\n`src/context/**` 负责让长期对话不会无限膨胀到超过模型 context window。\n\n### 10.1 ContextManager\n\n`manager.ts` 是 orchestrator。默认配置大致是：\n\n- `maxTokens: 200_000`\n- `compactAtRatio: 0.85`\n- `summarizeAtRatio: 0.92`\n- `maxToolResultChars: 30_000`\n- `microcompactFloorRatio: 0.7`\n- `microcompactKeepRecent`\n\n它有同步 `manage()` 和异步 `manageAsync()` 两条路径。TurnLoop 使用 `manageAsync()`。\n\n### 10.2 Hybrid token estimation\n\nContextManager 会记录 provider 返回的真实 prompt tokens：\n\n```ts\nrecordActualUsage(inputTokens, messageCount)\n```\n\n后续估算时，如果历史消息数匹配，就用：\n\n```text\n上次真实 input tokens + 新增消息估算 tokens\n```\n\n否则 fallback 到纯估算。\n\n这比完全用本地 tokenizer 更稳，因为不同 provider/tokenizer 差异很大。\n\n#",
+        "sourceSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "jsonPointer": null,
+        "line": 1055,
+        "match": "microcompactFloorRatio",
+        "context": "会无限膨胀到超过模型 context window。\n\n### 10.1 ContextManager\n\n`manager.ts` 是 orchestrator。默认配置大致是：\n\n- `maxTokens: 200_000`\n- `compactAtRatio: 0.85`\n- `summarizeAtRatio: 0.92`\n- `maxToolResultChars: 30_000`\n- `microcompactFloorRatio: 0.7`\n- `microcompactKeepRecent`\n\n它有同步 `manage()` 和异步 `manageAsync()` 两条路径。TurnLoop 使用 `manageAsync()`。\n\n### 10.2 Hybrid token estimation\n\nContextManager 会记录 provider 返回的真实 prompt tokens：\n\n```ts\nrecordActualUsage(inputTokens, messageCount)\n```\n\n后续估算时，如果历史消息数匹配，就用：\n\n```text\n上次真实 input tokens + 新增消息估算 tokens\n```\n\n否则 fallback 到纯估算。\n\n这比完全用本地 tokenizer 更稳，因为不同 provider/tokenizer 差异很大。\n\n### 10.3 manageAsync 顺序\n\n一次 context 管理大致按这个顺序：\n\n1. `applyToolResu",
+        "sourceSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9"
+      },
+      {
+        "path": "docs/archive/core-modules/context.md",
+        "jsonPointer": null,
+        "line": 40,
+        "match": "compactAtRatio",
+        "context": "Tokens: number): boolean;\n  checkLimits(messages: Message[]): { tokens; ratio; needsCompact; needsEmergency };\n}\n\ninterface ContextManagerConfig {\n  maxTokens: number;            // default 200_000\n  compactAtRatio: number;       // default 0.85\n  summarizeAtRatio: number;     // default 0.92\n  maxToolResultChars: number;   // default 30_000\n  microcompactFloorRatio: number;       // default 0.7 — micro idle below this\n  microcompactKeepRecent?: number;      // auto-derived from maxTokens if unset\n}\ntype SummarizeFn = (prompt: string) => Promise<string>;\ntype CompactStrategy = \"micro\" | \"summary\" | \"window\" | \"snip\" | \"emergency\";\ntype OnCompactFn = (info:",
+        "sourceSha256": "6bce941d712ef6d7df351f7400e6cab46c1a2feadc89117cf36316589a72b3ed"
+      },
+      {
+        "path": "docs/archive/core-modules/context.md",
+        "jsonPointer": null,
+        "line": 41,
+        "match": "summarizeAtRatio",
+        "context": ": Message[]): { tokens; ratio; needsCompact; needsEmergency };\n}\n\ninterface ContextManagerConfig {\n  maxTokens: number;            // default 200_000\n  compactAtRatio: number;       // default 0.85\n  summarizeAtRatio: number;     // default 0.92\n  maxToolResultChars: number;   // default 30_000\n  microcompactFloorRatio: number;       // default 0.7 — micro idle below this\n  microcompactKeepRecent?: number;      // auto-derived from maxTokens if unset\n}\ntype SummarizeFn = (prompt: string) => Promise<string>;\ntype CompactStrategy = \"micro\" | \"summary\" | \"window\" | \"snip\" | \"emergency\";\ntype OnCompactFn = (info: { strategy: CompactStrategy; before: number; afte",
+        "sourceSha256": "6bce941d712ef6d7df351f7400e6cab46c1a2feadc89117cf36316589a72b3ed"
+      },
+      {
+        "path": "docs/archive/core-modules/context.md",
+        "jsonPointer": null,
+        "line": 43,
+        "match": "microcompactFloorRatio",
+        "context": "\n  maxTokens: number;            // default 200_000\n  compactAtRatio: number;       // default 0.85\n  summarizeAtRatio: number;     // default 0.92\n  maxToolResultChars: number;   // default 30_000\n  microcompactFloorRatio: number;       // default 0.7 — micro idle below this\n  microcompactKeepRecent?: number;      // auto-derived from maxTokens if unset\n}\ntype SummarizeFn = (prompt: string) => Promise<string>;\ntype CompactStrategy = \"micro\" | \"summary\" | \"window\" | \"snip\" | \"emergency\";\ntype OnCompactFn = (info: { strategy: CompactStrategy; before: number; after: number }) => void;\n\n// compaction.ts — used directly by the engine in a few spots\nfunction estimateTo",
+        "sourceSha256": "6bce941d712ef6d7df351f7400e6cab46c1a2feadc89117cf36316589a72b3ed"
+      },
+      {
+        "path": "docs/archive/core-modules/context.md",
+        "jsonPointer": null,
+        "line": 114,
+        "match": "microcompactFloorRatio",
+        "context": "summarize`. Users edit these in `settings.json`, so feed them through `clampContextRatios` before constructing the manager (the engine drops `undefined` fields so they don't overwrite defaults).\n- **`microcompactFloorRatio` (default 0.7) means micro does nothing until ~70% full.** This is deliberate — clearing early Read/Bash output under low pressure just forces re-fetches and churns the cache. Don't lower it expecting more aggressive compaction.\n- **Token counts are heuristic estimates**, not real tokenizer output (char-ratio per content type). `recordActualUsage` improves accuracy by anchoring on the last real API count and only estimating messages added since.",
+        "sourceSha256": "6bce941d712ef6d7df351f7400e6cab46c1a2feadc89117cf36316589a72b3ed"
+      },
+      {
+        "path": "docs/archive/todo/plan-group-a-core.md",
+        "jsonPointer": null,
+        "line": 307,
+        "match": "compactAtRatio",
+        "context": "s()` 返回值追加：\n\n```ts\nconst estimate = this.estimateTokensHybridInfo(messages);\nreturn {\n  tokens: estimate.tokens,\n  ratio: estimate.tokens / this.config.maxTokens,\n  needsCompact: ratio >= this.config.compactAtRatio,\n  needsEmergency: ratio >= this.config.summarizeAtRatio,\n  promptTokensSource: estimate.source,\n  promptTokensConfidence: estimate.confidence,\n};\n```\n\n3. engine 首帧 seed 改为复用 context 估算，不再单独 `char / 4`。\n\n`engine.ts:1604` 附近建议改成结构化 seed：\n\n```ts\nconst ctxSeed = needsCtxSeed\n  ? (() => {\n      const checked = contextManager.checkLimits(messages);\n      return {\n        tokens: checked.tokens,\n        source: checked.promptTokensSource,\n        conf",
+        "sourceSha256": "15fad822d84099827bfa331532a433ad148bb267b8f781d14231e3d65942874e"
+      },
+      {
+        "path": "docs/archive/todo/plan-group-a-core.md",
+        "jsonPointer": null,
+        "line": 308,
+        "match": "summarizeAtRatio",
+        "context": "HybridInfo(messages);\nreturn {\n  tokens: estimate.tokens,\n  ratio: estimate.tokens / this.config.maxTokens,\n  needsCompact: ratio >= this.config.compactAtRatio,\n  needsEmergency: ratio >= this.config.summarizeAtRatio,\n  promptTokensSource: estimate.source,\n  promptTokensConfidence: estimate.confidence,\n};\n```\n\n3. engine 首帧 seed 改为复用 context 估算，不再单独 `char / 4`。\n\n`engine.ts:1604` 附近建议改成结构化 seed：\n\n```ts\nconst ctxSeed = needsCtxSeed\n  ? (() => {\n      const checked = contextManager.checkLimits(messages);\n      return {\n        tokens: checked.tokens,\n        source: checked.promptTokensSource,\n        confidence: checked.promptTokensConfidence,\n      };\n    })()",
+        "sourceSha256": "15fad822d84099827bfa331532a433ad148bb267b8f781d14231e3d65942874e"
+      },
+      {
+        "path": "docs/core-deep-dive/v2-04-model-context-memory-deep-dive.md",
+        "jsonPointer": null,
+        "line": 222,
+        "match": "summarizeAtRatio",
+        "context": "(同步、零成本)\nTier 2   LLM summary:把一段历史总结成更短的状态(异步、有成本)\nTier 3   window compact:接近窗口上限时的激进重组(同步、应急兜底)\n```\n\n`manage()` 跑同步层（Tier 0–1、3），`manageAsync()` 额外跑 Tier 2 的 LLM 总结（`summarizeFn` 由 Engine 注入）。关键阈值：`summarizeAtRatio` 默认 0.92（接近 92% 才总结），`microcompactFloorRatio` 默认 0.7（低于 70% 压力时 microcompact 不动手，让 tool_result 保持完整——压力不大的上下文不需要清）。\n\n### 5.1 为什么 compaction 必须保护 tool 配对\n\n这是 context 治理里最容易出隐蔽 bug 的地方。Anthropic / OpenAI 的 API 都要求 `tool_result` 必须有对应的 `tool_use`，否则整条消息被拒。compaction 是在删/重组消息，一不小心就会**把一对 tool_use/tool_result 拆散**——保留了引用 `tool_use_id` 的 `tool_result`，却把那条带 `tool_use` 的 assistant 消息切掉了。\n\n`context/compaction.ts` 用 `adjustIndexToPreserveAPIInvariants` 守",
+        "sourceSha256": "58436dd611f6ffed8125f4c889fea00c6f9bafaaaa577639a696b3e60cc4edf9"
+      },
+      {
+        "path": "docs/core-deep-dive/v2-04-model-context-memory-deep-dive.md",
+        "jsonPointer": null,
+        "line": 222,
+        "match": "microcompactFloorRatio",
+        "context": "短的状态(异步、有成本)\nTier 3   window compact:接近窗口上限时的激进重组(同步、应急兜底)\n```\n\n`manage()` 跑同步层（Tier 0–1、3），`manageAsync()` 额外跑 Tier 2 的 LLM 总结（`summarizeFn` 由 Engine 注入）。关键阈值：`summarizeAtRatio` 默认 0.92（接近 92% 才总结），`microcompactFloorRatio` 默认 0.7（低于 70% 压力时 microcompact 不动手，让 tool_result 保持完整——压力不大的上下文不需要清）。\n\n### 5.1 为什么 compaction 必须保护 tool 配对\n\n这是 context 治理里最容易出隐蔽 bug 的地方。Anthropic / OpenAI 的 API 都要求 `tool_result` 必须有对应的 `tool_use`，否则整条消息被拒。compaction 是在删/重组消息，一不小心就会**把一对 tool_use/tool_result 拆散**——保留了引用 `tool_use_id` 的 `tool_result`，却把那条带 `tool_use` 的 assistant 消息切掉了。\n\n`context/compaction.ts` 用 `adjustIndexToPreserveAPIInvariants` 守这条不变量：当要从某个 index 开始保留消息时，它会**向后扩张 slice 起点**",
+        "sourceSha256": "58436dd611f6ffed8125f4c889fea00c6f9bafaaaa577639a696b3e60cc4edf9"
+      }
+    ],
+    "context_form_recovery": [
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+        "jsonPointer": "/hits/old-failed/65/excerpt",
+        "line": 1,
+        "match": "上下文上限、引用范围与 extraFiles=[]；拒绝解析失败和不合法候选，保存失败",
+        "context": "- [ ] 候选保留原始 frontmatter（按原文本块保持），校验正文 UTF-8 字节、上下文上限、引用范围与 extraFiles=[]；拒绝解析失败和不合法候选，保存失败证据且不无限重试。",
+        "sourceSha256": "9a1e2fa7a75eea23bcfb58c35717897ec8379f2d025ebe5f60f0eb6b17d81e42"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-09-26-optimization-lab-engine.md",
+        "jsonPointer": null,
+        "line": 107,
+        "match": "上下文上限、引用范围与 extraFiles=[]；拒绝解析失败和不合法候选，保存失败",
+        "context": "RED：发送给优化器的材料只有原版、任务目标、开发输入和已冻结评分反馈；任何保留数据/路径不进入 payload。\n- [ ] `reflect_once_v1` 只调用一次优化操作，结构化返回 1–2 个完整正文、改动解释、开发来源 IDs。禁止任意 patch、工具调用、额外文件和对评分器的修改。\n- [ ] 候选保留原始 frontmatter（按原文本块保持），校验正文 UTF-8 字节、上下文上限、引用范围与 extraFiles=[]；拒绝解析失败和不合法候选，保存失败证据且不无限重试。\n- [ ] 以 body hash 保存 `candidates/<hash>/body.md` 与 manifest，记录 parent hash、strategyVersion 与来源。候选内容不得存到 scanner 根或使用 SKILL.md 文件名。\n- [ ] 用固定分词/ngram 生成新添实体/数字/文件名/长片段提示；相同输入结果相同，不更改评分或排序。\n- [ ] 注入恶意候选、超长正文、元数据权限变更、开发题目硬编码；验证正常 Skill、Memory、dream 文件字节不变。提交策略。\n\n## Task B7：评分模板、回填与冻结反馈\n\n文件：`grading.ts` 及测试。\n\n- [ ] RED：缺必要基线分数不能 proposing；缺必要筛选分数不能选择候选/开启 holdout。任何模板都不含未执行保留题。\n- [ ] 控制器生成随机不透明 gradingItemId 和随机顺序；私有映射绑定 experiment/trial/ca",
+        "sourceSha256": "039c848b8f2aca30e112f99be3ab657a3b5e01175f6ec3e9be8b0cfbdced39bc"
+      }
+    ]
+  },
+  "allRetainedSemanticallyRead": false
+}

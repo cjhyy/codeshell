@@ -1,0 +1,7 @@
+15:import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
+33:    controller.chat.run === "running" ||
+34:    controller.chat.run === "waiting" ||
+78:    chat,
+622:                        sessionTitle(chat, item.sessionId)
+771:                {controller.chatControls}
+rg: packages/web/app/useChatController.ts: IO error for operation on packages/web/app/useChatController.ts: No such file or directory (os error 2)

@@ -1,0 +1,84 @@
+{
+  "role": "Independent second implementation of metadata rules, not peer or source review",
+  "passed": true,
+  "metadataPinCount": 8,
+  "basePathCount": 4643,
+  "acceptedRows": 42,
+  "excludedRows": 15,
+  "deferredRows": 1,
+  "uniqueSemanticPaths": 22,
+  "transitionCount": 14,
+  "counts": {
+    "unknown": 3920,
+    "full": 360,
+    "selected": 363
+  },
+  "notFull": 4283,
+  "newFullPurposeChecks": [
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+        "jsonPointer": "/files/1"
+      },
+      "before": "unknown",
+      "after": "full",
+      "purpose": "Full control-layer source: projection composition and injected settings write routing only. No real loader/registry/Host/settings operation or live activation guarantee.",
+      "explicitEOFWholeRecord": true,
+      "newUniqueRead": false
+    },
+    {
+      "path": "packages/core/src/capability-control/project.ts",
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+        "jsonPointer": "/files/2"
+      },
+      "before": "unknown",
+      "after": "full",
+      "purpose": "Full pure descriptor projection and metadata control fields. Not actual runtime registry/permission behavior.",
+      "explicitEOFWholeRecord": true,
+      "newUniqueRead": false
+    },
+    {
+      "path": "packages/core/src/capability-control/types.ts",
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+        "jsonPointer": "/files/3"
+      },
+      "before": "unknown",
+      "after": "full",
+      "purpose": "Full static descriptor/write-scope/interface contracts and ordinary error type.",
+      "explicitEOFWholeRecord": true,
+      "newUniqueRead": false
+    },
+    {
+      "path": "packages/core/src/composition/lifetime.ts",
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+        "jsonPointer": "/files/0"
+      },
+      "before": "unknown",
+      "after": "full",
+      "purpose": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+      "explicitEOFWholeRecord": true,
+      "newUniqueRead": false
+    },
+    {
+      "path": "packages/core/src/composition/activation.ts",
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+        "jsonPointer": "/files/1"
+      },
+      "before": "unknown",
+      "after": "full",
+      "purpose": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+      "explicitEOFWholeRecord": true,
+      "newUniqueRead": false
+    }
+  ],
+  "checks.files": [],
+  "productSourceSemantics": 0,
+  "productExecution": 0,
+  "Git": 0,
+  "didNotImportOrExecuteAdapter": true
+}

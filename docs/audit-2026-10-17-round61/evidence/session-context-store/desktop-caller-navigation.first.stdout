@@ -1,0 +1,24 @@
+20:import { startExternalRuntimeSession } from "@cjhyy/code-shell-capability-coding/external-runtimes";
+96:  cwd: string;
+102:  initialContext?: string;
+133:  registerSession: (sessionId: string, cwd: string, webContentsId?: number) => void;
+139:  resolveProjectBinding: (cwd: string) => SessionProjectBinding | undefined;
+143:  projectTrust?: (cwd: string) => "trusted" | "untrusted" | "unknown";
+165:  prepareCodexLaunch?: (cwd: string) => Promise<CodexLaunch>;
+181:      cwd: string;
+184:      initialContext?: string;
+217:  private readonly prepareCodexLaunch: (cwd: string) => Promise<CodexLaunch>;
+441:      cwd: request.cwd,
+709:    const resumeRuntimeSessionId =
+907:      session = await startExternalRuntimeSession({
+910:        cwd: request.cwd,
+911:        businessSessionId: request.sessionId,
+925:          cwd: request.cwd,
+933:        ...(resumeRuntimeSessionId ? { resumeRuntimeSessionId } : {}),
+934:        ...(request.initialContext ? { initialContext: request.initialContext } : {}),
+1051:      cwd: request.cwd,
+1053:      initialContext: request.initialContext,
+1070:        cwd: request.cwd,
+1243:                    cwd: entry.cwd,
+1290:                  initialContext: entry.initialContext,
+1324:                cwd: entry.cwd,

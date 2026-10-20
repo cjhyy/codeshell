@@ -1,0 +1,35 @@
+{
+  "baseline": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "decision": "One new narrowly scoped P3 ERROR-R22-01 after source/primary-contract validation; no prior quota classification mechanism found in inspected targeted hits. Not semantic exhaustion.",
+  "history": {
+    "files": 2232,
+    "markdownFiles": 1202,
+    "jsonFiles": 1030,
+    "jsonStringLeaves": 309994,
+    "jsonScalarLeaves": 436035,
+    "parseErrors": 0
+  },
+  "targeted": {
+    "friendlySourceMatches": 47,
+    "quotaOrderMatches": 0,
+    "heuristicOverlapMatches": 10
+  },
+  "broad": {
+    "all429Matches": 102,
+    "savedContextCap": 100,
+    "numericNoise": true,
+    "localizedQuotaMatches": 5
+  },
+  "reviewedPrimaryHistory": [
+    "docs/archive/architecture/19-core-chain-review-beta.md",
+    "docs/archive/core-modules/engine.md",
+    "docs/archive/core-complete-review.md",
+    "docs/architecture/03-llm-and-model-layer.md"
+  ],
+  "exclusions": [
+    "Existing friendly-error mixed auth/custody/transcript suite static only",
+    "Generic rate retry architecture descriptions acknowledge429 handling but no quota branch issue",
+    "Numeric429 locations and counts are not provider-error evidence",
+    "No restart of failed local SDK metadata resolver direction"
+  ]
+}

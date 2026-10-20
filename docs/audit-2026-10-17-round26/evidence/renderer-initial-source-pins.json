@@ -1,0 +1,124 @@
+{
+  "parentReportedFreeze": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "gitComparisonPerformed": false,
+  "gitCommands": 0,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+      "bytes": 2052,
+      "lineCount": 56,
+      "sha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.test.tsx",
+      "bytes": 3725,
+      "lineCount": 113,
+      "sha256": "eecd8b36993e6bc7903e1ad07c03b6c99b730a522fb53ddec1a938ba22b6a1c5",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "bytes": 17885,
+      "lineCount": 424,
+      "sha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+      "bytes": 11449,
+      "lineCount": 352,
+      "sha256": "4c11dfc6ab2a5a3aa88bc5ec50f7e2dde3d703cfa17678cb4668c5c1f581a74e",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.ts",
+      "bytes": 2513,
+      "lineCount": 61,
+      "sha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.test.ts",
+      "bytes": 3075,
+      "lineCount": 94,
+      "sha256": "dc78c7c6223f46a240f245702610422cb7fd6a4fb6d3dce60ebe684e0cd6b2e7",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40415,
+      "lineCount": 1033,
+      "sha256": "de428ac137bd0d205805ec8f2756a175117bb6389b5fd188e81adf3e4cd49080",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+      "bytes": 12507,
+      "lineCount": 338,
+      "sha256": "53e3d749280c846a50c87d24e88ae307c6896474968c983c8e45ef8ae165c875",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "bytes": 437,
+      "lineCount": 12,
+      "sha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+      "bytes": 660,
+      "lineCount": 13,
+      "sha256": "fcb344312ed6342e6d4239178e3d73e71018412cb93d6e5ade8ff0c769a423a6",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "semanticRead": "pending except previously full-read CODESHELL; this is a before-read byte pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "semanticRead": "additional necessary selected consumer/dependency; hash captured at metadata follow-up, not a claim of pre-read pin",
+      "hashCapturedBeforeSemanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "bytes": 8028,
+      "lineCount": 265,
+      "sha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "semanticRead": "additional necessary selected consumer/dependency; hash captured at metadata follow-up, not a claim of pre-read pin",
+      "hashCapturedBeforeSemanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+      "bytes": 16988,
+      "lineCount": 437,
+      "sha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "semanticRead": "additional necessary selected consumer/dependency; hash captured at metadata follow-up, not a claim of pre-read pin",
+      "hashCapturedBeforeSemanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/simple-select.tsx",
+      "bytes": 7542,
+      "lineCount": 212,
+      "sha256": "b0ce04cf6ea85aacc648bbc31024c564e44fe68c3c65c66f7e7b724a78caa3c0",
+      "semanticRead": "additional necessary selected consumer/dependency; hash captured at metadata follow-up, not a claim of pre-read pin",
+      "hashCapturedBeforeSemanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "bytes": 15998,
+      "lineCount": 413,
+      "sha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "semanticRead": "Additional actual snapshot event producer; hash captured after selected text read, not a pre-read claim",
+      "hashCapturedBeforeSemanticRead": false
+    }
+  ]
+}

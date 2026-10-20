@@ -1,0 +1,16 @@
+{
+  "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+  "bytes": 8637,
+  "sha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+  "jsonPointer": "/files/8",
+  "rawObject": {
+    "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+    "frozenGitBlob": "3627bd9db9f5c1b1210769222e5d089878ddfba3",
+    "frozenSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+    "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+    "frozenBytes": 11253,
+    "currentEqualsFrozen": true,
+    "inspectionScope": "entire file; query producer/error consumer static only"
+  },
+  "role": "canonical original metadata positive, no source body"
+}

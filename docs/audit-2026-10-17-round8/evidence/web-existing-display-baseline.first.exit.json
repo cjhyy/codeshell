@@ -1,0 +1,16 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/web/src/lib/format.test.ts",
+    "packages/web/src/lib/messageMappers.test.ts",
+    "packages/web/src/lib/mobileAttachments.test.ts"
+  ],
+  "startedAt": "2026-10-17T05:45:20.548818+00:00",
+  "finishedAt": "2026-10-17T05:45:20.860182+00:00",
+  "exitCode": 0,
+  "attempt": 1,
+  "stdoutAndStderr": "web-existing-display-baseline.first.log"
+}

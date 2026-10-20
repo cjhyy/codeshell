@@ -38,6 +38,32 @@ function credential(grant: string): Credential {
     },
   };
 }
+test("recipe-only active connections protect their token and grant from retirement after restart", () => {
+  const { store, restart } = fixture();
+  const active = credential("active");
+  delete active.meta!.linkExecutionBackend;
+  delete active.meta!.linkExecutionRuntime;
+  active.meta = { ...active.meta, recordSchemaVersion: 2, linkRecipeId: "broker-oauth" };
+  store.stageRemoteLinkRetirement(active, 0);
+  store.save("user", active);
+  expect(restart().claimRemoteLinkRetirement(1)).toBeUndefined();
+  expect(restart().resolve(active.id)).toEqual(active);
+});
+test("a future record format still prevents an older Host from revoking its active grant", () => {
+  const { store, restart } = fixture();
+  store.stageRemoteLinkRetirement(credential("active"), 0);
+  const active = credential("active");
+  active.secret = "rotated-by-newer-host";
+  active.meta = {
+    linkRemoteIssuer: "https://link.example",
+    linkRemoteGrantId: "active",
+    recordSchemaVersion: 3,
+    linkRecipeId: "broker-oauth",
+  };
+  store.save("user", active);
+  expect(restart().claimRemoteLinkRetirement(1)).toBeUndefined();
+  expect(restart().remoteLinkRetirementCount()).toBe(1);
+});
 test("retired secrets are encrypted, hidden and preserved by ordinary writes and old readers", () => {
   const { dir, store, restart } = fixture();
   store.stageRemoteLinkRetirement(credential("one"), 10);

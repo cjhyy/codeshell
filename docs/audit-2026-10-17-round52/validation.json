@@ -1,0 +1,16 @@
+{
+  "baseline": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productReruns": 0
+  },
+  "mode": "Static Renderer theme/activity/image compression source review with independent thin-image review and target-only old-full metadata gate. Public WHATWG documentation consulted separately; no product execution. Zero product/helper/fixture/test/React/clock/timer/model/native/business-network/auth/custody experiments; Git binding/integration metadata separately recorded.",
+  "publicDocumentationWebCalls": {
+    "root": 1,
+    "independent104": 3
+  },
+  "productNetworkRuns": 0
+}

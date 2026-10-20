@@ -1,0 +1,157 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "readTimeUtc": "2026-10-17 10:17 UTC",
+  "algorithm": "sha256",
+  "sourceCount": 17,
+  "scope": "17 actual instruction/source/history files from output-static-crosscheck; complete repository paths, existing read ranges and read-time hashes only. No new reading or source revalidation performed to assemble this manifest.",
+  "frozenBlobVerifiedAtReadTime": true,
+  "currentMatchedFrozenAtReadTime": true,
+  "note": "Full file bytes/hash checks are not full semantic review. Selected ranges identify claimed reading, not transitive dependency or runtime coverage. Additional rg navigation excerpts do not enlarge full coverage. Includes one instruction file, eight product/test source files and eight historical documents; data-prep artifact hashes remain in the crosscheck report separately.",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "coverage": "full",
+      "selectedLineRanges": [[1, 217]],
+      "lineCount": 217,
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2"
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "coverage": "full",
+      "selectedLineRanges": [[1, 45]],
+      "lineCount": 45,
+      "bytes": 1722,
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a"
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [[1, 34]],
+      "lineCount": 34,
+      "bytes": 1257,
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127"
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [[1, 63], [208, 229], [280, 345], [418, 535]],
+      "lineCount": 702,
+      "bytes": 25112,
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [[1, 79]],
+      "lineCount": 130,
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6"
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "coverage": "full",
+      "selectedLineRanges": [[1, 188]],
+      "readingChunks": [[1, 172], [170, 188]],
+      "lineCount": 188,
+      "bytes": 5956,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/bash.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [[24, 64], [120, 129], [203, 239]],
+      "lineCount": 239,
+      "bytes": 10753,
+      "sha256": "f5bbf67f296aaff1b3d154b194e40d1362cb010257b44607a3704897cec67e22"
+    },
+    {
+      "path": "packages/core/src/protocol/server-output.ts",
+      "coverage": "full",
+      "selectedLineRanges": [[1, 51]],
+      "lineCount": 51,
+      "bytes": 1706,
+      "sha256": "c7025b3360f8039090b06d320d29c70da35b7fda2a1d3e440b4eb2eb2bdb2c76",
+      "note": "Read-only optional navigation; not found to participate in the cleaner chain."
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.test.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [[110, 175], [177, 220]],
+      "lineCount": 379,
+      "bytes": 14593,
+      "sha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "coverage": "selected",
+      "selectedLineRanges": [[104, 135]],
+      "lineCount": 396,
+      "bytes": 23642,
+      "sha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "note": "Additional rg navigation hits are described in the crosscheck; not full document reading."
+    },
+    {
+      "path": "docs/archive/core-modules/runtime.md",
+      "coverage": "selected",
+      "selectedLineRanges": [[19, 19], [68, 68], [104, 128]],
+      "lineCount": 128,
+      "bytes": 10185,
+      "sha256": "6a5acecf8d73d8fb134e1987b422078f3aa2cb7f8ba8f8b3be4f7b02a71ab1a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/skills-agents.md",
+      "coverage": "selected",
+      "selectedLineRanges": [[25, 51]],
+      "lineCount": 53,
+      "bytes": 9203,
+      "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/simplediff.md",
+      "coverage": "selected",
+      "selectedLineRanges": [[1, 30]],
+      "lineCount": 42,
+      "bytes": 6379,
+      "sha256": "a2309fec29f3e213c772d7010a5456cbd41519fb355cd628bb40c8ef1fbfc930"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/ndjson.md",
+      "coverage": "full",
+      "selectedLineRanges": [[1, 29]],
+      "lineCount": 29,
+      "bytes": 4829,
+      "sha256": "c1427ad4ff04aeab42227365d41f8823b591da6fb4d98d2b7b35f2242095f153"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/tasknoise.md",
+      "coverage": "selected",
+      "selectedLineRanges": [[13, 29]],
+      "lineCount": 35,
+      "bytes": 5751,
+      "sha256": "4a77837071c75a6a41c8e2ed596c1bfb52cf66500e9e02ef36660e5fd48d78b1"
+    },
+    {
+      "path": "docs/review-2026-10-12/runtime-round3.md",
+      "coverage": "full",
+      "selectedLineRanges": [[1, 47]],
+      "lineCount": 47,
+      "bytes": 8292,
+      "sha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7",
+      "note": "Historical navigation only; job/Host/pipe issues not causally related to this cleaner finding and not rerun."
+    },
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "coverage": "selected",
+      "selectedLineRanges": [[548, 548]],
+      "lineCount": 625,
+      "bytes": 99990,
+      "sha256": "2cadf52899194bd9532e4d3890a1ccad64cb94e48c2cadcef6fe7e8c1f842f1c",
+      "note": "Single rg navigation line; old clean assessment is not current verification."
+    }
+  ],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "gitWrites": 0
+}

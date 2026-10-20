@@ -1,0 +1,68 @@
+{
+  "checkedUTC": "2026-10-17T17:19:18.864094+00:00",
+  "sourceAndInstructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+      "bytes": 9089,
+      "lines": 247,
+      "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 93752,
+      "lines": 2479,
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnUsageMessageView.tsx",
+      "bytes": 2344,
+      "lines": 52,
+      "sha256": "4f941fcbec7d2f0c8e225df7e3e661da27acf6bb8b02cf2ee65f8640f563bb8b",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "matchesInitial": true
+    }
+  ],
+  "all7PinsUnchanged": true,
+  "history": {
+    "initialCount": 4895,
+    "endingCount": 4895,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "sameFilter": "include50/exclude numeric formal51+; docs/bugs MD/JSON only",
+    "inventoryExitCode": 0,
+    "inventoryStderr": ""
+  },
+  "newSemanticReadDuringEnding": 0,
+  "Git": 0,
+  "sourceDataAndRangeHashesOnlyNotRuntime": true
+}

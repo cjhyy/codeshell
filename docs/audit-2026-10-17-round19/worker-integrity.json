@@ -1,0 +1,197 @@
+{
+  "baseline": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "artifactChecks": [
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup-decisions.json",
+      "sha256": "ecb531b6596e3f26d6f2aa34e5ddefb61b074b59e9baf5396e327ab1228b8aa8"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup.json",
+      "sha256": "0424f52da9dc631dcfa1c5647251aec7ce05dafb426c8761af0caa80ccf87e58"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup.py",
+      "sha256": "507d3f99543dea43a7251d7711539f013f07a83f975fb4f94334afd49cf98cc1"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-findings.json",
+      "sha256": "f998dabaf691c5c034f6889f39d11c878ff804d90f79aee9e737ebea5a2484a4"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-first.exit.json",
+      "sha256": "6f6e0f93f5437c16d6c59934e0cd2e3f98b5dbd3748ea3a5897b58708f6a4d41"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-first.raw.log",
+      "sha256": "aad8dfb9f0edd3917f1eeee0a1b6e805ed60e78341be0c7c1ab94ce829d58617"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-focused.test.ts",
+      "sha256": "03ee81e8efaee3461c22a8d164e06f254009bd3f728a46da9e01cb672385a652"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-preflight.json",
+      "sha256": "53f4059e32cca5b9d293ed1cabaead80b6818795f3eb293b3eb90162d7ce51b1"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-related.json",
+      "sha256": "9e8f3677e8b85d5a8452c549c074b31a24335b53533bfbd2c138ffeba8cd62e6"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-source-manifest.json",
+      "sha256": "59955ebea96a4d077ce5441ca7dab04250c81d3047c190323451f5a0513a3067"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-validation.json",
+      "sha256": "c6dbf0d90006ae8795e9a6e9c334ae49a95bcc05e630290d1afa9814adfbb7a5"
+    },
+    {
+      "receipt": "reviewprompt-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "sha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-dedup.json",
+      "sha256": "0614cb8b39ec9d21366b27ecdaa7b0a6653447ae3c781281c0b5aabad7367056"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-dedup.py",
+      "sha256": "1c9c59180036a997811a268d4ea1dbe89915d3c5b88e959836a7c8d8fd943658"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-findings.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-metadata-skips.json",
+      "sha256": "b12e1ff92fc47603d9500642538ebbcd274f5ff8edeca48d8527fee15313a217"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-normal.first.exit.json",
+      "sha256": "10118af6c18507a13fd1e79ddfe61446ef666258b88bf9aa3ebceefb9c635128"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-normal.first.raw.log",
+      "sha256": "8abd530b2545b293931994cc6d5039bb8a2651d58814ed60769f1a8e4dbe6933"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-normal.test.ts",
+      "sha256": "5b55507cc493ea86b6a5679b77f2b538322da961ecbce57a4ed82b10176b6927"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-preflight.json",
+      "sha256": "c003c4bd1d9c511f11d8a5d853744f13179307bc7af8b83dfed7876fbb47eea4"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-related.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-source-manifest.json",
+      "sha256": "ed4a9395fbbdb7e4e37d6e8570cbe1fe043efbc6058586345b5072d9b65877f6"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-validation.json",
+      "sha256": "fd0b02f57d72afb6ca5038f402a956856b4b9590d3e06b622b90530207184a32"
+    },
+    {
+      "receipt": "timing-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/timing.md",
+      "sha256": "84b153340cfb082ef79d7e34a6b438a5a93cc66296071b40301de0607ec37672"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/simplediff.md",
+      "sha256": "a2309fec29f3e213c772d7010a5456cbd41519fb355cd628bb40c8ef1fbfc930"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-dedup.json",
+      "sha256": "8f7a5e5db0173a61ad18adaa20611d8ec6489e513f37ad4083050ea9d3050e7d"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-dedup.py",
+      "sha256": "57fd778cbc7c13dbc2b0e94f09edcb92c41fdd2f022d2d31667c61baec50542d"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-findings.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-focused.test.ts",
+      "sha256": "2c6a39087a5e2630c212d21973d7bf15058038cd3ba442472e22c4ed075de10d"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-normal.first.exit.json",
+      "sha256": "6186edd659a2862018299b2c697b6cd9db24e070cc32ad8ccbb58170e262c065"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-normal.first.raw.log",
+      "sha256": "b6f3347ad1b1a34e5b75413f9de8d127959f6b0a8aa47426daa453b91406ba01"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-preflight.json",
+      "sha256": "0f0acc02bee548404876e12f7bb40d8a75dbb7a474c2b7103620e7dd1b3be791"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-related.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-source-manifest.json",
+      "sha256": "90ec59e07bfe6494afd980a372bddd3adc59af77deb31313a89be91ab12357c9"
+    },
+    {
+      "receipt": "simplediff-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-validation.json",
+      "sha256": "a550cdcb2b32b805a7a7df029e045c0d224b640ec732813fe309e8cc56997f0a"
+    }
+  ],
+  "sourceCheckCount": 45,
+  "productTestsRerun": false
+}

@@ -1,0 +1,47 @@
+{
+  "recordedUtc": "2026-10-17T11:54:59.180200+00:00",
+  "kind": "metadata source-reader range overrun",
+  "toolChunkId": "2f7462",
+  "observedExitCode": 1,
+  "requestedRead": {
+    "path": "packages/tui/src/render/output.ts",
+    "ranges": [
+      [
+        563,
+        637
+      ],
+      [
+        640,
+        675
+      ],
+      [
+        776,
+        815
+      ]
+    ]
+  },
+  "actualObservedRead": {
+    "ranges": [
+      [
+        563,
+        637
+      ],
+      [
+        640,
+        675
+      ],
+      [
+        776,
+        814
+      ]
+    ],
+    "lineCount": 814,
+    "printedThroughEofBeforeFailure": true
+  },
+  "observedDiagnostic": "Traceback (most recent call last):\n  File \"<stdin>\", line 8, in <module>\nIndexError: list index out of range\n",
+  "rawCombinedOutputPersisted": false,
+  "limit": "Original tool response retains source text and stderr. No full raw-output file was captured; this receipt does not claim one. Metadata reader failed after printing all real requested source lines, on nonexistent line815. Active scope counts only the valid printed ranges, without rerunning that source read.",
+  "productAttempts": 0,
+  "productFailure": false,
+  "retryPerformed": false
+}

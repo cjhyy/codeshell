@@ -1,0 +1,24 @@
+{
+  "createdUTC": "2026-10-17T15:18:11.786904+00:00",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "target": "ContextSettingsSection.tsx",
+  "fallbackUsed": false,
+  "sameSHAFullReadExclusionEstablished": false,
+  "gateMeaning": "Explicit history metadata found current-SHA inventory/hash-only evidence, no current-SHA full receipt established. Not proof of historical unreadness.",
+  "ordinaryCounterevidence": [
+    "Form integer percent ranges10–95/98/99 match schema fractional0.1–0.95/0.98/0.99 after /100.",
+    "Form floor<=compact<=summarize normalization matches actual Core clamp; bilingual orderHint explicitly uses <=, so stale strict-order comments alone do not establish a form bug.",
+    "Reset payload nulls exactly3context overrides; read ordinary main data merge deletes null keys and preserves unrelated context fields.",
+    "Save user patch reaches settingsBus/user dispatcher/preload channel/main ordinary write call; successful write wrapper broadcasts settings-change source. No live event/worker behavior certified.",
+    "Engine reads SettingsManager context ratios and passes normalized fractions to normal run-context constructor; threshold consumers compare ratios, not whole percentage numbers."
+  ],
+  "limits": [
+    "No arbitrary pre-existing high-precision fraction lossless roundtrip claim: UI explicitly asks for whole percentages.",
+    "No parser/React/DOM/IPC/settings file/engine/model execution or test fixture.",
+    "No native/authority/identity/custody/permission mechanisms expanded.",
+    "No current author report/finding read; no existing-failure direction reopened.",
+    "No whole-repository or whole-history semantic correctness claim."
+  ]
+}

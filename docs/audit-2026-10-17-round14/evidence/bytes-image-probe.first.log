@@ -1,0 +1,20 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.test.ts:
+(pass) round14 ordinary in-memory image byte probes > image/png: ordinary maintained 1x1 image [1.48ms]
+(pass) round14 ordinary in-memory image byte probes > image/png: respects Uint8Array byteOffset and byteLength [1.05ms]
+(pass) round14 ordinary in-memory image byte probes > image/jpeg: ordinary maintained 1x1 image [0.17ms]
+(pass) round14 ordinary in-memory image byte probes > image/jpeg: respects Uint8Array byteOffset and byteLength
+(pass) round14 ordinary in-memory image byte probes > image/gif: ordinary maintained 1x1 image [0.28ms]
+(pass) round14 ordinary in-memory image byte probes > image/gif: respects Uint8Array byteOffset and byteLength [0.05ms]
+(pass) round14 ordinary in-memory image byte probes > image/webp: ordinary maintained 1x1 image [0.05ms]
+(pass) round14 ordinary in-memory image byte probes > image/webp: respects Uint8Array byteOffset and byteLength [0.03ms]
+(pass) round14 ordinary in-memory image byte probes > image/jpg alias canonicalizes to image/jpeg [0.15ms]
+(pass) round14 ordinary in-memory image byte probes > a nonanimated 87a header retains the ordinary GIF image dimensions [0.19ms]
+(pass) round14 ordinary in-memory image byte probes > synthetic SOF3 sample without DQT reaches current table rejection (candidate only) [0.16ms]
+
+ 11 pass
+ 0 fail
+ 31 expect() calls
+Ran 11 tests across 1 file. [63.00ms]
+Completed Bun shard: 11 tests, 0 skipped; 0 failures.

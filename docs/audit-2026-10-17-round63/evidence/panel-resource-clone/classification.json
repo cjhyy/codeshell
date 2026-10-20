@@ -1,0 +1,35 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "notPromotedBoundary": [
+    {
+      "id": null,
+      "path": "packages/server/src/panels/resources/storage.ts",
+      "lines": [
+        [
+          66,
+          76
+        ],
+        [
+          79,
+          85
+        ],
+        [
+          91,
+          92
+        ]
+      ],
+      "observation": "cloneMediaJson accepts serialized JSON at MAX_MEDIA_JSON_BYTES, writeMediaJson appends LF, while readMediaJson bounds whole file bytes by that same MAX. At exact serialized4MiB, the hypothetical written file would be one byte over read bound.",
+      "notEstablishedCondition": "No normal producer in this reviewed capture/import/materialize closure was shown able to produce an exact-boundary4MiB metadata record. ResourceAsset is constructed from fixed ID/digest/byte/time fields and bounded ordinary name/MIME metadata. Other unreviewed callers are not declared globally unreachable.",
+      "disposition": "Not promoted; no bug ID, no candidate count, no hand-crafted DTO/fixture or function execution."
+    }
+  ],
+  "rejectedPremise": "The private clone helper is not a public new-resource-ID operation. Existing assetId is intentionally returned after materialization.",
+  "limitedConclusion": "No new ordinary resource ID/path/directory/reference mismatch established in the reviewed producer-clone-consumer closure; not entire native/authority/OS correctness certification."
+}

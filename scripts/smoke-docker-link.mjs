@@ -363,6 +363,11 @@ try {
         "-e",
         `
     import { linkActionTool } from '/opt/codeshell/packages/core/dist/index.js';
+    const { readFileSync } = await import('node:fs');
+    const serverPackageUrl = new URL('file:///opt/codeshell/packages/server/package.json');
+    const serverPackage = JSON.parse(readFileSync(serverPackageUrl, 'utf8'));
+    const { installDefaultLinkProviders } = await import(new URL(serverPackage.exports['./links'].import, serverPackageUrl));
+    installDefaultLinkProviders();
     const result = await linkActionTool({provider:'github', action:'get_issue', connectionId:${JSON.stringify(saved.id)},
       params:{owner:'owner',repo:'repo',issue_number:7}}, {cwd:'/workspace',settingsScope:'full'});
     console.log(result);

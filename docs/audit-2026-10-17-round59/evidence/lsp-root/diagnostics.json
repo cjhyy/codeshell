@@ -1,0 +1,26 @@
+{
+  "metadataExceptions": [],
+  "toolOutputTruncationObserved": false,
+  "navigationNoMatches": [
+    {
+      "artifact": "consumer-navigation.json",
+      "command": [
+        "rg",
+        "-n",
+        "^describe|^  (it|test)|getLSPManager|initializeLSPManager|shutdown",
+        "packages/coding/src/lsp/manager.test.ts"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "",
+      "disposition": "Legitimate no-match declaration navigation. File remains hash-only; no fallback execution or body read."
+    }
+  ],
+  "incidentalDisplayExcluded": [
+    "manager.ts131–174 command availability/PATH/executable checks not semantically audited; whole279-line display is not full semantic review.",
+    "client.ts48–66 spawn/listeners displayed between selected constructor/initialize; old dynamic failures remain skipped.",
+    "index.capability.ts194–197 enforcement/path/concurrency fields displayed, not mechanism review.",
+    "coding-tui-chat.md113–119 next Claude-runtime section adjacent to C4/C5 old metadata window, excluded from this LSP cause scope."
+  ],
+  "rawOutputs": "Display JSONs preserve exact text/ranges for this task; first errors/truncations would be retained, none occurred. Audit standard-library hashing/parsing did not import or invoke repository code."
+}

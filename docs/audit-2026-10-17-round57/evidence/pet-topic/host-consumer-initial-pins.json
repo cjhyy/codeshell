@@ -1,0 +1,48 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "shouldStartNewSegment|buildCarryoverBrief|locateClosureWindow|enterConversationSessionRoute|shouldPromptConversationSessionRouteStale",
+    "packages/desktop/src",
+    "packages/pet/src"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "filenameResults": [
+    "packages/pet/src/topic-segment.test.ts",
+    "packages/pet/src/segment-closure.ts",
+    "packages/pet/src/conversation-session-route.ts",
+    "packages/pet/src/topic-segment.ts",
+    "packages/pet/src/conversation-session-route.test.ts",
+    "packages/pet/src/segment-closure.test.ts",
+    "packages/desktop/src/main/pet/conversation-session-route-store.ts",
+    "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+    "packages/desktop/src/main/pet/pet-segment-controller.ts"
+  ],
+  "pins": [
+    {
+      "path": "packages/desktop/src/main/pet/conversation-session-route-store.ts",
+      "bytes": 10967,
+      "lines": 305,
+      "sha256": "2966a715032d4c866f3411559c487338682a3ee043ddedbd7fcc1f1efce47a77",
+      "pinAt": "2026-10-17T18:55:16.180669+00:00",
+      "coverage": "hash-only before source-line navigation/body"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+      "bytes": 11519,
+      "lines": 302,
+      "sha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "pinAt": "2026-10-17T18:55:16.181447+00:00",
+      "coverage": "hash-only before source-line navigation/body"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+      "bytes": 11377,
+      "lines": 275,
+      "sha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "pinAt": "2026-10-17T18:55:16.181667+00:00",
+      "coverage": "hash-only before source-line navigation/body"
+    }
+  ]
+}

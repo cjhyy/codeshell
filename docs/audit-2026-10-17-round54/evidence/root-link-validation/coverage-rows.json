@@ -1,0 +1,268 @@
+[
+  {
+    "historyPath": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+    "at": "$[\"records\"][1][\"value\"][6]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "bytes": 10999,
+      "lines": 278,
+      "currentSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "currentMatchesPrior": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+    "at": "$[\"paths\"][21]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "lines": 278,
+      "bytes": 10999,
+      "currentSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "frozenSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "matchesFrozen": true,
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][790]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "bytes": 10999,
+      "lines": 278,
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+              "jsonLocation": "$[\"sources\"][6]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+              "jsonLocation": "$[\"files\"][66]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][3286]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "bytes": 10999,
+      "lines": 278,
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+    "at": "$[\"sources\"][6]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "bytes": 10999,
+      "lines": 278
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round3/source-manifest.json",
+    "at": "$[\"files\"][66]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "bytes": 10999,
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "matchesFrozenGitBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][13228]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "sourceHashFields": {
+        "currentSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+        "frozenSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-nonsemantic-or-hash-only",
+      "scopeFields": {
+        "scope": "inventory-only until explicitly listed in proposal.readScope"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/link/src/operation-validation.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1130,
+          "jsonPointer": "/paths/21"
+        }
+      ],
+      "claimId": "C013229"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][13229]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/link/src/operation-validation.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/1881"
+        }
+      ],
+      "claimId": "C013230"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][13230]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "sourceHashFields": {
+        "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+        "currentSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/link/src/operation-validation.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1128,
+          "jsonPointer": "/records/1/value/6"
+        }
+      ],
+      "claimId": "C013231"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][13231]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "sourceHashFields": {
+        "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/link/src/operation-validation.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1348,
+          "jsonPointer": "/files/790"
+        },
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/3286"
+        },
+        {
+          "historyRow": 1520,
+          "jsonPointer": "/sources/6"
+        },
+        {
+          "historyRow": 1532,
+          "jsonPointer": "/files/66"
+        }
+      ],
+      "claimId": "C013232"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][3608]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "bytes": 10999,
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "lines": 278,
+      "status": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitFullClaimIds": [],
+      "currentExplicitSelectedClaimIds": [],
+      "currentSelectedUnionLines": 0,
+      "claimIds": [
+        "C013229",
+        "C013230",
+        "C013231",
+        "C013232"
+      ],
+      "claimKindCounts": {
+        "explicit-nonsemantic-or-hash-only": 1,
+        "incidental-path-or-pin-object": 3
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][3608]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "bytes": 10999,
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "lines": 278
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][3609]",
+    "row": {
+      "path": "packages/link/src/operation-validation.ts",
+      "bytes": 10999,
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "lines": 278,
+      "initial49ShaMatches": true,
+      "blockedBy49EndingOverlay": false,
+      "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+    }
+  }
+]

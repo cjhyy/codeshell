@@ -1,0 +1,27 @@
+[
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 11,
+    "documentPin": {
+      "path": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "bytes": 37509,
+      "sha256": "27f512cb38ed5df5985e268749f8e65561bb270c36fd8c43f58ca95817ad4671",
+      "pinAt": "2026-10-17T20:20:13.337165+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "location": "/text",
+      "matchStart": 20626,
+      "matchEnd": 20756,
+      "windowStart": 20476,
+      "windowEnd": 20976,
+      "wholeValueCharacters": 25610,
+      "window": "saveProjectSetting(key, value, cwd)`。\n- `SettingsManager.deleteProjectSetting(key, cwd)` 或等价删除能力。\n- settings schema 增加 `capabilityOverrides`。\n- 单元测试覆盖点号路径写入、目录创建、原子写、invalidate。\n\n### Phase 2：能力控制层 project overlay\n\n- `CapabilityService.setEnabled()` 增加 scope/cwd。\n- 新增 `setOverride()` 或等价 API 表达 `inherit/on/off`。\n- descriptor 返回 `globalEnabled`、`projectOverride`、`effectiveSource`。\n- desktop capabilities service / IPC 透传 scope/cwd/state。\n- `readDisabledLists()` 或其上游能力计算接入 overlay。\n\n### Phase 3：suba",
+      "windowTruncated": true,
+      "matchStartLine": 550,
+      "windowStartLine": 547
+    },
+    "readAt": "2026-10-17T20:20:13.342549+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  }
+]

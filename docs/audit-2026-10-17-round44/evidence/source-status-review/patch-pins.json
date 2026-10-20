@@ -1,0 +1,13 @@
+{
+  "purpose": "before ordinary explicit patch payload data check; no settings write",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "lines": 62,
+      "pinUTC": "2026-10-17T14:59:35.765565+00:00",
+      "semanticRead": false
+    }
+  ]
+}

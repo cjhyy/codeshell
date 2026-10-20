@@ -1,0 +1,113 @@
+{
+  "frozenCommit": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "formalFindings": [],
+  "candidateCounts": {
+    "reviewed": 4,
+    "rejectedByExecutedControls": 2,
+    "auditDirectionSkippedAfterFixtureFailure": 2,
+    "promoted": 0
+  },
+  "execution": {
+    "shardsAttempted": 3,
+    "completedZeroFailureShards": 2,
+    "passedTests": 12,
+    "assertionsInPassingShards": 71,
+    "skippedTestsInPassingShards": 0,
+    "fixtureResolutionFailureShards": 1,
+    "failedShardRawBunCounts": {
+      "pass": 0,
+      "fail": 1,
+      "error": 1
+    },
+    "productTestsExecutedInFailedShard": 0,
+    "retryCount": 0
+  },
+  "receipts": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/logs/LogsView.interaction.test.tsx"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 1.036,
+      "rawLog": "docs/audit-2026-10-17-round6/evidence/desktop-logs-first.log",
+      "sha256": "ebff6cdd01a6a7d75e40c2b05439cdd98d4b254d1322d3c7b0c195e59cfd2894",
+      "bytes": 1239,
+      "attempt": 1
+    },
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/settings/SettingsPage.search.test.tsx"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 1.13,
+      "rawLog": "docs/audit-2026-10-17-round6/evidence/desktop-settings-search-first.log",
+      "sha256": "669fdcd28f46dc497cee4278599011743df17c9a313c0a7dfc33333d9454ac21",
+      "bytes": 785,
+      "attempt": 1
+    },
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round6/evidence/desktop-display-projections.test.ts"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 0.142,
+      "rawLog": "docs/audit-2026-10-17-round6/evidence/desktop-projections-first.log",
+      "sha256": "88b9ea023e38415a9c646f592bd1736c8c34a16d31a50538afbf0e214ec0f938",
+      "bytes": 528,
+      "attempt": 1
+    }
+  ],
+  "boundaries": [
+    "Only exact guarded Bun commands",
+    "Existing fixtures own in-memory MiniDOM/bridge/storage",
+    "No real app, user state, log directory, network, native operation, credentials, model or paid call",
+    "Pure projection direction stopped after first fixture import failure; no repair or alternate execution",
+    "No product edits or git mutations"
+  ],
+  "failedFixture": {
+    "path": "docs/audit-2026-10-17-round6/evidence/desktop-display-projections.test.ts",
+    "sha256": "11efe657ddafd0d1d84a471d6817fdd2fd9e59b2b2ee5cebdae9d8762e59ed53",
+    "bytes": 4974,
+    "preservedUnchangedAfterFirstRun": true,
+    "reason": "module resolution before any product test body; relative import climbs one level too far",
+    "disposition": "SKIP audit direction; no repair, retry or alternate execution"
+  },
+  "candidates": [
+    {
+      "id": "DD6-01",
+      "status": "REJECTED",
+      "severity": null,
+      "direction": "LogsView display/read ordering"
+    },
+    {
+      "id": "DD6-02",
+      "status": "REJECTED",
+      "severity": null,
+      "direction": "SettingsPage responsive search/navigation"
+    },
+    {
+      "id": "DD6-03",
+      "status": "SKIP_FIXTURE",
+      "severity": null,
+      "direction": "sidebar page projection"
+    },
+    {
+      "id": "DD6-04",
+      "status": "SKIP_FIXTURE",
+      "severity": null,
+      "direction": "catalog/grouped model option display"
+    }
+  ]
+}

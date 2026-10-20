@@ -1,0 +1,61 @@
+bun test v1.3.11 (af24e281)
+
+tests/release-recovery.test.ts:
+(pass) release recovery source gate > rejects malformed tags and run IDs before querying the source [0.43ms]
+(pass) release recovery source gate > accepts an original verified run, including annotated tags [0.17ms]
+(pass) release recovery source gate > recovers earlier ten-package tags but refuses duplicate smoke gates [0.12ms]
+(pass) release recovery source gate > accepts the pinned Windows runner but rejects duplicate or failed Windows builds [0.09ms]
+(pass) release recovery source gate > rejects moved tags and runs from another event or repository [0.08ms]
+(pass) release recovery source gate > requires every successful gate and every retained installer artifact [0.09ms]
+(pass) release assets require matching updater versions and unique installer names [479.55ms]
+
+tests/copy-assets.test.ts:
+(pass) copy-assets.mjs > fails when a glob source matches zero files [511.49ms]
+(pass) copy-assets.mjs > copies files matched by a glob source [483.19ms]
+
+tests/engine-bypass-guard.test.ts:
+(pass) check-no-engine-bypass > fails when an unauthorized package source file constructs Engine directly [644.12ms]
+
+tests/publish-release-packages.test.ts:
+(pass) resumable release publication > skips an immutable existing version only after checking the requested tag [0.26ms]
+(pass) resumable release publication > retries a transient publish failure: 503 Service Unavailable: https://registry.npmjs.org/@cjhyy%2fcode-shell [0.48ms]
+(pass) resumable release publication > retries a transient publish failure: error: 429 Too Many Requests [0.02ms]
+(pass) resumable release publication > retries a transient publish failure: error: publish failed with status 502 [0.02ms]
+(pass) resumable release publication > retries a transient publish failure: ECONNRESET [0.01ms]
+(pass) resumable release publication > rechecks an ambiguous failure before republishing a version accepted by the registry [0.04ms]
+(pass) resumable release publication > bounds repeated transient failures and does not print child credentials [0.16ms]
+(pass) resumable release publication > fails immediately on authentication errors without leaking raw output [0.03ms]
+(pass) resumable release publication > does not infer an absent version or publish during a registry outage [0.36ms]
+(pass) resumable release publication > an existing version with a different dist-tag requires explicit repair, never a downgrade [0.14ms]
+(pass) resumable release publication > accepts exit zero only after an exact version and requested tag read [0.09ms]
+(pass) resumable release publication > allows five minutes of public visibility delay without publishing again [0.18ms]
+(pass) resumable release publication > times out an accepted but invisible version without another publish or a success log [0.18ms]
+(pass) resumable release publication > waits for a delayed tag, including transient public read failures [0.17ms]
+(pass) resumable release publication > never moves a newer tag when the publisher reported success [0.57ms]
+(pass) resumable release publication > preserves permanent read failures and redacts unexpected confirmation errors [0.15ms]
+(pass) resumable release publication > caps reads by the remaining global deadline and rejects a late tag response [0.08ms]
+(pass) public registry verification > reads the exact scoped version without auth, bypassing a cached missing-version response [0.11ms]
+(pass) public registry verification > does not accept another version, malformed metadata, or unauthorized reads [0.09ms]
+(pass) public registry verification > checks the requested dist-tag against exact registry metadata [0.05ms]
+(pass) release helper modes and target checkout > keeps default entirely local [17.83ms]
+(pass) release helper modes and target checkout > keeps --dry-run entirely local [7.26ms]
+(pass) release helper modes and target checkout > keeps --list entirely local [6.56ms]
+(pass) release helper modes and target checkout > resumes the release after every earlier package is already published [6.47ms]
+(pass) release helper modes and target checkout > submits all packages before concurrent confirmation under one batch budget [6.56ms]
+(pass) release helper modes and target checkout > bounds a whole invisible batch at ten minutes, rather than ten minutes per package [6.69ms]
+(pass) release helper modes and target checkout > Bun publish --cwd selects the intended package in an isolated dry run [32.86ms]
+(pass) release helper modes and target checkout > reads and verifies versions from an explicit target checkout [38.36ms]
+
+tests/build-meta.test.ts:
+(pass) metapackage rebuild preserves both current and legacy CLI launchers [177.92ms]
+
+tests/builtin-coverage-gate.test.ts:
+(pass) coverage matches Bun's module mean while keeping the original line/function thresholds [0.40ms]
+(pass) coverage fails closed for absent, truncated, invalid or impossible LCOV counts [0.19ms]
+(pass) source coverage excludes generated package copies while retaining every loaded source [39.01ms]
+
+ 42 pass
+ 0 fail
+ 171 expect() calls
+Ran 42 tests across 6 files. [2.59s]
+Completed Bun shard: 42 tests, 0 skipped; 0 failures.

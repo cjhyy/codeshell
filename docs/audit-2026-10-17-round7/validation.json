@@ -1,0 +1,170 @@
+{
+  "baseline": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "totals": {
+    "firstBunShards": 9,
+    "completedCleanShards": 7,
+    "passedTests": 69,
+    "expectations": 372,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 2,
+    "passCountWithinFailedShards": 1,
+    "expectCallsWithinFailedShards": 13,
+    "existingBaselineTests": 53,
+    "focusedObservationsControlsAndCandidateTests": 16,
+    "rootPreflightBunShardsLaunched": 0
+  },
+  "runs": [
+    {
+      "log": "evidence/files-edit-literal.first.log",
+      "exitFile": "evidence/files-edit-literal.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "clean": true,
+      "phase": "focused-contract-observation-control",
+      "completed": true,
+      "passed": 6,
+      "failed": 0,
+      "expectations": 22,
+      "skipped": 0,
+      "sha256": "3068aa7d52422387d8878b545ec324e2154617271b79ccf1fad4d5dd391e9d27"
+    },
+    {
+      "log": "evidence/files-glob-order.first.log",
+      "exitFile": "evidence/files-glob-order.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "clean": true,
+      "phase": "observed-candidate-and-control",
+      "completed": true,
+      "passed": 2,
+      "failed": 0,
+      "expectations": 8,
+      "skipped": 0,
+      "sha256": "c68d4745b8203b01a799dd9ef365df3ab51aefa5250a93d096d34dcaf7c50289"
+    },
+    {
+      "log": "evidence/files-grep-fallback.first.log",
+      "exitFile": "evidence/files-grep-fallback.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "clean": true,
+      "phase": "focused-contract-observation-control",
+      "completed": true,
+      "passed": 2,
+      "failed": 0,
+      "expectations": 7,
+      "skipped": 0,
+      "sha256": "be571481b55f3e75083e1896ea63491213e6cfaa157981304599100043d4f9aa"
+    },
+    {
+      "log": "evidence/files-read-large.first.log",
+      "exitFile": "evidence/files-read-large.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "clean": true,
+      "phase": "focused-contract-observation-control",
+      "completed": true,
+      "passed": 2,
+      "failed": 0,
+      "expectations": 6,
+      "skipped": 0,
+      "sha256": "230cd522cbef992a5f97e3d521f9e796baedc4d769a672edee2eb59ec9b5857d"
+    },
+    {
+      "log": "evidence/providers-stream-contract.first.log",
+      "exitFile": "evidence/providers-stream-contract.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "clean": true,
+      "phase": "SDK-provider-progress-observations-controls-candidate",
+      "completed": true,
+      "passed": 4,
+      "failed": 0,
+      "expectations": 19,
+      "skipped": 0,
+      "sha256": "85b3642b84ae002c1749c2c8a4c6ab2a113fc6f2482460665805112337fa27f9"
+    },
+    {
+      "log": "evidence/providers-normalization-baseline.first.log",
+      "exitFile": "evidence/providers-normalization-baseline.first.exit.txt",
+      "exitCode": 0,
+      "firstRun": true,
+      "clean": true,
+      "phase": "existing-provider-baseline",
+      "completed": true,
+      "passed": 26,
+      "failed": 0,
+      "expectations": 46,
+      "skipped": 0,
+      "sha256": "b25f99b58636d2473539459109138d7851e0f1ca0d1d7772bcadedd855e5d360"
+    },
+    {
+      "log": "evidence/tui-store-anchor-baseline.first.log",
+      "exitFile": "evidence/tui-store-anchor-baseline.first.exit.json",
+      "exitCode": 0,
+      "firstRun": true,
+      "clean": true,
+      "phase": "existing-TUI-baseline",
+      "completed": true,
+      "passed": 27,
+      "failed": 0,
+      "expectations": 264,
+      "skipped": 0,
+      "sha256": "e3c66a2efa1354440e0479e23aa90feef7ab59576fa8b005d897b90f1ad4e8f3"
+    },
+    {
+      "log": "evidence/providers-thinking-roundtrip.first.log",
+      "exitFile": "evidence/providers-thinking-roundtrip.first.exit.txt",
+      "exitCode": 1,
+      "firstRun": true,
+      "clean": false,
+      "phase": "failed-fixture-assertion-SKIP",
+      "completed": false,
+      "passed": 1,
+      "failed": 1,
+      "expectations": 13,
+      "skipped": null,
+      "sha256": "41b72b0c2bcee7b27ec56765f8aa85cda7256d8a0054cd3f11b293485d2f9d8e",
+      "interpretation": "Failed first audit fixture; partial results excluded from clean totals, retained unchanged, direction skipped without retry/repair/alternate validation."
+    },
+    {
+      "log": "evidence/tui-diff-display.first.log",
+      "exitFile": "evidence/tui-diff-display.first.exit.json",
+      "exitCode": 1,
+      "firstRun": true,
+      "clean": false,
+      "phase": "failed-fixture-import-SKIP",
+      "completed": false,
+      "passed": 0,
+      "failed": 1,
+      "expectations": null,
+      "skipped": null,
+      "sha256": "5adeb72c980169bf6713153ce841c33e815749443f696fc9d7a808923e2f1987",
+      "interpretation": "Failed first audit fixture; partial results excluded from clean totals, retained unchanged, direction skipped without retry/repair/alternate validation."
+    }
+  ],
+  "nonBunSkips": [
+    {
+      "direction": "root translation",
+      "receipt": "evidence/root-i18n-preflight-failure.md",
+      "phase": "metadata preflight before guarded runner launch",
+      "productTestsExecuted": 0
+    },
+    {
+      "direction": "root theme application caller navigation",
+      "receipt": "evidence/root-static-search-skip.md",
+      "phase": "zsh glob expansion before rg launch",
+      "productTestsExecuted": 0
+    }
+  ],
+  "notes": [
+    "69 clean tests include 53 existing baseline tests and 16 focused observations/controls, including two downgraded behavior candidates. Not 69 new bugs or whole-repository gate.",
+    "Thinking's 1 pass and 13 expect calls belong to the failed shard, and TUI import has 0 pass; neither contributes to clean totals.",
+    "Root translation command never launched; its tool-response transcription is not a Bun raw log or failed Bun shard. Unchanged two-case fixture unexecuted.",
+    "Injected missing-command ENOENT in Grep is deliberate intended fallback input, not an actual environment/fixture failure; no external command launched.",
+    "Anthropic installed SDK memory parser is runtime evidence, not a real API/client/HTTP transport. Real provider/Facade/Transcript/reducer tested, execution/UI limited.",
+    "No failed direction repaired/retried or validated through another method. Original tests/logs unchanged when Glob/OpenAI claims were downgraded.",
+    "Crossreviews and assembly/hash/material checks add zero product execution. No shared dist/dependency rebuild, full build/typecheck/lint/test or clean-install claim.",
+    "No real models, paid APIs, accounts, user data, native apps/PTY, external messages, security/permission/platform experiments."
+  ]
+}

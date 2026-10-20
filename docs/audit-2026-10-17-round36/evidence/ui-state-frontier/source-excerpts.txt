@@ -1,0 +1,1016 @@
+FILE packages/desktop/src/renderer/ui/toastState.ts SHA256 27d4c0abe99db78f1968cae93fb67d644a9c003cf715078ca1cbc485a2f51e48; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 1-100
+   1: /**
+   2:  * Pure state behind the toast hook (useToast). Kept free of React/DOM/timers so
+   3:  * the active-stack and history behaviour is unit-testable; the ToastProvider owns the
+   4:  * id generation, the auto-dismiss timers, and the rendering.
+   5:  *
+   6:  * Toasts are non-blocking, transient confirmations ("已复制路径", "图片已保存")
+   7:  * — distinct from the modal dialogs in ./dialogState. Several can be visible at
+   8:  * once; the newest sits at the bottom of the stack.
+   9:  */
+  10: 
+  11: export type ToastVariant = "default" | "success" | "error";
+  12: 
+  13: export interface ToastOptions {
+  14:   message: string;
+  15:   /** Full diagnostic context retained in notification history. */
+  16:   detail?: string;
+  17:   /** Originating engine session, for opening the conversation from history. */
+  18:   sessionId?: string;
+  19:   /** Affects the accent/icon. Default "default". */
+  20:   variant?: ToastVariant;
+  21:   /** Auto-dismiss after this many ms; 0 means it stays until dismissed. */
+  22:   durationMs?: number;
+  23: }
+  24: 
+  25: export interface Toast {
+  26:   id: string;
+  27:   message: string;
+  28:   detail?: string;
+  29:   sessionId?: string;
+  30:   variant: ToastVariant;
+  31:   durationMs: number;
+  32: }
+  33: 
+  34: export interface ToastHistoryEntry extends Toast {
+  35:   createdAt: number;
+  36:   read: boolean;
+  37: }
+  38: 
+  39: export const DEFAULT_TOAST_DURATION_MS = 2600;
+  40: export const ERROR_TOAST_DURATION_MS = 8000;
+  41: 
+  42: /** Cap concurrent toasts so a burst can't bury the UI; oldest fall off. */
+  43: export const MAX_TOASTS = 4;
+  44: export const MAX_TOAST_HISTORY = 100;
+  45: 
+  46: export interface ToastState {
+  47:   toasts: Toast[];
+  48:   history: ToastHistoryEntry[];
+  49: }
+  50: 
+  51: export function initialToastState(history: ToastHistoryEntry[] = []): ToastState {
+  52:   return { toasts: [], history: history.slice(-MAX_TOAST_HISTORY) };
+  53: }
+  54: 
+  55: /**
+  56:  * Add a toast (already assigned an id by the provider). When the stack is at
+  57:  * MAX_TOASTS the oldest is dropped so the newest is always visible.
+  58:  */
+  59: export function addToast(state: ToastState, toast: Toast, createdAt = Date.now()): ToastState {
+  60:   const next = [...state.toasts, toast];
+  61:   if (next.length > MAX_TOASTS) next.splice(0, next.length - MAX_TOASTS);
+  62:   const history = [...state.history, { ...toast, createdAt, read: false }].slice(
+  63:     -MAX_TOAST_HISTORY,
+  64:   );
+  65:   return { toasts: next, history };
+  66: }
+  67: 
+  68: /** Remove an active toast by id while keeping its history. */
+  69: export function dismissToast(state: ToastState, id: string): ToastState {
+  70:   const toasts = state.toasts.filter((t) => t.id !== id);
+  71:   if (toasts.length === state.toasts.length) return state;
+  72:   return { ...state, toasts };
+  73: }
+  74: 
+  75: export function markToastHistoryRead(state: ToastState): ToastState {
+  76:   if (state.history.every((entry) => entry.read)) return state;
+  77:   return {
+  78:     ...state,
+  79:     history: state.history.map((entry) => (entry.read ? entry : { ...entry, read: true })),
+  80:   };
+  81: }
+  82: 
+  83: /** Clearing the history must not dismiss active notifications. */
+  84: export function clearToastHistory(state: ToastState): ToastState {
+  85:   if (state.history.length === 0) return state;
+  86:   return { ...state, history: [] };
+  87: }
+  88: 
+  89: /** Normalise caller options into a full Toast (minus the id). */
+  90: export function toastFromOptions(opts: ToastOptions): Omit<Toast, "id"> {
+  91:   return {
+  92:     message: opts.message,
+  93:     ...(opts.detail !== undefined ? { detail: opts.detail } : {}),
+  94:     ...(opts.sessionId?.trim() ? { sessionId: opts.sessionId } : {}),
+  95:     variant: opts.variant ?? "default",
+  96:     durationMs:
+  97:       opts.durationMs ??
+  98:       (opts.variant === "error" ? ERROR_TOAST_DURATION_MS : DEFAULT_TOAST_DURATION_MS),
+  99:   };
+ 100: }
+FILE packages/desktop/src/renderer/ui/toastState.test.ts SHA256 8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 1-162
+   1: import { describe, expect, test } from "bun:test";
+   2: import {
+   3:   initialToastState,
+   4:   addToast,
+   5:   dismissToast,
+   6:   markToastHistoryRead,
+   7:   clearToastHistory,
+   8:   toastFromOptions,
+   9:   MAX_TOASTS,
+  10:   DEFAULT_TOAST_DURATION_MS,
+  11:   ERROR_TOAST_DURATION_MS,
+  12:   MAX_TOAST_HISTORY,
+  13:   type Toast,
+  14:   type ToastHistoryEntry,
+  15: } from "./toastState";
+  16: 
+  17: const mk = (id: string, message = id): Toast => ({
+  18:   id,
+  19:   message,
+  20:   variant: "default",
+  21:   durationMs: 0,
+  22: });
+  23: 
+  24: describe("addToast", () => {
+  25:   test("appends to the stack newest-last", () => {
+  26:     let s = initialToastState();
+  27:     s = addToast(s, mk("a"));
+  28:     s = addToast(s, mk("b"));
+  29:     expect(s.toasts.map((t) => t.id)).toEqual(["a", "b"]);
+  30:   });
+  31: 
+  32:   test("drops the oldest past MAX_TOASTS", () => {
+  33:     let s = initialToastState();
+  34:     for (let i = 0; i < MAX_TOASTS + 2; i++) s = addToast(s, mk(`t${i}`));
+  35:     expect(s.toasts).toHaveLength(MAX_TOASTS);
+  36:     // The two oldest (t0, t1) fell off.
+  37:     expect(s.toasts[0]!.id).toBe("t2");
+  38:     expect(s.toasts.at(-1)!.id).toBe(`t${MAX_TOASTS + 1}`);
+  39:     expect(s.history.map((entry) => entry.id)).toEqual(
+  40:       Array.from({ length: MAX_TOASTS + 2 }, (_, index) => `t${index}`),
+  41:     );
+  42:   });
+  43: 
+  44:   test("retains full messages, details, and creation times independently of active toasts", () => {
+  45:     const message = "安装失败\n" + "完整错误信息".repeat(300);
+  46:     const detail = "command: bun run build\ncwd: /project\n" + "stack trace\n".repeat(400);
+  47:     const toast = { ...mk("failure", message), variant: "error" as const, detail };
+  48:     const state = addToast(initialToastState(), toast, 1_700_000_000_000);
+  49:     expect(state.history).toEqual([{ ...toast, createdAt: 1_700_000_000_000, read: false }]);
+  50:     expect(dismissToast(state, toast.id).history).toBe(state.history);
+  51:   });
+  52: 
+  53:   test("keeps only the newest bounded history without mutating previous state", () => {
+  54:     let state = initialToastState();
+  55:     for (let index = 0; index < MAX_TOAST_HISTORY; index++) {
+  56:       state = addToast(state, mk(`t${index}`), index);
+  57:     }
+  58:     const next = addToast(state, mk("latest"), MAX_TOAST_HISTORY);
+  59:     expect(next.history).toHaveLength(MAX_TOAST_HISTORY);
+  60:     expect(next.history[0]!.id).toBe("t1");
+  61:     expect(next.history.at(-1)!.id).toBe("latest");
+  62:     expect(state.history[0]!.id).toBe("t0");
+  63:     expect(next.toasts).toHaveLength(MAX_TOASTS);
+  64:   });
+  65: });
+  66: 
+  67: describe("dismissToast", () => {
+  68:   test("removes by id", () => {
+  69:     let s = addToast(addToast(initialToastState(), mk("a")), mk("b"));
+  70:     s = dismissToast(s, "a");
+  71:     expect(s.toasts.map((t) => t.id)).toEqual(["b"]);
+  72:     expect(s.history.map((entry) => entry.id)).toEqual(["a", "b"]);
+  73:   });
+  74: 
+  75:   test("unknown id is a no-op returning the same reference", () => {
+  76:     const s = addToast(initialToastState(), mk("a"));
+  77:     expect(dismissToast(s, "zzz")).toBe(s);
+  78:   });
+  79: });
+  80: 
+  81: describe("history controls", () => {
+  82:   test("restores bounded history without replaying active notifications", () => {
+  83:     const history: ToastHistoryEntry[] = Array.from(
+  84:       { length: MAX_TOAST_HISTORY + 2 },
+  85:       (_, index) => ({ ...mk(`saved-${index}`), createdAt: index, read: true }),
+  86:     );
+  87:     const state = initialToastState(history);
+  88:     expect(state.toasts).toEqual([]);
+  89:     expect(state.history).toHaveLength(MAX_TOAST_HISTORY);
+  90:     expect(state.history[0]!.id).toBe("saved-2");
+  91:     expect(history).toHaveLength(MAX_TOAST_HISTORY + 2);
+  92:   });
+  93: 
+  94:   test("marks existing history read while later notifications remain unread", () => {
+  95:     const state = addToast(initialToastState(), mk("a"), 100);
+  96:     const read = markToastHistoryRead(state);
+  97:     expect(read.history[0]!.read).toBe(true);
+  98:     expect(state.history[0]!.read).toBe(false);
+  99:     expect(read.toasts).toBe(state.toasts);
+ 100:     expect(markToastHistoryRead(read)).toBe(read);
+ 101:     const next = addToast(read, mk("b"), 200);
+ 102:     expect(next.history.map((entry) => entry.read)).toEqual([true, false]);
+ 103:   });
+ 104: 
+ 105:   test("clears history without dismissing active toasts", () => {
+ 106:     const state = addToast(initialToastState(), mk("a"));
+ 107:     const cleared = clearToastHistory(state);
+ 108:     expect(cleared.history).toEqual([]);
+ 109:     expect(cleared.toasts).toBe(state.toasts);
+ 110:     expect(state.history).toHaveLength(1);
+ 111:     expect(clearToastHistory(cleared)).toBe(cleared);
+ 112:   });
+ 113: });
+ 114: 
+ 115: describe("toastFromOptions", () => {
+ 116:   test("fills defaults", () => {
+ 117:     expect(toastFromOptions({ message: "hi" })).toEqual({
+ 118:       message: "hi",
+ 119:       variant: "default",
+ 120:       durationMs: DEFAULT_TOAST_DURATION_MS,
+ 121:     });
+ 122:   });
+ 123: 
+ 124:   test("honours explicit variant and duration (including 0)", () => {
+ 125:     expect(toastFromOptions({ message: "x", variant: "error", durationMs: 0 })).toEqual({
+ 126:       message: "x",
+ 127:       variant: "error",
+ 128:       durationMs: 0,
+ 129:     });
+ 130:   });
+ 131: 
+ 132:   test("gives failures more reading time while preserving explicit duration", () => {
+ 133:     expect(toastFromOptions({ message: "failure", variant: "error" }).durationMs).toBe(
+ 134:       ERROR_TOAST_DURATION_MS,
+ 135:     );
+ 136:     expect(
+ 137:       toastFromOptions({ message: "failure", variant: "error", durationMs: 1250 }).durationMs,
+ 138:     ).toBe(1250);
+ 139:   });
+ 140: 
+ 141:   test("retains optional diagnostic details without adding an absent key", () => {
+ 142:     const detail = "command: example\nerror: a full diagnostic";
+ 143:     expect(toastFromOptions({ message: "failed", detail }).detail).toBe(detail);
+ 144:     expect(toastFromOptions({ message: "failed", detail: "" }).detail).toBe("");
+ 145:     expect(toastFromOptions({ message: "failed" })).not.toHaveProperty("detail");
+ 146:   });
+ 147: 
+ 148:   test("retains the originating session through history and dismissal", () => {
+ 149:     const toast = {
+ 150:       id: "background-failure",
+ 151:       ...toastFromOptions({
+ 152:         message: "后台命令失败",
+ 153:         sessionId: "engine-session",
+ 154:       }),
+ 155:     };
+ 156:     const state = dismissToast(addToast(initialToastState(), toast), toast.id);
+ 157:     expect(state.toasts).toEqual([]);
+ 158:     expect(state.history[0]!.sessionId).toBe("engine-session");
+ 159:     expect(toastFromOptions({ message: "no session" })).not.toHaveProperty("sessionId");
+ 160:     expect(toastFromOptions({ message: "empty", sessionId: "" })).not.toHaveProperty("sessionId");
+ 161:   });
+ 162: });
+FILE packages/desktop/src/renderer/ui/ToastProvider.tsx SHA256 31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 1-249
+   1: /**
+   2:  * Transient, non-blocking toast notifications — the lightweight sibling of the
+   3:  * modal dialogs in ./DialogProvider. One Provider, one hook:
+   4:  *
+   5:  *   const toast = useToast();
+   6:  *   toast({ message: "已复制路径" });
+   7:  *   toast({ message: "保存失败", variant: "error" });
+   8:  *
+   9:  * Mounted once at the root (see main.tsx). Toasts stack in a corner, auto-expire
+  10:  * after their duration (errors stay longer; durationMs: 0 makes them sticky).
+  11:  * Dismissing only removes the popup; history stays available in the title bar.
+  12:  * The add/dismiss/cap logic lives in the
+  13:  * pure ./toastState reducer (unit-tested); this file is the React + timer shell.
+  14:  */
+  15: import React, {
+  16:   createContext,
+  17:   useCallback,
+  18:   useContext,
+  19:   useEffect,
+  20:   useMemo,
+  21:   useRef,
+  22:   useState,
+  23: } from "react";
+  24: import { Check, AlertTriangle, Info, X } from "lucide-react";
+  25: import { cn } from "@/lib/utils";
+  26: import { useT } from "../i18n/I18nProvider";
+  27: import {
+  28:   initialToastState,
+  29:   addToast,
+  30:   dismissToast,
+  31:   markToastHistoryRead,
+  32:   clearToastHistory,
+  33:   toastFromOptions,
+  34:   type ToastHistoryEntry,
+  35:   type ToastOptions,
+  36:   type ToastVariant,
+  37: } from "./toastState";
+  38: import { loadToastHistory, saveToastHistory } from "./toastHistoryStorage";
+  39: 
+  40: type ToastFn = (opts: ToastOptions) => void;
+  41: 
+  42: const ToastContextRef = createContext<ToastFn | null>(null);
+  43: interface ToastHistoryContextValue {
+  44:   history: ToastHistoryEntry[];
+  45:   markRead: () => void;
+  46:   clear: () => void;
+  47: }
+  48: const ToastHistoryContext = createContext<ToastHistoryContextValue | null>(null);
+  49: 
+  50: interface ToastTimer {
+  51:   handle?: ReturnType<typeof setTimeout>;
+  52:   remainingMs: number;
+  53:   startedAt: number;
+  54: }
+  55: 
+  56: let toastSeq = 0;
+  57: function nextToastId(): string {
+  58:   toastSeq += 1;
+  59:   return `toast-${Date.now()}-${toastSeq}`;
+  60: }
+  61: 
+  62: export function ToastProvider({ children }: { children: React.ReactNode }) {
+  63:   const [state, setState] = useState(() => initialToastState(loadToastHistory()));
+  64:   // Track the auto-dismiss timers so we can clear them on unmount / early
+  65:   // dismiss and avoid setState-after-unmount.
+  66:   const timers = useRef(new Map<string, ToastTimer>());
+  67: 
+  68:   const dismiss = useCallback((id: string) => {
+  69:     const timer = timers.current.get(id);
+  70:     if (timer?.handle !== undefined) clearTimeout(timer.handle);
+  71:     timers.current.delete(id);
+  72:     setState((s) => dismissToast(s, id));
+  73:   }, []);
+  74: 
+  75:   const toast = useCallback<ToastFn>((opts) => {
+  76:     const id = nextToastId();
+  77:     const full = { id, ...toastFromOptions(opts) };
+  78:     const createdAt = Date.now();
+  79:     setState((s) => addToast(s, full, createdAt));
+  80:     if (full.variant === "error") {
+  81:       // Logging must not prevent a notification when the bridge is unavailable.
+  82:       try {
+  83:         window.codeshell?.log?.("ui.toast.error", {
+  84:           message: full.message,
+  85:           ...(full.detail !== undefined ? { detail: full.detail } : {}),
+  86:           ...(full.sessionId ? { sessionId: full.sessionId } : {}),
+  87:         });
+  88:       } catch {
+  89:         // The history remains available when the log sink fails.
+  90:       }
+  91:     }
+  92:   }, []);
+  93: 
+  94:   const pause = useCallback((id: string) => {
+  95:     const timer = timers.current.get(id);
+  96:     if (!timer || timer.handle === undefined) return;
+  97:     clearTimeout(timer.handle);
+  98:     timer.handle = undefined;
+  99:     timer.remainingMs = Math.max(0, timer.remainingMs - (Date.now() - timer.startedAt));
+ 100:   }, []);
+ 101:   const resume = useCallback(
+ 102:     (id: string) => {
+ 103:       const timer = timers.current.get(id);
+ 104:       if (!timer || timer.handle !== undefined) return;
+ 105:       timer.startedAt = Date.now();
+ 106:       timer.handle = setTimeout(() => dismiss(id), timer.remainingMs);
+ 107:     },
+ 108:     [dismiss],
+ 109:   );
+ 110:   const markRead = useCallback(() => setState(markToastHistoryRead), []);
+ 111:   const clear = useCallback(() => setState(clearToastHistory), []);
+ 112:   const historyValue = useMemo(
+ 113:     () => ({ history: state.history, markRead, clear }),
+ 114:     [state.history, markRead, clear],
+ 115:   );
+ 116:   useEffect(() => saveToastHistory(state.history), [state.history]);
+ 117:   useEffect(() => {
+ 118:     const active = new Set(state.toasts.map((t) => t.id));
+ 119:     for (const [id, timer] of timers.current) {
+ 120:       if (active.has(id)) continue;
+ 121:       if (timer.handle !== undefined) clearTimeout(timer.handle);
+ 122:       timers.current.delete(id);
+ 123:     }
+ 124:     // Recreate timers on an effect remount too (React StrictMode keeps state
+ 125:     // while replaying cleanup/setup). Paused timers already in the map stay paused.
+ 126:     for (const toast of state.toasts) {
+ 127:       if (toast.durationMs <= 0 || timers.current.has(toast.id)) continue;
+ 128:       timers.current.set(toast.id, {
+ 129:         remainingMs: toast.durationMs,
+ 130:         startedAt: Date.now(),
+ 131:         handle: setTimeout(() => dismiss(toast.id), toast.durationMs),
+ 132:       });
+ 133:     }
+ 134:   }, [state.toasts, dismiss]);
+ 135:   useEffect(() => {
+ 136:     const map = timers.current;
+ 137:     return () => {
+ 138:       for (const timer of map.values()) {
+ 139:         if (timer.handle !== undefined) clearTimeout(timer.handle);
+ 140:       }
+ 141:       map.clear();
+ 142:     };
+ 143:   }, []);
+ 144: 
+ 145:   return (
+ 146:     <ToastContextRef.Provider value={toast}>
+ 147:       <ToastHistoryContext.Provider value={historyValue}>
+ 148:         {children}
+ 149:         <div
+ 150:           className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
+ 151:           aria-live="polite"
+ 152:           role="status"
+ 153:         >
+ 154:           {state.toasts.map((t) => (
+ 155:             <ToastCard
+ 156:               key={t.id}
+ 157:               variant={t.variant}
+ 158:               stackSize={state.toasts.length}
+ 159:               onDismiss={() => dismiss(t.id)}
+ 160:               onPause={() => pause(t.id)}
+ 161:               onResume={() => resume(t.id)}
+ 162:             >
+ 163:               {t.message}
+ 164:             </ToastCard>
+ 165:           ))}
+ 166:         </div>
+ 167:       </ToastHistoryContext.Provider>
+ 168:     </ToastContextRef.Provider>
+ 169:   );
+ 170: }
+ 171: 
+ 172: const NOOP_TOAST: ToastFn = () => {};
+ 173: 
+ 174: /**
+ 175:  * The hook callers use to raise a toast. A toast is non-critical UX, so when no
+ 176:  * ToastProvider is mounted (e.g. a component rendered in isolation by a test,
+ 177:  * or the browser popout window) this returns a no-op rather than throwing —
+ 178:  * the action still succeeds, it just shows no confirmation.
+ 179:  */
+ 180: export function useToast(): ToastFn {
+ 181:   return useContext(ToastContextRef) ?? NOOP_TOAST;
+ 182: }
+ 183: 
+ 184: export function useToastHistory(): ToastHistoryContextValue | null {
+ 185:   return useContext(ToastHistoryContext);
+ 186: }
+ 187: 
+ 188: const VARIANT_ICON: Record<ToastVariant, React.ReactNode> = {
+ 189:   default: <Info size={15} className="text-muted-foreground" />,
+ 190:   success: <Check size={15} className="text-status-ok" />,
+ 191:   error: <AlertTriangle size={15} className="text-status-err" />,
+ 192: };
+ 193: 
+ 194: function ToastCard({
+ 195:   variant,
+ 196:   stackSize,
+ 197:   onDismiss,
+ 198:   onPause,
+ 199:   onResume,
+ 200:   children,
+ 201: }: {
+ 202:   variant: ToastVariant;
+ 203:   stackSize: number;
+ 204:   onDismiss: () => void;
+ 205:   onPause: () => void;
+ 206:   onResume: () => void;
+ 207:   children: React.ReactNode;
+ 208: }) {
+ 209:   const { t } = useT();
+ 210:   const hovered = useRef(false);
+ 211:   return (
+ 212:     <div
+ 213:       className={cn(
+ 214:         "pointer-events-auto flex min-w-0 items-start gap-2 rounded-md border border-border",
+ 215:         "bg-popover px-3 py-2 text-sm text-popover-foreground shadow-lg",
+ 216:         "animate-in slide-in-from-bottom-2 fade-in",
+ 217:       )}
+ 218:       onMouseEnter={() => {
+ 219:         hovered.current = true;
+ 220:         onPause();
+ 221:       }}
+ 222:       onMouseLeave={(event) => {
+ 223:         hovered.current = false;
+ 224:         if (!event.currentTarget.contains(document.activeElement)) onResume();
+ 225:       }}
+ 226:       onFocus={onPause}
+ 227:       onBlur={(event) => {
+ 228:         if (!hovered.current && !event.currentTarget.contains(event.relatedTarget)) onResume();
+ 229:       }}
+ 230:     >
+ 231:       <span className="mt-0.5 shrink-0">{VARIANT_ICON[variant]}</span>
+ 232:       <span
+ 233:         className="max-h-48 min-w-0 flex-1 overflow-auto overscroll-contain whitespace-pre-wrap break-words select-text"
+ 234:         style={{ maxHeight: `min(12rem,max(1rem,calc((100dvh - 2rem) / ${stackSize} - 1.75rem)))` }}
+ 235:       >
+ 236:         {children}
+ 237:       </span>
+ 238:       <button
+ 239:         type="button"
+ 240:         onClick={onDismiss}
+ 241:         className="shrink-0 rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+ 242:         aria-label={t("misc.toast.dismiss")}
+ 243:         title={t("misc.toast.dismiss")}
+ 244:       >
+ 245:         <X size={13} />
+ 246:       </button>
+ 247:     </div>
+ 248:   );
+ 249: }
+FILE docs/audit-2026-10-17-round28/dialog-report.md SHA256 9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 1-17
+   1: # Round28 Dialog state 与普通消费者静态审查
+   2: 
+   3: 本方向 **0 formal / 0 candidate / 0 related**。Root 提供冻结基线 `32c633e58c20b3853f49bb0e43264b4577281eac`；作者未运行 Git，也未运行产品、测试、import、fixture、React/browser、VM、native、网络或模型。本轮只读源码/历史文档与文件hash，没有修产品或恢复任何旧失败方向。
+   4: 
+   5: 按rg库存先固定before-read filesystem pins，随后完整读 [dialogState](../../packages/desktop/src/renderer/ui/dialogState.ts)、[unit test声明](../../packages/desktop/src/renderer/ui/dialogState.test.ts)、[DialogProvider](../../packages/desktop/src/renderer/ui/DialogProvider.tsx)、[interaction wrapper](../../packages/desktop/src/renderer/ui/DialogProvider.interaction.test.tsx)、[ConfirmDialog兼容层](../../packages/desktop/src/renderer/ui/ConfirmDialog.tsx)、[profileRequirements确认消费者](../../packages/desktop/src/renderer/digital-humans/profileRequirements.ts)，共 **653行产品/测试合同**，另2份指令222行。8 pins与各自初始bytes/SHA、finish SHA一致，见 [source manifest](evidence/dialog-source-manifest.json)。当前filesystem证明不回填为作者Git冻结blob验证。interaction wrapper引用的browser fixture没有展开或执行。
+   6: 
+   7: 普通合同反证足够，本轮没有新的可达缺陷：
+   8: 
+   9: - `initialDialogState`为空，`enqueue`在无active时立即显示，其余追加FIFO；`resolveActive`空状态no-op，完成active后从queue取下一项。正常由这些操作产生的状态，不存在active为空而queue仍积压的异常形状。
+  10: - Provider的`open`用原生Promise创建resolver，正常值由Confirm的true/false、Alert的undefined和Prompt的string/null产生；Alert API又明确把结果映射void。reducer允许unknown是共享内部边界，不能仅据此假设真实调用方传了错误类型。
+  11: - `close`比较active request身份，陈旧或重复回调不能误关下一项；Promise resolver不是任意业务回调。人为构造throwing resolver、递归enqueue或改写caller-owned queue不能直接算普通产品输入，本轮也没有这类实验。
+  12: - Prompt按request在layout阶段重置defaultValue，composition与229键码阻止输入法Enter提交，Escape也有composition阻止分支。Confirm/Alert的外部关闭映射cancel/dismiss；optional confirm在没有Provider时返回false属于显式fail-closed合同。这些是源码反证，非本轮UI或时序验证。
+  13: - profileRequirements确实await boolean确认，并在依赖动作前后检查isCurrent；兼容层仅重导出hook/type。未建立普通Provider整体卸载后调用仍需继续完成的合同，不将悬置Promise猜测凑成候选，也没有扩展focus/native/竞态实验。
+  14: 
+  15: 先做全历史去重再分类：[dialog-dedup](evidence/dialog-dedup.json) 覆盖docs/bugs全部 **2677文件=1262MD+1415JSON**，递归value scalar含506929strings/740424scalars，0 parse error；包括169 exact archive/_archive目录路径（substring archive口径174），排除current28。exact-source54、dialog-contract142、producer35是occurrence总数，保存context54/100/35，cap100；关键词和完整文件SHA不代表历史语义穷尽。结构化coverage prep缺少本路径不能证明历史未读：检索确实找到既有source inventories、旧测试收据和普通DialogProvider消费者。旧copied-module路径harness记录、旧settings/session消费者问题保留原因果，见 [history decisions](evidence/dialog-history-decisions.json)，没有重报。
+  16: 
+  17: [validation](evidence/dialog-validation.json) 的所有运行计数为0。已有6个unit test声明及interaction wrapper的6个scenario名称只作设计意图阅读；没有调用wrapper的Bun.spawn、真实Radix/browser或reducer。该negative只覆盖声明范围，不代表所有modal、浏览器交互或全仓已无问题。
+FILE packages/desktop/src/renderer/ui/toastHistoryStorage.ts SHA256 1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 1-48
+   1: import { MAX_TOAST_HISTORY, type ToastHistoryEntry } from "./toastState";
+   2: 
+   3: export const TOAST_HISTORY_STORAGE_KEY = "codeshell.notificationHistory.v1";
+   4: 
+   5: function isToastHistoryEntry(value: unknown): value is ToastHistoryEntry {
+   6:   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+   7:   const entry = value as Record<string, unknown>;
+   8:   return (
+   9:     typeof entry.id === "string" &&
+  10:     entry.id.length > 0 &&
+  11:     typeof entry.message === "string" &&
+  12:     (entry.detail === undefined || typeof entry.detail === "string") &&
+  13:     (entry.sessionId === undefined ||
+  14:       (typeof entry.sessionId === "string" && entry.sessionId.trim().length > 0)) &&
+  15:     (entry.variant === "default" || entry.variant === "success" || entry.variant === "error") &&
+  16:     typeof entry.durationMs === "number" &&
+  17:     Number.isFinite(entry.durationMs) &&
+  18:     entry.durationMs >= 0 &&
+  19:     typeof entry.createdAt === "number" &&
+  20:     entry.createdAt >= 0 &&
+  21:     Number.isFinite(new Date(entry.createdAt).getTime()) &&
+  22:     typeof entry.read === "boolean"
+  23:   );
+  24: }
+  25: 
+  26: /** Window-local history survives reloads without other windows overwriting it. */
+  27: export function loadToastHistory(): ToastHistoryEntry[] {
+  28:   try {
+  29:     const raw = globalThis.sessionStorage?.getItem(TOAST_HISTORY_STORAGE_KEY);
+  30:     if (!raw) return [];
+  31:     const parsed: unknown = JSON.parse(raw);
+  32:     if (!Array.isArray(parsed)) return [];
+  33:     return parsed.filter(isToastHistoryEntry).slice(-MAX_TOAST_HISTORY);
+  34:   } catch {
+  35:     return [];
+  36:   }
+  37: }
+  38: 
+  39: export function saveToastHistory(entries: readonly ToastHistoryEntry[]): void {
+  40:   try {
+  41:     globalThis.sessionStorage?.setItem(
+  42:       TOAST_HISTORY_STORAGE_KEY,
+  43:       JSON.stringify(entries.slice(-MAX_TOAST_HISTORY)),
+  44:     );
+  45:   } catch {
+  46:     // History remains in memory when storage is unavailable or full.
+  47:   }
+  48: }
+FILE packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts SHA256 13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 1-140
+   1: import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+   2: import {
+   3:   loadToastHistory,
+   4:   saveToastHistory,
+   5:   TOAST_HISTORY_STORAGE_KEY,
+   6: } from "./toastHistoryStorage";
+   7: import { MAX_TOAST_HISTORY, type ToastHistoryEntry } from "./toastState";
+   8: 
+   9: const entry = (id = "failure"): ToastHistoryEntry => ({
+  10:   id,
+  11:   message: "保存失败\n完整错误信息",
+  12:   detail: "command: bun run build\ncwd: /project\nerror: detailed failure",
+  13:   variant: "error",
+  14:   durationMs: 8000,
+  15:   createdAt: 1_700_000_000_000,
+  16:   read: false,
+  17: });
+  18: 
+  19: let previousStorage: PropertyDescriptor | undefined;
+  20: let values: Map<string, string>;
+  21: 
+  22: beforeEach(() => {
+  23:   previousStorage = Object.getOwnPropertyDescriptor(globalThis, "sessionStorage");
+  24:   values = new Map();
+  25:   Object.defineProperty(globalThis, "sessionStorage", {
+  26:     configurable: true,
+  27:     value: {
+  28:       getItem: (key: string) => values.get(key) ?? null,
+  29:       setItem: (key: string, value: string) => values.set(key, value),
+  30:     },
+  31:   });
+  32: });
+  33: 
+  34: afterEach(() => {
+  35:   if (previousStorage) Object.defineProperty(globalThis, "sessionStorage", previousStorage);
+  36:   else Reflect.deleteProperty(globalThis, "sessionStorage");
+  37: });
+  38: 
+  39: describe("window-local toast history", () => {
+  40:   test("round trips complete messages, details, timestamps, and read state", () => {
+  41:     const original = {
+  42:       ...entry(),
+  43:       message: "日志失败\n" + "完整的错误文字".repeat(1000),
+  44:       detail: "完整的命令输出\n".repeat(1500),
+  45:       sessionId: "origin-engine-session",
+  46:       read: true,
+  47:     };
+  48:     saveToastHistory([original]);
+  49:     expect(values.has(TOAST_HISTORY_STORAGE_KEY)).toBe(true);
+  50:     expect(loadToastHistory()).toEqual([original]);
+  51:   });
+  52: 
+  53:   test("ignores malformed JSON and non-array values", () => {
+  54:     expect(loadToastHistory()).toEqual([]);
+  55:     for (const raw of ["{broken", "null", '"history"', "42", "{}"] as const) {
+  56:       values.set(TOAST_HISTORY_STORAGE_KEY, raw);
+  57:       expect(loadToastHistory()).toEqual([]);
+  58:     }
+  59:   });
+  60: 
+  61:   test("validates every required field and optional details before restoring", () => {
+  62:     const valid = entry("valid");
+  63:     const invalid = [
+  64:       null,
+  65:       [],
+  66:       "message",
+  67:       {},
+  68:       { ...valid, id: "" },
+  69:       { ...valid, id: 12 },
+  70:       { ...valid, message: null },
+  71:       { ...valid, detail: {} },
+  72:       { ...valid, sessionId: 42 },
+  73:       { ...valid, sessionId: "" },
+  74:       { ...valid, sessionId: "   " },
+  75:       { ...valid, sessionId: null },
+  76:       { ...valid, variant: "warning" },
+  77:       { ...valid, durationMs: -1 },
+  78:       { ...valid, durationMs: "8000" },
+  79:       { ...valid, durationMs: null },
+  80:       { ...valid, createdAt: -1 },
+  81:       { ...valid, createdAt: 1e30 },
+  82:       { ...valid, createdAt: "yesterday" },
+  83:       { ...valid, read: "false" },
+  84:       { ...valid, read: undefined },
+  85:     ];
+  86:     const withoutDetail = { ...entry("without-detail") };
+  87:     delete withoutDetail.detail;
+  88:     values.set(TOAST_HISTORY_STORAGE_KEY, JSON.stringify([valid, ...invalid, withoutDetail]));
+  89:     expect(loadToastHistory()).toEqual([valid, withoutDetail]);
+  90:   });
+  91: 
+  92:   test("limits restored and saved history to the newest entries", () => {
+  93:     const history = Array.from({ length: MAX_TOAST_HISTORY + 4 }, (_, index) => entry(`t${index}`));
+  94:     values.set(TOAST_HISTORY_STORAGE_KEY, JSON.stringify(history));
+  95:     expect(loadToastHistory()).toEqual(history.slice(-MAX_TOAST_HISTORY));
+  96:     saveToastHistory(history);
+  97:     expect(JSON.parse(values.get(TOAST_HISTORY_STORAGE_KEY)!)).toEqual(
+  98:       history.slice(-MAX_TOAST_HISTORY),
+  99:     );
+ 100:     expect(history).toHaveLength(MAX_TOAST_HISTORY + 4);
+ 101:   });
+ 102: 
+ 103:   test("saving empty history removes previous records on reload", () => {
+ 104:     saveToastHistory([entry()]);
+ 105:     saveToastHistory([]);
+ 106:     expect(loadToastHistory()).toEqual([]);
+ 107:   });
+ 108: 
+ 109:   test("storage failures never throw or mutate the caller's in-memory history", () => {
+ 110:     const history = [entry()];
+ 111:     Object.defineProperty(globalThis, "sessionStorage", {
+ 112:       configurable: true,
+ 113:       value: {
+ 114:         getItem: () => {
+ 115:           throw new Error("read unavailable");
+ 116:         },
+ 117:         setItem: () => {
+ 118:           throw new Error("quota exceeded");
+ 119:         },
+ 120:       },
+ 121:     });
+ 122:     expect(loadToastHistory()).toEqual([]);
+ 123:     expect(() => saveToastHistory(history)).not.toThrow();
+ 124:     expect(history).toEqual([entry()]);
+ 125:   });
+ 126: 
+ 127:   test("unavailable or blocked session storage is optional", () => {
+ 128:     Reflect.deleteProperty(globalThis, "sessionStorage");
+ 129:     expect(loadToastHistory()).toEqual([]);
+ 130:     expect(() => saveToastHistory([entry()])).not.toThrow();
+ 131:     Object.defineProperty(globalThis, "sessionStorage", {
+ 132:       configurable: true,
+ 133:       get: () => {
+ 134:         throw new Error("storage access denied");
+ 135:       },
+ 136:     });
+ 137:     expect(loadToastHistory()).toEqual([]);
+ 138:     expect(() => saveToastHistory([entry()])).not.toThrow();
+ 139:   });
+ 140: });
+FILE packages/desktop/src/renderer/ui/ToastProvider.interaction.test.tsx SHA256 cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 230-257
+ 230:   test("drops capped popup timers while preserving every notification in history", async () => {
+ 231:     await mount();
+ 232:     for (let index = 0; index < MAX_TOASTS + 1; index++) {
+ 233:       await settle(() => toast({ message: `notification-${index}`, durationMs: 1000 }));
+ 234:     }
+ 235:     expect(cards()).toHaveLength(MAX_TOASTS);
+ 236:     expect(clock.pending.size).toBe(MAX_TOASTS);
+ 237:     expect(cards().map(textOf)).not.toContain("notification-0");
+ 238:     expect(latest!.history.map((entry) => entry.message)).toEqual(
+ 239:       Array.from({ length: MAX_TOASTS + 1 }, (_, index) => `notification-${index}`),
+ 240:     );
+ 241:     await advance(1000);
+ 242:     expect(cards()).toHaveLength(0);
+ 243:     expect(clock.pending.size).toBe(0);
+ 244:     expect(latest!.history).toHaveLength(MAX_TOASTS + 1);
+ 245:   });
+ 246: 
+ 247:   test("expires notifications emitted by mount effects under StrictMode", async () => {
+ 248:     await mount(true, true);
+ 249:     expect(cards()).toHaveLength(1);
+ 250:     expect(latest!.history).toHaveLength(1);
+ 251:     expect(clock.pending.size).toBe(1);
+ 252:     await advance(1000);
+ 253:     expect(cards()).toHaveLength(0);
+ 254:     expect(clock.pending.size).toBe(0);
+ 255:     expect(latest!.history).toHaveLength(1);
+ 256:   });
+ 257: 
+RANGE 278-297
+ 278:   test("keeps useToast stable as history updates, is read, and is cleared", async () => {
+ 279:     await mount();
+ 280:     const first = toast;
+ 281:     await settle(() => toast({ message: "one", durationMs: 0 }));
+ 282:     await settle(() => latest!.markRead());
+ 283:     expect(latest!.history[0]!.read).toBe(true);
+ 284:     await settle(() => latest!.clear());
+ 285:     expect(latest!.history).toEqual([]);
+ 286:     expect(cards()).toHaveLength(1);
+ 287:     expect(references.length).toBeGreaterThan(2);
+ 288:     expect(references.every((reference) => reference === first)).toBe(true);
+ 289:   });
+ 290: 
+ 291:   test("supports isolated consumers without a provider", async () => {
+ 292:     await settle(() => root!.render(<Capture />));
+ 293:     expect(latest).toBeNull();
+ 294:     expect(() => toast({ message: "safe fallback" })).not.toThrow();
+ 295:     expect(clock.pending.size).toBe(0);
+ 296:   });
+ 297: });
+FILE packages/desktop/src/renderer/ui/NotificationHistory.tsx SHA256 6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 1-108
+   1: import React, { useEffect, useId, useState } from "react";
+   2: import { AlertTriangle, Bell, Check, Copy, Info } from "lucide-react";
+   3: import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+   4: import { Button } from "@/components/ui/button";
+   5: import { copyText } from "../lib/clipboard";
+   6: import { useT } from "../i18n";
+   7: import { IconButton } from "./IconButton";
+   8: import { useToastHistory } from "./ToastProvider";
+   9: import { MAX_TOAST_HISTORY, type ToastHistoryEntry } from "./toastState";
+  10: import { OPEN_NOTIFICATION_SESSION_EVENT } from "../app/notificationSessionNavigation";
+  11: 
+  12: /** Inspect earlier notifications without leaving the active conversation. */
+  13: export function NotificationHistory({
+  14:   onCloseAutoFocus,
+  15: }: {
+  16:   onCloseAutoFocus?: React.ComponentPropsWithoutRef<typeof PopoverContent>["onCloseAutoFocus"];
+  17: }) {
+  18:   const notifications = useToastHistory();
+  19:   const { t, lang } = useT();
+  20:   const titleId = useId();
+  21:   const [open, setOpen] = useState(false);
+  22:   const [errorsOnly, setErrorsOnly] = useState(false);
+  23:   const [copyResult, setCopyResult] = useState<{ id: string; ok: boolean } | null>(null);
+  24:   const history = notifications?.history;
+  25:   const markRead = notifications?.markRead;
+  26:   useEffect(() => {
+  27:     if (open) markRead?.();
+  28:   }, [open, history, markRead]);
+  29: 
+  30:   if (!notifications) return null;
+  31:   const unreadErrors = notifications.history.filter((n) => n.variant === "error" && !n.read).length;
+  32:   const entries = notifications.history
+  33:     .filter((n) => !errorsOnly || n.variant === "error")
+  34:     .slice()
+  35:     .reverse();
+  36:   const label = unreadErrors
+  37:     ? t("misc.toast.historyUnread", { count: unreadErrors })
+  38:     : t("misc.toast.history");
+  39:   const formatTime = (timestamp: number) =>
+  40:     new Date(timestamp).toLocaleString(lang === "zh" ? "zh-CN" : "en-US");
+  41:   const copy = async (entry: ToastHistoryEntry) => {
+  42:     const ok = await copyText(
+  43:       [formatTime(entry.createdAt), entry.message, entry.detail].filter(Boolean).join("\n\n"),
+  44:     );
+  45:     setCopyResult({ id: entry.id, ok });
+  46:   };
+  47: 
+  48:   return (
+  49:     <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+  50:       <Popover
+  51:         open={open}
+  52:         onOpenChange={(next) => {
+  53:           setOpen(next);
+  54:           setCopyResult(null);
+  55:         }}
+  56:       >
+  57:         <PopoverTrigger asChild>
+  58:           <IconButton
+  59:             label={label}
+  60:             active={open}
+  61:             className="relative"
+  62:             data-notification-action="open"
+  63:           >
+  64:             <Bell size={14} />
+  65:             {unreadErrors > 0 && (
+  66:               <span
+  67:                 aria-hidden="true"
+  68:                 className="absolute -right-1 -top-1 min-w-3.5 rounded-full bg-status-err px-0.5 text-[9px] leading-3.5 text-white"
+  69:               >
+  70:                 {unreadErrors > 99 ? "99+" : unreadErrors}
+  71:               </span>
+  72:             )}
+  73:           </IconButton>
+  74:         </PopoverTrigger>
+  75:         <PopoverContent
+  76:           onCloseAutoFocus={onCloseAutoFocus}
+  77:           align="end"
+  78:           aria-labelledby={titleId}
+  79:           className="w-[min(28rem,calc(100vw-1.5rem))]"
+  80:           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+  81:         >
+  82:           <div className="flex items-center justify-between gap-2 border-b border-border p-3">
+  83:             <div>
+  84:               <h2 id={titleId} className="text-sm font-semibold">
+  85:                 {t("misc.toast.history")}
+  86:               </h2>
+  87:               <p className="mt-1 text-xs text-muted-foreground">
+  88:                 {t("misc.toast.historyHint", { count: MAX_TOAST_HISTORY })}
+  89:               </p>
+  90:             </div>
+  91:             <Button
+  92:               size="sm"
+  93:               variant="ghost"
+  94:               disabled={notifications.history.length === 0}
+  95:               onClick={() => {
+  96:                 notifications.clear();
+  97:                 setCopyResult(null);
+  98:               }}
+  99:             >
+ 100:               {t("misc.toast.clearHistory")}
+ 101:             </Button>
+ 102:           </div>
+ 103:           <div className="flex gap-1 border-b border-border px-3 py-2">
+ 104:             <Button
+ 105:               size="sm"
+ 106:               variant={errorsOnly ? "ghost" : "secondary"}
+ 107:               aria-pressed={!errorsOnly}
+ 108:               onClick={() => setErrorsOnly(false)}
+RANGE 150-193
+ 150:                       <IconButton label={t("misc.toast.copy")} onClick={() => void copy(entry)}>
+ 151:                         <Copy size={13} />
+ 152:                       </IconButton>
+ 153:                     </div>
+ 154:                     <p className="whitespace-pre-wrap break-words text-sm select-text">
+ 155:                       {entry.message}
+ 156:                     </p>
+ 157:                     {entry.detail && entry.detail !== entry.message && (
+ 158:                       <p className="whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2 text-xs select-text">
+ 159:                         {entry.detail}
+ 160:                       </p>
+ 161:                     )}
+ 162:                     {entry.sessionId && (
+ 163:                       <Button
+ 164:                         size="sm"
+ 165:                         variant="outline"
+ 166:                         data-notification-action="open-session"
+ 167:                         onClick={() => {
+ 168:                           setOpen(false);
+ 169:                           window.dispatchEvent(
+ 170:                             new CustomEvent(OPEN_NOTIFICATION_SESSION_EVENT, {
+ 171:                               detail: { sessionId: entry.sessionId },
+ 172:                             }),
+ 173:                           );
+ 174:                         }}
+ 175:                       >
+ 176:                         {t("misc.toast.openSession")}
+ 177:                       </Button>
+ 178:                     )}
+ 179:                     {copyResult?.id === entry.id && (
+ 180:                       <p role="status" className="text-xs text-muted-foreground">
+ 181:                         {t(copyResult.ok ? "misc.toast.copied" : "misc.toast.copyFailed")}
+ 182:                       </p>
+ 183:                     )}
+ 184:                   </li>
+ 185:                 ))}
+ 186:               </ol>
+ 187:             )}
+ 188:           </div>
+ 189:         </PopoverContent>
+ 190:       </Popover>
+ 191:     </span>
+ 192:   );
+ 193: }
+FILE packages/desktop/src/renderer/tool-cards/ToolOutputBlock.tsx SHA256 33df4ff575e91c5a92a3e363b5c3b18c1e7d305b439380dce3ac7c8d8c6d5275; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 1-57
+   1: import React, { useId, useState } from "react";
+   2: import { Check, Copy } from "lucide-react";
+   3: import { Button } from "@/components/ui/button";
+   4: import { cn } from "@/lib/utils";
+   5: import { useT } from "../i18n/I18nProvider";
+   6: import { useCopyFeedback } from "../ui/useCopyFeedback";
+   7: import { useToast } from "../ui/ToastProvider";
+   8: 
+   9: const PREVIEW_CHARACTERS = 2_000;
+  10: const PREVIEW_LINES = 24;
+  11: 
+  12: interface Props {
+  13:   label: string;
+  14:   text: string;
+  15:   tone?: "default" | "error" | "added";
+  16:   /** Colorize only the visible text, without changing the source used to copy. */
+  17:   renderText?: (text: string) => React.ReactNode;
+  18: }
+  19: 
+  20: /** Full output stays reachable without mounting an unbounded initial preview. */
+  21: export function ToolOutputBlock({ label, text, tone = "default", renderText }: Props) {
+  22:   const { t } = useT();
+  23:   const toast = useToast();
+  24:   const { copied, copy } = useCopyFeedback(text);
+  25:   const [expanded, setExpanded] = useState(false);
+  26:   const outputId = useId();
+  27:   const labelId = useId();
+  28:   let preview = text.slice(0, PREVIEW_CHARACTERS).split("\n").slice(0, PREVIEW_LINES).join("\n");
+  29:   // A preview boundary must not leave half of an emoji's surrogate pair.
+  30:   if (/[\uD800-\uDBFF]$/.test(preview)) preview = preview.slice(0, -1);
+  31:   const truncated = preview.length < text.length;
+  32:   const visibleText = expanded ? text : preview;
+  33: 
+  34:   return (
+  35:     <div className="flex min-w-0 max-w-full flex-col gap-1" data-tool-output={label}>
+  36:       <div className="flex min-w-0 items-center justify-between gap-2">
+  37:         <span
+  38:           id={labelId}
+  39:           className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground"
+  40:         >
+  41:           {label}
+  42:         </span>
+  43:         <Button
+  44:           type="button"
+  45:           variant="ghost"
+  46:           size="icon"
+  47:           className="size-6 shrink-0 rounded-md text-muted-foreground"
+  48:           aria-label={`${t(copied ? "msg.assistant.copied" : "msg.toolOutput.copy")} · ${label}`}
+  49:           title={t(copied ? "msg.assistant.copied" : "msg.toolOutput.copy")}
+  50:           onClick={async (event) => {
+  51:             event.stopPropagation();
+  52:             if (!(await copy(text))) toast({ message: t("msg.copyFailed"), variant: "error" });
+  53:           }}
+  54:         >
+  55:           {copied ? <Check size={12} aria-hidden /> : <Copy size={12} aria-hidden />}
+  56:         </Button>
+  57:       </div>
+FILE packages/desktop/src/renderer/main.tsx SHA256 1f3fe147878a90e1520aeff8c85104858bfe844199e91d0825557112da31ffcc; metadata snapshot after semantic reading, not additional semantic coverage
+RANGE 69-89
+  69:     </React.StrictMode>,
+  70:   );
+  71: } else {
+  72:   installQuickChatPanelApp();
+  73:   root.render(
+  74:     <React.StrictMode>
+  75:       <I18nProvider>
+  76:         <DialogProvider>
+  77:           <ToastProvider>
+  78:             <SessionPersistenceGate>
+  79:               {/* Process-shell owner: stays mounted while App swaps chat/settings/overview content. */}
+  80:               <PetStateProvider>
+  81:                 <App />
+  82:               </PetStateProvider>
+  83:             </SessionPersistenceGate>
+  84:           </ToastProvider>
+  85:         </DialogProvider>
+  86:       </I18nProvider>
+  87:     </React.StrictMode>,
+  88:   );
+  89: }

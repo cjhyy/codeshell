@@ -1,0 +1,5 @@
+{
+  "frozenCommit": "248d091202869c07274adedf4fd50403105f1b1f",
+  "confirmedFindings": [],
+  "reason": "Registry replacement behavior reproduced, but the API contract does not establish that omitting a replacement executor should remove the existing executor; existing production adapters pass an executor."
+}

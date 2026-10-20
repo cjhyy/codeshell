@@ -1,0 +1,30 @@
+{
+  "peer": {
+    "productFunctions": 0,
+    "imports": 0,
+    "helpers": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "Git": 0,
+    "network": 0,
+    "UIBrowser": 0,
+    "native": 0,
+    "realUserFiles": 0
+  },
+  "reviewedRootEvidence": {
+    "rawLogPinned": true,
+    "exitPinned": true,
+    "fixturePinned": true,
+    "result": "1pass/11expect/0fail/0skip/exit0/Completed",
+    "publicCleanupNowParameter": true,
+    "ownedTmpCwd": true,
+    "cleanupFinally": true,
+    "fetchReplacedToThrow": true,
+    "ordinaryValidPNG": true,
+    "distinctIdSharedPathAsserted": true,
+    "sentBelowRetentionAsserted": true,
+    "independentSessionSentControl": true,
+    "peerIndependentlyRanRunnerOrEntireImportGraph": false
+  },
+  "sourceContractOnly": "Adjacent FS/atomicity/path/enforcement code displayed but not certified by this static review."
+}

@@ -1,0 +1,284 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "parentReportedBaselineOnly": true,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "firstFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCount": 217,
+      "role": "instruction carried from unchanged prior read",
+      "firstPinTiming": "Dedicated pin before assigned product semantic read; instructions were already read earlier unchanged.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "firstFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "coveredLineCount": 5,
+      "role": "instruction carried from unchanged prior read",
+      "firstPinTiming": "Dedicated pin before assigned product semantic read; instructions were already read earlier unchanged.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.ts",
+      "bytes": 1083,
+      "sha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "firstFilesystemSha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "finishFilesystemSha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "lineCount": 24,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          24
+        ]
+      ],
+      "coveredLineCount": 24,
+      "role": "product/test source only",
+      "firstPinTiming": "Dedicated pin before assigned product semantic read; instructions were already read earlier unchanged.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.test.ts",
+      "bytes": 1757,
+      "sha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "firstFilesystemSha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "finishFilesystemSha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "lineCount": 42,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          42
+        ]
+      ],
+      "coveredLineCount": 42,
+      "role": "product/test source only",
+      "firstPinTiming": "Dedicated pin before assigned product semantic read; instructions were already read earlier unchanged.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+      "bytes": 6072,
+      "sha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "firstFilesystemSha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "finishFilesystemSha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "lineCount": 177,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          177
+        ]
+      ],
+      "coveredLineCount": 177,
+      "role": "product/test source only",
+      "firstPinTiming": "Dedicated pin before assigned product semantic read; instructions were already read earlier unchanged.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "firstFilesystemSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "finishFilesystemSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "lineCount": 1247,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          90
+        ],
+        [
+          180,
+          327
+        ],
+        [
+          438,
+          542
+        ],
+        [
+          820,
+          1085
+        ]
+      ],
+      "coveredLineCount": 609,
+      "role": "product/test source only",
+      "firstPinTiming": "Dedicated pin before assigned product semantic read; instructions were already read earlier unchanged.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "firstFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "finishFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "lineCount": 2924,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          382,
+          408
+        ],
+        [
+          2589,
+          2640
+        ]
+      ],
+      "coveredLineCount": 79,
+      "role": "product/test source only",
+      "firstPinTiming": "Dedicated pin before assigned product semantic read; instructions were already read earlier unchanged.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/quickChatSession.ts",
+      "bytes": 2184,
+      "sha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "firstFilesystemSha256": null,
+      "finishFilesystemSha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "lineCount": 59,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          59
+        ]
+      ],
+      "coveredLineCount": 59,
+      "role": "product/test source only",
+      "firstPinTiming": "First durable byte hash after source navigation/selected read; missing before-read SHA remains null.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanelHost.tsx",
+      "bytes": 3816,
+      "sha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "firstFilesystemSha256": null,
+      "finishFilesystemSha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "lineCount": 115,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          29,
+          39
+        ],
+        [
+          96,
+          111
+        ]
+      ],
+      "coveredLineCount": 27,
+      "role": "product/test source only",
+      "firstPinTiming": "First durable byte hash after source navigation/selected read; missing before-read SHA remains null.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "firstFilesystemSha256": null,
+      "finishFilesystemSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "lineCount": 242,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          138,
+          147
+        ]
+      ],
+      "coveredLineCount": 10,
+      "role": "product/test source only",
+      "firstPinTiming": "First durable byte hash after source navigation/selected read; missing before-read SHA remains null.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "bytes": 14636,
+      "sha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "firstFilesystemSha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "finishFilesystemSha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "lineCount": 91,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          18,
+          27
+        ]
+      ],
+      "coveredLineCount": 10,
+      "role": "historical selected contract",
+      "firstPinTiming": "History inventory byte hash before selected history read; not a dedicated semantic-start capture.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "docs/review-2026-10-12/cli-quality-round9.md",
+      "bytes": 13182,
+      "sha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "firstFilesystemSha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "finishFilesystemSha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "lineCount": 78,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          29,
+          38
+        ]
+      ],
+      "coveredLineCount": 10,
+      "role": "historical selected contract",
+      "firstPinTiming": "History inventory byte hash before selected history read; not a dedicated semantic-start capture.",
+      "gitComparisonPerformed": false
+    },
+    {
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "bytes": 37767,
+      "sha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "firstFilesystemSha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "finishFilesystemSha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "lineCount": 470,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          202,
+          231
+        ]
+      ],
+      "coveredLineCount": 30,
+      "role": "historical selected contract",
+      "firstPinTiming": "History inventory byte hash before selected history read; not a dedicated semantic-start capture.",
+      "gitComparisonPerformed": false
+    }
+  ],
+  "sourcePinCount": 13,
+  "coveredLines": 1299,
+  "productTestReadLines": 1027,
+  "instructionReadLines": 222,
+  "historyReadLines": 50,
+  "inventoryOnlyNotSemanticallyRead": [
+    "packages/desktop/src/renderer/app/useRunController.approvals.test.tsx"
+  ],
+  "gitCommands": 0,
+  "rootFrozenBlobBindingRequired": true,
+  "note": "Whole-file SHA is not full semantic coverage. Main App/controller only declared ranges. Initial selected inventory includes an unread approvals test, which is not an active semantic source here. Added navigation pins after read remain null-initial; no product or native cancellation was executed."
+}

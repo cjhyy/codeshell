@@ -1,0 +1,19 @@
+{
+  "ranges": [
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "start": 690,
+      "end": 721,
+      "text": "                <div className=\"grid min-w-0 grid-cols-1 gap-2\">\n                  {list.map((s) => renderCard(s, true))}\n                </div>\n              </div>\n            ))}\n          </>\n        );\n      })()}\n\n      {edit.kind !== \"closed\" && (\n        <McpEditor\n          key={edit.kind === \"new\" ? \"new\" : `${edit.kind}:${edit.original}`}\n          existingNames={servers.map((s) => s.name)}\n          initial={\n            edit.kind === \"edit\" || edit.kind === \"override\"\n              ? (servers.find((s) => s.name === edit.original) ?? null)\n              : null\n          }\n          mode={edit.kind === \"override\" ? \"override\" : \"full\"}\n          onCancel={() => setEdit({ kind: \"closed\" })}\n          onSave={(next) =>\n            edit.kind === \"override\"\n              ? saveOverride(edit.original, next)\n              : saveEdit(next, edit.kind === \"edit\" ? edit.original : undefined)\n          }\n        />\n      )}\n\n      {toolsViewer && (\n        <ToolsViewer\n          probe={toolsViewer}\n          opener={detailOpener.current}"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "start": 1463,
+      "end": 1491,
+      "text": "          />\n        </label>\n        {isStdio ? (\n          <>\n            <label className=\"flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5\">\n              <span>Command</span>\n              <Input\n                value={command}\n                onChange={(e) => setCommand(e.target.value)}\n                placeholder=\"npx\"\n              />\n            </label>\n            <label className=\"flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5\">\n              <span>Args</span>\n              <Input\n                value={args}\n                onChange={(e) => setArgs(e.target.value)}\n                placeholder=\"-y @playwright/mcp@latest\"\n              />\n            </label>\n          </>\n        ) : (\n          <label\n            className=\"flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5\"\n            style={{ gridColumn: \"1 / -1\" }}\n          >\n            <span>URL</span>\n            <Input\n              value={url}"
+    }
+  ],
+  "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+  "readBeforePin": false,
+  "productRuns": 0
+}

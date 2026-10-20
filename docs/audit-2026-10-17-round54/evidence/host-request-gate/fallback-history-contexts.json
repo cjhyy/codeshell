@@ -1,0 +1,2490 @@
+{
+  "targetPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1874",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/39/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/43/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/50/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/1/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/productImports/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "pointer": "/files/60/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/2/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/5/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/8/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/13/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/17/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/20/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/23/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/26/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/31/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/2",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/0/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/4/value/0/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/28/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/57/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/61/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/65/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/74/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/79/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/86/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/90/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/92/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/95/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/98/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "pointer": "/hits/host-registry/99/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/7/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/proposal.json",
+      "pointer": "/ordinaryContractsAndCounterevidence/3/source",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts:1-117",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "pointer": "/sources/13/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+      "pointer": "/sourceChecks/36/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/files/46/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/priorPrepHashOnlyChecks/36/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/781/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "pointer": "/rankedCandidates/230/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3277/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/0/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/57/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13160/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13160/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13161/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13161/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13162/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13162/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13163/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13163/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13164/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13164/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13165/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13165/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13166/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13166/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13167/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13167/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13168/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13168/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13169/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13169/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3599/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3599/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/fullPaths/199",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3600/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/dated49/fullPaths/203",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "pointer": "/current51/fullPaths/199",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/old49-current/full/199",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/209",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/212",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "pointer": "/stageFullSelectedSets/plus-frozen45/full/215",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    }
+  ],
+  "targetSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/1/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "pointer": "/files/60/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/0/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/0/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/4/value/0/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/7/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/7/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "pointer": "/sources/13/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "pointer": "/sources/13/frozenReferenceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "pointer": "/sources/13/readHeadSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+      "pointer": "/sourceChecks/36/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/files/46/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/files/46/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/files/46/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "pointer": "/priorPrepHashOnlyChecks/36/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/781/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/781/claims/0/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/781/claims/1/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "pointer": "/rankedCandidates/230/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3277/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/0/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/57/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13160/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13160/sourceHashFields/frozenReferenceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13160/sourceHashFields/readHeadSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13161/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13161/sourceHashFields/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13164/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13165/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13165/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13167/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13167/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13167/sourceHashFields/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13168/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13169/sourceHashFields/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3599/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3599/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3600/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "completeScalar": true
+    }
+  ],
+  "targetFilename": [
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1658,
+      "context": "，见 5.2）。\n4. **扩展形态多、发版耦合重。** 扩展有四种形态，各自安装和审核；契约版本号分散，`PANEL_APP_API_VERSION` 和 `DESKTOP_CONTROL_PROTOCOL_VERSION` 各在两处重复定义。services 锁定 0.9.38，生产 Hub 仍是 0.9.23（2026-10-12 SSH 核实）。\n\n对应六条工作线：\n\n| 编号 | 工作线            | 一句话目标                                                                                                    |\n| ---- | ----------------- | ------------------------------------------------------------------------------------------------------------- |\n| W1   | Host Runtime 统一 | 一个纯 Node 的 HostRuntime；Desktop 和 serve 只是两种部署方式                                                 |\n| W2   | Protocol v2       | 有握手、有版本、Session/Turn/Item 对象模型、可续传，从 Schema 生成多语言客户端                                |\n| W3   | 统一策略与执行    | 一个 PolicyEngine 加一个 ApprovalStore；所有子进程走同一个 ExecutionService                                   |\n| W4   | 扩展收敛          | 一份包清单，组成部分按需声明，一次审核                                                                        |\n| W5   | 契约与发布        | 契约版本集中管理、兼容矩阵、发版节奏、验收自动化                                                              |\n| W6   | 远程、手机与沙箱  | 薄云端（中继、推送、配对、Link OAuth）加一任务一容器的沙箱 runner；都建立在 W1 和 W2 之上，不做常驻云端工作台 |\n\nW1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。阶段划分见第 9 节；阶段编号用 S0–S3，避免和 `TODO.md` 里的产品交付 P0/P1 混淆。\n\n### 0.1 与第 15 章的关系\n\n- 第 15 章 §6.3 的十条 v2 契约是本方案 W2 的**完整范围**，本章只补宿主侧细节，不另立一套更窄的契约。\n- 术语沿用第 15 章 §6.2：持久对话对象叫 **Session**，一次运行叫 **Turn**，`Thread` 只出现在外部 Runtime 适配器。本章不再提\"改名为 Threa",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3607,
+      "context": "------------------------------------------------------------------------------------------------------------------------------ |\n| 统一工作台规划        | 产品模型：共享范围、运行位置、云端委派电脑子任务               | W6 的用户流程不在本章重复定义                                                                                                                        |\n| 项目本地与云端运行 V2 | 运行位置在\"新建 / 打开项目\"时选择，会话固定执行位置            | 第 3.3 节 Desktop 是否连本机守护进程，以该文档的\"会话目标\"模型为前提。该文档里的持久云端工作区、云端 Panel 组合按第 8 节收窄为沙箱任务，相关章节冻结 |\n| 本章                  | HostRuntime、Protocol v2 宿主侧、策略 / 执行、扩展包、契约版本 | 上两份文档的实现都跑在本章定义的宿主和协议上                                                                                                         |\n\n---\n\n## 1. 现状事实（2026-10-14 据源码核对）\n\n### 1.1 宿主\n\n- `packages/desktop/src/main` 非测试代码约 85.1k 行，其中直接 import `electron` 的只有 46 个文件。\n  - **纯 Node、理论上可以搬走的约 43.5k 行**：pet 12.9k、各类 service 约 10k、会话 / transcript / runs 4.2k、mobile 和 cc-room 3.9k、panels 3.4k、云账号与云环境 3k、凭据加 MCP OAuth 1.7k、links 1.3k、automation 1.3k。\n  - **强依赖 Electron 的约 19k 行**：`index.ts`、browser-driver、窗口、协议处理、safeStorage、通知、updater、18 个 `*-ipc.ts`。\n  - **混合的约 21k 行**：`agent-bridge.ts` 2,521 行、`panel-app-bridge.ts` 3,791 行、external-runtime、im-gateway、pty 等。\n- `index.ts` 有 189 个 import、276 个 `ipcMain` handler（main 里一共 418 个），模块级单例超过 15 个。\n- 已经和 server 共享的：panels 运行时（desktop 对 `@cjhyy/code-shell-server/panels` 有 18 处 import）、mobile-remote 传输、remote-relay、links、`WorkerB",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 11704,
+      "context": "temd 部署。services 锁定 0.9.38；候选镜像只在 `candidate.yml` 里构建，不作为 package 依赖。\n- services 最近 60 个提交里约 25% 是证据 / 回执类提交。\n\n---\n\n## 2. 目标架构\n\n```\n   Desktop UI        Web / Hub SPA       iOS / Android        TUI / SDK / 外部 Agent\n       │                  │                   │                        │\n       └────── Protocol v2（initialize · Session/Turn/Item · cursor 续传 · client/* 反向请求）──────┘\n                                   │\n   ┌───────────────────────────────▼──────────────────────────────────────┐\n   │ HostRuntime（纯 Node，packages/host）                                 │\n   │  HostServices: sessions · credentials · panels · links · automation  │\n   │                browser-backends · devices · push · operations        │\n   │  PolicyEngine + ApprovalStore（唯一审批入口）                          │\n   │  ExecutionService（唯一子进程入口，默认沙箱）                          │\n   │  HostRequest 分发器（worker → host 类型化请求，取代 __*__ 回环）        │\n   │  Capability 声明 · CONTRACTS · Trace                                  │\n   │  HostAdapter ← 平台相关实现注入（Electron / Headless / Container）     │\n   └──────┬──────────────────────────────┬────────────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱 ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12503,
+      "context": "cutionService（唯一子进程入口，默认沙箱）                          │\n   │  HostRequest 分发器（worker → host 类型化请求，取代 __*__ 回环）        │\n   │  Capability 声明 · CONTRACTS · Trace                                  │\n   │  HostAdapter ← 平台相关实现注入（Electron / Headless / Container）     │\n   └──────┬──────────────────────────────┬────────────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱    = 容器内 serve + ContainerAdapter（一任务一容器，跑完销毁）\n   薄云端：配对 / Account · Link OAuth 回调 · 设备中继 · 推送网关（独立进程）· 对象存储（journal 与附件）\n```\n\n原则：\n\n- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。\n- **云端不跑常驻状态。** 薄云端只做转发、推送、配对和 OAuth 回调；任务状态在宿主里，产出进 git 和对象存储。\n\n- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。\n- **所有客户端都是平等的 Protocol v2 客户端。** Desktop 渲染进程也不例外：它通过 IPC 承载 v2 消息，不再走 276 个零散的 IPC handler。\n- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名），不能让请求挂起。\n- **一台机器一个 Host 写入者。** 同机并存的 Desktop 和 serve 对共享文件（automation、session 目录、settings）必须经过同一把跨进程锁，或者由 capabilities 协商出单一 owner。\n\n### 2.1 能力协商与降级\n\n宿主之间（Desktop、serve、沙箱",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12565,
+      "context": "ostRequest 分发器（worker → host 类型化请求，取代 __*__ 回环）        │\n   │  Capability 声明 · CONTRACTS · Trace                                  │\n   │  HostAdapter ← 平台相关实现注入（Electron / Headless / Container）     │\n   └──────┬──────────────────────────────┬────────────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱    = 容器内 serve + ContainerAdapter（一任务一容器，跑完销毁）\n   薄云端：配对 / Account · Link OAuth 回调 · 设备中继 · 推送网关（独立进程）· 对象存储（journal 与附件）\n```\n\n原则：\n\n- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。\n- **云端不跑常驻状态。** 薄云端只做转发、推送、配对和 OAuth 回调；任务状态在宿主里，产出进 git 和对象存储。\n\n- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。\n- **所有客户端都是平等的 Protocol v2 客户端。** Desktop 渲染进程也不例外：它通过 IPC 承载 v2 消息，不再走 276 个零散的 IPC handler。\n- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名），不能让请求挂起。\n- **一台机器一个 Host 写入者。** 同机并存的 Desktop 和 serve 对共享文件（automation、session 目录、settings）必须经过同一把跨进程锁，或者由 capabilities 协商出单一 owner。\n\n### 2.1 能力协商与降级\n\n宿主之间（Desktop、serve、沙箱）和 Runtime 之间（原生 Engine、Codex、Claude Code）的能力都不一致，本方案不追求一致，只定三",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12814,
+      "context": "─────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱    = 容器内 serve + ContainerAdapter（一任务一容器，跑完销毁）\n   薄云端：配对 / Account · Link OAuth 回调 · 设备中继 · 推送网关（独立进程）· 对象存储（journal 与附件）\n```\n\n原则：\n\n- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。\n- **云端不跑常驻状态。** 薄云端只做转发、推送、配对和 OAuth 回调；任务状态在宿主里，产出进 git 和对象存储。\n\n- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。\n- **所有客户端都是平等的 Protocol v2 客户端。** Desktop 渲染进程也不例外：它通过 IPC 承载 v2 消息，不再走 276 个零散的 IPC handler。\n- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名），不能让请求挂起。\n- **一台机器一个 Host 写入者。** 同机并存的 Desktop 和 serve 对共享文件（automation、session 目录、settings）必须经过同一把跨进程锁，或者由 capabilities 协商出单一 owner。\n\n### 2.1 能力协商与降级\n\n宿主之间（Desktop、serve、沙箱）和 Runtime 之间（原生 Engine、Codex、Claude Code）的能力都不一致，本方案不追求一致，只定三条规则：\n\n1. **声明。** 每个宿主在 `initialize` 里声明能力，每个 RuntimeProvider 声明自己的能力；一个 Session 的实际能力是两者的交集。Pet 现有的 `hostActionKinds` 闭合列表就是这个机制的雏形，1.7 时升级为公共机制。\n2. **拒绝而非挂起。** 请求不在声明里，立即返回 `host_unsupported` 并带能力名；UI 置灰，Mimi 不暴露对应工具。\n3. **委派。** 缺能力时可以把那一步交给有能力的宿主：",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12923,
+      "context": "       浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱    = 容器内 serve + ContainerAdapter（一任务一容器，跑完销毁）\n   薄云端：配对 / Account · Link OAuth 回调 · 设备中继 · 推送网关（独立进程）· 对象存储（journal 与附件）\n```\n\n原则：\n\n- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。\n- **云端不跑常驻状态。** 薄云端只做转发、推送、配对和 OAuth 回调；任务状态在宿主里，产出进 git 和对象存储。\n\n- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。\n- **所有客户端都是平等的 Protocol v2 客户端。** Desktop 渲染进程也不例外：它通过 IPC 承载 v2 消息，不再走 276 个零散的 IPC handler。\n- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名），不能让请求挂起。\n- **一台机器一个 Host 写入者。** 同机并存的 Desktop 和 serve 对共享文件（automation、session 目录、settings）必须经过同一把跨进程锁，或者由 capabilities 协商出单一 owner。\n\n### 2.1 能力协商与降级\n\n宿主之间（Desktop、serve、沙箱）和 Runtime 之间（原生 Engine、Codex、Claude Code）的能力都不一致，本方案不追求一致，只定三条规则：\n\n1. **声明。** 每个宿主在 `initialize` 里声明能力，每个 RuntimeProvider 声明自己的能力；一个 Session 的实际能力是两者的交集。Pet 现有的 `hostActionKinds` 闭合列表就是这个机制的雏形，1.7 时升级为公共机制。\n2. **拒绝而非挂起。** 请求不在声明里，立即返回 `host_unsupported` 并带能力名；UI 置灰，Mimi 不暴露对应工具。\n3. **委派。** 缺能力时可以把那一步交给有能力的宿主：云端或沙箱任务委派电脑子任务，电脑把无人值守的步骤丢进沙箱。委派走 Protocol v2 和 W6 的设备注册。\n\n能力矩阵（行是能力，列是 宿主 × Runtime，格子写 有 / 无 / 可委派）作为附录维护，同",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 13888,
+      "context": "与降级\n\n宿主之间（Desktop、serve、沙箱）和 Runtime 之间（原生 Engine、Codex、Claude Code）的能力都不一致，本方案不追求一致，只定三条规则：\n\n1. **声明。** 每个宿主在 `initialize` 里声明能力，每个 RuntimeProvider 声明自己的能力；一个 Session 的实际能力是两者的交集。Pet 现有的 `hostActionKinds` 闭合列表就是这个机制的雏形，1.7 时升级为公共机制。\n2. **拒绝而非挂起。** 请求不在声明里，立即返回 `host_unsupported` 并带能力名；UI 置灰，Mimi 不暴露对应工具。\n3. **委派。** 缺能力时可以把那一步交给有能力的宿主：云端或沙箱任务委派电脑子任务，电脑把无人值守的步骤丢进沙箱。委派走 Protocol v2 和 W6 的设备注册。\n\n能力矩阵（行是能力，列是 宿主 × Runtime，格子写 有 / 无 / 可委派）作为附录维护，同时是 `initialize` 响应和第 7.2 节兼容矩阵的事实来源。\n\n---\n\n## 3. W1 · HostRuntime 统一\n\n### 3.1 新包与接口\n\n新增 `packages/host`（`@cjhyy/code-shell-host`），纯 Node，只依赖 core。serve 和 desktop 都依赖它。单独成包的原因：`server` 包依赖 `web`、`capability-coding`、`link`，把 Host 放进 server 会让 Desktop 被这些包拖进来。\n\n```ts\ninterface HostService {\n  id: string; // \"credentials\", \"sessions\", \"panels\", ...\n  version: number;\n  capabilities(): HostCapability[]; // 写进 initialize 响应\n  methods?: Record<string, HostMethod>; // Protocol v2 的 host/* 方法\n  hostRequests?: Record<string, HostRequestHandler>; // worker → host 请求（取代回环）\n  start(ctx: HostContext): Promise<void>;\n  stop(): Promise<void>;\n}\n\ninterface HostAdapter {\n  // 平台相关能力，由部署形态注入\n  kind: \"electron\" | \"headless\" | \"container\"; // container：一任务一容器，无 iab / 对话框 / 本机凭据，只有 chromium 和注入的作用域 token\n  secretCipher: SecretCipher; // safeStorage / OS keychain / 文件密钥\n  notifier?: Notifier; // 桌面通知；headless 为空，走 push\n  dialogs?: DialogProvider; // 选择目录等；headless 为空，HostRu",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 14793,
+      "context": ">; // Protocol v2 的 host/* 方法\n  hostRequests?: Record<string, HostRequestHandler>; // worker → host 请求（取代回环）\n  start(ctx: HostContext): Promise<void>;\n  stop(): Promise<void>;\n}\n\ninterface HostAdapter {\n  // 平台相关能力，由部署形态注入\n  kind: \"electron\" | \"headless\" | \"container\"; // container：一任务一容器，无 iab / 对话框 / 本机凭据，只有 chromium 和注入的作用域 token\n  secretCipher: SecretCipher; // safeStorage / OS keychain / 文件密钥\n  notifier?: Notifier; // 桌面通知；headless 为空，走 push\n  dialogs?: DialogProvider; // 选择目录等；headless 为空，HostRuntime 改发 client/dialog 请求\n  browserBackends?: BrowserBackendHost; // Electron 提供 iab；headless 提供 chromium\n  openExternal?(url: string): Promise<void>;\n  paths: HostPaths;\n  sharedLock: CrossProcessLock; // 复用现有 CronStore 目录锁，所有共享文件写入经过它\n}\n\nclass HostRuntime {\n  constructor(opts: {\n    adapter: HostAdapter;\n    services: HostService[];\n    workerFactory: WorkerFactory;\n  });\n  connect(transport: ClientTransport, client: ClientInfo): ClientSession; // Protocol v2 入口\n}\n```\n\n### 3.2 迁移顺序（每一步都可以单独发布）\n\n| 步骤 | 内容                                                                                                                                       | 涉及                                                            | 验收                                                                                                                                                     |\n| ---- | -------------------------------",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 15045,
+      "context": "s\" | \"container\"; // container：一任务一容器，无 iab / 对话框 / 本机凭据，只有 chromium 和注入的作用域 token\n  secretCipher: SecretCipher; // safeStorage / OS keychain / 文件密钥\n  notifier?: Notifier; // 桌面通知；headless 为空，走 push\n  dialogs?: DialogProvider; // 选择目录等；headless 为空，HostRuntime 改发 client/dialog 请求\n  browserBackends?: BrowserBackendHost; // Electron 提供 iab；headless 提供 chromium\n  openExternal?(url: string): Promise<void>;\n  paths: HostPaths;\n  sharedLock: CrossProcessLock; // 复用现有 CronStore 目录锁，所有共享文件写入经过它\n}\n\nclass HostRuntime {\n  constructor(opts: {\n    adapter: HostAdapter;\n    services: HostService[];\n    workerFactory: WorkerFactory;\n  });\n  connect(transport: ClientTransport, client: ClientInfo): ClientSession; // Protocol v2 入口\n}\n```\n\n### 3.2 迁移顺序（每一步都可以单独发布）\n\n| 步骤 | 内容                                                                                                                                       | 涉及                                                            | 验收                                                                                                                                                     |\n| ---- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 17687,
+      "context": "      | serve 也能用 `credentialResolve` 同等能力，去掉 `CODE_SHELL_CREDENTIAL_ACCESS=local` 特例                                                                |\n| 1.4  | automation 只保留一个执行器，调度经过 `sharedLock`                                                                                         | automation-host、serve/automation-worker                        | Desktop 和 serve 共用调度；同机并存时只有一个实例实际触发；`automationCreate` 在 serve 下可用                                                            |\n| 1.5  | 手机远程编排改为 HostRuntime 的一个客户端，不再调用 `injectWorkerMessage`                                                                  | mobile-remote-orchestrator                                      | 手机直接走 Protocol v2（依赖 2.3 续传和 2.5 反向请求）                                                                                                   |\n| 1.6  | 拆分 `index.ts`：每个领域一个 `register(app, host)` 模块；IPC 改为一条 v2 通道加少量 Electron 专属 IPC                                     | index.ts、\\*-ipc.ts                                             | 现有 `tests/architecture-budgets.test.ts` 已锁定 `index.ts` 7,277 行和主进程路由总数；拆分后把 `index.ts` 上限下调到 1,500 行，并按领域模块分别计数路由  |\n| 1.7  | pet、task-inbox、im-gateway、cc-room、external-runtime、operation batch 逐个改成 HostService                                               | 对应目录                                                        | 各自能在 serve 里启用，或在 capabilities 里声明不可用                                            ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 19222,
+      "context": "册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。\n\n### 3.3 可选的后续：Desktop 连本机守护进程\n\n迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。\n\n### 3.4 风险\n\n- `panel-app-bridge.ts` 和 `agent-bridge.ts` 很大，迁移时要保持行为不变。先补协议层的录制回放测试，再搬代码。\n- 迁移期间两套实现会并存，用 feature flag 按服务切换，每个服务只维持一个版本周期的双轨。\n- 会话目录相关代码搬动时，测试写真实 `~/.code-shell` 的守卫必须放在 sessionsRoot 层而不是 home 层，否则子目录会绕过。\n\n---\n\n## 4. W2 · Protocol v2\n\n范围以第 15 章 §6.3 的十条为准。本节只定宿主侧细节和与第 15 章的差异补充。\n\n### 4.1 握手\n\n```jsonc\n// → initialize\n{ \"protocolVersions\": [\"2.0\"], \"client\": { \"name\": \"codeshell-ios\", \"version\": \"1.0.0\", \"kind\": \"mobile\" },\n  \"capabilities\": { \"streaming\": true, \"approvals\": [\"tool\",\"exec\",\"browser\",\"credential\"],\n                    \"clientRequests\": [\"dialog\",\"askUser\"], \"media\": [\"image/png\"] },\n  \"resume\": { \"sessionId\": \"…\", \"cursor\": \"…\"",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 19374,
+      "context": "automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。\n\n### 3.3 可选的后续：Desktop 连本机守护进程\n\n迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。\n\n### 3.4 风险\n\n- `panel-app-bridge.ts` 和 `agent-bridge.ts` 很大，迁移时要保持行为不变。先补协议层的录制回放测试，再搬代码。\n- 迁移期间两套实现会并存，用 feature flag 按服务切换，每个服务只维持一个版本周期的双轨。\n- 会话目录相关代码搬动时，测试写真实 `~/.code-shell` 的守卫必须放在 sessionsRoot 层而不是 home 层，否则子目录会绕过。\n\n---\n\n## 4. W2 · Protocol v2\n\n范围以第 15 章 §6.3 的十条为准。本节只定宿主侧细节和与第 15 章的差异补充。\n\n### 4.1 握手\n\n```jsonc\n// → initialize\n{ \"protocolVersions\": [\"2.0\"], \"client\": { \"name\": \"codeshell-ios\", \"version\": \"1.0.0\", \"kind\": \"mobile\" },\n  \"capabilities\": { \"streaming\": true, \"approvals\": [\"tool\",\"exec\",\"browser\",\"credential\"],\n                    \"clientRequests\": [\"dialog\",\"askUser\"], \"media\": [\"image/png\"] },\n  \"resume\": { \"sessionId\": \"…\", \"cursor\": \"…\" } }\n// ← result\n{ \"protocolVersion\": \"2.0\", \"contracts\": { /* 见 7.1 */ }, \"host\": { \"kind\": \"electron\", \"id\": \"…\" },\n  \"capabilities\": { \"browser\": { \"",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 23821,
+      "context": "本，断线后用 `since: stateVersion` 拉差分  |\n\nApproval 事件同时出现在两处：作为 Item 进 journal（可续传），作为独立对象进状态快照（可查询）。`SessionSnapshotStore` 和 `HubStreamCursor` 各自的 seq / epoch 删除，或改成 journal cursor 的内存缓存。\n\n### 4.4 宿主请求类型化（worker → host）\n\n回环不再伪装成审批，改成 worker → host 的类型化请求：\n\n```\nhost/browser.act   host/credential.materialize   host/credential.resolve   host/workspace.switch\nhost/panel.call    host/user.ask                 host/automation.create    host/model.sign\nhost/link.action   host/operation.batch\n```\n\n需要用户确认时，由 HostRuntime 生成一个 `Approval` 对象（见 W3）。\"执行请求\"和\"征求同意\"分开。\n\n### 4.5 客户端反向请求（host → client）\n\nheadless 宿主没有对话框和渲染进程，这类事情要向客户端要：\n\n```\nclient/dialog.pickDirectory   client/askUser   client/approval.prompt\n```\n\n- 宿主只向在 `initialize` 里声明了该能力的客户端发；多个客户端时按租约（沿用现有 `__ask_user__` 租约逻辑）选一个，其余收到 `approval/requested` 通知。\n- 请求带超时；超时或客户端断线返回 `client_unavailable`，worker 侧按策略降级（比如改为 deny）。\n\n### 4.6 Schema、错误与代码生成\n\n- 唯一定义：`packages/core/src/protocol/v2/schema.ts`（zod）。\n- 产出：JSON Schema 快照（`protocol/v2/schema.json`，CI 里比对快照），TS 客户端，Swift / Kotlin 模型（用 quicktype 或自写生成器）。\n- 错误沿用第 15 章 §6.3 第 6 条的类型列表，统一形状 `{ code, source, retryable, httpStatus? }`。\n- 版本规则：只增加字段算小版本；删除或改语义算大版本。实验字段一律放在 `x-` 前缀下，不进稳定契约。\n\n### 4.7 兼容\n\n- AgentServer 同时支持 v1 和 v2。没发 `initialize` 的连接按 v1 处理。\n- 提供 v1 适配层，把 Item 降级回 StreamEvent，保留两个小版本。\n- TUI 用进程内传输，最先切换，作为第一个验证点。\n\n### 4.8 验收\n\n- 同一段录制好的会话，经 v1 和 v2 回放后，UI 渲染结果一致。\n- 手机断网 5 分钟后恢复，用 cursor 补齐 Turn 输出，用 ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 31488,
+      "context": "odeshell 里发布（可以先藏在 feature flag 后面），再让 services 升级。\n\n### 7.3 发版节奏\n\n- 每两周一个小版本，紧急修复走补丁版本。\n- 生产 Hub 和 Cloud 镜像使用带摘要的镜像标签加滚动升级脚本，先把 0.9.23 升到当前版本。\n- Desktop 保持 electron-updater；macOS 签名问题处理完后，打开自动下载。\n\n### 7.4 验收自动化\n\n- 把 services 里的 `test:device-relay`、candidate 冒烟测试、部署回执变成 CI job。证据作为 artifact 保存 90 天。\n- 文档只写契约、设计和部署说明。按日期记录的部署回执迁到 `evidence/` 或 Release notes 里。\n- 目标：services 里证据 / 回执类提交占比从约 25%（最近 60 个提交抽样）降到 10% 以下。\n\n### 7.5 可观测性\n\n- 统一 trace：`traceId = sessionId`、`spanId = turnId / itemId`，从客户端经 HostRuntime 和 worker 一直到服务端。日志按 OpenTelemetry 格式输出，可以选择导出。\n- 错误统一使用 `{ code, source, retryable }`（与 W3 的 Decision 对齐）。\n\n---\n\n## 8. W6 · 远程、手机与沙箱\n\n依赖 1.5、2.3 和 2.5。产品流程（共享范围、运行位置、委派）以《统一工作台规划》为准，本节只定基础设施。前提是**电脑在线是正常状态**：遥控场景不依赖云端执行。\n\n### 8.1 薄云端（遥控必需）\n\n| 组件       | 方案                                                                                                                                                                                         |\n| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| 配对与身份 | 手机首次连某台电脑时扫码配对并本机确认（保留现在的配对机制）。Account 先只做设备表和一次性票据，多用户后置；设备中继去掉内嵌账号库                                                           |\n| 连接       | 手机 → 中继 → 电脑的 HostRuntime，直接走 Protocol v2；中继是无状态转发。手机端那套私有 WS 协议先补版本号，再逐步下线                      ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 32316,
+      "context": "                                                                                                                             |\n| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| 配对与身份 | 手机首次连某台电脑时扫码配对并本机确认（保留现在的配对机制）。Account 先只做设备表和一次性票据，多用户后置；设备中继去掉内嵌账号库                                                           |\n| 连接       | 手机 → 中继 → 电脑的 HostRuntime，直接走 Protocol v2；中继是无状态转发。手机端那套私有 WS 协议先补版本号，再逐步下线                                                                         |\n| 推送网关   | services 里**独立进程**，权限隔离，可单独扩容。iOS 用 APNs；Android 用 FCM，大陆走厂商通道或聚合推送。触发事件：待审批、Turn 完成、需要人工接管、电脑离线                                    |\n| Link OAuth | 第三方授权的公网回调和密钥托管留在云端，和现在一样                                                                                                                                           |\n| 保持在线   | Desktop 有手机连接时阻止系统睡眠；关窗口不杀 HostRuntime（第 3.3 节守护进程的轻量版，提前到 S2）                                                                                             |\n| App        | 第一版用 Capacitor 包装 `packages/web`。前提是 `packages/web` 先切到 v2 并能脱离 Hub 直连 HostRuntime（S2 的工作量要计入）。推送、生物识别、后台恢复用原生插件；数据模型用 W2 生成的 TS 类型 |\n| 基础设施   | 域名、wildcard DNS / TLS（大陆需备案，可先用香港节点）、Apple 开发者账号与 APNs 证书、各厂商推送账号、App 备案                                                 ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 32816,
+      "context": "HostRuntime，直接走 Protocol v2；中继是无状态转发。手机端那套私有 WS 协议先补版本号，再逐步下线                                                                         |\n| 推送网关   | services 里**独立进程**，权限隔离，可单独扩容。iOS 用 APNs；Android 用 FCM，大陆走厂商通道或聚合推送。触发事件：待审批、Turn 完成、需要人工接管、电脑离线                                    |\n| Link OAuth | 第三方授权的公网回调和密钥托管留在云端，和现在一样                                                                                                                                           |\n| 保持在线   | Desktop 有手机连接时阻止系统睡眠；关窗口不杀 HostRuntime（第 3.3 节守护进程的轻量版，提前到 S2）                                                                                             |\n| App        | 第一版用 Capacitor 包装 `packages/web`。前提是 `packages/web` 先切到 v2 并能脱离 Hub 直连 HostRuntime（S2 的工作量要计入）。推送、生物识别、后台恢复用原生插件；数据模型用 W2 生成的 TS 类型 |\n| 基础设施   | 域名、wildcard DNS / TLS（大陆需备案，可先用香港节点）、Apple 开发者账号与 APNs 证书、各厂商推送账号、App 备案                                                                               |\n\n验收：在手机上给家里的电脑派一个任务；锁屏状态收到审批推送，Face ID 批准；断网后再恢复，结果完整无缺；在手机上打开电脑上的一个 Panel 并完成一次操作。\n\n### 8.2 沙箱任务（无人值守，S3）\n\n云端执行只做一种形态：**一任务一容器**，对标 Codex Cloud 和 Claude Code 云端会话。\n\n| 环节           | 方案                                                                                                                                                         |\n| -------------- | -------------------------------------------------------------------------------------------------------------",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 33032,
+      "context": "发事件：待审批、Turn 完成、需要人工接管、电脑离线                                    |\n| Link OAuth | 第三方授权的公网回调和密钥托管留在云端，和现在一样                                                                                                                                           |\n| 保持在线   | Desktop 有手机连接时阻止系统睡眠；关窗口不杀 HostRuntime（第 3.3 节守护进程的轻量版，提前到 S2）                                                                                             |\n| App        | 第一版用 Capacitor 包装 `packages/web`。前提是 `packages/web` 先切到 v2 并能脱离 Hub 直连 HostRuntime（S2 的工作量要计入）。推送、生物识别、后台恢复用原生插件；数据模型用 W2 生成的 TS 类型 |\n| 基础设施   | 域名、wildcard DNS / TLS（大陆需备案，可先用香港节点）、Apple 开发者账号与 APNs 证书、各厂商推送账号、App 备案                                                                               |\n\n验收：在手机上给家里的电脑派一个任务；锁屏状态收到审批推送，Face ID 批准；断网后再恢复，结果完整无缺；在手机上打开电脑上的一个 Panel 并完成一次操作。\n\n### 8.2 沙箱任务（无人值守，S3）\n\n云端执行只做一种形态：**一任务一容器**，对标 Codex Cloud 和 Claude Code 云端会话。\n\n| 环节           | 方案                                                                                                                                                         |\n| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |\n| 触发           | GitHub 事件（Issue / PR 提及、push）、定时器、手机或桌面上的\"丢到沙箱\"                                                                                       |\n| 启动         ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 39429,
+      "context": "ported`；内部回环用 `approved: true` 携带 typed unsupported answer，不能误报用户拒绝；内部请求和 resolved ID 不向 client 暴露。普通审批和已安装 Panel callback 保留；Panel 的实际 runtime 只有 yes/no confirm，AskUser 立即返回 `approved:false, failure:unavailable` 加明确不支持原因，不弹内部工具审批、不构造空回答。Core 同步返回该原因，异步仅清理 pending、不注入答案或启动续跑；Desktop/Web 真实文字问答保持。最终 worker env 构造清 `CODE_SHELL_REMOTE_LINK_CLIENT_SECRET`，自定义 builder 也不能遗留。\n- **已实现：拦截收口及 1.1。** S0 纯逻辑迁 `packages/host`，错误文案由 adapter 注入宿主标签；`interceptHostRequest` 在 serve、Panel、Desktop 的生产链路共用，旧入口仅转导出。HostRuntime 注册能力并管理基本生命周期，仅依赖 core。1.2–1.4 留下一批。\n- **已实现：worker 环境开关。** serve 的交互与 automation worker 清 `CODE_SHELL_HOST_MCP_SERVERS`；Panel worker（含 Desktop Web 自定义 agent-task env）清 operation batch、model signing、workspace IPC 与 host MCP switches。Desktop 主 worker 明确安装自己的 bridge。\n- **已实现：协议预算。** 请求分发与 Run/Goal 输入校验抽到 `protocol/dispatch.ts`，旧 wire 保持；server.ts 预算由 5174 下调到 4949，dispatch.ts 单独预算 246。\n- **已实现：Windows shell env。** `mergeShellEnv` 在 win32 对变量名大小写不敏感归一，PATH/Path 不重复，显式项目覆盖仍优先。\n- **已实现：REPL。** 设置 `CODESHELL_WORKSPACE_WRITE_PROTOCOL=1`；Bun 宿主优先 `process.execPath`，Node 宿主使用已可用的 PATH Bun，均 `--no-env-file`。环境白名单不继承代理、`NODE_PATH`、`PYTHONPATH`、`VIRTUAL_ENV`、`CONDA_*`；credential env exposures 会进入 REPL；沙箱关闭的 Bash 仍完整继承。这不是防同用户文件/环境窃取的安全边界，REPL 仍未进入 OS 沙箱；已写发版说明。\n- **已实现：workspace bridge 选择。** worker 仅在宿主明确设 `CODE_SHELL_WORKSPACE_ACCESS=host` 时安装。Desktop 主 worker 启用；serve/Panel 清除，跨会话 `send_message`、",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 42021,
+      "context": "--------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |\n| 1   | `packages/host` 单独成包还是放进 `server`   | **单独成包**                                                                                  | server 依赖 web、capability-coding、link，Desktop 不应被拖进来                                            |\n| 2   | Desktop 内嵌 HostRuntime 还是连本机守护进程 | **S1、S2 内嵌；S3 再评估守护进程**                                                            | 与《项目本地与云端运行 V2》的会话固定执行位置模型兼容                                                     |\n| 3   | v2 命名                                     | **沿用 Session / Turn / Item**，Thread 只在外部 Runtime 适配器                                | 第 15 章 §6.2 已定，不重开                                                                                |\n| 4   | Bash 是否默认关闭网络                       | **按项目信任级别**：受信任 allow，未信任 deny                                                 | 编码场景要装依赖                                                                                          |\n| 5   | 自动审查的模型和位置                        | **本机、默认关闭、只处理 low 风险的 ask→allow**                                               | 隐私和安全边界                                                                                            |\n| 6   | 推送网关和 Account 是否同进程",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/README.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 5552,
+      "context": " Sessions & Pet](14-digital-human-and-pet.md)                               | Session binding, long-term memory, cross-Session messages, and the Pet independence boundary               |\n| 15  | [Codex Open Harness Comparison & Roadmap](15-codex-harness-comparison-and-roadmap.md)       | Source-backed comparison, gaps, non-goals, priorities, and phased evolution plan                           |\n| 16  | [Platform Consolidation](16-platform-consolidation.md)                                      | HostRuntime, Protocol v2, unified policy/execution, thin cloud + sandbox tasks; v1.1 2026-10-14, S0 已实施 |\n\n## Reference\n\n- [Feature inventory (desktop / tui)](11-feature-inventory.md) — full capability breadth map\n\n> The prior architecture set lives in [`docs/archive/architecture/`](../archive/architecture/README.md);\n> it is kept for history but predates large subsystems. This directory supersedes it.\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/archify/platform-consolidation-target.architecture.json",
+      "pointer": "/meta/views/2/note",
+      "kind": "json-value-scalar",
+      "offset": 4,
+      "context": "同一份 HostRuntime 由 Electron / Headless / Container 三种 Adapter 注入；云端只做配对、转发、推送与 OAuth 回调。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/architecture/archify/platform-consolidation-target.architecture.json",
+      "pointer": "/components/7/label",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/architecture/archify/platform-consolidation-target.architecture.json",
+      "pointer": "/cards/0/items/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime 是唯一宿主实现，Electron main 只剩窗口与系统集成",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/core.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6790,
+      "context": " header 时，auxText 所选连接是否因此没有得到尊重，仍需核实配置解析/消费者契约。已只读查看函数和既有测试；既有测试明确要求忽略 credentials，故不能只凭它计确认。本轮没有新增此候选 fixture，没有执行 aux 请求，也没有完成真实 defaults.auxText 消费链复核。\n- 主审随后通知平台内容检查中止，并要求停止所有进一步动态实验、不重试 aux 或权限相关工作。本分审遵从：此后仅完成报告文字，没有再执行测试、shell 命令或网络操作。C01—C04 的上述证据均在这条通知前完成，保留三轮原始日志；不把停止后的未完成调查补写成确认结论。\n\n## 覆盖与剩余边界\n\n已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。\n\n仍未逐行覆盖：Core operations/browser/link/plugins/sandbox/MCP 全量连接恢复、全部 session journal repair 分支、所有 builtin 工具及平台原生进程；Pet desktop 持久 store/实际 IM 通道由对应 Host 审查覆盖，本文不声称端到端验证。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/coverage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 800,
+      "context": "缺陷。逐项问题均标明是否已知、动态复现还是静态确认。库存见 [inventory.json](inventory.json)；其中 source 文件计数仅按扩展名/文件名计算，包含一些脚本与 fixture，不代表产品模块数量或逐行审查数量。\n\n| 包/范围 | 本轮审查深度 | 动态验证 | 主要未覆盖 |\n| --- | --- | --- | --- |\n| Core | run open/finalize/accounting、goal、executor/permission、provider 流收尾、Session CAS/fork/merge、history hooks、Cron、auxiliary 初读 | 6 个聚焦测试；与 Host/Pet 合并的 135 项既有 baseline | 全 builtin、operations、plugin/sandbox、MCP 所有恢复分支、完整 journal repair、真实模型 |\n| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |\n| Pet | projection、manager/followups/route、visit receipt | 同上 baseline 中 index/validator/route/receipt | 真实 IM、Desktop 持久 store 与完整 pet 工作流 |\n| Coding | ApplyPatch 计划/提交/rollback、Git/worktree、Notebook、DriveAgent 接线、LSP、外部 runtime/history/discovery | patch/Git 7 个新测试；Coding Git/patch + Arena/Optimization Lab 253 项 baseline；runtime shared 的 TUI 合并 baseline | 真实 Codex/Claude/LSP、所有 DriveAgent 并发/退出边界；Notebook 旧问题本轮只读未重跑 |\n| TUI | CLI run/runs/options、slash commands、permission、undo/export、renderers、query guard、输入/history、pending question | 5 个新测试；150 项 CLI/UI纯逻辑等 baseline | 完整 Ink/PTY 原生会话、全部组件渲染与快捷键 |\n| Desktop | 文件/图片/附件搜索、Panel package/bridge/resource、browser driver/native decoder、PTY接线、media custody、history conversion、renderer hooks/mobile/Cloud 接线 | 文件搜索 3 项、decoder 3 项；均局部，不是 Electron E2E | 大量 renderer 组件、完整原生App、真实Chrome/OS事件、Panel全方法和native tools |\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1874",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "pointer": "/hits/history_identity/21/context",
+      "kind": "json-value-scalar",
+      "offset": 394,
+      "context": "代表产品模块数量或逐行审查数量。\n\n| 包/范围 | 本轮审查深度 | 动态验证 | 主要未覆盖 |\n| --- | --- | --- | --- |\n| Core | run open/finalize/accounting、goal、executor/permission、provider 流收尾、Session CAS/fork/merge、history hooks、Cron、auxiliary 初读 | 6 个聚焦测试；与 Host/Pet 合并的 135 项既有 baseline | 全 builtin、operations、plugin/sandbox、MCP 所有恢复分支、完整 journal repair、真实模型 |\n| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |\n| Pet | projection、mana",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/0/text",
+      "kind": "json-value-scalar",
+      "offset": 38,
+      "context": "| W1   | Host Runtime 统一 | 一个纯 Node 的 HostRuntime；Desktop 和 serve 只是两种部署方式                                                 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/1/text",
+      "kind": "json-value-scalar",
+      "offset": 24,
+      "context": "| 本章                  | HostRuntime、Protocol v2 宿主侧、策略 / 执行、扩展包、契约版本 | 上两份文档的实现都跑在本章定义的宿主和协议上                                                                                                         |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/2/text",
+      "kind": "json-value-scalar",
+      "offset": 5,
+      "context": "   │ HostRuntime（纯 Node，packages/host）                                 │",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/5/text",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/6/text",
+      "kind": "json-value-scalar",
+      "offset": 28,
+      "context": "             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/7/text",
+      "kind": "json-value-scalar",
+      "offset": 67,
+      "context": "- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/8/text",
+      "kind": "json-value-scalar",
+      "offset": 4,
+      "context": "- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/9/text",
+      "kind": "json-value-scalar",
+      "offset": 11,
+      "context": "## 3. W1 · HostRuntime 统一",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/12/text",
+      "kind": "json-value-scalar",
+      "offset": 49,
+      "context": "  dialogs?: DialogProvider; // 选择目录等；headless 为空，HostRuntime 改发 client/dialog 请求",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/13/text",
+      "kind": "json-value-scalar",
+      "offset": 6,
+      "context": "class HostRuntime {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/17/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "| 1.5  | 手机远程编排改为 HostRuntime 的一个客户端，不再调用 `injectWorkerMessage`                                                                  | mobile-remote-orchestrator                                      | 手机直接走 Protocol v2（依赖 2.3 续传和 2.5 反向请求）                                                                                                   |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/19/text",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/19/text",
+      "kind": "json-value-scalar",
+      "offset": 172,
+      "context": "迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/20/text",
+      "kind": "json-value-scalar",
+      "offset": 10,
+      "context": "需要用户确认时，由 HostRuntime 生成一个 `Approval` 对象（见 W3）。\"执行请求\"和\"征求同意\"分开。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/21/text",
+      "kind": "json-value-scalar",
+      "offset": 66,
+      "context": "- 统一 trace：`traceId = sessionId`、`spanId = turnId / itemId`，从客户端经 HostRuntime 和 worker 一直到服务端。日志按 OpenTelemetry 格式输出，可以选择导出。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/22/text",
+      "kind": "json-value-scalar",
+      "offset": 27,
+      "context": "| 连接       | 手机 → 中继 → 电脑的 HostRuntime，直接走 Protocol v2；中继是无状态转发。手机端那套私有 WS 协议先补版本号，再逐步下线                                                                         |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/23/text",
+      "kind": "json-value-scalar",
+      "offset": 38,
+      "context": "| 保持在线   | Desktop 有手机连接时阻止系统睡眠；关窗口不杀 HostRuntime（第 3.3 节守护进程的轻量版，提前到 S2）                                                                                             |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/24/text",
+      "kind": "json-value-scalar",
+      "offset": 86,
+      "context": "| App        | 第一版用 Capacitor 包装 `packages/web`。前提是 `packages/web` 先切到 v2 并能脱离 Hub 直连 HostRuntime（S2 的工作量要计入）。推送、生物识别、后台恢复用原生插件；数据模型用 W2 生成的 TS 类型 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/25/text",
+      "kind": "json-value-scalar",
+      "offset": 127,
+      "context": "- **已实现：拦截收口及 1.1。** S0 纯逻辑迁 `packages/host`，错误文案由 adapter 注入宿主标签；`interceptHostRequest` 在 serve、Panel、Desktop 的生产链路共用，旧入口仅转导出。HostRuntime 注册能力并管理基本生命周期，仅依赖 core。1.2–1.4 留下一批。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/26/text",
+      "kind": "json-value-scalar",
+      "offset": 19,
+      "context": "| 2   | Desktop 内嵌 HostRuntime 还是连本机守护进程 | **S1、S2 内嵌；S3 再评估守护进程**                                                            | 与《项目本地与云端运行 V2》的会话固定执行位置模型兼容                                                     |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/28/text",
+      "kind": "json-value-scalar",
+      "offset": 102,
+      "context": "| 16  | [Platform Consolidation](16-platform-consolidation.md)                                      | HostRuntime, Protocol v2, unified policy/execution, thin cloud + sandbox tasks; v1.1 2026-10-14, S0 已实施 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/29/text",
+      "kind": "json-value-scalar",
+      "offset": 4,
+      "context": "同一份 HostRuntime 由 Electron / Headless / Container 三种 Adapter 注入；云端只做配对、转发、推送与 OAuth 回调。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/30/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/33/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime 是唯一宿主实现，Electron main 只剩窗口与系统集成",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/36/text",
+      "kind": "json-value-scalar",
+      "offset": 193,
+      "context": "已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/37/text",
+      "kind": "json-value-scalar",
+      "offset": 70,
+      "context": "| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/39/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/40/text",
+      "kind": "json-value-scalar",
+      "offset": 394,
+      "context": "代表产品模块数量或逐行审查数量。\n\n| 包/范围 | 本轮审查深度 | 动态验证 | 主要未覆盖 |\n| --- | --- | --- | --- |\n| Core | run open/finalize/accounting、goal、executor/permission、provider 流收尾、Session CAS/fork/merge、history hooks、Cron、auxiliary 初读 | 6 个聚焦测试；与 Host/Pet 合并的 135 项既有 baseline | 全 builtin、operations、plugin/sandbox、MCP 所有恢复分支、完整 journal repair、真实模型 |\n| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |\n| Pet | projection、mana",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/41/text",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/42/text",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/43/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/46/text",
+      "kind": "json-value-scalar",
+      "offset": 19,
+      "context": "- **HL-C1 · 未确认**：`HostRuntime.register()` 保存 caller-owned service 引用（`runtime.ts:50`），dispatch 再读取 handler（`:114`）；若调用者后来改对象，登记快照可能与 handler 不一致。当前 Desktop/serve/Panel 的创建点均构造私有对象，未找到正常调用方后续变更；没有执行人为突变，不计问题。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/50/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/59/text",
+      "kind": "json-value-scalar",
+      "offset": 193,
+      "context": "已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/63/text",
+      "kind": "json-value-scalar",
+      "offset": 70,
+      "context": "| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/64/text",
+      "kind": "json-value-scalar",
+      "offset": 193,
+      "context": "已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/72/text",
+      "kind": "json-value-scalar",
+      "offset": 193,
+      "context": "已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/109/text",
+      "kind": "json-value-scalar",
+      "offset": 106,
+      "context": "`packages/server` 的 Host 管理 API 与 Services 的 OAuth broker 是两个边界；对应修改在各自仓库、独立 task branch/worktree 中实施。与平台 HostRuntime/PolicyEngine 收敛复用同一套机制，避免产生第二个审批器或任务宿主。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/110/text",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "- [ ] S2-C：保持在线与轻量常驻（连接时阻止睡眠、关窗口保留 HostRuntime）、薄云端票据中继/配对设备表/独立推送网关、Capacitor 首版。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/112/text",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "| 7 | `packages/host` 仅依赖 core，HostRuntime 注册/分发/adapter 与同步生命周期；serve、Panel 和 Desktop adapter 调同一 interceptor，旧 host-requests 仅转导出；workspace、build 声明、release 清单、CI 发现已接入，Desktop 实际 bundle Host。 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.first.receipt.json",
+      "pointer": "/scope",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime direct source import; synchronous in-memory callbacks; no request/approval/worker/provider/native/network operations",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/1/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/7/readScope",
+      "kind": "json-value-scalar",
+      "offset": 14,
+      "context": "lines 339-343 HostRuntime producer only; broader auth/worker routing excluded",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/8/readScope",
+      "kind": "json-value-scalar",
+      "offset": 14,
+      "context": "lines 130-134 HostRuntime producer only; no task workers or authority execution",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/productImports/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-validation.json",
+      "pointer": "/limits/1",
+      "kind": "json-value-scalar",
+      "offset": 19,
+      "context": "Current production HostRuntime callers pass no start/stop callbacks; callback tests validate public synchronous lifecycle only.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/root-dedup.json",
+      "pointer": "/hits/immutability/0/context",
+      "kind": "json-value-scalar",
+      "offset": 189,
+      "context": "              |\n| 项目本地与云端运行 V2 | 运行位置在\"新建 / 打开项目\"时选择，会话固定执行位置            | 第 3.3 节 Desktop 是否连本机守护进程，以该文档的\"会话目标\"模型为前提。该文档里的持久云端工作区、云端 Panel 组合按第 8 节收窄为沙箱任务，相关章节冻结 |\n| 本章                  | HostRuntime、Protocol v2 宿主侧、策略 / 执行、扩展包、契约版本 | 上两份文档的实现都跑在本章定义的宿主和协议上                                                                                                         |\n\n---\n\n## 1. 现状事实（2026-10-14 据源码核对）\n\n### 1.1 宿主\n\n- `packages/desktop/src/main`",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 259,
+      "context": "# Host 普通目录与同步生命周期复审\n\n冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本范围 **0 项新确认问题、0 项新候选**。只写审查记录和证据，没有修改产品代码。\n\n`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。\n\n## 已验证行为\n\n[定向 fixture](evidence/host-lifecycle-controls.test.ts) 直接导入冻结源码 `runtime.ts`。其两个依赖均为 type-only import，不加载 Core、Host request 模块、adapter 平台或 worker。所有 adapter/service 都是本测试内同步数组回调。\n\n- 空服务目录：adapter start/stop 各一次，重复 start/stop 幂等。\n- `capabilities()` 返回数组被调用方修改不会改登记表；运行前和停止后 `supports()` 为 false。\n- adapter.start 内调用 stop：状态终结、后续服务不启动、adapter 不重复停止。\n- service.start 内调用 stop：只清理已到达服务，按相反顺序停止，后续服务不启动。\n- service.stop/adapter.stop 内重入 stop：每项仅停止一次。\n- 多个同步 stop 抛错：逆序保留全部 service 错误和 adapter 错误，停止后不能重启。\n\n[首次 raw combined log](evidence/host-lifecycle-controls.first.log) 为 **6 pass / 0 fail / 22 expect / 0 skipped**，guarded runner 确认 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。先保存首次 stdout/stderr 与退出码后才阅读；没有失败后修支架、重跑或替代验证。命令及原始日志 SHA-256 见 [首次收据](evidence/host-lifecycle-controls.first.receipt.json)。这些通过用例是正常生命周期控制，不是 bug",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2030,
+      "context": "ce/handler 突变生产者，且没有明确的登记快照契约；未做人为突变实验，不重复登记为新候选。README 明确生命周期同步，因此没有以 async void 回调制造缺陷。\n\n初次历史库存错误把不存在的顶层 archive/_archive 传给 rg，工具 exit 2 且路径列表过大被工具截断。该静态导航失败的 [标注转录](evidence/host-static-inventory-skip.md) 已保留；不存在路径方向跳过。后续独立去重只从实际存在 docs/bugs 根收集并解析嵌套档案。此事件没有运行产品或测试，不计 failed Bun shard。\n\n## 覆盖界限\n\nhost-requests 仅阅读普通数据形状与映射清单；authority/approval/security/auth/credential/custody/watchdog 行为均不作为本次验证目标，未调用 dispatch/intercept。没有启动真实 worker、Engine、模型、provider、插件 native entry、外部进程或网络，没有访问用户数据。三处当前生产 HostRuntime 创建点都没有传入 start/stop 回调，因此 fake adapter 控制只证明公共同步生命周期行为。现有 runtime.test.ts 混有请求/approval 测试，本次未执行整文件。未运行构建、typecheck、lint 或 full suite。\n\n[源码 manifest](evidence/host-source-manifest.json) 记录 11 份源码/配置与冻结哈希、当前一致性及读取范围；[validation](evidence/host-validation.json) 给出精确计数。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "pointer": "/files/60/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+      "pointer": "/hits/10/text",
+      "kind": "json-value-scalar",
+      "offset": 144,
+      "context": "`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "pointer": "/hits/identity_cache/2/context",
+      "kind": "json-value-scalar",
+      "offset": 420,
+      "context": "ker → host 类型化请求，取代 __*__ 回环）        │\n   │  Capability 声明 · CONTRACTS · Trace                                  │\n   │  HostAdapter ← 平台相关实现注入（Electron / Headless / Container）     │\n   └──────┬──────────────────────────────┬────────────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + Elec",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/2/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/5/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/6/context",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/7/context",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/8/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/13/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/17/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/20/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/23/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/24/context",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/25/context",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/26/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/31/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/host/src/runtime.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/109/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/135/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/136/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/137/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/138/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/279/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/293/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1658,
+      "context": "，见 5.2）。\n4. **扩展形态多、发版耦合重。** 扩展有四种形态，各自安装和审核；契约版本号分散，`PANEL_APP_API_VERSION` 和 `DESKTOP_CONTROL_PROTOCOL_VERSION` 各在两处重复定义。services 锁定 0.9.38，生产 Hub 仍是 0.9.23（2026-10-12 SSH 核实）。\n\n对应六条工作线：\n\n| 编号 | 工作线            | 一句话目标                                                                                                    |\n| ---- | ----------------- | ------------------------------------------------------------------------------------------------------------- |\n| W1   | Host Runtime 统一 | 一个纯 Node 的 HostRuntime；Desktop 和 serve 只是两种部署方式                                                 |\n| W2   | Protocol v2       | 有握手、有版本、Session/Turn/Item 对象模型、可续传，从 Schema 生成多语言客户端                                |\n| W3   | 统一策略与执行    | 一个 PolicyEngine 加一个 ApprovalStore；所有子进程走同一个 ExecutionService                                   |\n| W4   | 扩展收敛          | 一份包清单，组成部分按需声明，一次审核                                                                        |\n| W5   | 契约与发布        | 契约版本集中管理、兼容矩阵、发版节奏、验收自动化                                                              |\n| W6   | 远程、手机与沙箱  | 薄云端（中继、推送、配对、Link OAuth）加一任务一容器的沙箱 runner；都建立在 W1 和 W2 之上，不做常驻云端工作台 |\n\nW1 和 W2 是交织的，不是先后关系。步骤级依赖见第 9.1 节。阶段划分见第 9 节；阶段编号用 S0–S3，避免和 `TODO.md` 里的产品交付 P0/P1 混淆。\n\n### 0.1 与第 15 章的关系\n\n- 第 15 章 §6.3 的十条 v2 契约是本方案 W2 的**完整范围**，本章只补宿主侧细节，不另立一套更窄的契约。\n- 术语沿用第 15 章 §6.2：持久对话对象叫 **Session**，一次运行叫 **Turn**，`Thread` 只出现在外部 Runtime 适配器。本章不再提\"改名为 Threa",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3607,
+      "context": "------------------------------------------------------------------------------------------------------------------------------ |\n| 统一工作台规划        | 产品模型：共享范围、运行位置、云端委派电脑子任务               | W6 的用户流程不在本章重复定义                                                                                                                        |\n| 项目本地与云端运行 V2 | 运行位置在\"新建 / 打开项目\"时选择，会话固定执行位置            | 第 3.3 节 Desktop 是否连本机守护进程，以该文档的\"会话目标\"模型为前提。该文档里的持久云端工作区、云端 Panel 组合按第 8 节收窄为沙箱任务，相关章节冻结 |\n| 本章                  | HostRuntime、Protocol v2 宿主侧、策略 / 执行、扩展包、契约版本 | 上两份文档的实现都跑在本章定义的宿主和协议上                                                                                                         |\n\n---\n\n## 1. 现状事实（2026-10-14 据源码核对）\n\n### 1.1 宿主\n\n- `packages/desktop/src/main` 非测试代码约 85.1k 行，其中直接 import `electron` 的只有 46 个文件。\n  - **纯 Node、理论上可以搬走的约 43.5k 行**：pet 12.9k、各类 service 约 10k、会话 / transcript / runs 4.2k、mobile 和 cc-room 3.9k、panels 3.4k、云账号与云环境 3k、凭据加 MCP OAuth 1.7k、links 1.3k、automation 1.3k。\n  - **强依赖 Electron 的约 19k 行**：`index.ts`、browser-driver、窗口、协议处理、safeStorage、通知、updater、18 个 `*-ipc.ts`。\n  - **混合的约 21k 行**：`agent-bridge.ts` 2,521 行、`panel-app-bridge.ts` 3,791 行、external-runtime、im-gateway、pty 等。\n- `index.ts` 有 189 个 import、276 个 `ipcMain` handler（main 里一共 418 个），模块级单例超过 15 个。\n- 已经和 server 共享的：panels 运行时（desktop 对 `@cjhyy/code-shell-server/panels` 有 18 处 import）、mobile-remote 传输、remote-relay、links、`WorkerB",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 11704,
+      "context": "temd 部署。services 锁定 0.9.38；候选镜像只在 `candidate.yml` 里构建，不作为 package 依赖。\n- services 最近 60 个提交里约 25% 是证据 / 回执类提交。\n\n---\n\n## 2. 目标架构\n\n```\n   Desktop UI        Web / Hub SPA       iOS / Android        TUI / SDK / 外部 Agent\n       │                  │                   │                        │\n       └────── Protocol v2（initialize · Session/Turn/Item · cursor 续传 · client/* 反向请求）──────┘\n                                   │\n   ┌───────────────────────────────▼──────────────────────────────────────┐\n   │ HostRuntime（纯 Node，packages/host）                                 │\n   │  HostServices: sessions · credentials · panels · links · automation  │\n   │                browser-backends · devices · push · operations        │\n   │  PolicyEngine + ApprovalStore（唯一审批入口）                          │\n   │  ExecutionService（唯一子进程入口，默认沙箱）                          │\n   │  HostRequest 分发器（worker → host 类型化请求，取代 __*__ 回环）        │\n   │  Capability 声明 · CONTRACTS · Trace                                  │\n   │  HostAdapter ← 平台相关实现注入（Electron / Headless / Container）     │\n   └──────┬──────────────────────────────┬────────────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱 ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12503,
+      "context": "cutionService（唯一子进程入口，默认沙箱）                          │\n   │  HostRequest 分发器（worker → host 类型化请求，取代 __*__ 回环）        │\n   │  Capability 声明 · CONTRACTS · Trace                                  │\n   │  HostAdapter ← 平台相关实现注入（Electron / Headless / Container）     │\n   └──────┬──────────────────────────────┬────────────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱    = 容器内 serve + ContainerAdapter（一任务一容器，跑完销毁）\n   薄云端：配对 / Account · Link OAuth 回调 · 设备中继 · 推送网关（独立进程）· 对象存储（journal 与附件）\n```\n\n原则：\n\n- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。\n- **云端不跑常驻状态。** 薄云端只做转发、推送、配对和 OAuth 回调；任务状态在宿主里，产出进 git 和对象存储。\n\n- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。\n- **所有客户端都是平等的 Protocol v2 客户端。** Desktop 渲染进程也不例外：它通过 IPC 承载 v2 消息，不再走 276 个零散的 IPC handler。\n- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名），不能让请求挂起。\n- **一台机器一个 Host 写入者。** 同机并存的 Desktop 和 serve 对共享文件（automation、session 目录、settings）必须经过同一把跨进程锁，或者由 capabilities 协商出单一 owner。\n\n### 2.1 能力协商与降级\n\n宿主之间（Desktop、serve、沙箱",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12565,
+      "context": "ostRequest 分发器（worker → host 类型化请求，取代 __*__ 回环）        │\n   │  Capability 声明 · CONTRACTS · Trace                                  │\n   │  HostAdapter ← 平台相关实现注入（Electron / Headless / Container）     │\n   └──────┬──────────────────────────────┬────────────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱    = 容器内 serve + ContainerAdapter（一任务一容器，跑完销毁）\n   薄云端：配对 / Account · Link OAuth 回调 · 设备中继 · 推送网关（独立进程）· 对象存储（journal 与附件）\n```\n\n原则：\n\n- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。\n- **云端不跑常驻状态。** 薄云端只做转发、推送、配对和 OAuth 回调；任务状态在宿主里，产出进 git 和对象存储。\n\n- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。\n- **所有客户端都是平等的 Protocol v2 客户端。** Desktop 渲染进程也不例外：它通过 IPC 承载 v2 消息，不再走 276 个零散的 IPC handler。\n- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名），不能让请求挂起。\n- **一台机器一个 Host 写入者。** 同机并存的 Desktop 和 serve 对共享文件（automation、session 目录、settings）必须经过同一把跨进程锁，或者由 capabilities 协商出单一 owner。\n\n### 2.1 能力协商与降级\n\n宿主之间（Desktop、serve、沙箱）和 Runtime 之间（原生 Engine、Codex、Claude Code）的能力都不一致，本方案不追求一致，只定三",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12814,
+      "context": "─────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱    = 容器内 serve + ContainerAdapter（一任务一容器，跑完销毁）\n   薄云端：配对 / Account · Link OAuth 回调 · 设备中继 · 推送网关（独立进程）· 对象存储（journal 与附件）\n```\n\n原则：\n\n- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。\n- **云端不跑常驻状态。** 薄云端只做转发、推送、配对和 OAuth 回调；任务状态在宿主里，产出进 git 和对象存储。\n\n- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。\n- **所有客户端都是平等的 Protocol v2 客户端。** Desktop 渲染进程也不例外：它通过 IPC 承载 v2 消息，不再走 276 个零散的 IPC handler。\n- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名），不能让请求挂起。\n- **一台机器一个 Host 写入者。** 同机并存的 Desktop 和 serve 对共享文件（automation、session 目录、settings）必须经过同一把跨进程锁，或者由 capabilities 协商出单一 owner。\n\n### 2.1 能力协商与降级\n\n宿主之间（Desktop、serve、沙箱）和 Runtime 之间（原生 Engine、Codex、Claude Code）的能力都不一致，本方案不追求一致，只定三条规则：\n\n1. **声明。** 每个宿主在 `initialize` 里声明能力，每个 RuntimeProvider 声明自己的能力；一个 Session 的实际能力是两者的交集。Pet 现有的 `hostActionKinds` 闭合列表就是这个机制的雏形，1.7 时升级为公共机制。\n2. **拒绝而非挂起。** 请求不在声明里，立即返回 `host_unsupported` 并带能力名；UI 置灰，Mimi 不暴露对应工具。\n3. **委派。** 缺能力时可以把那一步交给有能力的宿主：",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12923,
+      "context": "       浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）\n             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）\n             沙箱    = 容器内 serve + ContainerAdapter（一任务一容器，跑完销毁）\n   薄云端：配对 / Account · Link OAuth 回调 · 设备中继 · 推送网关（独立进程）· 对象存储（journal 与附件）\n```\n\n原则：\n\n- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。\n- **云端不跑常驻状态。** 薄云端只做转发、推送、配对和 OAuth 回调；任务状态在宿主里，产出进 git 和对象存储。\n\n- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。\n- **所有客户端都是平等的 Protocol v2 客户端。** Desktop 渲染进程也不例外：它通过 IPC 承载 v2 消息，不再走 276 个零散的 IPC handler。\n- **不支持的能力要明确声明。** serve 没有浏览器能力，就在 capabilities 里说明，并对相应请求立即返回 `host_unsupported`（S0 线上为 `failure: \"unsupported\"`，`host_unsupported` 是 v2 错误码名），不能让请求挂起。\n- **一台机器一个 Host 写入者。** 同机并存的 Desktop 和 serve 对共享文件（automation、session 目录、settings）必须经过同一把跨进程锁，或者由 capabilities 协商出单一 owner。\n\n### 2.1 能力协商与降级\n\n宿主之间（Desktop、serve、沙箱）和 Runtime 之间（原生 Engine、Codex、Claude Code）的能力都不一致，本方案不追求一致，只定三条规则：\n\n1. **声明。** 每个宿主在 `initialize` 里声明能力，每个 RuntimeProvider 声明自己的能力；一个 Session 的实际能力是两者的交集。Pet 现有的 `hostActionKinds` 闭合列表就是这个机制的雏形，1.7 时升级为公共机制。\n2. **拒绝而非挂起。** 请求不在声明里，立即返回 `host_unsupported` 并带能力名；UI 置灰，Mimi 不暴露对应工具。\n3. **委派。** 缺能力时可以把那一步交给有能力的宿主：云端或沙箱任务委派电脑子任务，电脑把无人值守的步骤丢进沙箱。委派走 Protocol v2 和 W6 的设备注册。\n\n能力矩阵（行是能力，列是 宿主 × Runtime，格子写 有 / 无 / 可委派）作为附录维护，同",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 13888,
+      "context": "与降级\n\n宿主之间（Desktop、serve、沙箱）和 Runtime 之间（原生 Engine、Codex、Claude Code）的能力都不一致，本方案不追求一致，只定三条规则：\n\n1. **声明。** 每个宿主在 `initialize` 里声明能力，每个 RuntimeProvider 声明自己的能力；一个 Session 的实际能力是两者的交集。Pet 现有的 `hostActionKinds` 闭合列表就是这个机制的雏形，1.7 时升级为公共机制。\n2. **拒绝而非挂起。** 请求不在声明里，立即返回 `host_unsupported` 并带能力名；UI 置灰，Mimi 不暴露对应工具。\n3. **委派。** 缺能力时可以把那一步交给有能力的宿主：云端或沙箱任务委派电脑子任务，电脑把无人值守的步骤丢进沙箱。委派走 Protocol v2 和 W6 的设备注册。\n\n能力矩阵（行是能力，列是 宿主 × Runtime，格子写 有 / 无 / 可委派）作为附录维护，同时是 `initialize` 响应和第 7.2 节兼容矩阵的事实来源。\n\n---\n\n## 3. W1 · HostRuntime 统一\n\n### 3.1 新包与接口\n\n新增 `packages/host`（`@cjhyy/code-shell-host`），纯 Node，只依赖 core。serve 和 desktop 都依赖它。单独成包的原因：`server` 包依赖 `web`、`capability-coding`、`link`，把 Host 放进 server 会让 Desktop 被这些包拖进来。\n\n```ts\ninterface HostService {\n  id: string; // \"credentials\", \"sessions\", \"panels\", ...\n  version: number;\n  capabilities(): HostCapability[]; // 写进 initialize 响应\n  methods?: Record<string, HostMethod>; // Protocol v2 的 host/* 方法\n  hostRequests?: Record<string, HostRequestHandler>; // worker → host 请求（取代回环）\n  start(ctx: HostContext): Promise<void>;\n  stop(): Promise<void>;\n}\n\ninterface HostAdapter {\n  // 平台相关能力，由部署形态注入\n  kind: \"electron\" | \"headless\" | \"container\"; // container：一任务一容器，无 iab / 对话框 / 本机凭据，只有 chromium 和注入的作用域 token\n  secretCipher: SecretCipher; // safeStorage / OS keychain / 文件密钥\n  notifier?: Notifier; // 桌面通知；headless 为空，走 push\n  dialogs?: DialogProvider; // 选择目录等；headless 为空，HostRu",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 14793,
+      "context": ">; // Protocol v2 的 host/* 方法\n  hostRequests?: Record<string, HostRequestHandler>; // worker → host 请求（取代回环）\n  start(ctx: HostContext): Promise<void>;\n  stop(): Promise<void>;\n}\n\ninterface HostAdapter {\n  // 平台相关能力，由部署形态注入\n  kind: \"electron\" | \"headless\" | \"container\"; // container：一任务一容器，无 iab / 对话框 / 本机凭据，只有 chromium 和注入的作用域 token\n  secretCipher: SecretCipher; // safeStorage / OS keychain / 文件密钥\n  notifier?: Notifier; // 桌面通知；headless 为空，走 push\n  dialogs?: DialogProvider; // 选择目录等；headless 为空，HostRuntime 改发 client/dialog 请求\n  browserBackends?: BrowserBackendHost; // Electron 提供 iab；headless 提供 chromium\n  openExternal?(url: string): Promise<void>;\n  paths: HostPaths;\n  sharedLock: CrossProcessLock; // 复用现有 CronStore 目录锁，所有共享文件写入经过它\n}\n\nclass HostRuntime {\n  constructor(opts: {\n    adapter: HostAdapter;\n    services: HostService[];\n    workerFactory: WorkerFactory;\n  });\n  connect(transport: ClientTransport, client: ClientInfo): ClientSession; // Protocol v2 入口\n}\n```\n\n### 3.2 迁移顺序（每一步都可以单独发布）\n\n| 步骤 | 内容                                                                                                                                       | 涉及                                                            | 验收                                                                                                                                                     |\n| ---- | -------------------------------",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 15045,
+      "context": "s\" | \"container\"; // container：一任务一容器，无 iab / 对话框 / 本机凭据，只有 chromium 和注入的作用域 token\n  secretCipher: SecretCipher; // safeStorage / OS keychain / 文件密钥\n  notifier?: Notifier; // 桌面通知；headless 为空，走 push\n  dialogs?: DialogProvider; // 选择目录等；headless 为空，HostRuntime 改发 client/dialog 请求\n  browserBackends?: BrowserBackendHost; // Electron 提供 iab；headless 提供 chromium\n  openExternal?(url: string): Promise<void>;\n  paths: HostPaths;\n  sharedLock: CrossProcessLock; // 复用现有 CronStore 目录锁，所有共享文件写入经过它\n}\n\nclass HostRuntime {\n  constructor(opts: {\n    adapter: HostAdapter;\n    services: HostService[];\n    workerFactory: WorkerFactory;\n  });\n  connect(transport: ClientTransport, client: ClientInfo): ClientSession; // Protocol v2 入口\n}\n```\n\n### 3.2 迁移顺序（每一步都可以单独发布）\n\n| 步骤 | 内容                                                                                                                                       | 涉及                                                            | 验收                                                                                                                                                     |\n| ---- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 17687,
+      "context": "      | serve 也能用 `credentialResolve` 同等能力，去掉 `CODE_SHELL_CREDENTIAL_ACCESS=local` 特例                                                                |\n| 1.4  | automation 只保留一个执行器，调度经过 `sharedLock`                                                                                         | automation-host、serve/automation-worker                        | Desktop 和 serve 共用调度；同机并存时只有一个实例实际触发；`automationCreate` 在 serve 下可用                                                            |\n| 1.5  | 手机远程编排改为 HostRuntime 的一个客户端，不再调用 `injectWorkerMessage`                                                                  | mobile-remote-orchestrator                                      | 手机直接走 Protocol v2（依赖 2.3 续传和 2.5 反向请求）                                                                                                   |\n| 1.6  | 拆分 `index.ts`：每个领域一个 `register(app, host)` 模块；IPC 改为一条 v2 通道加少量 Electron 专属 IPC                                     | index.ts、\\*-ipc.ts                                             | 现有 `tests/architecture-budgets.test.ts` 已锁定 `index.ts` 7,277 行和主进程路由总数；拆分后把 `index.ts` 上限下调到 1,500 行，并按领域模块分别计数路由  |\n| 1.7  | pet、task-inbox、im-gateway、cc-room、external-runtime、operation batch 逐个改成 HostService                                               | 对应目录                                                        | 各自能在 serve 里启用，或在 capabilities 里声明不可用                                            ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 19222,
+      "context": "册、legacy HostRequest 分类/分发及 `interceptHostRequest`。serve 与 Panel agent-task 在客户端路由前调用；Desktop 的 Electron adapter 把既有 browser/credential/workspace/panel/automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。\n\n### 3.3 可选的后续：Desktop 连本机守护进程\n\n迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。\n\n### 3.4 风险\n\n- `panel-app-bridge.ts` 和 `agent-bridge.ts` 很大，迁移时要保持行为不变。先补协议层的录制回放测试，再搬代码。\n- 迁移期间两套实现会并存，用 feature flag 按服务切换，每个服务只维持一个版本周期的双轨。\n- 会话目录相关代码搬动时，测试写真实 `~/.code-shell` 的守卫必须放在 sessionsRoot 层而不是 home 层，否则子目录会绕过。\n\n---\n\n## 4. W2 · Protocol v2\n\n范围以第 15 章 §6.3 的十条为准。本节只定宿主侧细节和与第 15 章的差异补充。\n\n### 4.1 握手\n\n```jsonc\n// → initialize\n{ \"protocolVersions\": [\"2.0\"], \"client\": { \"name\": \"codeshell-ios\", \"version\": \"1.0.0\", \"kind\": \"mobile\" },\n  \"capabilities\": { \"streaming\": true, \"approvals\": [\"tool\",\"exec\",\"browser\",\"credential\"],\n                    \"clientRequests\": [\"dialog\",\"askUser\"], \"media\": [\"image/png\"] },\n  \"resume\": { \"sessionId\": \"…\", \"cursor\": \"…\"",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 19374,
+      "context": "automation/operation handler 注册给同一分发器。旧 `server/serve/host-requests.ts` 仅转导出，不再重复实现。此步不提供 v2 transport，也未迁移 1.2–1.4 大服务。Desktop 将 Host 内联，故列在 devDependencies；predist 实际实体化列表同时驱动生产 workspace 依赖守卫，禁止未实体化的生产包符号链接越出 app 边界。Desktop unsupported-loopback approve 使用独立 JSON-RPC id，由真实 Core pending 路径消费。\n\n### 3.3 可选的后续：Desktop 连本机守护进程\n\n迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。\n\n### 3.4 风险\n\n- `panel-app-bridge.ts` 和 `agent-bridge.ts` 很大，迁移时要保持行为不变。先补协议层的录制回放测试，再搬代码。\n- 迁移期间两套实现会并存，用 feature flag 按服务切换，每个服务只维持一个版本周期的双轨。\n- 会话目录相关代码搬动时，测试写真实 `~/.code-shell` 的守卫必须放在 sessionsRoot 层而不是 home 层，否则子目录会绕过。\n\n---\n\n## 4. W2 · Protocol v2\n\n范围以第 15 章 §6.3 的十条为准。本节只定宿主侧细节和与第 15 章的差异补充。\n\n### 4.1 握手\n\n```jsonc\n// → initialize\n{ \"protocolVersions\": [\"2.0\"], \"client\": { \"name\": \"codeshell-ios\", \"version\": \"1.0.0\", \"kind\": \"mobile\" },\n  \"capabilities\": { \"streaming\": true, \"approvals\": [\"tool\",\"exec\",\"browser\",\"credential\"],\n                    \"clientRequests\": [\"dialog\",\"askUser\"], \"media\": [\"image/png\"] },\n  \"resume\": { \"sessionId\": \"…\", \"cursor\": \"…\" } }\n// ← result\n{ \"protocolVersion\": \"2.0\", \"contracts\": { /* 见 7.1 */ }, \"host\": { \"kind\": \"electron\", \"id\": \"…\" },\n  \"capabilities\": { \"browser\": { \"",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 23821,
+      "context": "本，断线后用 `since: stateVersion` 拉差分  |\n\nApproval 事件同时出现在两处：作为 Item 进 journal（可续传），作为独立对象进状态快照（可查询）。`SessionSnapshotStore` 和 `HubStreamCursor` 各自的 seq / epoch 删除，或改成 journal cursor 的内存缓存。\n\n### 4.4 宿主请求类型化（worker → host）\n\n回环不再伪装成审批，改成 worker → host 的类型化请求：\n\n```\nhost/browser.act   host/credential.materialize   host/credential.resolve   host/workspace.switch\nhost/panel.call    host/user.ask                 host/automation.create    host/model.sign\nhost/link.action   host/operation.batch\n```\n\n需要用户确认时，由 HostRuntime 生成一个 `Approval` 对象（见 W3）。\"执行请求\"和\"征求同意\"分开。\n\n### 4.5 客户端反向请求（host → client）\n\nheadless 宿主没有对话框和渲染进程，这类事情要向客户端要：\n\n```\nclient/dialog.pickDirectory   client/askUser   client/approval.prompt\n```\n\n- 宿主只向在 `initialize` 里声明了该能力的客户端发；多个客户端时按租约（沿用现有 `__ask_user__` 租约逻辑）选一个，其余收到 `approval/requested` 通知。\n- 请求带超时；超时或客户端断线返回 `client_unavailable`，worker 侧按策略降级（比如改为 deny）。\n\n### 4.6 Schema、错误与代码生成\n\n- 唯一定义：`packages/core/src/protocol/v2/schema.ts`（zod）。\n- 产出：JSON Schema 快照（`protocol/v2/schema.json`，CI 里比对快照），TS 客户端，Swift / Kotlin 模型（用 quicktype 或自写生成器）。\n- 错误沿用第 15 章 §6.3 第 6 条的类型列表，统一形状 `{ code, source, retryable, httpStatus? }`。\n- 版本规则：只增加字段算小版本；删除或改语义算大版本。实验字段一律放在 `x-` 前缀下，不进稳定契约。\n\n### 4.7 兼容\n\n- AgentServer 同时支持 v1 和 v2。没发 `initialize` 的连接按 v1 处理。\n- 提供 v1 适配层，把 Item 降级回 StreamEvent，保留两个小版本。\n- TUI 用进程内传输，最先切换，作为第一个验证点。\n\n### 4.8 验收\n\n- 同一段录制好的会话，经 v1 和 v2 回放后，UI 渲染结果一致。\n- 手机断网 5 分钟后恢复，用 cursor 补齐 Turn 输出，用 ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 31488,
+      "context": "odeshell 里发布（可以先藏在 feature flag 后面），再让 services 升级。\n\n### 7.3 发版节奏\n\n- 每两周一个小版本，紧急修复走补丁版本。\n- 生产 Hub 和 Cloud 镜像使用带摘要的镜像标签加滚动升级脚本，先把 0.9.23 升到当前版本。\n- Desktop 保持 electron-updater；macOS 签名问题处理完后，打开自动下载。\n\n### 7.4 验收自动化\n\n- 把 services 里的 `test:device-relay`、candidate 冒烟测试、部署回执变成 CI job。证据作为 artifact 保存 90 天。\n- 文档只写契约、设计和部署说明。按日期记录的部署回执迁到 `evidence/` 或 Release notes 里。\n- 目标：services 里证据 / 回执类提交占比从约 25%（最近 60 个提交抽样）降到 10% 以下。\n\n### 7.5 可观测性\n\n- 统一 trace：`traceId = sessionId`、`spanId = turnId / itemId`，从客户端经 HostRuntime 和 worker 一直到服务端。日志按 OpenTelemetry 格式输出，可以选择导出。\n- 错误统一使用 `{ code, source, retryable }`（与 W3 的 Decision 对齐）。\n\n---\n\n## 8. W6 · 远程、手机与沙箱\n\n依赖 1.5、2.3 和 2.5。产品流程（共享范围、运行位置、委派）以《统一工作台规划》为准，本节只定基础设施。前提是**电脑在线是正常状态**：遥控场景不依赖云端执行。\n\n### 8.1 薄云端（遥控必需）\n\n| 组件       | 方案                                                                                                                                                                                         |\n| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| 配对与身份 | 手机首次连某台电脑时扫码配对并本机确认（保留现在的配对机制）。Account 先只做设备表和一次性票据，多用户后置；设备中继去掉内嵌账号库                                                           |\n| 连接       | 手机 → 中继 → 电脑的 HostRuntime，直接走 Protocol v2；中继是无状态转发。手机端那套私有 WS 协议先补版本号，再逐步下线                      ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 32316,
+      "context": "                                                                                                                             |\n| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| 配对与身份 | 手机首次连某台电脑时扫码配对并本机确认（保留现在的配对机制）。Account 先只做设备表和一次性票据，多用户后置；设备中继去掉内嵌账号库                                                           |\n| 连接       | 手机 → 中继 → 电脑的 HostRuntime，直接走 Protocol v2；中继是无状态转发。手机端那套私有 WS 协议先补版本号，再逐步下线                                                                         |\n| 推送网关   | services 里**独立进程**，权限隔离，可单独扩容。iOS 用 APNs；Android 用 FCM，大陆走厂商通道或聚合推送。触发事件：待审批、Turn 完成、需要人工接管、电脑离线                                    |\n| Link OAuth | 第三方授权的公网回调和密钥托管留在云端，和现在一样                                                                                                                                           |\n| 保持在线   | Desktop 有手机连接时阻止系统睡眠；关窗口不杀 HostRuntime（第 3.3 节守护进程的轻量版，提前到 S2）                                                                                             |\n| App        | 第一版用 Capacitor 包装 `packages/web`。前提是 `packages/web` 先切到 v2 并能脱离 Hub 直连 HostRuntime（S2 的工作量要计入）。推送、生物识别、后台恢复用原生插件；数据模型用 W2 生成的 TS 类型 |\n| 基础设施   | 域名、wildcard DNS / TLS（大陆需备案，可先用香港节点）、Apple 开发者账号与 APNs 证书、各厂商推送账号、App 备案                                                 ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 32816,
+      "context": "HostRuntime，直接走 Protocol v2；中继是无状态转发。手机端那套私有 WS 协议先补版本号，再逐步下线                                                                         |\n| 推送网关   | services 里**独立进程**，权限隔离，可单独扩容。iOS 用 APNs；Android 用 FCM，大陆走厂商通道或聚合推送。触发事件：待审批、Turn 完成、需要人工接管、电脑离线                                    |\n| Link OAuth | 第三方授权的公网回调和密钥托管留在云端，和现在一样                                                                                                                                           |\n| 保持在线   | Desktop 有手机连接时阻止系统睡眠；关窗口不杀 HostRuntime（第 3.3 节守护进程的轻量版，提前到 S2）                                                                                             |\n| App        | 第一版用 Capacitor 包装 `packages/web`。前提是 `packages/web` 先切到 v2 并能脱离 Hub 直连 HostRuntime（S2 的工作量要计入）。推送、生物识别、后台恢复用原生插件；数据模型用 W2 生成的 TS 类型 |\n| 基础设施   | 域名、wildcard DNS / TLS（大陆需备案，可先用香港节点）、Apple 开发者账号与 APNs 证书、各厂商推送账号、App 备案                                                                               |\n\n验收：在手机上给家里的电脑派一个任务；锁屏状态收到审批推送，Face ID 批准；断网后再恢复，结果完整无缺；在手机上打开电脑上的一个 Panel 并完成一次操作。\n\n### 8.2 沙箱任务（无人值守，S3）\n\n云端执行只做一种形态：**一任务一容器**，对标 Codex Cloud 和 Claude Code 云端会话。\n\n| 环节           | 方案                                                                                                                                                         |\n| -------------- | -------------------------------------------------------------------------------------------------------------",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 33032,
+      "context": "发事件：待审批、Turn 完成、需要人工接管、电脑离线                                    |\n| Link OAuth | 第三方授权的公网回调和密钥托管留在云端，和现在一样                                                                                                                                           |\n| 保持在线   | Desktop 有手机连接时阻止系统睡眠；关窗口不杀 HostRuntime（第 3.3 节守护进程的轻量版，提前到 S2）                                                                                             |\n| App        | 第一版用 Capacitor 包装 `packages/web`。前提是 `packages/web` 先切到 v2 并能脱离 Hub 直连 HostRuntime（S2 的工作量要计入）。推送、生物识别、后台恢复用原生插件；数据模型用 W2 生成的 TS 类型 |\n| 基础设施   | 域名、wildcard DNS / TLS（大陆需备案，可先用香港节点）、Apple 开发者账号与 APNs 证书、各厂商推送账号、App 备案                                                                               |\n\n验收：在手机上给家里的电脑派一个任务；锁屏状态收到审批推送，Face ID 批准；断网后再恢复，结果完整无缺；在手机上打开电脑上的一个 Panel 并完成一次操作。\n\n### 8.2 沙箱任务（无人值守，S3）\n\n云端执行只做一种形态：**一任务一容器**，对标 Codex Cloud 和 Claude Code 云端会话。\n\n| 环节           | 方案                                                                                                                                                         |\n| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |\n| 触发           | GitHub 事件（Issue / PR 提及、push）、定时器、手机或桌面上的\"丢到沙箱\"                                                                                       |\n| 启动         ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 39429,
+      "context": "ported`；内部回环用 `approved: true` 携带 typed unsupported answer，不能误报用户拒绝；内部请求和 resolved ID 不向 client 暴露。普通审批和已安装 Panel callback 保留；Panel 的实际 runtime 只有 yes/no confirm，AskUser 立即返回 `approved:false, failure:unavailable` 加明确不支持原因，不弹内部工具审批、不构造空回答。Core 同步返回该原因，异步仅清理 pending、不注入答案或启动续跑；Desktop/Web 真实文字问答保持。最终 worker env 构造清 `CODE_SHELL_REMOTE_LINK_CLIENT_SECRET`，自定义 builder 也不能遗留。\n- **已实现：拦截收口及 1.1。** S0 纯逻辑迁 `packages/host`，错误文案由 adapter 注入宿主标签；`interceptHostRequest` 在 serve、Panel、Desktop 的生产链路共用，旧入口仅转导出。HostRuntime 注册能力并管理基本生命周期，仅依赖 core。1.2–1.4 留下一批。\n- **已实现：worker 环境开关。** serve 的交互与 automation worker 清 `CODE_SHELL_HOST_MCP_SERVERS`；Panel worker（含 Desktop Web 自定义 agent-task env）清 operation batch、model signing、workspace IPC 与 host MCP switches。Desktop 主 worker 明确安装自己的 bridge。\n- **已实现：协议预算。** 请求分发与 Run/Goal 输入校验抽到 `protocol/dispatch.ts`，旧 wire 保持；server.ts 预算由 5174 下调到 4949，dispatch.ts 单独预算 246。\n- **已实现：Windows shell env。** `mergeShellEnv` 在 win32 对变量名大小写不敏感归一，PATH/Path 不重复，显式项目覆盖仍优先。\n- **已实现：REPL。** 设置 `CODESHELL_WORKSPACE_WRITE_PROTOCOL=1`；Bun 宿主优先 `process.execPath`，Node 宿主使用已可用的 PATH Bun，均 `--no-env-file`。环境白名单不继承代理、`NODE_PATH`、`PYTHONPATH`、`VIRTUAL_ENV`、`CONDA_*`；credential env exposures 会进入 REPL；沙箱关闭的 Bash 仍完整继承。这不是防同用户文件/环境窃取的安全边界，REPL 仍未进入 OS 沙箱；已写发版说明。\n- **已实现：workspace bridge 选择。** worker 仅在宿主明确设 `CODE_SHELL_WORKSPACE_ACCESS=host` 时安装。Desktop 主 worker 启用；serve/Panel 清除，跨会话 `send_message`、",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 42021,
+      "context": "--------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |\n| 1   | `packages/host` 单独成包还是放进 `server`   | **单独成包**                                                                                  | server 依赖 web、capability-coding、link，Desktop 不应被拖进来                                            |\n| 2   | Desktop 内嵌 HostRuntime 还是连本机守护进程 | **S1、S2 内嵌；S3 再评估守护进程**                                                            | 与《项目本地与云端运行 V2》的会话固定执行位置模型兼容                                                     |\n| 3   | v2 命名                                     | **沿用 Session / Turn / Item**，Thread 只在外部 Runtime 适配器                                | 第 15 章 §6.2 已定，不重开                                                                                |\n| 4   | Bash 是否默认关闭网络                       | **按项目信任级别**：受信任 allow，未信任 deny                                                 | 编码场景要装依赖                                                                                          |\n| 5   | 自动审查的模型和位置                        | **本机、默认关闭、只处理 low 风险的 ask→allow**                                               | 隐私和安全边界                                                                                            |\n| 6   | 推送网关和 Account 是否同进程",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/README.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 5552,
+      "context": " Sessions & Pet](14-digital-human-and-pet.md)                               | Session binding, long-term memory, cross-Session messages, and the Pet independence boundary               |\n| 15  | [Codex Open Harness Comparison & Roadmap](15-codex-harness-comparison-and-roadmap.md)       | Source-backed comparison, gaps, non-goals, priorities, and phased evolution plan                           |\n| 16  | [Platform Consolidation](16-platform-consolidation.md)                                      | HostRuntime, Protocol v2, unified policy/execution, thin cloud + sandbox tasks; v1.1 2026-10-14, S0 已实施 |\n\n## Reference\n\n- [Feature inventory (desktop / tui)](11-feature-inventory.md) — full capability breadth map\n\n> The prior architecture set lives in [`docs/archive/architecture/`](../archive/architecture/README.md);\n> it is kept for history but predates large subsystems. This directory supersedes it.\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/archify/platform-consolidation-target.architecture.json",
+      "pointer": "/meta/views/2/note",
+      "kind": "json-value-scalar",
+      "offset": 4,
+      "context": "同一份 HostRuntime 由 Electron / Headless / Container 三种 Adapter 注入；云端只做配对、转发、推送与 OAuth 回调。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/architecture/archify/platform-consolidation-target.architecture.json",
+      "pointer": "/components/7/label",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/architecture/archify/platform-consolidation-target.architecture.json",
+      "pointer": "/cards/0/items/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime 是唯一宿主实现，Electron main 只剩窗口与系统集成",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/core.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6790,
+      "context": " header 时，auxText 所选连接是否因此没有得到尊重，仍需核实配置解析/消费者契约。已只读查看函数和既有测试；既有测试明确要求忽略 credentials，故不能只凭它计确认。本轮没有新增此候选 fixture，没有执行 aux 请求，也没有完成真实 defaults.auxText 消费链复核。\n- 主审随后通知平台内容检查中止，并要求停止所有进一步动态实验、不重试 aux 或权限相关工作。本分审遵从：此后仅完成报告文字，没有再执行测试、shell 命令或网络操作。C01—C04 的上述证据均在这条通知前完成，保留三轮原始日志；不把停止后的未完成调查补写成确认结论。\n\n## 覆盖与剩余边界\n\n已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。\n\n仍未逐行覆盖：Core operations/browser/link/plugins/sandbox/MCP 全量连接恢复、全部 session journal repair 分支、所有 builtin 工具及平台原生进程；Pet desktop 持久 store/实际 IM 通道由对应 Host 审查覆盖，本文不声称端到端验证。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/coverage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 800,
+      "context": "缺陷。逐项问题均标明是否已知、动态复现还是静态确认。库存见 [inventory.json](inventory.json)；其中 source 文件计数仅按扩展名/文件名计算，包含一些脚本与 fixture，不代表产品模块数量或逐行审查数量。\n\n| 包/范围 | 本轮审查深度 | 动态验证 | 主要未覆盖 |\n| --- | --- | --- | --- |\n| Core | run open/finalize/accounting、goal、executor/permission、provider 流收尾、Session CAS/fork/merge、history hooks、Cron、auxiliary 初读 | 6 个聚焦测试；与 Host/Pet 合并的 135 项既有 baseline | 全 builtin、operations、plugin/sandbox、MCP 所有恢复分支、完整 journal repair、真实模型 |\n| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |\n| Pet | projection、manager/followups/route、visit receipt | 同上 baseline 中 index/validator/route/receipt | 真实 IM、Desktop 持久 store 与完整 pet 工作流 |\n| Coding | ApplyPatch 计划/提交/rollback、Git/worktree、Notebook、DriveAgent 接线、LSP、外部 runtime/history/discovery | patch/Git 7 个新测试；Coding Git/patch + Arena/Optimization Lab 253 项 baseline；runtime shared 的 TUI 合并 baseline | 真实 Codex/Claude/LSP、所有 DriveAgent 并发/退出边界；Notebook 旧问题本轮只读未重跑 |\n| TUI | CLI run/runs/options、slash commands、permission、undo/export、renderers、query guard、输入/history、pending question | 5 个新测试；150 项 CLI/UI纯逻辑等 baseline | 完整 Ink/PTY 原生会话、全部组件渲染与快捷键 |\n| Desktop | 文件/图片/附件搜索、Panel package/bridge/resource、browser driver/native decoder、PTY接线、media custody、history conversion、renderer hooks/mobile/Cloud 接线 | 文件搜索 3 项、decoder 3 项；均局部，不是 Electron E2E | 大量 renderer 组件、完整原生App、真实Chrome/OS事件、Panel全方法和native tools |\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "pointer": "/hits/history_identity/21/context",
+      "kind": "json-value-scalar",
+      "offset": 394,
+      "context": "代表产品模块数量或逐行审查数量。\n\n| 包/范围 | 本轮审查深度 | 动态验证 | 主要未覆盖 |\n| --- | --- | --- | --- |\n| Core | run open/finalize/accounting、goal、executor/permission、provider 流收尾、Session CAS/fork/merge、history hooks、Cron、auxiliary 初读 | 6 个聚焦测试；与 Host/Pet 合并的 135 项既有 baseline | 全 builtin、operations、plugin/sandbox、MCP 所有恢复分支、完整 journal repair、真实模型 |\n| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |\n| Pet | projection、mana",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/cross-review-host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 74,
+      "context": "# Host 独立只读复核\n\nRoot 阅读 Host 报告、六项 in-memory fixture、raw first log/receipt、runtime.ts 和来源/产物收据，接受 0 formal / 0 candidate。复核没有运行测试、产品模块、请求分派或 Git 写操作。\n\n11 项源码 bytes/SHA 与冻结 Git blob/current flags 相符，10 项 artifact bytes/SHA 相符，本地链接有效。6 pass / 22 expect，exit0/Completed、0 fail/skip；六项全是新增同步数据/生命周期控制，不当作六个发现。实际 runtime.ts 的两个 import 均 type-only，fixture 没有加载 Core/host-request runtime、adapter平台或worker。\n\n空目录、数组副本、同步 start 内 stop、stop 重入、逆序清理和全部同步错误保留均符合源代码合同。supports 仅用于普通 data.view 字符串状态检查，没有调用 dispatch 或构造 authority/approval。当前生产创建点无回调，所以报告没有用这些 fake callbacks 声称真实 native lifecycle 已验证。\n\ncaller-owned service 引用已是 round3 HL-C1，且没有新正常突变 producer/快照承诺；async void callback 又与明确同步设计冲突，不升级或重复计数合理。初始错误 archive/_archive 库存与截断工具输出有单独标注，不能被当作真实目录存在或完整扫描；独立 structured docs/bugs 去重的范围清楚。无需修改报告。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/0/text",
+      "kind": "json-value-scalar",
+      "offset": 38,
+      "context": "| W1   | Host Runtime 统一 | 一个纯 Node 的 HostRuntime；Desktop 和 serve 只是两种部署方式                                                 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/1/text",
+      "kind": "json-value-scalar",
+      "offset": 24,
+      "context": "| 本章                  | HostRuntime、Protocol v2 宿主侧、策略 / 执行、扩展包、契约版本 | 上两份文档的实现都跑在本章定义的宿主和协议上                                                                                                         |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/2/text",
+      "kind": "json-value-scalar",
+      "offset": 5,
+      "context": "   │ HostRuntime（纯 Node，packages/host）                                 │",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/5/text",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "   部署形态：Desktop = Electron main 内嵌 HostRuntime + ElectronAdapter（常驻）",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/6/text",
+      "kind": "json-value-scalar",
+      "offset": 28,
+      "context": "             serve   = 独立进程 HostRuntime + HeadlessAdapter（常驻）",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/7/text",
+      "kind": "json-value-scalar",
+      "offset": 67,
+      "context": "- **沙箱只是另一台电脑。** 手机或 Web 看沙箱里的 Session 和 Panel，与看电脑上的走同一条路：连到那台宿主的 HostRuntime。不单独做\"云端 Panel 运行时\"或\"云端工作台\"。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/8/text",
+      "kind": "json-value-scalar",
+      "offset": 4,
+      "context": "- **HostRuntime 是唯一的宿主实现。** Electron main 只负责窗口、webContents、系统集成，再加上一个 HostAdapter。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/9/text",
+      "kind": "json-value-scalar",
+      "offset": 11,
+      "context": "## 3. W1 · HostRuntime 统一",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/12/text",
+      "kind": "json-value-scalar",
+      "offset": 49,
+      "context": "  dialogs?: DialogProvider; // 选择目录等；headless 为空，HostRuntime 改发 client/dialog 请求",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/13/text",
+      "kind": "json-value-scalar",
+      "offset": 6,
+      "context": "class HostRuntime {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/17/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "| 1.5  | 手机远程编排改为 HostRuntime 的一个客户端，不再调用 `injectWorkerMessage`                                                                  | mobile-remote-orchestrator                                      | 手机直接走 Protocol v2（依赖 2.3 续传和 2.5 反向请求）                                                                                                   |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/19/text",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/19/text",
+      "kind": "json-value-scalar",
+      "offset": 172,
+      "context": "迁完以后，Desktop 可以不再内嵌 HostRuntime，改为连接本机常驻的 `code-shell-serve --local`。好处是关掉窗口后任务继续跑，手机还能连上。这一步与《项目本地与云端运行 V2》的\"会话固定执行位置\"模型一致：本机守护进程只是\"此计算机\"这个执行位置的另一种承载。轻量版（有手机连接时阻止睡眠、关窗口不杀 HostRuntime）在 S2 随 8.1 做；完整守护进程的决定留到 S3，到时需要评估 node-pty、playwright-core 这类原生模块的打包，以及开机自启的权限。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/20/text",
+      "kind": "json-value-scalar",
+      "offset": 10,
+      "context": "需要用户确认时，由 HostRuntime 生成一个 `Approval` 对象（见 W3）。\"执行请求\"和\"征求同意\"分开。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/21/text",
+      "kind": "json-value-scalar",
+      "offset": 66,
+      "context": "- 统一 trace：`traceId = sessionId`、`spanId = turnId / itemId`，从客户端经 HostRuntime 和 worker 一直到服务端。日志按 OpenTelemetry 格式输出，可以选择导出。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/22/text",
+      "kind": "json-value-scalar",
+      "offset": 27,
+      "context": "| 连接       | 手机 → 中继 → 电脑的 HostRuntime，直接走 Protocol v2；中继是无状态转发。手机端那套私有 WS 协议先补版本号，再逐步下线                                                                         |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/23/text",
+      "kind": "json-value-scalar",
+      "offset": 38,
+      "context": "| 保持在线   | Desktop 有手机连接时阻止系统睡眠；关窗口不杀 HostRuntime（第 3.3 节守护进程的轻量版，提前到 S2）                                                                                             |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/24/text",
+      "kind": "json-value-scalar",
+      "offset": 86,
+      "context": "| App        | 第一版用 Capacitor 包装 `packages/web`。前提是 `packages/web` 先切到 v2 并能脱离 Hub 直连 HostRuntime（S2 的工作量要计入）。推送、生物识别、后台恢复用原生插件；数据模型用 W2 生成的 TS 类型 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/25/text",
+      "kind": "json-value-scalar",
+      "offset": 127,
+      "context": "- **已实现：拦截收口及 1.1。** S0 纯逻辑迁 `packages/host`，错误文案由 adapter 注入宿主标签；`interceptHostRequest` 在 serve、Panel、Desktop 的生产链路共用，旧入口仅转导出。HostRuntime 注册能力并管理基本生命周期，仅依赖 core。1.2–1.4 留下一批。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/26/text",
+      "kind": "json-value-scalar",
+      "offset": 19,
+      "context": "| 2   | Desktop 内嵌 HostRuntime 还是连本机守护进程 | **S1、S2 内嵌；S3 再评估守护进程**                                                            | 与《项目本地与云端运行 V2》的会话固定执行位置模型兼容                                                     |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/28/text",
+      "kind": "json-value-scalar",
+      "offset": 102,
+      "context": "| 16  | [Platform Consolidation](16-platform-consolidation.md)                                      | HostRuntime, Protocol v2, unified policy/execution, thin cloud + sandbox tasks; v1.1 2026-10-14, S0 已实施 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/29/text",
+      "kind": "json-value-scalar",
+      "offset": 4,
+      "context": "同一份 HostRuntime 由 Electron / Headless / Container 三种 Adapter 注入；云端只做配对、转发、推送与 OAuth 回调。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/30/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/33/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime 是唯一宿主实现，Electron main 只剩窗口与系统集成",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/36/text",
+      "kind": "json-value-scalar",
+      "offset": 193,
+      "context": "已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/37/text",
+      "kind": "json-value-scalar",
+      "offset": 70,
+      "context": "| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/40/text",
+      "kind": "json-value-scalar",
+      "offset": 394,
+      "context": "代表产品模块数量或逐行审查数量。\n\n| 包/范围 | 本轮审查深度 | 动态验证 | 主要未覆盖 |\n| --- | --- | --- | --- |\n| Core | run open/finalize/accounting、goal、executor/permission、provider 流收尾、Session CAS/fork/merge、history hooks、Cron、auxiliary 初读 | 6 个聚焦测试；与 Host/Pet 合并的 135 项既有 baseline | 全 builtin、operations、plugin/sandbox、MCP 所有恢复分支、完整 journal repair、真实模型 |\n| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |\n| Pet | projection、mana",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/41/text",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/42/text",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/46/text",
+      "kind": "json-value-scalar",
+      "offset": 19,
+      "context": "- **HL-C1 · 未确认**：`HostRuntime.register()` 保存 caller-owned service 引用（`runtime.ts:50`），dispatch 再读取 handler（`:114`）；若调用者后来改对象，登记快照可能与 handler 不一致。当前 Desktop/serve/Panel 的创建点均构造私有对象，未找到正常调用方后续变更；没有执行人为突变，不计问题。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/46/text",
+      "kind": "json-value-scalar",
+      "offset": 71,
+      "context": "- **HL-C1 · 未确认**：`HostRuntime.register()` 保存 caller-owned service 引用（`runtime.ts:50`），dispatch 再读取 handler（`:114`）；若调用者后来改对象，登记快照可能与 handler 不一致。当前 Desktop/serve/Panel 的创建点均构造私有对象，未找到正常调用方后续变更；没有执行人为突变，不计问题。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/47/text",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 route、未知请求数据分类。当前生产 caller 没有传入有副作用的 adapter start/stop，因此假 adapter 验证不能代表真实 native 生命周期。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/59/text",
+      "kind": "json-value-scalar",
+      "offset": 193,
+      "context": "已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/63/text",
+      "kind": "json-value-scalar",
+      "offset": 70,
+      "context": "| Host | 请求分发、rollback、capability activation/lifetime | 同上 baseline 中 HostRuntime/ask-user | 所有 worker/进程异常及跨平台路径 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/64/text",
+      "kind": "json-value-scalar",
+      "offset": 193,
+      "context": "已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/72/text",
+      "kind": "json-value-scalar",
+      "offset": 193,
+      "context": "已进行四轮静态审查：run session open/finalize/accounting、goal resolve/termination、ToolExecutor/permission/controller/run-tooling、OpenAI/Anthropic provider 的流收尾与重试、SessionManager run CAS/fork/state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/109/text",
+      "kind": "json-value-scalar",
+      "offset": 106,
+      "context": "`packages/server` 的 Host 管理 API 与 Services 的 OAuth broker 是两个边界；对应修改在各自仓库、独立 task branch/worktree 中实施。与平台 HostRuntime/PolicyEngine 收敛复用同一套机制，避免产生第二个审批器或任务宿主。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/110/text",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "- [ ] S2-C：保持在线与轻量常驻（连接时阻止睡眠、关窗口保留 HostRuntime）、薄云端票据中继/配对设备表/独立推送网关、Capacitor 首版。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+      "pointer": "/matches/112/text",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "| 7 | `packages/host` 仅依赖 core，HostRuntime 注册/分发/adapter 与同步生命周期；serve、Panel 和 Desktop adapter 调同一 interceptor，旧 host-requests 仅转导出；workspace、build 声明、release 清单、CI 发现已接入，Desktop 实际 bundle Host。 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.first.receipt.json",
+      "pointer": "/scope",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime direct source import; synchronous in-memory callbacks; no request/approval/worker/provider/native/network operations",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/7/readScope",
+      "kind": "json-value-scalar",
+      "offset": 14,
+      "context": "lines 339-343 HostRuntime producer only; broader auth/worker routing excluded",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "pointer": "/files/8/readScope",
+      "kind": "json-value-scalar",
+      "offset": 14,
+      "context": "lines 130-134 HostRuntime producer only; no task workers or authority execution",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-validation.json",
+      "pointer": "/limits/1",
+      "kind": "json-value-scalar",
+      "offset": 19,
+      "context": "Current production HostRuntime callers pass no start/stop callbacks; callback tests validate public synchronous lifecycle only.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/root-dedup.json",
+      "pointer": "/hits/immutability/0/context",
+      "kind": "json-value-scalar",
+      "offset": 189,
+      "context": "              |\n| 项目本地与云端运行 V2 | 运行位置在\"新建 / 打开项目\"时选择，会话固定执行位置            | 第 3.3 节 Desktop 是否连本机守护进程，以该文档的\"会话目标\"模型为前提。该文档里的持久云端工作区、云端 Panel 组合按第 8 节收窄为沙箱任务，相关章节冻结 |\n| 本章                  | HostRuntime、Protocol v2 宿主侧、策略 / 执行、扩展包、契约版本 | 上两份文档的实现都跑在本章定义的宿主和协议上                                                                                                         |\n\n---\n\n## 1. 现状事实（2026-10-14 据源码核对）\n\n### 1.1 宿主\n\n- `packages/desktop/src/main`",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 259,
+      "context": "# Host 普通目录与同步生命周期复审\n\n冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本范围 **0 项新确认问题、0 项新候选**。只写审查记录和证据，没有修改产品代码。\n\n`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。\n\n## 已验证行为\n\n[定向 fixture](evidence/host-lifecycle-controls.test.ts) 直接导入冻结源码 `runtime.ts`。其两个依赖均为 type-only import，不加载 Core、Host request 模块、adapter 平台或 worker。所有 adapter/service 都是本测试内同步数组回调。\n\n- 空服务目录：adapter start/stop 各一次，重复 start/stop 幂等。\n- `capabilities()` 返回数组被调用方修改不会改登记表；运行前和停止后 `supports()` 为 false。\n- adapter.start 内调用 stop：状态终结、后续服务不启动、adapter 不重复停止。\n- service.start 内调用 stop：只清理已到达服务，按相反顺序停止，后续服务不启动。\n- service.stop/adapter.stop 内重入 stop：每项仅停止一次。\n- 多个同步 stop 抛错：逆序保留全部 service 错误和 adapter 错误，停止后不能重启。\n\n[首次 raw combined log](evidence/host-lifecycle-controls.first.log) 为 **6 pass / 0 fail / 22 expect / 0 skipped**，guarded runner 确认 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。先保存首次 stdout/stderr 与退出码后才阅读；没有失败后修支架、重跑或替代验证。命令及原始日志 SHA-256 见 [首次收据](evidence/host-lifecycle-controls.first.receipt.json)。这些通过用例是正常生命周期控制，不是 bug",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 404,
+      "context": "# Host 普通目录与同步生命周期复审\n\n冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本范围 **0 项新确认问题、0 项新候选**。只写审查记录和证据，没有修改产品代码。\n\n`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。\n\n## 已验证行为\n\n[定向 fixture](evidence/host-lifecycle-controls.test.ts) 直接导入冻结源码 `runtime.ts`。其两个依赖均为 type-only import，不加载 Core、Host request 模块、adapter 平台或 worker。所有 adapter/service 都是本测试内同步数组回调。\n\n- 空服务目录：adapter start/stop 各一次，重复 start/stop 幂等。\n- `capabilities()` 返回数组被调用方修改不会改登记表；运行前和停止后 `supports()` 为 false。\n- adapter.start 内调用 stop：状态终结、后续服务不启动、adapter 不重复停止。\n- service.start 内调用 stop：只清理已到达服务，按相反顺序停止，后续服务不启动。\n- service.stop/adapter.stop 内重入 stop：每项仅停止一次。\n- 多个同步 stop 抛错：逆序保留全部 service 错误和 adapter 错误，停止后不能重启。\n\n[首次 raw combined log](evidence/host-lifecycle-controls.first.log) 为 **6 pass / 0 fail / 22 expect / 0 skipped**，guarded runner 确认 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。先保存首次 stdout/stderr 与退出码后才阅读；没有失败后修支架、重跑或替代验证。命令及原始日志 SHA-256 见 [首次收据](evidence/host-lifecycle-controls.first.receipt.json)。这些通过用例是正常生命周期控制，不是 bug 复现，也不代表真实 native 生命周期。\n\n## 查重与排除\n\n[全历史查重](evidence/host-dedup.json) 遍历现有 docs/bugs 下 **1,601 份 Markdown/JSON**，包含 **169 份 nested archive/_archive** 文件；JSON 按 leaf 解析，无解析错误。当前 round11 排除。115 个词项匹配主要是历史覆盖、架构、引用及既有候选，均未当成新发现。\n\n`runtime",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1396,
+      "context": "rst.log) 为 **6 pass / 0 fail / 22 expect / 0 skipped**，guarded runner 确认 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。先保存首次 stdout/stderr 与退出码后才阅读；没有失败后修支架、重跑或替代验证。命令及原始日志 SHA-256 见 [首次收据](evidence/host-lifecycle-controls.first.receipt.json)。这些通过用例是正常生命周期控制，不是 bug 复现，也不代表真实 native 生命周期。\n\n## 查重与排除\n\n[全历史查重](evidence/host-dedup.json) 遍历现有 docs/bugs 下 **1,601 份 Markdown/JSON**，包含 **169 份 nested archive/_archive** 文件；JSON 按 leaf 解析，无解析错误。当前 round11 排除。115 个词项匹配主要是历史覆盖、架构、引用及既有候选，均未当成新发现。\n\n`runtime.ts:50` 保存 caller-owned service 引用的想法已经在 [round3 HL-C1](../audit-2026-10-17-round3/host-link.md) 记录。当前三个生产创建点仍构造私有对象，没有后续 service/handler 突变生产者，且没有明确的登记快照契约；未做人为突变实验，不重复登记为新候选。README 明确生命周期同步，因此没有以 async void 回调制造缺陷。\n\n初次历史库存错误把不存在的顶层 archive/_archive 传给 rg，工具 exit 2 且路径列表过大被工具截断。该静态导航失败的 [标注转录](evidence/host-static-inventory-skip.md) 已保留；不存在路径方向跳过。后续独立去重只从实际存在 docs/bugs 根收集并解析嵌套档案。此事件没有运行产品或测试，不计 failed Bun shard。\n\n## 覆盖界限\n\nhost-requests 仅阅读普通数据形状与映射清单；authority/approval/security/auth/credential/custody/watchdog 行为均不作为本次验证目标，未调用 dispatch/intercept。没有启动真实 worker、Engine、模型、provider、插件 native entry、外部进程或网络，没有访问用户数据。三处当前生产 HostRuntime 创建点都没有传入 start/stop 回调，因此 fake adapter 控制只证明公共同步生命周期行为。现有 runtime.test.ts 混有请求/approval 测试，本次未执行整文件。未运行构建、typecheck、lint 或 full suite。\n\n[源码 manifest](evidence/host-source-manifest.json) 记录 11 份源码/配置与冻结哈希、当前一致性及读取范围；[validation](evidence/host-validation.json) 给出精确计数。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2030,
+      "context": "ce/handler 突变生产者，且没有明确的登记快照契约；未做人为突变实验，不重复登记为新候选。README 明确生命周期同步，因此没有以 async void 回调制造缺陷。\n\n初次历史库存错误把不存在的顶层 archive/_archive 传给 rg，工具 exit 2 且路径列表过大被工具截断。该静态导航失败的 [标注转录](evidence/host-static-inventory-skip.md) 已保留；不存在路径方向跳过。后续独立去重只从实际存在 docs/bugs 根收集并解析嵌套档案。此事件没有运行产品或测试，不计 failed Bun shard。\n\n## 覆盖界限\n\nhost-requests 仅阅读普通数据形状与映射清单；authority/approval/security/auth/credential/custody/watchdog 行为均不作为本次验证目标，未调用 dispatch/intercept。没有启动真实 worker、Engine、模型、provider、插件 native entry、外部进程或网络，没有访问用户数据。三处当前生产 HostRuntime 创建点都没有传入 start/stop 回调，因此 fake adapter 控制只证明公共同步生命周期行为。现有 runtime.test.ts 混有请求/approval 测试，本次未执行整文件。未运行构建、typecheck、lint 或 full suite。\n\n[源码 manifest](evidence/host-source-manifest.json) 记录 11 份源码/配置与冻结哈希、当前一致性及读取范围；[validation](evidence/host-validation.json) 给出精确计数。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "pointer": "/hits/truncate_unicode/18/snippet",
+      "kind": "json-value-scalar",
+      "offset": 240,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "pointer": "/hits/truncate_unicode/25/snippet",
+      "kind": "json-value-scalar",
+      "offset": 240,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+      "pointer": "/hits/10/text",
+      "kind": "json-value-scalar",
+      "offset": 144,
+      "context": "`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "pointer": "/hits/identity_cache/2/context",
+      "kind": "json-value-scalar",
+      "offset": 420,
+      "context": "ker → host 类型化请求，取代 __*__ 回环）        │\n   │  Capability 声明 · CONTRACTS · Trace                                  │\n   │  HostAdapter ← 平台相关实现注入（Electron / Headless / Container）     │\n   └──────┬──────────────────────────────┬────────────────────────────────┘\n          │ WorkerBridgeCore（stdio）      │ 薄后端协议 / 进程\n    Agent worker（Engine）           浏览器后端 · Panel services · exec kernel\n\n   部署形态：Desktop = Electron main 内嵌 HostRuntime + Elec",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/6/context",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/7/context",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/24/context",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "pointer": "/matches/host/25/context",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/109/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/135/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/136/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/137/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/138/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/279/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/293/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "pointer": "/matches/cronMechanism/294/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-history-selected.json",
+      "pointer": "/selected/142/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 12,
+      "context": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/old_families/23/context",
+      "kind": "json-value-scalar",
+      "offset": 240,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/old_families/29/context",
+      "kind": "json-value-scalar",
+      "offset": 240,
+      "context": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/0/value/runs/1/command",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/0/value/runs/1/actualShellCommand",
+      "kind": "json-value-scalar",
+      "offset": 73,
+      "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/2/value/limits/1",
+      "kind": "json-value-scalar",
+      "offset": 19,
+      "context": "Current production HostRuntime callers pass no start/stop callbacks; callback tests validate public synchronous lifecycle only.",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/3/value/scope",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "HostRuntime direct source import; synchronous in-memory callbacks; no request/approval/worker/provider/native/network operations",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/fullReadReports/0/text",
+      "kind": "json-value-scalar",
+      "offset": 2956,
+      "context": "界、候选与排除\n\n- **HL-B1 · 已观察能力边界，不计 bug**：`docs/rate%2Ftable.md`、`docs/rate%5Ctable.md` 被 `file-selection.ts:46` 的 decode 后分段规则拒绝，而字面 `%20` 名称保留；fixture 第二项保留了这一结果。Core `links/http.ts:189` 的 `assertPathSegment()` 明确采用相同的原始/解码后双检查，`:215` 规定此格式经过每段验证后编码。尚无契约保证支持这两种字面表示，不能由“Git 文件名可能包含这些字符”直接推成产品 bug。本轮没有测试绕过或安全方向。\n- **HL-B2 · 已声明边界**：只有 GitHub/Figma manifest 提供普通文件选择；Notion 的 `document-content-unavailable`、Figma Make 的不支持类型，以及 Host 同步 `start/stop` 都是当前明示边界，未包装成缺陷。没有对异步 adapter 做实验。\n- **HL-C1 · 未确认**：`HostRuntime.register()` 保存 caller-owned service 引用（`runtime.ts:50`），dispatch 再读取 handler（`:114`）；若调用者后来改对象，登记快照可能与 handler 不一致。当前 Desktop/serve/Panel 的创建点均构造私有对象，未找到正常调用方后续变更；没有执行人为突变，不计问题。\n- **重复核对**：两批 audit findings、2026-10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 route、未知请求数据分类。当前生产 caller 没有传入有副作用的 adapter start/stop，因此假 adapter 验证不能代表真实 native 生命周期。\n\nLink 阅读 manifest/文件选择、operation contracts、`snapshotJson`/结构匹配、公开入口、普通 metadata 投影；类型文件仅核对数据形状。authorization/filter 和凭据/认证实现未作为审查目标，未运行相关操作单测。operation 基线验证 immutable catalog 快照、Figma summary/content 的输入输出区分",
+      "completeScalar": false
+    }
+  ]
+}

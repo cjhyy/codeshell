@@ -1,0 +1,47 @@
+{
+  "createdAt": "2026-10-17T17:51:23.864596+00:00",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "links": [
+    {
+      "target": "canonical-evidence.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "history-inventory.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "metadata-diagnostics.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "insidePacket": true
+    }
+  ],
+  "allLinksValid": true,
+  "sourcePinsAllUnchanged": true,
+  "historyPinsAllUnchanged": true,
+  "currentProductBodyReads": 0,
+  "productExecutions": 0,
+  "gitExecutions": 0,
+  "files": []
+}

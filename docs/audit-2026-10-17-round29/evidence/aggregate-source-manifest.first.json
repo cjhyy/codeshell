@@ -1,0 +1,1188 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "mainHead": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentBytes": 206,
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainBytes": 206,
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentBytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainBytes": 17639,
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "bytes": 5851,
+      "sha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "currentBytes": 5851,
+      "currentSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "mainBytes": 5851,
+      "mainSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/mappers.md",
+      "bytes": 7050,
+      "sha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "currentBytes": 7050,
+      "currentSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "mainBytes": 7050,
+      "mainSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "bytes": 14636,
+      "sha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "currentBytes": 14636,
+      "currentSha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "mainBytes": 14636,
+      "mainSha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/review-2026-10-12/cli-quality-round9.md",
+      "bytes": 13182,
+      "sha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "currentBytes": 13182,
+      "currentSha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "mainBytes": 13182,
+      "mainSha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "bytes": 37767,
+      "sha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "currentBytes": 37767,
+      "currentSha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "mainBytes": 37767,
+      "mainSha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "bytes": 38404,
+      "sha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "currentBytes": 38404,
+      "currentSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "mainBytes": 38404,
+      "mainSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "bytes": 2451,
+      "sha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "currentBytes": 2451,
+      "currentSha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "mainBytes": 2451,
+      "mainSha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "bytes": 2732,
+      "sha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "currentBytes": 2732,
+      "currentSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "mainBytes": 2732,
+      "mainSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "currentBytes": 51303,
+      "currentSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "mainBytes": 51303,
+      "mainSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/parseStreamLine.test.ts",
+      "bytes": 4946,
+      "sha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "currentBytes": 4946,
+      "currentSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "mainBytes": 4946,
+      "mainSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/parseStreamLine.ts",
+      "bytes": 2283,
+      "sha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "currentBytes": 2283,
+      "currentSha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "mainBytes": 2283,
+      "mainSha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "currentBytes": 86436,
+      "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "mainBytes": 86436,
+      "mainSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "currentBytes": 102234,
+      "currentSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "mainBytes": 102234,
+      "mainSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentBytes": 122863,
+      "currentSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "mainBytes": 122863,
+      "mainSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "currentBytes": 10859,
+      "currentSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "mainBytes": 10859,
+      "mainSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.approvals.test.tsx",
+      "bytes": 10480,
+      "sha256": "60f3d8fcbc0ca9e9e26c255c4ccd05888771611b5ee7d641b01ee4838f9fb9e1",
+      "currentBytes": 10480,
+      "currentSha256": "60f3d8fcbc0ca9e9e26c255c4ccd05888771611b5ee7d641b01ee4838f9fb9e1",
+      "mainBytes": 10480,
+      "mainSha256": "60f3d8fcbc0ca9e9e26c255c4ccd05888771611b5ee7d641b01ee4838f9fb9e1",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+      "bytes": 6072,
+      "sha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "currentBytes": 6072,
+      "currentSha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "mainBytes": 6072,
+      "mainSha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "currentBytes": 55140,
+      "currentSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "mainBytes": 55140,
+      "mainSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "bytes": 35323,
+      "sha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "currentBytes": 35323,
+      "currentSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "mainBytes": 35323,
+      "mainSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanelHost.tsx",
+      "bytes": 3816,
+      "sha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "currentBytes": 3816,
+      "currentSha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "mainBytes": 3816,
+      "mainSha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/quickChatSession.ts",
+      "bytes": 2184,
+      "sha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "currentBytes": 2184,
+      "currentSha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "mainBytes": 2184,
+      "mainSha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.test.ts",
+      "bytes": 1757,
+      "sha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "currentBytes": 1757,
+      "currentSha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "mainBytes": 1757,
+      "mainSha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.ts",
+      "bytes": 1083,
+      "sha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "currentBytes": 1083,
+      "currentSha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "mainBytes": 1083,
+      "mainSha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/shared/stream-envelope.test.ts",
+      "bytes": 1602,
+      "sha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "currentBytes": 1602,
+      "currentSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "mainBytes": 1602,
+      "mainSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/shared/stream-envelope.ts",
+      "bytes": 936,
+      "sha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "currentBytes": 936,
+      "currentSha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "mainBytes": 936,
+      "mainSha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/app/chat.ts",
+      "bytes": 8615,
+      "sha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "currentBytes": 8615,
+      "currentSha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "mainBytes": 8615,
+      "mainSha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "bytes": 14977,
+      "sha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "currentBytes": 14977,
+      "currentSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "mainBytes": 14977,
+      "mainSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "bytes": 73050,
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "currentBytes": 73050,
+      "currentSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "mainBytes": 73050,
+      "mainSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "bytes": 13196,
+      "sha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "currentBytes": 13196,
+      "currentSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "mainBytes": 13196,
+      "mainSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "bytes": 7039,
+      "sha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "currentBytes": 7039,
+      "currentSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "mainBytes": 7039,
+      "mainSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/mobileOutputRecovery.ts",
+      "bytes": 6817,
+      "sha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "currentBytes": 6817,
+      "currentSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "mainBytes": 6817,
+      "mainSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "bytes": 5644,
+      "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "currentBytes": 5644,
+      "currentSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "mainBytes": 5644,
+      "mainSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.test.ts",
+      "bytes": 1511,
+      "sha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "currentBytes": 1511,
+      "currentSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "mainBytes": 1511,
+      "mainSha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "bytes": 2742,
+      "sha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "currentBytes": 2742,
+      "currentSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "mainBytes": 2742,
+      "mainSha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "currentBytes": 28526,
+      "currentSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "mainBytes": 28526,
+      "mainSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.test.ts",
+      "bytes": 9383,
+      "sha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "currentBytes": 9383,
+      "currentSha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "mainBytes": 9383,
+      "mainSha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "bytes": 7513,
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "currentBytes": 7513,
+      "currentSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "mainBytes": 7513,
+      "mainSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/web/src/lib/mobileOutputRecovery.ts",
+      "sha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/shared/stream-envelope.ts",
+      "sha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/shared/stream-envelope.test.ts",
+      "sha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/main/parseStreamLine.ts",
+      "sha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/main/parseStreamLine.test.ts",
+      "sha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "sha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "packages/core/src/run/RunQueue.ts",
+      "sha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "sha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "packages/core/src/run/RunManager.ts",
+      "sha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "packages/web/src/lib/transcriptReplay.test.ts",
+      "sha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "packages/core/src/session/transcript.ts",
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "sha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "runtime-source-manifest.json",
+      "path": "packages/web/app/chat.ts",
+      "sha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "sha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "packages/web/src/lib/roomHistory.test.ts",
+      "sha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "sha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "sha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "sha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "sha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round17/mappers.md",
+      "sha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "room-source-manifest.json",
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/stopRouting.ts",
+      "sha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/stopRouting.test.ts",
+      "sha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+      "sha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/quickChatSession.ts",
+      "sha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanelHost.tsx",
+      "sha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "sha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "docs/review-2026-10-12/cli-quality-round9.md",
+      "sha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "stop-source-manifest.json",
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "sha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/web/src/lib/mobileOutputRecovery.ts",
+      "sha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/desktop/src/shared/stream-envelope.ts",
+      "sha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/desktop/src/shared/stream-envelope.test.ts",
+      "sha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/desktop/src/main/parseStreamLine.ts",
+      "sha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/desktop/src/main/parseStreamLine.test.ts",
+      "sha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "sha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/core/src/run/RunQueue.ts",
+      "sha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "sha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/web/src/lib/transcriptReplay.test.ts",
+      "sha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/core/src/run/RunManager.ts",
+      "sha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/core/src/session/transcript.ts",
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-root-runtime-source-manifest.json",
+      "path": "packages/web/app/chat.ts",
+      "sha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "sha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/web/src/lib/roomHistory.test.ts",
+      "sha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "sha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "sha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "sha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round17/mappers.md",
+      "sha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/stopRouting.ts",
+      "sha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/stopRouting.test.ts",
+      "sha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/quickChatSession.ts",
+      "sha256": "f65a8cebe285104e2f1c130be8e4c192a51a312c2a425e18d5b81e09581e234c",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanelHost.tsx",
+      "sha256": "566447987ff6d9c93b8fdca7bcc34899b3ec983d7a84e413842648efa04de5b6",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "sha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "docs/review-2026-10-12/cli-quality-round9.md",
+      "sha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    },
+    {
+      "manifest": "review-room-stop-source-manifest.json",
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "sha256": "7819a2eee926b0dcc906d1d6e9c69a604058dfb1f7c1a82f6b3ad44b8ffb5d45",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+    }
+  ],
+  "priorPrepHashOnlyChecks": [
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "sha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "coverage": "Earlier coverage inventory selection hash only; semantic read separately declared once by runtime author"
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "coverage": "Earlier coverage inventory selection hash only; semantic read separately declared once by runtime author"
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.test.ts",
+      "sha256": "1b8e530fa7b2bbb1f32d884d9b7b292ec795f5f8c641d191f40737a8b0be62c9",
+      "coverage": "Stop initial inventory only; not semantically read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.approvals.test.tsx",
+      "sha256": "60f3d8fcbc0ca9e9e26c255c4ccd05888771611b5ee7d641b01ee4838f9fb9e1",
+      "coverage": "Stop initial inventory only; not semantically read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+      "sha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "coverage": "Stop initial inventory only; not semantically read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "coverage": "Stop initial inventory only; not semantically read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/stopRouting.ts",
+      "sha256": "cc7ecf8971d8394bf682e5d9738d295729f32a9e207360b76d8509d9d5617d2a",
+      "coverage": "Stop initial inventory only; not semantically read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "coverage": "Stop initial inventory only; not semantically read"
+    },
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "Stop initial inventory only; not semantically read"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "Stop initial inventory only; not semantically read"
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "sha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "coverage": "hash-only; not semantically read by this independent reviewer"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.launch.test.tsx",
+      "sha256": "a09935ceb1df6a95e6bc338c8958e08eed76183e0b78ea72e92a7262e0736a7f",
+      "coverage": "hash-only; not semantically read by this independent reviewer"
+    }
+  ],
+  "changedFromFrozenPaths": [],
+  "note": "Runtime prep10 source rows reused by its formal manifest are the same semantic read, not another10 checks. No full inventory rescan. Hash-only rows are not semantic coverage."
+}

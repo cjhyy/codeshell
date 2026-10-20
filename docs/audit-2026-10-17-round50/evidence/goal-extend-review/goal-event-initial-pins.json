@@ -1,0 +1,19 @@
+{
+  "capturedUTC": "2026-10-17T17:03:33.873025+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lines": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lines": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "http": {
+    "target": "packages/server/src/session-http-responses.ts",
+    "currentSHA256": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+    "canonicalPath": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+    "jsonPointer": "/files/0",
+    "originalObject": {
+      "path": "packages/server/src/session-http-responses.ts",
+      "bytes": 1369,
+      "sha256": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+      "scope": "Full exploratory static only; no response tracking/cancellation/revocation experiment.",
+      "lineCount": 39,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    "disposition": "Same-SHA explicit full ordinary exploratory static reading; exclude target before body. No response cancellation/revocation/authority runtime certification."
+  },
+  "runReplay": {
+    "navigationOnlyStatus": "Mostly inventories and derived unknown classifications; neither unknown nor lack of full row establishes never-read.",
+    "sourceReadingDisposition": "Bounded selected ordinary data review, not first/full/new-unique certification.",
+    "oldCauseExcluded": "R21 native Hub new-session zero baseline slicing complete journal legacy base anchor; original quality-audit28-42 and README132-143 read. Old native/model/SSE tests not rerun."
+  }
+}

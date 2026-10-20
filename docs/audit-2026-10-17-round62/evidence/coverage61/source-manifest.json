@@ -1,0 +1,218 @@
+{
+  "atUTC": "2026-10-17T20:38:35.912007+00:00",
+  "role": "Metadata migration author; second implementation is self-check, not external peer or new source reader",
+  "rootReportedBaselineOnly": "d195788bc2c18cd85c81aea4a431ab29074df5cf",
+  "GitVerified": false,
+  "files": [],
+  "metadataFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round61/README.md",
+      "bytes": 3659,
+      "sha256": "3cafa0f15fbe6e2505ed2cdf1935a3428cb80e8ee431c4b68e618ffc1d8f66b5",
+      "pinBeforeParse": true,
+      "role": "formal61 README scope"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+      "bytes": 3097431,
+      "sha256": "249c7298280d2ff1f3bde4333c98f4d831c27e24a725dc7d9b0d818ed8db9671",
+      "pinBeforeParse": true,
+      "role": "canonical coverage base"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+      "bytes": 17239,
+      "sha256": "2bc4f306cb196da6b708a12d46ffb94a90a7e70005c35a6e0895a3ddfe8579dc",
+      "pinBeforeParse": true,
+      "role": "canonical source-manifest .files objects only"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/session-context-store/source-manifest.json",
+      "bytes": 16641,
+      "sha256": "1b37c178df1886adc9aa74c03b0e251c7cf966d3cfc89fbd4cb323b86952139a",
+      "pinBeforeParse": true,
+      "role": "canonical source-manifest .files objects only"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+      "bytes": 8643,
+      "sha256": "26684f7c05228b545ae46aac8b7cf316fbfae8e72c04e1f983efd2e59ad30c61",
+      "pinBeforeParse": true,
+      "role": "canonical source-manifest .files objects only"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+      "bytes": 23653,
+      "sha256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+      "pinBeforeParse": true,
+      "role": "canonical source-manifest .files objects only"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+      "bytes": 13120,
+      "sha256": "63bcf78f3467aacd94847a178f95ac8447d04b3d19d1b3d5aa8a6eb6f051babc",
+      "pinBeforeParse": true,
+      "role": "canonical source-manifest .files objects only"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+      "bytes": 18677,
+      "sha256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+      "pinBeforeParse": true,
+      "role": "canonical source-manifest .files objects only"
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "role": "instructionHashOnlyCarriedPriorRead"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "role": "instructionHashOnlyCarriedPriorRead"
+    }
+  ],
+  "sourceByteInventory": {
+    "path": "current-source-inventory.json",
+    "bytes": 1246564,
+    "sha256": "d43bf7277b93dda4a28ce5528c00e1a47dfc1d9bb37dfe9cd50c5f8fb26d57df"
+  },
+  "endingSourceByteInventory": {
+    "path": "ending-source-inventory.json",
+    "bytes": 1074756,
+    "sha256": "a83d3a114589a38f448deb64be1e6bdb49e200987e0dd0a292842f5ee2ff3e73"
+  },
+  "outputIndex": {
+    "path": "unified-current-index.json",
+    "bytes": 3965938,
+    "sha256": "0e476c3d434cce61bd6d08700b1e0e5fc4a328f7c05b58a0a603762ac72f7ac5"
+  },
+  "canonicalClaims": {
+    "path": "semantic-claims.json",
+    "bytes": 130159,
+    "sha256": "0a9ae65ed09c478a47f4c218ac34eff82705f469159e42747d7e0e2882acb045"
+  },
+  "rawCanonicalObjects": {
+    "path": "canonical-row-review.json",
+    "bytes": 118199,
+    "sha256": "a6d24fd9299f89c7459aacb67de64bb0a6057f1f4dc00252e3d1bfe73db76a23"
+  },
+  "firstMethodRetained": {
+    "path": "migrate.first.py",
+    "bytes": 11363,
+    "sha256": "550a8713b8afe4525de3d659dbd9366f254b9c4de2c768a9467e89dd44fb847a"
+  },
+  "currentMethod": {
+    "path": "migrate.py",
+    "bytes": 11614,
+    "sha256": "e37e94b40be0c673ee09137a36da3bd347a1bb88d2c19765c234afba38c2c3b3"
+  },
+  "independentChecker": {
+    "path": "independent-check.py",
+    "bytes": 6534,
+    "sha256": "e5442115b8259ed8f546cf0e79f5847bf99fad69fbb16bad5011294000277517"
+  },
+  "normalizationRules": [
+    "Only six explicit original formal61 author/Root/reviewer .files arrays. No aggregate Git byte manifest, history metadata, derived claims, receipts or nested copies used as new semantics.",
+    "Direct sha256 field exactly current; bytes and EOF line count match; semantic integer ranges and counts match explicit original declarations.",
+    "Explicit full requires a single full record covering1-EOF without semanticFull=false or displayed-only-full limitation. Selected unions never promote to full.",
+    "Actual body+navigation display must support already-explicit semantic ranges. Hash/navigation/display-only records never create semantic coverage.",
+    "Purpose, scope boundary, original overlap, source category, original object and JSON pointer retained verbatim. Full remains bounded by original purpose, not behavior/runtime certification.",
+    "Current355/354/3934 base preserved except14 explicit metadata upgrades. Duplicates and author/reviewer overlap add provenance only.",
+    "One malformed display row conservatively deferred; invalid original display assertion is not repaired by other valid records."
+  ],
+  "scopeExclusions": [
+    "formal61 top-level aggregate source-manifest not read or adapted",
+    "154/160/162 metadata-only packages not treated as source reading",
+    "No recursive derived semantic extraction, archived schema search, entire /tmp scan or cause re-evaluation",
+    "No source semantic body reading, product imports, helpers, tests, UI, native, model, network or Git operations"
+  ],
+  "counts": {
+    "atUTC": "2026-10-17T20:36:58.812106+00:00",
+    "baseCounts": {
+      "unknown": 3934,
+      "full": 355,
+      "selected": 354
+    },
+    "counts": {
+      "unknown": 3920,
+      "full": 360,
+      "selected": 363
+    },
+    "denominator": 4643,
+    "notFull": 4283,
+    "rowCount": 58,
+    "acceptedRows": 42,
+    "uniqueAcceptedPaths": 22,
+    "excludedRows": 15,
+    "deferredRows": 1,
+    "transitionCount": 14,
+    "retainedStatusPaths": 8,
+    "fullEvidenceRows": 5,
+    "testDeclarationRows": 1,
+    "sourceByteDrift": 0,
+    "documents": [
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+        "filesCount": 9,
+        "rowStates": {
+          "accepted": 9
+        }
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/session-context-store/source-manifest.json",
+        "filesCount": 8,
+        "rowStates": {
+          "excluded": 3,
+          "accepted": 5
+        }
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+        "filesCount": 5,
+        "rowStates": {
+          "accepted": 5
+        }
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "filesCount": 15,
+        "rowStates": {
+          "excluded": 10,
+          "accepted": 5
+        }
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+        "filesCount": 10,
+        "rowStates": {
+          "accepted": 10
+        }
+      },
+      {
+        "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+        "filesCount": 11,
+        "rowStates": {
+          "excluded": 2,
+          "accepted": 8,
+          "deferred": 1
+        }
+      }
+    ],
+    "productSemanticReadCount": 0,
+    "productExecutionCount": 0,
+    "GitOperations": 0,
+    "independentPeerReviewDelivered": false
+  },
+  "originalUniversePreserved": 4643,
+  "endingChecks": {
+    "path": "ending-checks.json",
+    "bytes": 199,
+    "sha256": "553c1a8404f38b2fbdc625a96babd42eccb95f6ed4d5727cadb543438004284f"
+  },
+  "validationBoundary": "Standard-library metadata processing and raw byte/hash/EOF inventory only; no product execution or new semantic review."
+}

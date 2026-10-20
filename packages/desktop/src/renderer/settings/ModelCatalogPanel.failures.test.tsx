@@ -13,6 +13,11 @@ describe("model catalog read and mutation recovery", () => {
     "delete-retry",
     "reset-retry",
     "unmount",
+    "unmount-delete",
+    "unmount-reset",
+    "unmount-save-failure",
+    "unmount-delete-failure",
+    "unmount-reset-failure",
   ])("%s", (scenario) => {
     // Other renderer suites replace Dialog modules globally. Keep this real
     // provider/portal mount independent of those module mocks.

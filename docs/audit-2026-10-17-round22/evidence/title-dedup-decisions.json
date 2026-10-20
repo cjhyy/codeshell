@@ -1,0 +1,49 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "scan": "evidence/title-dedup.json",
+  "findings": 0,
+  "candidates": 0,
+  "related": 0,
+  "decisions": [
+    {
+      "topic": "manual rename race",
+      "result": "not promoted",
+      "prior": "docs/review-2026-10-12/sidebar-title-observation-round27.md:9",
+      "reason": "Current titleManual guard and separate override store are ordinary counterevidence; no complete rename/Engine chain executed."
+    },
+    {
+      "topic": "detached whole-state overwrite",
+      "result": "old mechanism excluded",
+      "prior": "docs/refactor/_archive/goal-persistence-redesign-codex.md:97",
+      "reason": "Current run-finalize passes only title to updatePersistedSessionState; existing Engine tests statically cover later state retention; no repair verification claim."
+    },
+    {
+      "topic": "UTF-16 2000-code-unit input slices",
+      "result": "old mechanism excluded; unexecuted",
+      "prior": "docs/audit-2026-10-17-round12/desktop.md:7 and docs/audit-2026-10-17-round19/related.json",
+      "reason": "Same slice surrogate mechanism; only ASCII cap control ran here, no Unicode reproduction/recovery."
+    },
+    {
+      "topic": "best-effort model output format",
+      "result": "no candidate",
+      "prior": "docs/superpowers/specs/2026-06-01-llm-session-title-design.md",
+      "reason": "No ordinary provider output violates required contract shown; do not inject nonconforming text then promote prompt wish to validator bug."
+    },
+    {
+      "topic": "usage and summary prior review",
+      "result": "excluded as new issue",
+      "prior": "packages/core/src/engine/engine.session-title.test.ts:34 and 286",
+      "reason": "Existing usage/late-state tests static; owned collector controls make no pricing, usage ledger or summary repair claim."
+    }
+  ],
+  "metadataNotes": [
+    "One broad context-print command and one grouped navigation output were truncated. Only bounded visible excerpts and specifically selected source/history reads support conclusions; no truncated dump treated as fully read.",
+    "Optional historical report-name existence navigation found no round19/reviewprompt.md; inventory established actual reviewprompt-report.md. No product fixture/import error or test retry.",
+    "First author-receipt navigation assertion ran before its linked receipt existed. This metadata-only ordering check failed; receipt creation now precedes final link validation. Product test was not rerun."
+  ],
+  "limitations": [
+    "Exact and mechanism searches scan all scalar values but only store 100 contexts each.",
+    "Generic title/race language in recursive JSON includes unrelated record-title metadata; counts are not unique bugs.",
+    "History inventory is read-time corpus, not required identical to later main."
+  ]
+}

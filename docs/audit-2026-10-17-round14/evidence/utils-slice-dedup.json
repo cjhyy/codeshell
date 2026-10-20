@@ -1,0 +1,245 @@
+{
+  "pattern": "(render-border|sliceAnsi|ANSI.{0,100}(trunc|slice|截断|bleed|reset)|(?:reset|style).{0,60}(?:missing|丢失))",
+  "matches": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$.source_inventory[739]",
+      "text": "packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$.source_inventory[2224]",
+      "text": "packages/tui/src/render/render-border.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "location": "$.hits[21].matches[3].text",
+      "text": "> - **bug-scan 第五批(onboarding/settings/parse helpers/renderer 纯逻辑)2 候选**:#1 `transcript-reader` goal_progress `round: Number(d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[0].text",
+      "text": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "location": "$.matches[104].text",
+      "text": "Real bug with moderate severity. It only triggers in the edge case where text visual width exceeds border width (line 45 condition), but when it does occur, the output will be visually corrupted due to broken ANSI escape sequences. The codebase already has the correct solution available in truncateToWidthNoEllipsis; using that would fix this issue."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.logs[3].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.settings-navigation[3].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$.hits.sidebar-projection[11].text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].preStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].postStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].afterEnable.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[1].directSettled.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[2].normal.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.observations[2].afterIdleStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "location": "$.final.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "location": "$.snapshot.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "location": "$.snapshot.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.observations[0].preStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.observations[0].postStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.observations[0].afterEnable.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.observations[1].directSettled.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "location": "$.snapshot.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[0].preStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[0].postStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[0].afterEnable.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[1].directSettled.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[2].normal.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.observations[2].afterIdleStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "location": "$.final.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "location": "$.snapshot.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].preStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].postStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[0].afterEnable.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[1].directSettled.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[2].normal.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.observations[2].afterIdleStop.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "location": "$.final.loadedWorkspaceModules[463]",
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+      "location": "$.modules[39].productionFiles[15]",
+      "text": "utils/sliceAnsi.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$.hits[7].text",
+      "text": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$.hits[8].text",
+      "text": "> - **bug-scan 第五批(onboarding/settings/parse helpers/renderer 纯逻辑)2 候选**:#1 `transcript-reader` goal_progress `round: Number(d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$.hits[68].text",
+      "text": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$.hits[70].text",
+      "text": "> - **bug-scan 第五批(onboarding/settings/parse helpers/renderer 纯逻辑)2 候选**:#1 `transcript-reader` goal_progress `round: Number(d.round ?? 0)`→畸形 transcript 非数字 round 产 NaN ✅**已修**(`5bde0cbd`,Number.isFinite 否则 0,+1 测;cherry-pick 撞 main 测试文件分叉冲突,已解保留两套测试);#2 onboarding `modelDisplayName` 空 variant 尾空格→**cosmetic 判低价值不修**。其余(settings merge/schema/parse-log/format/streamGroups/sliceAnsi)均干净。**收益已明显递减(5 批扫近全仓,本批仅 1 中 1 cosmetic),孤立 bug 面将尽。**"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[187].file",
+      "text": "packages/tui/src/render/render-border.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[187].detail",
+      "text": "Line 46 uses `text.substring(0, borderLength)` to truncate text that may contain ANSI color codes (as stated in the BorderTextOptions comment on line 10: 'Pre-rendered string with ANSI color codes'). Substring truncates by character count, not visual width, which will split ANSI escape sequences and produce invalid output. The function should use `stringWidth` (available at line 6) to ensure truncation respects visual width like the rest of the function does."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[188].file",
+      "text": "packages/tui/src/render/render-border.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/confirmed.json",
+      "location": "$[21].file",
+      "text": "packages/tui/src/render/render-border.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/confirmed.json",
+      "location": "$[21].detail",
+      "text": "Line 46 uses `text.substring(0, borderLength)` to truncate text that may contain ANSI color codes (as stated in the BorderTextOptions comment on line 10: 'Pre-rendered string with ANSI color codes'). Substring truncates by character count, not visual width, which will split ANSI escape sequences and produce invalid output. The function should use `stringWidth` (available at line 6) to ensure truncation respects visual width like the rest of the function does."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/confirmed.json",
+      "location": "$[21].verify_note",
+      "text": "Real bug with moderate severity. It only triggers in the edge case where text visual width exceeds border width (line 45 condition), but when it does occur, the output will be visually corrupted due to broken ANSI escape sequences. The codebase already has the correct solution available in truncateToWidthNoEllipsis; using that would fix this issue."
+    }
+  ]
+}

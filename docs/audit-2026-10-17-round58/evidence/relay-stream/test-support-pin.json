@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T19:19:03.511271+00:00",
+  "files": [
+    {
+      "path": "tests/fixtures/device-relay/runner.mjs",
+      "bytes": 18299,
+      "lines": 501,
+      "sha256": "60047181a7031cae6143bdcfab52f873ddb6f67229de617e55e94142e12c707f",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

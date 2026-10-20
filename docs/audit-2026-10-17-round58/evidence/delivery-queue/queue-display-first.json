@@ -1,0 +1,17 @@
+{
+  "path": "packages/chat/src/delivery-queue.ts",
+  "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+  "displayedLineRanges": [
+    [
+      1,
+      167
+    ],
+    [
+      248,
+      480
+    ]
+  ],
+  "pinReference": "initial-pins.json",
+  "displayAt": "2026-10-17T19:22:01.172510+00:00",
+  "scope": "Lifecycle/record fields/calls. Old spool/account cases not reopened dynamically."
+}

@@ -1,0 +1,110 @@
+{
+  "baseline": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "unchanged instruction file"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "instruction file"
+    },
+    {
+      "path": "packages/tui/src/cli/parse-int-option.ts",
+      "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "bytes": 1051,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full read, actual helper tests"
+    },
+    {
+      "path": "packages/tui/src/cli/parse-int-option.test.ts",
+      "sha256": "93b1adadb242b9fe7241d26fd69c0381d47f9452ec35ef80660d084a03fcae11",
+      "bytes": 1086,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full read and executed existing tests"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/max-context-tokens.ts",
+      "sha256": "2141c44ae2aa4696c32f7afaff1a78fc7ba4a5acb38009f6965d8949ce00f825",
+      "bytes": 288,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full read, actual helper tests"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/max-context-tokens.test.ts",
+      "sha256": "cbf6cce38ca4f45f92f6b40254b60bb84d7b6e8a2b3cab4a17a7ceade592760f",
+      "bytes": 1261,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full read/executed, includes one source-wiring assertion"
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "bytes": 11626,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected64–76,93–105,125–134 and positiveIntOption references; not executed"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "sha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "bytes": 13137,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected120–132 resolver consumer, not executed"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "bytes": 13991,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected150–160 resolver consumer; existing test reads source only, REPL not run"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/runs.ts",
+      "sha256": "19c28ce128736d4f9132bfa562907534b1f8918bd03af409bad1e662e32a6dfd",
+      "bytes": 12208,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "selected57–67 and parser references101/276; not executed"
+    },
+    {
+      "path": "packages/core/src/cli/stdio-session-config.ts",
+      "sha256": "4c06bedce2b5c4daa137fef0ad3948c55b09a8daaeb5847e8196226f55638a02",
+      "bytes": 964,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full source-only, settings manager not imported or used"
+    },
+    {
+      "path": "packages/core/src/cli/stdio-host-config.ts",
+      "sha256": "5ee91b01dafa76134eaa63421e5c81ee9de3d2c0c65cc6510162c58f024f3051",
+      "bytes": 297,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "full source-only, no host/access execution"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "bytes": 233,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "coverage": "guarded runner pin"
+    }
+  ],
+  "note": "Selected source pins and partial consumer reads; not transitive/whole CLI or protocol validation."
+}

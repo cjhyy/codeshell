@@ -1,0 +1,107 @@
+{
+  "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "confirmedFindings": [],
+  "candidateIds": [
+    "GROUPS-R13-C1",
+    "GROUPS-R13-C2"
+  ],
+  "relatedObservationsNotCounted": [
+    "GROUPS-R13-R1"
+  ],
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts",
+        "packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts",
+        "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+      ],
+      "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+      "startedAt": "2026-10-17T06:57:08.728552+00:00",
+      "finishedAt": "2026-10-17T06:57:08.885693+00:00",
+      "exitCode": 0,
+      "rawLog": "docs/audit-2026-10-17-round13/evidence/groups-existing-baseline.first.raw.log",
+      "rawBytes": 3102,
+      "rawSha256": "0d6a6e6d020840560e3f7d08a8436b2a394fc6b41a85130ffe5830ace6709f7a",
+      "policy": "FIRST combined stdout/stderr saved before inspection; no retry, fixture repair or alternate validation after any failure",
+      "name": "groups-existing-baseline",
+      "attempt": 1,
+      "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round13/evidence/groups-existing-baseline.first.raw.log",
+      "rawLogSha256": "0d6a6e6d020840560e3f7d08a8436b2a394fc6b41a85130ffe5830ace6709f7a",
+      "exitFile": "docs/audit-2026-10-17-round13/evidence/groups-existing-baseline.first.exit.json",
+      "exitFileSha256": "e611eb1a0df0ecdee2e345f92e4c444f04cbe7b06157271d42007c7ada9e23ca",
+      "passedTests": 33,
+      "tests": 33,
+      "expectCalls": 66,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "guardedCompletionPresent": true,
+      "clean": true,
+      "kind": "existing pure baseline",
+      "plannedFocusedTests": 0,
+      "focusedTestBodiesExecuted": 0
+    },
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round13/evidence/groups-patch-summary.test.ts"
+      ],
+      "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+      "startedAt": "2026-10-17T06:57:14.340848+00:00",
+      "finishedAt": "2026-10-17T06:57:14.501505+00:00",
+      "exitCode": 1,
+      "rawLog": "docs/audit-2026-10-17-round13/evidence/groups-patch-summary.first.raw.log",
+      "rawBytes": 521,
+      "rawSha256": "27f73a06a6570142e4e530dbd759e57f3d8d9f57e5ff2df4e2e3e5dbfbeffe38",
+      "policy": "FIRST combined stdout/stderr saved before inspection; no retry, fixture repair or alternate validation after any failure",
+      "name": "groups-patch-summary",
+      "attempt": 1,
+      "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round13/evidence/groups-patch-summary.first.raw.log",
+      "rawLogSha256": "27f73a06a6570142e4e530dbd759e57f3d8d9f57e5ff2df4e2e3e5dbfbeffe38",
+      "exitFile": "docs/audit-2026-10-17-round13/evidence/groups-patch-summary.first.exit.json",
+      "exitFileSha256": "cc508f266130317347f0f358495df775154e2db01b3a29db042116e8973c6f19",
+      "passedTests": 0,
+      "tests": 0,
+      "expectCalls": 0,
+      "failures": 1,
+      "errors": 1,
+      "skipped": 0,
+      "guardedCompletionPresent": false,
+      "clean": false,
+      "kind": "focused fixture load failure; whole direction SKIP",
+      "plannedFocusedTests": 7,
+      "focusedTestBodiesExecuted": 0
+    }
+  ],
+  "totals": {
+    "cleanFirstShards": 1,
+    "tests": 33,
+    "expectCalls": 66,
+    "baselineTests": 33,
+    "newFocusedTests": 0,
+    "cleanFailures": 0,
+    "skipped": 0,
+    "failedShards": 1,
+    "failedShardPassedTests": 0,
+    "failedShardFailures": 1,
+    "failedShardErrors": 1,
+    "retries": 0
+  },
+  "firstRunPolicy": "All first combined output bytes and exit saved before inspection. Wrong relative fixture import caused load failure; preserve and SKIP entire focused direction, no repair/rerun/alternate validation. Passing existing baseline not used as substitute.",
+  "scope": "Pure existing aggregateFileChangeSummary/countLines/agentGroup and baseline parseUnifiedDiff only. All new candidate producer/consumer claims source-only. streamGroups/time/turnTiming not executed. No new external dependency.",
+  "sourceManifest": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+  "dedup": [
+    "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+    "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json"
+  ],
+  "skipNote": "docs/audit-2026-10-17-round13/evidence/groups-skip-note.md"
+}

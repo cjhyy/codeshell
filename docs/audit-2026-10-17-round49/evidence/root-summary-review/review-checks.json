@@ -1,0 +1,52 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "files": [],
+  "currentSummaryFullLines": 81,
+  "semanticProductLines": 263,
+  "semanticTestDeclarationLines": 12,
+  "displayedLines": 430,
+  "oldCostCause": {
+    "id": "COST-R9-01",
+    "priority": "P3",
+    "title": "独立CostTracker记录丢失完整模型标识并采用错误估价",
+    "report": "usage.md",
+    "reportLine": 5,
+    "source": "packages/core/src/cost-tracker.ts",
+    "line": 115,
+    "log": "evidence/root-usage-contracts.first.log",
+    "evidenceLevel": "真实公共standalone SDK+冻结bundled metadata；内存ledger正常对照",
+    "limitations": "仅未绑定CostTracker；当前EngineRuntime绑定账本，主流程正确；无实际账单/外部价格/网络验证",
+    "status": "confirmed-at-frozen-source-baseline"
+  },
+  "oldCauseDisposition": "Standalone CostTracker full model identity loss differs from ledger-bound normal summary mapping; original status/runner evidence not promoted to current runtime pass.",
+  "counterevidence": [
+    "model grouping uses JSON.stringify tuple provider/providerKind/model, not delimiter concatenation",
+    "missing usage and null cost counters are independent; not-sent producer explicitly stores zero usage and zero estimated cost, preventing spurious unknown cost",
+    "summary metadata is constrained by typed Omit, actual store caller supplies only metadata fields, group arrays initialized after metadata",
+    "formatUsageCost retains unknown-cost and partial flags; actual bound /cost uses per-model summary and /status/TUI display uses same formatted DTO",
+    "An ignored legacy detail arg alone does not prove lost breakdown because current bound formatSummary already includes per-model breakdown."
+  ],
+  "historyActuallyRead": {
+    "compactSourceRows": 58,
+    "summaryShaWindows": 12,
+    "focusedFunctionWindows": 1,
+    "focusedKnownCostWindows": 4,
+    "canonicalCOSTRecord": 1
+  },
+  "machineLimits": {
+    "summaryPathCount": 744,
+    "summaryPathContextCap": 60,
+    "broadContractCount": 98,
+    "broadContractCap": 60,
+    "focusedCostIdCount": 64,
+    "focusedCostIdCap": 60,
+    "allThoseContextsRead": false
+  },
+  "oldFullGate": {
+    "imageHistoryBodyBeforeExcluded": true,
+    "originalR4ReviewFullAndR21ScopePreserved": true
+  },
+  "productRuns": 0
+}

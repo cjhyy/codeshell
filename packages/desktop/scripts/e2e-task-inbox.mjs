@@ -48,6 +48,7 @@ try {
       taskKey: `session:${id}`,
       source: "session",
       sourceId: id,
+      parentSessionId: "fixture-background-parent",
       title: `任务 ${id}`,
       status,
       createdAt: now - 1000,
@@ -150,12 +151,12 @@ try {
       };
     });
   });
-  await navigateSettingsMenu(win, "任务中心", { activity: true });
-  await win.getByRole("heading", { name: "任务中心", level: 1 }).waitFor();
-  await win.getByText("2050 项", { exact: true }).waitFor();
+  await navigateSettingsMenu(win, "后台工作", { activity: true });
+  await win.getByRole("heading", { name: "后台工作", level: 1 }).waitFor();
+  await win.getByText("2049 项", { exact: true }).waitFor();
   assert(
     (await win.locator("article[data-task-key]").count()) === 53,
-    "Rendering is bounded per group at 2050 records",
+    "Rendering is bounded per group at 2049 background records",
   );
   const headings = await win.locator("main h2").allTextContents();
   assert(
@@ -175,13 +176,14 @@ try {
   );
   const source = win.getByLabel("来源", { exact: true });
   await source.focus();
-  await win.keyboard.press("b");
-  await source.selectOption("background-job");
+  await win.keyboard.press("Enter");
+  await win.getByRole("option", { name: "后台任务", exact: true }).click();
   assert(
     (await win.locator("article[data-task-key]").count()) === 1,
-    "Source filter works with native keyboard-selectable control",
+    "Source filter opens by keyboard and selects a background task",
   );
-  await source.selectOption("");
+  await source.click();
+  await win.getByRole("option", { name: "全部", exact: true }).click();
   await win.getByLabel("搜索任务标题", { exact: true }).fill("waiting");
   const cancel = win.getByRole("button", { name: "取消任务：任务 waiting", exact: true });
   await cancel.focus();
@@ -210,12 +212,12 @@ try {
     "Confirmed action reaches preload with exact identity and revision",
   );
   await win.getByLabel("搜索任务标题", { exact: true }).fill("history");
-  await win.getByRole("button", { name: "打开来源：任务 history", exact: true }).press("Enter");
-  await win.getByRole("heading", { name: "运行记录", exact: true, level: 1 }).waitFor();
-  await win.getByText("已选中准确的原始运行", { exact: true }).waitFor();
-  console.log("PASS: original Run detail navigation");
-  await navigateSettingsMenu(win, "任务中心", { activity: true });
-  await win.getByText("2050 项", { exact: true }).waitFor();
+  assert(
+    (await win.locator("article[data-task-key]").count()) === 0,
+    "Legacy foreground runs stay in history rather than background work",
+  );
+  await win.getByLabel("搜索任务标题", { exact: true }).fill("");
+  await win.getByText("2049 项", { exact: true }).waitFor();
   await app.evaluate(({ BrowserWindow }) => {
     const fixture = globalThis.__taskInboxFixture;
     fixture.version += 1;
@@ -237,8 +239,8 @@ try {
         localStorage.setItem("codeshell.uiLanguage", value);
         window.dispatchEvent(new window.Event("codeshell:language-changed"));
       }, lang);
-      await navigateSettingsMenu(win, /^(任务中心|Task center)$/, { activity: true });
-      await win.getByRole("heading", { name: /^(任务中心|Task center)/, level: 1 }).waitFor();
+      await navigateSettingsMenu(win, /^(后台工作|Background work)$/, { activity: true });
+      await win.getByRole("heading", { name: /^(后台工作|Background work)/, level: 1 }).waitFor();
       const sizes = await win.evaluate(() => ({
         content: document.documentElement.scrollWidth,
         viewport: document.documentElement.clientWidth,
@@ -251,7 +253,7 @@ try {
           `Task center navigation closes the narrow sidebar (${lang})`,
         );
       }
-      const search = win.getByRole("textbox", { name: /^(搜索任务标题|Search task titles)$/ });
+      const search = win.getByRole("searchbox", { name: /^(搜索任务标题|Search task titles)$/ });
       await search.fill("事件更新后的任务");
       assert(
         (await win.locator("article[data-task-key]").count()) === 1,
@@ -262,7 +264,7 @@ try {
   }
   assert(errors.length === 0, `No renderer errors: ${errors.join("; ")}`);
   console.log(
-    "PASS: task inbox 2050-record projection, four groups, source/search, stale/partial errors, keyboard confirmation, live refresh and settings activity navigation in Chinese/English at 1280, 820 and 390px",
+    "PASS: task inbox 2049-background-record projection, four groups, source/search, stale/partial errors, keyboard confirmation, live refresh and settings activity navigation in Chinese/English at 1280, 820 and 390px",
   );
 } catch (error) {
   if (win)

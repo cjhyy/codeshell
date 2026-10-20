@@ -1,0 +1,16 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/session/transcript.range-archive.test.ts",
+    "packages/core/src/session/transcript-tool-result-normalization.test.ts",
+    "packages/core/src/session/transcript.subagent.test.ts",
+    "packages/core/src/session/session-manager.side-fork.test.ts",
+    "packages/core/src/session/session-manager.context-transfer.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 0.536,
+  "rawOutput": "session-existing-baseline.first.log"
+}

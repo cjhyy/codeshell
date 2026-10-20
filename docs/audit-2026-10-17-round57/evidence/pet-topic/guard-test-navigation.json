@@ -1,0 +1,57 @@
+[
+  {
+    "command": [
+      "rg",
+      "-n",
+      "test\\(|it\\(",
+      "packages/pet/src/topic-segment.test.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "7:  test(\"starts a new segment after the idle threshold\", () => {\n12:  test(\"treats exactly the idle threshold as a boundary\", () => {\n16:  test(\"carryover brief includes unfinished tasks and latest conclusions\", () => {\n26:  test(\"carryover brief is empty when there is nothing to carry\", () => {\n30:  test(\"carryover brief omits the workspace suffix when absent\", () => {\n39:  test(\"work memory entry captures task, outcome and refs\", () => {\n58:  test(\"work memory entry is a defensive copy\", () => {\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "test\\(|it\\(",
+      "packages/pet/src/conversation-session-route.test.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "41:  test(\"a notify route carries no expiry, a bound route does\", () => {\n48:  test(\"falls back to the session id when the title is blank\", () => {\n52:  test(\"rejects an unaddressable route rather than guessing a conversation\", () => {\n60:  test(\"rejects control characters in a session title\", () => {\n83:  test(\"entering upgrades to bound and stamps a fresh expiry\", () => {\n91:  test(\"leaving downgrades to notify instead of deleting the route\", () => {\n104:  test(\"entering clears a previous suspension\", () => {\n111:  test(\"suspending stops delivery and records why\", () => {\n124:  test(\"a bound route expires only once the window has fully elapsed\", () => {\n132:  test(\"a notify route never expires\", () => {\n138:  test(\"inbound traffic extends the window\", () => {\n148:  test(\"an expired bound route never captures the next message\", () => {\n157:  test(\"a suspended or notify route is never treated as bound\", () => {\n167:  test(\"one conversation's route never leaks into another\", () => {\n176:  test(\"a quiet bound route warns once before delivering\", () => {\n188:  test(\"a new quiet period earns a new warning\", () => {\n201:  test(\"round-trips a well-formed route\", () => {\n206:  test(\"drops a row rather than repairing a partly-understood route\", () => {\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "test\\(|it\\(",
+      "packages/pet/src/segment-closure.test.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "19:  test(\"slices between the closing boundary and the next boundary\", () => {\n30:  test(\"runs a closing boundary to the end of the transcript\", () => {\n36:  test(\"treats an absent closing boundary as starting at index 0\", () => {\n41:  test(\"returns null when a boundary id is not in the transcript or window is empty\", () => {\n49:  test(\"labels speakers and skips empty turns\", () => {\n60:  test(\"parses a bare JSON object\", () => {\n67:  test(\"recovers JSON wrapped in a code fence with prose around it\", () => {\n74:  test(\"clamps memories to two and drops non-strings and blanks\", () => {\n81:  test(\"returns null without a usable title and summary\", () => {\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "case \"chat\"|dispatchNow|withManagerTurn|archiveBeforeCurrentTurn",
+      "packages/desktop/src/main/pet/pet-dispatch-service.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "967:          const result = await this.dispatchNow(command);\n1052:  private async withManagerTurn<T>(operation: () => Promise<T>): Promise<T> {\n1110:    return this.withManagerTurn(() =>\n1184:    const result = await this.withManagerTurn(() =>\n1185:      this.dispatchNow({\n1915:      : this.dispatchNow(command);\n1918:  private async dispatchNow(command: PetDispatchCommand): Promise<PetDispatchResult> {\n1991:      case \"chat\": {\n2375:                archiveBeforeCurrentTurn: {\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "wakeFollowUp|pet-followup",
+      "packages/desktop/src/main/index.ts"
+    ],
+    "exitCode": 1,
+    "stdout": "",
+    "stderr": ""
+  }
+]

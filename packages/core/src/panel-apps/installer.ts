@@ -70,6 +70,7 @@ const ALLOWED_ASSET_EXTENSIONS = new Set([
   ".html",
   ".js",
   ".mjs",
+  ".wasm",
   ".md",
   ".css",
   ".json",

@@ -1,0 +1,205 @@
+{
+  "atUTC": "2026-10-17T19:31:06.040327+00:00",
+  "role": "Independent old-cause metadata reviewer, not source reader or source-candidate verifier",
+  "files": [],
+  "metadataFiles": [
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "lines": 116,
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "beforeRead": true,
+      "kind": "canonical-historical-markdown",
+      "coverage": "selected-metadata",
+      "displayedLineRanges": [
+        [
+          75,
+          105
+        ]
+      ],
+      "selectedLineRanges": [
+        [
+          83,
+          100
+        ]
+      ],
+      "purpose": "Archive spool cleanup retry closure and slow attachment mutex, distinct from lease shutdown overwrite."
+    },
+    {
+      "path": "docs/audit-2026-10-16/findings.json",
+      "bytes": 12610,
+      "lines": 361,
+      "sha256": "6a4cf415ee6c3a4fb5c7fae5d97445838bd668fcbe6060a1c4656c51f5cd96b2",
+      "beforeRead": true,
+      "kind": "canonical-historical-findings-json",
+      "coverage": "selected-original-objects",
+      "jsonPointers": [
+        "/issues/20",
+        "/issues/21"
+      ],
+      "purpose": "Original IDs/trigger/evidence boundaries; not current product status recertification."
+    },
+    {
+      "path": "docs/audit-2026-10-16/server-web-chat.md",
+      "bytes": 16408,
+      "lines": 114,
+      "sha256": "e12916c5a52bc6bee7ccb78acf25788fcc68a160283523fa32f52e2f74098de0",
+      "beforeRead": true,
+      "kind": "canonical-historical-markdown",
+      "coverage": "selected-metadata",
+      "displayedLineRanges": [
+        [
+          1,
+          42
+        ],
+        [
+          45,
+          50
+        ]
+      ],
+      "selectedLineRanges": [
+        [
+          7,
+          35
+        ],
+        [
+          47,
+          48
+        ]
+      ],
+      "purpose": "SWC01 route ordinal, SWC02 dedupe identity, SWC03 I/O spooling ACK and explicitly known retry scope; no new source/read coverage attribution."
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "bytes": 31923,
+      "lines": 233,
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "beforeRead": true,
+      "kind": "canonical-historical-markdown",
+      "coverage": "selected-metadata",
+      "displayedLineRanges": [
+        [
+          58,
+          88
+        ],
+        [
+          137,
+          150
+        ],
+        [
+          210,
+          214
+        ],
+        [
+          225,
+          233
+        ]
+      ],
+      "selectedLineRanges": [
+        [
+          142,
+          150
+        ],
+        [
+          213,
+          213
+        ],
+        [
+          228,
+          229
+        ],
+        [
+          233,
+          233
+        ]
+      ],
+      "purpose": "C8 serial retry ordering, broad historical source-directed scope and separately unconfirmed cancellation/spool risks. Earlier unrelated displayed C2/C3/LSP/TUI fragments are navigation only."
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/findings.json",
+      "bytes": 17114,
+      "lines": 369,
+      "sha256": "b72da00f7b2f0a1e6fe1024dfc941c821fb649a5527e8f7c15d23f5fa5e6c7cc",
+      "beforeRead": true,
+      "kind": "canonical-historical-findings-json",
+      "coverage": "selected-original-objects",
+      "jsonPointers": [
+        "/issues/21"
+      ],
+      "purpose": "Original IDs/trigger/evidence boundaries; not current product status recertification."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "bytes": 6965,
+      "lines": 38,
+      "sha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "beforeRead": true,
+      "kind": "canonical-historical-markdown",
+      "coverage": "selected-metadata",
+      "displayedLineRanges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "selectedLineRanges": [
+        [
+          3,
+          15
+        ]
+      ],
+      "purpose": "CHAT-R11-01 initial rejected-load Promise cache cause and retry/rebuild limitations; old tests/report claims metadata only, no rerun."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/cross-review-chat.md",
+      "bytes": 8905,
+      "lines": 46,
+      "sha256": "7e927445bee654e5f3177c066ec3f14271e21b87322c3ffda2bc134b926f21dc",
+      "beforeRead": true,
+      "kind": "historical-review-metadata",
+      "coverage": "navigation-only",
+      "purpose": "Only rg contexts observed, first wide output truncated. Not used as an independent old-cause substantive source."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/findings.json",
+      "bytes": 1542,
+      "sha256": "623dceaf7d194fb747529ffdd59994416111d78f5ba43925a505c8a7d93a1aa8",
+      "beforeRead": true,
+      "kind": "canonical-historical-findings-json",
+      "coverage": "selected-original-objects",
+      "jsonPointers": [
+        "/findings/0"
+      ],
+      "purpose": "Original IDs/trigger/evidence boundaries; not current product status recertification."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-findings.json",
+      "bytes": 3130,
+      "sha256": "b5867052aeb00ce829b4ba4c2244d2abcebdf36f9acf669a6e255b5ec898f06b",
+      "beforeRead": true,
+      "kind": "canonical-historical-findings-json",
+      "coverage": "selected-original-objects",
+      "jsonPointers": [
+        "/findings/0"
+      ],
+      "purpose": "Original IDs/trigger/evidence boundaries; not current product status recertification."
+    }
+  ],
+  "metadataSemanticDocuments": 8,
+  "metadataNavigationOnlyDocuments": 1,
+  "sharedMachineNavigation": {
+    "path": "/tmp/codeshell-audit-round141-pairing/history-batch.json",
+    "bytes": 1396813,
+    "sha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b"
+  },
+  "directedMachineQuery": {
+    "method": "shutdown-lease-history.py",
+    "firstReceipt": "history-first-exit.json",
+    "snapshot": "2026-10-17T19:16:56.757474+00:00",
+    "historyFiles": 5850,
+    "productFiles": []
+  },
+  "notClaimed": "No product bytes opened or hashed; no new source semantic coverage, current product correctness, runtime behavior, candidate severity or formal promotion decision.",
+  "productExecution": 0,
+  "gitOperations": 0
+}

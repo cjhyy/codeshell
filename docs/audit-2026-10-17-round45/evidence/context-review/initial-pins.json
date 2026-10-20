@@ -1,0 +1,22 @@
+{
+  "context": "Root-reported baseline4d5e81a27ac0481113bc523bfbf588d10672ef38; no own Git",
+  "scope": "before history gate and all target product body reads",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "bytes": 12329,
+      "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "lineCount": 341,
+      "pinUTC": "2026-10-17T15:13:36.004909+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "bytes": 12083,
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "lineCount": 321,
+      "pinUTC": "2026-10-17T15:13:36.006904+00:00",
+      "semanticRead": false
+    }
+  ]
+}

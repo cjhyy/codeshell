@@ -1,0 +1,20 @@
+{
+  "scope": "First400 characters of MD-only hits in retained first100 of132 broad contexts; not all history or all oldCause contexts.",
+  "selected": [
+    {
+      "index": 0,
+      "path": "docs/archive/todo/plan-group-c-worktree-panels.md",
+      "boundedText": "gnature + 少量测试更新。\n\n## 4. 顶栏 worktree 切换器视觉/语义梳理\n\n### 真实锚点\n\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:117`：`WorkspaceIndicator` 主组件。\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:392`：`list.worktrees` 直接 flat map 成 rows。\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:481`：`WorkspaceRow`。\n- `packages/desktop/src/renderer/topbar/WorkspaceIndicator"
+    },
+    {
+      "index": 70,
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+      "boundedText": "12 | `components/ui/select.tsx` | 157 | scope unconfirmed |\n| 13 | `components/ui/dialog.tsx` | 106 | scope unconfirmed |\n| 14 | `chat/InlineMedia.tsx` | 217 | scope unconfirmed |\n| 15 | `chat/Lightbox.tsx` | 277 | scope unconfirmed |\n| 16 | `chat/MentionPopover.tsx` | 370 | scope unconfirmed |\n| 17 | `chat/useAnchoredPopover.ts` | 178 | scope unconfirmed |\n| 18 | `messages/AgentMessageView.tsx` |"
+    },
+    {
+      "index": 91,
+      "path": "docs/review-2026-10-12/hub-session-operations-quality-round18.md",
+      "boundedText": " 消费和对应 DOM 提交，正常控制明确等待错误/保存结果；它不能扩成 native 浏览器布局/焦点或完整多设备 UI 并发覆盖。\n\n两冻结产品基线的静态比较中，HubSessions、session-management、async-user-answer、Core server/ChatSession、回答卡及 controller 的相关路径一致；headless-server 的变化仅为无关的 Panel projectScope 导入及路由处理，不改变本候选的 running 登记、帧透传或归档 gate。本文精确行号按 a66f latest；84740 在无关新增代码之后有行号偏移。两基线动态适用以 root 自有 guarded 复跑收据为准，不把外部报告的复跑混入本审计或作者原始计数。\n\n## 去重和修复范围\n\n与 R73 独立：R73 是 configuration "
+    }
+  ]
+}

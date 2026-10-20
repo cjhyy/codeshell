@@ -1,0 +1,137 @@
+{
+  "capturedUTC": "2026-10-17T17:41:57.054488+00:00",
+  "postActualReadCapture": true,
+  "notInitialSnapshotOrAdditionalSemanticRead": true,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "displayedLineRanges": [
+        [
+          1,
+          218
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1,
+          "end": 218,
+          "text": "/**\n * Browser-native image compression for the chat composer.\n *\n * Why\n * ---\n * Renderer-side (browser) compression keeps us off native deps (no sharp,\n * no canvas npm package) — `<canvas>.toBlob` is built into Electron's\n * Chromium and does the entire decode → resize → re-encode cycle for us.\n *\n * The engine has a hard policy (`packages/core/src/engine/image-policy.ts`)\n * that refuses any image over 2 MB. Without this step, a user pasting a\n * 4 MB screenshot would have their turn refused with a friendly error\n * but still need to compress manually. This step makes the friendly\n * refusal the *fallback*, not the common case.\n *\n * Strategy\n * --------\n * 1. If the original is already small (≤ TARGET_BYTES), pass through\n *    unchanged. We don't re-encode tiny PNGs into JPEGs lossily for\n *    nothing — that would visibly degrade screenshots of code.\n * 2. Otherwise, load into an <img>, draw onto a canvas with the long\n *    edge clamped to MAX_DIMENSION, and re-encode as JPEG at a fixed\n *    quality. Two re-encode attempts at progressively lower quality\n *    give a soft landing for unusually large inputs.\n * 3. If anything in the pipeline throws (HEIC the canvas can't decode,\n *    OOM, …), return the original — the engine policy will catch it\n *    later. Compression must never *lose* an image.\n *\n * Public surface is just `compressIfNeeded()`. Constants are inline +\n * exported for the tests under `compress.test.ts`.\n *\n * Animated GIF caveat: drawing a GIF to canvas freezes the first frame.\n * That's a one-way conversion. For now we still compress them when\n * oversized — preserving the bytes of a 5 MB GIF is the worse failure\n * (it would just be rejected by the engine anyway). A future change\n * could skip GIFs and surface a warning instead.\n */\n\nimport type { ImageAttachment } from \"./attachments\";\n\n/**\n * Bytes below this we don't bother re-encoding. Matches the engine's\n * `IMAGE_LIMITS.maxBytesPerImage` (2 MB) so anything passing this gate\n * also passes the engine gate.\n *\n * Kept in sync manually because the renderer can't import from core\n * (different build target).\n */\nexport const TARGET_BYTES = 2 * 1024 * 1024;\n\n/** Long-edge pixel cap. Matches engine's `IMAGE_TARGETS.targetMaxDimension`. */\nexport const MAX_DIMENSION = 2048;\n\n/**\n * Image clarity level (provider-agnostic). Drives the long-edge cap so the user\n * trades fidelity for token cost. Replaces the old OpenAI-only low/high/original\n * knob: for OpenAI the engine still maps low→low / standard,high→high; for\n * Anthropic (no detail param — it just bills by pixels, ⌈w/28⌉×⌈h/28⌉) the\n * SAVING comes entirely from this renderer-side downscale before send.\n *   low      — 省钱: long edge ≤ 1024 (fewest tokens)\n *   standard — 1568 (old-model native cap; good cost/quality)\n *   high     — 2576 (Opus 4.7/4.8 high-res cap; full fidelity)\n */\nexport type ImageDetail = \"low\" | \"standard\" | \"high\";\n\nconst DETAIL_CAPS: Record<ImageDetail, number> = {\n  low: 1024,\n  standard: 1568,\n  high: 2576,\n};\n\n/** Long-edge pixel cap for a clarity level. Unknown/undefined → high (no\n *  surprise downscale of someone who never opted in). */\nexport function capForDetail(detail: ImageDetail | undefined): number {\n  return (detail && DETAIL_CAPS[detail]) || DETAIL_CAPS.high;\n}\n\n/**\n * Whether to downsample EVERY image (not just oversized ones). low/standard do\n * — that's how they actually cut tokens (a sub-2MB but 3000px screenshot still\n * costs ~4784 tokens on Opus). high preserves fidelity: compress only when over\n * the byte cap, exactly like the original behaviour.\n */\nexport function alwaysDownsample(detail: ImageDetail | undefined): boolean {\n  return detail === \"low\" || detail === \"standard\";\n}\n\n/**\n * JPEG quality ladder. We try the first quality; if the result is still\n * over `TARGET_BYTES` we try the next one, and so on. Empirically two\n * steps land every screenshot we've thrown at it under the cap.\n */\nconst QUALITY_LADDER = [0.82, 0.7, 0.55];\n\n/** MIME types we recompress as JPEG. Others pass through unchanged. */\nconst RECOMPRESSIBLE = new Set([\"image/png\", \"image/jpeg\", \"image/jpg\", \"image/webp\"]);\n\n/**\n * Compress one ImageAttachment if it exceeds `TARGET_BYTES`. Returns a\n * possibly-new ImageAttachment (with updated dataUrl/size/mime/name) or\n * the original instance unchanged.\n *\n * The function is `async` because `Image.decode()` and `canvas.toBlob()`\n * both need it. It never rejects — failures fall back to the original.\n */\nexport async function compressIfNeeded(\n  att: ImageAttachment,\n  detail?: ImageDetail,\n): Promise<ImageAttachment> {\n  // high/default: only touch oversized images (preserve fidelity). low/standard:\n  // downsample every image to cut tokens, even when under the byte cap.\n  if (att.size <= TARGET_BYTES && !alwaysDownsample(detail)) return att;\n  if (!RECOMPRESSIBLE.has(att.mime)) return att;\n\n  const cap = capForDetail(detail);\n  try {\n    const img = await loadImage(att.dataUrl);\n    const { width, height } = scaledDimensions(\n      img.naturalWidth,\n      img.naturalHeight,\n      cap,\n    );\n    // Already at/under the cap AND within bytes → nothing to gain, keep original\n    // (avoids needlessly re-encoding a small PNG of code into lossy JPEG).\n    if (width === img.naturalWidth && height === img.naturalHeight && att.size <= TARGET_BYTES) {\n      return att;\n    }\n    const canvas = document.createElement(\"canvas\");\n    canvas.width = width;\n    canvas.height = height;\n    const ctx = canvas.getContext(\"2d\");\n    if (!ctx) return att;\n    ctx.drawImage(img, 0, 0, width, height);\n\n    for (const q of QUALITY_LADDER) {\n      const blob = await canvasToBlob(canvas, \"image/jpeg\", q);\n      if (!blob) continue;\n      if (blob.size <= TARGET_BYTES || q === QUALITY_LADDER[QUALITY_LADDER.length - 1]) {\n        const dataUrl = await blobToDataUrl(blob);\n        return {\n          ...att,\n          mime: \"image/jpeg\",\n          // Rename only the extension so the tooltip still shows where\n          // the bytes came from. `a.png` → `a.png.jpg` is the convention\n          // ImageMagick uses for non-destructive re-encodes.\n          name: att.name.match(/\\.jpe?g$/i) ? att.name : `${att.name}.jpg`,\n          dataUrl,\n          size: blob.size,\n        };\n      }\n    }\n    return att;\n  } catch (err) {\n    // Bubble up to console for triage but keep the original — the\n    // engine's policy gate is the safety net.\n    console.warn(\"[attachments] compress failed\", err);\n    return att;\n  }\n}\n\n/**\n * Run `compressIfNeeded` on a batch in parallel. Order of the output\n * matches the input order so the renderer's attachment chips don't\n * shuffle when a single image takes longer to encode.\n */\nexport async function compressBatch(\n  atts: ImageAttachment[],\n  detail?: ImageDetail,\n): Promise<ImageAttachment[]> {\n  return Promise.all(atts.map((a) => compressIfNeeded(a, detail)));\n}\n\n// ---------------------------------------------------------------- internals\n\nfunction loadImage(src: string): Promise<HTMLImageElement> {\n  return new Promise((resolve, reject) => {\n    const img = new Image();\n    img.onload = () => resolve(img);\n    img.onerror = () => reject(new Error(\"image decode failed\"));\n    img.src = src;\n  });\n}\n\n/**\n * Long-edge clamp that preserves aspect ratio. If the image is already\n * within the cap, returns its natural dimensions unchanged — important\n * so screenshots of code stay readable.\n */\nexport function scaledDimensions(\n  w: number,\n  h: number,\n  cap: number,\n): { width: number; height: number } {\n  if (w <= cap && h <= cap) return { width: w, height: h };\n  if (w >= h) {\n    return { width: cap, height: Math.round((h * cap) / w) };\n  }\n  return { width: Math.round((w * cap) / h), height: cap };\n}\n\nfunction canvasToBlob(\n  canvas: HTMLCanvasElement,\n  type: string,\n  quality: number,\n): Promise<Blob | null> {\n  return new Promise((resolve) => {\n    canvas.toBlob((b) => resolve(b), type, quality);\n  });\n}\n\nfunction blobToDataUrl(blob: Blob): Promise<string> {\n  return new Promise((resolve, reject) => {\n    const r = new FileReader();\n    r.onload = () => resolve(String(r.result ?? \"\"));\n    r.onerror = () => reject(new Error(\"FileReader failed\"));\n    r.readAsDataURL(blob);\n  });\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "displayedLineRanges": [
+        [
+          1225,
+          1276
+        ],
+        [
+          1284,
+          1303
+        ],
+        [
+          1307,
+          1335
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1225,
+          "end": 1276,
+          "text": "  const acceptFiles = async (files: File[], origin: \"paste\" | \"os-drop\" | \"picker\") => {\n    if (composerDisabled || compacting) return;\n    if (files.length === 0) return;\n    if (!localRuntime) {\n      await onSelectRemoteFiles?.(files);\n      return;\n    }\n    setAttachmentError(null);\n    const { accepted, errors } = await buildAttachments(files, attachments);\n    if (!mountedRef.current) return;\n    if (accepted.length > 0) {\n      // Compress before staging so the chip thumbnail and the wire\n      // payload share the same bytes — keeps the UI honest about what\n      // will actually be sent. compressBatch never throws; it falls\n      // back to the original if encoding fails (engine policy still\n      // gates oversize bytes downstream).\n      const compressed = await compressBatch(accepted, imageDetail);\n      if (!mountedRef.current) return;\n      const context = onPrepareAttachmentSession?.();\n      if (!context) {\n        errors.push({\n          kind: \"staging-failed\",\n          message: t(\"chat.attachment.stagingUnavailable\"),\n        });\n      } else {\n        try {\n          const staged = await Promise.all(\n            compressed.map(async (att) => {\n              const meta = await window.codeshell.stageAttachmentImageDataUrl({\n                cwd: context.cwd,\n                sessionId: context.sessionId,\n                name: att.name,\n                mime: att.mime,\n                dataUrl: att.dataUrl,\n                origin,\n                quickChatClaimId: context.quickChatClaimId,\n              });\n              return {\n                ...att,\n                id: meta.id,\n                path: meta.path,\n                relPath: meta.relPath,\n                absPath: meta.absPath,\n                sha256: meta.sha256,\n                origin: meta.origin,\n                sessionId: meta.sessionId,\n                createdAt: meta.createdAt,\n                size: meta.size,\n                mime: meta.mime ?? att.mime,\n              };\n            }),\n          );\n"
+        },
+        {
+          "start": 1284,
+          "end": 1303,
+          "text": "              message: (e as Error).message,\n            }),\n          });\n        }\n      }\n    }\n    if (mountedRef.current && errors.length > 0) {\n      setAttachmentError(errors.map((e) => e.message).join(\"；\"));\n    }\n  };\n\n  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {\n    if (compacting) return;\n    captureMentionEditSelection(e.currentTarget);\n    const imageFiles = filesFromClipboard(e.clipboardData?.items ?? null);\n    if (imageFiles.length === 0) return;\n    e.preventDefault();\n    await acceptFiles(imageFiles, \"paste\");\n  };\n\n"
+        },
+        {
+          "start": 1307,
+          "end": 1335,
+          "text": "\n  const acceptComposerFiles = async (\n    files: File[],\n    origin: \"os-drop\" | \"picker\",\n  ): Promise<void> => {\n    if (composerDisabled || compacting || files.length === 0) return;\n    if (!localRuntime) {\n      await onSelectRemoteFiles?.(files);\n      return;\n    }\n    setAttachmentError(null);\n    const images: File[] = [];\n    const paths: string[] = [];\n    const unavailable: string[] = [];\n\n    for (const file of files) {\n      const path = pathForRendererFile(file);\n      if (file.type.startsWith(\"image/\") || (path && classifyPath(path) === \"image\")) {\n        images.push(file);\n      } else if (path) {\n        paths.push(path);\n      } else {\n        unavailable.push(file.name || t(\"chat.attachment.unnamed\"));\n      }\n    }\n\n    if (images.length > 0) await acceptFiles(images, origin);\n    if (!mountedRef.current) return;\n    if (paths.length > 0) addLocalFilePaths(paths, origin);\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "displayedLineRanges": [
+        [
+          18,
+          49
+        ],
+        [
+          61,
+          156
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 18,
+          "end": 49,
+          "text": "export interface ImageAttachment {\n  /** Local id for keying/removing in the UI. */\n  id: string;\n  /** Original file name when available. Used for the chip tooltip. */\n  name: string;\n  /** MIME type as reported by the browser. */\n  mime: string;\n  /** Base64 data URL — what the model wire format wants. */\n  dataUrl: string;\n  /** Size in bytes (best-effort; useful for the \"太大\" warning). */\n  size: number;\n  /** Path shown to the model; prefers cwd-relative paths. */\n  path?: string;\n  /** Absolute path for main/core/tool handoff; not shown unless needed. */\n  absPath?: string;\n  /** cwd-relative path when the attachment was copied into the workspace. */\n  relPath?: string;\n  /** Hex sha256 of the staged/sourced bytes, without a `sha256:` prefix. */\n  sha256?: string;\n  /** Where the user supplied this attachment from. */\n  origin?:\n    | \"paste\"\n    | \"os-drop\"\n    | \"file-panel\"\n    | \"picker\"\n    | \"mention\"\n    | \"generated\"\n    | \"mobile\"\n    | \"tool\";\n  /** Session directory that owns staged attachments. */\n  sessionId?: string;\n  /** When this attachment was staged/selected. */\n"
+        },
+        {
+          "start": 61,
+          "end": 156,
+          "text": "\nexport const ATTACHMENT_LIMITS = {\n  /** Single-file ceiling. Most providers cap at 20 MB; stay conservative. */\n  maxBytesPerImage: 10 * 1024 * 1024,\n  maxImagesPerMessage: 6,\n  /** Anything outside this set is rejected before reading. */\n  allowedMimes: new Set([\"image/png\", \"image/jpeg\", \"image/jpg\", \"image/webp\", \"image/gif\"]),\n} as const;\n\nexport interface AttachmentError {\n  kind: \"too-large\" | \"wrong-type\" | \"too-many\" | \"read-failed\" | \"staging-failed\";\n  message: string;\n}\n\nlet idCounter = 0;\nfunction nextId(): string {\n  idCounter += 1;\n  return `img-${Date.now().toString(36)}-${idCounter}`;\n}\n\nfunction readFileAsDataUrl(file: File): Promise<string> {\n  return new Promise((resolve, reject) => {\n    const reader = new FileReader();\n    reader.onload = () => resolve(String(reader.result ?? \"\"));\n    reader.onerror = () => reject(new Error(\"FileReader failed\"));\n    reader.readAsDataURL(file);\n  });\n}\n\n/**\n * Validate + read a batch of files into ImageAttachment. Returns the\n * accepted attachments and any per-file errors. Callers surface errors\n * in a banner — they never throw, so a paste of mixed content (one\n * image + some text) doesn't kill the whole drop.\n */\nexport async function buildAttachments(\n  files: File[],\n  existing: ImageAttachment[],\n): Promise<{ accepted: ImageAttachment[]; errors: AttachmentError[] }> {\n  const errors: AttachmentError[] = [];\n  const accepted: ImageAttachment[] = [];\n\n  for (const file of files) {\n    if (accepted.length + existing.length >= ATTACHMENT_LIMITS.maxImagesPerMessage) {\n      errors.push({\n        kind: \"too-many\",\n        message: tr(\"chat.attachment.tooMany\", {\n          max: ATTACHMENT_LIMITS.maxImagesPerMessage,\n          name: file.name || tr(\"chat.attachment.unnamed\"),\n        }),\n      });\n      continue;\n    }\n    if (!ATTACHMENT_LIMITS.allowedMimes.has(file.type)) {\n      errors.push({\n        kind: \"wrong-type\",\n        message: tr(\"chat.attachment.wrongType\", {\n          type: file.type || tr(\"chat.attachment.unknownType\"),\n          name: file.name || tr(\"chat.attachment.unnamed\"),\n        }),\n      });\n      continue;\n    }\n    if (file.size > ATTACHMENT_LIMITS.maxBytesPerImage) {\n      errors.push({\n        kind: \"too-large\",\n        message: tr(\"chat.attachment.tooLarge\", {\n          name: file.name || tr(\"chat.attachment.unnamed\"),\n          mb: ATTACHMENT_LIMITS.maxBytesPerImage / 1024 / 1024,\n        }),\n      });\n      continue;\n    }\n    try {\n      const dataUrl = await readFileAsDataUrl(file);\n      accepted.push({\n        id: nextId(),\n        name: file.name || \"image\",\n        mime: file.type,\n        dataUrl,\n        size: file.size,\n      });\n    } catch (e) {\n      errors.push({\n        kind: \"read-failed\",\n        message: tr(\"chat.attachment.readFailed\", {\n          name: file.name || tr(\"chat.attachment.unnamed\"),\n          message: (e as Error).message,\n        }),\n      });\n    }\n  }\n\n  return { accepted, errors };\n}\n\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "displayedLineRanges": [
+        [
+          275,
+          278
+        ],
+        [
+          1530,
+          1537
+        ],
+        [
+          2656,
+          2663
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 275,
+          "end": 278,
+          "text": "  const [imageDetail, setImageDetail] = useState<\"low\" | \"standard\" | \"high\" | undefined>(\n    undefined,\n  );\n  const {\n"
+        },
+        {
+          "start": 1530,
+          "end": 1537,
+          "text": "        );\n        // Image clarity: migrate legacy \"original\" → \"high\"; anything else\n        // unrecognized → undefined (follow default, no downscale).\n        const rawDetail = (merged.images as { detail?: string } | undefined)?.detail;\n        const d = rawDetail === \"original\" ? \"high\" : rawDetail;\n        setImageDetail(d === \"low\" || d === \"standard\" || d === \"high\" ? d : undefined);\n        const conns = Array.isArray(merged.modelConnections)\n          ? (merged.modelConnections as ModelInstance[])\n"
+        },
+        {
+          "start": 2656,
+          "end": 2663,
+          "text": "                    onAskUserAnswer={handleAskUserAnswer}\n                    onExtendGoal={extendGoal}\n                    onAttachImagePath={(p) => void attachImageByPath(p)}\n                    onPrepareAttachmentSession={prepareAttachmentSession}\n                    imageDetail={imageDetail}\n                    pendingApproval={visibleApproval}\n                    onApprovalDecide={\n                      visibleApproval\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.test.ts",
+      "sha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "displayedLineRanges": [
+        [
+          1,
+          82
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1,
+          "end": 82,
+          "text": "import { describe, expect, test } from \"bun:test\";\nimport {\n  scaledDimensions,\n  MAX_DIMENSION,\n  TARGET_BYTES,\n  capForDetail,\n  alwaysDownsample,\n  type ImageDetail,\n} from \"./compress\";\n\n/**\n * Only `scaledDimensions` is unit-testable in pure Node — the rest of\n * compress.ts depends on `document.createElement(\"canvas\")` which we\n * don't fake here. The interesting bug surface is the aspect-ratio math\n * (off-by-one rounding for landscape vs portrait), so that's what we\n * pin down.\n */\n\ndescribe(\"scaledDimensions\", () => {\n  test(\"passes through when both sides fit under the cap\", () => {\n    expect(scaledDimensions(1024, 768, 2048)).toEqual({ width: 1024, height: 768 });\n    expect(scaledDimensions(2048, 2048, 2048)).toEqual({ width: 2048, height: 2048 });\n  });\n\n  test(\"clamps landscape on the long edge\", () => {\n    // 4000×2000 → cap 2048: long edge → 2048, short edge → 1024.\n    expect(scaledDimensions(4000, 2000, 2048)).toEqual({ width: 2048, height: 1024 });\n  });\n\n  test(\"clamps portrait on the long edge\", () => {\n    // 2000×4000 → cap 2048: long edge → 2048, short edge → 1024.\n    expect(scaledDimensions(2000, 4000, 2048)).toEqual({ width: 1024, height: 2048 });\n  });\n\n  test(\"clamps square correctly\", () => {\n    expect(scaledDimensions(4096, 4096, 2048)).toEqual({ width: 2048, height: 2048 });\n  });\n\n  test(\"preserves aspect ratio within one pixel (rounding-tolerant)\", () => {\n    // A weird ratio that rounds to a non-integer.\n    const { width, height } = scaledDimensions(5123, 2718, 2048);\n    expect(width).toBe(2048);\n    // 2048 * 2718/5123 ≈ 1086.6 → 1087.\n    expect(height).toBe(1087);\n    expect(Math.abs(width / height - 5123 / 2718)).toBeLessThan(0.01);\n  });\n});\n\ndescribe(\"constants are sane defaults\", () => {\n  test(\"TARGET_BYTES matches the engine's per-image cap\", () => {\n    expect(TARGET_BYTES).toBe(2 * 1024 * 1024);\n  });\n  test(\"MAX_DIMENSION is the documented 2048\", () => {\n    expect(MAX_DIMENSION).toBe(2048);\n  });\n});\n\ndescribe(\"capForDetail — per-clarity-level long-edge cap\", () => {\n  test(\"low/标准/高清 map to 1024 / 1568 / 2576\", () => {\n    expect(capForDetail(\"low\")).toBe(1024);\n    expect(capForDetail(\"standard\")).toBe(1568);\n    expect(capForDetail(\"high\")).toBe(2576);\n  });\n  test(\"unknown / undefined falls back to high (no surprise downscale)\", () => {\n    expect(capForDetail(undefined)).toBe(2576);\n    expect(capForDetail(\"garbage\" as ImageDetail)).toBe(2576);\n  });\n});\n\ndescribe(\"alwaysDownsample — whether to re-encode even small images\", () => {\n  // low/standard intentionally downsample EVERY image (that's how they save\n  // tokens — a 1.5MB 3000px screenshot is under the byte gate but still costs\n  // ~4784 tokens on Opus). high preserves fidelity: only compress if oversize.\n  test(\"low and standard always downsample\", () => {\n    expect(alwaysDownsample(\"low\")).toBe(true);\n    expect(alwaysDownsample(\"standard\")).toBe(true);\n  });\n  test(\"high (and default) only compress when oversize\", () => {\n    expect(alwaysDownsample(\"high\")).toBe(false);\n    expect(alwaysDownsample(undefined)).toBe(false);\n  });\n});\n"
+        }
+      ]
+    }
+  ]
+}

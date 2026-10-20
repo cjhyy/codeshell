@@ -1,0 +1,19 @@
+{
+  "capturedUTC": "2026-10-17T15:57:58.726285+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "lines": 1571,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "pinBeforeBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "lines": 536,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "pinBeforeBodyAndLineNavigation": true
+    }
+  ]
+}

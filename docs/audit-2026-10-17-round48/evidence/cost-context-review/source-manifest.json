@@ -1,0 +1,330 @@
+{
+  "capturedUTC": "2026-10-17T15:53:25.037261+00:00",
+  "rootReportedContext": "c3a9ece2e6f183671b00e07322a9722fad6bda54 external only; reviewer Git0",
+  "role": "Independent source reviewer;61 author inputs and findings not read or requested",
+  "files": [
+    {
+      "path": "packages/core/src/cost-ledger/context.ts",
+      "bytes": 5823,
+      "lines": 167,
+      "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "capturedBeforeProductBody": true,
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          1
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          5,
+          133
+        ],
+        [
+          137,
+          167
+        ]
+      ],
+      "coveredLineCount": 162,
+      "displayedLineRanges": [
+        [
+          1,
+          167
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineCountIncludingNavigation": 167,
+      "scope": "Ordinary owner/attempt/usage DTO and visible callback flow. Crypto import/hash/random generation2/134–136 and store-type import4 navigation only; no crypto/identity/persist audit.",
+      "firstPinArtifact": "initial-pins.json",
+      "firstFilesystemSHA": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "captureAtUTC": "2026-10-17T15:53:25.037261+00:00",
+      "captureTiming": "After actual source display; not retroactively before-read. First filesystem pin preceded source body/line navigation.",
+      "finishFilesystemSHA": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "finishEqualsFirst": true
+    },
+    {
+      "path": "packages/core/src/llm/client-base.ts",
+      "bytes": 18650,
+      "lines": 468,
+      "sha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "pinBeforeBodyOrLineNavigation": true,
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          63,
+          64
+        ],
+        [
+          75,
+          83
+        ],
+        [
+          90,
+          149
+        ]
+      ],
+      "coveredLineCount": 71,
+      "displayedLineRanges": [
+        [
+          61,
+          155
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        10,
+        13,
+        14,
+        15,
+        16
+      ],
+      "displayedLineCountIncludingNavigation": 100,
+      "scope": "Ordinary construction wrapper, complete provider/model DTO, visibility/billing/purpose gates and usage callbacks only. Model defaults/old output budget comments61–74 outside selected semantic ranges; provider implementation not followed.",
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstFilesystemSHA": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "captureAtUTC": "2026-10-17T15:53:25.037261+00:00",
+      "captureTiming": "After actual source display; not retroactively before-read. First filesystem pin preceded source body/line navigation.",
+      "finishFilesystemSHA": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "finishEqualsFirst": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "bytes": 2251,
+      "lines": 92,
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "pinBeforeBodyOrLineNavigation": true,
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          47
+        ]
+      ],
+      "coveredLineCount": 47,
+      "displayedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineCountIncludingNavigation": 50,
+      "scope": "UsagePurpose/UsageIdentity/UsageReceipt DTO only, not prices/account validity.",
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstFilesystemSHA": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "captureAtUTC": "2026-10-17T15:53:25.037261+00:00",
+      "captureTiming": "After actual source display; not retroactively before-read. First filesystem pin preceded source body/line navigation.",
+      "finishFilesystemSHA": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "finishEqualsFirst": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lines": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "pinBeforeBodyOrLineNavigation": true,
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          488,
+          494
+        ]
+      ],
+      "coveredLineCount": 7,
+      "displayedLineRanges": [
+        [
+          488,
+          509
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineCountIncludingNavigation": 22,
+      "scope": "TokenUsage DTO only; adjacent input compilation display-only.",
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstFilesystemSHA": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "captureAtUTC": "2026-10-17T15:53:25.037261+00:00",
+      "captureTiming": "After actual source display; not retroactively before-read. First filesystem pin preceded source body/line navigation.",
+      "finishFilesystemSHA": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "finishEqualsFirst": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lines": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "pinBeforeBodyOrLineNavigation": true,
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1957,
+          1961
+        ],
+        [
+          1966,
+          1968
+        ]
+      ],
+      "coveredLineCount": 8,
+      "displayedLineRanges": [
+        [
+          1375,
+          1400
+        ],
+        [
+          1945,
+          1976
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        116,
+        4489
+      ],
+      "displayedLineCountIncludingNavigation": 60,
+      "scope": "Normal Engine UsageOwner-returning boundary and main/subagent purpose selection plus owner wrapper. Session storage/identity lineage, prompt/context package assembly, hooks/permissions/run implementation excluded despite display.",
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstFilesystemSHA": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "captureAtUTC": "2026-10-17T15:53:25.037261+00:00",
+      "captureTiming": "After actual source display; not retroactively before-read. First filesystem pin preceded source body/line navigation.",
+      "finishFilesystemSHA": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "finishEqualsFirst": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "bytes": 18125,
+      "lines": 435,
+      "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "pinBeforeBodyOrLineNavigation": true,
+      "kind": "test",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          257,
+          270
+        ]
+      ],
+      "coveredLineCount": 14,
+      "displayedLineRanges": [
+        [
+          251,
+          277
+        ],
+        [
+          283,
+          322
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        7,
+        159,
+        187,
+        207,
+        239
+      ],
+      "displayedLineCountIncludingNavigation": 72,
+      "scope": "One complete existing disabled nested billing declaration as intent only; surrounding identity-store and localhost SDK/retry declarations display/navigation only, no tests/server/SDK run.",
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstFilesystemSHA": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "captureAtUTC": "2026-10-17T15:53:25.037261+00:00",
+      "captureTiming": "After actual source display; not retroactively before-read. First filesystem pin preceded source body/line navigation.",
+      "finishFilesystemSHA": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "finishEqualsFirst": true
+    },
+    {
+      "path": "packages/core/src/model-request-boundary/accounting.test.ts",
+      "bytes": 3086,
+      "lines": 95,
+      "sha256": "4ac2ec636f1330e45bb83afbacacae8deedbaca54a94ce9b256d0582e139f740",
+      "pinBeforeBodyOrLineNavigation": true,
+      "kind": "test",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          20,
+          36
+        ],
+        [
+          38,
+          40
+        ]
+      ],
+      "coveredLineCount": 20,
+      "displayedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        47,
+        53,
+        54,
+        59,
+        60
+      ],
+      "displayedLineCountIncludingNavigation": 50,
+      "scope": "Selected ordinary sections of one existing accounting-failure observation test as intent only; crypto-format assertion37/imports/preflight signing/boundary machinery display/navigation only, not audited or run.",
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstFilesystemSHA": "4ac2ec636f1330e45bb83afbacacae8deedbaca54a94ce9b256d0582e139f740",
+      "captureAtUTC": "2026-10-17T15:53:25.037261+00:00",
+      "captureTiming": "After actual source display; not retroactively before-read. First filesystem pin preceded source body/line navigation.",
+      "finishFilesystemSHA": "4ac2ec636f1330e45bb83afbacacae8deedbaca54a94ce9b256d0582e139f740",
+      "finishEqualsFirst": true
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/core/src/model-traces/context.ts",
+      "bytes": 33874,
+      "lines": 944,
+      "sha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+      "pinBeforeBodyOrLineNavigation": true,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        6,
+        493
+      ],
+      "displayedLineCountIncludingNavigation": 2,
+      "scope": "Only import/currentUsageAttempt requestId locator; randomUUID/model trace mechanisms not followed.",
+      "finishFilesystemSHA": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+      "finishEqualsFirst": true
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "capturedBeforeProductBody": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "capturedBeforeProductBody": true
+    }
+  ],
+  "instructionReadStatus": "Previously read and carried unchanged; repeated hashes only, not new semantic coverage",
+  "semanticFileCount": 7,
+  "fullFileCount": 0,
+  "selectedFileCount": 7,
+  "semanticLines": 329,
+  "semanticProductLines": 295,
+  "semanticTestLines": 34,
+  "displayedProductAndTestLinesIncludingNavigation": 523,
+  "existingSemanticTestDeclarations": 2,
+  "testExecutions": 0,
+  "productExecution": 0,
+  "gitOperations": 0,
+  "nativeNetwork": 0
+}

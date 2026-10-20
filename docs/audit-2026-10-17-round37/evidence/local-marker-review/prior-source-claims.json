@@ -1,0 +1,4443 @@
+{
+  "readAtUTC": "2026-10-17T12:50:43.775156+00:00",
+  "basedOnInventoryCanonicalSha256": "f562e4b8a180eba179be765419a469810655e4f3d53f6b5a2debbcaa78e9580f",
+  "jsonFilesExamined": 1886,
+  "targetPaths": [
+    "packages/core/src/plugins/installedPlugins.ts",
+    "packages/core/src/plugins/installer/install.ts",
+    "packages/core/src/plugins/installer/paths.ts",
+    "packages/core/src/plugins/installer/types.ts",
+    "packages/core/src/plugins/installer/uninstall.ts",
+    "packages/core/src/plugins/knownMarketplaces.ts",
+    "packages/core/src/plugins/marketplaceManager.ts",
+    "packages/core/src/plugins/pluginCatalog.test.ts",
+    "packages/core/src/plugins/pluginCatalog.ts",
+    "packages/core/src/plugins/pluginInstaller.ts",
+    "packages/core/src/plugins/schemas.ts",
+    "packages/core/src/plugins/types.ts",
+    "packages/desktop/src/main/index.ts",
+    "packages/desktop/src/main/plugins-service.ts",
+    "packages/desktop/src/preload/index.ts",
+    "packages/desktop/src/preload/types.d.ts",
+    "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+    "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+    "packages/desktop/src/renderer/extensions/uninstallTarget.ts"
+  ],
+  "matchingObjectRows": 465,
+  "currentDirectShaRows": 123,
+  "currentDirectShaRowsByTarget": {
+    "packages/desktop/src/preload/index.ts": 28,
+    "packages/core/src/plugins/installer/types.ts": 11,
+    "packages/desktop/src/main/index.ts": 8,
+    "packages/desktop/src/preload/types.d.ts": 16,
+    "packages/core/src/plugins/installedPlugins.ts": 7,
+    "packages/core/src/plugins/installer/paths.ts": 5,
+    "packages/core/src/plugins/knownMarketplaces.ts": 4,
+    "packages/core/src/plugins/marketplaceManager.ts": 9,
+    "packages/core/src/plugins/pluginCatalog.ts": 4,
+    "packages/core/src/plugins/schemas.ts": 4,
+    "packages/desktop/src/renderer/extensions/uninstallTarget.ts": 2,
+    "packages/core/src/plugins/installer/install.ts": 9,
+    "packages/core/src/plugins/installer/uninstall.ts": 1,
+    "packages/core/src/plugins/pluginCatalog.test.ts": 1,
+    "packages/core/src/plugins/pluginInstaller.ts": 6,
+    "packages/core/src/plugins/types.ts": 1,
+    "packages/desktop/src/main/plugins-service.ts": 5,
+    "packages/desktop/src/renderer/extensions/PluginsTab.tsx": 1,
+    "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts": 1
+  },
+  "currentDirectShaRowsFull": [
+    {
+      "historyPath": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonLocation": "$[\"files\"][16]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "frozenGitBlob": "447721df39607d329ad5b46c18dfa6ebd1a27400",
+        "frozenSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "frozenBytes": 86436,
+        "currentEqualsFrozen": true,
+        "inspectionScope": "lines 1046-1047 and target search references; static only"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "jsonLocation": "$[\"files\"][19]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][16]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "search-source-manifest.json",
+        "path": "packages/desktop/src/preload/index.ts",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round15/evidence/migration-source-manifest.json",
+      "jsonLocation": "$[\"files\"][6]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "bytes": 5106,
+        "scope": "full static schema read; no separate schema validation run",
+        "currentSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "currentEqualsFrozen": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round15/source-manifest.json",
+      "jsonLocation": "$[\"files\"][31]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "bytes": 5106,
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "mainSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round15/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][32]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "migration-source-manifest.json",
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-package-prep/inventory.json",
+      "jsonLocation": "$[\"files\"][100]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "jsonLocation": "$[\"sources\"][82]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "frozenSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "matchesFrozen": true,
+        "coverage": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "jsonLocation": "$[\"checks\"][82]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentRoundFrozenMatchesPrep": true,
+        "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "jsonLocation": "$[\"files\"][106]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "mainSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentWorkingTreeMatchesMain": true,
+        "currentBytes": 86436,
+        "mainBytes": 86436
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][82]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentRoundFrozenMatchesPrep": true,
+        "reading": "Prior prep inventory/hash only, not Root new full reading or runtime"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round25/addressed-sources.json",
+      "jsonLocation": "$[\"sourceMetadataChanges\"][0]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "frozenSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+        "mainSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "frozenBytes": 299077,
+        "mainBytes": 299337,
+        "authorReadRanges": [
+          [
+            4206,
+            4213
+          ]
+        ],
+        "selectedAuthorLinesUnchanged": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round25/evidence/main-source-review.json",
+      "jsonLocation": "$[\"changedSelectedSources\"][0]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "frozenSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+        "mainSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "frozenBytes": 299077,
+        "mainBytes": 299337,
+        "authorReadRanges": [
+          [
+            4206,
+            4213
+          ]
+        ],
+        "selectedAuthorLinesUnchanged": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "jsonLocation": "$[\"files\"][40]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299077,
+        "sha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+        "currentSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "mainSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "currentBytes": 299337,
+        "mainBytes": 299337,
+        "currentWorkingTreeMatchesFrozenBlob": false,
+        "mainMatchesFrozenBlob": false,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round26/evidence/service-source-manifest.json",
+      "jsonLocation": "$[\"sources\"][8]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            85,
+            89
+          ],
+          [
+            122,
+            134
+          ],
+          [
+            1040,
+            1060
+          ]
+        ],
+        "lineCount": 2982,
+        "bytes": 102234,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "runtimeExecuted": false,
+        "note": "Review public-type/import/composition segments only;other rg navigation snippets not claimed reviewed plugin interfaces."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round26/evidence/service-source-manifest.json",
+      "jsonLocation": "$[\"sources\"][9]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            6423,
+            6458
+          ]
+        ],
+        "lineCount": 7330,
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "runtimeExecuted": false
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round26/source-manifest.json",
+      "jsonLocation": "$[\"files\"][24]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "currentSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "mainSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "currentBytes": 299337,
+        "mainBytes": 299337,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round26/source-manifest.json",
+      "jsonLocation": "$[\"files\"][29]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "currentSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "mainSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "currentBytes": 102234,
+        "mainBytes": 102234,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round26/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][52]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "service-source-manifest.json",
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "scope": "selected",
+        "rootIndependentlyBoundFrozenBlob": true,
+        "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round26/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][53]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "service-source-manifest.json",
+        "path": "packages/desktop/src/main/index.ts",
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "scope": "selected",
+        "rootIndependentlyBoundFrozenBlob": true,
+        "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][306]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installedPlugins.ts",
+        "bytes": 9314,
+        "lines": 265,
+        "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+                "jsonLocation": "$[\"files\"][25]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+                "jsonLocation": "$[\"files\"][24]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][24]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][322]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/paths.ts",
+        "bytes": 994,
+        "lines": 30,
+        "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+                "jsonLocation": "$[\"files\"][21]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][36]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][325]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "bytes": 5106,
+        "lines": 154,
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round15/evidence/migration-source-manifest.json",
+                "jsonLocation": "$[\"files\"][6]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+                "jsonLocation": "$[\"files\"][31]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][32]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+                "jsonLocation": "$[\"files\"][8]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][38]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][326]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/knownMarketplaces.ts",
+        "bytes": 6280,
+        "lines": 161,
+        "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+                "jsonLocation": "$[\"files\"][20]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][39]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][329]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "bytes": 7940,
+        "lines": 236,
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+                "jsonLocation": "$[\"files\"][19]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][332]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginCatalog.ts",
+        "bytes": 5601,
+        "lines": 157,
+        "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+                "jsonLocation": "$[\"files\"][18]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][43]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][336]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/schemas.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/schemas.ts",
+        "bytes": 6630,
+        "lines": 183,
+        "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+                "jsonLocation": "$[\"files\"][9]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][47]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][552]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "lines": 7330,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "status": "current-sha-selected-only",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 1,
+        "currentSelectedUnionLines": 36,
+        "currentSelectedUnionRanges": [
+          [
+            6423,
+            6458
+          ]
+        ],
+        "priorVersionClaimVariants": 5,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 7,
+        "claims": [
+          {
+            "sourceSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+                "jsonLocation": "$[\"files\"][28]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+                "jsonLocation": "$[\"files\"][48]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+                "jsonLocation": "$[\"files\"][17]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"files\"][18]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][17]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round17/source-manifest.json",
+                "jsonLocation": "$[\"files\"][34]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round17/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][21]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+                "jsonLocation": "$[\"files\"][105]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+                "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][81]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+                "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][42]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": "690–703,5555–5564; catalog callback and save IPC, not imported",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][21]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "explicit-hash-or-inventory-only",
+            "rawCoverageLabel": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+                "jsonLocation": "$[\"sources\"][81]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-selected",
+            "rawCoverageLabel": "selected",
+            "selectedLineRanges": [
+              [
+                6423,
+                6458
+              ]
+            ],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round26/evidence/service-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][9]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round26/source-manifest.json",
+                "jsonLocation": "$[\"files\"][24]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round26/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][53]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "cf5ba2f931c816cb44b598d54ef173793e40f554335de75d103f7b0ee5a2c26a",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/review-2026-10-12/reproductions/menu-recents-round23/source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][8]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-menu-recents-round23/root-first-portability-failure-initial/source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][8]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "426bfe5ccc8387db82f5bbe47ce1b83681995e7192f37bb03775f4eca37d0d80",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/menu-recents-round23/source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][8]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/source-manifest.json",
+                "jsonLocation": "$[26]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-menu-recents-round23/author-first/source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][8]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-menu-recents-round23/root-first-portability-failure-latest/source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][8]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][599]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lines": 1892,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 3,
+        "claimVariants": 4,
+        "claims": [
+          {
+            "sourceSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+                "jsonLocation": "$[\"files\"][16]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"files\"][19]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][16]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+                "jsonLocation": "$[\"files\"][106]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+                "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][82]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+                "jsonLocation": "$[\"files\"][46]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-hash-or-inventory-only",
+            "rawCoverageLabel": "inventory/hash only unless separately selected-history passage; no full semantic coverage claim",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+                "jsonLocation": "$[\"sources\"][82]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": "selected tailLog IPC adapter lines 996-997; not executed",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][24]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "b85c80ec01b488890fcfad0e9afed4fb1e02575dcba8e30cce8a06805ed44327",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/review-2026-10-12/reproductions/menu-routing-round23/source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][1]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/menu-routing-round23/source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][1]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/source-manifest.json",
+                "jsonLocation": "$[28]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-menu-routing-round23/archive-first/source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][1]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-menu-routing-round23/source-manifest.json",
+                "jsonLocation": "$[\"sourceManifest\"][1]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+                "jsonLocation": "$[32]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+                "jsonLocation": "$[32]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonLocation": "$[\"files\"][604]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "lines": 2982,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "status": "current-sha-selected-only",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 1,
+        "currentSelectedUnionLines": 39,
+        "currentSelectedUnionRanges": [
+          [
+            85,
+            89
+          ],
+          [
+            122,
+            134
+          ],
+          [
+            1040,
+            1060
+          ]
+        ],
+        "priorVersionClaimVariants": 2,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 4,
+        "claims": [
+          {
+            "sourceSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-selected",
+            "rawCoverageLabel": "selected",
+            "selectedLineRanges": [
+              [
+                85,
+                89
+              ],
+              [
+                122,
+                134
+              ],
+              [
+                1040,
+                1060
+              ]
+            ],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round26/evidence/service-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][8]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round26/source-manifest.json",
+                "jsonLocation": "$[\"files\"][29]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round26/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][52]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "5620bf480afc0c6a667be075be3deb032cade2720b5229c1bda94d1b4154f249",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": "tailLog public type search hit only; not executed",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][25]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "5620bf480afc0c6a667be075be3deb032cade2720b5229c1bda94d1b4154f249",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+                "jsonLocation": "$[\"files\"][47]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "jsonLocation": "$[\"rankedCandidates\"][77]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+        "bytes": 1840,
+        "lines": 39,
+        "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+        "coverageStatus": "no-matching-source-manifest-row",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 0,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 0,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][824]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installedPlugins.ts",
+        "bytes": 9314,
+        "lines": 265,
+        "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][840]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/install.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "bytes": 3010,
+        "lines": 74,
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][859]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/paths.ts",
+        "bytes": 994,
+        "lines": 30,
+        "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][869]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "bytes": 5106,
+        "lines": 154,
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][871]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/uninstall.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/uninstall.ts",
+        "bytes": 907,
+        "lines": 19,
+        "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][876]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/knownMarketplaces.ts",
+        "bytes": 6280,
+        "lines": 161,
+        "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][881]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "bytes": 7940,
+        "lines": 236,
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][887]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.test.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginCatalog.test.ts",
+        "bytes": 5530,
+        "lines": 157,
+        "sha256": "ba7383c30272aca56cf9090d375f1c5ec2d17f997dcebfd56bcaeb934e4c321d"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][888]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginCatalog.ts",
+        "bytes": 5601,
+        "lines": 157,
+        "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][901]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginInstaller.ts",
+        "bytes": 19962,
+        "lines": 487,
+        "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][907]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/schemas.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/schemas.ts",
+        "bytes": 6630,
+        "lines": 183,
+        "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][910]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/types.ts",
+        "bytes": 3237,
+        "lines": 98,
+        "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][1867]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "lines": 7330,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][2138]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/plugins-service.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/plugins-service.ts",
+        "bytes": 11267,
+        "lines": 323,
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][2320]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lines": 1892,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][2355]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "lines": 2982,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][2698]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+        "bytes": 18987,
+        "lines": 530,
+        "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][2713]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+        "bytes": 2011,
+        "lines": 39,
+        "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonLocation": "$[\"files\"][2714]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+        "bytes": 1840,
+        "lines": 39,
+        "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+      "jsonLocation": "$[\"files\"][13]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentBytes": 86436,
+        "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "mainBytes": 86436,
+        "mainSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+      "jsonLocation": "$[\"files\"][14]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "currentBytes": 102234,
+        "currentSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "mainBytes": 102234,
+        "mainSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][6]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/desktop/src/preload/index.ts",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][27]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "room-source-manifest.json",
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][50]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "review-root-runtime-source-manifest.json",
+        "path": "packages/desktop/src/preload/index.ts",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][67]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "review-room-stop-source-manifest.json",
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/review-room-stop-source-manifest.json",
+      "jsonLocation": "$[\"initialPins\"][8]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "lineCount": 2982,
+        "initialFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "coverage": "initial byte pin; semantic coverage only when listed in files",
+        "finishFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "initialEqualsFinish": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/review-room-stop-source-manifest.json",
+      "jsonLocation": "$[\"files\"][7]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "lineCount": 2982,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "initialFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "finishFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "initialEqualsFinish": true,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            2442,
+            2463
+          ]
+        ],
+        "coveredLineCount": 22,
+        "sourceReadTiming": "Reviewer durable initial pin precedes the declared review read; earlier navigation/reused historical knowledge does not expand ranges.",
+        "runtimeExecuted": false,
+        "gitBlobComparedByReviewer": false
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/review-room-stop-source-manifest.json",
+      "jsonLocation": "$[\"authorSourceManifestChecks\"][8]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "author": "room",
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "lineCount": 2982,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "coverageDeclaredByAuthor": "selected",
+        "selectedLineRangesDeclaredByAuthor": [
+          [
+            2442,
+            2463
+          ]
+        ],
+        "coveredLineCountDeclaredByAuthor": 22,
+        "matchesAuthorManifest": true,
+        "reviewerSemanticCoverageInSeparateFilesField": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+      "jsonLocation": "$[\"sourcePins\"][6]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lineCount": 1892,
+        "ranges": [
+          [
+            235,
+            310
+          ]
+        ],
+        "coverage": "selected",
+        "coveredLineCount": 76,
+        "initialSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+        "finishSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "matchesInitialPin": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+      "jsonLocation": "$[\"authorManifestChecks\"][0][\"sourceRows\"][6]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "bytes": 86436,
+        "lineCount": 1892,
+        "ranges": [
+          [
+            235,
+            310
+          ]
+        ],
+        "coveredLineCount": 76,
+        "role": "ordinary-consumer",
+        "validCurrentBytesAndBounds": true,
+        "initialFilesystemSha256": null,
+        "firstPinBeforeThisTaskSemanticRead": null,
+        "pinTiming": "after selected235-310 consumer read"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/room-consumer-initial-pins.json",
+      "jsonLocation": "$[\"files\"][4]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "lineCount": 2982,
+        "firstFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "captureTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+        "gitBlobCompared": false
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/room-source-manifest.json",
+      "jsonLocation": "$[\"files\"][8]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "lineCount": 2982,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "firstFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "initialSemanticReadSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "finishFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            2442,
+            2463
+          ]
+        ],
+        "coveredLineCount": 22,
+        "firstPinTiming": "Before selected/full semantic consumer reading; prior rg output was locator only",
+        "gitBlobCompared": false,
+        "runtimeExecuted": false
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/root-consumer-pins.json",
+      "jsonLocation": "$[\"files\"][1]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lineCount": 1892,
+        "initialFilesystemSha256": null,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "pinTiming": "after selected235-310 consumer read"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+      "jsonLocation": "$[\"files\"][6]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "lineCount": 1892,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            235,
+            310
+          ]
+        ],
+        "coveredLineCount": 76,
+        "role": "ordinary-consumer",
+        "initialFilesystemSha256": null,
+        "firstDurableSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "pinTiming": "after selected235-310 consumer read",
+        "finishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "matchesFirstDurablePin": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/source-manifest.json",
+      "jsonLocation": "$[\"files\"][13]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentBytes": 86436,
+        "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "mainBytes": 86436,
+        "mainSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/source-manifest.json",
+      "jsonLocation": "$[\"files\"][14]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "currentBytes": 102234,
+        "currentSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "mainBytes": 102234,
+        "mainSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][6]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/desktop/src/preload/index.ts",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][27]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "room-source-manifest.json",
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][50]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "review-root-runtime-source-manifest.json",
+        "path": "packages/desktop/src/preload/index.ts",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round29/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][67]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/types.d.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "review-room-stop-source-manifest.json",
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round32/evidence/review-selection-source-manifest.json",
+      "jsonLocation": "$[\"files\"][7]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lineCount": 1892,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "initialFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "finishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+        "captureRecord": "consumer-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            767,
+            782
+          ]
+        ],
+        "coveredLineCount": 16,
+        "prepSourceRow": {
+          "path": "packages/desktop/src/preload/index.ts",
+          "bytes": 86436,
+          "lineCount": 1892,
+          "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "initialFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "finishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "initialEqualsFinish": true,
+          "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+          "captureRecord": "consumer-initial-pins.json",
+          "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+          "gitBlobComparedByReviewer": false,
+          "runtimeExecuted": false,
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              767,
+              782
+            ]
+          ],
+          "coveredLineCount": 16
+        },
+        "semanticReadReusedFromPrep": true,
+        "formalizationNewSemanticRead": false,
+        "formalizationFinishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "formalizationInitialEqualsFinish": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round32/evidence/review-selection-source-manifest.json",
+      "jsonLocation": "$[\"files\"][7][\"prepSourceRow\"]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lineCount": 1892,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "initialFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "finishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+        "captureRecord": "consumer-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            767,
+            782
+          ]
+        ],
+        "coveredLineCount": 16
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/consumer-initial-pins.json",
+      "jsonLocation": "$[\"files\"][5]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lineCount": 1892,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "timing": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/source-manifest.json",
+      "jsonLocation": "$[\"files\"][7]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lineCount": 1892,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "initialFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "finishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+        "captureRecord": "consumer-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            767,
+            782
+          ]
+        ],
+        "coveredLineCount": 16
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round32/source-manifest.json",
+      "jsonLocation": "$[\"files\"][22]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentBytes": 86436,
+        "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "mainBytes": 86436,
+        "mainSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round32/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][21]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "review-selection-source-manifest.json",
+        "path": "packages/desktop/src/preload/index.ts",
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/initial-pins.json",
+      "jsonLocation": "$[\"files\"][2]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "bytes": 5106,
+        "lineCount": 154,
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "initialFilesystemSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "pinTiming": "before direct source-range semantic reading; filename inventory only",
+        "coverage": "inventory-only",
+        "selectedLineRanges": [],
+        "coveredLineCount": 0,
+        "finishFilesystemSha256": null
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/initial-pins.json",
+      "jsonLocation": "$[\"files\"][6]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/install.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "bytes": 3010,
+        "lineCount": 74,
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "initialFilesystemSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "pinTiming": "before direct source-range semantic reading; filename inventory only",
+        "coverage": "inventory-only",
+        "selectedLineRanges": [],
+        "coveredLineCount": 0,
+        "finishFilesystemSha256": null
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/initial-pins.json",
+      "jsonLocation": "$[\"files\"][13]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/plugins-service.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/plugins-service.ts",
+        "bytes": 11267,
+        "lineCount": 323,
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "initialFilesystemSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "pinTiming": "before direct selected source read; prior rg filename inventory only",
+        "coverage": "inventory-only",
+        "selectedLineRanges": [],
+        "coveredLineCount": 0,
+        "finishFilesystemSha256": null
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json",
+      "jsonLocation": "$[\"files\"][2]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "bytes": 5106,
+        "lineCount": 154,
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "initialFilesystemSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "pinTiming": "before direct source-range semantic reading; filename inventory only",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            154
+          ]
+        ],
+        "coveredLineCount": 154,
+        "finishFilesystemSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "matchesInitialPin": true,
+        "role": "source-only-metadata-and-caller-boundary"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json",
+      "jsonLocation": "$[\"files\"][6]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/install.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "bytes": 3010,
+        "lineCount": 74,
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "initialFilesystemSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "pinTiming": "before direct source-range semantic reading; filename inventory only",
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            74
+          ]
+        ],
+        "coveredLineCount": 74,
+        "finishFilesystemSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "matchesInitialPin": true,
+        "role": "source-only-metadata-and-caller-boundary"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json",
+      "jsonLocation": "$[\"files\"][10]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/plugins-service.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/plugins-service.ts",
+        "bytes": 11267,
+        "lineCount": 323,
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "initialFilesystemSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "pinTiming": "before direct selected source read; prior rg filename inventory only",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            215,
+            255
+          ],
+          [
+            280,
+            323
+          ]
+        ],
+        "coveredLineCount": 85,
+        "finishFilesystemSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "matchesInitialPin": true,
+        "role": "source-only-metadata-and-caller-boundary"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/local-install-review/facade-initial-pin.json",
+      "jsonLocation": "$[\"files\"][0]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginInstaller.ts",
+        "bytes": 19962,
+        "lines": 487,
+        "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "firstSemanticReadSha256": null,
+        "pinBeforeIndependentRead": true,
+        "capturedUtc": "2026-10-17T12:18:00.869588+00:00",
+        "semanticReadOccurred": false
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/local-install-review/finish-hash-checks.json",
+      "jsonLocation": "$[\"sourceChecks\"][1]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/install.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "unchanged": true,
+        "coverage": "selected"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/local-install-review/finish-hash-checks.json",
+      "jsonLocation": "$[\"sourceChecks\"][5]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginInstaller.ts",
+        "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "unchanged": true,
+        "coverage": "hash-only"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/local-install-review/initial-pins.json",
+      "jsonLocation": "$[\"files\"][1]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/install.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "bytes": 3010,
+        "lines": 74,
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "captureUtc": "2026-10-17T12:17:39.204898+00:00",
+        "beforeNewDirectionRead": true,
+        "firstSemanticReadSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "priorSemanticRead": false
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/local-install-review/source-manifest.json",
+      "jsonLocation": "$[\"files\"][1]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/install.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "bytes": 3010,
+        "lines": 74,
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            73
+          ]
+        ],
+        "semanticLines": 73,
+        "initialSemanticReadSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "initialFilesystemSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "directionPinUtc": "2026-10-17T12:17:39.204898+00:00",
+        "frozenUtc": "2026-10-17T12:20:28.015872+00:00",
+        "semanticReadUtc": null,
+        "gitBlobCompared": false,
+        "timingNote": "Pinned before this direction semantic read; per-read semantic timestamps not recorded."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/local-install-review/source-manifest.json",
+      "jsonLocation": "$[\"hashOnlyFiles\"][0]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginInstaller.ts",
+        "bytes": 19962,
+        "lines": 487,
+        "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "semanticLines": 0,
+        "initialSemanticReadSha256": null,
+        "initialFilesystemSha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "directionPinUtc": "2026-10-17T12:18:00.869588+00:00",
+        "frozenUtc": "2026-10-17T12:20:28.015872+00:00",
+        "semanticReadUtc": null,
+        "gitBlobCompared": false,
+        "timingNote": "Unused facade locator returned no match; file was hashed but not semantically read."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/consumer-initial-pins.json",
+      "jsonLocation": "$[\"files\"][3]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "bytes": 7940,
+        "lines": 236,
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "firstSemanticReadSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "pinBeforeIndependentRead": true,
+        "capturedUtc": "2026-10-17T12:11:29.039469+00:00"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/finish-hash-checks.json",
+      "jsonLocation": "$[\"files\"][5]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "initialFilesystemSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "frozenFilesystemSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "unchanged": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/source-manifest.json",
+      "jsonLocation": "$[\"files\"][5]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "bytes": 7940,
+        "lines": 236,
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            78,
+            120
+          ]
+        ],
+        "semanticLines": 43,
+        "initialFilesystemSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "initialSemanticReadSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "initialCaptureUtc": "2026-10-17T12:11:29.039469+00:00",
+        "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+        "pinBeforeIndependentRead": true,
+        "semanticReadUtc": null,
+        "timingLimit": "Per-read semantic timestamps were not recorded.",
+        "gitBlobCompared": false
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"files\"][14]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/install.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "bytes": 3010,
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "currentBytes": 3010,
+        "currentSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "mainBytes": 3010,
+        "mainSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"files\"][21]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "bytes": 5106,
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "currentBytes": 5106,
+        "currentSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "mainBytes": 5106,
+        "mainSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"files\"][24]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "bytes": 7940,
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "currentBytes": 7940,
+        "currentSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "mainBytes": 7940,
+        "mainSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"files\"][27]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginInstaller.ts",
+        "bytes": 19962,
+        "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "currentBytes": 19962,
+        "currentSha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "mainBytes": 19962,
+        "mainSha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"files\"][36]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/plugins-service.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/main/plugins-service.ts",
+        "bytes": 11267,
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "currentBytes": 11267,
+        "currentSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "mainBytes": 11267,
+        "mainSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][5]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "plugin-input-review/source-manifest.json",
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][11]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/install.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "local-install-review/source-manifest.json",
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][30]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "installer-input-frontier/source-manifest.json",
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "coverage": "full",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][34]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/install.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "installer-input-frontier/source-manifest.json",
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "coverage": "full",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][38]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/main/plugins-service.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "installer-input-frontier/source-manifest.json",
+        "path": "packages/desktop/src/main/plugins-service.ts",
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonLocation": "$[\"hashOnlyChecks\"][0]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "manifest": "local-install-review/source-manifest.json",
+        "path": "packages/core/src/plugins/pluginInstaller.ts",
+        "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "coverage": "hash-only",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "jsonLocation": "$[\"sources\"][24]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "coverage": "selected tailLog IPC adapter lines 996-997; not executed",
+        "bytes": 86436,
+        "lines": 1892,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901"
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "jsonLocation": "$[\"files\"][46]",
+      "pathField": "path",
+      "targetPath": "packages/desktop/src/preload/index.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round7/evidence/files-source-manifest.json",
+      "jsonLocation": "$[\"sources\"][23]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installedPlugins.ts",
+        "readScope": "selected ranges",
+        "readRanges": [
+          [
+            1,
+            65
+          ]
+        ],
+        "bytes": 9314,
+        "lines": 265,
+        "frozenSourceSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "jsonLocation": "$[\"files\"][25]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installedPlugins.ts",
+        "bytes": 9314,
+        "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-command-preflight.json",
+      "jsonLocation": "$[\"source\"][3]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installedPlugins.ts",
+        "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "frozenSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "matchesFrozen": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-command-preflight.json",
+      "jsonLocation": "$[\"source\"][4]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/paths.ts",
+        "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+        "frozenSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+        "matchesFrozen": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+      "jsonLocation": "$[\"files\"][8]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+        "frozenBytes": 5106,
+        "frozenSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "currentWorkingTreeSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+      "jsonLocation": "$[\"files\"][9]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/schemas.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/schemas.ts",
+        "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+        "frozenBytes": 6630,
+        "frozenSha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+        "currentWorkingTreeSha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+      "jsonLocation": "$[\"files\"][18]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginCatalog.ts",
+        "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+        "frozenBytes": 5601,
+        "frozenSha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+        "currentWorkingTreeSha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+      "jsonLocation": "$[\"files\"][19]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+        "frozenBytes": 7940,
+        "frozenSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "currentWorkingTreeSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+      "jsonLocation": "$[\"files\"][20]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/knownMarketplaces.ts",
+        "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+        "frozenBytes": 6280,
+        "frozenSha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+        "currentWorkingTreeSha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+      "jsonLocation": "$[\"files\"][21]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/paths.ts",
+        "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+        "frozenBytes": 994,
+        "frozenSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+        "currentWorkingTreeSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+      "jsonLocation": "$[\"files\"][24]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installedPlugins.ts",
+        "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+        "frozenBytes": 9314,
+        "frozenSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "currentWorkingTreeSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "jsonLocation": "$[\"files\"][24]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installedPlugins.ts",
+        "bytes": 9314,
+        "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "jsonLocation": "$[\"files\"][36]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/paths.ts",
+        "bytes": 994,
+        "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "jsonLocation": "$[\"files\"][38]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/installer/types.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "bytes": 5106,
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "jsonLocation": "$[\"files\"][39]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/knownMarketplaces.ts",
+        "bytes": 6280,
+        "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "jsonLocation": "$[\"files\"][40]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "bytes": 7940,
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "jsonLocation": "$[\"files\"][43]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/pluginCatalog.ts",
+        "bytes": 5601,
+        "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "jsonLocation": "$[\"files\"][47]",
+      "pathField": "path",
+      "targetPath": "packages/core/src/plugins/schemas.ts",
+      "directCurrentShaPresent": true,
+      "directRow": {
+        "path": "packages/core/src/plugins/schemas.ts",
+        "bytes": 6630,
+        "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "otherRowLocations": [
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog.json",
+      "jsonLocation": "$[74]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog.json",
+      "jsonLocation": "$[75]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog.json",
+      "jsonLocation": "$[76]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog.json",
+      "jsonLocation": "$[77]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "jsonLocation": "$[64]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "jsonLocation": "$[65]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "jsonLocation": "$[66]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "jsonLocation": "$[74]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "jsonLocation": "$[75]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "jsonLocation": "$[76]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "jsonLocation": "$[77]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/confirmed.json",
+      "jsonLocation": "$[16]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/confirmed.json",
+      "jsonLocation": "$[17]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[65]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[68]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[69]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[252]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[253]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[254]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[255]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[256]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[257]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[258]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/findings.json",
+      "jsonLocation": "$[259]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "jsonLocation": "$[33]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "jsonLocation": "$[34]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "jsonLocation": "$[35]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "jsonLocation": "$[\"files\"][28]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round10/source-manifest.json",
+      "jsonLocation": "$[\"files\"][48]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonLocation": "$[\"files\"][17]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "jsonLocation": "$[\"files\"][18]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][17]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json",
+      "jsonLocation": "$[\"sources\"][21]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round17/source-manifest.json",
+      "jsonLocation": "$[\"files\"][34]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round17/source-manifest.json",
+      "jsonLocation": "$[\"workerSourceChecks\"][21]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-package-prep/inventory.json",
+      "jsonLocation": "$[\"files\"][99]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "jsonLocation": "$[\"sources\"][81]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "jsonLocation": "$[\"checks\"][81]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "jsonLocation": "$[\"files\"][105]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][81]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round25/evidence/link-prep/source-manifest.json",
+      "jsonLocation": "$[\"sources\"][19]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round25/evidence/prep-copy-receipt.json",
+      "jsonLocation": "$[\"sourceChecks\"][42]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round25/source-manifest.json",
+      "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][42]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "jsonLocation": "$[\"sources\"][25]",
+      "targetPath": "packages/desktop/src/preload/types.d.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "jsonLocation": "$[\"files\"][47]",
+      "targetPath": "packages/desktop/src/preload/types.d.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][247]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][250]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][251]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][261]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][263]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][264]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][267]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][301]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][305]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][309]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][311]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][321]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][323]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][327]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][331]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][332]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][333]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][334]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][336]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][337]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][337]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][339]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][341]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][342]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][344]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][345]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][348]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][352]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][354]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][358]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][359]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][360]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][362]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][362]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][363]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][363]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][364]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][364]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][365]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][366]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][367]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][368]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][369]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][370]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][371]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][371]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][372]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][372]",
+      "targetPath": "packages/core/src/plugins/schemas.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][373]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][373]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][374]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][381]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][382]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][382]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][383]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][383]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][384]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][384]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][385]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][385]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][386]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][387]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][387]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][388]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][388]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][389]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][389]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][390]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][391]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][392]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][393]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][393]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][394]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][395]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][396]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][397]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][398]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][399]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][400]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][401]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][402]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][402]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][403]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][404]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][406]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][420]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][421]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "jsonLocation": "$[\"relativeImports\"][449]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][95]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][129]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][132]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][133]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][161]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][361]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][364]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][365]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][375]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][378]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][382]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][384]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][394]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][396]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][400]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][404]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][405]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][406]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][407]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][409]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][410]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][410]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][412]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][414]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][415]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][417]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][418]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][421]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][425]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][427]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][431]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][432]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][433]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][435]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][435]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][436]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][436]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][437]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][437]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][438]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][439]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][440]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][441]",
+      "targetPath": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][442]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][443]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][444]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][444]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][445]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][445]",
+      "targetPath": "packages/core/src/plugins/schemas.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][446]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][446]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][447]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][454]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][455]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][455]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][456]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][456]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][457]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][457]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][458]",
+      "targetPath": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][458]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][459]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][460]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][460]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][461]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][461]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][462]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][462]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][463]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][464]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][465]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][466]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][466]",
+      "targetPath": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][467]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][468]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][469]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][470]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][471]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][472]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][473]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][474]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][475]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][475]",
+      "targetPath": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][476]",
+      "targetPath": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][477]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][479]",
+      "targetPath": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][493]",
+      "targetPath": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "jsonLocation": "$[\"relativeImports\"][494]",
+      "targetPath": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/file-root-quality-preflight-round27.sources.json",
+      "jsonLocation": "$[\"items\"][22]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+      "jsonLocation": "$[\"sources\"][4]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/file-root-round27/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][26]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/file-root-round27/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][28]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/file-root-round27/observed.json",
+      "jsonLocation": "$[\"extractedCallbacks\"][0]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/file-root-round27/observed.json",
+      "jsonLocation": "$[\"extractedCallbacks\"][1]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/menu-recents-round23/observations.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/menu-recents-round23/source-manifest.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/menu-routing-round23/observations.json",
+      "jsonLocation": "$[\"sourceManifest\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/menu-routing-round23/source-manifest.json",
+      "jsonLocation": "$[\"sourceManifest\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/menu-routing-round23/source-manifest.json",
+      "jsonLocation": "$[\"extraction\"][0]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/menu-routing-round23/source-manifest.json",
+      "jsonLocation": "$[\"extraction\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/browser-stop-round22/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "jsonLocation": "$[105]",
+      "targetPath": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][26]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][28]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "jsonLocation": "$[\"extractedCallbacks\"][0]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/file-root-round27/observed.json",
+      "jsonLocation": "$[\"extractedCallbacks\"][1]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/menu-recents-round23/observations.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/menu-recents-round23/source-manifest.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/menu-routing-round23/observations.json",
+      "jsonLocation": "$[\"sourceManifest\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/menu-routing-round23/source-manifest.json",
+      "jsonLocation": "$[\"sourceManifest\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/menu-routing-round23/source-manifest.json",
+      "jsonLocation": "$[\"extraction\"][0]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/menu-routing-round23/source-manifest.json",
+      "jsonLocation": "$[\"extraction\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "jsonLocation": "$[\"groups\"][1][\"rawLogs\"][105]",
+      "targetPath": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "jsonLocation": "$[\"logs\"][246]",
+      "targetPath": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-blank-files-round28/hash-span-audit.json",
+      "jsonLocation": "$[\"receipts\"][0]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-blank-files-round28/hash-span-audit.json",
+      "jsonLocation": "$[\"receipts\"][1]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-blank-files-round28/source-manifest.json",
+      "jsonLocation": "$[\"paths\"][23]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-browser-stop-round22/before-first-native/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-browser-stop-round22/first-native-failed/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-browser-stop-round22/second-native-failed/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/source-manifest.json",
+      "jsonLocation": "$[\"manifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][26]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][28]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/observed.json",
+      "jsonLocation": "$[\"extractedCallbacks\"][0]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/observed.json",
+      "jsonLocation": "$[\"extractedCallbacks\"][1]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/root-preflight.json",
+      "jsonLocation": "$[\"paths\"][26]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/root-preflight.json",
+      "jsonLocation": "$[\"paths\"][28]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/source-manifest.json",
+      "jsonLocation": "$[26]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/source-manifest.json",
+      "jsonLocation": "$[28]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/static-prepared-receipt.json",
+      "jsonLocation": "$[\"paths\"][26]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/static-prepared-receipt.json",
+      "jsonLocation": "$[\"paths\"][28]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/prepared-initial/static-prepared-receipt.json",
+      "jsonLocation": "$[\"paths\"][26]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/prepared-initial/static-prepared-receipt.json",
+      "jsonLocation": "$[\"paths\"][28]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/root-preflight.json",
+      "jsonLocation": "$[\"paths\"][26]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/root-preflight.json",
+      "jsonLocation": "$[\"paths\"][28]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/static-prepared-receipt.json",
+      "jsonLocation": "$[\"paths\"][26]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-file-root-round27/static-prepared-receipt.json",
+      "jsonLocation": "$[\"paths\"][28]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-recents-round23/author-first/observations.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-recents-round23/author-first/source-manifest.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-recents-round23/root-first-portability-failure-initial/observations.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-recents-round23/root-first-portability-failure-initial/source-manifest.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-recents-round23/root-first-portability-failure-latest/observations.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-recents-round23/root-first-portability-failure-latest/source-manifest.json",
+      "jsonLocation": "$[\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-routing-round23/archive-first/observations.json",
+      "jsonLocation": "$[\"sourceManifest\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-routing-round23/archive-first/source-manifest.json",
+      "jsonLocation": "$[\"sourceManifest\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-routing-round23/archive-first/source-manifest.json",
+      "jsonLocation": "$[\"extraction\"][0]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-routing-round23/archive-first/source-manifest.json",
+      "jsonLocation": "$[\"extraction\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-routing-round23/observations.json",
+      "jsonLocation": "$[\"sourceManifest\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-routing-round23/source-manifest.json",
+      "jsonLocation": "$[\"sourceManifest\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-routing-round23/source-manifest.json",
+      "jsonLocation": "$[\"extraction\"][0]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-menu-routing-round23/source-manifest.json",
+      "jsonLocation": "$[\"extraction\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+      "jsonLocation": "$[32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/static-prepared-receipt.json",
+      "jsonLocation": "$[\"sourceManifest\"][32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+      "jsonLocation": "$[\"runs\"][0][\"sourceManifest\"][32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+      "jsonLocation": "$[\"runs\"][1][\"sourceManifest\"][32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+      "jsonLocation": "$[\"sourceManifest\"][32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+      "jsonLocation": "$[32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/static-prepared-receipt.json",
+      "jsonLocation": "$[\"sourceManifest\"][32]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-session-continuation-round26/source-manifest-preflight.json",
+      "jsonLocation": "$[\"paths\"][11]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-session-continuation-round26/source-manifest-static-final.json",
+      "jsonLocation": "$[\"paths\"][11]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/original-sidebar-title-round27/source-manifest.json",
+      "jsonLocation": "$[\"paths\"][14]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round22-browser-stop-results.json",
+      "jsonLocation": "$[\"standaloneNativeExecutions\"][0][\"sourceManifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round22-browser-stop-results.json",
+      "jsonLocation": "$[\"standaloneNativeExecutions\"][1][\"sourceManifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round22-browser-stop-results.json",
+      "jsonLocation": "$[\"standaloneNativeExecutions\"][2][\"sourceManifest\"][6]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-menu-owner-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][0][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-menu-owner-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][1][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-menu-recents-results.json",
+      "jsonLocation": "$[\"runs\"][0][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-menu-recents-results.json",
+      "jsonLocation": "$[\"runs\"][1][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-menu-routing-results.json",
+      "jsonLocation": "$[\"runs\"][0][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-menu-routing-results.json",
+      "jsonLocation": "$[\"runs\"][1][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][0][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][1][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][0][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round23-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][1][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round24-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][0][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round24-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][1][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round24-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][0][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round24-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][1][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round25-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][0][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round25-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][1][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round25-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][0][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round25-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][1][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round26-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][0][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round26-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][1][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round26-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][0][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round26-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][1][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round27-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][0][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round27-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][1][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round27-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][0][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round27-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][1][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round28-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][0][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round28-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][1][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round28-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][0][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round28-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][1][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round29-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][0][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round29-report-audit.json",
+      "jsonLocation": "$[\"round23MenuRuns\"][1][\"productSources\"][1]",
+      "targetPath": "packages/desktop/src/preload/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round29-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][0][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    },
+    {
+      "historyPath": "docs/review-2026-10-12/validation/round29-report-audit.json",
+      "jsonLocation": "$[\"round23RecentRuns\"][1][\"sourceManifest\"][8]",
+      "targetPath": "packages/desktop/src/main/index.ts"
+    }
+  ],
+  "contextCap": null,
+  "driftFromFirstInventory": [],
+  "limits": [
+    "Object-row heuristic does not make hash inventory, receipt, old runtime pass, or no-row coverage ranking into semantic reading.",
+    "MD scalar contexts and older unstructured reports remain in history.json; absence of object row does not prove unread.",
+    "Own frozen future35/future33 prep source reuse is recorded separately since current mutable35/future36/37 are deliberately excluded from repo history."
+  ]
+}

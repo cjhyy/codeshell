@@ -1,0 +1,57 @@
+{
+  "usage": {
+    "currentSha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+    "canonical": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json#/files/4",
+    "exactScope": "Full static leaf; prior round9 accounting direction excluded, no runtime.",
+    "decision": "Same-SHA old full; later directed body reread expressly retained as overlap, no new unique coverage."
+  },
+  "timing": {
+    "currentSha256": "9306f80c1fa56b8f59f35afc879045140d08129e8cbf167085fb82f63c831ced",
+    "canonical": "docs/audit-2026-10-17-round19/evidence/timing-source-manifest.json#/files/0",
+    "md": "docs/audit-2026-10-17-round19/timing.md:7",
+    "decision": "Same-SHA explicit full1–41; body-before gate exclusion, current body0."
+  },
+  "actualProducerScope": "Root retained actual producer→session cumulative field problem. Directed run-accounting/run-state-persistence + necessary selected Engine/TurnLoop/finalize/ModelFacade read; no mechanical fallback leaf.",
+  "canonicalWindows": [
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "pointers": [
+        "/files/17",
+        "/files/21"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+      "pointers": [
+        "/files/4"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-source-manifest.json",
+      "pointers": [
+        "/files/0",
+        "/files/5"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/timing.md",
+      "lineRanges": [
+        [
+          1,
+          42
+        ]
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/usage.md",
+      "lineRanges": [
+        [
+          1,
+          26
+        ]
+      ]
+    }
+  ],
+  "unknownIsUnread": false,
+  "hashIsSemanticCoverage": false
+}

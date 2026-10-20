@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lineCount": 1404,
+      "pinUTC": "2026-10-17T15:35:41.780776+00:00",
+      "beforeSemanticOrNavigationRead": true
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "lineCount": 800,
+      "pinUTC": "2026-10-17T15:35:41.782672+00:00",
+      "beforeSemanticOrNavigationRead": true
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173,
+      "pinUTC": "2026-10-17T15:35:41.783323+00:00",
+      "beforeSemanticOrNavigationRead": true
+    }
+  ]
+}

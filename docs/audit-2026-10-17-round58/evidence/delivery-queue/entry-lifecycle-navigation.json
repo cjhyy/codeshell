@@ -1,0 +1,70 @@
+{
+  "inventory": {
+    "command": [
+      "rg",
+      "--files",
+      "packages/chat"
+    ],
+    "exitCode": 0,
+    "stderr": "",
+    "selectedFilenameOnly": [
+      "packages/chat/src/desktop-control-client.ts",
+      "packages/chat/src/desktop-control-client.test.ts",
+      "packages/chat/src/cli.ts",
+      "packages/chat/package.json"
+    ]
+  },
+  "pins": [
+    {
+      "path": "packages/chat/src/cli.ts",
+      "bytes": 11645,
+      "lines": 320,
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "pinAt": "2026-10-17T19:29:16.911430+00:00",
+      "coverage": "hash-only before entry metadata/navigation"
+    },
+    {
+      "path": "packages/chat/package.json",
+      "bytes": 2936,
+      "lines": 123,
+      "sha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "pinAt": "2026-10-17T19:29:16.914395+00:00",
+      "coverage": "hash-only before entry metadata/navigation"
+    }
+  ],
+  "navigation": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "process\\.exit|import\\.meta\\.main|runGateway|SIGTERM|SIGINT|main\\(|acquireGateway|lockPath",
+        "packages/chat/src/cli.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "24:import { acquireGatewayInstanceLock } from \"./instance-lock.js\";\n44:async function main(args = process.argv.slice(2)): Promise<void> {\n68:  const lease = acquireGatewayInstanceLock(config.runtime.lockPath, \"code-shell-chat CLI\");\n71:  process.once(\"SIGINT\", stop);\n72:  process.once(\"SIGTERM\", stop);\n141:    process.off(\"SIGINT\", stop);\n142:    process.off(\"SIGTERM\", stop);\n160:  const lease = acquireGatewayInstanceLock(config.runtime.lockPath, \"code-shell-chat canary\");\n243:  process.once(\"SIGINT\", stop);\n244:  process.once(\"SIGTERM\", stop);\n277:    process.off(\"SIGINT\", stop);\n278:    process.off(\"SIGTERM\", stop);\n317:main().catch((error) => {\n319:  process.exitCode = 1;\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "removeOwnedLock|^export|rmSync|unlink|function",
+        "packages/chat/src/instance-lock.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "11:  rmSync,\n27:export interface GatewayInstanceLease {\n33:export class GatewayAlreadyRunningError extends Error {\n52:export function acquireGatewayInstanceLock(path: string, owner: string): GatewayInstanceLease {\n89:          removeOwnedLock(path, record.token);\n94:      if (created) rmSync(path, { force: true });\n106:      removeOwnedLock(path, existing.token);\n112:function readLock(path: string): GatewayLockRecord | undefined {\n147:function isProcessAlive(pid: number): boolean {\n156:function removeOwnedLock(path: string, token: string): void {\n158:  if (current?.token === token) rmSync(path, { force: true });\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "buildMimiOutgoingReplies|\\.chat\\(",
+        "packages/chat/src/gateway.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "143:        outgoing = await buildMimiOutgoingReplies(\n158:          const pending = buildMimiOutgoingReplies(\n224:async function buildMimiOutgoingReplies(\n",
+      "stderr": ""
+    }
+  ]
+}

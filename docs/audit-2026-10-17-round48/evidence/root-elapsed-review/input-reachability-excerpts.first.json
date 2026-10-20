@@ -1,0 +1,66 @@
+{
+  "atUTC": "2026-10-17T16:04:23.375151+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "sha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "displayedRanges": [
+        [
+          309,
+          324
+        ],
+        [
+          347,
+          387
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            309,
+            324
+          ],
+          "text": " 309   }\n 310 \n 311   if (pendingQuestion) {\n 312     return (\n 313       <AskUserPrompt\n 314         key={pendingQuestion.requestId}\n 315         question={pendingQuestion.question}\n 316         header={pendingQuestion.header}\n 317         options={pendingQuestion.options}\n 318         multiSelect={pendingQuestion.multiSelect}\n 319         draft={pendingQuestion.draft}\n 320         submitting={pendingQuestion.submitting}\n 321         onSubmittingChange={(submitting) =>\n 322           onQuestionSubmittingChange(pendingQuestion.requestId, submitting)\n 323         }\n 324         onDraftChange={(draft) => onQuestionDraftChange(pendingQuestion.requestId, draft)}"
+        },
+        {
+          "range": [
+            347,
+            387
+          ],
+          "text": " 347             });\n 348         }}\n 349       />\n 350     );\n 351   }\n 352 \n 353   if (pendingApproval) return null;\n 354 \n 355   return (\n 356     <>\n 357       {queuedInputs.length > 0 && (\n 358         <Box marginLeft={2}>\n 359           <Text dim>\n 360             {`⌛ 已缓存 ${queuedInputs.length} 条，将在本轮结束后依次发送（/force 立即打断并优先发送）`}\n 361           </Text>\n 362         </Box>\n 363       )}\n 364       <CommandInput\n 365         value={input}\n 366         onChange={setInput}\n 367         onSubmit={handleSubmit}\n 368         commands={commands}\n 369         placeholder={isRunning ? \"Interrupt… (Ctrl+C to cancel)\" : undefined}\n 370         disabled={dockFocusIdx !== null}\n 371         onArrowOut={(direction) => {\n 372           if (direction !== \"down\") return;\n 373           const visible = getVisibleAgents(asyncAgentRegistry.getSnapshot(), Date.now());\n 374           if (visible.length === 0) return;\n 375           if (viewMode.kind === \"agent\") {\n 376             const index = visible.findIndex((agent) => agent.agentId === viewMode.agentId);\n 377             if (index >= 0 && index < MAX_VISIBLE) {\n 378               setDockFocusIdx(index + 1);\n 379               return;\n 380             }\n 381           }\n 382           setDockFocusIdx(0);\n 383         }}\n 384       />\n 385     </>\n 386   );\n 387 }"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "sha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "displayedRanges": [
+        [
+          149,
+          177
+        ],
+        [
+          214,
+          245
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            149,
+            177
+          ],
+          "text": " 149 \n 150   const handleSubmit = (v: string) => {\n 151     // If autocomplete is showing and user presses Enter, complete first\n 152     if (showAutocomplete && filtered.length > 0 && filter.length > 0) {\n 153       const cmd = filtered[selectedIndex];\n 154       if (cmd && v.trim() === value.trim()) {\n 155         // If the typed value exactly matches a command, submit it\n 156         const exactMatch = filtered.find((c) => c.name === v.trim());\n 157         if (exactMatch) {\n 158           onSubmit(v);\n 159           setSelectedIndex(0);\n 160           historyRef.current.reset();\n 161           return;\n 162         }\n 163         // Otherwise autocomplete\n 164         onChange(cmd.name + \" \");\n 165         setCursorResetCounter((n) => n + 1);\n 166         setSelectedIndex(0);\n 167         return;\n 168       }\n 169     }\n 170     // P1.7: Record input history and reset navigator\n 171     addToHistory(v);\n 172     historyRef.current.refresh();\n 173     setFromHistory(false);\n 174     onSubmit(v);\n 175     setSelectedIndex(0);\n 176   };\n 177 "
+        },
+        {
+          "range": [
+            214,
+            245
+          ],
+          "text": " 214                 </Text>\n 215                 <Text color={isSelected ? \"cyanBright\" : \"white\"} bold={isSelected}>\n 216                   {cmd.name}\n 217                 </Text>\n 218                 <Text dim>  {cmd.description}</Text>\n 219               </Box>\n 220             );\n 221           })}\n 222           {start + MAX_VISIBLE < filtered.length && (\n 223             <Text dim>  ↓ {filtered.length - start - MAX_VISIBLE} more</Text>\n 224           )}\n 225         </Box>\n 226       )}\n 227 \n 228       {/* Input line */}\n 229       <Box flexDirection=\"column\">\n 230         <Box>\n 231           <Text>{\"❯ \"}</Text>\n 232           <TextInput\n 233             value={value}\n 234             onChange={handleChange}\n 235             onSubmit={handleSubmit}\n 236             placeholder={placeholder ?? \"Ask anything… (/ for commands, ↑ for history)\"}\n 237             focus={!disabled}\n 238             hint={inlineHint}\n 239             cursorResetCounter={cursorResetCounter}\n 240           />\n 241         </Box>\n 242       </Box>\n 243     </Box>\n 244   );\n 245 }"
+        }
+      ]
+    }
+  ],
+  "scope": "Root66 actual selected user input reachability, no running component or helper."
+}

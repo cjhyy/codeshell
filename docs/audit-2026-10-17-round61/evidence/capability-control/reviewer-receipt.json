@@ -1,0 +1,135 @@
+{
+  "frozenAt": "2026-10-17T20:15:33.489956+00:00",
+  "root": "/tmp/codeshell-audit-round155-capability-control",
+  "selfExcluded": true,
+  "artifactCount": 24,
+  "files": [
+    {
+      "path": "actual-caller-filenames.json",
+      "bytes": 1008,
+      "sha256": "6537a8844d00cf2e2924197f263582409e9a796e80a6fcccf6f7c00b71607ce4"
+    },
+    {
+      "path": "caller-initial-pins.json",
+      "bytes": 1278,
+      "sha256": "806df05027db50cec26ee841028fca5da628a9ac55822822212efb35467203bc"
+    },
+    {
+      "path": "caller-navigation.json",
+      "bytes": 2220,
+      "sha256": "a3957e4b909582cd504815ff20dd91a698ec985dc51ccc1929af385f94f2f6a3"
+    },
+    {
+      "path": "caller-storage-display.json",
+      "bytes": 24424,
+      "sha256": "50487fd467b1fa4dbf14fe922ab1801f60abe9d54e2e2eca3c6c6274da29a097"
+    },
+    {
+      "path": "canonical-filename-navigation.json",
+      "bytes": 3291,
+      "sha256": "7ee2eeba3fa06f4be7d53273b67d0a219519d75ac03bf978d31f07805b34f56b"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 788,
+      "sha256": "304775cf7d3727b59962c858e6fe80f820f66c07121b40747723531801a9f131"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 3973,
+      "sha256": "015758444cdacee59703ca7840008ae8df02128d97a3695181c839ceb88b2620"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 1316,
+      "sha256": "54d47aeb69f5e7f668bfeb4b0ec33012cd4a83c2d6d57c2f979990568d965e34"
+    },
+    {
+      "path": "dotted-token-focused-history.json",
+      "bytes": 2607,
+      "sha256": "07287a54c314f1a36fb4055b0eafac651142b632b7b3f03334e8b3a8c489a44e"
+    },
+    {
+      "path": "dotted-token-prior-cause-read.json",
+      "bytes": 5451,
+      "sha256": "073e015a0a49efebef90c61d03449726fbd037a680eb441abf25830c1bde6481"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 7322,
+      "sha256": "5c71b1df300e35082ea262973493259e2138038ccae15a2708a6c62b449ea6d0"
+    },
+    {
+      "path": "filename-navigation.json",
+      "bytes": 385,
+      "sha256": "56871c0e3925fc9c9428ae0789b2c0bfc1958476cc7ce3fb167f3038f0ce80ba"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 17336,
+      "sha256": "382b0fc376de4484307d42c34ed41dde35b350368324f2ba0f2f829efd4fd1ae"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1822,
+      "sha256": "5bfdd50aa20289520fa2b7f7768ad63de9656796244dbcb64049a1145a6e7eff"
+    },
+    {
+      "path": "locator-display.first.observed.json",
+      "bytes": 587,
+      "sha256": "6236bd8b916ef3941bdfb4b78e34b9f09f2dd114962bb252cce3ac9eb91bb254"
+    },
+    {
+      "path": "normal-name-producer-navigation.json",
+      "bytes": 4983,
+      "sha256": "dda47be73637a09a238efefdd0911742e93def4421066448ecde3324d3682eac"
+    },
+    {
+      "path": "normal-name-producer-pins.json",
+      "bytes": 623,
+      "sha256": "d96135a8f6fd007087a1fbb187e539ef86ba184b43e2ad176769b72bec0a38df"
+    },
+    {
+      "path": "normal-token-path-display.json",
+      "bytes": 14992,
+      "sha256": "0e221a6febfc8cc0cfe14066f63cb125d441be664fcd9dafa210a9c5f3332f9b"
+    },
+    {
+      "path": "prior-canonical-read.json",
+      "bytes": 15050,
+      "sha256": "d4c46aff17d385c97083f65ed510315f73dfc2fdb57589af168196b2eec97268"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3625,
+      "sha256": "5adcfd1b1a6c5aadbfbcca269407afaf00702acc5e2cc6891cf778bd867574c4"
+    },
+    {
+      "path": "shared-history-projection.json",
+      "bytes": 329052,
+      "sha256": "4a219433ae013c9a442bbba86bf3ccd5cbba294d51b44ca4e769389aa4ab49d1"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 17239,
+      "sha256": "2bc4f306cb196da6b708a12d46ffb94a90a7e70005c35a6e0895a3ddfe8579dc"
+    },
+    {
+      "path": "supporting-filenames.json",
+      "bytes": 1602,
+      "sha256": "bba0f8425e184f43a3bd165b3d9829a660d688d7add7842785c10a1de6a9a7cc"
+    },
+    {
+      "path": "target-source-display.json",
+      "bytes": 25836,
+      "sha256": "0997b8a065e750c3de6168bfff27d2b00edaa07d4f829d3e45f9529496eb9b67"
+    }
+  ],
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "productAndTestExecutions": 0,
+  "GitCalls": 0
+}

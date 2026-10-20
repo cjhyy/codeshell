@@ -1,6 +1,9 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { githubStarActionIds } from "./github-star.js";
+import { FIGMA_NEW_ACTIONS } from "./figma.js";
 import { getLocalLinkProvider } from "./providers.js";
 import type { CredentialMetadata } from "../credentials/access.js";
+import { isFigmaMcpAction, FIGMA_MCP_SERVER_URL } from "@cjhyy/code-shell-link";
 
 /** Public authority only. Rotating tokens/expiry are deliberately excluded. */
 export function linkAuthoritySnapshot(credential: CredentialMetadata): string {
@@ -8,9 +11,11 @@ export function linkAuthoritySnapshot(credential: CredentialMetadata): string {
   return JSON.stringify({
     id: credential.id,
     type: credential.type,
+    recipe: meta?.linkRecipeId,
+    recordSchemaVersion: meta?.recordSchemaVersion,
     provider: meta?.linkProvider,
-    runtime: meta?.linkExecutionRuntime,
-    backend: meta?.linkExecutionBackend,
+    runtime: linkConnectionMetadata(meta).linkExecutionRuntime,
+    backend: linkConnectionMetadata(meta).linkExecutionBackend,
     account: meta?.linkAccountId,
     issuer: meta?.linkRemoteIssuer,
     connection: meta?.linkRemoteConnectionId,
@@ -18,13 +23,22 @@ export function linkAuthoritySnapshot(credential: CredentialMetadata): string {
     capabilities: meta?.linkCapabilityIds,
     resources: meta?.linkResourceGroups,
     legacyResources: meta?.linkResourceLabels,
-    authSource: meta?.linkAuthSource,
+    authSource: linkConnectionMetadata(meta).linkAuthSource,
     remoteState: meta?.linkRemoteState,
+    cleanupDisabled: meta?.linkCleanupDisabled,
     verifiedAt: meta?.linkLastVerifiedAt,
     clientId: credential.oauthStatus?.clientId ?? meta?.clientId,
     tokenEndpoint: credential.oauthStatus?.tokenEndpoint ?? meta?.tokenEndpoint,
-    oauthScope: credential.oauthStatus?.scope,
-    oauthScopes: credential.oauthStatus?.scopes,
+    oauthScopes: [
+      ...new Set(
+        typeof credential.oauthStatus?.scope === "string"
+          ? credential.oauthStatus.scope.split(/\s+/).filter(Boolean)
+          : (credential.oauthStatus?.scopes ?? []),
+      ),
+    ].sort(),
+    mcpServerUrl: meta?.mcpServerUrl,
+    resource: meta?.resource,
+    oauthIssuer: meta?.issuer,
   });
 }
 
@@ -34,15 +48,27 @@ export function allowsLinkAction(
   provider: string,
   action: string,
 ): boolean {
+  if (credential.meta?.linkCleanupDisabled) return false;
+  if (provider === "figma") {
+    const mcp = String(linkConnectionMetadata(credential.meta).linkExecutionBackend) === "mcp";
+    if (mcp !== isFigmaMcpAction(action)) return false;
+    if (mcp)
+      return (
+        credential.type === "oauth" &&
+        credential.meta?.mcpServerUrl === FIGMA_MCP_SERVER_URL &&
+        credential.meta.linkCapabilityIds?.includes(`figma.${action}`) === true
+      );
+  }
   if (
-    credential.meta?.linkExecutionBackend === "cli" &&
+    linkConnectionMetadata(credential.meta).linkExecutionBackend === "cli" &&
     getLocalLinkProvider(provider)?.actions.find((candidate) => candidate.id === action)?.risk ===
       "write"
   )
     return false;
   const ids = credential.meta?.linkCapabilityIds;
   if (
-    credential.meta?.linkExecutionRuntime === "server" ||
+    linkConnectionMetadata(credential.meta).linkExecutionRuntime === "server" ||
+    (provider === "figma" && (FIGMA_NEW_ACTIONS as readonly string[]).includes(action)) ||
     (provider === "github" &&
       (action === "update_issue" || (githubStarActionIds as readonly string[]).includes(action)))
   )

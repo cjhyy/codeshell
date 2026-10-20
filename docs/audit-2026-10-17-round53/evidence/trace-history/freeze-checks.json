@@ -1,0 +1,162 @@
+{
+  "checkedUTC": "2026-10-17T17:53:35.108009+00:00",
+  "role": "Own-author metadata finalization, not another independent source review",
+  "files": [],
+  "sourceRangeMetadataChecks": [
+    {
+      "path": "packages/server/src/model-trace-history.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "rangesWithinCurrentLineCount": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/server/src/model-trace-http.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "rangesWithinCurrentLineCount": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/desktop/src/main/trace-history-service.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "rangesWithinCurrentLineCount": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "rangesWithinCurrentLineCount": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/server/src/model-trace-http.test.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplayed": true,
+      "rangesWithinCurrentLineCount": true,
+      "coverage": "selected"
+    }
+  ],
+  "links": [
+    {
+      "label": "分类",
+      "target": "classification.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "初始 pins",
+      "target": "initial-pins.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "完整历史库存",
+      "target": "history.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "metadata 方法",
+      "target": "history-method.py",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "有界窗口",
+      "target": "history-contexts.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "精确对象",
+      "target": "coverage-gate-objects.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "gate decision",
+      "target": "gate-decision.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "support pin",
+      "target": "support-initial-pins.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "先 pin",
+      "target": "consumer-initial-pins.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "所读清单",
+      "target": "source-manifest.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "摘录",
+      "target": "source-excerpts.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "记录",
+      "target": "first-diagnostic.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "diagnostics",
+      "target": "diagnostics.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "结束检查",
+      "target": "ending-checks.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "validation",
+      "target": "validation.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "整理脚本",
+      "target": "finalize-metadata.py",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "metadata检查",
+      "target": "freeze-checks.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "冻结回执",
+      "target": "reviewer-receipt.json",
+      "existsOrPendingSelfReceipt": true,
+      "withinExactOutput": true
+    }
+  ],
+  "linkCount": 18,
+  "allLinksWithinExactOutput": true,
+  "artifactChecks": "receipt generated after this check; self excluded; final hashes reported separately",
+  "productRuns": 0,
+  "GitOperations": 0
+}

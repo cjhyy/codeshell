@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/root-cli-model.test.ts:
+(pass) A10 seed Engine replaces explicit CLI model/endpoint/key with configured catalog default [18.14ms]
+
+ 1 pass
+ 0 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [1.79s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

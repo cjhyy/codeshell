@@ -1,0 +1,91 @@
+{
+  "createdUTC": "2026-10-17T15:27:12.870406+00:00",
+  "parentReportedContext": "0b17496707e0f4d679a86a9d8b4c22477093e8a6; no own Git verification",
+  "files": [],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "bytes": 11253,
+      "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "lineCount": 293,
+      "pinUTC": "2026-10-17T15:25:59.652332+00:00",
+      "semanticRead": false,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "scope": "Body-before exclusion from sameSHA R13 explicit entire-file inspectionScope. Current source body displayed/read0, no fallback or consumer expansion.",
+      "endingUTC": "2026-10-17T15:27:12.848731+00:00",
+      "endingBytes": 11253,
+      "endingSha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "unchanged": true
+    }
+  ],
+  "historicalMetadataReads": [
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "initialBytes": 9153,
+      "initialSha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208",
+      "pinOrigin": "history.json inventory before detailed metadata object inspection",
+      "pinUTC": "2026-10-17T15:26:02.947705+00:00",
+      "endingBytes": 9153,
+      "endingSha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208",
+      "unchanged": true,
+      "scope": "Only exact metadata objects saved in coverage-gate-detail.json; not whole-file semantic review or product source read."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "initialBytes": 8637,
+      "initialSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "pinOrigin": "history.json inventory before detailed metadata object inspection",
+      "pinUTC": "2026-10-17T15:26:02.947705+00:00",
+      "endingBytes": 8637,
+      "endingSha256": "3de735e54e0a77f3fb692bdfcad81af6dd631aa850f9a62f62a1769e7a77827d",
+      "unchanged": true,
+      "scope": "Only exact metadata objects saved in coverage-gate-detail.json; not whole-file semantic review or product source read."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "initialBytes": 1891704,
+      "initialSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "pinOrigin": "history.json inventory before detailed metadata object inspection",
+      "pinUTC": "2026-10-17T15:26:02.947705+00:00",
+      "endingBytes": 1891704,
+      "endingSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "unchanged": true,
+      "scope": "Only exact metadata objects saved in coverage-gate-detail.json; not whole-file semantic review or product source read."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "initialBytes": 12061422,
+      "initialSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pinOrigin": "history.json inventory before detailed metadata object inspection",
+      "pinUTC": "2026-10-17T15:26:02.947705+00:00",
+      "endingBytes": 12061422,
+      "endingSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "unchanged": true,
+      "scope": "Only exact metadata objects saved in coverage-gate-detail.json; not whole-file semantic review or product source read."
+    }
+  ],
+  "productSemanticFiles": 0,
+  "productSemanticLines": 0,
+  "productDisplayedLines": 0,
+  "gateEvidence": {
+    "historyPath": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+    "jsonPointer": "/files/8",
+    "rawFieldName": "inspectionScope",
+    "rawFieldValue": "entire file; query producer/error consumer static only",
+    "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+    "frozenBytes": 11253,
+    "sameSHA": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+    "meaning": "Explicit same-version whole-file static inspection with query producer/error consumer purpose. Does not certify every possible behavior."
+  },
+  "runtime": {
+    "productImports": 0,
+    "productFunctions": 0,
+    "tools": 0,
+    "fixtures": 0,
+    "testsSemanticRead": 0,
+    "testsExecuted": 0,
+    "uiNativeNetworkSessionOperations": 0,
+    "git": 0
+  }
+}

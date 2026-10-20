@@ -1,0 +1,104 @@
+54:   test("writes a png data URL under .code-shell/attachments/<sessionId>", async () => {
+55:     const meta = await stageImageDataUrl({
+56:       cwd,
+57:       sessionId: "sid-1",
+58:       name: "截图.png",
+59:       mime: "image/png",
+60:       dataUrl: PNG_URL,
+61:       origin: "paste",
+62:     });
+63: 
+64:     expect(meta.sessionId).toBe("sid-1");
+65:     expect(meta.origin).toBe("paste");
+66:     expect(meta.mime).toBe("image/png");
+67:     expect(meta.size).toBeGreaterThan(0);
+68:     expect(meta.sha256).toMatch(/^[a-f0-9]{64}$/);
+69:     expect(meta.relPath).toStartWith(".code-shell/attachments/sid-1/");
+70:     expect(meta.path).toBe(meta.relPath);
+71:     expect(meta.absPath).toEndWith(meta.relPath!.replace(/\//g, "/"));
+72:     expect(existsSync(meta.absPath)).toBe(true);
+73:     expect(
+74:       relative(cwd, meta.absPath).startsWith(join(".code-shell", "attachments", "sid-1")),
+75:     ).toBe(true);
+76:   });
+77: 
+78:   test("reuses the same file for the same hash in one session", async () => {
+79:     const first = await stageImageDataUrl({
+80:       cwd,
+81:       sessionId: "sid-1",
+82:       name: "a.png",
+83:       mime: "image/png",
+84:       dataUrl: PNG_URL,
+85:       origin: "paste",
+86:     });
+87:     const second = await stageImageDataUrl({
+88:       cwd,
+89:       sessionId: "sid-1",
+90:       name: "b.png",
+91:       mime: "image/png",
+92:       dataUrl: PNG_URL,
+93:       origin: "os-drop",
+94:     });
+95: 
+96:     expect(second.absPath).toBe(first.absPath);
+97:     expect(second.relPath).toBe(first.relPath);
+98:     expect(second.id).not.toBe(first.id);
+99:   });
+100: 
+434:   test("listRecentAttachments returns sent manifest entries only", async () => {
+435:     const meta = await stageImageDataUrl({
+436:       cwd,
+437:       sessionId: "sid-1",
+438:       name: "a.png",
+439:       mime: "image/png",
+440:       dataUrl: PNG_URL,
+441:       origin: "paste",
+442:     });
+443: 
+444:     expect(await listRecentAttachments({ cwd })).toEqual([]);
+445:     await markAttachmentsSent(cwd, "sid-1", [meta]);
+446:     const recent = await listRecentAttachments({ cwd });
+447:     expect(recent).toHaveLength(1);
+448:     expect(recent[0]!.id).toBe(meta.id);
+449:   });
+450: 
+451:   test("cleanup removes expired draft and sent files by TTL", async () => {
+452:     const draft = await stageImageDataUrl({
+453:       cwd,
+454:       sessionId: "sid-draft",
+455:       name: "a.png",
+456:       mime: "image/png",
+457:       dataUrl: PNG_URL,
+458:       origin: "paste",
+459:     });
+460:     const sent = await stageImageDataUrl({
+461:       cwd,
+462:       sessionId: "sid-sent",
+463:       name: "b.png",
+464:       mime: "image/png",
+465:       dataUrl: PNG_URL,
+466:       origin: "paste",
+467:     });
+468:     await markAttachmentsSent(cwd, "sid-sent", [sent]);
+469: 
+470:     const tooEarly = await cleanupAttachments({
+471:       cwd,
+472:       now: draft.createdAt + DRAFT_ATTACHMENT_TTL_MS - 1,
+473:     });
+474:     expect(tooEarly.removed).toEqual([]);
+475: 
+476:     const draftCleanup = await cleanupAttachments({
+477:       cwd,
+478:       now: draft.createdAt + DRAFT_ATTACHMENT_TTL_MS + 1,
+479:     });
+480:     expect(draftCleanup.removed).toContain(draft.absPath);
+481:     expect(existsSync(draft.absPath)).toBe(false);
+482:     expect(existsSync(sent.absPath)).toBe(true);
+483: 
+484:     const sentCleanup = await cleanupAttachments({
+485:       cwd,
+486:       now: Date.now() + SENT_ATTACHMENT_TTL_MS + 1,
+487:     });
+488:     expect(sentCleanup.removed).toContain(sent.absPath);
+489:     expect(existsSync(sent.absPath)).toBe(false);
+490:   });

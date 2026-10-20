@@ -1,0 +1,17 @@
+# Root正式53归档复核
+
+八包107–114全部冻结：159份原件逐字节复制，151条原self-excluded receipt加159copy，共310核验，24个report/manifest/receipt锚点。38唯一pins中25为packages源/测试路径、13为指令/平台声明/历史审读元数据；40实际范围行、1navigation行、16hash行跨作者保留，不当作唯一新增全文覆盖。
+
+正式新增2项P3：TUI-R53-01为CLI/TUI对Glob状态行的消费计数，Root111和独立112闭合正常producer注册/字符串成功/r.result/实际展示与默认CLItext路由。May30原/123只涉及>200producer缺header及单复数，不是当前同因；修改producer头部不能修CLI误计。TUI-R53-02为Windows盘符绝对路径被slash guard绕过去cwd前缀，长ASCII共同目录挤掉相对文件尾；113独立定向复核，Root114亲读普通absolute输入和本机path边界支持。Windows Desktop发布matrix不当作完整CLI运行验收，实际Windows/TTY/工具调用为0。Root111/114同一作者，不说成第三独立源作者。
+
+原114条catalog对象完全保留，追加一次两条，合计116=44P2+72P3。旧UTF16、Read byte标签、Glob全局最新200候选和失败动态方向不重复登记或恢复；CorecompactOutput无活跃consumer不当可达性证据，terminal-ui本地同名函数不混同Core导入。无剩余新候选/新增关联。
+
+Root111全文209仅本次静态范围，可能有R14旧静态重叠，不能当首次。当前1full+3selected为407产品语义/577正文/0测试声明；112是旧full源上的具体问题targeted selected，273产品+39测试声明/736唯一显示，CLI原canonical查找晚于选读时序保留。113selected87产品+3元数据，Root114再核15产品+3元数据，都是必要重叠，不加入唯一全仓覆盖。107target78行与R49全重叠，余必要消费者也保留旧读；108仅50普通缓存DTO选段，旧reload失败机制不展开。
+
+109两目标和Root110 parse-task同SHA原canonical全文在正文前排除，不升级generic标签或额外激活consumer。108 section-cache原full字段与ancestor navigation/no-new-claim冲突保留，暂缓确定全文，不由单个字段覆写原限制。unknown/no-row/hash都不是未读保证；旧文件/原库存/测试声明不转成新pass。
+
+所有首诊断保留：107猜测test目录rg2且原stderr抑制、错误Desktop路径无bytes、两次输出截断；109文件名输出截断0；111 metadata摘录端点165越过实际163导致IndexError后只修extractor端点，另误猜可选R7文件导致rg路径错误但outer0/nested未知；112两metadata宽展示截断、global误召回与词边界补查分开；113额外locator独立exit/stderr未持久，null不伪造0/2/raw。Root/agent没有产品验证失败或产品重跑。
+
+所有源读者冻结后fetch并refresh，main仍524c0827，无incoming路径；38pins frozen/current/main同，原5150历史bytes也无变化。新53文档不倒填初始扫描。公共文档网络/产品/helper/fixture/test/React/DOM/clock/timer/native/model/业务网络执行均0，仅Git与标准库证据/索引/字节核对。冻结空白例外0，全文件普通空白检查。
+
+总体覆盖仍为dated45的4643TS/TSX：304full/169selected/4170unknown，46–53未统一回填；4339不是未读/精确剩余数，116不是当前未修复数。只提交本批审查文档，不push，主目录原改动保持；全仓目标继续active。

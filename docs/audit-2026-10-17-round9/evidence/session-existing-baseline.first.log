@@ -1,0 +1,46 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/session/transcript.subagent.test.ts:
+(pass) Transcript.appendSubagent > persists a subagent anchor with agentId + description [5.41ms]
+(pass) Transcript.appendSubagent > survives reload from disk (replay reads it back) [5.27ms]
+(pass) Transcript.appendMessage injected flag > persists injected:true only when opts.injected is set [3.56ms]
+
+packages/core/src/session/session-manager.side-fork.test.ts:
+(pass) SessionManager side snapshot > does not copy the user message already persisted by an in-flight parent run [39.07ms]
+(pass) SessionManager side snapshot > cuts all paired assistant and tool tail events after the completed cursor [20.27ms]
+(pass) SessionManager side snapshot > copies no parent events when no completed conversation turn exists [12.41ms]
+(pass) SessionManager side snapshot > uses the stable tail of a legacy session whose persisted status is completed [18.14ms]
+(pass) SessionManager side snapshot > skips source-session run receipts in a completed side snapshot [18.44ms]
+(pass) SessionManager side snapshot > fails closed when the persisted completed cursor is not in the transcript [11.48ms]
+(pass) SessionManager side snapshot > does not inherit the parent's active goal or control state [19.91ms]
+
+packages/core/src/session/session-manager.context-transfer.test.ts:
+(pass) SessionManager context-transfer fork > persists one context_transfer event and hydrates it as model background [17.75ms]
+
+packages/core/src/session/transcript.range-archive.test.ts:
+(pass) Transcript range_archive > replaces the [from, to) span with the summary on replay [9.77ms]
+(pass) Transcript range_archive > an undefined fromClientMessageId archives from the beginning [7.96ms]
+(pass) Transcript range_archive > is idempotent on segmentId [11.30ms]
+(pass) Transcript range_archive > ignores a marker whose toClientMessageId is missing (fails open to full history) [10.86ms]
+(pass) Transcript range_archive > ignores a marker whose from comes after to (fails open) [10.28ms]
+(pass) Transcript range_archive > ignores a degenerate marker where from === to [10.20ms]
+(pass) Transcript range_archive > survives reload from disk [13.56ms]
+(pass) Transcript range_archive > adjacent spans: to of span A === from of span B [10.80ms]
+(pass) Transcript range_archive > two from-less markers: the LAST one wins on replay [10.95ms]
+(pass) Transcript range_archive > toMessagesWithIndex maps clientMessageIds to LIVE indices, skipping archived spans [6.85ms]
+(pass) Transcript range_archive > a duplicate from message (e.g. torn JSONL reload) does not reopen the span and swallow the tail [0.54ms]
+(pass) Transcript range_archive > drops an orphaned tool_result whose tool_use fell inside an archived span [0.58ms]
+(pass) Transcript range_archive > selectContextRange keeps raw messages in full and injects the archived summary as a system-reminder [9.29ms]
+(pass) Transcript range_archive > drops a complete tool_use/tool_result round that lies entirely inside a span [0.52ms]
+(pass) Transcript range_archive > loads only the live tail for a large transcript with a manual clear boundary [8.24ms]
+
+packages/core/src/session/transcript-tool-result-normalization.test.ts:
+(pass) Transcript tool-result normalization > does not persist an interrupted result when a reader loads an in-flight tool [4.45ms]
+(pass) Transcript tool-result normalization > prefers a real late result over a legacy synthetic duplicate [6.08ms]
+(pass) Transcript tool-result normalization > drops an orphaned result from a detached loaded snapshot [2.77ms]
+
+ 29 pass
+ 0 fail
+ 123 expect() calls
+Ran 29 tests across 5 files. [444.00ms]
+Completed Bun shard: 29 tests, 0 skipped; 0 failures.

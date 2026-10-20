@@ -1,0 +1,40 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "counts": {
+    "files": 2301,
+    "markdown": 1213,
+    "json": 1088,
+    "stringLeaves": 335490,
+    "scalarLeaves": 472091,
+    "parseErrors": 0
+  },
+  "matches": {
+    "stdinSource": 15,
+    "stdinBehavior": 5,
+    "queueSource": 169,
+    "paramSource": 155
+  },
+  "cap": 100,
+  "decisions": [
+    {
+      "direction": "read-stdin",
+      "decision": "SKIP before0attempts: prior round21 ndjson receipts explicitly classify old CLI data/read-stdin as failed direction; existing5tests only static",
+      "prior": "docs/audit-2026-10-17-round21/ndjson.md"
+    },
+    {
+      "direction": "RunQueue",
+      "decision": "Old full leaf and existing baseline in original operations-memory and round10; no repeated queue/timer/sync failure tests",
+      "prior": "docs/audit-2026-10-17-round10/runs.md"
+    },
+    {
+      "direction": "model params",
+      "decision": "Old full leaf, normal false/0/dotted controls and unproved parent/child conflict already recorded in round10; no forced runtime or new candidate",
+      "prior": "docs/audit-2026-10-17-round10/catalog.md"
+    },
+    {
+      "direction": "utils prep",
+      "decision": "Verified negative proposal10sourcepins; oldOM3failedgroup and format/json/Unicode exclusions persist; no new fixture proposed"
+    }
+  ],
+  "limitation": "Keywords and capped contexts are not semantic exhaustion; Root did not read every saved context or execute exploratory product modules."
+}

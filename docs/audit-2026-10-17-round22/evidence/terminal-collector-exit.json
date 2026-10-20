@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "python3",
+    "docs/audit-2026-10-17-round22/evidence/terminal-audit.py"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "exitCode": 0,
+  "raw": "evidence/terminal-collector.txt",
+  "bytes": 2181,
+  "sha256": "96c6e5bb2c9d5d025ce2c31f322334b7bdf599ac42e71fc4069150f31b176b2b",
+  "productRuntimeAttempts": 0,
+  "testsRun": 0
+}

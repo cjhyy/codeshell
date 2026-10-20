@@ -592,26 +592,221 @@ export async function getGitDiff(
   }
 }
 
-/** Review-only full-repository diff variant. Unlike the legacy API it surfaces
- * execution failures to the per-repository fan-in layer. A missing HEAD keeps
- * the legacy empty-diff behavior for a freshly initialized repository. */
+/** Review includes untracked files and unborn repositories. Incomplete snapshots
+ * fail visibly so a size limit or unreadable path cannot look like a clean repo.
+ * Keep this separate from the legacy inspector's best-effort diff contract. */
 export async function getGitDiffForReview(cwd: string, mode: GitDiffMode = "all"): Promise<string> {
-  const base = ["diff", "--no-color", "--unified=3"];
+  const maxFiles = 512;
+  const maxFileBytes = 2 * 1024 * 1024;
+  const maxContentBytes = 8 * 1024 * 1024;
+  const maxDiffBytes = 8 * 1024 * 1024;
+  const run = async (args: string[]): Promise<string> => {
+    try {
+      const { stdout } = await execFileAsync("git", args, {
+        cwd,
+        maxBuffer: maxDiffBytes,
+        timeout: 30_000,
+        windowsHide: true,
+      });
+      return stdout;
+    } catch (error) {
+      if ((error as { code?: unknown }).code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
+        throw new Error("Review diff exceeds the 8 MiB size limit", { cause: error });
+      }
+      throw error;
+    }
+  };
+  if (await run(["ls-files", "--unmerged", "-z"])) {
+    throw new Error("Resolve merge conflicts before reviewing uncommitted changes");
+  }
+  const base = [
+    "diff",
+    "--no-color",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--no-relative",
+    "--src-prefix=a/",
+    "--dst-prefix=b/",
+    "--unified=3",
+  ];
   const args =
-    mode === "staged" ? [...base, "--cached"] : mode === "all" ? [...base, "HEAD"] : base;
+    mode === "staged"
+      ? [...base, "--cached", "--"]
+      : mode === "all"
+        ? [...base, "HEAD", "--"]
+        : [...base, "--"];
+  let trackedDiff: string;
+  let unborn = false;
   try {
-    return await gitRun(cwd, args);
+    trackedDiff = await run(args);
   } catch (error) {
     if (
-      mode === "all" &&
-      /(?:bad revision|unknown revision).*HEAD|ambiguous argument 'HEAD'/i.test(
+      mode !== "all" ||
+      !/(?:bad revision|unknown revision).*HEAD|ambiguous argument 'HEAD'/i.test(
         gitErrorDetail(error),
       )
     ) {
-      return "";
+      throw error;
     }
-    throw error;
+    // Only an absent branch ref is unborn. A broken ref or missing object must
+    // remain observable rather than being mistaken for a fresh repository.
+    const headRef = (await run(["symbolic-ref", "--quiet", "HEAD"])).trim();
+    try {
+      await run(["show-ref", "--verify", "--quiet", headRef]);
+    } catch (refError) {
+      if ((refError as { code?: unknown }).code !== 1) throw error;
+      unborn = true;
+    }
+    if (!unborn) throw error;
+    trackedDiff = "";
   }
+
+  let diffBytes = Buffer.byteLength(trackedDiff);
+  let fileCount = (trackedDiff.match(/^diff --git /gm) ?? []).length;
+  const assertDiffLimits = () => {
+    if (fileCount > maxFiles) throw new Error(`Review diff exceeds the ${maxFiles} file limit`);
+    if (diffBytes > maxDiffBytes) throw new Error("Review diff exceeds the 8 MiB size limit");
+  };
+  assertDiffLimits();
+  if (mode === "staged") return trackedDiff;
+
+  // NUL separators preserve spaces, Unicode, tabs, and newlines in filenames.
+  const untracked = (await run(["ls-files", "--others", "--exclude-standard", "-z"]))
+    .split("\0")
+    .filter(Boolean);
+  const tracked = unborn
+    ? (await run(["ls-files", "--cached", "-z"])).split("\0").filter(Boolean)
+    : [];
+  const additions = [...new Set([...tracked, ...untracked])];
+  fileCount += additions.length;
+  assertDiffLimits();
+  if (!additions.length) return trackedDiff;
+
+  const root = await fs.realpath(cwd);
+  const trackedPaths = new Set(tracked);
+  const { constants } = await import("node:fs");
+  const chunks = [trackedDiff];
+  let contentBytes = 0;
+  // A bounded read also protects against a file growing after lstat. Reuse the
+  // buffer while processing sequentially to bound Main-process memory and I/O.
+  const readBuffer = Buffer.alloc(maxFileBytes + 1);
+  const quotePath = (value: string): string =>
+    '"' +
+    [...Buffer.from(value)]
+      .map((byte) =>
+        byte === 34 || byte === 92
+          ? `\\${String.fromCharCode(byte)}`
+          : byte < 32 || byte >= 127
+            ? `\\${byte.toString(8).padStart(3, "0")}`
+            : String.fromCharCode(byte),
+      )
+      .join("") +
+    '"';
+
+  for (const file of additions) {
+    try {
+      const absolute = path.resolve(root, file);
+      const relative = path.relative(root, absolute);
+      if (
+        !relative ||
+        relative === ".." ||
+        relative.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relative)
+      ) {
+        throw new Error("path escapes the repository");
+      }
+      // Do not follow a symlink in any containing directory. Git ordinarily
+      // lists the link itself, but the worktree may change during collection.
+      const parent = path.dirname(absolute);
+      let stat;
+      try {
+        stat = await fs.lstat(absolute);
+      } catch (error) {
+        // Against an empty tree, a staged addition removed from the worktree
+        // has no final content. Missing untracked files remain an error.
+        if (trackedPaths.has(file) && (error as NodeJS.ErrnoException).code === "ENOENT") continue;
+        throw error;
+      }
+      if ((await fs.realpath(parent)) !== parent) {
+        throw new Error("parent directory is a symbolic link");
+      }
+      if (stat.size > maxFileBytes) throw new Error("file exceeds the 2 MiB content limit");
+      let content: Buffer;
+      let fileMode: string;
+      if (stat.isSymbolicLink()) {
+        content = await fs.readlink(absolute, { encoding: "buffer" });
+        fileMode = "120000";
+      } else if (stat.isFile()) {
+        const handle = await fs.open(
+          absolute,
+          constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+        );
+        try {
+          const opened = await handle.stat();
+          if (!opened.isFile() || opened.dev !== stat.dev || opened.ino !== stat.ino) {
+            throw new Error("file changed while collecting the review diff");
+          }
+          let length = 0;
+          while (length < readBuffer.length) {
+            const { bytesRead } = await handle.read(
+              readBuffer,
+              length,
+              readBuffer.length - length,
+              null,
+            );
+            if (!bytesRead) break;
+            length += bytesRead;
+          }
+          content = readBuffer.subarray(0, length);
+        } finally {
+          await handle.close();
+        }
+        fileMode = stat.mode & 0o111 ? "100755" : "100644";
+      } else {
+        throw new Error("unsupported file type; review requires a regular file or symbolic link");
+      }
+      if (content.length > maxFileBytes) throw new Error("file exceeds the 2 MiB content limit");
+      contentBytes += content.length;
+      if (contentBytes > maxContentBytes)
+        throw new Error("new file content exceeds the 8 MiB limit");
+
+      const oldPath = quotePath(`a/${file}`);
+      const newPath = quotePath(`b/${file}`);
+      const patch = [`diff --git ${oldPath} ${newPath}`, `new file mode ${fileMode}`];
+      let text: string | undefined;
+      if (!content.includes(0)) {
+        try {
+          text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(content);
+        } catch {
+          // Invalid UTF-8 is binary content, just like a NUL-containing file.
+        }
+      }
+      if (text === undefined) {
+        patch.push(`Binary files /dev/null and ${newPath} differ`);
+      } else if (text.length) {
+        const terminated = text.endsWith("\n");
+        let lineCount = terminated ? 0 : 1;
+        for (let index = 0; index < text.length; index++) {
+          if (text.charCodeAt(index) === 10) lineCount++;
+        }
+        patch.push("--- /dev/null", `+++ ${newPath}`, `@@ -0,0 +1,${lineCount} @@`);
+        patch.push("+" + (terminated ? text.slice(0, -1) : text).replace(/\n/g, "\n+"));
+        if (!terminated) patch.push("\\ No newline at end of file");
+      }
+      const chunk = patch.join("\n") + "\n";
+      diffBytes += Buffer.byteLength(chunk) + 1;
+      assertDiffLimits();
+      chunks.push(chunk);
+    } catch (error) {
+      throw new Error(
+        `Cannot collect Review diff for ${quotePath(file)}: ${gitErrorDetail(error)}`,
+        {
+          cause: error,
+        },
+      );
+    }
+  }
+  return chunks.filter(Boolean).join("\n");
 }
 
 /**
@@ -620,13 +815,40 @@ export async function getGitDiffForReview(cwd: string, mode: GitDiffMode = "all"
  */
 export async function getGitRangeDiff(cwd: string, range: string, file?: string): Promise<string> {
   if (typeof range !== "string" || !range) return "";
-  const args = ["diff", "--no-color", "--unified=3", range];
-  if (file) args.push("--", file);
-  try {
-    return await gitRun(cwd, args);
-  } catch {
-    return "";
-  }
+  const args = [
+    "diff",
+    "--no-color",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--no-relative",
+    "--src-prefix=a/",
+    "--dst-prefix=b/",
+    "--unified=3",
+    range,
+    "--",
+  ];
+  if (file) args.push(file);
+  return gitRun(cwd, args);
+}
+
+/** A selected commit's own patch, including a root commit's additions. The
+ * first-parent view keeps merge commits consistent with ordinary commit review. */
+export async function getGitCommitDiff(cwd: string, commit = "HEAD"): Promise<string> {
+  return gitRun(cwd, [
+    "show",
+    "--format=",
+    "--no-color",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--no-relative",
+    "--src-prefix=a/",
+    "--dst-prefix=b/",
+    "--unified=3",
+    "--root",
+    "--first-parent",
+    commit,
+    "--",
+  ]);
 }
 
 /** One recent commit, for the review panel's 提交 submenu. */

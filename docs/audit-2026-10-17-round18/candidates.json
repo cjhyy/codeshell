@@ -1,0 +1,42 @@
+{
+  "baseline": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "count": 1,
+  "candidates": [
+    {
+      "id": "UNREAD-R18-C1",
+      "status": "candidate",
+      "title": "List refresh may clear an unread background session that the browser does not select",
+      "sourceRefs": [
+        {
+          "path": "packages/web/src/hooks/useRemoteApp.ts",
+          "line": 685,
+          "endLine": 709
+        },
+        {
+          "path": "packages/web/src/hooks/useRemoteApp.ts",
+          "line": 813,
+          "endLine": 819
+        },
+        {
+          "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+          "line": 513,
+          "endLine": 534
+        }
+      ],
+      "ordinaryTriggerHypothesis": "Browser already bound A with conversation revision 1; background B has unread mark; ordinary list reply keeps A/B with activeSessionId B. The navigation guard rejects B but unread clear precedes it. Actual cross-tab/device producer timing not executed.",
+      "observed": "Actual leaf helpers plus manually mirrored list composition produce empty unread set while mirrored navigation predicate is false; original Set still contains B.",
+      "controls": [
+        "No-op branches preserve reference",
+        "Changing branches clone and preserve original Set",
+        "Prune handles array/Set/single-consumption generator",
+        "Clearing missing browser binding A leaves B untouched"
+      ],
+      "runtimeEvidence": "evidence/unread-pure.first.raw.log",
+      "fixture": "evidence/unread-pure.test.ts",
+      "report": "unread.md#unread-r18-c1--列表刷新可能清掉浏览器未查看的后台会话标记候选",
+      "limits": "useRemoteApp and producer are static only; no hook/React/socket/history/UI/real device/network/native/model/user data. Not a hook or end-to-end reproduction; no message loss, navigation, draft movement or wrong-send claim.",
+      "dedupDisposition": "No helper name hits in complete historical MD/parsed JSON corpus. Old R61 Desktop shared SessionCatalog navigation and W11 pending-create stream binding are exclusion comparisons, not new related counts."
+    }
+  ],
+  "note": "Actual helpers with manually mirrored consumer composition; actual hook/producer/timing not executed. No severity."
+}

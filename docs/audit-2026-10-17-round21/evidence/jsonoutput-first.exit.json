@@ -1,0 +1,16 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round21/evidence/jsonoutput-focused.test.ts"
+  ],
+  "exitCode": 0,
+  "firstAttempt": true,
+  "combinedRaw": "docs/audit-2026-10-17-round21/evidence/jsonoutput-first.raw.log",
+  "rawSha256": "9ae029f5f48607a73d6278713c544c5bb5fe35f033ebddb82e8ec392550545aa",
+  "rawBytes": 1498,
+  "savedBeforeInspection": true,
+  "elapsedSeconds": 0.786
+}

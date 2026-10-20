@@ -1,0 +1,26 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "passed": true,
+  "sourceBytePinsChecked": 10,
+  "sourceManifest": "docs/audit-2026-10-17-round20/evidence/toolsummary-source-manifest.json",
+  "fixture": "docs/audit-2026-10-17-round20/evidence/toolsummary-focused.test.ts",
+  "fixtureSha256": "d0c46d54e04fb62f117359d15fd383d70b423585ad745a7f4d8091c16f569120",
+  "leafAbsoluteImport": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/engine/tool-summary.ts",
+  "loggerExactPreimportMock": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/logging/logger.ts",
+  "loggerMockExports": "logger.warn only; in-memory recording",
+  "observedRuntimeImports": [
+    "../logging/logger.js"
+  ],
+  "observedTypeOnlyImports": [
+    "../types.js"
+  ],
+  "leafTopLevel": "constant system prompt and function declaration only; no product filesystem/network/timer work",
+  "dependencyResolution": "No guessed node_modules package preflight; actual guarded Bun import not run yet",
+  "forbiddenDirectionsExcluded": [
+    "old failed JSON summary repair",
+    "actual model/provider/Engine/TurnLoop dynamic execution",
+    "coupled turn-loop tests",
+    "paid/network/realtools/userdata/native/timers/security/custody"
+  ],
+  "firstRunPolicy": "Persist combined raw stdout/stderr and exit JSON before reading; any nonzero/failure => entire leaf dynamic direction skipped without edits/retry/alternate validation."
+}

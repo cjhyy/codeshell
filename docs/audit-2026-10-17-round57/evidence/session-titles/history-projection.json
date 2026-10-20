@@ -1,0 +1,924 @@
+{
+  "reference": {
+    "createdAt": "2026-10-17T18:55:59.208422+00:00",
+    "source": "/tmp/codeshell-audit-round135-static-files/history-batch.json",
+    "bytes": 1250596,
+    "sha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f",
+    "rootReportedFrozen": true,
+    "rootReportedCohort": "5676MD/JSON,frozen56included57+excluded;recursiveJSONvalues+archives;0parseerrors; no author method executed"
+  },
+  "target": "packages/server/src/session-titles-store.ts",
+  "query": [
+    "packages/server/src/session-titles-store.ts",
+    "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+  ],
+  "historyFiles": 5676,
+  "jsonValueScalarsVisited": 4212456,
+  "excludedFormalAtOrAbove": 57,
+  "count": 423,
+  "cap": 100,
+  "errors": [],
+  "hits": [
+    {
+      "document": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/2102",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/evidence/title-source-manifest.json",
+      "location": "/sources/9/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/evidence/title-source-manifest.json",
+      "location": "/sources/9/frozenSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/evidence/title-source-manifest.json",
+      "location": "/sources/9/currentSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/source-manifest.json",
+      "location": "/files/37/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/source-manifest.json",
+      "location": "/files/37/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/source-manifest.json",
+      "location": "/files/37/currentSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/source-manifest.json",
+      "location": "/files/37/mainSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/source-manifest.json",
+      "location": "/workerSourceChecks/28/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/source-manifest.json",
+      "location": "/workerSourceChecks/28/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/title-report.md",
+      "location": 11,
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "手动重命名的反证来自当前 [Sidebar handler](../../packages/desktop/src/renderer/app/useSessionNavigation.ts#L259) 与 [metadata helper](../../packages/desktop/src/renderer/transcripts.ts#L1018)：manual=true 设置 titleManual。接收自动标题的 [useHostSubscriptions](../../packages/desktop/src/renderer/app/useHostSubscriptions.ts#L366) 在更新前检查此 flag。历史页 [commitEdit](../../packages/desktop/src/renderer/sessions/SessionsView.tsx#L254) 等待 Main 的 title override 写入，随后 [history sync](../../packages/desktop/src/renderer/app/useSessionHistorySync.ts#L46) 把成功名称及 manual flag 回填 loaded aliases；[Main handler](../../packages/desktop/src/main/activity-history-ipc.ts#L29) 写另一套 [override store](../../packages/server/src/session-titles-store.ts#L138)。这条接线只做 selected 静态阅读，不导入或运行 renderer、IPC、registry、磁盘或 native。旧 [sidebar 命名观察](../review-2026-10-12/sidebar-title-observation-round27.md#L9) 已明确自动标题 guard 与双来源边界，因此不能只因 Core 后台写 title 就断言会覆盖手工名。",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "location": "/files/140",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/894/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/894/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/894/claims/0/sourceSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/894/claims/1/sourceSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/3685/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/3685/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14696/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14696/sourceHashFields/frozenSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14696/sourceHashFields/currentSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14696/directSourcePathsInObject/0",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14697/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14697/directSourcePathsInObject/0",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14698/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14698/sourceHashFields/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14698/sourceHashFields/currentSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14698/sourceHashFields/mainSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14698/directSourcePathsInObject/0",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14699/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14699/sourceHashFields/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14699/directSourcePathsInObject/0",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14700/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14700/directSourcePathsInObject/0",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/4007/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/4007/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/4007/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/4007/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "location": "/selectedNoFullPaths/123",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/4008/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/4008/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "location": "/dated49/selectedNoFullPaths/127",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "location": "/current51/selectedNoFullPaths/123",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "location": "/stageFullSelectedSets/old49-current/selected/123",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "location": "/stageFullSelectedSets/plus-inspectionScope/selected/123",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "location": "/stageFullSelectedSets/plus-frozen43-44/selected/134",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "location": "/stageFullSelectedSets/plus-frozen45/selected/142",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/packet-review/checks.json",
+      "location": "/packetChecks/3/sourceRowMetadataChecks/0/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/packet-review/checks.json",
+      "location": "/packetChecks/3/sourceRowMetadataChecks/0/capturedSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/ending-checks.json",
+      "location": "/sourceChecks/0/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/ending-checks.json",
+      "location": "/sourceChecks/0/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/ending-checks.json",
+      "location": "/sourceChecks/0/initialSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/0/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/0/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/1/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/1/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/1/immediateParentForExactValue/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/1/immediateParentForExactValue/frozenSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/1/immediateParentForExactValue/currentSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/2/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/2/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/2/immediateParentForExactValue/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/2/immediateParentForExactValue/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/2/immediateParentForExactValue/currentSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/2/immediateParentForExactValue/mainSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/3/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/3/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/3/immediateParentForExactValue/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/3/immediateParentForExactValue/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/4/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/4/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "查此 flag。历史页 [commitEdit](../../packages/desktop/src/renderer/sessions/SessionsView.tsx#L254) 等待 Main 的 title override 写入，随后 [history sync](../../packages/desktop/src/renderer/app/useSessionHistorySync.ts#L46) 把成功名称及 manual flag 回填 loaded aliases；[Main handler](../../packages/desktop/src/main/activity-history-ipc.ts#L29) 写另一套 [override store](../../packages/server/src/session-titles-store.ts#L138)。这条接线只做 selected 静态阅读，不导入或运行 renderer、IPC、registry、磁盘或 native。旧 [sidebar 命名观察](../review-2026-10-12/sidebar-title-observation-round27.md#L9) 已明确自动标题 guard 与双来源边界，因此不能只因 Core 后台写 title 就断言会覆盖手工名。\n\n去重扫描 [全历史清单](evidence/title-dedup.json) 包括 docs/bugs 的 MD 与递归 JSON 标量，排除本批，含 archive/_archive。读取时共 2232 文件（1202 MD、1030 JSON）、309994 字符串叶与 436035 全标量叶、0 JSON parse error。exact 137 次、mechanism 339 次匹配，各仅保留前 100 条 context；计数不等于语义穷尽，mechanism 的 title/race 在旧 JSON 记录 title 字段与通用 race 文本中产生噪声。[去重决定](evidence/title-dedup-decisions.json) 记录有界补读及排除：UTF-16 slice 旧机制、旧自动标题/usage/summary 讨论、模型输出格式愿望、已有 Sidebar 双来源观察均不算新增。没有运行 surrogate 边界、假定模型违背 prompt、真实模型或旧失败方向。\n\n[首次 raw](evidence/title-session-leaf.ra",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/5/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/5/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/6/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/6/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/6/immediateParentForExactValue/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/6/immediateParentForExactValue/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/6/immediateParentForExactValue/claims/0/sourceSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/6/immediateParentForExactValue/claims/1/sourceSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/7/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/7/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/7/immediateParentForExactValue/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/7/immediateParentForExactValue/sha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/8/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/8/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/8/immediateParentForExactValue/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/8/immediateParentForExactValue/sourceHashFields/frozenSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/8/immediateParentForExactValue/sourceHashFields/currentSha256",
+      "matched": [
+        "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+      ],
+      "value": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/8/immediateParentForExactValue/directSourcePathsInObject/0",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/9/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/9/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/10/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/10/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/10/immediateParentForExactValue/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/10/immediateParentForExactValue/directSourcePathsInObject/0",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/11/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/11/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/12/needle",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/12/context",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "location": "/hits/source_path/12/immediateParentForExactValue/path",
+      "matched": [
+        "packages/server/src/session-titles-store.ts"
+      ],
+      "value": "packages/server/src/session-titles-store.ts",
+      "truncatedValue": false
+    }
+  ],
+  "limitation": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading."
+}

@@ -1,0 +1,22 @@
+{
+  "totals": {
+    "semanticFiles": 3,
+    "fullProductFiles": 0,
+    "selectedProductFiles": 2,
+    "fullTestDeclarationFiles": 1,
+    "productSemanticLines": 308,
+    "testDeclarationLines": 109,
+    "semanticLines": 417,
+    "bodyDisplayedLines": 733,
+    "bodyPlusAdditionalNavigationDisplayedLines": 738,
+    "hashOnlyProductFiles": 1,
+    "hashOnlyInstructions": 2,
+    "declaredExistingTests": 7,
+    "testsExecuted": 0,
+    "newUniqueCoverageClaim": false
+  },
+  "sourceEndingPins": 10,
+  "sourceInstructionCanonicalUnchanged": true,
+  "historyInventory": 6484,
+  "historyDrift": []
+}

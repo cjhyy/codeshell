@@ -1,0 +1,44 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "bytes": 9117,
+      "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "lineCount": 221,
+      "pinUTC": "2026-10-17T16:24:03.963903+00:00",
+      "timing": "before76 first current body/line-navigation display"
+    },
+    {
+      "path": "packages/core/src/composition/compiler.ts",
+      "bytes": 12385,
+      "sha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+      "lineCount": 328,
+      "pinUTC": "2026-10-17T16:24:03.964879+00:00",
+      "timing": "before76 first current body/line-navigation display"
+    },
+    {
+      "path": "packages/core/src/preset/index.ts",
+      "bytes": 10423,
+      "sha256": "8e81b2da2cacfc2c72877789cc04069cfaa10e61e52d6bf4bd6a978423aa6d66",
+      "lineCount": 333,
+      "pinUTC": "2026-10-17T16:24:03.965236+00:00",
+      "timing": "before76 first current body/line-navigation display"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "pinUTC": "2026-10-17T16:24:03.966224+00:00",
+      "timing": "before76 first current body/line-navigation display"
+    },
+    {
+      "path": "packages/core/src/composition/compiler.test.ts",
+      "bytes": 8530,
+      "sha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+      "lineCount": 260,
+      "pinUTC": "2026-10-17T16:24:03.966579+00:00",
+      "timing": "before76 first current body/line-navigation display"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "atUTC": "2026-10-17T19:39:47.900836+00:00",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/session/usage.ts",
+      "bytes": 5944,
+      "lines": 149,
+      "sha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/session/stream-timing.ts",
+      "bytes": 1606,
+      "lines": 41,
+      "sha256": "9306f80c1fa56b8f59f35afc879045140d08129e8cbf167085fb82f63c831ced",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructions": "Prior AGENTS5/CODESHELL217 actual reading carried only under same SHA; this task hashes instructions, not a new read.",
+  "rootReportedBaselineOnly": "c39eb6f987b7bd5d740fee6d8ab5b46718f9c9af",
+  "ownGitOperations": 0,
+  "role": "Independent bounded normal usage/timing source reviewer"
+}

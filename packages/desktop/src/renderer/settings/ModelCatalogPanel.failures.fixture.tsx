@@ -24,6 +24,9 @@ const { ModelCatalogPanel } = await import("./ModelCatalogPanel");
 const { DialogProvider } = await import("../ui/DialogProvider");
 const { ToastProvider } = await import("../ui/ToastProvider");
 const scenario = process.argv[2];
+let settingsChanged = 0;
+const onSettingsChanged = () => settingsChanged++;
+window.addEventListener("codeshell:settings-changed", onSettingsChanged);
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: Error) => void;
@@ -44,7 +47,10 @@ const makeEntry = (displayName = "Catalog Test"): CatalogEntry => ({
   modelPresets: [{ value: "fixture-model" }],
 });
 let stored = [makeEntry()];
-let origin = scenario === "reset-retry" ? "user-override-of-builtin" : "user";
+let origin =
+  scenario === "reset-retry" || scenario.startsWith("unmount-reset")
+    ? "user-override-of-builtin"
+    : "user";
 let readFailure = false;
 let originFailure = scenario === "origins-retry";
 let deferredRead: ReturnType<typeof deferred<CatalogEntry[]>> | undefined =
@@ -145,6 +151,7 @@ async function remove() {
   });
 }
 async function failWrite(index: number, reject: boolean) {
+  const changedBefore = settingsChanged;
   await update(() =>
     reject
       ? writes[index].result.reject(new Error("Synthetic backend detail must not appear"))
@@ -155,6 +162,7 @@ async function failWrite(index: number, reject: boolean) {
   );
   assert.ok(!textOf(container).includes("Synthetic backend detail"));
   assert.equal(props(fieldset()).disabled, false);
+  assert.equal(settingsChanged, changedBefore, "A failed persistence does not reload live models");
 }
 try {
   await update(() =>
@@ -270,7 +278,13 @@ try {
     assert.equal(writes[2].entry?.displayName, "Latest retry draft");
     stored = [writes[2].entry!];
     readFailure = true;
+    const changedBefore = settingsChanged;
     await update(() => writes[2].result.resolve({ ok: true }));
+    assert.equal(
+      settingsChanged,
+      changedBefore + 1,
+      "A persisted catalog save reloads live models even if the following read fails",
+    );
     assert.ok(!nameInput(), "Only a successful mutation closes the editor");
     assert.ok(textOf(card()).includes("Latest retry draft"));
     assert.ok(
@@ -350,7 +364,9 @@ try {
     await remove();
     stored = scenario === "delete-retry" ? [] : [makeEntry("Restored built-in")];
     origin = "builtin";
+    const changedBefore = settingsChanged;
     await update(() => writes[2].result.resolve({ ok: true }));
+    assert.equal(settingsChanged, changedBefore + 1, "Persisted removal reloads live models");
     assert.ok(!nameInput());
     if (scenario === "delete-retry") {
       assert.ok(!card() && textOf(container).includes("还没有模板"));
@@ -365,21 +381,30 @@ try {
           textOf(document.activeElement).includes("Restored built-in"),
       );
     }
-  } else if (scenario === "unmount") {
+  } else if (scenario.startsWith("unmount")) {
     await openEditor();
-    await click(button("保存"));
+    if (scenario.includes("delete") || scenario.includes("reset")) await remove();
+    else await click(button("保存"));
     const countBefore = readCount;
+    const changedBefore = settingsChanged;
     await update(() => root.unmount());
     unmounted = true;
-    await update(() => writes[0].result.resolve({ ok: true }));
+    const succeeded = !scenario.endsWith("failure");
+    await update(() => writes[0].result.resolve({ ok: succeeded }));
+    assert.equal(
+      settingsChanged,
+      changedBefore + (succeeded ? 1 : 0),
+      "Persistence success reloads live models even after the editor unmounts; failure does not",
+    );
     assert.equal(
       readCount,
       countBefore,
-      "An unmounted editor does not refresh or raise notifications after its write",
+      "An unmounted editor does not refresh its own view after its write",
     );
     assert.equal(container.childNodes.length, 0);
   } else throw new Error("Unknown catalog regression scenario");
 } finally {
   if (!unmounted) await update(() => root.unmount());
+  window.removeEventListener("codeshell:settings-changed", onSettingsChanged);
   document.body.removeChild(container);
 }

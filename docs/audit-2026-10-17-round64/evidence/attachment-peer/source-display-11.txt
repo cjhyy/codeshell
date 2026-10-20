@@ -1,0 +1,104 @@
+3228: ): Promise<GatewayControlEventAttachment[]> {
+3229:   const attachments: GatewayControlEventAttachment[] = [];
+3230:   for (const path of paths) {
+3231:     const attachment = await inspectKnownReplyAttachment(path);
+3232:     if (!attachment) {
+3233:       throw new Error(`附件不在允许的附件目录内、属于敏感文件、格式无效或超过 10 MB：${path}`);
+3234:     }
+3235:     attachments.push(attachment);
+3236:   }
+3237:   return attachments;
+3238: }
+3239: 
+3240: async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
+3241:   for (const cwd of await knownAttachmentCwds()) {
+3242:     if (sessionId) {
+3243:       await cleanupSessionAttachments(cwd, sessionId).catch(() => undefined);
+3244:     } else {
+3245:       await cleanupAttachments({ cwd }).catch(() => undefined);
+3246:     }
+3247:   }
+3248: }
+3249: 
+3250: async function dispatchGatewayPetChat(
+3251:   request: PetChatControlRequest,
+3252: ): Promise<PetChatControlResult> {
+3465:             })().catch((error) =>
+3466:               dlog("main", "desktop_notification.open_session.failed", {
+3467:                 sessionId,
+3468:                 error: String(error),
+3469:               }),
+3470:             );
+3471:           },
+3472:         }),
+3473:     },
+3474:   );
+3475:   await projectStore.warm();
+3476:   writeSettingsSchemaAtStartup();
+3477:   void cleanupKnownAttachments();
+3478:   // The main window and the pet popout both render on the default session, so
+3479:   // one handler there serves cstheme:// assets to every window.
+3480:   installThemeAssetProtocol();
+3481:   session.defaultSession.protocol.handle(MEDIA_PREVIEW_SCHEME, (request) =>
+3482:     mediaPreviewService.respond(request),
+3483:   );
+5124:         dataUrl: payload.dataUrl!,
+5125:         origin,
+5126:       }),
+5127:     );
+5128:   },
+5129: );
+5130: ipcMain.handle(
+5131:   "attachments:cleanup",
+5132:   async (_e, payload: { cwd?: string; sessionId?: string; now?: number }) => {
+5133:     if (!payload || typeof payload.cwd !== "string") {
+5134:       throw new Error("attachments:cleanup requires cwd");
+5135:     }
+5136:     const cwd = await requireRendererProjectPath(payload.cwd);
+5137:     return cleanupAttachments({
+5138:       cwd,
+5139:       sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
+5140:     });
+5141:   },
+5142: );
+5143: ipcMain.handle("attachments:inspect", async (_e, payload: { cwd?: string; sessionId?: string }) => {
+5144:   if (!payload || typeof payload.cwd !== "string") {
+5145:     throw new Error("attachments:inspect requires cwd");
+5146:   }
+5147:   const cwd = await requireRendererProjectPath(payload.cwd);
+5148:   return listRecentAttachments({
+5149:     cwd,
+5150:     sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
+5151:   });
+5152: });
+5153: ipcMain.handle(
+5154:   "attachments:markSent",
+5155:   async (
+5156:     event,
+5157:     payload: {
+5158:       cwd?: string;
+5159:       sessionId?: string;
+5160:       attachments?: Array<Parameters<typeof markAttachmentsSent>[2][number]>;
+5161:       quickChatClaimId?: string;
+5162:     },
+5163:   ) => {
+5164:     if (!payload || typeof payload.cwd !== "string" || typeof payload.sessionId !== "string") {
+5165:       throw new Error("attachments:markSent requires cwd and sessionId");
+5166:     }
+5167:     const cwd = await requireRendererProjectPath(payload.cwd);
+5168:     const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
+5169:     if (attachments.length > 32) throw new Error("too many attachments to mark sent");
+5170:     const authorizedPayload = { ...payload, cwd };
+5171:     return runClaimBoundAttachmentOperation(event.sender.id, authorizedPayload, async () => {
+5172:       await markAttachmentsSent(cwd, payload.sessionId!, attachments);
+5173:       return { ok: true } as const;
+5174:     });
+5175:   },
+5176: );
+5177: ipcMain.handle(
+5178:   "skills:uninstall",
+5179:   async (
+5180:     _e,
+5181:     input: {
+5182:       scope?: unknown;
+5183:       target?: unknown;

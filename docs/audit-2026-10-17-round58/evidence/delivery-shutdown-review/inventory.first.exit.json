@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "packages/chat/src",
+    "-g",
+    "*cli*",
+    "-g",
+    "*delivery*",
+    "-g",
+    "*gateway*",
+    "-g",
+    "*lease*",
+    "-g",
+    "*bound-session*",
+    "-g",
+    "*control*"
+  ],
+  "exitCode": 0,
+  "atUTC": "2026-10-17T19:26:59.755284+00:00"
+}

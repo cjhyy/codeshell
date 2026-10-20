@@ -1,0 +1,25 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round3/evidence/lab-offline-round2.test.ts:
+20 |             registerProvider("openai", OpenAIClient);
+21 |             Cls = OpenAIClient;
+22 |         }
+23 |     }
+24 |     if (!Cls) {
+25 |         throw new LLMError(`Unknown LLM provider: ${config.provider}. Available: ${[...PROVIDER_REGISTRY.keys()].join(", ")}`);
+                   ^
+LLMError: Unknown LLM provider: audit-arena-reviewer-cap. Available: 
+  details: undefined,
+ provider: undefined,
+
+      at createLLMClient (/Users/admin/Documents/个人学习/代码学习/codeshell/packages/core/dist/llm/client-factory.js:25:15)
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/arena/src/phases/cross-review.ts:182:26)
+      at map (1:11)
+      at runVerificationReview (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/arena/src/phases/cross-review.ts:173:30)
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round3/evidence/lab-offline-round2.test.ts:39:24)
+(fail) Arena default maxReviewersPerClaim two still sends one claim to all three nonowners [6.53ms]
+
+ 0 pass
+ 1 fail
+Ran 1 test across 1 file. [819.00ms]
+Bun test process failed (1)

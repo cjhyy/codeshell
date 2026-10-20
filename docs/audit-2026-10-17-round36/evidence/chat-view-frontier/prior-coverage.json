@@ -1,0 +1,40 @@
+{
+  "rankPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+  "selectedJSONRows": [
+    {
+      "jsonLocation": "$[\"rankedCandidates\"][125]",
+      "row": {
+        "path": "packages/desktop/src/renderer/chat/anchorBuckets.ts",
+        "bytes": 2961,
+        "lines": 80,
+        "sha256": "d81fae043047c2de19141184a9f02c80ff2ff429e991004668fbef75d0cfca46",
+        "coverageStatus": "no-matching-source-manifest-row",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 0,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 1,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "jsonLocation": "$[\"rankedCandidates\"][128]",
+      "row": {
+        "path": "packages/desktop/src/renderer/chat/followState.ts",
+        "bytes": 3454,
+        "lines": 85,
+        "sha256": "aa9ddaf79e2cbf85c554bce7e04d94f1e16fde1887f3afb4604e2aa27fad1615",
+        "coverageStatus": "no-matching-source-manifest-row",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 0,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 0,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    }
+  ],
+  "decision": "Both rows match current source hashes but status no-matching-source-manifest-row is inventory/navigation only. It is neither proof of historically unread nor an existing semantic pass. Earlier source walkthrough/plan contexts mention current concepts but no historical same-version whole semantic pin was established."
+}

@@ -1,0 +1,10 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/root-json-output.test.ts:
+(pass) A12 JSON final fallback includes child-agent text while text renderer excludes it [0.32ms]
+
+ 1 pass
+ 0 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [341.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

@@ -1,0 +1,25 @@
+{
+  "baseline": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+  "mainHead": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+  "formal": 1,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 226,
+  "activeSourceChecks": 47,
+  "incidentalSourceChecks": 191,
+  "hashOnlyChecks": 29,
+  "unboundNavigationReferences": 6,
+  "missingDeclaredByteCounts": 2,
+  "receiptChecks": 667,
+  "verbatimCopies": 337,
+  "frozenWhitespaceArtifacts": 12,
+  "datedCoverageReference": "Conservative46–60 migration on original4643 same-SHA paths:355full/354selected/3934unknown,4288 not full.61 current source reviews not unioned; no exact remaining audit/bug count. Current filtered4644 includes prior57 evidence-only TS.",
+  "historicalFormalRecords": 119,
+  "priorities": {
+    "P2": 46,
+    "P3": 73
+  },
+  "changedFromFrozenSourcePaths": [],
+  "productRuns": 0,
+  "goalStillActive": true
+}

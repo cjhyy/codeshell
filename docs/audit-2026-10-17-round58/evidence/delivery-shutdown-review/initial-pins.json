@@ -1,0 +1,39 @@
+{
+  "rootReportedBaseline": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "gitCertified": false,
+  "instructionReuse": "Same SHA prior CODESHELL full217 read and AGENTS instructions reused, no new instruction body.",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T19:26:59.756980+00:00",
+      "timing": "before body/nav this packet; product filenames confirmed current inventory"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T19:26:59.757314+00:00",
+      "timing": "before body/nav this packet; product filenames confirmed current inventory"
+    },
+    {
+      "path": "packages/chat/src/delivery-queue.ts",
+      "bytes": 28387,
+      "lineCount": 769,
+      "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "pinnedAtUTC": "2026-10-17T19:26:59.757888+00:00",
+      "timing": "before body/nav this packet; product filenames confirmed current inventory"
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.ts",
+      "bytes": 3817,
+      "lineCount": 99,
+      "sha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "pinnedAtUTC": "2026-10-17T19:26:59.758296+00:00",
+      "timing": "before body/nav this packet; product filenames confirmed current inventory"
+    }
+  ]
+}

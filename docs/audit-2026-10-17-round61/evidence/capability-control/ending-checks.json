@@ -1,0 +1,191 @@
+{
+  "checkedAt": "2026-10-17T20:15:33.408102+00:00",
+  "sourceChecks": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "bytes": 7815,
+      "initialSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "endingSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "bytes": 7690,
+      "initialSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "endingSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/capability-control/project.ts",
+      "bytes": 5930,
+      "initialSha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "endingSha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/capabilities-service.ts",
+      "bytes": 4475,
+      "initialSha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+      "endingSha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+      "bytes": 26939,
+      "initialSha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+      "endingSha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "initialSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "endingSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/capability-control/types.ts",
+      "bytes": 2864,
+      "initialSha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+      "endingSha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 75595,
+      "initialSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "endingSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "initialSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "endingSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "unchanged": true
+    }
+  ],
+  "selectedHistoricalChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-source-manifest.json",
+      "bytes": 8960,
+      "initialSha256": "846b73a17037299a131795cb80ce11afe04d00fa9b62bc5cc20be6c4c7640771",
+      "endingSha256": "846b73a17037299a131795cb80ce11afe04d00fa9b62bc5cc20be6c4c7640771",
+      "unchanged": true,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedJsonPointers": [
+        "/sources/8"
+      ],
+      "displayedLineRanges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "bytes": 25980,
+      "initialSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+      "endingSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+      "unchanged": true,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedJsonPointers": [
+        "/files/31"
+      ],
+      "displayedLineRanges": []
+    },
+    {
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "bytes": 60400,
+      "initialSha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+      "endingSha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+      "unchanged": true,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedJsonPointers": [],
+      "displayedLineRanges": [
+        [
+          180,
+          194
+        ]
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md",
+      "bytes": 39170,
+      "initialSha256": "6b5fede9d7a924c6be358ef8a51c84cd0b7fe37e0c7827f1308e18baece0e59a",
+      "endingSha256": "6b5fede9d7a924c6be358ef8a51c84cd0b7fe37e0c7827f1308e18baece0e59a",
+      "unchanged": true,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedJsonPointers": [],
+      "displayedLineRanges": [
+        [
+          65,
+          108
+        ]
+      ]
+    },
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "initialSha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "endingSha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "unchanged": true,
+      "selectionArtifact": "dotted-token-prior-cause-read.json",
+      "selectedJsonPointers": [],
+      "displayedLineRanges": [
+        [
+          25,
+          73
+        ]
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "bytes": 13804,
+      "initialSha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "endingSha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "unchanged": true,
+      "selectionArtifact": "dotted-token-prior-cause-read.json",
+      "selectedJsonPointers": [],
+      "displayedLineRanges": [
+        [
+          195,
+          203
+        ]
+      ]
+    }
+  ],
+  "focusedHistoryInventoryChecks": [
+    {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "initialSha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "endingSha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "unchanged": true
+    },
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "initialSha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "endingSha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "unchanged": true
+    }
+  ],
+  "sharedBatchCheck": {
+    "path": "/tmp/codeshell-audit-round157-composition-lifetime/history-batch.json",
+    "initialSha256": "97861ae2e150de7a080d891724516900d9fdbed271d790c6e59cad05ef0c03c9",
+    "endingSha256": "97861ae2e150de7a080d891724516900d9fdbed271d790c6e59cad05ef0c03c9",
+    "unchanged": true
+  },
+  "allOwnPinsUnchanged": true,
+  "wholeSharedInventoryRecheckedByThisAuthor": false,
+  "GitVerified": false
+}

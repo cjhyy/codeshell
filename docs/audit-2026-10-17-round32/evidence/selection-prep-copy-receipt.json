@@ -1,0 +1,82 @@
+{
+  "originalPrepParentReportedContext": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "parentReportedFormalBaseline": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "files": [
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/artifact-receipt.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/artifact-receipt.json",
+      "bytes": 2651,
+      "sha256": "a1d29fc27477836a45d7830a561fd5423ce53dbb8b4243376c437586c33aab9e",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/consumer-reference.txt",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/consumer-reference.txt",
+      "bytes": 4502,
+      "sha256": "46c05ca7416f1e72b28a4bda7c3d8153967a96909cafc5ac8e442fdd5cde2131",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/decisions.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/decisions.json",
+      "bytes": 1975,
+      "sha256": "9f4046804c7349ceba9b344a75584ff7ca757afb8e089003b6d5de5a83fdbafd",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/history-method.py",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/history-method.py",
+      "bytes": 3652,
+      "sha256": "a5b56a98e1c24703625b959fbba8e0b7ae95c62dcf53b63448890d44a0f1ba64",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/history.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/history.json",
+      "bytes": 629551,
+      "sha256": "a280e31d054f0d84c2618f8011bc4e8cc8b3134a82080b2d0743471ef93ceb15",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/metadata-notes.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/metadata-notes.json",
+      "bytes": 1194,
+      "sha256": "6240cc29e4568b4223a9f6fdbdfd500cd39ac2213b2a606661684a10a5f49b79",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/prior-source-comparison.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+      "bytes": 1377,
+      "sha256": "f533483096e0e77418d86da1348fbb8bb048b851fa6381d77b9d8e3970e42c27",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/report.md",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/report.md",
+      "bytes": 4169,
+      "sha256": "717095015c0470a69e31b633fd4a921c292fb6b37bcef13da2c75ee532639b1d",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/source-manifest.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/source-manifest.json",
+      "bytes": 9981,
+      "sha256": "72f679ca9159239d0c8d548fd794d02df0123af3cc372fe6645d27b44a1aa4fe",
+      "byteIdentical": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round32-selection-frontier/validation.json",
+      "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/validation.json",
+      "bytes": 720,
+      "sha256": "e8a8c2a6e4e3925e396dd3714c07a37cabf9b6a3169cf71ead100ba422303f47",
+      "byteIdentical": true
+    }
+  ],
+  "artifactCount": 10,
+  "copiedAtUTC": "2026-10-17T12:10:47.446352+00:00",
+  "newSemanticSourceReads": 0,
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "note": "Ten frozen prep artifacts copied byte for byte, preserving original parent/times/2921 history/pins and withdrawn initial hypothesis; not new semantic coverage."
+}

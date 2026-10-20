@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { linkProviderModuleUrl } from "./fixtures/link-provider-module.mjs";
 import { createServer } from "node:http";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -92,6 +93,8 @@ const digest = (value) =>
 const names = (body) => (body.tools ?? []).map((tool) => tool.function.name);
 try {
   const core = await import("@cjhyy/code-shell-core");
+  const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+  installDefaultLinkProviders();
   const host = await import("@cjhyy/code-shell-core/internal");
   const coding = await import("../packages/coding/dist/index.capability.js");
   const pet = await import("../packages/pet/dist/index.js");
@@ -457,6 +460,9 @@ try {
         linkExecutionBackend: "remote",
         linkRemoteState: "connected",
         linkRemoteGrantId: "fixture-grant",
+        linkResourceGroups: [
+          { id: "repositories", items: [{ id: "fixture/repo", label: "Synthetic repository" }] },
+        ],
         linkCapabilityIds: ["github.list_repositories"],
         linkLastVerifiedAt: "2026-10-09T00:00:00Z",
       },
@@ -467,7 +473,11 @@ try {
       envExposures: () => ({}),
       executeRemoteLinkAction: async () => {
         boundReads++;
-        return { value: "bound consumer result" };
+        return {
+          repositories: [
+            { id: 1, full_name: "fixture/repo", description: "bound consumer result" },
+          ],
+        };
       },
     });
     const counters = { approvals: 0 };

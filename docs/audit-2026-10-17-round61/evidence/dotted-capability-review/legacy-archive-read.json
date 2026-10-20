@@ -1,0 +1,104 @@
+{
+  "input": {
+    "path": "docs/archive/bug-followups-2026-08-13.md",
+    "bytes": 7166,
+    "lineCount": 116,
+    "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+    "pinnedAtUTC": "2026-10-17T20:13:28.269370+00:00",
+    "timing": "before any own prep158 body/nav"
+  },
+  "bodyDisplayedLineRanges": [
+    [
+      1,
+      18
+    ],
+    [
+      30,
+      50
+    ]
+  ],
+  "bodyDisplayedLineCount": 39,
+  "semanticScopeLineRanges": [
+    [
+      1,
+      7
+    ],
+    [
+      36,
+      45
+    ]
+  ],
+  "semanticScopeLineCount": 17,
+  "excerpts": [
+    {
+      "line": 1,
+      "text": "# 安全加固遗留问题 — 已完成（2026-08-25）"
+    },
+    {
+      "line": 2,
+      "text": ""
+    },
+    {
+      "line": 3,
+      "text": "> 来源：2026-08-12/08-13 两轮全仓安全加固（191 files, +12k）提交前的独立复查。"
+    },
+    {
+      "line": 4,
+      "text": "> 2026-08-25 复核并完成余下 8 项：统一 manifest 安全读取、拒绝点号名称假成功、"
+    },
+    {
+      "line": 5,
+      "text": "> undo/redo 会话与窗口校验、撤销设备防复活、browser anchor 生命周期清理、"
+    },
+    {
+      "line": 6,
+      "text": "> DeliveryQueue 逐记录清理重试与锁外附件下载、user scope fail-closed。"
+    },
+    {
+      "line": 7,
+      "text": "> 本文件移入 archive，以下保留修复前的问题与验收依据。"
+    },
+    {
+      "line": 36,
+      "text": "### 2. 带点号的插件/Skill 名会静默 no-op 却报告成功"
+    },
+    {
+      "line": 37,
+      "text": ""
+    },
+    {
+      "line": 38,
+      "text": "- 位置：`packages/core/src/tool-system/builtin/install-capability.ts:556-560`、`791-797`"
+    },
+    {
+      "line": 39,
+      "text": "- 现状：`SAFE_PLUGIN_SEGMENT_RE`(`:34`)/`SAFE_SKILL_NAME_RE`(`:35`) 允许 `.`，"
+    },
+    {
+      "line": 40,
+      "text": "  名字被插进点分设置键 `capabilityOverrides.plugins.${plugin}`；"
+    },
+    {
+      "line": 41,
+      "text": "  `setDottedSetting`（`settings/manager.ts:137-148`）按 `.` 拆成嵌套对象"
+    },
+    {
+      "line": 42,
+      "text": "  `{plugins:{a:{b:\"off\"}}}`，而读取端 `capability-control/overlay.ts:22-26`"
+    },
+    {
+      "line": 43,
+      "text": "  期望扁平 `Record<name,\"on\"|\"off\">`，非法结构被归一化为 inherit。"
+    },
+    {
+      "line": 44,
+      "text": "- 结果：`disable plugin a.b` 返回「Disabled ...」但插件依然启用。"
+    },
+    {
+      "line": 45,
+      "text": "- 建议：禁止名字中的 `.`，或改用非点分的键写入方式。"
+    }
+  ],
+  "statusInterpretation": "Original heading says completed on 2026-08-25 and that the archive preserves pre-fix issues/acceptance basis. It explicitly mentions rejecting dotted names. Section 2 names plugin/Skill inputs and recommends either rejecting dots or a non-dotted key write. This dated status does not establish that the currently read MCP/project-override variant is fixed, nor that all current settings mechanisms are defective.",
+  "coverageLimitation": "One personally read original archive, not an independent full-history scan. Parent supplied the candidate to compare; no mutable/final prep155 report was read."
+}

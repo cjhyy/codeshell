@@ -1,0 +1,37 @@
+{
+  "purpose": "before accepted DTO/ordinary CLI invocation and constructor signature only; credentials/login/SDK transport bodies stop boundary",
+  "files": [
+    {
+      "path": "packages/chat/src/config.ts",
+      "bytes": 28057,
+      "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "lineCount": 870,
+      "pinUTC": "2026-10-17T15:44:32.016655+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "bytes": 11645,
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "lineCount": 320,
+      "pinUTC": "2026-10-17T15:44:32.019414+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/chat/src/slack.ts",
+      "bytes": 5782,
+      "sha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "lineCount": 165,
+      "pinUTC": "2026-10-17T15:44:32.020612+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "lineCount": 193,
+      "pinUTC": "2026-10-17T15:44:32.021763+00:00",
+      "semanticRead": false
+    }
+  ]
+}

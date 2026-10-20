@@ -1,0 +1,1896 @@
+{
+  "atUTC": "2026-10-17T21:14:39.691590+00:00",
+  "rootReportedBaseline": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "gitCertified": false,
+  "scope": "independent targeted static counter-review of Root ATTACH-R64-01, plus first-run evidence inspection; not first-read or whole source review",
+  "summary": {
+    "productSemanticFiles": 6,
+    "productSemanticLines": 606,
+    "existingTestDeclarationLines": 104,
+    "rootFixtureCodeInspectionLines": 87,
+    "rootRawLogAndExitInspectionLines": 24,
+    "bodyDisplayLinesAllInputs": 1246,
+    "allDisplayUnionLinesAllInputs": 1379,
+    "sourceInstructionAndEvidencePins": 12,
+    "fullProductFiles": 0,
+    "productExecutionByPeer": 0,
+    "testExecutionByPeer": 0,
+    "Git": 0
+  },
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "totalLines": 217,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [],
+      "bodyDisplayLineCount": 0,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [],
+      "allDisplayedLineCount": 0,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lines": 217,
+        "pinnedAtUTC": "2026-10-17T21:11:31.333540+00:00",
+        "timing": "before own prep176 body/navigation"
+      },
+      "ending": {
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lines": 217,
+        "atUTC": "2026-10-17T21:14:39.681838+00:00"
+      },
+      "scope": "same-SHA instruction reuse, no new body"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "totalLines": 5,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [],
+      "bodyDisplayLineCount": 0,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [],
+      "allDisplayedLineCount": 0,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lines": 5,
+        "pinnedAtUTC": "2026-10-17T21:11:31.334363+00:00",
+        "timing": "before own prep176 body/navigation"
+      },
+      "ending": {
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lines": 5,
+        "atUTC": "2026-10-17T21:14:39.683077+00:00"
+      },
+      "scope": "same-SHA instruction reuse, no new body"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+      "bytes": 3358,
+      "sha256": "abcae4504ba63806cdcdac1d1395d8dbd882a1b9e535d18936c8d3652dcd5185",
+      "totalLines": 87,
+      "coverage": "evidence-inspection",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          87
+        ]
+      ],
+      "bodyDisplayLineCount": 87,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          87
+        ]
+      ],
+      "allDisplayedLineCount": 87,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+        "bytes": 3358,
+        "sha256": "abcae4504ba63806cdcdac1d1395d8dbd882a1b9e535d18936c8d3652dcd5185",
+        "lines": 87,
+        "pinnedAtUTC": "2026-10-17T21:11:31.334647+00:00",
+        "timing": "before own prep176 body/navigation"
+      },
+      "ending": {
+        "bytes": 3358,
+        "sha256": "abcae4504ba63806cdcdac1d1395d8dbd882a1b9e535d18936c8d3652dcd5185",
+        "lines": 87,
+        "atUTC": "2026-10-17T21:14:39.683546+00:00"
+      },
+      "scope": "Root first-run evidence, independently read, not reexecuted and not peer runtime pass"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log",
+      "bytes": 517,
+      "sha256": "7f7c6c3006954a915d44611977ec8a19b365ecd4f4936c26b416509a2e2add69",
+      "totalLines": 11,
+      "coverage": "evidence-inspection",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          11
+        ]
+      ],
+      "bodyDisplayLineCount": 11,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          11
+        ]
+      ],
+      "allDisplayedLineCount": 11,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log",
+        "bytes": 517,
+        "sha256": "7f7c6c3006954a915d44611977ec8a19b365ecd4f4936c26b416509a2e2add69",
+        "lines": 11,
+        "pinnedAtUTC": "2026-10-17T21:11:31.337249+00:00",
+        "timing": "before own prep176 body/navigation"
+      },
+      "ending": {
+        "bytes": 517,
+        "sha256": "7f7c6c3006954a915d44611977ec8a19b365ecd4f4936c26b416509a2e2add69",
+        "lines": 11,
+        "atUTC": "2026-10-17T21:14:39.684052+00:00"
+      },
+      "scope": "Root first-run evidence, independently read, not reexecuted and not peer runtime pass"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first-exit.json",
+      "bytes": 343,
+      "sha256": "12dbce4fbd1fce26b41b983ce5d739ba7c1c1814179bbc1b9d70f1065c4bf7d9",
+      "totalLines": 13,
+      "coverage": "evidence-inspection",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "bodyDisplayLineCount": 13,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "allDisplayedLineCount": 13,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first-exit.json",
+        "bytes": 343,
+        "sha256": "12dbce4fbd1fce26b41b983ce5d739ba7c1c1814179bbc1b9d70f1065c4bf7d9",
+        "lines": 13,
+        "pinnedAtUTC": "2026-10-17T21:11:31.339234+00:00",
+        "timing": "before own prep176 body/navigation"
+      },
+      "ending": {
+        "bytes": 343,
+        "sha256": "12dbce4fbd1fce26b41b983ce5d739ba7c1c1814179bbc1b9d70f1065c4bf7d9",
+        "lines": 13,
+        "atUTC": "2026-10-17T21:14:39.684326+00:00"
+      },
+      "scope": "Root first-run evidence, independently read, not reexecuted and not peer runtime pass"
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "bytes": 27944,
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "totalLines": 887,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          100,
+          123
+        ],
+        [
+          177,
+          188
+        ],
+        [
+          230,
+          296
+        ],
+        [
+          356,
+          385
+        ],
+        [
+          387,
+          418
+        ],
+        [
+          420,
+          472
+        ],
+        [
+          690,
+          714
+        ],
+        [
+          875,
+          886
+        ]
+      ],
+      "semanticLineCount": 255,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [
+        [
+          1,
+          90
+        ],
+        [
+          100,
+          145
+        ],
+        [
+          170,
+          306
+        ],
+        [
+          350,
+          487
+        ],
+        [
+          690,
+          716
+        ],
+        [
+          805,
+          840
+        ],
+        [
+          865,
+          887
+        ]
+      ],
+      "bodyDisplayLineCount": 497,
+      "navigationLineRanges": [
+        [
+          98,
+          99
+        ],
+        [
+          122,
+          123
+        ],
+        [
+          177,
+          177
+        ],
+        [
+          256,
+          256
+        ],
+        [
+          295,
+          295
+        ],
+        [
+          316,
+          316
+        ],
+        [
+          352,
+          352
+        ],
+        [
+          368,
+          368
+        ],
+        [
+          409,
+          409
+        ],
+        [
+          420,
+          420
+        ],
+        [
+          453,
+          453
+        ],
+        [
+          459,
+          459
+        ],
+        [
+          476,
+          476
+        ],
+        [
+          690,
+          690
+        ],
+        [
+          708,
+          708
+        ],
+        [
+          717,
+          717
+        ],
+        [
+          749,
+          749
+        ],
+        [
+          754,
+          754
+        ],
+        [
+          761,
+          761
+        ],
+        [
+          767,
+          767
+        ],
+        [
+          807,
+          807
+        ],
+        [
+          835,
+          835
+        ],
+        [
+          866,
+          866
+        ],
+        [
+          875,
+          876
+        ],
+        [
+          884,
+          884
+        ]
+      ],
+      "navigationLineCount": 28,
+      "allDisplayedLineRanges": [
+        [
+          1,
+          90
+        ],
+        [
+          98,
+          145
+        ],
+        [
+          170,
+          306
+        ],
+        [
+          316,
+          316
+        ],
+        [
+          350,
+          487
+        ],
+        [
+          690,
+          717
+        ],
+        [
+          749,
+          749
+        ],
+        [
+          754,
+          754
+        ],
+        [
+          761,
+          761
+        ],
+        [
+          767,
+          767
+        ],
+        [
+          805,
+          840
+        ],
+        [
+          865,
+          887
+        ]
+      ],
+      "allDisplayedLineCount": 505,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "packages/server/src/attachment-service.ts",
+        "bytes": 27944,
+        "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+        "lines": 887,
+        "pinnedAtUTC": "2026-10-17T21:11:41.983758+00:00",
+        "timing": "before own body/navigation"
+      },
+      "ending": {
+        "bytes": 27944,
+        "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+        "lines": 887,
+        "atUTC": "2026-10-17T21:14:39.684854+00:00"
+      },
+      "scope": "specific ATTACH-R64-01 ordinary same-session content-dedup/ID retention case; targeted overlap, not first/full file review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "totalLines": 391,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          96,
+          142
+        ]
+      ],
+      "semanticLineCount": 47,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [
+        [
+          91,
+          145
+        ]
+      ],
+      "bodyDisplayLineCount": 55,
+      "navigationLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          19,
+          20
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          35,
+          35
+        ],
+        [
+          47,
+          47
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          75,
+          75
+        ],
+        [
+          77,
+          78
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          98,
+          98
+        ],
+        [
+          104,
+          104
+        ],
+        [
+          136,
+          137
+        ],
+        [
+          178,
+          178
+        ],
+        [
+          180,
+          180
+        ],
+        [
+          182,
+          182
+        ],
+        [
+          185,
+          185
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          217,
+          217
+        ],
+        [
+          225,
+          226
+        ],
+        [
+          230,
+          231
+        ],
+        [
+          237,
+          237
+        ],
+        [
+          243,
+          243
+        ],
+        [
+          247,
+          248
+        ],
+        [
+          269,
+          269
+        ],
+        [
+          291,
+          291
+        ],
+        [
+          300,
+          300
+        ],
+        [
+          307,
+          307
+        ]
+      ],
+      "navigationLineCount": 35,
+      "allDisplayedLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          19,
+          20
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          35,
+          35
+        ],
+        [
+          47,
+          47
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          75,
+          75
+        ],
+        [
+          77,
+          78
+        ],
+        [
+          91,
+          145
+        ],
+        [
+          178,
+          178
+        ],
+        [
+          180,
+          180
+        ],
+        [
+          182,
+          182
+        ],
+        [
+          185,
+          185
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          217,
+          217
+        ],
+        [
+          225,
+          226
+        ],
+        [
+          230,
+          231
+        ],
+        [
+          237,
+          237
+        ],
+        [
+          243,
+          243
+        ],
+        [
+          247,
+          248
+        ],
+        [
+          269,
+          269
+        ],
+        [
+          291,
+          291
+        ],
+        [
+          300,
+          300
+        ],
+        [
+          307,
+          307
+        ]
+      ],
+      "allDisplayedLineCount": 85,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "packages/desktop/src/renderer/chat/attachments.ts",
+        "bytes": 13388,
+        "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+        "lines": 391,
+        "pinnedAtUTC": "2026-10-17T21:11:53.462646+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 13388,
+        "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+        "lines": 391,
+        "atUTC": "2026-10-17T21:14:39.685464+00:00"
+      },
+      "scope": "specific ATTACH-R64-01 ordinary same-session content-dedup/ID retention case; targeted overlap, not first/full file review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "totalLines": 1247,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          366,
+          368
+        ],
+        [
+          394,
+          407
+        ]
+      ],
+      "semanticLineCount": 17,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [
+        [
+          355,
+          369
+        ],
+        [
+          375,
+          412
+        ]
+      ],
+      "bodyDisplayLineCount": 53,
+      "navigationLineRanges": [
+        [
+          11,
+          11
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          315,
+          315
+        ],
+        [
+          341,
+          341
+        ],
+        [
+          366,
+          367
+        ],
+        [
+          394,
+          394
+        ],
+        [
+          399,
+          399
+        ],
+        [
+          402,
+          402
+        ],
+        [
+          445,
+          445
+        ],
+        [
+          467,
+          467
+        ],
+        [
+          562,
+          562
+        ],
+        [
+          565,
+          566
+        ],
+        [
+          594,
+          594
+        ],
+        [
+          606,
+          606
+        ],
+        [
+          625,
+          625
+        ],
+        [
+          630,
+          630
+        ],
+        [
+          634,
+          634
+        ],
+        [
+          732,
+          732
+        ],
+        [
+          752,
+          752
+        ],
+        [
+          779,
+          779
+        ],
+        [
+          795,
+          795
+        ],
+        [
+          820,
+          820
+        ],
+        [
+          824,
+          824
+        ],
+        [
+          840,
+          840
+        ],
+        [
+          848,
+          849
+        ],
+        [
+          858,
+          859
+        ],
+        [
+          863,
+          863
+        ],
+        [
+          889,
+          889
+        ],
+        [
+          897,
+          897
+        ],
+        [
+          906,
+          906
+        ]
+      ],
+      "navigationLineCount": 34,
+      "allDisplayedLineRanges": [
+        [
+          11,
+          11
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          315,
+          315
+        ],
+        [
+          341,
+          341
+        ],
+        [
+          355,
+          369
+        ],
+        [
+          375,
+          412
+        ],
+        [
+          445,
+          445
+        ],
+        [
+          467,
+          467
+        ],
+        [
+          562,
+          562
+        ],
+        [
+          565,
+          566
+        ],
+        [
+          594,
+          594
+        ],
+        [
+          606,
+          606
+        ],
+        [
+          625,
+          625
+        ],
+        [
+          630,
+          630
+        ],
+        [
+          634,
+          634
+        ],
+        [
+          732,
+          732
+        ],
+        [
+          752,
+          752
+        ],
+        [
+          779,
+          779
+        ],
+        [
+          795,
+          795
+        ],
+        [
+          820,
+          820
+        ],
+        [
+          824,
+          824
+        ],
+        [
+          840,
+          840
+        ],
+        [
+          848,
+          849
+        ],
+        [
+          858,
+          859
+        ],
+        [
+          863,
+          863
+        ],
+        [
+          889,
+          889
+        ],
+        [
+          897,
+          897
+        ],
+        [
+          906,
+          906
+        ]
+      ],
+      "allDisplayedLineCount": 82,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "packages/desktop/src/renderer/app/useRunController.ts",
+        "bytes": 55140,
+        "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+        "lines": 1247,
+        "pinnedAtUTC": "2026-10-17T21:12:02.908467+00:00",
+        "timing": "before own body/navigation"
+      },
+      "ending": {
+        "bytes": 55140,
+        "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+        "lines": 1247,
+        "atUTC": "2026-10-17T21:14:39.686211+00:00"
+      },
+      "scope": "specific ATTACH-R64-01 ordinary same-session content-dedup/ID retention case; targeted overlap, not first/full file review"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "totalLines": 1892,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          928,
+          946
+        ]
+      ],
+      "semanticLineCount": 19,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [
+        [
+          928,
+          953
+        ]
+      ],
+      "bodyDisplayLineCount": 26,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "allDisplayedLineRanges": [
+        [
+          928,
+          953
+        ]
+      ],
+      "allDisplayedLineCount": 26,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "lines": 1892,
+        "pinnedAtUTC": "2026-10-17T21:12:02.992249+00:00",
+        "timing": "before own body/navigation"
+      },
+      "ending": {
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "lines": 1892,
+        "atUTC": "2026-10-17T21:14:39.687132+00:00"
+      },
+      "scope": "specific ATTACH-R64-01 ordinary same-session content-dedup/ID retention case; targeted overlap, not first/full file review"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "totalLines": 7330,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          3194,
+          3209
+        ],
+        [
+          3240,
+          3247
+        ],
+        [
+          3475,
+          3477
+        ],
+        [
+          5034,
+          5040
+        ],
+        [
+          5078,
+          5128
+        ],
+        [
+          5130,
+          5174
+        ]
+      ],
+      "semanticLineCount": 130,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [
+        [
+          3194,
+          3217
+        ],
+        [
+          3228,
+          3252
+        ],
+        [
+          3465,
+          3483
+        ],
+        [
+          5034,
+          5183
+        ]
+      ],
+      "bodyDisplayLineCount": 218,
+      "navigationLineRanges": [
+        [
+          3194,
+          3194
+        ],
+        [
+          5034,
+          5034
+        ],
+        [
+          5079,
+          5079
+        ],
+        [
+          5093,
+          5093
+        ],
+        [
+          5096,
+          5096
+        ],
+        [
+          5098,
+          5098
+        ],
+        [
+          5101,
+          5101
+        ],
+        [
+          5105,
+          5105
+        ]
+      ],
+      "navigationLineCount": 8,
+      "allDisplayedLineRanges": [
+        [
+          3194,
+          3217
+        ],
+        [
+          3228,
+          3252
+        ],
+        [
+          3465,
+          3483
+        ],
+        [
+          5034,
+          5183
+        ]
+      ],
+      "allDisplayedLineCount": 218,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "lines": 7330,
+        "pinnedAtUTC": "2026-10-17T21:12:03.079476+00:00",
+        "timing": "before own body/navigation"
+      },
+      "ending": {
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "lines": 7330,
+        "atUTC": "2026-10-17T21:14:39.688251+00:00"
+      },
+      "scope": "specific ATTACH-R64-01 ordinary same-session content-dedup/ID retention case; targeted overlap, not first/full file review",
+      "boundary": "5034–5040 only ordinary non-qchat route semantically reviewed; displayed qchat5034–5076 broader ownership branch not certified. Adjacent reply/skills snippets are body display, not selected semantics."
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "totalLines": 2622,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          280,
+          299
+        ],
+        [
+          1161,
+          1171
+        ],
+        [
+          1193,
+          1218
+        ],
+        [
+          1225,
+          1293
+        ],
+        [
+          1295,
+          1306
+        ]
+      ],
+      "semanticLineCount": 138,
+      "testDeclarationOnly": false,
+      "bodyDisplayLineRanges": [
+        [
+          275,
+          299
+        ],
+        [
+          1150,
+          1185
+        ],
+        [
+          1190,
+          1310
+        ]
+      ],
+      "bodyDisplayLineCount": 182,
+      "navigationLineRanges": [
+        [
+          108,
+          108
+        ],
+        [
+          171,
+          171
+        ],
+        [
+          190,
+          190
+        ],
+        [
+          258,
+          258
+        ],
+        [
+          261,
+          261
+        ],
+        [
+          280,
+          280
+        ],
+        [
+          282,
+          282
+        ],
+        [
+          289,
+          289
+        ],
+        [
+          293,
+          293
+        ],
+        [
+          307,
+          307
+        ],
+        [
+          314,
+          314
+        ],
+        [
+          318,
+          318
+        ],
+        [
+          325,
+          325
+        ],
+        [
+          331,
+          331
+        ],
+        [
+          337,
+          337
+        ],
+        [
+          342,
+          342
+        ],
+        [
+          345,
+          346
+        ],
+        [
+          356,
+          356
+        ],
+        [
+          358,
+          358
+        ],
+        [
+          387,
+          387
+        ],
+        [
+          414,
+          414
+        ],
+        [
+          457,
+          457
+        ],
+        [
+          459,
+          459
+        ],
+        [
+          490,
+          490
+        ],
+        [
+          523,
+          523
+        ],
+        [
+          530,
+          530
+        ],
+        [
+          559,
+          559
+        ],
+        [
+          568,
+          568
+        ],
+        [
+          994,
+          994
+        ],
+        [
+          1018,
+          1018
+        ],
+        [
+          1020,
+          1020
+        ],
+        [
+          1188,
+          1188
+        ],
+        [
+          1267,
+          1268
+        ],
+        [
+          1305,
+          1305
+        ],
+        [
+          1522,
+          1522
+        ],
+        [
+          1530,
+          1530
+        ],
+        [
+          1565,
+          1565
+        ],
+        [
+          1609,
+          1609
+        ],
+        [
+          1815,
+          1815
+        ],
+        [
+          1954,
+          1954
+        ],
+        [
+          1962,
+          1962
+        ],
+        [
+          2032,
+          2032
+        ],
+        [
+          2112,
+          2112
+        ],
+        [
+          2320,
+          2321
+        ],
+        [
+          2498,
+          2499
+        ]
+      ],
+      "navigationLineCount": 49,
+      "allDisplayedLineRanges": [
+        [
+          108,
+          108
+        ],
+        [
+          171,
+          171
+        ],
+        [
+          190,
+          190
+        ],
+        [
+          258,
+          258
+        ],
+        [
+          261,
+          261
+        ],
+        [
+          275,
+          299
+        ],
+        [
+          307,
+          307
+        ],
+        [
+          314,
+          314
+        ],
+        [
+          318,
+          318
+        ],
+        [
+          325,
+          325
+        ],
+        [
+          331,
+          331
+        ],
+        [
+          337,
+          337
+        ],
+        [
+          342,
+          342
+        ],
+        [
+          345,
+          346
+        ],
+        [
+          356,
+          356
+        ],
+        [
+          358,
+          358
+        ],
+        [
+          387,
+          387
+        ],
+        [
+          414,
+          414
+        ],
+        [
+          457,
+          457
+        ],
+        [
+          459,
+          459
+        ],
+        [
+          490,
+          490
+        ],
+        [
+          523,
+          523
+        ],
+        [
+          530,
+          530
+        ],
+        [
+          559,
+          559
+        ],
+        [
+          568,
+          568
+        ],
+        [
+          994,
+          994
+        ],
+        [
+          1018,
+          1018
+        ],
+        [
+          1020,
+          1020
+        ],
+        [
+          1150,
+          1185
+        ],
+        [
+          1188,
+          1188
+        ],
+        [
+          1190,
+          1310
+        ],
+        [
+          1522,
+          1522
+        ],
+        [
+          1530,
+          1530
+        ],
+        [
+          1565,
+          1565
+        ],
+        [
+          1609,
+          1609
+        ],
+        [
+          1815,
+          1815
+        ],
+        [
+          1954,
+          1954
+        ],
+        [
+          1962,
+          1962
+        ],
+        [
+          2032,
+          2032
+        ],
+        [
+          2112,
+          2112
+        ],
+        [
+          2320,
+          2321
+        ],
+        [
+          2498,
+          2499
+        ]
+      ],
+      "allDisplayedLineCount": 224,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lines": 2622,
+        "pinnedAtUTC": "2026-10-17T21:12:27.926833+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lines": 2622,
+        "atUTC": "2026-10-17T21:14:39.689056+00:00"
+      },
+      "scope": "specific ATTACH-R64-01 ordinary same-session content-dedup/ID retention case; targeted overlap, not first/full file review"
+    },
+    {
+      "path": "packages/server/src/attachment-service.test.ts",
+      "bytes": 17409,
+      "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+      "totalLines": 551,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          54,
+          100
+        ],
+        [
+          434,
+          490
+        ]
+      ],
+      "semanticLineCount": 104,
+      "testDeclarationOnly": true,
+      "bodyDisplayLineRanges": [
+        [
+          54,
+          100
+        ],
+        [
+          434,
+          490
+        ]
+      ],
+      "bodyDisplayLineCount": 104,
+      "navigationLineRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          18,
+          19
+        ],
+        [
+          43,
+          43
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          78,
+          78
+        ],
+        [
+          101,
+          101
+        ],
+        [
+          129,
+          129
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          166,
+          166
+        ],
+        [
+          197,
+          197
+        ],
+        [
+          211,
+          211
+        ],
+        [
+          236,
+          236
+        ],
+        [
+          259,
+          259
+        ],
+        [
+          283,
+          283
+        ],
+        [
+          296,
+          296
+        ],
+        [
+          311,
+          311
+        ],
+        [
+          334,
+          334
+        ],
+        [
+          357,
+          357
+        ],
+        [
+          385,
+          385
+        ],
+        [
+          406,
+          406
+        ],
+        [
+          420,
+          420
+        ],
+        [
+          434,
+          434
+        ],
+        [
+          451,
+          452
+        ],
+        [
+          454,
+          454
+        ],
+        [
+          460,
+          460
+        ],
+        [
+          462,
+          462
+        ],
+        [
+          468,
+          468
+        ],
+        [
+          470,
+          470
+        ],
+        [
+          472,
+          472
+        ],
+        [
+          476,
+          476
+        ],
+        [
+          478,
+          478
+        ],
+        [
+          480,
+          482
+        ],
+        [
+          484,
+          484
+        ],
+        [
+          486,
+          486
+        ],
+        [
+          488,
+          489
+        ],
+        [
+          492,
+          492
+        ],
+        [
+          510,
+          510
+        ],
+        [
+          516,
+          516
+        ],
+        [
+          546,
+          546
+        ]
+      ],
+      "navigationLineCount": 44,
+      "allDisplayedLineRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          18,
+          19
+        ],
+        [
+          43,
+          43
+        ],
+        [
+          54,
+          101
+        ],
+        [
+          129,
+          129
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          166,
+          166
+        ],
+        [
+          197,
+          197
+        ],
+        [
+          211,
+          211
+        ],
+        [
+          236,
+          236
+        ],
+        [
+          259,
+          259
+        ],
+        [
+          283,
+          283
+        ],
+        [
+          296,
+          296
+        ],
+        [
+          311,
+          311
+        ],
+        [
+          334,
+          334
+        ],
+        [
+          357,
+          357
+        ],
+        [
+          385,
+          385
+        ],
+        [
+          406,
+          406
+        ],
+        [
+          420,
+          420
+        ],
+        [
+          434,
+          490
+        ],
+        [
+          492,
+          492
+        ],
+        [
+          510,
+          510
+        ],
+        [
+          516,
+          516
+        ],
+        [
+          546,
+          546
+        ]
+      ],
+      "allDisplayedLineCount": 128,
+      "testExecutionByPeer": 0,
+      "initialPin": {
+        "path": "packages/server/src/attachment-service.test.ts",
+        "bytes": 17409,
+        "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+        "lines": 551,
+        "pinnedAtUTC": "2026-10-17T21:12:32.746482+00:00",
+        "timing": "before own navigation snippets"
+      },
+      "ending": {
+        "bytes": 17409,
+        "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+        "lines": 551,
+        "atUTC": "2026-10-17T21:14:39.689551+00:00"
+      },
+      "scope": "existing tests declaration only; not executed here"
+    }
+  ]
+}

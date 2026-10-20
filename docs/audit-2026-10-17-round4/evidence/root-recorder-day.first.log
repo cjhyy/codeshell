@@ -1,0 +1,23 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round4/evidence/root-recorder-day.test.ts:
+20 |     process.env.CODE_SHELL_DEV = "1";
+21 |     process.env.CODE_SHELL_VERBOSE_LOG = "1";
+22 |     setSystemTime(new Date("2026-10-16T23:59:59.000Z"));
+23 |     const recorder = await import(pathToFileURL(copy).href);
+24 |     expect(readFileSync(copy)).toEqual(readFileSync(source));
+25 |     expect(recorder.getVerboseLogDir()).toBe(join(root, "log"));
+                                             ^
+error: expect(received).toBe(expected)
+
+Expected: "/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/audit-r4-recorder-day-RV8qfN/log"
+Received: "/private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/audit-r4-recorder-day-RV8qfN/log"
+
+      at <anonymous> (/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/evidence/root-recorder-day.test.ts:25:41)
+(fail) LOG-R4-02 a continuous session writes after UTC midnight into the previous day directory [31.91ms]
+
+ 0 pass
+ 1 fail
+ 2 expect() calls
+Ran 1 test across 1 file. [114.00ms]
+Bun test process failed (1)

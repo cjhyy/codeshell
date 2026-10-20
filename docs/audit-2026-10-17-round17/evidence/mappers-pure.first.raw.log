@@ -1,0 +1,18 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round17/evidence/mappers-pure.test.ts:
+(pass) persisted user, assistant and system anchor retain their documented event forms [0.91ms]
+(pass) ordinary room user attachment metadata is forwarded without rewriting original text [0.29ms]
+(pass) room tool starts and out-of-order results keep real producer ids and full args [0.09ms]
+(pass) legacy persisted tool lines keep sequence ids and id-less result event [0.06ms]
+(pass) normal persisted turn, error and process-exit lines preserve mapper contracts
+(pass) room replay preserves prose/tool interleaving and leaves the input unchanged [0.61ms]
+(pass) maintained HistoryMessage role/text/tools projection preserves ordinary prose order and args [0.30ms]
+(pass) multiple HistoryMessage tools have distinct deterministic positional snapshot ids [0.03ms]
+(pass) characterization: a snapshot tool start and a later real-id room result carry different ids [0.21ms]
+
+ 9 pass
+ 0 fail
+ 33 expect() calls
+Ran 9 tests across 1 file. [166.00ms]
+Completed Bun shard: 9 tests, 0 skipped; 0 failures.

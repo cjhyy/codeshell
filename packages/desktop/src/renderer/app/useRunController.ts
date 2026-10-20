@@ -45,6 +45,8 @@ import { timePhase } from "../perf";
 import type { TrackedProject } from "../projects";
 import type { ViewMode, ViewState } from "../view";
 import type { ApproveChoice, ApprovePathScope } from "../approvals/approvalDecision";
+import { approvalKey } from "../approvals/approvalRecords";
+import { APPROVAL_HISTORY_LIMIT } from "../approvals/useApprovalHistory";
 import type { ApprovalRequestEnvelope, InputAttachmentMeta } from "../../preload/types";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
@@ -172,6 +174,26 @@ export function useRunController({
   } = runtime;
   const { approvalQueue, setApprovalQueue, setApproval, setApprovalHistory, approvalBucketsRef } =
     approvals;
+  const approvalSubmissionsRef = useRef(
+    new Map<string, { signature: string; promise: Promise<void> }>(),
+  );
+  const acknowledgedApprovalIdsRef = useRef(new Set<string>());
+  // Project the legacy focused approval from the committed queue. Queue
+  // updaters stay pure even when StrictMode or a concurrent render replays them.
+  useEffect(() => {
+    setApproval((current) => {
+      if (current && approvalQueue.some((entry) => approvalKey(entry) === approvalKey(current))) {
+        return current;
+      }
+      return approvalQueue[0] ?? null;
+    });
+    for (const requestId of acknowledgedApprovalIdsRef.current) {
+      if (!approvalQueue.some((entry) => entry.requestId === requestId)) {
+        approvalBucketsRef.current.delete(requestId);
+        acknowledgedApprovalIdsRef.current.delete(requestId);
+      }
+    }
+  }, [approvalQueue, setApproval, approvalBucketsRef]);
   const pendingLaunchesRef = useRef(new Map<string, { cancelled: boolean }>());
   const launchVersionsRef = useRef(new Map<string, symbol>());
   const send = (
@@ -1130,65 +1152,88 @@ export function useRunController({
     reason?: string,
     scope?: ApproveChoice,
     pathScope?: ApprovePathScope,
-  ): void => {
-    // Multi-session: thread engine sessionId so the worker routes the
-    // decision back to the right session's pendingApprovals map. `scope`
-    // (once/session/project) + `pathScope` (file/dir/tool, file tools) only
-    // ride along on approve; deny ignores them.
-    const approveScope = decision === "approve" ? scope : undefined;
-    const approvePathScope = decision === "approve" ? pathScope : undefined;
-    if (env.sessionId) {
-      // (sessionId, requestId, decision, reason, answer, scope, pathScope)
-      void window.codeshell.approve(
-        env.sessionId,
-        env.requestId,
-        decision,
-        reason,
-        undefined,
-        approveScope,
-        approvePathScope,
-      );
-    } else {
-      // Legacy (requestId, decision, reason, answer, scope, pathScope)
-      void window.codeshell.approve(
-        env.requestId,
-        decision,
-        reason,
-        undefined,
-        approveScope,
-        approvePathScope,
-      );
+  ): Promise<void> => {
+    const key = approvalKey(env);
+    const signature = JSON.stringify([decision, reason, scope, pathScope]);
+    const existing = approvalSubmissionsRef.current.get(key);
+    if (existing) {
+      if (existing.signature === signature) return existing.promise;
+      const rejected = Promise.reject<void>(new Error(t("activityApprovals.submitting")));
+      void rejected.catch(() => {});
+      return rejected;
     }
-    void window.codeshell.mobileRemote.notifyApprovalResolved({
-      requestId: env.requestId,
-      sessionId: env.sessionId,
-      approved: decision === "approve",
-    });
-    approvalBucketsRef.current.delete(env.requestId);
-    // The card itself gives instant optimistic feedback via its own local
-    // state (ApprovalCard `decided`), so the user never waits on this root-App
-    // re-render. Time the synchronous state churn anyway: if a future large
-    // session makes the App re-render janky on click, perf.approval.decide will
-    // surface it (no-op when perf logging is off). See the 2026-06-07 approval-
-    // scope spec / debugging note: IPC is fire-and-forget and the stream build
-    // is memoized, so this state update is the only synchronous work on click.
-    timePhase("approval.decide", () => {
-      // Compute the post-decision queue ONCE here. Reading `approvalQueue` from
-      // render scope inside the setApproval updater would see the STALE pre-filter
-      // value (the setApprovalQueue update above is batched and not yet committed),
-      // so with multiple queued approvals the "next" lookup could surface an
-      // already-decided one or skip the next. Derive both updates from this single
-      // filtered list instead.
-      const remaining = approvalQueue.filter((e) => e.requestId !== env.requestId);
-      setApprovalQueue(remaining);
-      setApprovalHistory((h) => [...h, { decision, envelope: env, reason, at: Date.now() }]);
-      setApproval((cur) => {
-        if (!cur || cur.requestId === env.requestId) {
-          return remaining[0] ?? null;
-        }
-        return cur;
+    // Keep the request pending until Main/worker accepts the decision. Both
+    // chat cards and the activity page can submit the same request, so share
+    // one delivery promise and record the accepted decision exactly once.
+    const submission = Promise.resolve().then(async () => {
+      const approveScope = decision === "approve" ? scope : undefined;
+      const approvePathScope = decision === "approve" ? pathScope : undefined;
+      const response = env.sessionId
+        ? await window.codeshell.approve(
+            env.sessionId,
+            env.requestId,
+            decision,
+            reason,
+            undefined,
+            approveScope,
+            approvePathScope,
+          )
+        : await window.codeshell.approve(
+            env.requestId,
+            decision,
+            reason,
+            undefined,
+            approveScope,
+            approvePathScope,
+          );
+      // The core RPC bridge returns error envelopes without rejecting.
+      if (response?.error) throw new Error(response.error.message);
+      const at = Date.now();
+      timePhase("approval.decide", () => {
+        acknowledgedApprovalIdsRef.current.add(env.requestId);
+        setApprovalQueue((current) => current.filter((entry) => approvalKey(entry) !== key));
+        setApprovalHistory((current) =>
+          [...current, { decision, envelope: env, reason, at }].slice(-APPROVAL_HISTORY_LIMIT),
+        );
       });
+      // Mirroring is best-effort after acceptance; a disconnected mobile peer
+      // must not turn a successful approval into a retryable delivery failure.
+      try {
+        const mirrored = window.codeshell.mobileRemote?.notifyApprovalResolved?.({
+          requestId: env.requestId,
+          sessionId: env.sessionId,
+          approved: decision === "approve",
+        });
+        void Promise.resolve(mirrored).catch((error) => {
+          try {
+            window.codeshell.log?.("approval.mirror.failed", { error: String(error) });
+          } catch {
+            // Diagnostics must not change an already accepted decision.
+          }
+        });
+      } catch (error) {
+        try {
+          window.codeshell.log?.("approval.mirror.failed", { error: String(error) });
+        } catch {
+          // Diagnostics must not change an already accepted decision.
+        }
+      }
     });
+    approvalSubmissionsRef.current.set(key, { signature, promise: submission });
+    // Handle failures even for older fire-and-forget callers. The returned
+    // promise still rejects so ApprovalCard can restore its controls for retry.
+    void submission.then(
+      () => approvalSubmissionsRef.current.delete(key),
+      (error) => {
+        approvalSubmissionsRef.current.delete(key);
+        toast({
+          message: t("activityApprovals.failed"),
+          detail: error instanceof Error ? error.message : String(error),
+          variant: "error",
+        });
+      },
+    );
+    return submission;
   };
 
   const showWelcome = state.messages.length === 0;

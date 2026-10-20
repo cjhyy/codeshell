@@ -1,0 +1,40 @@
+{
+  "scopeRefinementUTC": "2026-10-17T14:14:32.641175+00:00",
+  "previousMutableTextReadCountDraft": {
+    "sourceManifestSha256": "a492e942953f48ec4c0139047f171ae823e284cf52f328e771f9d2fff6a145fe",
+    "counts": {
+      "activeSemanticPins": 3,
+      "fullPins": 2,
+      "selectedPins": 1,
+      "productAndTestLines": 258,
+      "productLines": 203,
+      "testDeclarationLines": 55,
+      "testDeclarationsRead": 2,
+      "instructionHashChecks": 2,
+      "newInstructionSemanticReadLines": 0
+    }
+  },
+  "finalSemanticCounts": {
+    "activeSemanticPins": 3,
+    "fullPins": 1,
+    "selectedPins": 2,
+    "productAndTestLines": 222,
+    "productLines": 167,
+    "testDeclarationLines": 55,
+    "testDeclarationsRead": 2,
+    "displayedLinesIncludingNavigation": 357,
+    "instructionHashChecks": 2,
+    "newInstructionSemanticReadLines": 0
+  },
+  "reason": "Before freeze, distinguish source displayed/read text from ordinary semantic coverage. Initial mutable draft used full127leaf text-read range plus guard884, despite explicit authority boundary disclaimer. Final ordinary scope removes native/identity/revocation constants/methods and epoch guard; displayed357 separately retained. No product/source reread, reexecution or author scope adoption.",
+  "metadataFailures": 1,
+  "metadataOutputTruncations": 0,
+  "relativeOutsideDirectoryMarkdownLinksRequired": false,
+  "freezeMetadataFailure": {
+    "firstDiagnostic": "freeze-first-diagnostic.json",
+    "firstLinks": "links-check.first.json",
+    "firstReceipt": "artifact-receipt.first.json",
+    "cause": "Resolved target/private/tmp compared to unresolved base/tmp; false outside-dir membership, links did exist.",
+    "correction": "Normalize base with resolve too, no relative link alias or product action."
+  }
+}

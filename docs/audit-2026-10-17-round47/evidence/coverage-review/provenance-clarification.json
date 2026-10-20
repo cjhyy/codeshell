@@ -1,0 +1,781 @@
+{
+  "files": [],
+  "transitionRepresentativeCount": 35,
+  "canonicalSourceManifestCount": 34,
+  "derivedRepresentativeCount": 1,
+  "all35RangeSupportValid": true,
+  "checks": [
+    {
+      "path": "packages/core/src/context/compaction.ratios.test.ts",
+      "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.json",
+      "jsonPointer": "/files/11",
+      "kind": "full",
+      "ranges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 67,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+      "jsonPointer": "/files/0",
+      "kind": "selected",
+      "ranges": [
+        [
+          26,
+          32
+        ],
+        [
+          118,
+          128
+        ],
+        [
+          135,
+          150
+        ],
+        [
+          171,
+          173
+        ],
+        [
+          180,
+          186
+        ],
+        [
+          190,
+          192
+        ],
+        [
+          195,
+          203
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 56,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+      "jsonPointer": "/files/7",
+      "kind": "selected",
+      "ranges": [
+        [
+          348,
+          348
+        ],
+        [
+          442,
+          445
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 5,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+      "jsonPointer": "/files/1",
+      "kind": "selected",
+      "ranges": [
+        [
+          43,
+          53
+        ],
+        [
+          130,
+          143
+        ],
+        [
+          146,
+          148
+        ],
+        [
+          152,
+          154
+        ],
+        [
+          156,
+          162
+        ],
+        [
+          165,
+          167
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 41,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+      "jsonPointer": "/files/3",
+      "kind": "selected",
+      "ranges": [
+        [
+          2797,
+          2810
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 14,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.test.tsx",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/11",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/modelPickerPresentation.ts",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/10",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/ExtensionsPage.tsx",
+      "document": "docs/audit-2026-10-17-round44/evidence/market-frontier/source-manifest.json",
+      "jsonPointer": "/files/6",
+      "kind": "selected",
+      "ranges": [
+        [
+          90,
+          110
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 21,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+      "document": "docs/audit-2026-10-17-round44/evidence/market-review/source-manifest.json",
+      "jsonPointer": "/files/1",
+      "kind": "selected",
+      "ranges": [
+        [
+          47,
+          69
+        ],
+        [
+          127,
+          131
+        ],
+        [
+          161,
+          178
+        ],
+        [
+          192,
+          223
+        ],
+        [
+          247,
+          249
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 81,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+      "document": "docs/audit-2026-10-17-round44/evidence/market-review/source-manifest.json",
+      "jsonPointer": "/files/2",
+      "kind": "selected",
+      "ranges": [
+        [
+          10,
+          19
+        ],
+        [
+          24,
+          29
+        ],
+        [
+          36,
+          47
+        ],
+        [
+          62,
+          71
+        ],
+        [
+          131,
+          152
+        ],
+        [
+          159,
+          163
+        ],
+        [
+          169,
+          180
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 77,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+      "jsonPointer": "/files/2",
+      "kind": "full",
+      "ranges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 29,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+      "jsonPointer": "/files/11",
+      "kind": "selected",
+      "ranges": [
+        [
+          441,
+          458
+        ],
+        [
+          1642,
+          1661
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 38,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/installedThemes.ts",
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "jsonPointer": "/files/2",
+      "kind": "selected",
+      "ranges": [
+        [
+          4,
+          17
+        ],
+        [
+          31,
+          35
+        ],
+        [
+          42,
+          55
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 33,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.interaction.test.tsx",
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "jsonPointer": "/files/4",
+      "kind": "selected",
+      "ranges": [
+        [
+          136,
+          258
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 123,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-review/source-manifest.json",
+      "jsonPointer": "/files/1",
+      "kind": "selected",
+      "ranges": [
+        [
+          210,
+          230
+        ],
+        [
+          286,
+          330
+        ],
+        [
+          394,
+          407
+        ],
+        [
+          647,
+          660
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 94,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-review/source-manifest.json",
+      "jsonPointer": "/files/2",
+      "kind": "selected",
+      "ranges": [
+        [
+          77,
+          79
+        ],
+        [
+          121,
+          125
+        ],
+        [
+          584,
+          591
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 16,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts",
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "jsonPointer": "/files/2",
+      "kind": "full",
+      "ranges": [
+        [
+          1,
+          160
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 160,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts",
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-review/source-manifest.json",
+      "jsonPointer": "/files/0",
+      "kind": "full",
+      "ranges": [
+        [
+          1,
+          251
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 251,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.test.tsx",
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "jsonPointer": "/files/5",
+      "kind": "selected",
+      "ranges": [
+        [
+          78,
+          115
+        ],
+        [
+          117,
+          123
+        ],
+        [
+          134,
+          159
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 71,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "jsonPointer": "/files/0",
+      "kind": "selected",
+      "ranges": [
+        [
+          24,
+          50
+        ],
+        [
+          53,
+          55
+        ],
+        [
+          64,
+          94
+        ],
+        [
+          112,
+          125
+        ],
+        [
+          211,
+          211
+        ],
+        [
+          214,
+          249
+        ],
+        [
+          281,
+          328
+        ],
+        [
+          356,
+          358
+        ],
+        [
+          360,
+          362
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 166,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+      "jsonPointer": "/files/0",
+      "kind": "full",
+      "ranges": [
+        [
+          1,
+          341
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 341,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/source-manifest.json",
+      "jsonPointer": "/files/5",
+      "kind": "selected",
+      "ranges": [
+        [
+          45,
+          48
+        ],
+        [
+          433,
+          458
+        ],
+        [
+          717,
+          731
+        ],
+        [
+          1121,
+          1128
+        ],
+        [
+          1131,
+          1141
+        ],
+        [
+          1319,
+          1321
+        ],
+        [
+          1393,
+          1413
+        ],
+        [
+          1424,
+          1426
+        ],
+        [
+          1781,
+          1797
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 108,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPreferences.interaction.test.tsx",
+      "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/source-manifest.json",
+      "jsonPointer": "/files/10",
+      "kind": "selected",
+      "ranges": [
+        [
+          8,
+          17
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 10,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+      "jsonPointer": "/files/1",
+      "kind": "full",
+      "ranges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 29,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/7",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SearchDialog.tsx",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/6",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/8",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/searchFocus.ts",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/5",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/sessionContentSearch.test.ts",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/2",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/1",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/useSessionContentSearch.ts",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/9",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "jsonPointer": "/files/3",
+      "kind": "selected",
+      "ranges": [
+        [
+          118,
+          128
+        ],
+        [
+          141,
+          142
+        ],
+        [
+          165,
+          180
+        ],
+        [
+          243,
+          245
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 32,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "document": "docs/audit-2026-10-17-round45/evidence/appearance-frontier/source-manifest.json",
+      "jsonPointer": "/files/1",
+      "kind": "selected",
+      "ranges": [
+        [
+          5,
+          20
+        ],
+        [
+          33,
+          49
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 33,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/desktop/src/shared/session-catalog.ts",
+      "document": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "jsonPointer": "/files/13",
+      "kind": "full",
+      "ranges": [],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 0,
+      "fullRangeOrWholeFileLabel": true,
+      "canonicalSourceManifestRepresentative": true,
+      "originalRangeSupportValid": true
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "document": "docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/inputSourceRangeMetadataChecks/3",
+      "kind": "selected",
+      "ranges": [
+        [
+          1,
+          181
+        ]
+      ],
+      "rangeBoundsWithin51Metadata": true,
+      "unionLines": 181,
+      "fullRangeOrWholeFileLabel": false,
+      "canonicalSourceManifestRepresentative": false,
+      "originalRangeSupportValid": true
+    }
+  ],
+  "errata": {
+    "path": "packages/optimization-lab/src/contracts/dataset.ts",
+    "displayRepresentativeOverrideOnly": {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "jsonPointer": "/files/3",
+      "sourceSHA": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          181
+        ]
+      ],
+      "originalScope": "Ordinary validation DTO/policy counterevidence; imports and Buffer/schema calls only read, never invoked; remaining filesystem/store body not read"
+    },
+    "reason": "Original canonical limited selected scope is the underlying same reading. The43 aggregate checks row is only a metadata copy; must not count as new semantics. Broad not-read regex rejects canonical for classification but scope-omitting copy activates selected; cited original supports exactly1\u2013181, not full345-line file.",
+    "countsChanged": false,
+    "57ArtifactsModified": false
+  }
+}

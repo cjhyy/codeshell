@@ -1,0 +1,8 @@
+{
+  "toolChunk": "cc664e",
+  "method": "The pinned original R23 source-manifest was parsed, then json.dumps(..., indent=2)[:11000] was printed.",
+  "presentationCapCharacters": 11000,
+  "targetActualRead": "The first /files/0 object for session-http-responses.ts, including current SHA,39 lineCount and explicit full static scope, was completely visible.",
+  "notClaimed": "The rest of this manifest was not fully displayed or treated as a new semantic source review. Other incidentally visible metadata rows were not used to expand product scope.",
+  "originalCanonicalUnmodified": true
+}

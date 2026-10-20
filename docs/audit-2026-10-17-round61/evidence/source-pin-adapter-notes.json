@@ -1,0 +1,155 @@
+{
+  "missingDeclaredByteCounts": [
+    {
+      "manifest": "mcp-dot-history/source-manifest.json",
+      "collection": "directCanonicalSelections",
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "reportedBytes": null,
+      "rootFrozenGitBytes": 7166,
+      "note": "No author byte count invented; Root independently binds Git bytes."
+    },
+    {
+      "manifest": "mcp-dot-history/source-manifest.json",
+      "collection": "directCanonicalSelections",
+      "path": "docs/audit-2026-10-17-round58/recorded-findings-catalog.json",
+      "reportedBytes": null,
+      "rootFrozenGitBytes": 80337,
+      "note": "No author byte count invented; Root independently binds Git bytes."
+    }
+  ],
+  "nonReadingGateAssertions": [],
+  "unboundNavigationReferences": [
+    {
+      "manifest": "capability-control/source-manifest.json",
+      "collection": "historicalMetadata",
+      "row": {
+        "path": "docs/audit-2026-10-17-round5/evidence/profile-source-manifest.json",
+        "bytes": 8960,
+        "initialSha256": "846b73a17037299a131795cb80ce11afe04d00fa9b62bc5cc20be6c4c7640771",
+        "endingSha256": "846b73a17037299a131795cb80ce11afe04d00fa9b62bc5cc20be6c4c7640771",
+        "unchanged": true,
+        "selectionArtifact": "prior-canonical-read.json",
+        "selectedJsonPointers": [
+          "/sources/8"
+        ],
+        "displayedLineRanges": []
+      },
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "capability-control/source-manifest.json",
+      "collection": "historicalMetadata",
+      "row": {
+        "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "bytes": 25980,
+        "initialSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+        "endingSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+        "unchanged": true,
+        "selectionArtifact": "prior-canonical-read.json",
+        "selectedJsonPointers": [
+          "/files/31"
+        ],
+        "displayedLineRanges": []
+      },
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "capability-control/source-manifest.json",
+      "collection": "historicalMetadata",
+      "row": {
+        "path": "bugs/2026-07-13-repo-audit.md",
+        "bytes": 60400,
+        "initialSha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+        "endingSha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+        "unchanged": true,
+        "selectionArtifact": "prior-canonical-read.json",
+        "selectedJsonPointers": [],
+        "displayedLineRanges": [
+          [
+            180,
+            194
+          ]
+        ]
+      },
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "capability-control/source-manifest.json",
+      "collection": "historicalMetadata",
+      "row": {
+        "path": "docs/archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md",
+        "bytes": 39170,
+        "initialSha256": "6b5fede9d7a924c6be358ef8a51c84cd0b7fe37e0c7827f1308e18baece0e59a",
+        "endingSha256": "6b5fede9d7a924c6be358ef8a51c84cd0b7fe37e0c7827f1308e18baece0e59a",
+        "unchanged": true,
+        "selectionArtifact": "prior-canonical-read.json",
+        "selectedJsonPointers": [],
+        "displayedLineRanges": [
+          [
+            65,
+            108
+          ]
+        ]
+      },
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "capability-control/source-manifest.json",
+      "collection": "historicalMetadata",
+      "row": {
+        "path": "docs/archive/bug-followups-2026-08-13.md",
+        "bytes": 7166,
+        "initialSha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+        "endingSha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+        "unchanged": true,
+        "selectionArtifact": "dotted-token-prior-cause-read.json",
+        "selectedJsonPointers": [],
+        "displayedLineRanges": [
+          [
+            25,
+            73
+          ]
+        ]
+      },
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    },
+    {
+      "manifest": "capability-control/source-manifest.json",
+      "collection": "historicalMetadata",
+      "row": {
+        "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+        "bytes": 13804,
+        "initialSha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+        "endingSha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+        "unchanged": true,
+        "selectionArtifact": "dotted-token-prior-cause-read.json",
+        "selectedJsonPointers": [],
+        "displayedLineRanges": [
+          [
+            195,
+            203
+          ]
+        ]
+      },
+      "note": "Original string/navigation or noncanonical hash-key row retained verbatim; no additional Root Git-bound source pin or semantic scope inferred from this adapter omission."
+    }
+  ],
+  "externalMetadataInputs": [
+    {
+      "originalPath": "/tmp/codeshell-audit-round154-coverage-migration/unified-current-index.json",
+      "frozenCopy": "evidence/coverage-migration/unified-current-index.json",
+      "bytes": 3097431,
+      "sha256": "249c7298280d2ff1f3bde4333c98f4d831c27e24a725dc7d9b0d818ed8db9671",
+      "scope": "Metadata external artifact only; no Git source pin or semantic coverage inferred."
+    },
+    {
+      "originalPath": "/tmp/codeshell-audit-round154-coverage-migration/current-source-inventory.json",
+      "frozenCopy": "evidence/coverage-migration/current-source-inventory.json",
+      "bytes": 1706809,
+      "sha256": "8e3c78d9cbbaae82af49ccacad450cc8b6b91012343cdee2c32bf717d5dad317",
+      "scope": "Metadata external artifact only; no Git source pin or semantic coverage inferred."
+    }
+  ],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows. Nested historical inputs without the canonical sha256 key remain original author metadata, not additional source coverage.",
+  "productRuns": 0
+}

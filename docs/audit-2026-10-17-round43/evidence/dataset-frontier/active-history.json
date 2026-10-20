@@ -1,0 +1,217 @@
+{
+  "capturedAtUTC": "2026-10-17T14:38:30.626662+00:00",
+  "inventorySha256": "47ef0e5ccf80391d9c3203990262ad79c4dafa1dba05e383572c1674ae916cb1",
+  "patterns": {
+    "exact-leaf-contract": "parseEditableDataset|serializeEditableDataset|duplicateEditableCase|summarizeEditableDataset|createEditableCase|dataset-editor",
+    "ordinary-preservation": "(?:dataset|数据集).{0,100}(?:round.?trip|切换|unknown|defaults|缺省|副本|duplicate|序列化|表单)|(?:round.?trip|缺省|副本|序列化|表单).{0,100}(?:dataset|数据集)",
+    "old-lab-boundary": "LAB-R3-01|dataset.editor.{0,80}(?:fail|skip|失败|跳过)"
+  },
+  "counts": {
+    "exact-leaf-contract": 13,
+    "ordinary-preservation": 3,
+    "old-lab-boundary": 21
+  },
+  "contextCap": 60,
+  "retainedCounts": {
+    "exact-leaf-contract": 13,
+    "ordinary-preservation": 3,
+    "old-lab-boundary": 21
+  },
+  "hits": {
+    "exact-leaf-contract": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][1578]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][2816][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][2817][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/history.json",
+        "location": "$[\"matches\"][\"lab\"][15][\"excerpt\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[137][\"file\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[137][\"log\"]",
+        "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/137-dataset-editor.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][137][\"file\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][137][\"log\"]",
+        "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/137-dataset-editor.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][137][\"resolvedLog\"]",
+        "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/137-dataset-editor.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][137][\"archiveMemberBasename\"]",
+        "excerpt": "137-dataset-editor.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$[\"logs\"][278][\"file\"]",
+        "excerpt": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$[\"logs\"][278][\"originalLog\"]",
+        "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/137-dataset-editor.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$[\"logs\"][278][\"tarMember\"]",
+        "excerpt": "desktop-renderer/137-dataset-editor.test.ts.log"
+      }
+    ],
+    "ordinary-preservation": [
+      {
+        "path": "docs/superpowers/plans/2026-09-26-optimization-lab-foundation.md",
+        "location": "1238",
+        "excerpt": "function dataset(cases: unknown[]) {"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-09-26-optimization-lab-foundation.md",
+        "location": "1426",
+        "excerpt": "export function validateDataset(raw: unknown): DatasetValidation {"
+      },
+      {
+        "path": "docs/todo/optimization-lab-editor-2026-10-08.md",
+        "location": "7",
+        "excerpt": "- 表单编辑数据集标题、任务族及全部案例字段；支持案例增删、复制，rubric 和三类硬断言编辑。复制产生新案例 ID，保持原 sourceGroupId，避免把同源材料伪装为独立证据。"
+      }
+    ],
+    "old-lab-boundary": [
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "$[\"hits\"][\"old_families\"][134][\"context\"]",
+        "excerpt": "| LAB-R3-01 | P3 | Lab反思输入仍选取已更正的旧评分 | [arena-lab.md](arena-lab.md) |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "$[\"hits\"][\"old_families\"][137][\"context\"]",
+        "excerpt": "## LAB-R3-01 / P3 — 人工评分更正后，反思输入仍携带最初评分"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "$[\"hits\"][\"old_families\"][146][\"context\"]",
+        "excerpt": "LAB-R3-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "$[\"hits\"][\"old_families\"][149][\"context\"]",
+        "excerpt": "LAB-R3-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/README.md",
+        "location": "11",
+        "excerpt": "- [Lab评分与报告](lab-report.md)：15pins、14全文+controller选段2012行，是原prep同一次继续阅读；保存原parent9b与当前32c上下文，没有重复算新语义阅读。旧LAB-R3-01不重报；[Lab独立复核](evidence/review-lab.md) 核对10份副本与边界。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/history-decisions.json",
+        "location": "$[\"priorReport\"][\"decisions\"][0]",
+        "excerpt": "LAB-R3-01 feedback.find first record is an old formal and remains same current strategy source; not a new candidate."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/lab-prep/proposal.json",
+        "location": "$[\"oldExcludedIds\"][0]",
+        "excerpt": "LAB-R3-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/lab-related.json",
+        "location": "$[\"excludedOldIds\"][0]",
+        "excerpt": "LAB-R3-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/lab-validation.json",
+        "location": "$[\"limitations\"][2]",
+        "excerpt": "Old LAB-R3-01 and old Arena failed reviewer direction remain excluded; no recovery/retry/alternative execution."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/review-lab.md",
+        "location": "11",
+        "excerpt": "旧LAB-R3-01仍作为排除项：反馈取首条的旧因果不重报，Arena旧失败fixture不恢复。旧Round3的20个source hash与Round24 inventory entry不能拼成全包语义覆盖。本review没有真实provider、完整模型实验或默认Desktop业务观察，也没有因读到实验能力而宣称默认打开。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/review-lab.md",
+        "location": "15",
+        "excerpt": "链接计数保留真实口径：[author receipt](lab-artifact-receipt.json) 保存reported **12**，本review当前实际核到 **13个本地Markdown链接**，包括带fragment的旧LAB-R3-01链接与selfreceipt链接，目标文件及所带行号均有效。不猜旧checker怎样计数或当时执行了哪些；不改冻结作者。RootQC应并列这两项，最终metadata verifier按当时现有文件重数，不能借链接检查宣称产品gate。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/lab-report.md",
+        "location": "23",
+        "excerpt": "[LAB-R3-01](../audit-2026-10-17-round3/arena-lab.md#lab-r3-01--p3--人工评分更正后反思输入仍携带最初评分) 已记录 `reflectionInput` 对同 trial 的反馈取首条；当前相同源码不重新计数。旧 Arena reviewer-cap 的失败 fixture 仍保持 SKIP，没有通过模型、替代解析或新执行恢复它。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/README.md",
+        "location": "18",
+        "excerpt": "| LAB-R3-01 | P3 | Lab反思输入仍选取已更正的旧评分 | [arena-lab.md](arena-lab.md) |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/arena-lab.md",
+        "location": "9",
+        "excerpt": "## LAB-R3-01 / P3 — 人工评分更正后，反思输入仍携带最初评分"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/lab-final-receipt.json",
+        "location": "$[\"confirmedFindings\"][0]",
+        "excerpt": "LAB-R3-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round1-receipt.json",
+        "location": "$[\"observations\"][0][\"id\"]",
+        "excerpt": "LAB-R3-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round1-receipt.json",
+        "location": "$[\"findings\"][0][\"id\"]",
+        "excerpt": "LAB-R3-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/findings.json",
+        "location": "$[\"findings\"][9][\"id\"]",
+        "excerpt": "LAB-R3-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/quality-root.md",
+        "location": "21",
+        "excerpt": "| LAB-R3-01 | correction门禁使用最新、reflection find取首项形成过期反馈；实验flag-off范围P3 | 真实grading/reflection纯转换，Controller追加/冻结链路静态；不声称真实模型候选必然错误 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/history.json",
+        "location": "$[\"hits\"][\"turn-contract\"][31][\"excerpt\"]",
+        "excerpt": "- [Lab评分与报告](lab-report.md)：15pins、14全文+controller选段2012行，是原prep同一次继续阅读；保存原parent9b与当前32c上下文，没有重复算新语义阅读。旧LAB-R3-01不重报；[Lab独立复核](evidence/review-lab.md) 核对10份副本与边界。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+        "location": "$[\"hits\"][\"rect_clip_terms\"][72][\"context\"]",
+        "excerpt": "失真实；损坏/非schema边界P3；与旧R2-04相关家族但独立Codex live入口 | 不声称正常writer产生null或实际Host崩溃；同一个修复不能自动修另一parser |\n| R3-04 | 默认Windows格式name整段cwd，name>512后同一writer/reader不一致；保留条件P3 | 自有本地metadata、无agent启动；未在Windows创建真实长路径 |\n| HL-01/02 | 路径trim改变精确引用、defaultLabel尾部UTF-16切分破损，条件P3 | 自有Map命中不是实际GitHub读取；source identity/label消费是静态接线；%2F拒绝保留能力边界 |\n| CDP-R3-01/02 | quad被外接矩形替代导致错误点，Shift text/key不一致；私有legacy范围P3 | 只验证fake sender输出及几何；不从中心可见推断真实scroll行为，已在报告修正该句 |\n| CDP-R3-03 | visibility:hidden祖先可有显式visible后代，提前剪枝漏报；生产diagnostics消费者使P2合理 | 实际callback在Node VM中运行、DOM/style是纯对象；无真实CSS排版引擎或Desktop适配器E2E |\n| LAB-R3-01 | correction门禁使用最新、reflection find取首项形成过期反馈；实验flag-off范围P3 | 真实grading/reflection纯转换，Controller追加/冻结链路静态；不声称真实模型候选必然错误 |\n| ARENA-R3-01/02 | explicit agree契约与默认agree冲突；早退绕过明确unresolved sweep；私有保留源码范围P3 | 真实parser/state/ledger/early-return；四桶summary消费者静态，未将复制过滤当作真实私有summary函数执行 |\n\n所有原始日志按首次guarded运行保存。CDP的stdout/stderr分开保存，聚合计数按每一对作为一个shard；不得漏掉stderr中的Bun统计。其他日志是合并stdout/stderr。成功总计按完整Completed门禁计算，Lab第二轮provider registry实例不一致失败独立保存，未进入fakeLLM，候选不计确认。\n\n"
+      }
+    ]
+  },
+  "datedDrift": [],
+  "keySearch": false,
+  "productExecution": 0,
+  "gitCommands": 0
+}

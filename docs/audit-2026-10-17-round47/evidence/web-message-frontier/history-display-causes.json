@@ -1,0 +1,529 @@
+{
+  "capturedUTC": "2026-10-17T15:37:13.793481+00:00",
+  "historyPathSet": "history-initial-pins.json, same dated 4162 included files; no excluded/future material added",
+  "literalCasefoldedTerms": {
+    "display_names": [
+      "messagecopybutton",
+      "tooldisplaysummary",
+      "subagentstatuslabel",
+      "messagefilepath"
+    ],
+    "web_display_cause": [
+      "web message",
+      "web markdown",
+      "web消息",
+      "复制代码",
+      "复制回复",
+      "messagecontent.tsx:107",
+      "message-code-block"
+    ]
+  },
+  "capPerGroup": 100,
+  "totals": {
+    "display_names": 0,
+    "web_display_cause": 61
+  },
+  "retained": {
+    "display_names": 0,
+    "web_display_cause": 61
+  },
+  "jsonStringValues": 1676345,
+  "jsonScalarValues": 2534677,
+  "driftSinceInitial": [],
+  "parseErrors": [],
+  "hits": {
+    "display_names": [],
+    "web_display_cause": [
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/117/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/117/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/117/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/118/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/118/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/118/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/119/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/119/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/119/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/120/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/120/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/120/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/121/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/121/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/121/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/122/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/122/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "jsonPointer": "/hits/history_projection/122/context",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</butt",
+        "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "jsonPointer": "/contexts/room-page-contract/20/context",
+        "line": 8,
+        "needle": "复制回复",
+        "context": "tory-corruption.log` 为 2 pass / 4 expect / 0 fail/skip / Completed。\n- 条件：这是本地损坏/不符合对象 schema 的记录隔离问题；没有证据证明正常 Claude writer 会生成 null，也未接触真实用户 transcript。\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-05 [P3] 复制回复为纯文本时修改 fenced code 正文\n\n- 位置：`packages/desktop/src/renderer/markdown/stripMarkdown.ts:13-14` 先移除围栏，随后 `:39-40` 对已经暴露的代码正文应用强调正则。文件顶部明确约定保留代码内容原样。\n- 触发：普通 Python 围栏正文含 `if __name__ == \"__ma",
+        "sha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/history.json",
+        "jsonPointer": "/hits/old-failed/11/excerpt",
+        "line": 7,
+        "needle": "复制回复",
+        "context": "tory-corruption.log` 为 2 pass / 4 expect / 0 fail/skip / Completed。\n- 条件：这是本地损坏/不符合对象 schema 的记录隔离问题；没有证据证明正常 Claude writer 会生成 null，也未接触真实用户 transcript。\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-05 [P3] 复制回复为纯文本时修改 fenced code 正文\n\n- 位置：`packages/desktop/src/renderer/markdown/stripMarkdown.ts:13-14` 先移除围栏，随后 `:39-40` 对已经暴露的代码正文应用强调正则。文件顶部明确约定保留代码内容原样。\n- 触发：普通 Python 围栏正文含 `if __name__ == \"__ma",
+        "sha256": "8526bc9cc05eef33a280e73446683f25bec0c2cc0c644085471290acc8906530"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/exact-leaf/14/excerpt",
+        "line": 4,
+        "needle": "复制回复",
+        "context": "\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-05 [P3] 复制回复为纯文本时修改 fenced code 正文\n\n- 位置：`packages/desktop/src/renderer/markdown/stripMarkdown.ts:13-14` 先移除围栏，随后 `:39-40` 对已经暴露的代码正文应用强调正则。文件顶部明确约定保留代码内容原样。\n- 触发：普通 Python 围栏正文含 `if __name__ == \"__ma",
+        "sha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/exact-leaf/15/excerpt",
+        "line": 4,
+        "needle": "复制回复",
+        "context": "\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-05 [P3] 复制回复为纯文本时修改 fenced code 正文\n\n- 位置：`packages/desktop/src/renderer/markdown/stripMarkdown.ts:13-14` 先移除围栏，随后 `:39-40` 对已经暴露的代码正文应用强调正则。文件顶部明确约定保留代码内容原样。\n- 触发：普通 Python 围栏正文含 `if __name__ == \"__ma",
+        "sha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/31/excerpt",
+        "line": 4,
+        "needle": "复制回复",
+        "context": "anscript。\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-05 [P3] 复制回复为纯文本时修改 fenced code 正文\n\n- 位置：`packages/desktop/src/renderer/markdown/stripMarkdown.ts:13-14` 先移除围栏，随后 `:39-40` 对已经暴露的代码正文应用强调正则。文件顶部明确约定保留代码内容原样。\n- 触发：普通 Python 围栏正文含 `if __name__ == \"__ma",
+        "sha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round40/evidence/data-frontier/history.json",
+        "jsonPointer": "/hits/ordinary-contract/33/excerpt",
+        "line": 4,
+        "needle": "复制回复",
+        "context": "anscript。\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-05 [P3] 复制回复为纯文本时修改 fenced code 正文\n\n- 位置：`packages/desktop/src/renderer/markdown/stripMarkdown.ts:13-14` 先移除围栏，随后 `:39-40` 对已经暴露的代码正文应用强调正则。文件顶部明确约定保留代码内容原样。\n- 触发：普通 Python 围栏正文含 `if __name__ == \"__ma",
+        "sha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/141/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidde",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/141/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><pat",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/141/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/142/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidde",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/142/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><pat",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/142/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/202/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidde",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/202/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><pat",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/202/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/203/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidde",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/203/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><pat",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/203/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/336/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidde",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/336/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><pat",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/336/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/337/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "\\\"attachment\\\">📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidde",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/337/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "📎 modern-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><pat",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "jsonPointer": "/hits/sidebar-projection/337/text",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "n-shot.png</span></div><div class=\\\"msg assistant\\\"><div class=\\\"message-content\\\"><p>The saved answer remains visible.</p><div class=\\\"message-actions\\\"><button class=\\\"message-copy\\\" aria-label=\\\"复制回复\\\" title=\\\"复制回复\\\">复制回复</button></div></div></div></div></div><div class=\\\"composer-wrap\\\"><footer class=\\\"composer\\\"><textarea aria-label=\\\"任务内容\\\" rows=\\\"2\\\" placeholder=\\\"描述你的任务，或提出一个问题…\\\"></textarea><div class=\\\"composer-toolbar\\\"><span class=\\\"composer-run-status\\\" role=\\\"status\\\"></span><button class=\\\"send composer-submit\\\" aria-label=\\\"发送\\\" title=\\\"发送\\\" disabled=\\\"\\\"><svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"1.7\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" aria-hidden=\\\"true\\\"><path d=\\\"M",
+        "sha256": "265f325ba817e44a620e1d3f4f8ad5b5e7da1ce9e2e0e2d5b973160cd6fb67d2"
+      },
+      {
+        "path": "docs/audit-2026-10-17/root.md",
+        "jsonPointer": null,
+        "line": 44,
+        "needle": "复制回复",
+        "context": "tory-corruption.log` 为 2 pass / 4 expect / 0 fail/skip / Completed。\n- 条件：这是本地损坏/不符合对象 schema 的记录隔离问题；没有证据证明正常 Claude writer 会生成 null，也未接触真实用户 transcript。\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-05 [P3] 复制回复为纯文本时修改 fenced code 正文\n\n- 位置：`packages/desktop/src/renderer/markdown/stripMarkdown.ts:13-14` 先移除围栏，随后 `:39-40` 对已经暴露的代码正文应用强调正则。文件顶部明确约定保留代码内容原样。\n- 触发：普通 Python 围栏正文含 `if __name__ == \"__main__\":`、`a*b*c`、`\"*literal*\"`。预期仅去围栏；实际分别成为 `if name == \"main\":`、`abc`、`\"literal\"`。\n- 影响：复制出的代码语义改变。原消息仍然保留；此项仅覆盖回复的“复制为纯文本”，不声称代码块独立复制按钮有问题。\n- 生产接线：`packages/desktop/src/renderer/messages/AssistantMessageView.tsx:53` 将此函数结果交给复制 hook。\n- 证据：`evidence/root-copy-code.test.ts` 调用真实转换函数，普通 prose 强调和简单代码块为正常对照。日志 `root-copy-code.log` 为 2 pass / 6 expect / 0 fail/ski",
+        "sha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074"
+      },
+      {
+        "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/0/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></",
+        "sha256": "624b6d3322ab1ff8f43bcc21e66b484f15bb4fda55dc79ffae0a72c6074c4c67"
+      },
+      {
+        "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/0/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ttachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></",
+        "sha256": "624b6d3322ab1ff8f43bcc21e66b484f15bb4fda55dc79ffae0a72c6074c4c67"
+      },
+      {
+        "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/0/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ent\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button",
+        "sha256": "624b6d3322ab1ff8f43bcc21e66b484f15bb4fda55dc79ffae0a72c6074c4c67"
+      },
+      {
+        "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/1/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></",
+        "sha256": "624b6d3322ab1ff8f43bcc21e66b484f15bb4fda55dc79ffae0a72c6074c4c67"
+      },
+      {
+        "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/1/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ttachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></",
+        "sha256": "624b6d3322ab1ff8f43bcc21e66b484f15bb4fda55dc79ffae0a72c6074c4c67"
+      },
+      {
+        "path": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/1/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ent\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button",
+        "sha256": "624b6d3322ab1ff8f43bcc21e66b484f15bb4fda55dc79ffae0a72c6074c4c67"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/0/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></",
+        "sha256": "1209743fa2fc78868d03bfb24126e220e39f173f8138a4bf9a7ab0315939f8b1"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/0/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ttachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></",
+        "sha256": "1209743fa2fc78868d03bfb24126e220e39f173f8138a4bf9a7ab0315939f8b1"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/0/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ent\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button",
+        "sha256": "1209743fa2fc78868d03bfb24126e220e39f173f8138a4bf9a7ab0315939f8b1"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/1/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></",
+        "sha256": "1209743fa2fc78868d03bfb24126e220e39f173f8138a4bf9a7ab0315939f8b1"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/1/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ttachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></",
+        "sha256": "1209743fa2fc78868d03bfb24126e220e39f173f8138a4bf9a7ab0315939f8b1"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "jsonPointer": "/observations/1/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ent\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button",
+        "sha256": "1209743fa2fc78868d03bfb24126e220e39f173f8138a4bf9a7ab0315939f8b1"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+        "jsonPointer": "/observations/0/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></",
+        "sha256": "4201df10228c2acb1abaf56e2e2fce0253f27fd6dc7586715b78a7b34f083f22"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+        "jsonPointer": "/observations/0/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ttachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></",
+        "sha256": "4201df10228c2acb1abaf56e2e2fce0253f27fd6dc7586715b78a7b34f083f22"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+        "jsonPointer": "/observations/0/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ent\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button",
+        "sha256": "4201df10228c2acb1abaf56e2e2fce0253f27fd6dc7586715b78a7b34f083f22"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+        "jsonPointer": "/observations/1/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "span class=\"attachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></",
+        "sha256": "4201df10228c2acb1abaf56e2e2fce0253f27fd6dc7586715b78a7b34f083f22"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+        "jsonPointer": "/observations/1/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ttachment\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></",
+        "sha256": "4201df10228c2acb1abaf56e2e2fce0253f27fd6dc7586715b78a7b34f083f22"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+        "jsonPointer": "/observations/1/pairedWebMarkup",
+        "line": 1,
+        "needle": "复制回复",
+        "context": "ent\">📎 modern-shot.png</span></div><div class=\"msg assistant\"><div class=\"message-content\"><p>The saved answer remains visible.</p><div class=\"message-actions\"><button class=\"message-copy\" aria-label=\"复制回复\" title=\"复制回复\">复制回复</button></div></div></div></div></div><div class=\"composer-wrap\"><footer class=\"composer\"><textarea aria-label=\"任务内容\" rows=\"2\" placeholder=\"描述你的任务，或提出一个问题…\"></textarea><div class=\"composer-toolbar\"><span class=\"composer-run-status\" role=\"status\"></span><button class=\"send composer-submit\" aria-label=\"发送\" title=\"发送\" disabled=\"\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5m-6 6 6-6 6 6\"></path></svg></button",
+        "sha256": "4201df10228c2acb1abaf56e2e2fce0253f27fd6dc7586715b78a7b34f083f22"
+      }
+    ]
+  },
+  "notSemanticExhaustion": true,
+  "productAttempts": 0
+}

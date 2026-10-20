@@ -1,0 +1,160 @@
+{
+  "frozenSource": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBytes": 17639,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBytes": 233,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+      "frozenSha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "sha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "frozenBytes": 29998,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/streamGroups.test.ts",
+      "frozenSha256": "70156453851d82f80e80311be065b1da9521e8f2451d2dedfc2cc253b3c2f2cb",
+      "sha256": "70156453851d82f80e80311be065b1da9521e8f2451d2dedfc2cc253b3c2f2cb",
+      "frozenBytes": 29494,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "frozenSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "frozenBytes": 4292,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/agentGroup.test.ts",
+      "frozenSha256": "24772e53362679c111fa2112109f9dc28a95dbc28a86a1739d5fdb90d3a401d3",
+      "sha256": "24772e53362679c111fa2112109f9dc28a95dbc28a86a1739d5fdb90d3a401d3",
+      "frozenBytes": 3226,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AgentGroupCard.tsx",
+      "frozenSha256": "7df5fac9cfc719572bfa6be82ddf227e658eff0fb7a59c1092071bf643f3c3d6",
+      "sha256": "7df5fac9cfc719572bfa6be82ddf227e658eff0fb7a59c1092071bf643f3c3d6",
+      "frozenBytes": 3673,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "frozenSha256": "f2d3d421a6e5c488d28509794915e8dff08817699d3097588d10b44c5798e0b1",
+      "sha256": "f2d3d421a6e5c488d28509794915e8dff08817699d3097588d10b44c5798e0b1",
+      "frozenBytes": 14470,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts",
+      "frozenSha256": "4dc946ba4e9adabb7a50474f805f1d1eecdc14db4fb5c8374bc9be2bbcfee16f",
+      "sha256": "4dc946ba4e9adabb7a50474f805f1d1eecdc14db4fb5c8374bc9be2bbcfee16f",
+      "frozenBytes": 10762,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts",
+      "frozenSha256": "e89e1cfbf5dcc6d05770b47aa4bbdeb4954e0d66071578c3931804121afd32c8",
+      "sha256": "e89e1cfbf5dcc6d05770b47aa4bbdeb4954e0d66071578c3931804121afd32c8",
+      "frozenBytes": 878,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "frozenSha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "sha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "frozenBytes": 15998,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "frozenSha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+      "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+      "frozenBytes": 3874,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/time.test.ts",
+      "frozenSha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+      "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+      "frozenBytes": 2342,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/turnTiming.test.ts",
+      "frozenSha256": "3ef499f83998d86ea26e3daa895b2aad8406c351c81a5941b52ba6f27e5ef7cf",
+      "sha256": "3ef499f83998d86ea26e3daa895b2aad8406c351c81a5941b52ba6f27e5ef7cf",
+      "frozenBytes": 11615,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "frozenSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "frozenBytes": 37921,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "frozenSha256": "f9ac44e771858e1323fb79b30b8e06c7234ab0f6b0bcf68836def2481c5ebb90",
+      "sha256": "f9ac44e771858e1323fb79b30b8e06c7234ab0f6b0bcf68836def2481c5ebb90",
+      "frozenBytes": 86676,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "frozenSha256": "e2831337564fad6b8e996abd31c2e20f702102e83724150bfe05fe0045a05094",
+      "sha256": "e2831337564fad6b8e996abd31c2e20f702102e83724150bfe05fe0045a05094",
+      "frozenBytes": 5419,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/index.ts",
+      "frozenSha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "sha256": "90870de9f68eea46c44ae8971461d163bb29ff678cf925ca7dd77e7ddae31ee2",
+      "frozenBytes": 4352,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/parser.ts",
+      "frozenSha256": "2572d1d2204c222d62bd37e609ed5d68a253b64a8637a5e7334800bb497b3611",
+      "sha256": "2572d1d2204c222d62bd37e609ed5d68a253b64a8637a5e7334800bb497b3611",
+      "frozenBytes": 8351,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/coding/src/tools/apply-patch/types.ts",
+      "frozenSha256": "cc2e53039c195b6d4150ef357dbe634c43c4181a7a60559fbea068e4dbe6ad7a",
+      "sha256": "cc2e53039c195b6d4150ef357dbe634c43c4181a7a60559fbea068e4dbe6ad7a",
+      "frozenBytes": 1960,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-28-electron-turn-summary-design.md",
+      "frozenSha256": "65e94ae2d59553447d8421c69f7fde1b4a898d02647571f3248f5c29d2fa102b",
+      "sha256": "65e94ae2d59553447d8421c69f7fde1b4a898d02647571f3248f5c29d2fa102b",
+      "frozenBytes": 10730,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "frozenSha256": "8aa894e7a8173515a92ee0b63b70c3537ee980f3576dc4dcfc05b29225bc86ad",
+      "sha256": "8aa894e7a8173515a92ee0b63b70c3537ee980f3576dc4dcfc05b29225bc86ad",
+      "frozenBytes": 5955,
+      "currentEqualsFrozen": true
+    }
+  ],
+  "scope": "Inspected selected source and baseline runtime inputs. Pins do not imply full-file behavioural coverage; source-only versus executed scope is in groups.md."
+}

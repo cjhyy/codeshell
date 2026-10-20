@@ -1,0 +1,487 @@
+{
+  "baseline": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "mainHead": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "files": [
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentBytes": 7063,
+      "currentSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "mainBytes": 7063,
+      "mainSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentBytes": 2110,
+      "currentSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "mainBytes": 2110,
+      "mainSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "currentBytes": 297,
+      "currentSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "mainBytes": 297,
+      "mainSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "bytes": 2158,
+      "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "currentBytes": 2158,
+      "currentSha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "mainBytes": 2158,
+      "mainSha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/index.ts",
+      "bytes": 2454,
+      "sha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "currentBytes": 2454,
+      "currentSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "mainBytes": 2454,
+      "mainSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/ink.tsx",
+      "bytes": 89185,
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "currentBytes": 89185,
+      "currentSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "mainBytes": 89185,
+      "mainSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "bytes": 27146,
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentBytes": 27146,
+      "currentSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "mainBytes": 27146,
+      "mainSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "bytes": 7445,
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "currentBytes": 7445,
+      "currentSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "mainBytes": 7445,
+      "mainSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/root.ts",
+      "bytes": 4613,
+      "sha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "currentBytes": 4613,
+      "currentSha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "mainBytes": 4613,
+      "mainSha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/screen.ts",
+      "bytes": 49323,
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "currentBytes": 49323,
+      "currentSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "mainBytes": 49323,
+      "mainSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "bytes": 1738,
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "currentBytes": 1738,
+      "currentSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "mainBytes": 1738,
+      "mainSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "bytes": 1895,
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "currentBytes": 1895,
+      "currentSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "mainBytes": 1895,
+      "mainSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/warn.ts",
+      "bytes": 309,
+      "sha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "currentBytes": 309,
+      "currentSha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "mainBytes": 309,
+      "mainSha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "scripts/build-meta.ts",
+      "bytes": 1712,
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "currentBytes": 1712,
+      "currentSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "mainBytes": 1712,
+      "mainSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "tests/search-highlight.test.ts",
+      "bytes": 4161,
+      "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "currentBytes": 4161,
+      "currentSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "mainBytes": 4161,
+      "mainSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/render/screen.ts",
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/render/ink.tsx",
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "tests/search-highlight.test.ts",
+      "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/tui/src/render/warn.ts",
+      "sha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "packages/tui/src/render/ink.tsx",
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "packages/tui/src/render/index.ts",
+      "sha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "packages/tui/src/index.ts",
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "packages/tui/package.json",
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "tests/search-highlight.test.ts",
+      "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "package.json",
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "packages/tui/src/render/root.ts",
+      "sha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "path": "scripts/build-meta.ts",
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-search-source-manifest.json",
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-search-source-manifest.json",
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-search-source-manifest.json",
+      "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-search-source-manifest.json",
+      "path": "tests/search-highlight.test.ts",
+      "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-search-source-manifest.json",
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-search-source-manifest.json",
+      "path": "packages/tui/src/render/ink.tsx",
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-search-source-manifest.json",
+      "path": "packages/tui/src/render/screen.ts",
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-search-source-manifest.json",
+      "path": "packages/tui/src/render/output.ts",
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/render/screen.ts",
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/render/ink.tsx",
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "tests/search-highlight.test.ts",
+      "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/render/root.ts",
+      "sha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/render/index.ts",
+      "sha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/index.ts",
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    },
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/package.json",
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+    }
+  ],
+  "hashOnlyChecks": [
+    {
+      "manifest": "review-aggregate-independent-checks.json",
+      "path": "packages/tui/src/render/warn.ts",
+      "sha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "coverage": "Hash only; no additional semantic reading"
+    }
+  ],
+  "changedFromFrozenPaths": [],
+  "note": "Dated prep source records appear once per author/reviewer. Original same-read and initial-null limitations remain. No entire package inventory was semantically reviewed."
+}

@@ -1,21 +1,24 @@
+import { useTaskInboxSnapshot } from "./useTaskInboxSnapshot";
 import { OperationBatchForm } from "./OperationBatchForm";
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Inbox, Loader2, RefreshCw } from "lucide-react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Inbox, ListFilter, Loader2, RefreshCw } from "lucide-react";
 import type {
   TaskInboxRecordV1,
-  TaskInboxListResult,
   TaskInboxAction,
   TaskSource,
   TaskStatus,
 } from "../../preload/task-inbox-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SimpleSelect } from "@/components/ui/simple-select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "../i18n/I18nProvider";
 import { useOptionalConfirm } from "../ui/DialogProvider";
 import { OperationResolutionReview } from "./OperationResolutionReview";
 import {
   TASK_INBOX_GROUPS,
   groupTaskInboxRecords,
+  isBackgroundWork,
   taskInboxProject,
   type TaskInboxFilters,
   type TaskInboxGroup,
@@ -29,8 +32,6 @@ const SubagentSessionDetail = React.lazy(() =>
 
 const SOURCES: TaskSource[] = [
   "session",
-  "legacy-run",
-  "automation",
   "mimi-delegation",
   "subagent",
   "background-shell",
@@ -62,111 +63,55 @@ const initialCounts = (): Record<TaskInboxGroup, number> => ({
 });
 
 export interface TaskInboxPageProps {
+  onOpenTrace?: (sessionId?: string, traceId?: string) => void;
   onOpenTaskInboxRecord?: (record: TaskInboxRecordV1) => void | Promise<void>;
 }
 
-export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}) {
+export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxPageProps = {}) {
   const { t, lang } = useT();
   const confirm = useOptionalConfirm();
   const id = useId();
   const [selectedSubagent, setSelectedSubagent] = useState<TaskInboxRecordV1 | null>(null);
-  const [snapshot, setSnapshot] = useState<TaskInboxListResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { snapshot, loading, error, refresh } = useTaskInboxSnapshot();
   const [actionError, setActionError] = useState<string | null>(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const containerRef = useRef<HTMLElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [visibleCounts, setVisibleCounts] = useState(initialCounts);
-  const [revision, setRevision] = useState(0);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const pendingRef = useRef(new Set<string>());
-  const currentVersionRef = useRef(-1);
-  const notifiedVersionRef = useRef(-1);
-  // Notifications queue behind the immutable paginated snapshot being read.
-  // Cancelling that read on every source update could prevent the first render.
-  const loadInFlightRef = useRef(true);
   const refreshRef = useRef<HTMLButtonElement>(null);
-  const refresh = useCallback(() => setRevision((value) => value + 1), []);
-
-  useEffect(
-    () =>
-      window.codeshell.taskInbox.onChanged((version) => {
-        if (version > Math.max(currentVersionRef.current, notifiedVersionRef.current)) {
-          notifiedVersionRef.current = version;
-          if (!loadInFlightRef.current) {
-            loadInFlightRef.current = true;
-            refresh();
-          }
-        }
-      }),
-    [refresh],
-  );
+  const mounted = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
-    let published = false;
-    loadInFlightRef.current = true;
-    setLoading(true);
-    setError(null);
-    void (async () => {
-      try {
-        // Read all bounded pages once, then filter locally without losing options
-        // from other pages. An explicit refresh invalidates the request generation.
-        const records = new Map<string, TaskInboxRecordV1>();
-        let first: TaskInboxListResult | null = null;
-        let cursor: string | undefined;
-        const cursors = new Set<string>();
-        do {
-          const page = await window.codeshell.taskInbox.list({
-            limit: 200,
-            ...(cursor ? { cursor } : {}),
-          });
-          if (cancelled) return;
-          if (!first) first = page;
-          if (page.version !== first.version) {
-            // Mixed versions violate the immutable pagination contract. Start
-            // a new snapshot rather than displaying inconsistent pages.
-            refresh();
-            return;
-          }
-          for (const record of page.records) records.set(record.taskKey, record);
-          cursor = page.nextCursor;
-          if (cursor) {
-            if (cursors.has(cursor)) throw new Error("Task pagination did not advance");
-            cursors.add(cursor);
-          }
-        } while (cursor);
-        if (!cancelled && first) {
-          currentVersionRef.current = first.version;
-          setSnapshot({ ...first, records: [...records.values()], nextCursor: undefined });
-          published = true;
-        }
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        if (!cancelled) {
-          loadInFlightRef.current = false;
-          setLoading(false);
-          // Publish this complete snapshot before following the newest queued
-          // notification. A burst schedules only one subsequent load.
-          if (published && notifiedVersionRef.current > currentVersionRef.current) {
-            loadInFlightRef.current = true;
-            refresh();
-          }
-        }
-      }
-    })();
+    mounted.current = true;
     return () => {
-      cancelled = true;
+      mounted.current = false;
     };
-  }, [revision, refresh]);
+  }, []);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width >= 1000) setFiltersOpen(false);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [selectedSubagent]);
+
+  const backgroundRecords = useMemo(
+    () => (snapshot?.records ?? []).filter(isBackgroundWork),
+    [snapshot],
+  );
   const grouped = useMemo(
-    () => groupTaskInboxRecords(snapshot?.records ?? [], filters),
-    [snapshot, filters],
+    () => groupTaskInboxRecords(backgroundRecords, filters),
+    [backgroundRecords, filters],
   );
   const projects = useMemo(
-    () => [...new Set((snapshot?.records ?? []).map(taskInboxProject).filter(Boolean))].sort(),
-    [snapshot],
+    () => [...new Set(backgroundRecords.map(taskInboxProject).filter(Boolean))].sort(),
+    [backgroundRecords],
   );
   const filteredCount = TASK_INBOX_GROUPS.reduce(
     (count, group) => count + grouped[group].length,
@@ -176,6 +121,48 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
     setFilters((current) => ({ ...current, [key]: value }));
     setVisibleCounts(initialCounts());
   };
+  const activeFilterCount = [filters.source, filters.project, filters.status].filter(
+    Boolean,
+  ).length;
+  const clearFilters = () => {
+    setFilters(EMPTY_FILTERS);
+    setVisibleCounts(initialCounts());
+    searchRef.current?.focus({ preventScroll: true });
+  };
+  const renderFilters = (suffix = "") => (
+    <>
+      <FilterSelect
+        id={`${id}-source${suffix}`}
+        label={t("taskInbox.source")}
+        all={t("taskInbox.all")}
+        value={filters.source}
+        onChange={(value) => filter("source", value)}
+        options={SOURCES.map((source) => ({
+          value: source,
+          label: t(`taskInbox.sources.${source}`),
+        }))}
+      />
+      <FilterSelect
+        id={`${id}-project${suffix}`}
+        label={t("taskInbox.project")}
+        all={t("taskInbox.all")}
+        value={filters.project}
+        onChange={(value) => filter("project", value)}
+        options={projects.map((project) => ({ value: project, label: project }))}
+      />
+      <FilterSelect
+        id={`${id}-status${suffix}`}
+        label={t("taskInbox.status")}
+        all={t("taskInbox.all")}
+        value={filters.status}
+        onChange={(value) => filter("status", value)}
+        options={STATUSES.map((status) => ({
+          value: status,
+          label: t(`taskInbox.statuses.${status}`),
+        }))}
+      />
+    </>
+  );
   const actOnTask = async (record: TaskInboxRecordV1, action: TaskInboxAction) => {
     if (pendingRef.current.has(record.taskKey)) return;
     pendingRef.current.add(record.taskKey);
@@ -200,6 +187,7 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
       });
       if (result.status === "ok") {
         if (action === "open") {
+          if (!mounted.current) return;
           if (record.source === "subagent") setSelectedSubagent(result.record ?? record);
           else if (onOpenTaskInboxRecord) await onOpenTaskInboxRecord(result.record ?? record);
           else setActionError(t("taskInbox.openUnavailable"));
@@ -241,19 +229,19 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
     );
 
   return (
-    <main className="@container/tasks flex h-full min-h-0 min-w-0 flex-col bg-background">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-5 @min-[760px]/tasks:px-6">
-        <div className="min-w-0">
-          <h1 className="flex flex-wrap items-center gap-2.5 text-xl font-semibold tracking-tight">
-            {t("taskInbox.title")}
-            {snapshot && (
-              <span className="rounded-full border border-border/70 px-2.5 py-0.5 text-xs font-normal tabular-nums text-muted-foreground">
-                {t("taskInbox.total", { count: filteredCount })}
-              </span>
-            )}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t("taskInbox.subtitle")}</p>
-        </div>
+    <main
+      ref={containerRef}
+      className="@container/tasks flex h-full min-h-0 min-w-0 flex-col bg-background"
+    >
+      <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3 @min-[760px]/tasks:px-6">
+        <h1 className="flex flex-wrap items-center gap-2.5 text-xl font-semibold tracking-tight">
+          {t("activity.backgroundWork")}
+          {snapshot && (
+            <span className="rounded-full border border-border/70 px-2.5 py-0.5 text-xs font-normal tabular-nums text-muted-foreground">
+              {t("taskInbox.total", { count: filteredCount })}
+            </span>
+          )}
+        </h1>
         <Button
           type="button"
           ref={refreshRef}
@@ -275,48 +263,78 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
           )}
           {t("taskInbox.refresh")}
         </Button>
+        <p className="col-span-2 line-clamp-2 text-sm text-muted-foreground @min-[480px]/tasks:line-clamp-none">
+          {t("activity.backgroundDescription")}
+        </p>
       </header>
-      <div className="grid shrink-0 grid-cols-1 gap-3 px-4 pb-4 @min-[600px]/tasks:grid-cols-2 @min-[1000px]/tasks:grid-cols-4 @min-[760px]/tasks:px-6">
-        <label className="space-y-1.5 text-xs text-muted-foreground" htmlFor={`${id}-search`}>
-          {t("taskInbox.search")}
+      <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-4 pb-3 @min-[1000px]/tasks:grid-cols-4 @min-[760px]/tasks:px-6">
+        <label
+          className="min-w-0 space-y-1.5 text-xs text-muted-foreground"
+          htmlFor={`${id}-search`}
+        >
+          <span className="sr-only @min-[1000px]/tasks:not-sr-only">{t("taskInbox.search")}</span>
           <Input
             id={`${id}-search`}
+            ref={searchRef}
+            type="search"
+            placeholder={t("activity.taskSearch")}
             value={filters.search}
             onChange={(event) => filter("search", event.target.value)}
             className="h-9 rounded-lg"
           />
         </label>
-        <FilterSelect
-          id={`${id}-source`}
-          label={t("taskInbox.source")}
-          all={t("taskInbox.all")}
-          value={filters.source}
-          onChange={(value) => filter("source", value)}
-          options={SOURCES.map((source) => ({
-            value: source,
-            label: t(`taskInbox.sources.${source}`),
-          }))}
-        />
-        <FilterSelect
-          id={`${id}-project`}
-          label={t("taskInbox.project")}
-          all={t("taskInbox.all")}
-          value={filters.project}
-          onChange={(value) => filter("project", value)}
-          options={projects.map((project) => ({ value: project, label: project }))}
-        />
-        <FilterSelect
-          id={`${id}-status`}
-          label={t("taskInbox.status")}
-          all={t("taskInbox.all")}
-          value={filters.status}
-          onChange={(value) => filter("status", value)}
-          options={STATUSES.map((status) => ({
-            value: status,
-            label: t(`taskInbox.statuses.${status}`),
-          }))}
-        />
+        <div className="@min-[1000px]/tasks:hidden">
+          <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" className="h-9 gap-2 rounded-lg">
+                <ListFilter size={14} aria-hidden />
+                {t("taskInbox.filters")}
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-accent px-1.5 text-xs tabular-nums">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              className="w-80 space-y-3 p-3"
+              aria-label={t("taskInbox.filters")}
+              onCloseAutoFocus={(event) => {
+                if ((containerRef.current?.getBoundingClientRect().width ?? 0) >= 1000) {
+                  event.preventDefault();
+                  searchRef.current?.focus();
+                }
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-medium">{t("taskInbox.filters")}</h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={activeFilterCount === 0}
+                  onClick={() => {
+                    setFilters((current) => ({ ...current, source: "", project: "", status: "" }));
+                    setVisibleCounts(initialCounts());
+                  }}
+                >
+                  {t("taskInbox.clearFilters")}
+                </Button>
+              </div>
+              {renderFilters("-compact")}
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="hidden @min-[1000px]/tasks:contents">{renderFilters()}</div>
       </div>
+      {(activeFilterCount > 0 || filters.search) && filteredCount > 0 && (
+        <div className="shrink-0 px-4 pb-2 @min-[760px]/tasks:px-6">
+          <Button type="button" size="sm" variant="ghost" onClick={clearFilters}>
+            {t("activity.clearFilters")}
+          </Button>
+        </div>
+      )}
       <div
         className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 @min-[760px]/tasks:px-6"
         aria-busy={loading}
@@ -327,6 +345,21 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
             className="mb-3 rounded-xl border border-status-err/20 bg-status-err/5 p-3 text-sm text-status-err"
           >
             {t("taskInbox.listFailed", { message: error })}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-disabled={loading}
+              className="ml-3"
+              onClick={() => {
+                if (!loading) {
+                  refreshRef.current?.focus({ preventScroll: true });
+                  refresh();
+                }
+              }}
+            >
+              {t("activity.retry")}
+            </Button>
           </p>
         )}
         {actionError && (
@@ -353,13 +386,22 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
           <p role="status" className="py-10 text-center text-sm text-muted-foreground">
             {t("taskInbox.loading")}
           </p>
+        ) : !snapshot ? (
+          <p role="status" className="py-10 text-center text-sm text-muted-foreground">
+            {t("activity.unavailable")}
+          </p>
         ) : filteredCount === 0 ? (
           <div
             role="status"
             className="flex flex-col items-center gap-3 py-10 text-sm text-muted-foreground"
           >
             <Inbox size={24} aria-hidden />
-            {t(snapshot?.records.length ? "taskInbox.noMatches" : "taskInbox.empty")}
+            {t(backgroundRecords.length ? "taskInbox.noMatches" : "taskInbox.empty")}
+            {(activeFilterCount > 0 || filters.search) && (
+              <Button type="button" size="sm" variant="outline" onClick={clearFilters}>
+                {t("activity.clearFilters")}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-5">
@@ -409,18 +451,26 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
                               </time>
                             </div>
                             {record.summary && (
-                              <p className="line-clamp-4 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                              <p
+                                className="max-h-48 overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]"
+                                tabIndex={0}
+                                aria-label={t("activity.summary")}
+                              >
                                 {record.summary}
                               </p>
                             )}
                             {record.error && (
-                              <p className="line-clamp-4 whitespace-pre-wrap break-words text-xs text-status-err">
+                              <p
+                                className="max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs text-status-err [overflow-wrap:anywhere]"
+                                tabIndex={0}
+                                aria-label={t("activity.taskError")}
+                              >
                                 {record.error}
                               </p>
                             )}
                             {record.artifacts.length > 0 && (
                               <ul
-                                aria-label={t("auto.runs.artifacts")}
+                                aria-label={t("taskInbox.artifacts")}
                                 className="space-y-1 text-xs text-muted-foreground"
                               >
                                 {record.artifacts.slice(0, 8).map((artifact, index) => (
@@ -450,6 +500,16 @@ export function TaskInboxPage({ onOpenTaskInboxRecord }: TaskInboxPageProps = {}
                               />
                             )}
                             <div className="mt-auto flex flex-wrap items-center gap-2">
+                              {onOpenTrace && (record.sessionId || record.runId) && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => onOpenTrace(record.sessionId, record.runId)}
+                                >
+                                  {t("activity.viewTrace")}
+                                </Button>
+                              )}
                               {record.capabilities.map((action) => (
                                 <Button
                                   type="button"
@@ -524,19 +584,14 @@ function FilterSelect({
   return (
     <div className="space-y-1.5 text-xs text-muted-foreground">
       <label htmlFor={id}>{label}</label>
-      <select
-        id={id}
+      <SimpleSelect
+        ariaLabel={label}
+        triggerProps={{ id }}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="flex h-9 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <option value="">{all}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        onChange={onChange}
+        options={[{ value: "", label: all }, ...options]}
+        className="h-9 text-foreground"
+      />
     </div>
   );
 }

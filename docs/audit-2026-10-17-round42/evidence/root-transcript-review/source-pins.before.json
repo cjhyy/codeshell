@@ -1,0 +1,38 @@
+{
+  "atUTC": "2026-10-17T14:20:41.902162+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "bytes": 6622,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "lineCount": 195,
+      "initialSemanticReadSha256": null,
+      "reason": "Root learns author exact locations/claims before dedicated content read; no first-ever or backdated initial semantic pin. This current dedicated hash is before Root body display."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "lineCount": 1571,
+      "initialSemanticReadSha256": null,
+      "reason": "Root learns author exact locations/claims before dedicated content read; no first-ever or backdated initial semantic pin. This current dedicated hash is before Root body display."
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "lineCount": 2412,
+      "initialSemanticReadSha256": null,
+      "reason": "Root learns author exact locations/claims before dedicated content read; no first-ever or backdated initial semantic pin. This current dedicated hash is before Root body display."
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lineCount": 2318,
+      "initialSemanticReadSha256": null,
+      "reason": "Root learns author exact locations/claims before dedicated content read; no first-ever or backdated initial semantic pin. This current dedicated hash is before Root body display."
+    }
+  ],
+  "productRuns": 0
+}

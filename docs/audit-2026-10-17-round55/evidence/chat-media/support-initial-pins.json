@@ -1,0 +1,26 @@
+{
+  "capturedUTC": "2026-10-17T18:27:48.327114+00:00",
+  "files": [
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "lines": 193,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "bytes": 12790,
+      "lines": 362,
+      "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/chat/src/platform-media.test.ts",
+      "bytes": 5802,
+      "lines": 159,
+      "sha256": "b7da4a3fa5a122b61cb05eb501eee4f50da6fab0d8b799dab53062305c6eba61",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

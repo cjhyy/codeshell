@@ -1,0 +1,20 @@
+{
+  "baseline": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "mainHead": "23f8af1ea62f3276d307a49ccc02e23e0873a997",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 32,
+  "activeSourceChecks": 36,
+  "hashOnlyChecks": 6,
+  "receiptChecks": 58,
+  "verbatimCopies": 34,
+  "history": {
+    "markdownFiles": 1304,
+    "jsonFiles": 1684,
+    "stringLeaves": 645399,
+    "scalarLeaves": 957193
+  },
+  "productRuns": 0,
+  "goalStillActive": true
+}

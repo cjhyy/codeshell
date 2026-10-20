@@ -219,10 +219,38 @@ test("independent Node writer can keep appending during long-file capture, pagin
   const child = spawn("node", ["--input-type=module", "-e", writerSource, f.file], {
     stdio: ["ignore", "pipe", "pipe"],
   });
+  // Drain stderr: an unread pipe never ends, so "close" would wait on it forever.
+  let stderr = "";
+  child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+  let exitedYet = false;
+  child.once("exit", () => (exitedYet = true));
   const closed = new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);
     child.once("close", resolve);
   });
+  // Report the writer's state instead of an opaque test timeout if it never closes.
+  let closeTimer: ReturnType<typeof setTimeout> | undefined;
+  const settled = () =>
+    Promise.race([
+      closed,
+      new Promise<never>((_, reject) => {
+        closeTimer = setTimeout(() => {
+          reject(
+            new Error(
+              `writer did not close: ${JSON.stringify({
+                pid: child.pid,
+                exitCode: child.exitCode,
+                signalCode: child.signalCode,
+                exitedYet,
+                stdoutEnded: child.stdout.readableEnded,
+                stderrEnded: child.stderr.readableEnded,
+                stderr: stderr.slice(-2000),
+              })}`,
+            ),
+          );
+        }, 30_000);
+      }),
+    ]).finally(() => clearTimeout(closeTimer));
   try {
     await new Promise<void>((resolve, reject) => {
       child.stdout.once("data", () => resolve());
@@ -262,7 +290,7 @@ test("independent Node writer can keep appending during long-file capture, pagin
     cold.manager.subscribe(f.target);
     const coldMs = performance.now() - coldStart;
     console.log("CCRoom ongoing writer cold", JSON.stringify({ coldMs }));
-    expect(await closed).toBe(0);
+    expect(await settled()).toBe(0);
     const snapshot = cold.manager.subscribe(f.target);
     expect(snapshot.messages.map((message) => message.text)).toEqual(
       Array.from({ length: 50 }, (_, n) => `writer-${n + 70}`),

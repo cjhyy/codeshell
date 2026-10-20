@@ -58,6 +58,11 @@ describe("loadView", () => {
     expect(loadView().viewMode).toBe("settings_page");
   });
 
+  it("redirects the removed run-history route to execution traces", () => {
+    persist("runs");
+    expect(loadView().viewMode).toBe("traces");
+  });
+
   it("falls back to chat for an unknown persisted mode", () => {
     persist("files");
     expect(loadView().viewMode).toBe("chat");

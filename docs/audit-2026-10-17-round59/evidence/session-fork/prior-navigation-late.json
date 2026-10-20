@@ -1,0 +1,59 @@
+{
+  "files": [
+    {
+      "path": "docs/review-2026-10-12/session-operations-round17.md",
+      "bytes": 16661,
+      "sha256": "f70e6e23b7fb293b7510edc8af69470a4d01cdeb1f43b1b1453e4b684f9c9fd9",
+      "lineCount": 112,
+      "initialSha256": null,
+      "hashTiming": "Late after earlier metadata keyword navigation; not backfilled before-read pin",
+      "navigationDisplayedLines": [],
+      "wholeFileSemanticRead": false
+    },
+    {
+      "path": "docs/review-2026-10-12/session-actions-round13.md",
+      "bytes": 9450,
+      "sha256": "e93516afdcc2eef11850eaa1d2e7a2859b0524af030d3a8e07317176cb3b4e37",
+      "lineCount": 66,
+      "initialSha256": null,
+      "hashTiming": "Late after earlier metadata keyword navigation; not backfilled before-read pin",
+      "navigationDisplayedLines": [],
+      "wholeFileSemanticRead": false
+    },
+    {
+      "path": "docs/review-2026-10-12/context-recovery-round17.md",
+      "bytes": 7058,
+      "sha256": "74ba376b3eca7aa1ac537e05bf114926152b7008ec7fa74b2ce8ee79aa796b0a",
+      "lineCount": 36,
+      "initialSha256": null,
+      "hashTiming": "Late after earlier metadata keyword navigation; not backfilled before-read pin",
+      "navigationDisplayedLines": [
+        7,
+        11,
+        15,
+        17,
+        20
+      ],
+      "wholeFileSemanticRead": false
+    },
+    {
+      "path": "docs/review-2026-10-12/session-continuation-round26.md",
+      "bytes": 5386,
+      "sha256": "0a62a74ebef8c320ab8ed6697d533a464f3faac7519b33bfc984b66d63f8e44b",
+      "lineCount": 27,
+      "initialSha256": null,
+      "hashTiming": "Late after earlier metadata keyword navigation; not backfilled before-read pin",
+      "navigationDisplayedLines": [
+        9,
+        11,
+        13,
+        18,
+        25,
+        27
+      ],
+      "wholeFileSemanticRead": false
+    }
+  ],
+  "purpose": "Original bounded fork/alignment/cancellation-design context only, no old runtime pass borrowed. Empty displayed line list means keyword search produced no visible match, not semantic whole read.",
+  "atUTC": "2026-10-17T19:46:50.354140+00:00"
+}

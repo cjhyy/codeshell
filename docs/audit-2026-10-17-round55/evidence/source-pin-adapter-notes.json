@@ -1,0 +1,20 @@
+{
+  "missingDeclaredByteCounts": [],
+  "nonReadingGateAssertions": [
+    {
+      "manifest": "root-agent-registry/source-manifest.json",
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "note": "Duplicate old-full decision bound to explicit hash-only row and empty current semantic files; original qualifiers and missing newProductSemanticLines field preserved, not additional source reading."
+    },
+    {
+      "manifest": "root-agent-registry/source-manifest.json",
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "note": "Duplicate old-full decision bound to explicit hash-only row and empty current semantic files; original qualifiers and missing newProductSemanticLines field preserved, not additional source reading."
+    }
+  ],
+  "unboundNavigationReferences": [],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows.",
+  "productRuns": 0
+}

@@ -1,0 +1,16 @@
+{
+  "capturedUTC": "2026-10-17T19:04:06.695646+00:00",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round135-static-files/history-batch.json",
+      "bytes": 1250596,
+      "sha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round135-static-files/cause-history.json",
+      "bytes": 77867,
+      "sha256": "2b89e71d8f8280cfb4e7858a63c52003436d7d174b2c297b01424c6a405dd835"
+    }
+  ],
+  "role": "Frozen parent history metadata, not product pre-read pins"
+}

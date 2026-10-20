@@ -1,0 +1,87 @@
+1: import { expect, test } from "bun:test";
+2: import { existsSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+3: import { tmpdir } from "node:os";
+4: import { join } from "node:path";
+5: 
+6: if (!process.env.CODE_SHELL_TEST_HOME) {
+7:   throw new Error("Audit fixture requires the repository guarded test runner");
+8: }
+9: 
+10: // The two product modules import only crypto, fs, fs/promises and path.
+11: // No Core, worker, application, HTTP client or account module is imported.
+12: globalThis.fetch = (() => {
+13:   throw new Error("Attachment audit does not allow network access");
+14: }) as typeof fetch;
+15: 
+16: const {
+17:   DRAFT_ATTACHMENT_TTL_MS,
+18:   SENT_ATTACHMENT_TTL_MS,
+19:   cleanupAttachments,
+20:   listRecentAttachments,
+21:   markAttachmentsSent,
+22:   stageImageDataUrl,
+23: } = await import("../../../packages/server/src/attachment-service.ts");
+24: 
+25: // The ordinary one-pixel PNG already used by attachment-service.test.ts.
+26: const png =
+27:   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+28: 
+29: test("records shared-file deletion of a sent attachment before its retention deadline", async () => {
+30:   const cwd = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-audit-shared-attachment-")));
+31:   try {
+32:     const draft = await stageImageDataUrl({
+33:       cwd,
+34:       sessionId: "shared-session",
+35:       name: "draft.png",
+36:       dataUrl: png,
+37:       origin: "paste",
+38:     });
+39:     const sent = await stageImageDataUrl({
+40:       cwd,
+41:       sessionId: "shared-session",
+42:       name: "sent.png",
+43:       dataUrl: png,
+44:       origin: "paste",
+45:     });
+46:     await markAttachmentsSent(cwd, "shared-session", [sent]);
+47: 
+48:     const control = await stageImageDataUrl({
+49:       cwd,
+50:       sessionId: "control-session",
+51:       name: "control.png",
+52:       dataUrl: png,
+53:       origin: "paste",
+54:     });
+55:     await markAttachmentsSent(cwd, "control-session", [control]);
+56: 
+57:     expect(draft.id).not.toBe(sent.id);
+58:     expect(draft.absPath).toBe(sent.absPath);
+59:     expect(control.absPath).not.toBe(sent.absPath);
+60:     expect(existsSync(sent.absPath)).toBe(true);
+61:     expect((await listRecentAttachments({ cwd, sessionId: "shared-session" })).map((x) => x.id))
+62:       .toEqual([sent.id]);
+63: 
+64:     // Use the public cleanup clock parameter; do not change Date or sleep.
+65:     const now = Date.now() + DRAFT_ATTACHMENT_TTL_MS + 1_000;
+66:     expect(now - sent.createdAt).toBeLessThan(SENT_ATTACHMENT_TTL_MS);
+67:     const cleaned = await cleanupAttachments({ cwd, now });
+68: 
+69:     // These assertions describe the current defect, not a fixed regression.
+70:     expect(cleaned.removed).toContain(sent.absPath);
+71:     expect(existsSync(sent.absPath)).toBe(false);
+72:     expect(await listRecentAttachments({ cwd, sessionId: "shared-session" })).toEqual([]);
+73:     expect(existsSync(control.absPath)).toBe(true);
+74:     expect((await listRecentAttachments({ cwd, sessionId: "control-session" })).map((x) => x.id))
+75:       .toEqual([control.id]);
+76:     console.log(JSON.stringify({
+77:       case: "expired draft deletes the deduplicated sent image",
+78:       samePhysicalPath: draft.absPath === sent.absPath,
+79:       distinctIds: draft.id !== sent.id,
+80:       sentAgeBelowRetention: now - sent.createdAt < SENT_ATTACHMENT_TTL_MS,
+81:       removedSentFile: cleaned.removed.includes(sent.absPath),
+82:       independentSentControlRetained: existsSync(control.absPath),
+83:     }));
+84:   } finally {
+85:     rmSync(cwd, { recursive: true, force: true });
+86:   }
+87: });

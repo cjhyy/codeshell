@@ -47,13 +47,21 @@ describe("MessageStream — empty marker suppression (no blank blocks)", () => {
       { kind: "thinking", id: "t1", text: "", done: true },
     ];
     const html = renderToStaticMarkup(<MessageStream messages={messages} />);
-    expect(html).not.toContain("thinking");
+    expect(html).not.toContain("cs-thinking");
   });
 
   test("still renders a thinking message that has text", () => {
     const messages: Message[] = [{ kind: "thinking", id: "t1", text: "pondering", done: true }];
     const html = renderToStaticMarkup(<MessageStream messages={messages} />);
-    expect(html).toContain("thinking");
+    expect(html).toContain("思考过程");
+    expect(html).toContain('type="button"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("aria-controls=");
+    expect(html).not.toContain("pondering");
+    const runningHtml = renderToStaticMarkup(
+      <MessageStream messages={[{ ...messages[0], done: false } as Message]} />,
+    );
+    expect(runningHtml).toContain("正在思考");
   });
 });
 
@@ -73,5 +81,79 @@ describe("MessageStream — injected system reminders", () => {
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain("background task finished");
     expect(html).not.toContain("&lt;system-reminder&gt;");
+  });
+});
+
+describe("MessageStream — goal extension actions", () => {
+  function approachingGoal(nearest: "turns" | "stopBlocks", withTool = true): Message[] {
+    return [
+      {
+        kind: "user",
+        id: "goal-user",
+        text: "继续检查项目",
+        isGoal: true,
+        turnTiming: { startedAt: 1, completed: false },
+      },
+      ...(withTool
+        ? ([
+            {
+              kind: "tool",
+              id: "goal-tool",
+              toolName: "Read",
+              args: "{}",
+              result: "done",
+              status: "succeeded",
+              startedAt: 2,
+              endedAt: 3,
+            },
+          ] satisfies Message[])
+        : []),
+      {
+        kind: "goal_progress",
+        id: "goal-limit",
+        status: "approaching_limit",
+        nearest,
+        round: 4,
+        turnsRemaining: 2,
+        stopBlocksRemaining: 1,
+      },
+      { kind: "assistant", id: "goal-stream", text: "继续检查中", done: false },
+    ];
+  }
+
+  for (const [nearest, label] of [
+    ["turns", "再续 50 轮"],
+    ["stopBlocks", "再续 15 次"],
+  ] as const) {
+    test(`live tool group retains the ${nearest} extension action`, () => {
+      const html = renderToStaticMarkup(
+        <MessageStream
+          messages={approachingGoal(nearest)}
+          liveTurnActive
+          onExtendGoal={() => {}}
+        />,
+      );
+      expect(html).toContain('aria-expanded="true"');
+      expect(html).toContain(`${label}</button>`);
+    });
+  }
+
+  test("callback-free grouped views retain progress without offering an action", () => {
+    const html = renderToStaticMarkup(
+      <MessageStream messages={approachingGoal("turns")} liveTurnActive />,
+    );
+    expect(html).toContain("目标接近轮次上限");
+    expect(html).not.toContain("再续 50 轮");
+  });
+
+  test("a flat goal marker retains its existing extension action", () => {
+    const html = renderToStaticMarkup(
+      <MessageStream
+        messages={approachingGoal("turns", false)}
+        liveTurnActive
+        onExtendGoal={() => {}}
+      />,
+    );
+    expect(html).toContain("再续 50 轮</button>");
   });
 });

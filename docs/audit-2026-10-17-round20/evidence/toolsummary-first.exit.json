@@ -1,0 +1,20 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round20/evidence/toolsummary-focused.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "exitCode": 0,
+  "elapsedSeconds": 0.264,
+  "raw": "docs/audit-2026-10-17-round20/evidence/toolsummary-first.raw.log",
+  "rawBytes": 2005,
+  "rawSha256": "1ca063c7195cfe1efb305c712cdf43d85ed9dfdaf9a93deddef342446edc0371",
+  "combinedStdoutStderr": true,
+  "rawSavedBeforeInspection": true,
+  "exitSavedBeforeInspection": true,
+  "firstAttempt": true,
+  "productReruns": 0
+}

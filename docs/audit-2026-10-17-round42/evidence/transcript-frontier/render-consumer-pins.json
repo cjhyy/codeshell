@@ -1,0 +1,21 @@
+{
+  "scope": "before entry render/virtual list data filtering search only; no React/DOM/native execution",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "lineCount": 344,
+      "pinUTC": "2026-10-17T14:18:39.159736+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "bytes": 11173,
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "lineCount": 273,
+      "pinUTC": "2026-10-17T14:18:39.160604+00:00",
+      "semanticRead": false
+    }
+  ]
+}

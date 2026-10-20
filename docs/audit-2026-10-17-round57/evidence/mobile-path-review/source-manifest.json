@@ -1,0 +1,699 @@
+{
+  "createdUTC": "2026-10-17T19:08:45.100542+00:00",
+  "role": "Independent directed reviewer, Root-supplied hypothesis, no author mutable report read; source-only opinion",
+  "rootReportedBaselineOnly": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.ts",
+      "bytes": 9561,
+      "lines": 202,
+      "sha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          24,
+          44
+        ],
+        [
+          73,
+          96
+        ],
+        [
+          100,
+          162
+        ]
+      ],
+      "semanticLines": 108,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          202
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 202,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          23
+        ],
+        [
+          45,
+          72
+        ],
+        [
+          97,
+          99
+        ],
+        [
+          163,
+          202
+        ]
+      ],
+      "purpose": "Independent directed conditional encoded-asset path review. Prefix/query stripping, ordinary resolver filesystem lookup, accept fallback and response routing. Traversal/symlink/hardlink/security-design comments, containment completeness and dev proxy transport outside purpose; full display not full security semantics.",
+      "initialSemanticReadSha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+      "finishBytes": 9561,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+      "bytes": 25828,
+      "lines": 649,
+      "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          70,
+          76
+        ],
+        [
+          114,
+          117
+        ],
+        [
+          219,
+          224
+        ]
+      ],
+      "semanticLines": 17,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          70,
+          76
+        ],
+        [
+          114,
+          117
+        ],
+        [
+          200,
+          224
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        23,
+        42,
+        72,
+        73,
+        75,
+        107,
+        108,
+        114,
+        116,
+        213,
+        219,
+        221,
+        627
+      ],
+      "uniqueDisplayedLines": 41,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          23,
+          23
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          107,
+          108
+        ],
+        [
+          200,
+          218
+        ],
+        [
+          627,
+          627
+        ]
+      ],
+      "purpose": "Actual default root/test override comment and raw req URL mobile route→serveMobile. upload/auth/tunnel/identity mechanism only adjacent/navigation, no enforcement certification.",
+      "initialSemanticReadSha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "finishBytes": 25828,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/vite.mobile.config.ts",
+      "bytes": 1784,
+      "lines": 40,
+      "sha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          8,
+          16
+        ],
+        [
+          28,
+          31
+        ]
+      ],
+      "semanticLines": 13,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 40,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          7
+        ],
+        [
+          17,
+          27
+        ],
+        [
+          32,
+          40
+        ]
+      ],
+      "purpose": "Actual root/base/publicDir/outDir configuration. No Vite build/vendor semantics executed or independently proved, no claim entire generated output file alphabet.",
+      "initialSemanticReadSha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51",
+      "finishBytes": 1784,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/mobile/index.html",
+      "bytes": 439,
+      "lines": 14,
+      "sha256": "d787813704d1d2e79f43e34ec729a0b2b9688b8322b0805aa5c59d09ff36e49c",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          8,
+          8
+        ],
+        [
+          12,
+          12
+        ]
+      ],
+      "semanticLines": 2,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          14
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 14,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          7
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          13,
+          14
+        ]
+      ],
+      "purpose": "Actual manifest href and module-entry src only; rest HTML display navigation. Browser parser/DOM not executed.",
+      "initialSemanticReadSha256": "d787813704d1d2e79f43e34ec729a0b2b9688b8322b0805aa5c59d09ff36e49c",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "d787813704d1d2e79f43e34ec729a0b2b9688b8322b0805aa5c59d09ff36e49c",
+      "finishBytes": 439,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/mobile/main.tsx",
+      "bytes": 706,
+      "lines": 17,
+      "sha256": "effc599f30214112e15c0ee4fc26ce9149055997227f964b78e7dcfe230673e9",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          3,
+          4
+        ],
+        [
+          17,
+          17
+        ]
+      ],
+      "semanticLines": 3,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 17,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          2
+        ],
+        [
+          5,
+          16
+        ]
+      ],
+      "purpose": "Actual web DesktopApp/service-worker imports and /mobile/ service-worker registration call. Auth callback/React rendering only adjacent, not executed or certified.",
+      "initialSemanticReadSha256": "effc599f30214112e15c0ee4fc26ce9149055997227f964b78e7dcfe230673e9",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "effc599f30214112e15c0ee4fc26ce9149055997227f964b78e7dcfe230673e9",
+      "finishBytes": 706,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/web/app/public/manifest.webmanifest",
+      "bytes": 381,
+      "lines": 15,
+      "sha256": "923a5ce08545a048e0a7497200566885eefdc1f14cd4eb13e565da6d5bf412cc",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          12,
+          13
+        ]
+      ],
+      "semanticLines": 2,
+      "sourceKind": "resource-metadata",
+      "displayedLineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 15,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          11
+        ],
+        [
+          14,
+          15
+        ]
+      ],
+      "purpose": "Actual public manifest icon file name literal ./icon.svg; no external platform install behavior.",
+      "initialSemanticReadSha256": "923a5ce08545a048e0a7497200566885eefdc1f14cd4eb13e565da6d5bf412cc",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "923a5ce08545a048e0a7497200566885eefdc1f14cd4eb13e565da6d5bf412cc",
+      "finishBytes": 381,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/web/app/public/sw.js",
+      "bytes": 1787,
+      "lines": 48,
+      "sha256": "3566b7ecf5db7811c6916a09651ca7f82a2ad86694fdb87243af4628c92b7319",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          4,
+          9
+        ]
+      ],
+      "semanticLines": 6,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        4,
+        7,
+        38
+      ],
+      "uniqueDisplayedLines": 14,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          3
+        ],
+        [
+          10,
+          13
+        ],
+        [
+          38,
+          38
+        ]
+      ],
+      "purpose": "Actual ASCII public-file allowlist and BASE+file URL construction. SW cache/fetch/security behavior not reviewed or executed.",
+      "initialSemanticReadSha256": "3566b7ecf5db7811c6916a09651ca7f82a2ad86694fdb87243af4628c92b7319",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "3566b7ecf5db7811c6916a09651ca7f82a2ad86694fdb87243af4628c92b7319",
+      "finishBytes": 1787,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/web/app/register-service-worker.ts",
+      "bytes": 289,
+      "lines": 7,
+      "sha256": "1a2a975a9d214489ba1991673d60ffaca0509ab74f524a1931a86c5cfbb9d0f5",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          3
+        ]
+      ],
+      "semanticLines": 3,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          7
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        2,
+        3
+      ],
+      "uniqueDisplayedLines": 7,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          4,
+          7
+        ]
+      ],
+      "purpose": "Actual base parameter and `${base}sw.js` registration URL, main supplies /mobile/. Secure-context lifecycle and browser effects not certified or executed.",
+      "initialSemanticReadSha256": "1a2a975a9d214489ba1991673d60ffaca0509ab74f524a1931a86c5cfbb9d0f5",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "1a2a975a9d214489ba1991673d60ffaca0509ab74f524a1931a86c5cfbb9d0f5",
+      "finishBytes": 289,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.test.ts",
+      "bytes": 7555,
+      "lines": 181,
+      "sha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          39,
+          44
+        ],
+        [
+          47,
+          49
+        ],
+        [
+          51,
+          53
+        ],
+        [
+          55,
+          56
+        ]
+      ],
+      "semanticLines": 14,
+      "sourceKind": "test-declarations",
+      "displayedLineRanges": [
+        [
+          39,
+          56
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        6,
+        8,
+        10,
+        16,
+        17,
+        21,
+        31,
+        32,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        47,
+        48,
+        51,
+        52,
+        55,
+        56,
+        59,
+        60,
+        61,
+        62,
+        63,
+        71,
+        80,
+        89,
+        97,
+        111,
+        114,
+        116,
+        124,
+        129,
+        139
+      ],
+      "uniqueDisplayedLines": 41,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          6,
+          6
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          16,
+          17
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          31,
+          32
+        ],
+        [
+          45,
+          46
+        ],
+        [
+          50,
+          50
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          59,
+          63
+        ],
+        [
+          71,
+          71
+        ],
+        [
+          80,
+          80
+        ],
+        [
+          89,
+          89
+        ],
+        [
+          97,
+          97
+        ],
+        [
+          111,
+          111
+        ],
+        [
+          114,
+          114
+        ],
+        [
+          116,
+          116
+        ],
+        [
+          124,
+          124
+        ],
+        [
+          129,
+          129
+        ],
+        [
+          139,
+          139
+        ]
+      ],
+      "purpose": "Four partial existing prefix/index/plain nested/missing declarations. All test setup/FS/symlink/devproxy assertions only locator/navigation, no execution; no encoded case originally demonstrated by these declarations.",
+      "initialSemanticReadSha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+      "finishBytes": 7555,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/desktop/src/mobile/styles.css",
+      "bytes": 4489,
+      "lines": 152,
+      "sha256": "5ba86fe857141999a19f726aeaef434029fdb636ca2fa9ac9d0381679cbcc3cd",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        3,
+        13,
+        71
+      ],
+      "uniqueDisplayedLines": 3,
+      "purpose": "Filename/import/URL locator only; old mobile/App is not main DesktopApp entry. No body semantic read."
+    },
+    {
+      "path": "packages/desktop/src/mobile/App.tsx",
+      "bytes": 11542,
+      "lines": 325,
+      "sha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        166,
+        167,
+        194,
+        195,
+        253
+      ],
+      "uniqueDisplayedLines": 5,
+      "purpose": "Filename/import/URL locator only; old mobile/App is not main DesktopApp entry. No body semantic read."
+    },
+    {
+      "path": "packages/web/app/DesktopApp.tsx",
+      "bytes": 21945,
+      "lines": 574,
+      "sha256": "b20bfff8716b4a987eb1acb12db43cde66ec63e18ea41c092f8422a3a6ac43da",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        136
+      ],
+      "uniqueDisplayedLines": 1,
+      "purpose": "Filename/import/URL locator only; old mobile/App is not main DesktopApp entry. No body semantic read."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/web/app/public/icon.svg",
+      "bytes": 286,
+      "sha256": "9fea5fa5acff4876d11d897516a8ba74cb06a2da0aea0a7f435b90ef5cd5dee2",
+      "filenameASCII": true,
+      "hasLiteralSpaceOrPercent": false,
+      "semanticRead": false,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "uniqueDisplayedLines": 0
+    },
+    {
+      "path": "packages/web/app/public/offline.html",
+      "bytes": 1178,
+      "sha256": "d43bfd5a415433b1b466c62b1022df42be18631acec0bd18d7721d17854f818c",
+      "filenameASCII": true,
+      "hasLiteralSpaceOrPercent": false,
+      "semanticRead": false,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "uniqueDisplayedLines": 0
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionStatus": "Prior AGENTS5/CODESHELL217 actual reading carried under unchanged SHA, no new body reading.",
+  "totals": {
+    "semanticFiles": 9,
+    "full": 0,
+    "selected": 9,
+    "productSemanticLines": 152,
+    "testDeclarationSemanticLines": 14,
+    "resourceMetadataSemanticLines": 2,
+    "semanticLines": 168,
+    "uniqueDisplayedLinesSummedAcrossFiles": 400,
+    "navigationOnlyFiles": 3,
+    "hashOnlyAssetFiles": 2,
+    "sourceAndInstructionBytePins": 16,
+    "partialExistingTestDeclarationsRead": 4,
+    "testsExecutedByReviewer": 0
+  },
+  "coverageBoundary": "Full202leaf/40config displayed but only ordinary filename/root/URL contract analyzed. No complete import closure, release bundle or vendor Vite output analysis; no full native/security enforcement certification."
+}

@@ -1,0 +1,8 @@
+7:### R2-01 [P2] Claude 项目目录编码碰撞，使另一项目会话被标为当前项目
+10:- 触发：两个正常路径 `/workspace/foo-bar` 和 `/workspace/foo/bar` 的非字母数字字符都变为 `-`，编码后目录相同。两个 JSONL 文件都明确携带各自真实 cwd。
+12:- 影响：项目会话列表、打开历史和后续上下文定位不一致。没有执行外部 Claude、takeover 或真实用户会话，不声称已观察实际任务在错误目录写入。
+14:- 证据：`evidence/root-session-discovery.test.ts`，真实 reader + 自有临时 JSONL；两个碰撞路径与不碰撞正常对照。`root-session-discovery.log` 为 2 pass / 8 expect / 0 fail/skip / Completed，首次即保存原始日志。
+15:- 查重：旧两轮主索引与 coding 分报告未找到同根因已确认项；当前源码已有全局发现的碰撞防御，但项目级消费者没有应用。
+35:### R2-04 [P3] Claude transcript 的一个 null 记录中止整段健康历史
+41:- 条件：这是本地损坏/不符合对象 schema 的记录隔离问题；没有证据证明正常 Claude writer 会生成 null，也未接触真实用户 transcript。
+123:既有相关 baseline：项目/Claude/Codex history/discovery/related 及 Markdown strip、search highlight，7 files / 72 pass / 186 expect / 0 fail/skip / Completed，原始日志 `evidence/root-parser-baseline.log`。它们未覆盖上述碰撞、同线程双 rollout 与导出围栏场景。

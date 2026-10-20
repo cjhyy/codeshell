@@ -1,0 +1,7 @@
+90:    name: "/cost",
+91:    description: "Show token usage and cost (/cost stats for summary, /cost detail for breakdown)",
+92:    usage: "/cost [stats|detail]",
+130:        ctx.addStatus("Use /cost stats or /cost detail for more info.");
+620:    name: "/status",
+622:      "Show system status; /status env for environment info, /status doctor for diagnostics",
+623:    usage: "/status [env|doctor]",

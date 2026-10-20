@@ -1,0 +1,71 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "guardedRuns": [
+    {
+      "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+      "argv": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/engine/reactive-threshold.test.ts",
+        "docs/audit-2026-10-17-round22/evidence/budget-reactive-focused.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "elapsedSeconds": 0.203,
+      "raw": "docs/audit-2026-10-17-round22/evidence/budget-first.raw.log",
+      "rawBytes": 1124,
+      "rawSha256": "98864a76576bdc9ccac2e45e6e0ea93d8f5fe5d3bd4d18d59c05ad432620baec",
+      "combinedStdoutStderr": true,
+      "rawAndExitSavedBeforeInspection": true,
+      "productReruns": 0,
+      "pass": 8,
+      "expect": 17,
+      "fail": 0,
+      "errors": 0,
+      "skipped": 0,
+      "existingTests": 4,
+      "focusedTests": 4,
+      "completedGuard": true,
+      "actualProductionLeafCalls": true,
+      "manualMirroredConsumer": false
+    }
+  ],
+  "totals": {
+    "cleanRuns": 1,
+    "failedRuns": 0,
+    "runtimeAttempts": 1,
+    "pass": 8,
+    "expect": 17,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 4,
+    "focusedTests": 4,
+    "productRetryCount": 0
+  },
+  "actualScope": [
+    "Actual zero-runtime-import crossedReactiveThreshold leaf; existing4 tests and focused4 ordinary numeric controls.",
+    "Exact boundaries, single multi-bucket jump and current bucket replay suppression, one 15-step monotonic 333 sequence, independent fresh counters. No mocks or callbacks."
+  ],
+  "staticOnly": [
+    "Full token-budget.ts; old round9 ordinary-policy and diminishing observation read, intentionally no new budget execution.",
+    "Selected TurnLoop import/tracker/budget/stream warning call sites and ModelFacade optional cumulative getOutputTokens contract only.",
+    "Historical deep-dive and review documentation wording comparison only."
+  ],
+  "excluded": [
+    "No Engine/TurnLoop/ContextManager/ModelFacade import, construction or runtime; no actual stream/provider/callback/model/SDK/network/account/native process/queue/timer.",
+    "No goal, token accounting, authority, identity, custody, permission, security or watchdog experiments.",
+    "No invalid numeric inputs or mutation of tracker/counters to force unreachable branches.",
+    "Old failed directions skipped, old budget controls not rerun; no build/lint/typecheck/full suite."
+  ],
+  "firstRunHandling": "Combined first stdout/stderr written to raw, then exit/hash persisted before inspection; exit0/Completed; no retries, repair or alternate validation.",
+  "limitations": [
+    "Passing leaf controls do not establish ordinary integration/compaction behavior or all numeric cases.",
+    "Small loop is one focused case, not counted per helper call.",
+    "No new product defect established; historical prose mismatch remains disclosed as unranked documentation wording observation."
+  ]
+}

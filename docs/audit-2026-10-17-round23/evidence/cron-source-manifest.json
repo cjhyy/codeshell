@@ -1,0 +1,145 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "files": [
+    {
+      "path": "packages/core/src/automation/cron-expr.ts",
+      "coverage": "full",
+      "lineCount": 207,
+      "bytes": 7034,
+      "sha256": "5a5fcfd813afb00e42b32cbaa19f9be68918fed0608a30a33cb494ce7f2c3da0",
+      "frozenSha256": "5a5fcfd813afb00e42b32cbaa19f9be68918fed0608a30a33cb494ce7f2c3da0",
+      "matchesFrozen": true,
+      "note": "Actual zero-runtime-import expression leaf; dynamic focused controls only."
+    },
+    {
+      "path": "packages/core/src/automation/cron-expr.test.ts",
+      "coverage": "full",
+      "lineCount": 158,
+      "bytes": 7079,
+      "sha256": "05eb2d10833520218cd8df091ea3ab0426ef74674399974c42308564bdc865d4",
+      "frozenSha256": "05eb2d10833520218cd8df091ea3ab0426ef74674399974c42308564bdc865d4",
+      "matchesFrozen": true,
+      "note": "Static only; broad existing suite intentionally unexecuted, including year-long leap search."
+    },
+    {
+      "path": "packages/core/src/automation/parse-schedule.test.ts",
+      "coverage": "full",
+      "lineCount": 35,
+      "bytes": 1506,
+      "sha256": "3a7d40058d8219e4882e6e25772b1bc52dffd54246d847f60fbbb537023b61db",
+      "frozenSha256": "3a7d40058d8219e4882e6e25772b1bc52dffd54246d847f60fbbb537023b61db",
+      "matchesFrozen": true,
+      "note": "Static only; imports scheduler, unexecuted."
+    },
+    {
+      "path": "packages/core/src/automation/scheduler-cron-expr.test.ts",
+      "coverage": "full",
+      "lineCount": 83,
+      "bytes": 3404,
+      "sha256": "996638bd4f00828c3c34303e5ccb9519edd530c2699f6c28127d0b247358b44e",
+      "frozenSha256": "996638bd4f00828c3c34303e5ccb9519edd530c2699f6c28127d0b247358b44e",
+      "matchesFrozen": true,
+      "note": "Static only; real Scheduler and timer creation in cases; unexecuted."
+    },
+    {
+      "path": "packages/core/src/automation/scheduler.ts",
+      "coverage": "selected",
+      "lineCount": 1299,
+      "bytes": 50584,
+      "sha256": "6b59290c36a81bbab5445372deb8033c67b638ea9f53ad34831e8dccfdd27c70",
+      "frozenSha256": "6b59290c36a81bbab5445372deb8033c67b638ea9f53ad34831e8dccfdd27c70",
+      "matchesFrozen": true,
+      "note": "Static selected consumer/validation/parseSchedule/exports; never imported or instantiated.",
+      "selectedLineRanges": [
+        [
+          1,
+          33
+        ],
+        [
+          489,
+          525
+        ],
+        [
+          549,
+          573
+        ],
+        [
+          794,
+          813
+        ],
+        [
+          920,
+          970
+        ],
+        [
+          1045,
+          1092
+        ],
+        [
+          1213,
+          1299
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/automation/index.ts",
+      "coverage": "selected",
+      "lineCount": 99,
+      "bytes": 3049,
+      "sha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "frozenSha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "matchesFrozen": true,
+      "note": "Static expression exports only, no barrel import.",
+      "selectedLineRanges": [
+        [
+          74,
+          86
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "coverage": "selected",
+      "lineCount": 536,
+      "bytes": 17401,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "frozenSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "matchesFrozen": true,
+      "note": "Static internal exports only, no barrel import.",
+      "selectedLineRanges": [
+        [
+          224,
+          242
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/cron.ts",
+      "coverage": "selected",
+      "lineCount": 245,
+      "bytes": 11102,
+      "sha256": "8971b2edcc7de99541f6b662f9307ba7abb1592c7df57963c671d417f97281d5",
+      "frozenSha256": "8971b2edcc7de99541f6b662f9307ba7abb1592c7df57963c671d417f97281d5",
+      "matchesFrozen": true,
+      "note": "Static ordinary five-field grammar and schedule/timezone descriptions; no tool registration/runtime.",
+      "selectedLineRanges": [
+        [
+          39,
+          102
+        ]
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "coverage": "full",
+      "lineCount": 46,
+      "bytes": 6923,
+      "sha256": "3f153cd67dca7c20fbe27cf83c0eef6c32bfe4bd3ffd14c48300af98550360e1",
+      "frozenSha256": "3f153cd67dca7c20fbe27cf83c0eef6c32bfe4bd3ffd14c48300af98550360e1",
+      "matchesFrozen": true,
+      "note": "Historical TIME1/TIME2 and prior suite dedup; not new issue or rerun."
+    }
+  ],
+  "productChanges": false,
+  "gitWrites": false
+}

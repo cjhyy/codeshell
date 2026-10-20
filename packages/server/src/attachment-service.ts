@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import {
   appendFile,
@@ -172,8 +172,6 @@ const IMAGE_MIME_EXT: Record<string, string> = {
 
 const ALLOWED_IMAGE_MIMES = new Set(Object.keys(IMAGE_MIME_EXT));
 
-let idCounter = 0;
-
 export async function stageImageDataUrl(
   input: StageImageDataUrlInput,
 ): Promise<InputAttachmentMeta> {
@@ -274,9 +272,8 @@ async function stageImageBuffer(
 
   const relPath = normalizePath(relative(cwd, absPath));
   const createdAt = Date.now();
-  idCounter += 1;
   const meta: InputAttachmentMeta = {
-    id: `att_${sha16}_${idCounter.toString(36)}`,
+    id: `att_${sha16}_${randomUUID()}`,
     sessionId: input.sessionId,
     kind: "image",
     origin: input.origin,
@@ -334,9 +331,8 @@ export async function stageFileBytes(input: StageFileBytesInput): Promise<InputA
 
   const relPath = normalizePath(relative(cwd, absPath));
   const createdAt = Date.now();
-  idCounter += 1;
   const meta: InputAttachmentMeta = {
-    id: `att_${sha16}_${idCounter.toString(36)}`,
+    id: `att_${sha16}_${randomUUID()}`,
     sessionId: input.sessionId,
     kind: "file",
     origin: input.origin,
@@ -445,27 +441,39 @@ export async function cleanupAttachments(input: AttachmentCleanupInput): Promise
       continue;
     }
 
-    const latest = latestAttachmentState(records);
-    for (const state of latest.values()) {
-      const createdAt = state.createdAt ?? 0;
-      const sentAt = state.sentAt;
-      const isSent = typeof sentAt === "number";
-      const ttl = isSent ? SENT_ATTACHMENT_TTL_MS : DRAFT_ATTACHMENT_TTL_MS;
-      const basis = isSent ? sentAt : createdAt;
-      if (!basis || now - basis < ttl) continue;
-      if (!state.absPath || !(await pathExistsInside(state.absPath, root))) continue;
-      await rm(state.absPath, { force: true }).catch(() => undefined);
-      removed.push(state.absPath);
-      await appendManifest(sessionDir, {
-        event: "cleanup",
-        id: state.id,
-        sessionId,
-        absPath: state.absPath,
-        relPath: state.relPath,
-        path: state.path,
-        sha256: state.sha256,
-        cleanedAt: now,
+    const byPath = new Map<string, ManifestRecord[]>();
+    for (const state of latestAttachmentState(records).values()) {
+      if (!state.absPath) continue;
+      const references = byPath.get(state.absPath) ?? [];
+      references.push(state);
+      byPath.set(state.absPath, references);
+    }
+    for (const [absPath, references] of byPath) {
+      const expired = references.filter((state) => {
+        const isSent = typeof state.sentAt === "number";
+        const ttl = isSent ? SENT_ATTACHMENT_TTL_MS : DRAFT_ATTACHMENT_TTL_MS;
+        const basis = isSent ? state.sentAt! : (state.createdAt ?? 0);
+        return !!basis && now - basis >= ttl;
       });
+      if (expired.length === 0 || !(await pathExistsInside(absPath, root))) continue;
+      // Staging deduplicates image bytes across IDs at this same canonical path.
+      // Retire expired IDs independently; a live or unknown-age reference keeps the file.
+      if (expired.length === references.length) {
+        await rm(absPath, { force: true }).catch(() => undefined);
+        removed.push(absPath);
+      }
+      for (const state of expired) {
+        await appendManifest(sessionDir, {
+          event: "cleanup",
+          id: state.id,
+          sessionId,
+          absPath: state.absPath,
+          relPath: state.relPath,
+          path: state.path,
+          sha256: state.sha256,
+          cleanedAt: now,
+        });
+      }
     }
   }
 

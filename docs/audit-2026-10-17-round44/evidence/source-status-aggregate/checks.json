@@ -1,0 +1,660 @@
+{
+  "capturedAtUTC": "2026-10-17T15:10:46.304084+00:00",
+  "role": "metadata reviewer only; not new source reviewer or runtime fix verifier",
+  "files": [],
+  "inputDirectory": "/tmp/codeshell-audit-round50-source-review",
+  "inputFiles": [
+    {
+      "path": "checks.json",
+      "bytes": 3905,
+      "sha256": "7fbd5fc084ad36208654e13a815e2d76d71214e51cbfc8db9a91f5fbf7bfbe0b",
+      "opaqueNotDecoded": false
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1975,
+      "sha256": "feaacdf940ad0f321f1e57793ba5d30dfe7faa3cea9dcd574e5f792ee31d4e34",
+      "opaqueNotDecoded": false
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1201,
+      "sha256": "ddb8d98be7b530f969cf101e49133fe889f0dbd33b88ab7a936d6f38ef2ce4a9",
+      "opaqueNotDecoded": false
+    },
+    {
+      "path": "patch-pins.json",
+      "bytes": 398,
+      "sha256": "32620da37e49ae5d1720cd62a990d667c0270bc323ea2d1804fbb083a85b3ca8",
+      "opaqueNotDecoded": false
+    },
+    {
+      "path": "producer-pins.json",
+      "bytes": 988,
+      "sha256": "4a171ae95a2446087723d767d4f34c58592f8012c2c18ab4ae254835bac7e3c6",
+      "opaqueNotDecoded": false
+    },
+    {
+      "path": "review.md",
+      "bytes": 3266,
+      "sha256": "2a3776d504fd37f3235f48a4d7b844b8d2153b59f9e34594aa363bf80518d40c",
+      "opaqueNotDecoded": false
+    },
+    {
+      "path": "reviewer-receipt.json",
+      "bytes": 2229,
+      "sha256": "13d7889094c1f5dae24f38e72d1666bc10783e1a015b5e637711fab6cb02b879",
+      "opaqueNotDecoded": false
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 30932,
+      "sha256": "391f16fe260d4cdfafea1961e878ae2d99c3a9b7632cdd6d2663d54ae15272ea",
+      "opaqueNotDecoded": true
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 13696,
+      "sha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179",
+      "opaqueNotDecoded": false
+    },
+    {
+      "path": "stages.json",
+      "bytes": 2983,
+      "sha256": "670fec60139570694ee1fdb700ad1c207bf97322bf453ede32e8b8ae3b537643",
+      "opaqueNotDecoded": false
+    }
+  ],
+  "fileCount": 10,
+  "receiptRows": 9,
+  "allReceiptHashesAndBytesMatch": true,
+  "receiptSelfExcluded": true,
+  "reportLinks": [
+    {
+      "source": "review.md",
+      "target": "stages.json",
+      "exists": true,
+      "canonicalInsideFrozenInput": true
+    },
+    {
+      "source": "review.md",
+      "target": "source-manifest.json",
+      "exists": true,
+      "canonicalInsideFrozenInput": true
+    },
+    {
+      "source": "review.md",
+      "target": "initial-pins.json",
+      "exists": true,
+      "canonicalInsideFrozenInput": true
+    },
+    {
+      "source": "review.md",
+      "target": "producer-pins.json",
+      "exists": true,
+      "canonicalInsideFrozenInput": true
+    },
+    {
+      "source": "review.md",
+      "target": "patch-pins.json",
+      "exists": true,
+      "canonicalInsideFrozenInput": true
+    },
+    {
+      "source": "review.md",
+      "target": "checks.json",
+      "exists": true,
+      "canonicalInsideFrozenInput": true
+    },
+    {
+      "source": "review.md",
+      "target": "source-excerpts.json",
+      "exists": true,
+      "canonicalInsideFrozenInput": true
+    },
+    {
+      "source": "review.md",
+      "target": "metadata-notes.json",
+      "exists": true,
+      "canonicalInsideFrozenInput": true
+    },
+    {
+      "source": "review.md",
+      "target": "reviewer-receipt.json",
+      "exists": true,
+      "canonicalInsideFrozenInput": true
+    }
+  ],
+  "rangeChecksFromFrozenManifestAndPinMetadata": [
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "sha256FromFrozenMetadata": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+      "coverage": "selected",
+      "metadataSourceLines": 228,
+      "semanticRanges": [
+        [
+          26,
+          32
+        ],
+        [
+          118,
+          128
+        ],
+        [
+          135,
+          150
+        ],
+        [
+          171,
+          173
+        ],
+        [
+          180,
+          186
+        ],
+        [
+          190,
+          192
+        ],
+        [
+          195,
+          203
+        ]
+      ],
+      "semanticLines": 56,
+      "displayRanges": [
+        [
+          13,
+          36
+        ],
+        [
+          88,
+          98
+        ],
+        [
+          118,
+          151
+        ],
+        [
+          164,
+          204
+        ]
+      ],
+      "displayLines": 110,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "sha256FromFrozenMetadata": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+      "coverage": "selected",
+      "metadataSourceLines": 334,
+      "semanticRanges": [
+        [
+          43,
+          53
+        ],
+        [
+          130,
+          143
+        ],
+        [
+          146,
+          148
+        ],
+        [
+          152,
+          154
+        ],
+        [
+          156,
+          162
+        ],
+        [
+          165,
+          167
+        ]
+      ],
+      "semanticLines": 41,
+      "displayRanges": [
+        [
+          43,
+          56
+        ],
+        [
+          121,
+          168
+        ]
+      ],
+      "displayLines": 62,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "sha256FromFrozenMetadata": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675",
+      "coverage": "full",
+      "metadataSourceLines": 29,
+      "semanticRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "semanticLines": 29,
+      "displayRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "displayLines": 29,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "sha256FromFrozenMetadata": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "coverage": "selected",
+      "metadataSourceLines": 2984,
+      "semanticRanges": [
+        [
+          2797,
+          2810
+        ]
+      ],
+      "semanticLines": 14,
+      "displayRanges": [
+        [
+          2795,
+          2812
+        ]
+      ],
+      "displayLines": 18,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "sha256FromFrozenMetadata": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "coverage": "selected",
+      "metadataSourceLines": 530,
+      "semanticRanges": [
+        [
+          131,
+          139
+        ],
+        [
+          147,
+          155
+        ]
+      ],
+      "semanticLines": 18,
+      "displayRanges": [
+        [
+          127,
+          156
+        ]
+      ],
+      "displayLines": 30,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "sha256FromFrozenMetadata": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "coverage": "selected",
+      "metadataSourceLines": 1918,
+      "semanticRanges": [
+        [
+          45,
+          48
+        ],
+        [
+          433,
+          458
+        ],
+        [
+          717,
+          731
+        ],
+        [
+          1121,
+          1128
+        ],
+        [
+          1131,
+          1141
+        ],
+        [
+          1319,
+          1321
+        ],
+        [
+          1393,
+          1413
+        ],
+        [
+          1424,
+          1426
+        ],
+        [
+          1781,
+          1797
+        ]
+      ],
+      "semanticLines": 108,
+      "displayRanges": [
+        [
+          26,
+          51
+        ],
+        [
+          250,
+          279
+        ],
+        [
+          408,
+          466
+        ],
+        [
+          717,
+          735
+        ],
+        [
+          1118,
+          1142
+        ],
+        [
+          1310,
+          1325
+        ],
+        [
+          1388,
+          1429
+        ],
+        [
+          1781,
+          1813
+        ]
+      ],
+      "displayLines": 250,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    },
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "sha256FromFrozenMetadata": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "coverage": "selected",
+      "metadataSourceLines": 487,
+      "semanticRanges": [
+        [
+          44,
+          46
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          64,
+          65
+        ],
+        [
+          267,
+          267
+        ],
+        [
+          272,
+          272
+        ],
+        [
+          293,
+          293
+        ],
+        [
+          298,
+          298
+        ],
+        [
+          315,
+          315
+        ],
+        [
+          320,
+          320
+        ],
+        [
+          338,
+          338
+        ],
+        [
+          372,
+          372
+        ],
+        [
+          408,
+          415
+        ],
+        [
+          423,
+          427
+        ]
+      ],
+      "semanticLines": 27,
+      "displayRanges": [
+        [
+          42,
+          57
+        ],
+        [
+          60,
+          67
+        ],
+        [
+          267,
+          267
+        ],
+        [
+          272,
+          272
+        ],
+        [
+          293,
+          293
+        ],
+        [
+          298,
+          298
+        ],
+        [
+          315,
+          315
+        ],
+        [
+          320,
+          320
+        ],
+        [
+          337,
+          340
+        ],
+        [
+          356,
+          374
+        ],
+        [
+          401,
+          427
+        ]
+      ],
+      "displayLines": 80,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "sha256FromFrozenMetadata": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "coverage": "selected",
+      "metadataSourceLines": 74,
+      "semanticRanges": [
+        [
+          36,
+          36
+        ],
+        [
+          57,
+          65
+        ]
+      ],
+      "semanticLines": 10,
+      "displayRanges": [
+        [
+          30,
+          37
+        ],
+        [
+          55,
+          68
+        ]
+      ],
+      "displayLines": 22,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "sha256FromFrozenMetadata": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "coverage": "selected",
+      "metadataSourceLines": 30,
+      "semanticRanges": [
+        [
+          19,
+          21
+        ],
+        [
+          23,
+          23
+        ],
+        [
+          25,
+          26
+        ]
+      ],
+      "semanticLines": 6,
+      "displayRanges": [
+        [
+          19,
+          26
+        ]
+      ],
+      "displayLines": 8,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "sha256FromFrozenMetadata": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "coverage": "selected",
+      "metadataSourceLines": 62,
+      "semanticRanges": [
+        [
+          3,
+          5
+        ],
+        [
+          18,
+          26
+        ],
+        [
+          31,
+          39
+        ],
+        [
+          43,
+          62
+        ]
+      ],
+      "semanticLines": 41,
+      "displayRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "displayLines": 62,
+      "pinAndEndingMetadataConsistent": true,
+      "rangeBoundsFromInputMetadataValid": true,
+      "currentSourceBytesRead": false
+    }
+  ],
+  "rangeTotals": {
+    "files": 10,
+    "full": 1,
+    "selected": 9,
+    "semanticLinesDeclared": 350,
+    "displayLinesDeclared": 671,
+    "testSemanticLines": 0
+  },
+  "stageConsistency": {
+    "ids": [
+      "MARKETPLACE-R37-01",
+      "MCP-R38-01",
+      "MCP-R39-01"
+    ],
+    "stage": "source-addressed at Root-reported07e / runtime not revalidated",
+    "sameAcrossReportStagesReceipt": true,
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0,
+    "originalClassificationRewriteProposed": false,
+    "fixImplementationOrRuntimeValidationClaimed": false,
+    "conditionalLimits": [
+      {
+        "id": "MARKETPLACE-R37-01",
+        "originalCondition": "Ordinary installed marketplace literally named local was inferred as direct-local by namespace; no direct directory was assumed.",
+        "limits": "Assumes ordinary accepted record/layout; no custody/path validation/manifest binding certification or actual uninstall."
+      },
+      {
+        "id": "MCP-R38-01",
+        "originalCondition": "Full stdio form save without changing Args text had joined and reparsed a nonempty quoted argument array.",
+        "limits": "Only unchanged/equal displayed text original condition, not full parser grammar, arbitrary edits, semantic intent, empty/missing variants or actual MCP command execution."
+      },
+      {
+        "id": "MCP-R39-01",
+        "originalCondition": "Renaming full settings server lost3supported options that form does not author.",
+        "limits": "Only those3supported fields and ordinary previously loaded record; no arbitrary unknown extras, backend transaction/lifecycle, override or auth policy certification."
+      }
+    ]
+  },
+  "sourceEndingPolicy": "Ten matching ending hashes are input source-review metadata, cross-checked against its pin/manifest metadata; no current product bytes or Git read by aggregator.",
+  "roleDisclosure": "Input reviewer disclosed prior metadata/history/aggregate participation, not original source author or fix implementer, not blind. This layer is metadata only.",
+  "preservedDiagnostics": "Two guessed file locator misses, head70 navigation bound and unrelated catalog custody display excluded from semantic scope are disclosed in frozen metadata-notes. Not product failures or retried old dynamic directions.",
+  "rootRawDiffDependency": false,
+  "rootRawDiffOpened": false,
+  "noNewHistoryOrCauseDedup": true,
+  "rootReportedVersionNotIndependentlyGitAuthenticated": true,
+  "sourceExcerptsDecoded": 0,
+  "currentProductBytesRead": 0,
+  "newProductSemanticReading": 0,
+  "productExecution": 0,
+  "testsRun": 0,
+  "fixtures": 0,
+  "gitCommands": 0,
+  "repositoryWrites": 0,
+  "metadataErrors": [],
+  "limitations": [
+    "The three stages are source-based suggestions for the old triggers, not runtime-confirmed fixes or proof of all configuration/parser/installation behavior.",
+    "No old classification or catalog record is modified by this aggregate; historical records are not current-open/current-fixed counts.",
+    "Only frozen input artifacts read; raw diff package is still out of scope."
+  ]
+}

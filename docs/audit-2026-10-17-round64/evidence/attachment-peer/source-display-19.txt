@@ -1,0 +1,52 @@
+5077: 
+5078: ipcMain.handle(
+5079:   "attachments:stageImageDataUrl",
+5080:   async (
+5081:     event,
+5082:     payload: {
+5083:       cwd?: string;
+5084:       sessionId?: string;
+5085:       name?: string;
+5086:       mime?: string;
+5087:       dataUrl?: string;
+5088:       origin?: string;
+5089:       quickChatClaimId?: string;
+5090:     },
+5091:   ) => {
+5092:     if (!payload || typeof payload !== "object") {
+5093:       throw new Error("attachments:stageImageDataUrl requires payload");
+5094:     }
+5095:     if (typeof payload.cwd !== "string")
+5096:       throw new Error("attachments:stageImageDataUrl requires cwd");
+5097:     if (typeof payload.sessionId !== "string") {
+5098:       throw new Error("attachments:stageImageDataUrl requires sessionId");
+5099:     }
+5100:     if (typeof payload.dataUrl !== "string") {
+5101:       throw new Error("attachments:stageImageDataUrl requires dataUrl");
+5102:     }
+5103:     const cwd = await requireRendererProjectPath(payload.cwd);
+5104:     if (payload.dataUrl.length > Math.ceil((10 * 1024 * 1024 * 4) / 3) + 1_024) {
+5105:       throw new Error("attachments:stageImageDataUrl exceeds the encoded size limit");
+5106:     }
+5107:     const origin =
+5108:       payload.origin === "paste" ||
+5109:       payload.origin === "os-drop" ||
+5110:       payload.origin === "file-panel" ||
+5111:       payload.origin === "picker" ||
+5112:       payload.origin === "mention" ||
+5113:       payload.origin === "generated" ||
+5114:       payload.origin === "tool"
+5115:         ? payload.origin
+5116:         : "paste";
+5117:     const authorizedPayload = { ...payload, cwd };
+5118:     return runClaimBoundAttachmentOperation(event.sender.id, authorizedPayload, () =>
+5119:       stageImageDataUrl({
+5120:         cwd,
+5121:         sessionId: payload.sessionId!,
+5122:         name: payload.name,
+5123:         mime: payload.mime,
+5124:         dataUrl: payload.dataUrl!,
+5125:         origin,
+5126:       }),
+5127:     );
+5128:   },

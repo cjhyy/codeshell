@@ -1,0 +1,65 @@
+[
+  {
+    "path": "packages/core/src/model-catalog/types.ts",
+    "bytes": 5401,
+    "lines": 121,
+    "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+    "pinAtUTC": "2026-10-17T20:37:23.191028+00:00",
+    "kind": "product",
+    "coverageBeforeRead": "hash-only"
+  },
+  {
+    "path": "packages/core/src/model-catalog/index.ts",
+    "bytes": 4933,
+    "lines": 127,
+    "sha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+    "pinAtUTC": "2026-10-17T20:37:23.193570+00:00",
+    "kind": "product",
+    "coverageBeforeRead": "hash-only"
+  },
+  {
+    "path": "packages/core/src/model-catalog/save-entry.ts",
+    "bytes": 6541,
+    "lines": 189,
+    "sha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+    "pinAtUTC": "2026-10-17T20:37:23.194351+00:00",
+    "kind": "product",
+    "coverageBeforeRead": "hash-only"
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+    "bytes": 20093,
+    "lines": 500,
+    "sha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+    "pinAtUTC": "2026-10-17T20:37:23.195598+00:00",
+    "kind": "product",
+    "coverageBeforeRead": "hash-only"
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/generate-video.ts",
+    "bytes": 24537,
+    "lines": 640,
+    "sha256": "409b6675fd7cb582a63bf0158d84ae28519fc2881a8e6413c30266242c17729b",
+    "pinAtUTC": "2026-10-17T20:37:23.196664+00:00",
+    "kind": "product",
+    "coverageBeforeRead": "hash-only"
+  },
+  {
+    "path": "packages/core/src/model-catalog/gen-connections.test.ts",
+    "bytes": 3587,
+    "lines": 86,
+    "sha256": "4f780bb60279f1e22c90d0117b20f294f46727a018b3290cecbd5635ac9eba03",
+    "pinAtUTC": "2026-10-17T20:37:23.197623+00:00",
+    "kind": "test-declaration",
+    "coverageBeforeRead": "hash-only"
+  },
+  {
+    "path": "packages/core/src/model-catalog/upsert.test.ts",
+    "bytes": 2537,
+    "lines": 80,
+    "sha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8",
+    "pinAtUTC": "2026-10-17T20:37:23.198638+00:00",
+    "kind": "test-declaration",
+    "coverageBeforeRead": "hash-only"
+  }
+]

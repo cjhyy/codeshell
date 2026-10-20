@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./chat-content.css";
 
 /* Dark mode is driven by a `.dark` class on <html> (see theme.ts). */
 @custom-variant dark (&:is(.dark *));
@@ -82,6 +83,43 @@
   }
 }
 
+/* Short search windows need room for results. These scoped overrides sit
+   outside layers so the normal utility spacing remains the large-window default. */
+@media (max-height: 32rem) {
+  .cs-search-dialog {
+    top: 0.5rem;
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .cs-search-dialog-heading {
+    padding-top: 0.25rem;
+    padding-bottom: 0;
+  }
+
+  .cs-search-dialog-hint {
+    padding-block: 0.375rem;
+  }
+
+  .cs-search-dialog [cmdk-input] {
+    height: 2.25rem;
+  }
+
+  .cs-search-results-heading {
+    padding-top: 0;
+  }
+
+  .cs-search-state {
+    gap: 0.5rem;
+    padding-block: 0.75rem;
+  }
+}
+
+@media (max-height: 20rem) {
+  .cs-search-dialog-hint {
+    display: none;
+  }
+}
+
 /*
  * Explicit, class-scoped state styling for components that rely on Radix's
  * `data-state` attribute. Tailwind v4.3 mis-compiles the `data-[state=...]:`
@@ -90,6 +128,11 @@
  * Writing the rules by hand, scoped to a class, is deterministic and correct.
  */
 @layer components {
+  :root {
+    --cs-titlebar-height: 2.75rem;
+    --cs-sidebar-width: 15rem;
+  }
+
   /* Each host surface owns its image above its base color and below content.
      Isolation keeps a negative image layer inside that surface rather than
      behind the opaque app shell (the old body wallpaper was hidden there). */
@@ -114,24 +157,46 @@
   }
 
   [data-theme-surface="window"] {
+    --cs-shell-frame-width: var(--cs-frame-width, 0px);
+    --cs-shell-frame-radius: var(--cs-frame-radius, 0px);
     --cs-surface-image: var(--cs-surface-window-image);
     --cs-surface-opacity: var(--cs-surface-window-opacity);
     --cs-surface-fit: var(--cs-surface-window-fit);
     --cs-surface-position: var(--cs-surface-window-position);
     --cs-surface-background: var(--cs-surface-window-background, var(--cs-background));
     --cs-surface-background-opacity: var(--cs-surface-window-background-opacity, 1);
-    border-radius: var(--cs-frame-radius, 0px);
+    border-radius: var(--cs-shell-frame-radius);
+    padding: var(--cs-shell-frame-width);
   }
 
-  /* The frame is decorative: an inset overlay leaves all layout, resize and
-     drag targets in place. Only AppShell has the window hook, not pet popouts. */
+  /* Reserve the same inset that the decorative stroke occupies. Content and
+     dividers now meet the inner frame rather than painting underneath it. */
   [data-theme-surface="window"]::after {
     content: "";
     position: absolute;
     inset: 0;
     z-index: 70;
-    border: var(--cs-frame-width, 0px) solid hsl(var(--cs-frame-color, var(--cs-border)));
+    border: var(--cs-shell-frame-width) solid hsl(var(--cs-frame-color, var(--cs-border)));
     border-radius: inherit;
+    pointer-events: none;
+  }
+
+  [data-app-shell-content] {
+    border-radius: max(0px, calc(var(--cs-shell-frame-radius) - var(--cs-shell-frame-width)));
+  }
+
+  [data-app-shell][data-window-state="fullscreen"] {
+    --cs-shell-frame-width: 0px;
+    --cs-shell-frame-radius: 0px;
+  }
+
+  [data-app-shell][data-sidebar="open"][data-sidebar-mode="inline"] [data-theme-music-dock]::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--cs-sidebar-width) - 1px);
+    border-left: 1px solid hsl(var(--cs-border) / 0.7);
     pointer-events: none;
   }
 
@@ -196,9 +261,122 @@
     margin-inline: auto;
   }
 
+  /* Ordinary main chats scroll the composer within the actual pane. Keep a
+     readable slice of active output; queued previews share the space with it.
+     New-chat welcome content already has its own scrolling parent. */
+  [data-chat-variant="main"]:not([data-pending-interaction="true"]) .cs-chat-composer-wrap {
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 0.75rem;
+  }
+
+  [data-chat-variant="main"][data-mode="active"]:not([data-pending-interaction="true"])
+    .cs-chat-composer-wrap {
+    max-height: max(60%, calc(100% - 4rem));
+  }
+
+  [data-chat-variant="main"][data-mode="active"][data-queued-input="true"]:not(
+      [data-pending-interaction="true"]
+    )
+    .cs-chat-composer-wrap {
+    max-height: 60%;
+  }
+
+  /* Pending questions and approvals share the actual chat pane with the composer. Bound
+     both siblings by that pane's height, including short Quick Chat docks. */
+  [data-pending-interaction="true"] .cs-chat-sticky {
+    min-height: 0;
+    max-height: 60%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 0.5rem;
+  }
+
+  [data-pending-interaction="true"] .cs-chat-composer-wrap {
+    max-height: 40%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
   .cs-message-actions {
     opacity: 1;
     transition: opacity 150ms ease;
+  }
+
+  .cs-file-action {
+    opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cs-file-action {
+      opacity: 0;
+    }
+
+    [data-file-row]:hover .cs-file-action,
+    [data-file-row]:focus-within .cs-file-action,
+    .cs-file-action[data-state="open"],
+    .cs-file-action[data-active="true"] {
+      opacity: 1;
+    }
+  }
+
+  .cs-context-turn {
+    min-width: 0;
+    margin: 0.75rem 0.5rem;
+    border: 1px solid hsl(var(--cs-border) / 0.65);
+    border-radius: 1rem;
+    background: hsl(var(--cs-card) / 0.55);
+  }
+
+  .cs-context-turn[data-context-turn-selected="true"] {
+    border-color: hsl(var(--cs-primary) / 0.3);
+    background: hsl(var(--cs-primary) / 0.035);
+    box-shadow: inset 3px 0 0 hsl(var(--cs-primary) / 0.5);
+  }
+
+  .cs-context-turn-heading {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    gap: 0.625rem;
+    border-bottom: 1px solid hsl(var(--cs-border) / 0.5);
+    border-radius: 1rem 1rem 0 0;
+    padding: 0.75rem;
+    outline: none;
+  }
+
+  .cs-context-turn-heading:hover:not(:disabled) {
+    background: hsl(var(--cs-muted) / 0.35);
+  }
+
+  .cs-context-turn-heading:focus-visible {
+    box-shadow: inset 0 0 0 2px hsl(var(--cs-ring));
+  }
+
+  .cs-context-turn-heading:disabled {
+    cursor: wait;
+  }
+
+  .cs-context-selection-state {
+    display: flex;
+    min-height: 12rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: safe center;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .cs-context-selection-footer {
+    max-height: 55%;
+    overflow-y: auto;
+  }
+
+  .cs-context-selection-state-error {
+    min-height: 0;
+    padding: 1rem;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -212,7 +390,7 @@
     }
   }
 
-  /* Main-chat surfaces keep the shared quick-chat and pet composers compact. */
+  /* Each chat variant owns its spacing inside the shared composer. */
   [data-chat-variant="main"] .cs-new-chat {
     justify-content: safe center;
     overflow-y: auto;
@@ -236,6 +414,145 @@
     box-shadow:
       0 0 0 3px hsl(var(--cs-primary) / 0.07),
       0 8px 28px hsl(var(--cs-foreground) / 0.045);
+  }
+
+  .cs-quick-chat {
+    background: hsl(var(--cs-background));
+  }
+
+  .cs-quick-chat-welcome {
+    /* This is the composer's sibling: containment never affects textarea sizing. */
+    container: quick-chat-welcome / size;
+    justify-content: safe center;
+  }
+
+  .cs-quick-chat-intro {
+    width: 100%;
+    max-width: 24rem;
+    flex-shrink: 0;
+    padding-block: 1.5rem;
+    text-align: center;
+  }
+
+  .cs-quick-chat-intro-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cs-quick-chat-starters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  @container quick-chat-welcome (max-height: 16rem) {
+    .cs-quick-chat-intro-icon {
+      display: none;
+    }
+  }
+
+  @container quick-chat-welcome (max-height: 9rem) {
+    .cs-quick-chat-intro {
+      padding-block: 0.5rem;
+    }
+
+    .cs-quick-chat-intro-description,
+    .cs-quick-chat-starters {
+      display: none;
+    }
+  }
+
+  @container quick-chat-welcome (max-height: 2rem) {
+    .cs-quick-chat-intro {
+      display: none;
+    }
+  }
+
+  .cs-quick-chat-starter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid hsl(var(--cs-border) / 0.8);
+    border-radius: 0.625rem;
+    background: hsl(var(--cs-card));
+    padding: 0.5rem 0.625rem;
+    font-size: 0.6875rem;
+    color: hsl(var(--cs-muted-foreground));
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .cs-quick-chat-starter:hover:not(:disabled) {
+    border-color: hsl(var(--cs-primary) / 0.3);
+    background: hsl(var(--cs-primary) / 0.04);
+    color: hsl(var(--cs-foreground));
+  }
+
+  .cs-quick-chat-starter:focus-visible {
+    outline: 2px solid hsl(var(--cs-ring));
+    outline-offset: 3px;
+  }
+
+  .cs-quick-chat-starter:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .cs-quick-chat-state {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    align-items: safe center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 1.25rem;
+  }
+
+  .cs-quick-chat-state-card {
+    width: 100%;
+    max-width: 24rem;
+    border: 1px solid hsl(var(--cs-border) / 0.65);
+    border-radius: 1rem;
+    background: hsl(var(--cs-card));
+    padding: 1.5rem 1rem;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  [data-chat-variant="quickChat"] .cs-chat-transcript,
+  [data-chat-variant="quickChat"] .cs-chat-sticky,
+  .cs-quick-chat-composer-wrap {
+    max-width: 42rem;
+    margin-inline: auto;
+  }
+
+  /* Long drafts/attachments must remain reachable even in a short dock. */
+  .cs-quick-chat-composer-wrap {
+    max-height: 100%;
+    overflow-y: auto;
+  }
+
+  [data-chat-variant="quickChat"] .cs-chat-composer {
+    border-radius: 1rem;
+    border-color: hsl(var(--cs-border) / 0.85);
+    padding: 0.625rem;
+    box-shadow:
+      0 4px 18px hsl(var(--cs-foreground) / 0.035),
+      0 1px 2px hsl(var(--cs-foreground) / 0.04);
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  [data-chat-variant="quickChat"] .cs-chat-composer:focus-within {
+    border-color: hsl(var(--cs-primary) / 0.45);
+    box-shadow:
+      0 0 0 3px hsl(var(--cs-primary) / 0.06),
+      0 4px 18px hsl(var(--cs-foreground) / 0.04);
   }
 
   .cs-welcome-suggestions {
@@ -287,6 +604,8 @@
 
   @media (prefers-reduced-motion: reduce) {
     [data-chat-variant="main"] .cs-chat-composer,
+    [data-chat-variant="quickChat"] .cs-chat-composer,
+    .cs-quick-chat-starter,
     .cs-welcome-suggestion {
       transition: none;
     }
@@ -494,26 +813,83 @@
     opacity: 0.5;
   }
 
+  .cs-select-trigger {
+    border-color: hsl(var(--cs-input) / 0.8);
+    background: hsl(var(--cs-card));
+    box-shadow: 0 1px 2px hsl(var(--cs-foreground) / 0.025);
+  }
+
+  .cs-select-trigger:hover:not(:disabled) {
+    border-color: hsl(var(--cs-primary) / 0.25);
+    background: hsl(var(--cs-accent) / 0.4);
+  }
+
+  .cs-select-trigger:focus-visible,
+  .cs-select-trigger[data-state="open"] {
+    border-color: hsl(var(--cs-primary) / 0.45);
+    box-shadow: 0 0 0 3px hsl(var(--cs-primary) / 0.07);
+  }
+
+  .cs-select-trigger[data-placeholder] {
+    color: hsl(var(--cs-muted-foreground));
+  }
+
+  .cs-select-chevron {
+    transition: transform 150ms ease;
+  }
+
+  .cs-select-trigger[data-state="open"] .cs-select-chevron {
+    transform: rotate(180deg);
+  }
+
+  .cs-menu-item.cs-select-item {
+    min-height: 2.25rem;
+  }
+
+  .cs-select-item[data-state="checked"] {
+    background: hsl(var(--cs-primary) / 0.07);
+  }
+
+  .cs-select-item[data-highlighted] {
+    background: hsl(var(--cs-accent));
+    color: hsl(var(--cs-accent-foreground));
+  }
+
+  .cs-select-option-label,
+  .cs-select-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cs-select-chevron {
+      transition: none;
+    }
+  }
+
   .cs-popup-surface {
     background: hsl(var(--cs-popover));
     color: hsl(var(--cs-popover-foreground));
-    border: 1px solid hsl(var(--cs-border) / 0.86);
+    border: 1px solid hsl(var(--cs-border) / 0.75);
     box-shadow:
-      0 18px 45px hsl(var(--cs-foreground) / 0.1),
-      0 1px 2px hsl(var(--cs-foreground) / 0.08);
+      0 12px 32px hsl(var(--cs-foreground) / 0.08),
+      0 2px 6px hsl(var(--cs-foreground) / 0.045);
   }
   .dark .cs-popup-surface {
     border-color: hsl(var(--cs-border) / 0.95);
     box-shadow:
-      0 18px 45px rgb(0 0 0 / 0.26),
-      0 1px 2px rgb(0 0 0 / 0.18);
+      0 12px 32px rgb(0 0 0 / 0.3),
+      0 2px 6px rgb(0 0 0 / 0.18);
   }
 
   .cs-menu-item {
     display: flex;
     align-items: center;
-    min-height: 1.875rem;
-    border-radius: var(--radius-sm);
+    min-height: 2rem;
+    border-radius: 0.5rem;
     color: hsl(var(--cs-popover-foreground));
     outline: none;
   }

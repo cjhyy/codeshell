@@ -1,0 +1,553 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "corpusInventory": "root-dedup.json/inventory",
+  "filesRehashed": 2677,
+  "patterns": {
+    "chunker": "splitIntoChunks|blank.line.{0,80}(?:fence|chunk)|(?:closed|fenced).{0,50}(?:block|code).{0,60}(?:blank|chunk)",
+    "streamingConsumer": "StreamingMarkdown(?:\\.tsx|Body)|splitStreamingMarkdown"
+  },
+  "counts": {
+    "chunker": 58,
+    "streamingConsumer": 47
+  },
+  "contextCapPerQuery": 60,
+  "contexts": {
+    "chunker": [
+      {
+        "path": "docs/archive/review-2026-05-30/backlog.json",
+        "at": "$[58].fix",
+        "context": "Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "at": "$[11].fix",
+        "context": "Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "at": "$[11].verify_note",
+        "context": "ere context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk boundaries."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "at": "$[11].verify_reason",
+        "context": "ly blank lines (line.length === 0) without any marker. The parser should either require the space marker for blank lines (making line.length === 1 the condition) or treat unmarked blank lines as an error or chunk boundary, consistent with the error handling at line 282. Blank lines without markers are not listed in the documented \"Lenient extras\" (lines 17-21), indicating this is unintended behavior."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "at": "$[58].fix",
+        "context": "Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "at": "$[58].reason",
+        "context": "ly blank lines (line.length === 0) without any marker. The parser should either require the space marker for blank lines (making line.length === 1 the condition) or treat unmarked blank lines as an error or chunk boundary, consistent with the error handling at line 282. Blank lines without markers are not listed in the documented \"Lenient extras\" (lines 17-21), indicating this is unintended behavior."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "at": "$[58].note",
+        "context": "ere context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk boundaries."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[117].fix",
+        "context": "Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+        "at": "$.hits[102].excerpt",
+        "context": "ere context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk boundaries."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+        "at": "$.hits[103].excerpt",
+        "context": "ly blank lines (line.length === 0) without any marker. The parser should either require the space marker for blank lines (making line.length === 1 the condition) or treat unmarked blank lines as an error or chunk boundary, consistent with the error handling at line 282. Blank lines without markers are not listed in the documented \"Lenient extras\" (lines 17-21), indicating this is unintended behavior."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+        "at": "$.hits[108].excerpt",
+        "context": "ly blank lines (line.length === 0) without any marker. The parser should either require the space marker for blank lines (making line.length === 1 the condition) or treat unmarked blank lines as an error or chunk boundary, consistent with the error handling at line 282. Blank lines without markers are not listed in the documented \"Lenient extras\" (lines 17-21), indicating this is unintended behavior."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+        "at": "$.hits[109].excerpt",
+        "context": "ere context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk boundaries."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "at": "$.hits[211].excerpt",
+        "context": "ere context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk boundaries."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "at": "$.hits[212].excerpt",
+        "context": "ly blank lines (line.length === 0) without any marker. The parser should either require the space marker for blank lines (making line.length === 1 the condition) or treat unmarked blank lines as an error or chunk boundary, consistent with the error handling at line 282. Blank lines without markers are not listed in the documented \"Lenient extras\" (lines 17-21), indicating this is unintended behavior."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "at": "$.hits[217].excerpt",
+        "context": "ly blank lines (line.length === 0) without any marker. The parser should either require the space marker for blank lines (making line.length === 1 the condition) or treat unmarked blank lines as an error or chunk boundary, consistent with the error handling at line 282. Blank lines without markers are not listed in the documented \"Lenient extras\" (lines 17-21), indicating this is unintended behavior."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "at": "$.hits[218].excerpt",
+        "context": "ere context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk boundaries."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].match",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].context",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[9].matches[0].match",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[9].matches[0].context",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[13].matches[0].match",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[13].matches[0].context",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "at": "$.matches.mechanism[28].excerpt",
+        "context": "cit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "at": "$.matches.mechanism[36].excerpt",
+        "context": "cit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "at": "$.matches.mechanism[52].excerpt",
+        "context": "cit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "at": "$.matches.mechanism[60].excerpt",
+        "context": "cit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "at": "$.matches.mechanism[76].excerpt",
+        "context": "cit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "at": "$.matches.mechanism[84].excerpt",
+        "context": "cit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[77].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[78].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[79].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[80].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[81].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[82].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[147].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const msg = err "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[148].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\", \"_id\": 58}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[149].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[150].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const msg = err "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[152].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\", \"_id\": 58}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[153].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[154].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const msg = err "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[156].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\", \"_id\": 58}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$.matches.user-display[157].excerpt",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.logs[1].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const msg = err "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.logs[2].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\", \"_id\": 58}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.logs[3].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.settings-navigation[0].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const msg = err "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.settings-navigation[1].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"verify_note\": \"The bug is real but has moderate impact. While the code would functionally match blank lines in files correctly (since both the pattern and file contain empty strings), it violates the stated grammar and creates an inconsistency in marker verification. This could cause incorrect matches in edge cases where context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.settings-navigation[1].text",
+        "context": "ere context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk boundaries.\", \"verify_reason\": \"The code at lines 261-267 treats blank lines (line.length === 0) as valid context lines by unconditionally adding empty strings to oldLines and newLines. However, the patch format grammar at lines 14-15 requires all change_line entries to start with a marker: \\\"change_line := (\\\" \\\" | \\\"+\\\" | \\\"-\\\") text LF\\\". A blank line with no marker violates this grammar. The code bypasses marker verification for blank lines — whereas lines 269-290 check markers for all other lines and throw an error at line 282-287 if a ma"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.settings-navigation[1].text",
+        "context": "ly blank lines (line.length === 0) without any marker. The parser should either require the space marker for blank lines (making line.length === 1 the condition) or treat unmarked blank lines as an error or chunk boundary, consistent with the error handling at line 282. Blank lines without markers are not listed in the documented \\\"Lenient extras\\\" (lines 17-21), indicating this is unintended behavior.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, u"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.settings-navigation[2].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\", \"_id\": 58}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.settings-navigation[3].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.sidebar-projection[8].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const msg = err "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.sidebar-projection[9].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"verify_note\": \"The bug is real but has moderate impact. While the code would functionally match blank lines in files correctly (since both the pattern and file contain empty strings), it violates the stated grammar and creates an inconsistency in marker verification. This could cause incorrect matches in edge cases where context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.sidebar-projection[9].text",
+        "context": "ere context lines are ambiguous, and it represents incomplete input validation. The fix would require requiring an explicit space marker for blank context lines, treating unmarked blank lines as either errors or chunk boundaries.\", \"verify_reason\": \"The code at lines 261-267 treats blank lines (line.length === 0) as valid context lines by unconditionally adding empty strings to oldLines and newLines. However, the patch format grammar at lines 14-15 requires all change_line entries to start with a marker: \\\"change_line := (\\\" \\\" | \\\"+\\\" | \\\"-\\\") text LF\\\". A blank line with no marker violates this grammar. The code bypasses marker verification for blank lines — whereas lines 269-290 check markers for all other lines and throw an error at line 282-287 if a ma"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.sidebar-projection[9].text",
+        "context": "ly blank lines (line.length === 0) without any marker. The parser should either require the space marker for blank lines (making line.length === 1 the condition) or treat unmarked blank lines as an error or chunk boundary, consistent with the error handling at line 282. Blank lines without markers are not listed in the documented \\\"Lenient extras\\\" (lines 17-21), indicating this is unintended behavior.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, u"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.sidebar-projection[10].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\", \"pkg\": \"core\", \"_id\": 58}, {\"file\": \"packages/core/src/tool-system/builtin/arena.ts\", \"line\": \"498\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe error property access in catch block\", \"detail\": \"The catch block at line 496-499 uses `(err as Error).message` without verifying err is an Error object. If err is a non-Error value (string, null, undefined), accessing .message will return undefined, resulting in the string 'Arena error: undefined'. This masks the actual error.\", \"fix\": \"Use `const"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$.hits.sidebar-projection[11].text",
+        "context": "ext lines or treat unmarked blank lines as an error (consistent with the behavior at line 282).\", \"fix\": \"Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no marker) as an error or end-of-chunk signal.\"}, {\"file\": \"packages/core/src/tool-system/builtin/apply-patch/applier.ts\", \"line\": \"276\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causing unlink to throw. Though the error is caught at line 280, this creates an avoidable race condition during error recov"
+      }
+    ],
+    "streamingConsumer": [
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "：`packages/desktop/src/renderer/messages/AssistantMessageView.tsx:46`、`packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:102`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:34`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:93`\n- 输入：`AssistantMessage.text` 或 process card 内 assistant item 的 `text`，且 `done:false`。\n- 输出：`StreamingMarkdownBody`：稳定前缀走窄 Markdown，活跃尾部走 `<pre>`。\n- 为什么需要：流式 Markdown 的 todo 背景是“先显示原文，done 后突变”的体验问题，但不能每 token 全量重解析导致卡顿/抖动（`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:9`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:608`）。当前实现用 120ms throttle、按空行切 chunk、memo chunk，只让最新 chunk 重解析（`packages/desktop/src/renderer/messages/StreamingMarkdown.ts"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "46`、`packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:102`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:34`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:93`\n- 输入：`AssistantMessage.text` 或 process card 内 assistant item 的 `text`，且 `done:false`。\n- 输出：`StreamingMarkdownBody`：稳定前缀走窄 Markdown，活跃尾部走 `<pre>`。\n- 为什么需要：流式 Markdown 的 todo 背景是“先显示原文，done 后突变”的体验问题，但不能每 token 全量重解析导致卡顿/抖动（`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:9`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:608`）。当前实现用 120ms throttle、按空行切 chunk、memo chunk，只让最新 chunk 重解析（`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:52`、`packages/desktop/src/renderer/messages/StreamingMarkdown.ts"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "amingMarkdown.tsx:34`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:93`\n- 输入：`AssistantMessage.text` 或 process card 内 assistant item 的 `text`，且 `done:false`。\n- 输出：`StreamingMarkdownBody`：稳定前缀走窄 Markdown，活跃尾部走 `<pre>`。\n- 为什么需要：流式 Markdown 的 todo 背景是“先显示原文，done 后突变”的体验问题，但不能每 token 全量重解析导致卡顿/抖动（`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:9`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:608`）。当前实现用 120ms throttle、按空行切 chunk、memo chunk，只让最新 chunk 重解析（`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:52`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:82`）。\n\n### 22. `splitStreamingMarkdown` 把半成品留在 active tail\n- 文件：`packages/desktop/src/renderer/markdown/splitStreami"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "plan.md:9`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:608`）。当前实现用 120ms throttle、按空行切 chunk、memo chunk，只让最新 chunk 重解析（`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:52`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:82`）。\n\n### 22. `splitStreamingMarkdown` 把半成品留在 active tail\n- 文件：`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:1`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:121`\n- 输入：正在增长的 Markdown text buffer。\n- 输出：`{ stablePrefix, activeTail }`。\n- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 s"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "l-plan.md:608`）。当前实现用 120ms throttle、按空行切 chunk、memo chunk，只让最新 chunk 重解析（`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:52`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:82`）。\n\n### 22. `splitStreamingMarkdown` 把半成品留在 active tail\n- 文件：`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:1`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:121`\n- 输入：正在增长的 Markdown text buffer。\n- 输出：`{ stablePrefix, activeTail }`。\n- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "空行切 chunk、memo chunk，只让最新 chunk 重解析（`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:52`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:82`）。\n\n### 22. `splitStreamingMarkdown` 把半成品留在 active tail\n- 文件：`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:1`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:121`\n- 输入：正在增长的 Markdown text buffer。\n- 输出：`{ stablePrefix, activeTail }`。\n- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/rendere"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "kdown.tsx:52`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:82`）。\n\n### 22. `splitStreamingMarkdown` 把半成品留在 active tail\n- 文件：`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:1`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:121`\n- 输入：正在增长的 Markdown text buffer。\n- 输出：`{ stablePrefix, activeTail }`。\n- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-au"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "wn.tsx:82`）。\n\n### 22. `splitStreamingMarkdown` 把半成品留在 active tail\n- 文件：`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:1`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:121`\n- 输入：正在增长的 Markdown text buffer。\n- 输出：`{ stablePrefix, activeTail }`。\n- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。\n\n### 23. done 后切完整 Markdown 管线\n- 文件：`packages"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "件：`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:1`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:121`\n- 输入：正在增长的 Markdown text buffer。\n- 输出：`{ stablePrefix, activeTail }`。\n- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。\n\n### 23. done 后切完整 Markdown 管线\n- 文件：`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:40`、`packages/de"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81`、`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:121`\n- 输入：正在增长的 Markdown text buffer。\n- 输出：`{ stablePrefix, activeTail }`。\n- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。\n\n### 23. done 后切完整 Markdown 管线\n- 文件：`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:40`、`packages/desktop/src/renderer/Markdown.tsx:160`、`packages/desktop/src/renderer/Ma"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。\n\n### 23. done 后切完整 Markdown 管线\n- 文件：`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:40`、`packages/desktop/src/renderer/Markdown.tsx:160`、`packages/desktop/src/renderer/Markdown.tsx:170`、`packages/desktop/src/renderer/Markdown.tsx:179`\n- 输入：同一条 assistant text，`done:true`。\n- 输出：完整 `<Markdown>`：`remark-gfm`、`remarkPathLinks`、`rehypeRaw → rehypeSanitize → rehypeHighlight`、path/image 组件覆盖。\n- 为什么需要：流式阶段推迟 highlight/raw/path IPC/图片加载等重能力，done 后内容稳定再启用完整功能；安全边界"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "wn/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。\n\n### 23. done 后切完整 Markdown 管线\n- 文件：`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:40`、`packages/desktop/src/renderer/Markdown.tsx:160`、`packages/desktop/src/renderer/Markdown.tsx:170`、`packages/desktop/src/renderer/Markdown.tsx:179`\n- 输入：同一条 assistant text，`done:true`。\n- 输出：完整 `<Markdown>`：`remark-gfm`、`remarkPathLinks`、`rehypeRaw → rehypeSanitize → rehypeHighlight`、path/image 组件覆盖。\n- 为什么需要：流式阶段推迟 highlight/raw/path IPC/图片加载等重能力，done 后内容稳定再启用完整功能；安全边界要求 raw HTML 一解析就立刻 sanitize，再 highlight，否则不可信 LLM/网页转述内容可能进入 DOM（`packages/desktop/src/renderer/Markdown.tsx:172`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "重能力，done 后内容稳定再启用完整功能；安全边界要求 raw HTML 一解析就立刻 sanitize，再 highlight，否则不可信 LLM/网页转述内容可能进入 DOM（`packages/desktop/src/renderer/Markdown.tsx:172`、`packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:132`）。\n\n### 24. `TurnProcessGroupCard` 最终呈现或折叠 process 内容\n- 文件：`packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:38`、`packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:48`、`packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:53`、`packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:71`\n- 输入：`TurnProcessGroup{ isLive, stopped, items, durationMs, firstToolStartedAt }`。\n- 输出：live turn 默认展开并每秒更新 elapsed；closed turn 默认可折叠，clean turn boundary 后被 `turnEpoch` 强制收起；stopped turn 不显示折叠 header，内容平铺。\n- 为什"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "lements\",\n    一句话说明: \"按 kind 渲染 AssistantMessageView 或 TurnProcessGroupCard 等组件。\",\n  },\n  {\n    节点名: \"21 Streaming Markdown Paint\",\n    文件: \"packages/desktop/src/renderer/messages/StreamingMarkdown.tsx:93\",\n    输入数据形状: \"text + done:false\",\n    输出数据形状: \"stable markdown chunks + active <pre>\",\n    一句话说明: \"流式时富渲染稳定前缀，活跃尾部保持源码显示。\",\n  },\n  {\n    节点名: \"22 Split Streaming Markdown\",\n    文件: \"packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81\",\n    输入数据形状: \"markdown text buffer\",\n    输出数据形状: \"{stablePrefix,activeTail}\",\n    一句话说明: \"只在安全空行边界切分，并避开未闭合 fence。\",\n  },\n  {\n    节点名: \"23 Done Markdown Pipeline\",\n    文件: \"packages/desktop/src/renderer/Markdown.tsx:170\",\n    输入数据形状: \"text + done:true\",\n    输出数据形状: \"full ReactMarkdown DOM\",\n  "
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "at": "$",
+        "context": "据形状: \"stable markdown chunks + active <pre>\",\n    一句话说明: \"流式时富渲染稳定前缀，活跃尾部保持源码显示。\",\n  },\n  {\n    节点名: \"22 Split Streaming Markdown\",\n    文件: \"packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:81\",\n    输入数据形状: \"markdown text buffer\",\n    输出数据形状: \"{stablePrefix,activeTail}\",\n    一句话说明: \"只在安全空行边界切分，并避开未闭合 fence。\",\n  },\n  {\n    节点名: \"23 Done Markdown Pipeline\",\n    文件: \"packages/desktop/src/renderer/Markdown.tsx:170\",\n    输入数据形状: \"text + done:true\",\n    输出数据形状: \"full ReactMarkdown DOM\",\n    一句话说明: \"完成后启用完整 Markdown、安全清洗、高亮和路径/图片能力。\",\n  },\n  {\n    节点名: \"24 TurnProcessGroupCard\",\n    文件: \"packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:47\",\n    输入数据形状: \"TurnProcessGroup\",\n    输出数据形状: \"open live card | collapsed process"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": ")**:节流/分块高亮活跃代码块;统一桌面/移动滚动实现;把\n  `stripMarkdown` 的 fence 检测复用进未闭合 fence 判定。视阶段 2 实测再决定。\n\n---\n\n## 五、`StreamingMarkdown` 设计\n\n### 5.1 组件接口\n\n新增 `packages/desktop/src/renderer/messages/StreamingMarkdown.tsx`,取代三处内联\n`done ? … : …`:\n\n```tsx\ninterface StreamingMarkdownProps {\n  text: string;\n  done: boolean;\n  cwd?: string | null;\n  /** 关掉流式富渲染时回退到纯 <pre>(阶段 2 的 feature flag / 保守回滚位) */\n  streamingRichRender?: boolean; // default: 从 settings 读,默认 true\n}\n\n// 伪代码\nfunction StreamingMarkdown({ text, done, cwd, streamingRichRender = true }: Props) {\n  if (text === \"\") return null;                    // 保留现有空态抑制不变量\n  if (done) return <Markdown text={text} cwd={cwd} />;   // 完成态:完整管线,零改动\n  if (!streamingRichRender) {                      // 回退 = 今天的行为\n    "
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "// 回退 = 今天的行为\n    return (\n      <div className={streamingMarkdownClassName}>\n        <pre className=\"whitespace-pre-wrap font-sans\">{text}</pre>\n      </div>\n    );\n  }\n  return <StreamingMarkdownBody text={text} />;     // 阶段 2 的核心\n}\n```\n\n- 三处调用点(`AssistantMessageView`/`AgentMessageView`/`TurnProcessGroupCard`)统一改为\n  `<StreamingMarkdown text=… done=… cwd=… />`,**修掉后两处丢 `cwd`**。\n- `done`/空态语义与今天**逐字等价**,阶段 0 可先只做这一层(行为不变),阶段 2 再填\n  `StreamingMarkdownBody`。\n\n### 5.2 `StreamingMarkdownBody`:稳定前缀 + 活跃尾部\n\n核心思想:**把流式 buffer 切成\"稳定前缀\"和\"活跃尾部\",前缀走(裁剪过的)Markdown\n管线,尾部走纯文本**,避免半成品块反复重排。\n\n```\ntext = \"……已完成的段落/闭合的代码块……\" + \"……正在流入的活跃尾部……\"\n                    ↑ stablePrefix                    ↑ activeTail\n```\n\n**切分规则(伪代码)**,一个纯函数 `splitStreamingMarkdown(t"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "tMessageView`/`AgentMessageView`/`TurnProcessGroupCard`)统一改为\n  `<StreamingMarkdown text=… done=… cwd=… />`,**修掉后两处丢 `cwd`**。\n- `done`/空态语义与今天**逐字等价**,阶段 0 可先只做这一层(行为不变),阶段 2 再填\n  `StreamingMarkdownBody`。\n\n### 5.2 `StreamingMarkdownBody`:稳定前缀 + 活跃尾部\n\n核心思想:**把流式 buffer 切成\"稳定前缀\"和\"活跃尾部\",前缀走(裁剪过的)Markdown\n管线,尾部走纯文本**,避免半成品块反复重排。\n\n```\ntext = \"……已完成的段落/闭合的代码块……\" + \"……正在流入的活跃尾部……\"\n                    ↑ stablePrefix                    ↑ activeTail\n```\n\n**切分规则(伪代码)**,一个纯函数 `splitStreamingMarkdown(text): { stablePrefix, activeTail }`:\n\n```ts\nfunction splitStreamingMarkdown(text: string) {\n  // 1. 未闭合的 ``` fence:从最后一个未配对 fence 起,整段(含 fence 行)归入 activeTail,\n  //    避免把半个代码块喂给 highlight/解析(fence 数量为奇数 → 有未闭合)。\n  // 2. 未闭合的 raw HTML 标签(如 \"<div\" 没到 \">\",或开标签"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "TurnProcessGroupCard`)统一改为\n  `<StreamingMarkdown text=… done=… cwd=… />`,**修掉后两处丢 `cwd`**。\n- `done`/空态语义与今天**逐字等价**,阶段 0 可先只做这一层(行为不变),阶段 2 再填\n  `StreamingMarkdownBody`。\n\n### 5.2 `StreamingMarkdownBody`:稳定前缀 + 活跃尾部\n\n核心思想:**把流式 buffer 切成\"稳定前缀\"和\"活跃尾部\",前缀走(裁剪过的)Markdown\n管线,尾部走纯文本**,避免半成品块反复重排。\n\n```\ntext = \"……已完成的段落/闭合的代码块……\" + \"……正在流入的活跃尾部……\"\n                    ↑ stablePrefix                    ↑ activeTail\n```\n\n**切分规则(伪代码)**,一个纯函数 `splitStreamingMarkdown(text): { stablePrefix, activeTail }`:\n\n```ts\nfunction splitStreamingMarkdown(text: string) {\n  // 1. 未闭合的 ``` fence:从最后一个未配对 fence 起,整段(含 fence 行)归入 activeTail,\n  //    避免把半个代码块喂给 highlight/解析(fence 数量为奇数 → 有未闭合)。\n  // 2. 未闭合的 raw HTML 标签(如 \"<div\" 没到 \">\",或开标签无闭合):从该标签起归 activeTail。\n  //    简单"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "剪过的)Markdown\n管线,尾部走纯文本**,避免半成品块反复重排。\n\n```\ntext = \"……已完成的段落/闭合的代码块……\" + \"……正在流入的活跃尾部……\"\n                    ↑ stablePrefix                    ↑ activeTail\n```\n\n**切分规则(伪代码)**,一个纯函数 `splitStreamingMarkdown(text): { stablePrefix, activeTail }`:\n\n```ts\nfunction splitStreamingMarkdown(text: string) {\n  // 1. 未闭合的 ``` fence:从最后一个未配对 fence 起,整段(含 fence 行)归入 activeTail,\n  //    避免把半个代码块喂给 highlight/解析(fence 数量为奇数 → 有未闭合)。\n  // 2. 未闭合的 raw HTML 标签(如 \"<div\" 没到 \">\",或开标签无闭合):从该标签起归 activeTail。\n  //    简单实现:检测尾部是否有未闭合的 \"<...\":用保守正则,宁可多划入尾部。\n  // 3. 表格:若最后一块是仅有表头/分隔行、尚无数据行的半张表,把该表块归 activeTail\n  //    (半张 gfm 表在 remark 下会反复在\"段落 ↔ 表格\"间跳,是抖动主因)。\n  // 4. 兜底:把 text 的最后一\"行\"(最后一个 \\n 之后)始终归 activeTail —— 正在打字的\n  //    行本就不稳定,不值得进管线。\n  // 找到最靠前的切点,之前 = stablePrefix"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "入的活跃尾部……\"\n                    ↑ stablePrefix                    ↑ activeTail\n```\n\n**切分规则(伪代码)**,一个纯函数 `splitStreamingMarkdown(text): { stablePrefix, activeTail }`:\n\n```ts\nfunction splitStreamingMarkdown(text: string) {\n  // 1. 未闭合的 ``` fence:从最后一个未配对 fence 起,整段(含 fence 行)归入 activeTail,\n  //    避免把半个代码块喂给 highlight/解析(fence 数量为奇数 → 有未闭合)。\n  // 2. 未闭合的 raw HTML 标签(如 \"<div\" 没到 \">\",或开标签无闭合):从该标签起归 activeTail。\n  //    简单实现:检测尾部是否有未闭合的 \"<...\":用保守正则,宁可多划入尾部。\n  // 3. 表格:若最后一块是仅有表头/分隔行、尚无数据行的半张表,把该表块归 activeTail\n  //    (半张 gfm 表在 remark 下会反复在\"段落 ↔ 表格\"间跳,是抖动主因)。\n  // 4. 兜底:把 text 的最后一\"行\"(最后一个 \\n 之后)始终归 activeTail —— 正在打字的\n  //    行本就不稳定,不值得进管线。\n  // 找到最靠前的切点,之前 = stablePrefix,之后 = activeTail。\n  return { stablePrefix, activeTail };\n}\n```\n\n渲染:\n\n```tsx\nf"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "后一\"行\"(最后一个 \\n 之后)始终归 activeTail —— 正在打字的\n  //    行本就不稳定,不值得进管线。\n  // 找到最靠前的切点,之前 = stablePrefix,之后 = activeTail。\n  return { stablePrefix, activeTail };\n}\n```\n\n渲染:\n\n```tsx\nfunction StreamingMarkdownBody({ text }: { text: string }) {\n  const { stablePrefix, activeTail } = useMemo(() => splitStreamingMarkdown(text), [text]);\n  return (\n    <div className={markdownBodyClassName}>\n      {stablePrefix && <StreamMarkdownPrefix text={stablePrefix} />}\n      {activeTail && (\n        <pre className=\"m-0 whitespace-pre-wrap border-0 bg-transparent p-0 font-sans text-muted-foreground\">\n          {activeTail}\n        </pre>\n      )}\n    </div>\n  );\n}\n```\n\n- `stablePrefix` 是 `useMemo`,只在切分结果变时重算;但 `stablePrefix` 频繁变(每灌一行\n  就长一点)仍会 re-parse。**必须节流**(见 5.4)"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "veTail。\n  return { stablePrefix, activeTail };\n}\n```\n\n渲染:\n\n```tsx\nfunction StreamingMarkdownBody({ text }: { text: string }) {\n  const { stablePrefix, activeTail } = useMemo(() => splitStreamingMarkdown(text), [text]);\n  return (\n    <div className={markdownBodyClassName}>\n      {stablePrefix && <StreamMarkdownPrefix text={stablePrefix} />}\n      {activeTail && (\n        <pre className=\"m-0 whitespace-pre-wrap border-0 bg-transparent p-0 font-sans text-muted-foreground\">\n          {activeTail}\n        </pre>\n      )}\n    </div>\n  );\n}\n```\n\n- `stablePrefix` 是 `useMemo`,只在切分结果变时重算;但 `stablePrefix` 频繁变(每灌一行\n  就长一点)仍会 re-parse。**必须节流**(见 5.4)。\n- `activeTail` 更新是纯文本 `<pre>`,极廉价,不触发管线。\n\n### 5.3 各能力在 streaming 阶段的取舍\n\n| 能力 | 流式阶段(stablePrefix 管线) | d"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "sageStream>`(第 699–707 行附近)。\n4. `src/renderer/i18n/ns/chat.ts`\n   - 加跳底按钮 `aria-label`/tooltip key(zh + en 同加)。\n\n**问题 A(流式 Markdown,阶段 0 重构 + 阶段 2 富渲染)**\n5. `src/renderer/messages/StreamingMarkdown.tsx`(**新增**)\n   - §5.1 外层 + §5.2 `StreamingMarkdownBody` + §5.4 节流 + §5.5 窄管线\n     `StreamMarkdownPrefix`。\n6. `src/renderer/messages/AssistantMessageView.tsx`\n   - 第 46–54 行 `done ? … : …` 换成 `<StreamingMarkdown text={message.text} done={message.done} cwd={cwd} />`;空态抑制不变。\n7. `src/renderer/messages/AgentMessageView.tsx`\n   - 第 89–95 行同上,**补上 `cwd`**(若该上下文能拿到 workspace;拿不到则维持无 `cwd`\n     但要在组件里保持相对图降级为链接的现有语义)。\n8. `src/renderer/messages/TurnProcessGroupCard.tsx`\n   - 第 102–117 行内联 assistant 分支换 `<StreamingMarkdown>`,**把卡片已有的 `cwd`\n     prop 转发进去**("
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "s/chat.ts`\n   - 加跳底按钮 `aria-label`/tooltip key(zh + en 同加)。\n\n**问题 A(流式 Markdown,阶段 0 重构 + 阶段 2 富渲染)**\n5. `src/renderer/messages/StreamingMarkdown.tsx`(**新增**)\n   - §5.1 外层 + §5.2 `StreamingMarkdownBody` + §5.4 节流 + §5.5 窄管线\n     `StreamMarkdownPrefix`。\n6. `src/renderer/messages/AssistantMessageView.tsx`\n   - 第 46–54 行 `done ? … : …` 换成 `<StreamingMarkdown text={message.text} done={message.done} cwd={cwd} />`;空态抑制不变。\n7. `src/renderer/messages/AgentMessageView.tsx`\n   - 第 89–95 行同上,**补上 `cwd`**(若该上下文能拿到 workspace;拿不到则维持无 `cwd`\n     但要在组件里保持相对图降级为链接的现有语义)。\n8. `src/renderer/messages/TurnProcessGroupCard.tsx`\n   - 第 102–117 行内联 assistant 分支换 `<StreamingMarkdown>`,**把卡片已有的 `cwd`\n     prop 转发进去**(修 §1.1 记的丢 `cwd` 不一致)。\n9. `src/renderer/markdown/spl"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "renderer/messages/TurnProcessGroupCard.tsx`\n   - 第 102–117 行内联 assistant 分支换 `<StreamingMarkdown>`,**把卡片已有的 `cwd`\n     prop 转发进去**(修 §1.1 记的丢 `cwd` 不一致)。\n9. `src/renderer/markdown/splitStreamingMarkdown.ts`(**新增**,纯函数)\n   - §5.2 切分规则;可复用 `stripMarkdown.ts` 的 fence 正则思路(§3 阶段 3)。\n10. `src/renderer/Markdown.tsx`\n    - 可导出 `StreamMarkdownPrefix`(窄管线)或把窄管线放 `StreamingMarkdown.tsx`;\n      `streamingMarkdownClassName`/`markdownBodyClassName` 复用,不改语义。\n11. (可选)settings:若做 feature flag `streamingRichRender`,加一处开关\n    (`settings/*` + `i18n/ns/settings.ts`,zh+en);默认 true。\n\n---\n\n## 八、测试计划(`bun test`,`renderToStaticMarkup` 断言 HTML 串)\n\n> 约束:无 DOM/jsdom、无 testing-library,effect/点击/IPC 在测试里不跑。所以:\n> **纯函数尽量抽出来单测;组件测静态输出;交互/滚动靠手动验证。**\n\n**单元测试(纯函数,最高价值)**\n- `ma"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "wn/splitStreamingMarkdown.ts`(**新增**,纯函数)\n   - §5.2 切分规则;可复用 `stripMarkdown.ts` 的 fence 正则思路(§3 阶段 3)。\n10. `src/renderer/Markdown.tsx`\n    - 可导出 `StreamMarkdownPrefix`(窄管线)或把窄管线放 `StreamingMarkdown.tsx`;\n      `streamingMarkdownClassName`/`markdownBodyClassName` 复用,不改语义。\n11. (可选)settings:若做 feature flag `streamingRichRender`,加一处开关\n    (`settings/*` + `i18n/ns/settings.ts`,zh+en);默认 true。\n\n---\n\n## 八、测试计划(`bun test`,`renderToStaticMarkup` 断言 HTML 串)\n\n> 约束:无 DOM/jsdom、无 testing-library,effect/点击/IPC 在测试里不跑。所以:\n> **纯函数尽量抽出来单测;组件测静态输出;交互/滚动靠手动验证。**\n\n**单元测试(纯函数,最高价值)**\n- `markdown/splitStreamingMarkdown.test.ts`(新增):\n  - 未闭合 ``` fence → fence 起归 activeTail;闭合后整段归 stablePrefix。\n  - 半张表(仅表头/分隔行)→ 归 activeTail;补齐数据行后 → 归 stablePrefix。\n  - 未闭合 `<div`/"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "测试计划(`bun test`,`renderToStaticMarkup` 断言 HTML 串)\n\n> 约束:无 DOM/jsdom、无 testing-library,effect/点击/IPC 在测试里不跑。所以:\n> **纯函数尽量抽出来单测;组件测静态输出;交互/滚动靠手动验证。**\n\n**单元测试(纯函数,最高价值)**\n- `markdown/splitStreamingMarkdown.test.ts`(新增):\n  - 未闭合 ``` fence → fence 起归 activeTail;闭合后整段归 stablePrefix。\n  - 半张表(仅表头/分隔行)→ 归 activeTail;补齐数据行后 → 归 stablePrefix。\n  - 未闭合 `<div`/`<span` → 归 activeTail。\n  - 末行(最后 `\\n` 后)始终在 activeTail。\n  - 空串 / 纯文本 / 多段混合的边界。\n- `chat/stickToBottom` 里可抽出纯计算 `isNearBottom(scrollHeight, scrollTop, clientHeight, threshold)`\n  单测(hook 本身依赖 DOM,难在 bun test 直接测)。\n- trigger 计算若抽成纯函数(`buildScrollTrigger(messages, liveTurnActive, trailingKey)`)\n  也单测桶化边界。\n\n**组件测试(`renderToStaticMarkup`)**\n- `messages/StreamingMarkdown.test.tsx`(新增):\n  - `done:false` 且富"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "\n\n## 十、落地顺序小结\n\n1. 阶段 0a:抽 `StreamingMarkdown`(**逐字等价,零行为变更**)+ 补组件测试基线。\n   阶段 0b:补 `cwd`(**有意行为变更,独立提交+测试**)。见 §11-S1。\n2. 阶段 1:滚动状态机 + 发送 re-arm + 流内跟随 + 跳底按钮(**先交付验收**)。\n3. 阶段 2:`splitStreamingMarkdown` + `StreamingMarkdownBody` + 窄管线 + 节流\n   (feature flag 默认开)。\n4. 阶段 3(可选):活跃代码块分块高亮、桌面/移动滚动统一。\n\n---\n\n## 十一、评审修正(2026-07-02,对抗性设计评审 + 代码事实核实后)\n\n> 代码事实层面全部核实通过(行号/依赖/文件位置与现状一致)。核心方向不变\n> (闭合块富渲染、未闭合当源码),但以下设计细节按原文实现会重新引入它要避免的\n> 抖动/卡顿。落地以本节为准,覆盖上文冲突处。\n\n**C4(覆盖 §5.2/§5.4)— 稳定前缀必须分块 memo,不能整段重解析。**\nreact-markdown 无增量解析,每 tick 全量重解析整个 `stablePrefix` = O(前缀长度),长回答\n下尾部照样 jank(150ms 事故本质)。改法:`stablePrefix` 按**空行(`\\n\\n`)切成 chunk**,\n每个 chunk 一个 `memo` 化的 `<StreamMarkdownPrefix>`,key = chunk 序号 + 内容 hash;只有\n**最新一个 chunk** 会随流入重解析,已定稿 chunk 不再 re-parse。这才实现 "
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "StreamingMarkdown`(**逐字等价,零行为变更**)+ 补组件测试基线。\n   阶段 0b:补 `cwd`(**有意行为变更,独立提交+测试**)。见 §11-S1。\n2. 阶段 1:滚动状态机 + 发送 re-arm + 流内跟随 + 跳底按钮(**先交付验收**)。\n3. 阶段 2:`splitStreamingMarkdown` + `StreamingMarkdownBody` + 窄管线 + 节流\n   (feature flag 默认开)。\n4. 阶段 3(可选):活跃代码块分块高亮、桌面/移动滚动统一。\n\n---\n\n## 十一、评审修正(2026-07-02,对抗性设计评审 + 代码事实核实后)\n\n> 代码事实层面全部核实通过(行号/依赖/文件位置与现状一致)。核心方向不变\n> (闭合块富渲染、未闭合当源码),但以下设计细节按原文实现会重新引入它要避免的\n> 抖动/卡顿。落地以本节为准,覆盖上文冲突处。\n\n**C4(覆盖 §5.2/§5.4)— 稳定前缀必须分块 memo,不能整段重解析。**\nreact-markdown 无增量解析,每 tick 全量重解析整个 `stablePrefix` = O(前缀长度),长回答\n下尾部照样 jank(150ms 事故本质)。改法:`stablePrefix` 按**空行(`\\n\\n`)切成 chunk**,\n每个 chunk 一个 `memo` 化的 `<StreamMarkdownPrefix>`,key = chunk 序号 + 内容 hash;只有\n**最新一个 chunk** 会随流入重解析,已定稿 chunk 不再 re-parse。这才实现 §3 引用的\n\"已提交行不再重排\"。`useDefe"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "at": "$.source_inventory[1540]",
+        "context": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "at": "$.source_inventory[1555]",
+        "context": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+        "at": "$.matches.cronMechanism[108].excerpt",
+        "context": "要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/cron-history-selected.json",
+        "at": "$.selected[141].excerpt",
+        "context": "要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "at": "$.contexts.worktreeFileOpen[26].context",
+        "context": "\n\n## 十、落地顺序小结\n\n1. 阶段 0a:抽 `StreamingMarkdown`(**逐字等价,零行为变更**)+ 补组件测试基线。\n   阶段 0b:补 `cwd`(**有意行为变更,独立提交+测试**)。见 §11-S1。\n2. 阶段 1:滚动状态机 + 发送 re-arm + 流内跟随 + 跳底按钮(**先交付验收**)。\n3. 阶段 2:`splitStreamingMarkdown` + `StreamingMarkdownBody` + 窄管线 + 节流\n   (feature flag 默认开)。\n4. 阶段 3(可选):活跃代码块分块高亮、桌面/移动滚动统一。\n\n-"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "at": "$.contexts.worktreeFileOpen[26].context",
+        "context": "StreamingMarkdown`(**逐字等价,零行为变更**)+ 补组件测试基线。\n   阶段 0b:补 `cwd`(**有意行为变更,独立提交+测试**)。见 §11-S1。\n2. 阶段 1:滚动状态机 + 发送 re-arm + 流内跟随 + 跳底按钮(**先交付验收**)。\n3. 阶段 2:`splitStreamingMarkdown` + `StreamingMarkdownBody` + 窄管线 + 节流\n   (feature flag 默认开)。\n4. 阶段 3(可选):活跃代码块分块高亮、桌面/移动滚动统一。\n\n-"
+      },
+      {
+        "path": "docs/review-2026-07-09/GUIDELINE.md",
+        "at": "$",
+        "context": "reamReducer.ts`（19KB，归约成 UI 状态）\n- 分组与折叠：`messages/streamGroups.ts`（27KB，**turn 分组 / 折叠逻辑的核心**）\n- 渲染组件：`MessageStream.tsx`（14KB，含自动滚动）、`messages/TurnProcessGroupCard.tsx`、`messages/StreamingMarkdown.tsx`、`markdown/splitStreamingMarkdown.ts`\n\n---\n\n## 3. codex 的执行流程（两阶段，串行）\n\n> 卡密sama 通过 DriveAgent（cli:codex）驱动。**一次一个任务，独立会话，跑完复核再派下一个**。不要一口气 fan-out 一堆 codex。\n\n### 阶段一：讲清架构（先做架构）\n\n**任务 A1 — Core 引擎结构说明**\n- 读：`docs/architecture/01-engine-and-turn-loop.md`、`docs/architecture/02-tool-system.md`、`docs/architecture/03-llm-and-model-layer.md`、`docs/architecture/04-protocol-and-sessions.md`、`docs/core-deep-dive/v2-02/03/05`、以及 §2A 的源码锚点。\n- 写：`docs/archive/review-2026-07-09/01-core-engine-structure.md`\n- 内容：按 engine / tool-system / protocol 三大块，每块给出 §1 "
+      },
+      {
+        "path": "docs/review-2026-07-09/GUIDELINE.md",
+        "at": "$",
+        "context": " 分组与折叠：`messages/streamGroups.ts`（27KB，**turn 分组 / 折叠逻辑的核心**）\n- 渲染组件：`MessageStream.tsx`（14KB，含自动滚动）、`messages/TurnProcessGroupCard.tsx`、`messages/StreamingMarkdown.tsx`、`markdown/splitStreamingMarkdown.ts`\n\n---\n\n## 3. codex 的执行流程（两阶段，串行）\n\n> 卡密sama 通过 DriveAgent（cli:codex）驱动。**一次一个任务，独立会话，跑完复核再派下一个**。不要一口气 fan-out 一堆 codex。\n\n### 阶段一：讲清架构（先做架构）\n\n**任务 A1 — Core 引擎结构说明**\n- 读：`docs/architecture/01-engine-and-turn-loop.md`、`docs/architecture/02-tool-system.md`、`docs/architecture/03-llm-and-model-layer.md`、`docs/architecture/04-protocol-and-sessions.md`、`docs/core-deep-dive/v2-02/03/05`、以及 §2A 的源码锚点。\n- 写：`docs/archive/review-2026-07-09/01-core-engine-structure.md`\n- 内容：按 engine / tool-system / protocol 三大块，每块给出 §1 的三层（结构 / 设计 / 为什么）。每个子模块配真实 `文件路径:"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "at": "$[115].file",
+        "context": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "at": "$[115].log",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/115-splitStreamingMarkdown.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$.groups[1].rawLogs[115].file",
+        "context": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$.groups[1].rawLogs[115].log",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/115-splitStreamingMarkdown.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$.groups[1].rawLogs[115].resolvedLog",
+        "context": "/private/tmp/codeshell-review-20261012/desktop-baseline/115-splitStreamingMarkdown.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$.groups[1].rawLogs[115].archiveMemberBasename",
+        "context": "115-splitStreamingMarkdown.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "at": "$.logs[256].file",
+        "context": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "at": "$.logs[256].originalLog",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/115-splitStreamingMarkdown.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "at": "$.logs[256].tarMember",
+        "context": "desktop-renderer/115-splitStreamingMarkdown.test.ts.log"
+      }
+    ]
+  },
+  "stats": {
+    "markdownFiles": 1262,
+    "jsonFiles": 1415,
+    "stringLeaves": 506929,
+    "scalarLeaves": 740424
+  },
+  "productExecution": false,
+  "limitation": "Keyword counts and capped contexts do not prove semantic exhaustion."
+}

@@ -1,0 +1,172 @@
+[
+  {
+    "path": "package.json",
+    "jsonPointers": [
+      "name",
+      "version",
+      "publishConfig",
+      "main",
+      "types",
+      "exports",
+      "bin",
+      "files",
+      "dependencies"
+    ],
+    "selected": {
+      "name": "@cjhyy/code-shell",
+      "version": "0.9.45",
+      "publishConfig": {
+        "access": "public"
+      },
+      "main": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        }
+      },
+      "bin": {
+        "code-shell": "./dist/cli.js"
+      },
+      "files": [
+        "assets/codeshell-dog-icon.png",
+        "assets/codeshell-promo.png",
+        "assets/codeshell-desktop-screenshot-en.png",
+        "docs/architecture/images/overview-runtime-layers.png",
+        "dist",
+        "scripts/check-node.cjs",
+        "README.md",
+        "README.zh-CN.md",
+        "LICENSE",
+        "CHANGELOG.md"
+      ],
+      "dependencies": {
+        "@cjhyy/code-shell-core": "workspace:*",
+        "@cjhyy/code-shell-tui": "workspace:*"
+      }
+    }
+  },
+  {
+    "path": "packages/core/package.json",
+    "jsonPointers": [
+      "name",
+      "version",
+      "publishConfig",
+      "main",
+      "types",
+      "exports",
+      "bin",
+      "files",
+      "dependencies",
+      "optionalDependencies"
+    ],
+    "selected": {
+      "name": "@cjhyy/code-shell-core",
+      "version": "0.9.45",
+      "publishConfig": {
+        "access": "public"
+      },
+      "main": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        },
+        "./internal": {
+          "types": "./dist/index.internal.d.ts",
+          "import": "./dist/index.internal.js"
+        },
+        "./internal/skills": {
+          "types": "./dist/index.skills.d.ts",
+          "import": "./dist/index.skills.js"
+        },
+        "./panel-app-runtime": {
+          "types": "./dist/panel-apps/runtime.d.ts",
+          "import": "./dist/panel-apps/runtime.js"
+        },
+        "./browser/panel-app-runtime": {
+          "types": "./dist/panel-apps/runtime.d.ts",
+          "import": "./dist/panel-apps/runtime.js"
+        },
+        "./extension": {
+          "types": "./dist/index.extension.d.ts",
+          "import": "./dist/index.extension.js"
+        },
+        "./bin/agent-server-stdio": "./dist/cli/agent-server-stdio.js"
+      },
+      "bin": {
+        "code-shell-output-journal": "./dist/cli/output-journal-repair.js"
+      },
+      "files": [
+        "dist"
+      ],
+      "dependencies": {
+        "@anthropic-ai/sdk": "^0.39.0",
+        "@cjhyy/code-shell-link": "workspace:*",
+        "@modelcontextprotocol/sdk": "^1.31.0",
+        "cross-spawn": "^7.0.6",
+        "glob": "^11.0.0",
+        "gpt-tokenizer": "^3.4.0",
+        "nanoid": "^5.1.2",
+        "openai": "^4.82.0",
+        "proper-lockfile": "^4.1.2",
+        "saxes": "6.0.0",
+        "semver": "^7.7.4",
+        "smol-toml": "^1.6.1",
+        "strip-ansi": "^7.2.0",
+        "yaml": "^2.7.0",
+        "yauzl": "^3.4.0",
+        "zod": "^3.24.2",
+        "zod-to-json-schema": "^3.25.2"
+      },
+      "optionalDependencies": {
+        "pdfjs-dist": "6.4.299"
+      }
+    }
+  },
+  {
+    "path": "packages/web/package.json",
+    "jsonPointers": [
+      "name",
+      "version",
+      "publishConfig",
+      "main",
+      "types",
+      "exports",
+      "files",
+      "dependencies",
+      "peerDependencies"
+    ],
+    "selected": {
+      "name": "@cjhyy/code-shell-web",
+      "version": "0.9.45",
+      "publishConfig": {
+        "access": "public"
+      },
+      "main": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js"
+        },
+        "./package.json": "./package.json"
+      },
+      "files": [
+        "dist",
+        "dist-app"
+      ],
+      "dependencies": {
+        "@cjhyy/code-shell-core": "workspace:*",
+        "@cjhyy/code-shell-link": "workspace:*",
+        "@types/react": "^19.2.14",
+        "qrcode": "1.5.4"
+      },
+      "peerDependencies": {
+        "react": "19.2.6"
+      }
+    }
+  }
+]

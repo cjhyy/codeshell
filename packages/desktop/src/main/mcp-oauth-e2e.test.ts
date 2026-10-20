@@ -12,7 +12,7 @@ import {
   createMcpAuthenticatedFetch,
   parseOAuthCredentialSecret,
 } from "@cjhyy/code-shell-core";
-import { McpOAuthService } from "./mcp-oauth-service.js";
+import { McpOAuthService, McpOAuthVerificationError } from "./mcp-oauth-service.js";
 import { buildCredentialSnapshot } from "./credential-access-service.js";
 
 async function requestBody(req: IncomingMessage): Promise<string> {
@@ -76,6 +76,7 @@ describe("MCP OAuth local protocol round-trip", () => {
     let protectedDiscoveryCalls = 0;
     let authorizationDiscoveryCalls = 0;
     let registrationCalls = 0;
+    let rejectMcp = false;
 
     server = createServer(async (req, res) => {
       const url = new URL(req.url ?? "/", origin || "http://127.0.0.1");
@@ -152,6 +153,11 @@ describe("MCP OAuth local protocol round-trip", () => {
         return;
       }
       if (url.pathname === "/mcp") {
+        if (rejectMcp) {
+          always401Authorizations.push(req.headers.authorization ?? "");
+          res.writeHead(401).end();
+          return;
+        }
         const authorization = req.headers.authorization ?? "";
         mcpAuthorizations.push(authorization);
         if (authorization !== "Bearer access-3") {
@@ -229,6 +235,15 @@ describe("MCP OAuth local protocol round-trip", () => {
     const store = new CredentialStore(undefined, new PlaintextCipher());
     const service = new McpOAuthService({
       store,
+      profiles: {
+        fixture: {
+          id: "fixture",
+          provider: "fixture",
+          label: "Local MCP",
+          serverUrl: `${origin}/mcp`,
+          registrationClientName: "Codex",
+        },
+      },
       openExternal: async (rawUrl) => {
         authorizationUrl = new URL(rawUrl);
         expect(authorizationUrl.searchParams.get("state")).toMatch(/^[a-f0-9]{32}$/);
@@ -237,7 +252,13 @@ describe("MCP OAuth local protocol round-trip", () => {
         const callback = new URL(callbackUrl);
         callback.searchParams.set("code", "local-auth-code");
         callback.searchParams.set("state", authorizationUrl.searchParams.get("state")!);
-        expect((await fetch(callback)).status).toBe(200);
+        const received = await fetch(callback);
+        expect(received.status).toBe(200);
+        const callbackHtml = await received.text();
+        expect(callbackHtml).toContain("Authorization received");
+        expect(callbackHtml).toContain("已收到授权");
+        expect(callbackHtml).toContain("Return to CodeShell to see the verification result");
+        expect(callbackHtml).not.toContain("Authorization successful");
         try {
           const duplicate = await fetch(callback, { signal: AbortSignal.timeout(200) });
           duplicateCallbackRejected = duplicate.status !== 200;
@@ -249,16 +270,16 @@ describe("MCP OAuth local protocol round-trip", () => {
     });
 
     const login = await service.login({
-      source: "mcp",
-      serverName: "Local MCP",
-      serverUrl: `${origin}/mcp`,
+      source: "catalog",
+      profileId: "fixture",
+      credentialId: "local-mcp-oauth",
     });
     expect(login.credential.id).toBe("local-mcp-oauth");
     expect(protectedDiscoveryCalls).toBe(1);
     expect(authorizationDiscoveryCalls).toBe(1);
     expect(registrationCalls).toBe(1);
     expect(registrationBody).toMatchObject({
-      client_name: "CodeShell",
+      client_name: "Codex",
       token_endpoint_auth_method: "none",
       scope: "tools",
     });
@@ -272,21 +293,19 @@ describe("MCP OAuth local protocol round-trip", () => {
       tokenEndpoint: `${origin}/token`,
       revocationEndpoint: `${origin}/revoke`,
     });
-    await expect(service.resolveAccessToken("local-mcp-oauth")).resolves.toMatchObject({
+    await expect(
+      service.resolveAccessToken("local-mcp-oauth", { serverUrl: `${origin}/mcp` }),
+    ).resolves.toMatchObject({
       accessToken: "access-2",
     });
 
     const access = {
       listMasked: () => [],
-      resolveMeta: () => ({
-        id: "local-mcp-oauth",
-        type: "oauth" as const,
-        label: "Local MCP",
-        hasSecret: true,
-      }),
+      resolveMeta: () => store.listMasked().find((value) => value.id === "local-mcp-oauth"),
       envExposures: () => ({}),
       resolveOAuthAccess: (request: { forceRefresh?: boolean }) =>
         service.resolveAccessToken("local-mcp-oauth", {
+          serverUrl: `${origin}/mcp`,
           forceRefresh: Boolean(request.forceRefresh),
         }),
     };
@@ -317,9 +336,32 @@ describe("MCP OAuth local protocol round-trip", () => {
     expect(mcpAuthorizations.slice(2).length).toBeGreaterThanOrEqual(2);
     expect(mcpAuthorizations.slice(2).every((value) => value === "Bearer access-3")).toBe(true);
 
-    expect((await authenticatedFetch(`${origin}/always-401`, { method: "POST" })).status).toBe(401);
+    rejectMcp = true;
+    expect((await authenticatedFetch(`${origin}/mcp`, { method: "POST" })).status).toBe(401);
+    rejectMcp = false;
     expect(always401Authorizations).toEqual(["Bearer access-3", "Bearer access-4"]);
     expect(tokenBodies).toHaveLength(4);
+
+    // The browser has received the code, while Host verification may still fail.
+    const prior = store.resolve("local-mcp-oauth")!;
+    await expect(
+      service.authorizeCredential(
+        { source: "catalog", profileId: "fixture", credentialId: "local-mcp-oauth" },
+        {
+          validateCredential: async () => {
+            throw new McpOAuthVerificationError(
+              "account_verification",
+              "account_identity_unavailable",
+            );
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      stage: "credential_verification",
+      reason: "account_identity_unavailable",
+    });
+    expect(store.resolve("local-mcp-oauth")).toEqual(prior);
+    expect(revokedTokens).toEqual(["refresh-5"]);
 
     const current = store.resolve("local-mcp-oauth")!;
     const currentSecret = parseOAuthCredentialSecret(current.secret!);
@@ -337,7 +379,7 @@ describe("MCP OAuth local protocol round-trip", () => {
       removed: true,
       remoteRevoked: false,
     });
-    expect(revokedTokens).toEqual([]);
+    expect(revokedTokens).toEqual(["refresh-5"]);
     expect(trustedRedirectBodies.map((request) => request.path)).toEqual([
       "/redirect-token",
       "/redirect-revoke",

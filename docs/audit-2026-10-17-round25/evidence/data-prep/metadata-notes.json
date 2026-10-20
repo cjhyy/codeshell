@@ -1,0 +1,23 @@
+{
+  "kind": "Manual first-response metadata transcription; not product raw log",
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "notes": [
+    {
+      "stage": "Saved history selection formatting",
+      "error": "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
+      "line": "if group==... and ... notin ...",
+      "correction": "Only Python metadata filter spelling corrected to not in. No product/import/test executed."
+    },
+    {
+      "stage": "Consumer source navigation",
+      "error": "rg: packages/core/src/tool-system/builtin/bash-output.ts: No such file or directory (os error 2)",
+      "reason": "Reviewer guessed a nonexistent filename despite having broad inventory. Guessed path is skipped; no product import or test attempted. Actual reference navigation must use inventory before reading.",
+      "exitCode": null,
+      "exitNote": "First exec display printed output only; exit metadata was not retained. No reconstructed exit value claimed."
+    }
+  ],
+  "firstResponseTranscription": "metadata-first-responses.txt",
+  "firstExitCodesRetained": false,
+  "correctionScope": "Metadata filter spelling corrected; actual consumer read only after rginventory located background-shell-tools.ts. No product/fixture/VM/AST execution or recovery of failed tests."
+}

@@ -1,0 +1,111 @@
+{
+  "frozenUTC": "2026-10-17T19:09:39.191008+00:00",
+  "root": "/tmp/codeshell-audit-round137-mobile-path-review",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "cause-history-projection.json",
+      "bytes": 9284,
+      "sha256": "f31ee0769ef7f37524fdf0d8e1f90a67ba744cba7236965af39e094ceebe1708"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 2898,
+      "sha256": "c7bae8625ebdda97754b8e9dffc3e84a9e446d2147b845ef476f182acec94aaa"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 969,
+      "sha256": "b04e2570a61f1f5dd1d8b60c9f579c0dcfca6743fddfd35c23ffd06931b254bd"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 5586,
+      "sha256": "9a8e11b66be7e11ad7e026c5ead15373f36260f35129c010543c2809945e4ee9"
+    },
+    {
+      "path": "entry-initial-pins.json",
+      "bytes": 539,
+      "sha256": "9b51f55bff88a97f30fa855c49c0f1e791136b04aacd280da43bbf1b55e5bd5c"
+    },
+    {
+      "path": "finalize-metadata.first.py",
+      "bytes": 14483,
+      "sha256": "0e3961e8c798bfbf7dcc23c645ecd036546d10c92046cda06dd1e6c5ab8d6868"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 14594,
+      "sha256": "8b1a7af9fa4b18b9041726ecb55095dbafb6119bbe87aaf623b1fbb7e143c97d"
+    },
+    {
+      "path": "freeze-checks.json",
+      "bytes": 5523,
+      "sha256": "14baf71097b8ef219196b5f5d7f45ea38c2189dc17658dfe27724737f38f97d1"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 2207,
+      "sha256": "bd83e5c35994bb9a18c1109fca6932b2829e75944026a32e9add066cf396a3b0"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1570,
+      "sha256": "cedfec38686a61f6539b7f61323e7125b3d4275ae434e87180abae80e12fcb2c"
+    },
+    {
+      "path": "metadata-first-error.json",
+      "bytes": 766,
+      "sha256": "89ead924b5aed47eb61d621b34c2e59bc17534eac14ea92abdac6f6a7740f562"
+    },
+    {
+      "path": "public-assets-inventory.json",
+      "bytes": 1266,
+      "sha256": "2aeda85f86dd9103d4bd3fb3a357fdbcdbcf355205317b12d0352a7f82b45afe"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5262,
+      "sha256": "b7ddf7ff40e0484c8d5e917d06fd49512f39dad0d7235555b5a6e04e998fb3bf"
+    },
+    {
+      "path": "shared-history-pins.json",
+      "bytes": 540,
+      "sha256": "a33c56c6f8e4c47f64dd415c7f8f5afb843afe95d14edc4f6b0323ecf70746f2"
+    },
+    {
+      "path": "shared-history-targets.json",
+      "bytes": 27692,
+      "sha256": "77a9d66f87ec2cbfc7ab84f98bb5edf86dc23e87f43caef73bfadf22dc074c60"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 43301,
+      "sha256": "ca4bd7cd90c0f27fa846cf4bcd02817a5d57cb034ce998163d18e10cb20521d6"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 18098,
+      "sha256": "fada57568381e16aef70d293fd8145666dc4ab9e40f5c12297fc216fb3cd8d0a"
+    },
+    {
+      "path": "source-resource-name-inventory.json",
+      "bytes": 10394,
+      "sha256": "cde714510a091f8d1bf83c831e9dfbf5e8c53d0a248b4491758251c4c0ffee96"
+    },
+    {
+      "path": "support-initial-pins.json",
+      "bytes": 1721,
+      "sha256": "ee09afa163e09666e81641bba5e3ee5ecc360269e5857ccc7c7d024c7410dc74"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1591,
+      "sha256": "39e299a1f053df4c0c5fbd9a36bd868dfae3877c02bcf995f35ff82438e80e63"
+    }
+  ],
+  "fileCountExcludingReceipt": 20,
+  "role": "Independent directed mobile encoded-path candidate review, formal promotion not supported, Root unit attempt reported only",
+  "productRunCount": 0,
+  "GitOperationCount": 0
+}

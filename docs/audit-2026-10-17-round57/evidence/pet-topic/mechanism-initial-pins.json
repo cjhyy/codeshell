@@ -1,0 +1,42 @@
+[
+  {
+    "path": "packages/pet/src/conversation-session-route.ts",
+    "bytes": 12852,
+    "lines": 369,
+    "sha256": "5c87bb342284c4a90c77fde336cc08cc0325dd79a49555dbb13e6e13c3f75f8b",
+    "pinAt": "2026-10-17T18:54:19.181857+00:00",
+    "coverage": "hash-only before body/navigation"
+  },
+  {
+    "path": "packages/pet/src/segment-closure.ts",
+    "bytes": 6195,
+    "lines": 154,
+    "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+    "pinAt": "2026-10-17T18:54:19.182386+00:00",
+    "coverage": "hash-only before body/navigation"
+  },
+  {
+    "path": "packages/pet/src/topic-segment.test.ts",
+    "bytes": 2315,
+    "lines": 69,
+    "sha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+    "pinAt": "2026-10-17T18:54:19.183372+00:00",
+    "coverage": "hash-only before body/navigation"
+  },
+  {
+    "path": "packages/pet/src/conversation-session-route.test.ts",
+    "bytes": 8610,
+    "lines": 217,
+    "sha256": "98604e965e244ef566e7b926403a27ce0b5f515e2ab429cb5a0e8a903304b4fa",
+    "pinAt": "2026-10-17T18:54:19.183824+00:00",
+    "coverage": "hash-only before body/navigation"
+  },
+  {
+    "path": "packages/pet/src/segment-closure.test.ts",
+    "bytes": 3238,
+    "lines": 86,
+    "sha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+    "pinAt": "2026-10-17T18:54:19.184299+00:00",
+    "coverage": "hash-only before body/navigation"
+  }
+]

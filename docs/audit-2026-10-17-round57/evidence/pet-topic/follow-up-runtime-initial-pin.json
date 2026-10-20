@@ -1,0 +1,8 @@
+{
+  "path": "packages/desktop/src/main/pet/pet-follow-up-runtime.ts",
+  "bytes": 5768,
+  "lines": 131,
+  "sha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+  "pinAt": "2026-10-17T18:58:11.557348+00:00",
+  "coverage": "hash-only before body/navigation"
+}

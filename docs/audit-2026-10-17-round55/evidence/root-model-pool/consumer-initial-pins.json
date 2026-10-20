@@ -1,0 +1,47 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/engine/model-connections-pool.ts",
+      "bytes": 3655,
+      "lines": 80,
+      "sha256": "e5ee2a984a6d2f57eac155140873facca04d296d495af55f5f7f4edee52ce467",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/llm/provider-catalog.ts",
+      "bytes": 2314,
+      "lines": 75,
+      "sha256": "ec80becdb369165c233e38f60bd242aee86170232d8209b20dd9422a6499c642",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.ts",
+      "bytes": 3687,
+      "lines": 74,
+      "sha256": "864b45aa4a8e41398d5191a974be7b9fb172137147109b1d2d0b05ae3335da8f",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/llm/reasoning-setting.ts",
+      "bytes": 2304,
+      "lines": 46,
+      "sha256": "a00d2dee0e430bafb8b89a50a0a71f54cff8a6ab6766221d1dcccad3d551b11f",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "lines": 159,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lines": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "productRuns": 0
+}

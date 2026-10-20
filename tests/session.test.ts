@@ -94,6 +94,7 @@ describe("SessionManager", () => {
     expect(forked.state.workspace).toEqual(original.state.workspace);
     expect(forked.state.workspace).not.toBe(original.state.workspace);
     expect(forked.state.tokenUsage.totalTokens).toBe(0);
+    expect(forked.state.cacheUsageVersion).toBe(1);
     expect(forked.state.cumulativePromptTokens).toBe(0);
     expect(forked.state.turnCount).toBe(0);
     expect(forked.state.turnSeq).toBe(0);

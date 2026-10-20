@@ -117,6 +117,10 @@ const guardReceipt = {
 };
 writeFileSync(join(evidence, "guard.json"), JSON.stringify(guardReceipt), { mode: 0o600 });
 console.log(`Batch preimport receipt: ${evidence}/guard.json`);
+// Core intentionally has no implicit Link implementations. Compose the actual
+// product providers only after this fresh process proved its exact-origin guard.
+const { installTestLinkProviders } = await import("../helpers/link-providers.js");
+await installTestLinkProviders();
 const { createGithubIssueBatch, normalizeGithubIssueBatch, githubIssueBatchPolicy } =
   await import("../../packages/core/src/links/github-issue-batch.js");
 const { githubOperationPlan } = await import("../../packages/core/src/links/operation-recovery.js");
@@ -179,6 +183,12 @@ function fixture() {
       linkRemoteGrantId: "synthetic-grant",
       linkLastVerifiedAt: "2026-10-10T00:00:00Z",
       linkCapabilityIds: ["github.create_issue", "github.list_issues", "github.get_issue"],
+      linkResourceGroups: [
+        {
+          id: "repositories",
+          items: [{ id: "synthetic-owner/synthetic-repo", label: "Synthetic fixture repository" }],
+        },
+      ],
     },
   };
   const ledger = () =>
@@ -268,6 +278,12 @@ function fixture() {
     },
   };
 }
+test("broker batch writes require the fixture's explicit repository grant before sending", async () => {
+  const f = fixture();
+  Reflect.deleteProperty(f.connection.meta, "linkResourceGroups");
+  expect(await f.invoke()).toMatchObject({ kind: "error", code: "permission_denied" });
+  expect(calls).toEqual([]);
+});
 test("actual ToolExecutor verifies two fixed slots, duplicate physical tool IDs never send twice", async () => {
   const f = fixture();
   expect((await f.invoke()).kind).toBe("action_result");

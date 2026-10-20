@@ -1,0 +1,33 @@
+{
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "oldFullSourceExclusions": 1,
+  "targetFullProof": "R13 groups.md7 explicitly complete source reading paired with groups-source-manifest/files/11 same currentSHA. This is physical source-read evidence, not full behavior/runtime proof.",
+  "noNewSpecificIndependentProblemEstablished": true,
+  "oldTimeDstLead": "R13 groups.md36 already deferred fixed24hour/calendar topics without ordinary producer/runtime evidence; no new candidate and no restoration of failed recorder-midnight direction.",
+  "sameShaTestFullSeparatelyActivated": false,
+  "currentExecution": {
+    "product": 0,
+    "helper": 0,
+    "fixture": 0,
+    "tests": 0,
+    "React": 0,
+    "DOM": 0,
+    "productClock": 0,
+    "timer": 0,
+    "network": 0,
+    "native": 0,
+    "Git": 0
+  },
+  "metadataEvidenceCaptureWallClock": "Python stdlib timestamps only, not product clock/format/timer execution.",
+  "tests": "Only source filenames/bytes were inventoried/hashed. Old test logs remain historic; zero current declarations or test/helper invocations.",
+  "metadataCommandFailures": 0,
+  "metadataTruncatedOutputs": 0,
+  "sourceBodyRead": 0,
+  "providerIdentityOrAuthorityExpanded": false,
+  "firstInventoryLimitation": "Broad *time*test* filename inventory also returned unrelated runtime test names; none of those unrelated paths was opened, hashed, imported or executed.",
+  "earlier87Status": "Dated JSON-only scope-unconfirmed category preserved. This task adds original Markdown support for this target exclusion without rewriting old packet or global counts."
+}

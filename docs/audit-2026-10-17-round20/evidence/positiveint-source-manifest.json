@@ -1,0 +1,70 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "sources": [
+    {
+      "path": "packages/tui/src/cli/parse-int-option.ts",
+      "readScope": "full source",
+      "selectedLineRanges": [
+        [
+          1,
+          24
+        ]
+      ],
+      "lineCount": 24,
+      "frozenSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "currentSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/parse-int-option.test.ts",
+      "readScope": "full existing leaf tests",
+      "selectedLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "lineCount": 29,
+      "frozenSha256": "93b1adadb242b9fe7241d26fd69c0381d47f9452ec35ef80660d084a03fcae11",
+      "currentSha256": "93b1adadb242b9fe7241d26fd69c0381d47f9452ec35ef80660d084a03fcae11",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "readScope": "selected static option definition and action ranges",
+      "selectedLineRanges": [
+        [
+          1,
+          155
+        ]
+      ],
+      "lineCount": 265,
+      "frozenSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/runs.ts",
+      "readScope": "selected static option definitions and consumers; import reference navigation",
+      "selectedLineRanges": [
+        [
+          15,
+          15
+        ],
+        [
+          90,
+          120
+        ],
+        [
+          265,
+          290
+        ]
+      ],
+      "lineCount": 323,
+      "frozenSha256": "19c28ce128736d4f9132bfa562907534b1f8918bd03af409bad1e662e32a6dfd",
+      "currentSha256": "19c28ce128736d4f9132bfa562907534b1f8918bd03af409bad1e662e32a6dfd",
+      "matchesFrozen": true
+    }
+  ],
+  "runtimeScope": "Actual parse-int-option.ts leaf, real Commander dependency via first Bun run; no CLI/program.parse, consumer, native, model or network execution."
+}

@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round3/evidence/root-codex-event-data.test.ts:
+{"case":"completed-files","input":{"type":"item.completed","item":{"id":"file-1","type":"file_change","changes":[{"path":"/fixture/a.ts","kind":"update"},{"path":"/fixture/b.ts","kind":"add"}],"status":"completed"}},"events":[]}
+(pass) R3-01 normal completed file_change with changes array produces no edit event [2.47ms]
+{"case":"mcp-results","success":[{"type":"tool_result","id":"mcp-1","summary":"[object Object]","isError":false}],"failure":[{"type":"tool_result","id":"mcp-2","summary":"","isError":true}]}
+(pass) R3-02 structured MCP success and error message lose readable result text [0.10ms]
+(pass) R3-03 non-object null JSON is thrown while malformed JSON noise is ignored [0.60ms]
+(pass) ordinary command output and final assistant text normal controls [0.17ms]
+
+ 4 pass
+ 0 fail
+ 9 expect() calls
+Ran 4 tests across 1 file. [195.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

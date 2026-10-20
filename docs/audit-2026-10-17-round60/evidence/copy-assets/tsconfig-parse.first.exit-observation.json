@@ -1,0 +1,10 @@
+{
+  "toolChunkId": "b4606c",
+  "exitCodeObserved": 1,
+  "failureKind": "audit metadata strict JSON parser applied to JSONC configuration",
+  "productOrBuildRun": false,
+  "beforeFailurePersisted": "runtime-consumer-display.json",
+  "tsconfigFirstAttemptPinTiming": "One core/tsconfig pin was held only in memory before parse exception, not durably saved. Its initial read timestamp/hash are not reconstructed. This followup pins all config bytes before successful selected text reading.",
+  "initialFailedReadSha256": null,
+  "rawSeparateStdoutStderrCaptured": false
+}

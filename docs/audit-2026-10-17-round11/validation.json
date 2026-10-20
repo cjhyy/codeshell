@@ -1,0 +1,109 @@
+{
+  "baseline": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "totals": {
+    "firstBunShards": 7,
+    "completedCleanShards": 7,
+    "passedTests": 42,
+    "expectations": 619,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 0,
+    "existingBaselineTests": 21,
+    "newFocusedObservationsAndControls": 21
+  },
+  "runs": [
+    {
+      "log": "evidence/root-composition-existing.first.log",
+      "exitFile": "evidence/root-composition-existing.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 6,
+      "failed": 0,
+      "expectations": 426,
+      "skipped": 0,
+      "sha256": "3aeac250c57f81b8c44febd3585256679f23fe1ea4666eeba35bee2f4e14274d"
+    },
+    {
+      "log": "evidence/root-composition-controls.first.log",
+      "exitFile": "evidence/root-composition-controls.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 3,
+      "failed": 0,
+      "expectations": 18,
+      "skipped": 0,
+      "sha256": "ff7c334746bde8009945aac1308431523930bc884a208fdcc2fdf373cba20379"
+    },
+    {
+      "log": "evidence/hooks-pure-contracts.first.log",
+      "exitFile": "evidence/hooks-pure-contracts.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 8,
+      "failed": 0,
+      "expectations": 30,
+      "skipped": 0,
+      "sha256": "d95f7fdeaa19c129d265e8930622644d10fdc8cd0ffcd5a77c1e2f409464778e"
+    },
+    {
+      "log": "evidence/hooks-existing-pure.first.log",
+      "exitFile": "evidence/hooks-existing-pure.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 13,
+      "failed": 0,
+      "expectations": 32,
+      "skipped": 0,
+      "sha256": "11a5a786d84d2a570e2ad263635242896659d0f9e7e455e426c53a97cc22c6ad"
+    },
+    {
+      "log": "evidence/host-lifecycle-controls.first.log",
+      "exitFile": "evidence/host-lifecycle-controls.first.receipt.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 6,
+      "failed": 0,
+      "expectations": 22,
+      "skipped": 0,
+      "sha256": "c5e5c0f5467870f9c1faab9772af94a33a44857326ffc3d69fd7a4a2ab613129"
+    },
+    {
+      "log": "evidence/chat-progress-load.first.log",
+      "exitFile": "evidence/chat-progress-load.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 4,
+      "failed": 0,
+      "expectations": 33,
+      "skipped": 0,
+      "sha256": "8c6f3df96b6b3d1836502af99335915576cef9644bc71518e986de0e483ed9c1"
+    },
+    {
+      "log": "evidence/chat-channel-baseline.first.log",
+      "exitFile": "evidence/chat-channel-baseline.first.exit.json",
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 2,
+      "failed": 0,
+      "expectations": 58,
+      "skipped": 0,
+      "sha256": "2a1afa45666257d9e42d628a969f147dcd7721c84515ab9de8a121a42281cf59"
+    }
+  ],
+  "notes": [
+    "Seven first raw combined stdout/stderr logs and exits saved before inspection; no failed Bun shard/product rerun.",
+    "42 tests = 21 existing baseline + 21 focused observations/controls; shared finding logs counted once.",
+    "Notification load defect uses real progress/relay/watcher prototype and memory store/pages/sleep/fake adapter; no client constructor, descriptor, request, checkpoint, real OS read failure or network.",
+    "No permanent notification-loss claim: cursor stays on the event and new handler can recover. Actual retry demonstration is bounded to three failed iterations.",
+    "Hook registration remains a contract candidate; synthetic mid-emit registration is not an Engine repeated-injection claim.",
+    "Compiler tests run ordinary metadata only; tool/query callables never run. Host lifecycle adapters are synchronous memory callbacks and dispatch is not invoked.",
+    "Static navigation/official-source access and metadata snapshot guard diagnostics separately retained; no skipped product direction recovered.",
+    "No real models/paid APIs/accounts/user data/external messages/native apps/PTY/auth/permission/security/custody/watchdog experiments, shared dist/dependency rebuild or full build/typecheck/lint/test."
+  ]
+}

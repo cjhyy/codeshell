@@ -1,0 +1,144 @@
+{
+  "task": "Read-only terminal-ui frontier preparation for possible round22",
+  "prepBaseline": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "actualHeadAtStart": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "actualHeadAtHistoryScan": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "actualHeadAtCompletion": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "recommendedDisposition": "Exclude terminal-ui as a dynamic lane under current constraints; retain static source lead only until an ordinary consumer is established. Do not extract/copy functions or invent mocks to force execution.",
+  "dynamicEligible": false,
+  "runtimeAttempts": 0,
+  "testsRun": 0,
+  "productImports": 0,
+  "constructors": 0,
+  "outputCaptureOrWrite": 0,
+  "gitWrites": 0,
+  "repoWrites": 0,
+  "sourceManifest": "sources.json",
+  "historyInventory": "history.json",
+  "historyTotals": {
+    "files": 2232,
+    "markdown": 1202,
+    "json": 1030,
+    "stringLeaves": 309992,
+    "scalarLeaves": 436032,
+    "parseErrors": 0
+  },
+  "historyMatchCounts": {
+    "target": 37,
+    "banner_padding": 74,
+    "known_overlap": 209
+  },
+  "historySavedContexts": {
+    "target": 37,
+    "banner_padding": 74,
+    "known_overlap": 100
+  },
+  "historyScope": "All current working corpus prior docs/bugs MD and recursively parsed JSON scalar values; includes current in-progress round21 reports, inventory describes read time and not final round21 or frozen commit-only corpus. No exclusions because round22 prep writes outside repo.",
+  "ordinaryConsumerNavigation": {
+    "command": [
+      "rg",
+      "-l",
+      "terminal-ui|formatToolStart|formatToolResult|renderTaskList|printBanner",
+      "packages",
+      "scripts",
+      "tests",
+      "--glob",
+      "*.ts",
+      "--glob",
+      "*.tsx",
+      "--glob",
+      "*.js",
+      "--glob",
+      "*.mjs",
+      "--glob",
+      "*.json"
+    ],
+    "matches": [
+      "packages/tui/src/cli/output/terminal-ui.ts"
+    ],
+    "selectedOrdinaryHeadlessChain": "run.ts:233 creates renderer from renderer.ts; line236 forwards envelope.event. Renderer does not import terminal-ui. Protocol/type reading confirms StreamEvent data shapes only.",
+    "limitations": [
+      "Literal search does not exclude computed/generated/external consumers.",
+      "No actual CLI/SDK/REPL/renderer/Engine/stdio behavior observed."
+    ]
+  },
+  "moduleCoupling": {
+    "runtimeImports": [
+      "chalk",
+      "ora",
+      "marked",
+      "marked-terminal",
+      "cli-highlight",
+      "@cjhyy/code-shell-core/internal getCurrentVersion"
+    ],
+    "topLevelInitialization": [
+      "chalk.level mutation at17–19",
+      "new Marked at21",
+      "marked.use(markedTerminal()) at22"
+    ],
+    "coupledExports": [
+      "createSpinner constructs/starts ora interval",
+      "printBanner writes console and invokes Core version",
+      "renderMarkdown/highlightCode require maintained parser/highlighter library behavior"
+    ],
+    "decision": "No isolated zero-import leaf export in this module; module import already executes constructors/initializers. No dependency stubs or source extraction performed."
+  },
+  "unclassifiedStaticLeads": [
+    {
+      "title": "Banner border inner width formula differs by four ASCII columns",
+      "source": "packages/tui/src/cli/output/terminal-ui.ts:94–125",
+      "observation": "top/bottom and empty lines use width56. For a short ASCII content line, p=width-stripAnsi(line).length+4 (106/113/121) and the concatenation at107/114/122 put four more padding positions inside the two vertical borders; source arithmetic yields inner60 while horizontal edge/empty is56. This is a static derivation, not output capture or a product call.",
+      "ordinaryContract": "Source printBanner documentation says styled banner box, but no actual ordinary production call/export consumer was found.",
+      "classification": "Unclassified source-only lead; no formal/candidate count or severity assigned.",
+      "dedup": "37 target matches mainly old duplicate-formatToolArgs record and copies; banner pattern74 includes unrelated planning/review banner mentions. No semantic-exhaustion claim."
+    }
+  ],
+  "overlapExclusions": [
+    {
+      "family": "Unicode truncation / display-column width",
+      "refs": [
+        "DESKTOP-R12-01",
+        "UTIL-R14-R1",
+        "TUI-C2 round7"
+      ],
+      "source": "private truncate228–229 and printBanner stripAnsi.length; same broad mechanisms, no new runtime or ordinary consumer. Old TUI Diff/Slice failures not recovered."
+    },
+    {
+      "family": "UTF16 byte labels",
+      "refs": [
+        "DESKTOP-R12-C1",
+        "round14 utils Read compact summary concern"
+      ],
+      "source": "Actual headless renderer compactSummary144 (content.length passed to formatBytes) is a different active module, statically read only. Already acknowledged prior concern; not new candidate or terminal-ui defect."
+    },
+    {
+      "family": "Parent/child text mapping",
+      "refs": [
+        "A12",
+        "round21 json-output.md"
+      ],
+      "source": "Terminal-ui has no StreamEvent reducer/caller. Actual renderer JsonRenderer child+empty fallback is old A12; excluded, not rerun."
+    },
+    {
+      "family": "stream retry/revoke display",
+      "refs": [
+        "round7 baseline",
+        "round20 streamattempt.md",
+        "old Desktop F-01"
+      ],
+      "source": "Terminal-ui has no correlation/attempt state. No retry/replay/rollback experiments or new bug claimed."
+    },
+    {
+      "family": "formatToolArgs duplication",
+      "refs": [
+        "May30 findings.json $[161]"
+      ],
+      "source": "Existing same-file maintenance record; no new item."
+    }
+  ],
+  "nextStep": "Root should select another frontier for runtime work. Revalidate actual HEAD, source bytes and fresh complete prior history after round21 integration before reusing this metadata.",
+  "metadataErrors": [],
+  "artifactDirectory": "/tmp/codeshell-audit-round22-terminal-ui-frontier",
+  "selectedSourceBytesChanged": false,
+  "productTimersOrNativeProcesses": 0
+}

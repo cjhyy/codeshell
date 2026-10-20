@@ -85,7 +85,7 @@ export function ConnectionInstanceCard({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <code className="font-mono">#{inst.id}</code>
+            <code className="min-w-0 [overflow-wrap:anywhere] font-mono">#{inst.id}</code>
             <span>·</span>
             <code className="break-all font-mono">{inst.model}</code>
           </div>

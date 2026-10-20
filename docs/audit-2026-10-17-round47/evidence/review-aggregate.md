@@ -1,0 +1,7 @@
+Formal47 archives three frozen packets,70verbatim copies and137receipt/copy checks,7worker source pins,15freeze checks. No new product finding/candidate/related. Web ordinary source review is selected454product+57test intentions,511semantic/902display,not full295 merely because target fully displayed. Meta57/60 source semantic0.
+
+Independent reviewer exactly reproduced49/51 sets,read all10 raw field additions and35transition evidence,34canonical+1dataset transfer. Formal provenance override retains the canonical selected1–181 row and remaining filesystem/store-not-read scope. Numeric categories stay304/169/4170,not a new reading or whole345file claim. No author frozen bytes changed.
+
+Twenty source-anchored inspectionScope objects versus21 all-field objects differ by one instruction row; not a missing source-object audit. Fourfull/fourselected SHA invalidations are separate from field10 and later evidence14/11 changes. Counts belong to4643 current-SHA snapshot and evidence through45;46+not backfilled. Unknown/unmarkable-full not unread,unfinished or bugs.
+
+Author method and product were not executed by reviewer/Root. Root verifier checks artifact integrity,source bindings,links and explicit final-set metadata,not every possible schema/parser combination. Actual negative controls are limited; do not inflate to exhaustive validity. JSON machine counts include old derived claims without turning them into new source evidence. Original first diagnostics and reviewer retraction retained.

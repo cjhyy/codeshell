@@ -1,0 +1,67 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 2,
+  "guardedRuns": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/coding/src/review/review-prompt.test.ts",
+        "docs/audit-2026-10-17-round19/evidence/reviewprompt-focused.test.ts"
+      ],
+      "exitCode": 0,
+      "raw": "docs/audit-2026-10-17-round19/evidence/reviewprompt-first.raw.log",
+      "exit": "docs/audit-2026-10-17-round19/evidence/reviewprompt-first.exit.json",
+      "completed": true,
+      "pass": 15,
+      "expect": 44,
+      "fail": 0,
+      "skipped": 0,
+      "existingTests": 9,
+      "existingExpect": 20,
+      "focusedTests": 6,
+      "focusedExpect": 24,
+      "focusedCharacterizationTests": 2,
+      "focusedOtherControlTests": 4,
+      "actualProductionLeafCalls": true,
+      "manualMirroredCliRecipe": false,
+      "firstAttempt": true
+    }
+  ],
+  "totals": {
+    "cleanRuns": 1,
+    "failedRuns": 0,
+    "runtimeAttempts": 1,
+    "pass": 15,
+    "expect": 44,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 9,
+    "focusedTests": 6,
+    "productRetryCount": 0
+  },
+  "firstRunHandling": "Combined raw stdout/stderr saved verbatim before inspection; exit JSON also saved before reading raw. No failure or retry.",
+  "preflight": "Actual source paths/Git bytes/absolute leaf import only; no guessed dependency package paths.",
+  "staticOnly": [
+    "TUI command parsing/prompt pass-through and inline usage UI wiring",
+    "R2-03 fixed fence related context",
+    "DESKTOP-R12-01 UTF-16 related context"
+  ],
+  "excluded": [
+    "/review CLI execution",
+    "product Git commands or filesystem state operations",
+    "client/model/network/paid API",
+    "TUI/React rendering",
+    "prompt injection/security experiments",
+    "Unicode truncate/encode experiments",
+    "all previous failed directions",
+    "broad build/typecheck/lint/full suite"
+  ],
+  "metadataAdjustments": [
+    "Independent review requested explicit intermediate TuiControlSurface static wiring; selected source/pin/report link added, zero product reruns."
+  ]
+}

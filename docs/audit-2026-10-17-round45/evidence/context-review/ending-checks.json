@@ -1,0 +1,160 @@
+{
+  "createdUTC": "2026-10-17T15:17:22.866399+00:00",
+  "sourceChecks": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "endingSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "endingSha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "endingSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "endingSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "endingSha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "endingSha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "endingSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "endingSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "endingSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "endingSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/run-context.ts",
+      "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "endingSha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "endingSha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "unchanged": true,
+      "coverage": "hash-only"
+    }
+  ],
+  "sourceAllSame": true,
+  "historyEnding": {
+    "count": 3979,
+    "sameScopeAsInitial": true,
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "historicalReading": {
+    "pathContextRead": {
+      "context": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "conversation": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    "contextSHAWindowsRead": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "conversationSHAWindowsNotSeparatelyRead": true,
+    "explicitCoverageRowsRead": 14,
+    "focusedRead": {
+      "ratio-order": [
+        0,
+        1,
+        2
+      ],
+      "form-helpers": [],
+      "ratio-percent": []
+    },
+    "limit": "Bounded windows/explicit metadata only; not whole documents or giant scalar semantic exhaustion."
+  },
+  "runtime": {
+    "productImports": 0,
+    "productFunctions": 0,
+    "languageFixtures": 0,
+    "testsSemanticRead": 0,
+    "testsExecuted": 0,
+    "reactDOMUI": 0,
+    "nativeNetworkModel": 0,
+    "git": 0
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "base": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "actual_head": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "report": "docs/audit-2026-10-17-round4/settings.md",
+  "findings": [
+    {
+      "id": "SET-01",
+      "severity": "P2",
+      "title": "User single-setting write masks unrelated YAML settings",
+      "path": "packages/core/src/settings/manager.ts",
+      "line": 550,
+      "conditions": "User settings.yaml or settings.yml is valid and settings.json absent; saveUserSetting writes one ordinary preference.",
+      "observed": "New JSON contains only changed field; next manager load loses effective userProfile/images from YAML; YAML bytes survive and removing generated JSON restores values.",
+      "reachability": "TUI /config set -> protocol config_set -> Engine.updateConfig -> SettingsManager.saveUserSetting. Only manager dynamic; caller wiring static.",
+      "receipt": "settings-yaml-write",
+      "counts": {
+        "tests": 5,
+        "assertions": 31
+      }
+    },
+    {
+      "id": "SET-02",
+      "severity": "P3",
+      "title": "Config reports success after persisting a known setting with invalid type",
+      "path": "packages/core/src/settings/manager.ts",
+      "line": 581,
+      "conditions": "Caller supplies a schema-invalid value for a known field, e.g. boolean agent.responseLanguage.",
+      "observed": "Real Config tool returns Updated and persists boolean; fresh SettingsManager.get throws; correct string write restores load. User single-setting writer shares omission.",
+      "reachability": "Actual configTool with owned cwd and real writer; user writer directly tested. No full app/transport/Engine execution.",
+      "receipt": "settings-invalid-write",
+      "counts": {
+        "tests": 4,
+        "assertions": 15
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C-SET-01",
+      "status": "static_only_unconfirmed",
+      "topic": "Mixed legacy migration can recompute existing providerKey; current Engine selection uses modelConnections, product impact not proven."
+    },
+    {
+      "id": "C-SET-02",
+      "status": "static_only_unconfirmed",
+      "topic": "Generic migration gaps/future input stamp target; production chain continuous and stamp-only manager diff not persisted."
+    }
+  ],
+  "runs": [
+    {
+      "id": "settings-yaml-write",
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round4/evidence/settings-yaml-write.test.ts",
+      "first_run": true,
+      "exit_code": 0,
+      "files": 1,
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "assertions": 31,
+      "completed": true,
+      "raw_stdout_stderr": "docs/audit-2026-10-17-round4/evidence/settings-yaml-write.first.log",
+      "exit_file": "docs/audit-2026-10-17-round4/evidence/settings-yaml-write.first.exit.txt"
+    },
+    {
+      "id": "settings-invalid-write",
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round4/evidence/settings-invalid-write.test.ts",
+      "first_run": true,
+      "exit_code": 0,
+      "files": 1,
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "assertions": 15,
+      "completed": true,
+      "raw_stdout_stderr": "docs/audit-2026-10-17-round4/evidence/settings-invalid-write.first.log",
+      "exit_file": "docs/audit-2026-10-17-round4/evidence/settings-invalid-write.first.exit.txt"
+    }
+  ],
+  "totals": {
+    "files": 2,
+    "tests": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "assertions": 46,
+    "confirmed": 2,
+    "P2": 1,
+    "P3": 1
+  },
+  "first_failures": [],
+  "retries": 0,
+  "source_manifest": "docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json",
+  "dedup": "docs/audit-2026-10-17-round4/evidence/settings-dedup.json",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/settings-dedup.json",
+      "sha256": "a097b9a4049a993eee29ee439693dd9833739977d7be8f740c4acf34247030cb",
+      "bytes": 11100
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/settings-invalid-write.first.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/settings-invalid-write.first.log",
+      "sha256": "ea25825a5ec151663eb6fa89ffc1691ab09b0d5f7dbba850fc2657ee33300430",
+      "bytes": 742
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/settings-invalid-write.test.ts",
+      "sha256": "958497ed6f630b4c0b8f6aa4ca67f4dbd677dccd0d9c3a20750d2bfa935cb0e1",
+      "bytes": 4538
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json",
+      "sha256": "939bca1e6f008f3a3df10ae14db96207c7bd9641547e12df3c8022c1e96c57ae",
+      "bytes": 2765
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/settings-yaml-write.first.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/settings-yaml-write.first.log",
+      "sha256": "d68d594fd25abc5f23916abbf8ccf7ca5ae8f3bd131bb540fd9ef258a7ba463e",
+      "bytes": 831
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/settings-yaml-write.test.ts",
+      "sha256": "7c55536975f8fa20292378cbd5c0980bcb3f39bf09d36e1ad5f48ec44057c488",
+      "bytes": 4601
+    }
+  ],
+  "limits": [
+    "No complete Core/repository suite",
+    "No real user data/model/network/API",
+    "No live TUI/Protocol transport/Engine/Electron",
+    "No auth/security/plugin install/hook experiment",
+    "No concurrent/multiprocess/failure-injection coverage",
+    "No product changes or git branch/index/commit operations"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "toolChunk": "7657f7",
+  "exitCode": 0,
+  "metadataPresentationTruncated": true,
+  "maxOutputTokens": 6500,
+  "originalTokenCount": 12559,
+  "warning": "Warning: truncated output (original token count: 12559)",
+  "requestedRows": {
+    "parameter-bounds": 19,
+    "numeric-save": 24,
+    "model-selection-patch": 0
+  },
+  "actualReadClaim": "Do not claim all requested records fully read. Subsequent bounded presentations separately recorded. Original full contexts remain focused-history.json; not regenerated raw stdout.",
+  "productFailure": false,
+  "sourceOrProductRerun": false
+}

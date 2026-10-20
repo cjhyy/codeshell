@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/hub/uploads.ts",
+      "bytes": 9115,
+      "sha256": "cceec9c70f92fd5bd95adb81eb5420cc3aeb507524518efbaba48e2743241511",
+      "lines": 267,
+      "atUTC": "2026-10-17T21:08:58.737206+00:00",
+      "beforeBodyAndLineNavigation": true
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "baselineReportedByRoot": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "frozenUtc": "2026-10-17T12:08:38.382414+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "helperOrEngineFunctionInvocations": 0,
+  "moduleImports": 0,
+  "languageFixturesExecuted": 0,
+  "modelActions": 0,
+  "realTaskActions": 0,
+  "lockOrApprovalActions": 0,
+  "permissionOrAuthorityActions": 0,
+  "nativeActions": 0,
+  "networkRequests": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataFailures": [],
+  "newFormalSemanticReadLines": 0,
+  "reusedSemanticReadLines": 513,
+  "historyScannerMeaning": "Metadata-only complete prior Markdown/recursiveJSONvalue scan, including frozen31/excluding current32, with actual excerpt review tracked separately. Completion is not product validation.",
+  "limits": [
+    "No product/parser or engine function, test or fixture ran.",
+    "Historical IMAGE-R15-C1 fixture is not rerun or counted as new current evidence.",
+    "No full build/typecheck/lint/suite, model, real Task, lock, approval, permissions or native experiment.",
+    "All old failed dynamic directions remain skipped."
+  ]
+}

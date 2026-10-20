@@ -1,0 +1,32 @@
+manifest keys ['frozenCommit', 'fileCount', 'allMatchFrozen', 'files']
+[
+  {
+    "pointer": "/files/4",
+    "object": {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "bytes": 6078,
+      "lines": 147,
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "frozenSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "matchesFrozen": true,
+      "reviewMode": "complete"
+    }
+  },
+  {
+    "pointer": "/files/5",
+    "object": {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "bytes": 4696,
+      "lines": 124,
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "frozenSha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "matchesFrozen": true,
+      "reviewMode": "complete"
+    }
+  }
+]
+report [44,63]
+Traceback (most recent call last):
+  File "<stdin>", line 4, in <module>
+  File "<stdin>", line 4, in <genexpr>
+IndexError: list index out of range

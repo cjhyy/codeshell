@@ -1,0 +1,25 @@
+{
+  "parentReportedPrepContext": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "mode": "static-only",
+  "runs": [],
+  "productAttempts": 0,
+  "productImports": 0,
+  "productFunctionCalls": 0,
+  "testRuns": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "fixturesExecuted": 0,
+  "reactBrowserRuns": 0,
+  "stdinTtyNativeRuns": 0,
+  "networkRequests": 0,
+  "gitCommands": 0,
+  "realUiForkSessionEngineCalls": 0,
+  "authIdentityExperiments": 0,
+  "existingTestDeclarationsRead": {
+    "packages/desktop/src/renderer/contextSelection.test.ts": 9,
+    "packages/desktop/src/renderer/modelSelection.test.ts": 2
+  },
+  "existingTestsExecuted": 0,
+  "sourceFinishChecksMatched": true,
+  "oldFailedDirectionsRemainSkipped": true
+}

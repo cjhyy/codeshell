@@ -1,0 +1,9 @@
+{
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "notes": [
+    "unclassified unsupported ordinary URL suffix lead",
+    "MIG-R15-C1 excluded based on separately attributed peer history"
+  ]
+}

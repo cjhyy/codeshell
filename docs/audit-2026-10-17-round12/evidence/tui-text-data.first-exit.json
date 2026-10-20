@@ -1,0 +1,13 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round12/evidence/tui-text-data.test.ts"
+  ],
+  "exitCode": 0,
+  "rawCombinedLog": "tui-text-data.first.log",
+  "firstAttempt": true,
+  "ranAgain": false
+}

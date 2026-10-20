@@ -1,0 +1,162 @@
+{
+  "status": "negative proposal; no new independent ordinary-producer contract violation established",
+  "outputDirectory": "/tmp/codeshell-audit-round26-frontier",
+  "round25Contribution": false,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "inventory": {
+    "paths": 194,
+    "directories": [
+      "packages/core/src/prompt",
+      "packages/web/src",
+      "packages/coding/src"
+    ],
+    "beforeSourceReview": true
+  },
+  "history": {
+    "roots": [
+      "docs",
+      "bugs"
+    ],
+    "archivesIncluded": true,
+    "round25Included": true,
+    "totals": {
+      "files": 2506,
+      "markdown": 1240,
+      "json": 1266,
+      "stringLeaves": 426716,
+      "scalarLeaves": 609556,
+      "parseErrors": 0
+    },
+    "matchCounts": {
+      "prompt": 493,
+      "user-display": 208,
+      "message-mapper": 158,
+      "output-projection": 483,
+      "model-trace": 51,
+      "notebook": 211,
+      "git-parse": 64,
+      "coding-text": 110,
+      "client-sync": 416,
+      "client-env": 18
+    },
+    "retainedContexts": {
+      "prompt": 180,
+      "user-display": 180,
+      "message-mapper": 158,
+      "output-projection": 180,
+      "model-trace": 51,
+      "notebook": 180,
+      "git-parse": 64,
+      "coding-text": 110,
+      "client-sync": 180,
+      "client-env": 18
+    },
+    "supplementMatchCounts": {
+      "codex-user-context": 44,
+      "connection-leaf": 1,
+      "turn-input": 1
+    },
+    "supplementRetainedContexts": {
+      "codex-user-context": 44,
+      "connection-leaf": 1,
+      "turn-input": 1
+    },
+    "limitations": [
+      "Broad groups are capped at180 contexts, supplemental groups at100. Counts exceed retained contexts in some groups; no semantic-exhaustion claim.",
+      "JSON scalar values searched recursively, not keys. Snapshot is per-file, not Git-verified global atomic history. Future adoption must refresh history after integration."
+    ]
+  },
+  "consideredFrontiers": [
+    {
+      "path": "packages/web/src/lib/connectionLiveness.ts",
+      "decision": "Not selected",
+      "ordinaryChain": "useRemoteSocket imports the class and constructs one per socket; selected1..145 confirms real transport/lifecycle coupling.",
+      "counterevidence": "Revision/stopped/paused guards, arm-before-send and single-flight probing are explicit source choices. No concrete ordinary producer violated a separate contract during static review.",
+      "dynamicBoundary": "Zero imports are not sufficient to make constructor safe pure data: it arms real timers. No constructor/timer/probe/socket/auth test or fake timer suggested."
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-user-text.ts",
+      "decision": "No new issue / no test recommendation",
+      "ordinaryChain": "Actual parseCodexRecentHistory and parseCodexTranscriptLine call codexUserText for user payload content; firstUserMessageFromPrefix calls it for title text. Only selected source read, no actual transcript/user data loaded.",
+      "contract": "Retain user-authored parts while discarding known leading host parts, and strip complete leading Page snapshots while preserving following prompt.",
+      "counterevidence": "Complete-leading-page regex and separate per-part mapping directly serve the stated ordinary shape. A deliberately host-prefixed literal user string is not sufficient evidence of a producer defect; no new normal writer shape violating this contract was established.",
+      "oldScope": "Existing room/history/mapper titles and failed projection/replay directions remain excluded. No claim that this isolated helper validates complete room projection."
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/turn-input.ts",
+      "decision": "No new issue; attachment direction excluded",
+      "ordinaryChain": "Inventory query finds textWithAttachmentReferences called by both Codex and Claude Code runtime source; runtime callers were not semantically read or invoked.",
+      "counterevidence": "The helper explicitly returns original text when no nonblank reference and appends ordinary path references otherwise. No unsupported input shape is generalized to a user failure; no path/attachment/security test suggested."
+    }
+  ],
+  "historyExclusions": [
+    {
+      "prior": "SectionCache and prompt composition",
+      "evidence": [
+        "docs/audit-2026-10-17-round25/frontier-selection.md:7",
+        "docs/audit-2026-10-17-round23/product-report.md:21"
+      ],
+      "decision": "SectionCache already round5 actual coverage, prompt customPrompt/sections precedence oldPRODUCT-R23-R1. No cache baseline or model-wish experiment repeated."
+    },
+    {
+      "prior": "messageMappers/userMessageDisplay/output projections",
+      "evidence": [
+        "docs/audit-2026-10-17-round17/mappers.md:21",
+        "docs/audit-2026-10-17-round14/web.md",
+        "docs/audit-2026-10-17-round18/unread.md"
+      ],
+      "decision": "Existing mapper/legacy text/newline or old unproven snapshot-live/unread candidate scope. Do not manufacture new reducer failure from isolated objects or replay old failed group."
+    },
+    {
+      "prior": "model trace presentation/API",
+      "evidence": [
+        "docs/audit-2026-10-17-round18/presentation.md",
+        "docs/audit-2026-10-17-round18/traceapi.md"
+      ],
+      "decision": "Already read and tested prior round; no new baseline repetition."
+    },
+    {
+      "prior": "NotebookEdit",
+      "evidence": [
+        "docs/review-remaining-2026-10-12/coding-tui-chat.md:152",
+        "docs/review-remaining-2026-10-12/coding-tui-chat.md:160"
+      ],
+      "decision": "Existing C9 string-form source and C10 replace metadata/id mechanisms excluded; no tool/FS experiment."
+    },
+    {
+      "prior": "Git parse-log/slug, review prompt, changed-file parser",
+      "evidence": [
+        "docs/audit-2026-10-17-round13/git-text.md",
+        "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+        "docs/audit-2026-10-17/root.md:73"
+      ],
+      "decision": "Previously covered parse-log/slug and review alias/fences/UTF16/Move-to mechanisms; no Git, patch, parser or baseline execution."
+    },
+    {
+      "prior": "All old failed LSP/patch/grep/read/Edit, memory-sort, ANSI, i18n and authority directions",
+      "decision": "Remain skipped. No wrappers, alternative validation or neighboring broad suite used to recover them."
+    }
+  ],
+  "nextStep": {
+    "recommendNewDynamicLane": false,
+    "reason": "No independent new ordinary producer+contract contradiction warrants another test. Pure codexUserText could be a bounded leaf only if Root later establishes a new specific writer-contract gap; do not execute just to add controls.",
+    "requiresNewAuthorizationAndFreeze": true,
+    "fixturesWritten": false,
+    "testsRun": false
+  },
+  "sourceManifest": "source-manifest.json",
+  "metadataNotes": "metadata-notes.json",
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "fixturesWritten": 0,
+  "vmAstEvaluations": 0,
+  "nativeExperiments": 0,
+  "networkRequests": 0,
+  "authSecurityExperiments": 0,
+  "realHomeAccess": 0,
+  "gitCommands": 0,
+  "round25Writes": 0
+}

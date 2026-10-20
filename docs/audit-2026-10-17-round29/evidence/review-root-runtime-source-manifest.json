@@ -1,0 +1,1381 @@
+{
+  "parentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "reviewer": "aggregator_round27_resume",
+  "captureAtUTC": "2026-10-17T11:43:10.028347+00:00",
+  "mode": "independent static text review only",
+  "gitCommands": 0,
+  "productExecutions": 0,
+  "sourcePins": [
+    {
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "bytes": 5644,
+      "lineCount": 168,
+      "ranges": [
+        [
+          1,
+          168
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 168,
+      "initialSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/web/src/lib/mobileOutputRecovery.ts",
+      "bytes": 6817,
+      "lineCount": 161,
+      "ranges": [
+        [
+          1,
+          161
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 161,
+      "initialSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/shared/stream-envelope.ts",
+      "bytes": 936,
+      "lineCount": 22,
+      "ranges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 22,
+      "initialSha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/shared/stream-envelope.test.ts",
+      "bytes": 1602,
+      "lineCount": 49,
+      "ranges": [
+        [
+          1,
+          49
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 49,
+      "initialSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/main/parseStreamLine.ts",
+      "bytes": 2283,
+      "lineCount": 63,
+      "ranges": [
+        [
+          1,
+          63
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 63,
+      "initialSha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/main/parseStreamLine.test.ts",
+      "bytes": 4946,
+      "lineCount": 152,
+      "ranges": [
+        [
+          1,
+          152
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 152,
+      "initialSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lineCount": 1892,
+      "ranges": [
+        [
+          235,
+          310
+        ]
+      ],
+      "coverage": "selected",
+      "coveredLineCount": 76,
+      "initialSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "bytes": 14977,
+      "lineCount": 396,
+      "ranges": [
+        [
+          150,
+          270
+        ]
+      ],
+      "coverage": "selected",
+      "coveredLineCount": 121,
+      "initialSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "bytes": 2732,
+      "lineCount": 101,
+      "ranges": [
+        [
+          1,
+          101
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 101,
+      "initialSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "bytes": 2451,
+      "lineCount": 79,
+      "ranges": [
+        [
+          1,
+          79
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 79,
+      "initialSha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "bytes": 7513,
+      "lineCount": 207,
+      "ranges": [
+        [
+          1,
+          207
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 207,
+      "initialSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.test.ts",
+      "bytes": 9383,
+      "lineCount": 229,
+      "ranges": [
+        [
+          1,
+          229
+        ]
+      ],
+      "coverage": "full",
+      "coveredLineCount": 229,
+      "initialSha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "bytes": 38404,
+      "lineCount": 999,
+      "ranges": [
+        [
+          315,
+          366
+        ],
+        [
+          527,
+          600
+        ],
+        [
+          610,
+          790
+        ]
+      ],
+      "coverage": "selected",
+      "coveredLineCount": 307,
+      "initialSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "lineCount": 800,
+      "ranges": [
+        [
+          578,
+          632
+        ]
+      ],
+      "coverage": "selected",
+      "coveredLineCount": 55,
+      "initialSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lineCount": 1377,
+      "ranges": [
+        [
+          530,
+          635
+        ]
+      ],
+      "coverage": "selected",
+      "coveredLineCount": 106,
+      "initialSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/web/app/chat.ts",
+      "bytes": 8615,
+      "lineCount": 208,
+      "ranges": [
+        [
+          36,
+          74
+        ],
+        [
+          96,
+          126
+        ]
+      ],
+      "coverage": "selected",
+      "coveredLineCount": 70,
+      "initialSha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+      "finishSha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "matchesInitialPin": true
+    }
+  ],
+  "authorArtifactChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round29/root-report.md",
+      "bytes": 3525,
+      "sha256": "70c60a8e2d4bc2117ff7ee637a9dce32cb23be606b71d007f872993f52b63aae",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-initial-source-pins.json",
+      "bytes": 1656,
+      "sha256": "d41ded59501d4e1e7833a54bdfb9e43568222ccb90dc8e6df85f4ee05c47428d",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-consumer-pins.json",
+      "bytes": 1385,
+      "sha256": "3f8c6e82617d67524bdfd4bb8fef05e8d2ed5f79e430e13298571d53a785d6dc",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-metadata-notes.json",
+      "bytes": 1040,
+      "sha256": "879718ae8c2444df678e3f7d3ae6cbc37f71ee63debc7e240d8425d31fccc94d",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.py",
+      "bytes": 3392,
+      "sha256": "9dd4996d03a17064b1622f2d23f4ffec1748e5deaacfbf54f43c6d5d17941e5a",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "bytes": 649251,
+      "sha256": "f6a1d68e48cf38e4fbf53d154e9d26f8bebc83f19c110a9867db2b9bc5e74a31",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+      "bytes": 7245,
+      "sha256": "4a7da67b11c3d9f9ef57e363b2189e3745de8b3e3a3eafff70f1e68a7a6c48fb",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-history-decisions.json",
+      "bytes": 1152,
+      "sha256": "d0ae9bf9c2623cebd7ad8603042581afffc6a0bab1c88b866846a3e6ae18f60f",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-validation.json",
+      "bytes": 661,
+      "sha256": "4eb85ca926aa9b7d52f3e2b0a30fb7fa46154d4c1754c23586538dece75a2f85",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-artifact-receipt.json",
+      "bytes": 2536,
+      "sha256": "8224d4943ad8fdfffad7b25ea5b9b63a1c4da51f5d8a2cb683e9009ccfd187a9",
+      "receiptSelfExcluded": true,
+      "kind": "current Round29 author receipt capture; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-author-checks.json",
+      "bytes": 5394,
+      "sha256": "469c477e0c5658c291d5c6caceb51bc7b84009fd0657667e3b7559c68cda4a9f",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+      "bytes": 668269,
+      "sha256": "e1503f9210a7bbe21a077e1c1c5355e83323bae3e3b20a7204044b1f0df7f5e2",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.py",
+      "bytes": 3473,
+      "sha256": "7021c145e0d6bf494589b782faac4ddd97ac93063d4fd5880aa6c1d65b1cbb5f",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-history-decisions.json",
+      "bytes": 5261,
+      "sha256": "502453893c914afdabdf16af09d91c99678965809f3b71c91e7802dc8d1afd57",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-metadata-notes.json",
+      "bytes": 1218,
+      "sha256": "c1cc87b641ea0c24930c83cc8ab59c40d66bc6332fe2165f618af7d6767bd913",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep-copy-receipt.json",
+      "bytes": 4609,
+      "sha256": "e7dbfb496c15367450f48f3c770917073179740159321b92fb034811eff3b1cb",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-source-manifest.json",
+      "bytes": 8223,
+      "sha256": "0cab58340ffc4b0fcba458cdddad4f92fc6aa3ef55d782bd2ccbff15edd3d78f",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-validation.json",
+      "bytes": 929,
+      "sha256": "2fcd04541c2b52dc634902da46341a3310740097c1ea7394c5df689220fd1935",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/runtime-report.md",
+      "bytes": 5787,
+      "sha256": "ad25349e08624c89ecfa42d4b08702c60aad511e56270afdfa11bdd1e8f515a7",
+      "receiptMatched": true,
+      "kind": "current Round29 frozen author artifact; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-artifact-receipt.json",
+      "bytes": 2748,
+      "sha256": "1d12713a18365d9a25689f79f486aadbf4c6bc69d3d4a193bc37c13a96bb5833",
+      "receiptSelfExcluded": true,
+      "kind": "current Round29 author receipt capture; not baseline source"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/README.md",
+      "bytes": 1613,
+      "sha256": "2dda988b1f4ae4007d933f1074b13cb6650e7d656e6433f77f66f38b9e70a806",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/artifact-receipt.json",
+      "bytes": 3030,
+      "sha256": "9b3813ef49874e34dbe4078f2ee3a5d3900d5e966174778765db7c03046cf0e5",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/consumer-initial-pin.json",
+      "bytes": 282,
+      "sha256": "cd8fcc451aafb731025bc0d9ed2997c906d80a39ef814a4ace4340f00d534397",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/extra-initial-pins.json",
+      "bytes": 2109,
+      "sha256": "efa55c39e3fbd227f574ac3b06d0f88640b6376c7fa3619cb5c9f527e66ae19f",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/finish-hash-checks.json",
+      "bytes": 1855,
+      "sha256": "f179aa4068d05f2d4ff0ac804c16fca2d5f84b3f17948e001545c374f1ebc6bf",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history-decisions.json",
+      "bytes": 4543,
+      "sha256": "cc0e7f7bcaa411f421097b72a69b19d149317b3458bc989ba2365aa1d7431530",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history-method.py",
+      "bytes": 3475,
+      "sha256": "5df8e637e3ee04592cbbbb0b938dfa04ffb93f82d6b5934a01940cdf8e896852",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+      "bytes": 651772,
+      "sha256": "fc1700f90f30909f4f78955dff6d25fa510954c2f65b8470ffd95857330ae290",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/initial-pins.json",
+      "bytes": 1680,
+      "sha256": "73f75f2ecd43d0c6d00ad866b77c80b6fd8df87b65eb0288583eda6999bed686",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/proposal.json",
+      "bytes": 1627,
+      "sha256": "e2afbd4334b66eae30a70b7b507bb628911bf354056a5144cfc02d867f87a987",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/selection.json",
+      "bytes": 1509,
+      "sha256": "d1adf923dce8c111001429ac2298cf7c582c86ff86f1f3c94f2911ed17a774f2",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/source-manifest.json",
+      "bytes": 8114,
+      "sha256": "d3e722359c0b80bae5bca66544fc61baf87191fb0b5b6ff081e38dd226dd460a",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/validation.json",
+      "bytes": 515,
+      "sha256": "073e583356b806d4c74062cef05075b8c04ecd22c86cafaafea9c68ed368a36f",
+      "copyReceiptMatched": true,
+      "kind": "verbatim prep provenance, not a new source read"
+    }
+  ],
+  "authorManifestChecks": [
+    {
+      "author": "root",
+      "sourceRows": [
+        {
+          "path": "packages/web/src/lib/outputCoverage.ts",
+          "currentSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "bytes": 5644,
+          "lineCount": 168,
+          "ranges": [
+            [
+              1,
+              168
+            ]
+          ],
+          "coveredLineCount": 168,
+          "role": "product",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "firstPinBeforeThisTaskSemanticRead": null,
+          "pinTiming": "Before semantic source reading; earlier wc/rg navigation only."
+        },
+        {
+          "path": "packages/web/src/lib/mobileOutputRecovery.ts",
+          "currentSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+          "bytes": 6817,
+          "lineCount": 161,
+          "ranges": [
+            [
+              1,
+              161
+            ]
+          ],
+          "coveredLineCount": 161,
+          "role": "product",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+          "firstPinBeforeThisTaskSemanticRead": null,
+          "pinTiming": "Before semantic source reading; earlier wc/rg navigation only."
+        },
+        {
+          "path": "packages/desktop/src/shared/stream-envelope.ts",
+          "currentSha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+          "bytes": 936,
+          "lineCount": 22,
+          "ranges": [
+            [
+              1,
+              22
+            ]
+          ],
+          "coveredLineCount": 22,
+          "role": "product",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": null,
+          "pinTiming": "First durable hash after full22-line source read; initial stays null."
+        },
+        {
+          "path": "packages/desktop/src/shared/stream-envelope.test.ts",
+          "currentSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+          "bytes": 1602,
+          "lineCount": 49,
+          "ranges": [
+            [
+              1,
+              49
+            ]
+          ],
+          "coveredLineCount": 49,
+          "role": "test-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+          "firstPinBeforeThisTaskSemanticRead": null,
+          "pinTiming": "Before semantic source reading; earlier wc/rg navigation only."
+        },
+        {
+          "path": "packages/desktop/src/main/parseStreamLine.ts",
+          "currentSha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+          "bytes": 2283,
+          "lineCount": 63,
+          "ranges": [
+            [
+              1,
+              63
+            ]
+          ],
+          "coveredLineCount": 63,
+          "role": "product",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": null,
+          "pinTiming": "after full63 source read"
+        },
+        {
+          "path": "packages/desktop/src/main/parseStreamLine.test.ts",
+          "currentSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+          "bytes": 4946,
+          "lineCount": 152,
+          "ranges": [
+            [
+              1,
+              152
+            ]
+          ],
+          "coveredLineCount": 152,
+          "role": "test-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+          "firstPinBeforeThisTaskSemanticRead": null,
+          "pinTiming": "before full152 source read"
+        },
+        {
+          "path": "packages/desktop/src/preload/index.ts",
+          "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "bytes": 86436,
+          "lineCount": 1892,
+          "ranges": [
+            [
+              235,
+              310
+            ]
+          ],
+          "coveredLineCount": 76,
+          "role": "ordinary-consumer",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": null,
+          "pinTiming": "after selected235-310 consumer read"
+        },
+        {
+          "path": "packages/web/src/hooks/mobileOutputClient.ts",
+          "currentSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+          "bytes": 14977,
+          "lineCount": 396,
+          "ranges": [
+            [
+              150,
+              270
+            ]
+          ],
+          "coveredLineCount": 121,
+          "role": "ordinary-consumer",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+          "firstPinBeforeThisTaskSemanticRead": null,
+          "pinTiming": "before selected150-270 semantic read; earlier rg/wc navigation only"
+        },
+        {
+          "path": "CODESHELL.md",
+          "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "bytes": 17639,
+          "lineCount": 217,
+          "ranges": [
+            [
+              1,
+              217
+            ]
+          ],
+          "coveredLineCount": 217,
+          "role": "instruction",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": null,
+          "pinTiming": "Instruction source fully read now; no fresh read-start pin, prior round instruction hash unchanged."
+        }
+      ],
+      "sourceRowCount": 9,
+      "totalDeclaredReadLines": 1029,
+      "ordinaryProductContractReadLines": 812,
+      "instructionReadLines": 217,
+      "navigationOnlyReadLines": 0,
+      "note": "Independent current filesystem SHA and range-bound checks for every author row; does not claim reviewer semantic reading outside own sourcePins or Git object binding."
+    },
+    {
+      "author": "runtime",
+      "sourceRows": [
+        {
+          "path": "CODESHELL.md",
+          "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "bytes": 17639,
+          "lineCount": 217,
+          "ranges": [
+            [
+              1,
+              217
+            ]
+          ],
+          "coveredLineCount": 217,
+          "role": "instruction",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": false,
+          "pinTiming": null
+        },
+        {
+          "path": "packages/core/src/run/RunQueue.ts",
+          "currentSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+          "bytes": 2732,
+          "lineCount": 101,
+          "ranges": [
+            [
+              1,
+              101
+            ]
+          ],
+          "coveredLineCount": 101,
+          "role": "product-or-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": true,
+          "pinTiming": null
+        },
+        {
+          "path": "packages/web/src/lib/transcriptReplay.ts",
+          "currentSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+          "bytes": 7513,
+          "lineCount": 207,
+          "ranges": [
+            [
+              1,
+              207
+            ]
+          ],
+          "coveredLineCount": 207,
+          "role": "product-or-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": true,
+          "pinTiming": null
+        },
+        {
+          "path": "packages/core/src/run/RunQueue.test.ts",
+          "currentSha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+          "bytes": 2451,
+          "lineCount": 79,
+          "ranges": [
+            [
+              1,
+              79
+            ]
+          ],
+          "coveredLineCount": 79,
+          "role": "product-or-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": false,
+          "pinTiming": null
+        },
+        {
+          "path": "packages/core/src/run/RunManager.ts",
+          "currentSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+          "bytes": 38404,
+          "lineCount": 999,
+          "ranges": [
+            [
+              115,
+              153
+            ],
+            [
+              315,
+              366
+            ],
+            [
+              527,
+              600
+            ],
+            [
+              610,
+              790
+            ]
+          ],
+          "coveredLineCount": 346,
+          "role": "product-or-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": true,
+          "pinTiming": null
+        },
+        {
+          "path": "packages/web/src/lib/transcriptReplay.test.ts",
+          "currentSha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+          "bytes": 9383,
+          "lineCount": 229,
+          "ranges": [
+            [
+              1,
+              229
+            ]
+          ],
+          "coveredLineCount": 229,
+          "role": "product-or-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": false,
+          "pinTiming": null
+        },
+        {
+          "path": "packages/web/src/lib/streamReducer.ts",
+          "currentSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+          "bytes": 28526,
+          "lineCount": 800,
+          "ranges": [
+            [
+              320,
+              367
+            ],
+            [
+              455,
+              516
+            ],
+            [
+              578,
+              632
+            ]
+          ],
+          "coveredLineCount": 165,
+          "role": "product-or-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": true,
+          "pinTiming": null
+        },
+        {
+          "path": "packages/core/src/session/transcript.ts",
+          "currentSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+          "bytes": 51303,
+          "lineCount": 1377,
+          "ranges": [
+            [
+              530,
+              635
+            ]
+          ],
+          "coveredLineCount": 106,
+          "role": "product-or-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": true,
+          "pinTiming": null
+        },
+        {
+          "path": "packages/web/src/hooks/mobileOutputClient.ts",
+          "currentSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+          "bytes": 14977,
+          "lineCount": 396,
+          "ranges": [
+            [
+              1,
+              165
+            ]
+          ],
+          "coveredLineCount": 165,
+          "role": "navigation-boundary-only",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": true,
+          "pinTiming": null
+        },
+        {
+          "path": "packages/web/app/chat.ts",
+          "currentSha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+          "bytes": 8615,
+          "lineCount": 208,
+          "ranges": [
+            [
+              36,
+              74
+            ],
+            [
+              96,
+              126
+            ]
+          ],
+          "coveredLineCount": 70,
+          "role": "product-or-contract",
+          "validCurrentBytesAndBounds": true,
+          "initialFilesystemSha256": null,
+          "firstPinBeforeThisTaskSemanticRead": true,
+          "pinTiming": null
+        }
+      ],
+      "sourceRowCount": 10,
+      "totalDeclaredReadLines": 1685,
+      "ordinaryProductContractReadLines": 1303,
+      "instructionReadLines": 217,
+      "navigationOnlyReadLines": 165,
+      "note": "Independent current filesystem SHA and range-bound checks for every author row; does not claim reviewer semantic reading outside own sourcePins or Git object binding."
+    }
+  ],
+  "historyReexecution": false,
+  "note": "Current filesystem source pins are separate from current Round29 author artifacts. No Git blob claim. Author runtime prep reused once; these are independent reviewer text reads.",
+  "finishAtUTC": "2026-10-17T11:44:43.335061+00:00",
+  "sourcePinCount": 16,
+  "totalIndependentlyReadProductTestLines": 1966,
+  "independentFullSourceCount": 10,
+  "independentSelectedSourceCount": 6,
+  "partialToolOutputNote": "One batched result elided transcriptReplay.test.ts lines43–60; bounded1–80 text reread restored that gap before full229 claim. No product command or failure.",
+  "authorReportLinkChecks": [
+    {
+      "author": "root",
+      "localLinkCount": 15,
+      "links": [
+        {
+          "target": "../../packages/web/src/lib/outputCoverage.ts",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/src/lib/mobileOutputRecovery.ts",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/src/lib/mobileOutputRecovery.ts:93",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/src/hooks/mobileOutputClient.ts:155",
+          "exists": true
+        },
+        {
+          "target": "../../packages/desktop/src/shared/stream-envelope.ts",
+          "exists": true
+        },
+        {
+          "target": "../../packages/desktop/src/main/parseStreamLine.ts",
+          "exists": true
+        },
+        {
+          "target": "../../packages/desktop/src/preload/index.ts:260",
+          "exists": true
+        },
+        {
+          "target": "../../packages/desktop/src/shared/stream-envelope.test.ts",
+          "exists": true
+        },
+        {
+          "target": "../../packages/desktop/src/main/parseStreamLine.test.ts",
+          "exists": true
+        },
+        {
+          "target": "evidence/root-source-manifest.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/root-dedup.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/root-history-decisions.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/root-metadata-notes.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/root-validation.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/root-artifact-receipt.json",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "author": "runtime",
+      "localLinkCount": 26,
+      "links": [
+        {
+          "target": "../../packages/core/src/run/RunQueue.ts",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/src/lib/transcriptReplay.ts",
+          "exists": true
+        },
+        {
+          "target": "../../packages/core/src/run/RunQueue.ts:33",
+          "exists": true
+        },
+        {
+          "target": "../../packages/core/src/run/RunQueue.ts:66",
+          "exists": true
+        },
+        {
+          "target": "../../packages/core/src/run/RunManager.ts:124",
+          "exists": true
+        },
+        {
+          "target": "../../packages/core/src/run/RunManager.ts:323",
+          "exists": true
+        },
+        {
+          "target": "../../packages/core/src/run/RunManager.ts:527",
+          "exists": true
+        },
+        {
+          "target": "../../packages/core/src/run/RunManager.ts:648",
+          "exists": true
+        },
+        {
+          "target": "../../packages/core/src/run/RunManager.ts:719",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/src/lib/transcriptReplay.ts:44",
+          "exists": true
+        },
+        {
+          "target": "../../packages/core/src/session/transcript.ts:537",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/src/lib/transcriptReplay.ts:201",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/src/lib/streamReducer.ts:327",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/src/lib/streamReducer.ts:463",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/src/lib/streamReducer.ts:588",
+          "exists": true
+        },
+        {
+          "target": "../../packages/web/app/chat.ts:44",
+          "exists": true
+        },
+        {
+          "target": "../archive/beta-prep-audit-2026-06-23.md:45",
+          "exists": true
+        },
+        {
+          "target": "../audit-2026-10-17/operations-memory.md:66",
+          "exists": true
+        },
+        {
+          "target": "../audit-2026-10-17-round14/web.md:30",
+          "exists": true
+        },
+        {
+          "target": "evidence/runtime-dedup.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/runtime-prep-copy-receipt.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/runtime-source-manifest.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/runtime-validation.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/runtime-history-decisions.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/runtime-metadata-notes.json",
+          "exists": true
+        },
+        {
+          "target": "evidence/runtime-artifact-receipt.json",
+          "exists": true
+        }
+      ]
+    }
+  ],
+  "prepCopyChecks": [
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/README.md",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/README.md",
+      "bytes": 1613,
+      "sha256": "2dda988b1f4ae4007d933f1074b13cb6650e7d656e6433f77f66f38b9e70a806",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/artifact-receipt.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/artifact-receipt.json",
+      "bytes": 3030,
+      "sha256": "9b3813ef49874e34dbe4078f2ee3a5d3900d5e966174778765db7c03046cf0e5",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/consumer-initial-pin.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/consumer-initial-pin.json",
+      "bytes": 282,
+      "sha256": "cd8fcc451aafb731025bc0d9ed2997c906d80a39ef814a4ace4340f00d534397",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/extra-initial-pins.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/extra-initial-pins.json",
+      "bytes": 2109,
+      "sha256": "efa55c39e3fbd227f574ac3b06d0f88640b6376c7fa3619cb5c9f527e66ae19f",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/finish-hash-checks.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/finish-hash-checks.json",
+      "bytes": 1855,
+      "sha256": "f179aa4068d05f2d4ff0ac804c16fca2d5f84b3f17948e001545c374f1ebc6bf",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/history-decisions.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history-decisions.json",
+      "bytes": 4543,
+      "sha256": "cc0e7f7bcaa411f421097b72a69b19d149317b3458bc989ba2365aa1d7431530",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/history-method.py",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history-method.py",
+      "bytes": 3475,
+      "sha256": "5df8e637e3ee04592cbbbb0b938dfa04ffb93f82d6b5934a01940cdf8e896852",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/history.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+      "bytes": 651772,
+      "sha256": "fc1700f90f30909f4f78955dff6d25fa510954c2f65b8470ffd95857330ae290",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/initial-pins.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/initial-pins.json",
+      "bytes": 1680,
+      "sha256": "73f75f2ecd43d0c6d00ad866b77c80b6fd8df87b65eb0288583eda6999bed686",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/proposal.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/proposal.json",
+      "bytes": 1627,
+      "sha256": "e2afbd4334b66eae30a70b7b507bb628911bf354056a5144cfc02d867f87a987",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/selection.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/selection.json",
+      "bytes": 1509,
+      "sha256": "d1adf923dce8c111001429ac2298cf7c582c86ff86f1f3c94f2911ed17a774f2",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/source-manifest.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/source-manifest.json",
+      "bytes": 8114,
+      "sha256": "d3e722359c0b80bae5bca66544fc61baf87191fb0b5b6ff081e38dd226dd460a",
+      "byteIdenticalToOriginalNow": true
+    },
+    {
+      "source": "/tmp/codeshell-audit-round29-core-frontier/validation.json",
+      "destination": "docs/audit-2026-10-17-round29/evidence/runtime-prep/validation.json",
+      "bytes": 515,
+      "sha256": "073e583356b806d4c74062cef05075b8c04ecd22c86cafaafea9c68ed368a36f",
+      "byteIdenticalToOriginalNow": true
+    }
+  ],
+  "prepFormalRowsIdentical": true,
+  "historyMetadataRequery": [
+    {
+      "author": "root",
+      "totals": {
+        "files": 2765,
+        "archivePaths": 169,
+        "markdown": 1275,
+        "json": 1490,
+        "scalarLeaves": 833428,
+        "stringLeaves": 562917,
+        "parseErrors": 0
+      },
+      "inventoryRowsAndCurrentHashesMatched": true,
+      "totalsMatched": true,
+      "matchCounts": {
+        "exact": 267,
+        "recovery-contract": 381,
+        "envelope-contract": 53
+      },
+      "matchCountsMatched": true,
+      "contextCap": 100,
+      "retainedContextCounts": {
+        "exact": 100,
+        "recovery-contract": 100,
+        "envelope-contract": 53
+      },
+      "inventoryCanonicalSha256": "b6a6f52892bf6751afa780e41d51231d8b89a19217c54720f7f496b2ddcc35df",
+      "note": "Metadata keyword requery only; no whole-history semantic read or semantic exhaustion claim; keys excluded, values scalars included, exact archive/_archive directories."
+    },
+    {
+      "author": "runtime",
+      "totals": {
+        "files": 2765,
+        "archivePaths": 169,
+        "markdown": 1275,
+        "json": 1490,
+        "scalarLeaves": 833428,
+        "stringLeaves": 562917,
+        "parseErrors": 0
+      },
+      "inventoryRowsAndCurrentHashesMatched": true,
+      "totalsMatched": true,
+      "matchCounts": {
+        "queue": 445,
+        "replay": 140,
+        "ordinary-projection": 156,
+        "old-failed-display": 20
+      },
+      "matchCountsMatched": true,
+      "contextCap": 80,
+      "retainedContextCounts": {
+        "queue": 80,
+        "replay": 80,
+        "ordinary-projection": 80,
+        "old-failed-display": 20
+      },
+      "inventoryCanonicalSha256": "b6a6f52892bf6751afa780e41d51231d8b89a19217c54720f7f496b2ddcc35df",
+      "note": "Metadata keyword requery only; no whole-history semantic read or semantic exhaustion claim; keys excluded, values scalars included, exact archive/_archive directories."
+    }
+  ],
+  "validation": {
+    "productAttempts": 0,
+    "productImports": 0,
+    "productFunctionCalls": 0,
+    "testsExecuted": 0,
+    "fixturesExecuted": 0,
+    "vmAstEval": 0,
+    "reactBrowserNativeRuns": 0,
+    "networkRequests": 0,
+    "gitCommands": 0,
+    "authorVerifierExecutions": 0,
+    "metadataErrors": [],
+    "meaning": "Only own stdlib filesystem/hash/JSON/regex/range/link checks ran; history metadata was independently requeried, neither author script executed.",
+    "reviewReportLinksChecked": 13,
+    "authorArtifactsStillUnchangedAtReviewFreeze": true
+  },
+  "existingTestDeclarationsReadOnly": {
+    "packages/desktop/src/shared/stream-envelope.test.ts": 4,
+    "packages/desktop/src/main/parseStreamLine.test.ts": 13,
+    "packages/core/src/run/RunQueue.test.ts": 4,
+    "packages/web/src/lib/transcriptReplay.test.ts": 9
+  },
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "reviewOutcome": "Supports both authors scoped static negative; no new product finding and no metadata correction requested.",
+  "finalSourceRecheckAtUTC": "2026-10-17T11:45:53.063430+00:00",
+  "reviewReportLocalLinkChecks": [
+    {
+      "target": "../root-report.md",
+      "exists": true
+    },
+    {
+      "target": "../runtime-report.md",
+      "exists": true
+    },
+    {
+      "target": "review-root-runtime-source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "../../../packages/web/src/lib/outputCoverage.ts",
+      "exists": true
+    },
+    {
+      "target": "../../../packages/web/src/lib/mobileOutputRecovery.ts",
+      "exists": true
+    },
+    {
+      "target": "../../../packages/web/src/hooks/mobileOutputClient.ts#L155",
+      "exists": true
+    },
+    {
+      "target": "../../../packages/desktop/src/shared/stream-envelope.ts",
+      "exists": true
+    },
+    {
+      "target": "../../../packages/desktop/src/main/parseStreamLine.ts",
+      "exists": true
+    },
+    {
+      "target": "../../../packages/core/src/run/RunQueue.ts",
+      "exists": true
+    },
+    {
+      "target": "../../../packages/core/src/run/RunManager.ts#L527",
+      "exists": true
+    },
+    {
+      "target": "../../../packages/web/src/lib/transcriptReplay.ts",
+      "exists": true
+    },
+    {
+      "target": "root-artifact-receipt.json",
+      "exists": true
+    },
+    {
+      "target": "runtime-artifact-receipt.json",
+      "exists": true
+    }
+  ],
+  "finalMetadataRecheckAtUTC": "2026-10-17T11:46:08.673801+00:00"
+}

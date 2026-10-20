@@ -1,0 +1,24 @@
+{
+  "parentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "reviewer": "aggregator_round27_resume",
+  "artifactCount": 2,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/review-root-runtime.md",
+      "bytes": 6760,
+      "sha256": "f9b89fc25bc1adfa402c4dc2a10f231064ecdc77f88940e34738ff7a273313b6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+      "bytes": 48694,
+      "sha256": "dd832edd7dc31c18a557bb094db34e84ee14fc93d35bef52b01352ec20151b50"
+    }
+  ],
+  "selfExcluded": true,
+  "authorFilesChanged": 0,
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0
+}

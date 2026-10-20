@@ -1,0 +1,12 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "getLSPManager|shutdown(All)?LSPManagers?|initializeLSPManager",
+    "packages"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/coding/src/index.ts\npackages/coding/src/lsp/manager-lifecycle.test.ts\npackages/coding/src/lsp/manager.ts\npackages/coding/src/tools/lsp.ts\n",
+  "stderr": "",
+  "scope": "Filename-only source references; other surfaces not read or certified."
+}

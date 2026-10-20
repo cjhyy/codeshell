@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "path": "review-root-runtime.md",
+      "bytes": 6760,
+      "sha256": "f9b89fc25bc1adfa402c4dc2a10f231064ecdc77f88940e34738ff7a273313b6"
+    },
+    {
+      "path": "review-root-runtime-source-manifest.json",
+      "bytes": 48694,
+      "sha256": "dd832edd7dc31c18a557bb094db34e84ee14fc93d35bef52b01352ec20151b50"
+    },
+    {
+      "path": "review-root-runtime-artifact-receipt.json",
+      "bytes": 729,
+      "sha256": "4dae487536d981c66537a4dac73b10916efd50f2dffdff7f89b5d1d009e6e13d"
+    },
+    {
+      "path": "review-room-stop.md",
+      "bytes": 5400,
+      "sha256": "5667d04a5259b03e653423b4a1e23490e58704804323735f447b18afbc9820c5"
+    },
+    {
+      "path": "review-room-stop-source-manifest.json",
+      "bytes": 57198,
+      "sha256": "947ad342d7f13f7064c8c8edfaf10e0fc0023f8ffecddbf69148baf131eb9100"
+    }
+  ],
+  "checks": 5,
+  "pinTiming": "Root checked reviewer freeze-message hashes after reading artifacts; no reconstructed read-start pin.",
+  "productExecution": false
+}

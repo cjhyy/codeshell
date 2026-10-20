@@ -1,0 +1,64 @@
+1: import { existsSync } from "node:fs";
+2: import { readdir } from "node:fs/promises";
+3: import { join, posix, relative, sep } from "node:path";
+4: import { PANEL_APP_MANIFEST_FILE } from "./manifest.js";
+5: import { PanelAppInstallError } from "./paths.js";
+6: 
+7: export const MAX_PANEL_DISCOVERY_DEPTH = 4;
+8: export const MAX_PANEL_DISCOVERY_DIRECTORIES = 512;
+9: const MAX_PANEL_DISCOVERY_RESULTS = 16;
+10: 
+11: function looksLikePanelAppRoot(directory: string): boolean {
+12:   return existsSync(join(directory, PANEL_APP_MANIFEST_FILE));
+13: }
+14: 
+15: export async function discoverPanelAppRoots(directory: string): Promise<string[]> {
+16:   const found: string[] = [];
+17:   const pending = [{ directory, depth: 0 }];
+18:   let visited = 0;
+19:   while (
+20:     pending.length > 0 &&
+21:     visited < MAX_PANEL_DISCOVERY_DIRECTORIES &&
+22:     found.length < MAX_PANEL_DISCOVERY_RESULTS
+23:   ) {
+24:     const current = pending.shift()!;
+25:     visited += 1;
+26:     if (looksLikePanelAppRoot(current.directory)) {
+27:       found.push(current.directory);
+28:       continue;
+29:     }
+30:     if (current.depth >= MAX_PANEL_DISCOVERY_DEPTH) continue;
+31:     const entries = await readdir(current.directory, { withFileTypes: true });
+32:     for (const entry of entries) {
+33:       if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name === "node_modules") {
+34:         continue;
+35:       }
+36:       if (pending.length + visited >= MAX_PANEL_DISCOVERY_DIRECTORIES) {
+37:         throw new PanelAppInstallError(
+38:           "Panel App directory discovery limit exceeded; choose an app subdirectory",
+39:         );
+40:       }
+41:       pending.push({ directory: join(current.directory, entry.name), depth: current.depth + 1 });
+42:     }
+43:   }
+44:   return found;
+45: }
+46: 
+47: export async function findPanelAppRoot(directory: string): Promise<string> {
+48:   if (looksLikePanelAppRoot(directory)) return directory;
+49:   const found = await discoverPanelAppRoots(directory);
+50:   if (found.length === 1) return found[0];
+51:   if (found.length > 1) {
+52:     const candidates = found
+53:       .map((root) => relative(directory, root).split(sep).join(posix.sep))
+54:       .sort()
+55:       .join(", ");
+56:     throw new PanelAppInstallError(
+57:       `multiple Panel Apps found; choose an app subdirectory: ${candidates}`,
+58:     );
+59:   }
+60:   throw new PanelAppInstallError(
+61:     `no Panel App found (expected ${PANEL_APP_MANIFEST_FILE}); ` +
+62:       "for a monorepo, provide the app subdirectory or a GitHub /tree/<ref>/<path> URL",
+63:   );
+64: }

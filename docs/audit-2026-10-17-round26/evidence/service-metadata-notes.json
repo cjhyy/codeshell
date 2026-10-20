@@ -1,0 +1,37 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "gitCommands": 0,
+  "metadataOnly": [
+    {
+      "kind": "Display truncation",
+      "stage": "Combined initial source/history navigation",
+      "note": "Initial multi-file output and later saved-context print exceeded displayed output budget. Full primary service/test/diff-test reading used the explicit bounded ranges recorded in manifest;unshown history not claimed semantically read."
+    },
+    {
+      "kind": "First missing public-type path",
+      "chunkId": "e6a0aa",
+      "command": "rg -n ReviewAiPrompt|ReviewGitDiff|shared/review|ProjectAuthorityApi packages/desktop/src/preload/types.ts",
+      "outerCommandExitCode": 0,
+      "innerExitCode": null,
+      "firstResponse": "rg: packages/desktop/src/preload/types.ts: IO error for operation on packages/desktop/src/preload/types.ts: No such file or directory (os error 2)",
+      "note": "Combined shell continued later read-only source commands,so outer0 is not a captured rg exit. No exact inner exit reconstructed."
+    },
+    {
+      "kind": "Second missing public-type path",
+      "chunkId": "d683e3",
+      "outerCommandExitCode": 2,
+      "firstResponse": "rg: packages/desktop/src/preload/types/index.ts: IO error for operation on packages/desktop/src/preload/types/index.ts: No such file or directory (os error 2)",
+      "note": "Directory-index guess was unnecessary;the actual inventory in the same response listed types.d.ts. No repeats of either missing path. Subsequently read only actual inventory-resolved types.d.ts Review imports/ProjectAuthorityApi composition."
+    },
+    {
+      "kind": "Metadata scanner first execution",
+      "sessionId": 30057,
+      "exitCode": 0,
+      "summary": "2509 files;1241 MD/1268JSON;426811string/609678scalar;0parse;exact106/scope478/mechanism315;100contexts per group cap.",
+      "note": "Same exec handle polled to completion once;no restart. No product imports or code evaluation."
+    }
+  ],
+  "scope": "Manual preserved tool responses/metadata chronology;not original product raw and not a product failure/recovery. No old failed product direction restored."
+}

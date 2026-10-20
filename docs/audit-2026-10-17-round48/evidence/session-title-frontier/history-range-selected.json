@@ -1,0 +1,59 @@
+{
+  "scope": "Previously displayed bounded old review/range windows; Desktop adapter full14 is a different path/SHA than current Server189. Nested versions are byte pins only.",
+  "contexts": [
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/review-aggregate.md",
+      "jsonPointer": null,
+      "line": 9,
+      "needle": "session-titles-store",
+      "context": "rminal 的两份 Python collector `.txt`、历史扫描、Git hash 核对、deferred Promise 或循环调用次数算成产品 shard/测试。三份首跑原件已存在，本复核没有重新执行保存脚本或测试。\n\n独立读取冻结 Git blob、刷新 main 的 Git blob 和当前文件字节，**42 个唯一源码/历史/配置 pin** 的 SHA 与 bytes 全部匹配，不代表 42 份产品源码全文或动态覆盖。**40 次作者 source checks 对应 36 条唯一路径**，重复来源没有混成 40 份独立新覆盖。terminal 的两份 Core 类型仍是 hash-only。title/terminal reviewer 新增的 Desktop `session-titles-store.ts` adapter 在 aggregate 中单列为 reviewer 来源，不改变 title 作者的 16-pin 范围或测试数量。\n\n四份 author receipt 独立核对 **65 个 artifact 的 bytes/SHA**：Root 15、budget 18、title 13、terminal 19；worker-integrity 中对应 hash 全部相符。direction reviews 均区分实际叶子、owned callbacks 与静态真实消费者；预算旧测试不重跑，标题 rename/Engine/store 不作为通过项，terminal 不强行抽取或导入。Root QC 的无 Git 写范围已明确限定各 worker/reviewer，未误称主审没有做 Git 元数据及集成工作。\n\n集成计划的 initialPrimary 与 primaryBefore 逐键比较，**只有 head 不同**；statusHex、tracked/staged diff hash 和四个 untracked 文件的 path/bytes/hash 全部保留。独立 `git rev-list --count` 与 `git diff --name-only` 核对 `ab258c3..7e5570210d7e9336cbe9d6a90ed375832e7e3329`，确为 **22 commits / 20 paths**，与计划清单相等、与本批新目录分离；选定 pin 在两端均未变。并行的 CI、浏览器、Windows 安装器及发布材料不纳入本批验证",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "b5010b5a8fdb6fa69b38f759f7abd1a2bb330c4b357c9024d93e0465c350c647"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/review-title-terminal.md",
+      "jsonPointer": null,
+      "line": 13,
+      "needle": "session-titles-store",
+      "context": "atePersistedSessionState`；旧整份 state 回写机制已被历史 goal persistence 文档收录，当前作者没有把它重新报错或声称动态修复通过。选读 Sidebar rename、`renameSessionLocal`、`useHostSubscriptions`、history sync、SessionsView commit、Main handler 与 Server store 后，`titleManual` guard 和独立 override store 构成真实普通反证。它们都只是静态接线，不能替代完整改名链实验。\n\n本 reviewer 另补读作者 manifest 未单列的真实桥接文件：`packages/desktop/src/main/session-titles-store.ts:1–14`，全文静态读取，**无 import/执行**。该 adapter 从 `@cjhyy/code-shell-server/storage` 导入 `createSessionTitlesStore`，`setTitle` 转发到该 store，补全 Main handler 与 Server override 的接线证据。冻结 Git blob 与当前字节相同，SHA256 为 `5c7ea7233f145105a79886d570d0735e8d66c1a90ab9495f9ed054d85bc374d7`，680 bytes / 14 lines。此文件属于 reviewer 新增 source pin，未改变 title 作者的原阅读范围或 16-pin 收据。\n\nTerminal 的 `terminal-ui.ts` 235 行和 `renderer.ts` 163 行已全文静态读，`run.ts` 选读 1–27、225–280。六个 runtime dependencies、顶层 chalk mutation、Marked 初始化以及 ora.start/版本查询足以支持当前动态排除；未抽取源码、替换依赖或制造消费者。实际 headless run 从 renderer.ts 构造 renderer 并转交事件，renderer 无 terminal-ui import。已检查普通名称与全部导出名称导航的 argv/输出；命中同名局部函数不是 terminal-ui 的消费者。限定的字面检索不能证明仓库外、计算或生成消费者不存在。\n\nbanner",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "e6e4713721f4f389ef655374aaa60d01564211b8e5b93396af9fb11a6c497aea"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-sidebar-title-round27/independent-quality.raw.md",
+      "jsonPointer": null,
+      "line": 36,
+      "needle": "session-titles-store",
+      "context": "ons-service.ts:35)\n- [packages/server/src/sessions-service.ts:89](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/sessions-service.ts:89)\n- [packages/desktop/src/main/index.ts:6857](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts:6857)\n- [packages/desktop/src/main/session-titles-store.ts:1](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/session-titles-store.ts:1)\n- [packages/desktop/src/renderer/sessions/SessionsView.tsx:121](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/sessions/SessionsView.tsx:121)\n- [packages/desktop/src/renderer/app/useSessionHistorySync.ts:40](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/app/useSessionHistorySync.ts:40)\n- [packages/desktop/src/renderer/app/useHostSubscriptions.ts:348](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/app/useHostSubscriptions.ts:348)\n\n## 正",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9bfd5f9888bd7baa1f8c24a0c87f3ecc48f85bfe6af59028ba978bfa59ba624d"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-sidebar-title-round27/static-preflight.md",
+      "jsonPointer": null,
+      "line": 14,
+      "needle": "session-titles-store",
+      "context": "listSessions与listSessionTitles，然后registry覆盖Core durabletitle；:96–102filter匹配engine id或这个titleMap。:313–315实际行呈现也用该map。\n- Main `index.ts:6741` 的sessions:list直调server listSessions，`server/src/sessions-service.ts:35–109` 只读会话state/transcript，从state.title/summary得fallback，未消费catalog。Main:6857–6864另有sessions:titles/rename的真实独立registry入口。\n- `desktop/main/session-titles-store.ts:1–14`是sharedserverstore adapter，默认desktop/session-titles.json；`server/src/session-titles-store.ts:133–188`list/set只操作该map，无catalog联动。\n- 普通新建真实identity说明 `useRunController.ts:234–247` 新UI Session直接作为engine id；legacy不同id不必加入触发。无Engine执行需要，fixture可actualCoreSM.create同真实UIcreate生成ID。\n\n## 反向正常同步、重载和跨窗口反证\n\n- 历史页改名 `SessionsView.tsx:121–155`等待actualrename成功才通知host/改自身title；Main写独立registry。`App.tsx:1343–1359`连接 `useSessionHistorySync.ts:46–64`，按canonicalengine id遍历所有UIaliases，renameSessionLocal(...manualtrue)反写catalog。因此history→sidebar明确存在，不应误称两向都不同步；已有R71专项正常EACCES保稿/同值重试已执行，本轮没有复跑。\n- `SessionPersistence.initialize:205`订阅catalogchanged；:278–305只重投影catalog；`useSessionIndices.ts:25–35`更新Sidebarpr",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "847d3b8af685e79724fe7acfee44b734bba14b0d7c04c4667546d3bbcd14e51a"
+    }
+  ],
+  "nestedBytePinRow": {
+    "path": "docs/review-2026-10-12/validation/original-sidebar-title-round27/source-manifest.json",
+    "jsonPointer": "/paths/16",
+    "row": {
+      "path": "packages/server/src/session-titles-store.ts",
+      "same": true,
+      "versions": [
+        {
+          "tree": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell",
+          "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+        },
+        {
+          "tree": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell",
+          "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0"
+        }
+      ]
+    }
+  }
+}

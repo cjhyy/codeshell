@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T17:03:38.367228+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "bytes": 108774,
+      "lines": 2412,
+      "beforeCurrentLineNavigationAndBody": true
+    }
+  ]
+}

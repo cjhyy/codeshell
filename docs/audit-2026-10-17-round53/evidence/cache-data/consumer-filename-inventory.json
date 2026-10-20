@@ -1,0 +1,15 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "loadModelCache|saveModelCache|model-cache",
+    "packages/core/src/llm"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "files": [
+    "packages/core/src/llm/model-pool.ts",
+    "packages/core/src/llm/model-fetcher.ts"
+  ],
+  "filenameOnly": true
+}

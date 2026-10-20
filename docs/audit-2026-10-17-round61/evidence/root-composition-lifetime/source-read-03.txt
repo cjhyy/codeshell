@@ -1,0 +1,122 @@
+packages/core/src/engine/runtime.ts:60–84
+60:     this.costTracker.bindLedger?.(this.usageLedger);
+61:     this.lifetime.own(() => this.modelPool.clear());
+62:     this.lifetime.own(() => this.toolRegistry.clear());
+63:     this.lifetime.own(() => this.sandboxCache.clear());
+64:     this.lifetime.own(() => this.mcpPool.disconnectAll());
+65:   }
+66: 
+67:   clearModels(): void {
+68:     this.modelPool.clear();
+69:   }
+70: 
+71:   /** Quiesce active Engines before releasing their scopes and shared MCP resources. */
+72:   ownEngine(close: () => Promise<void>): Dispose {
+73:     if (this.closing || this.lifetime.disposed) throw new Error("EngineRuntime has been closed");
+74:     this.engines.add(close);
+75:     return onceDispose(() => {
+76:       this.engines.delete(close);
+77:     });
+78:   }
+79: 
+80:   reloadModelsFromSettings(): void {
+81:     const settings = this.settings.load();
+82:     const connections = (settings as { modelConnections?: unknown[] }).modelConnections ?? [];
+83:     const credentials = (settings as { credentials?: unknown[] }).credentials ?? [];
+84:     const catalog = getMergedCatalog();
+
+packages/core/src/engine/runtime.ts:115–159
+115:     if (!cached) {
+116:       cached = resolveSandboxBackend(config, cwd);
+117:       // Don't cache a rejection: an explicit-mode probe that throws (e.g.
+118:       // `seatbelt` on a host without sandbox-exec) must be retryable after the
+119:       // user fixes the config, not sticky until process restart.
+120:       cached.catch(() => {
+121:         if (this.sandboxCache.get(key) === cached) this.sandboxCache.delete(key);
+122:       });
+123:       this.sandboxCache.set(key, cached);
+124:     }
+125:     return cached;
+126:   }
+127: 
+128:   /**
+129:    * Tear down runtime-owned resources. Safe to call multiple times; the
+130:    * MCPManager's `disconnectAll` clears its own connection map and the
+131:    * sandbox cache holds resolved-backend promises that don't need
+132:    * explicit cleanup (they're plain objects). Closes Gate 2 bullet
+133:    * "runtime close shuts down MCP connections, timers, and background
+134:    * work."
+135:    *
+136:    * Hosts that own a long-lived Runtime (the stdio worker, future
+137:    * Electron broker, codeshell-serve) should `await runtime.close()`
+138:    * before exiting the process — otherwise MCP child processes may be
+139:    * left running and bound ports may stay held until the OS cleans up.
+140:    */
+141:   close(): Promise<void> {
+142:     if (this.closing) return this.closing;
+143:     this.closing = (async () => {
+144:       const results = await Promise.allSettled(
+145:         [...this.engines].reverse().map((close) => Promise.resolve().then(close)),
+146:       );
+147:       const errors = results.flatMap((result) =>
+148:         result.status === "rejected" ? [result.reason] : [],
+149:       );
+150:       try {
+151:         await this.lifetime.dispose();
+152:       } catch (error) {
+153:         errors.push(error);
+154:       }
+155:       if (errors.length) throw new AggregateError(errors, "EngineRuntime shutdown failed");
+156:     })();
+157:     return this.closing;
+158:   }
+159: }
+
+packages/core/src/engine/engine.ts:4004–4050
+4004:   dispose(): Promise<void> {
+4005:     if (this.disposal) return this.disposal;
+4006:     this.disposed = true;
+4007:     this.runAbort?.abort("Engine disposed");
+4008:     // An initializing module may await work cancelled by one of its owned disposers.
+4009:     // A run cannot enter before ready(), so unwind initialization before waiting.
+4010:     if (this.moduleActivationPending) void this.lifetime.dispose().catch(() => {});
+4011:     this.disposal = (async () => {
+4012:       try {
+4013:         await this.runSettled;
+4014:         await this.moduleReady;
+4015:       } finally {
+4016:         try {
+4017:           await this.lifetime.dispose();
+4018:         } finally {
+4019:           this.workspaceAuthorities.clear();
+4020:           this.steerQueueBySid.clear();
+4021:           this.compactedMessagesBySession.clear();
+4022:           this.agentDefsCache = undefined;
+4023:           this.lastContextManager = undefined;
+4024:         }
+4025:       }
+4026:     })();
+4027:     return this.disposal;
+4028:   }
+4029: 
+4030:   /**
+4031:    * Config hot-reload "layer 2": merge a disk-default config patch into this
+4032:    * ALREADY-RUNNING session's `this.config` and reload settings hooks.
+4033:    * Prompt changes apply at the next turn boundary — an in-flight turn keeps using the
+4034:    * PromptComposer it was built with, and the next turn rebuilds the composer
+4035:    * from the freshly-merged config (composer is rebuilt per-turn).
+4036:    *
+4037:    * `version` is a monotonic counter from the server: stale (<=last applied)
+4038:    * payloads are dropped so out-of-order reload deliveries can't let an older
+4039:    * config clobber a newer one (Q5).
+4040:    *
+4041:    * MCP: preserve the current Run's connection/tool snapshot. At the next Run,
+4042:    * connectAll applies the new baseline plus that Run's Profile/project/local
+4043:    * overrides, and releases only scopes no owner still requires.
+4044:    *
+4045:    * Preset (#2): a preset hot-reload re-resolves `this.preset` so the next-turn
+4046:    * PromptComposer picks up the new preset's system prompt / behavior — that's
+4047:    * the main user-visible preset effect and it IS hot. The toolRegistry's
+4048:    * builtin tool SET, however, is ctor-frozen (and may be shared via runtime):
+4049:    * it is NOT rebuilt here. So a preset change that alters the builtin tool set
+4050:    * (e.g. switching to a capability-contributed preset adds tools) only takes effect on the

@@ -1,0 +1,69 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-16/server-web-chat.md",
+      "bytes": 16408,
+      "sha256": "e12916c5a52bc6bee7ccb78acf25788fcc68a160283523fa32f52e2f74098de0",
+      "lineCount": 114,
+      "selectedLineRanges": [
+        [
+          15,
+          40
+        ]
+      ],
+      "atUTC": "2026-10-17T19:28:56.163924+00:00"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "bytes": 31923,
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "lineCount": 233,
+      "selectedLineRanges": [
+        [
+          60,
+          85
+        ],
+        [
+          130,
+          157
+        ]
+      ],
+      "atUTC": "2026-10-17T19:28:56.164971+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "bytes": 6965,
+      "sha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "lineCount": 38,
+      "selectedLineRanges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "atUTC": "2026-10-17T19:28:56.165211+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "bytes": 8813,
+      "sha256": "186bb098e3d80c7936072948b00cd254bb72d71fc21e4ee1ad143bf607a98e7d",
+      "selectedJsonPointers": [
+        "/files/18"
+      ],
+      "atUTC": "2026-10-17T19:28:56.165606+00:00"
+    }
+  ],
+  "objects": [
+    {
+      "pointer": "/files/18",
+      "row": {
+        "path": "packages/chat/src/cli.ts",
+        "frozenSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+        "currentSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+        "currentMatchesFrozen": true,
+        "scope": "directed production watcher wiring source read; not executed"
+      }
+    }
+  ],
+  "scope": "Exact bounded original documents only; no prior tests/log executed or borrowed pass."
+}

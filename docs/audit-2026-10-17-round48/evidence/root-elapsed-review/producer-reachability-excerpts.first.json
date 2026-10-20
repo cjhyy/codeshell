@@ -1,0 +1,140 @@
+{
+  "atUTC": "2026-10-17T16:04:08.366266+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "displayedRanges": [
+        [
+          124,
+          158
+        ],
+        [
+          172,
+          179
+        ],
+        [
+          350,
+          362
+        ],
+        [
+          370,
+          372
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            124,
+            158
+          ],
+          "text": " 124     };\n 125   };\n 126 \n 127   getSnapshot = (): AsyncAgentEntry[] => {\n 128     return this.snapshot;\n 129   };\n 130 \n 131   hasRunning = (): boolean => {\n 132     return this.snapshot.some((e) => e.status === \"running\" || e.status === \"cancelling\");\n 133   };\n 134 \n 135   /** True if any background agent spawned by `sessionId` is still running.\n 136    *  Drives Engine.run's \"wait for my background agents before resolving\". */\n 137   hasRunningForSession = (sessionId: string): boolean => {\n 138     return this.snapshot.some(\n 139       (e) => (e.status === \"running\" || e.status === \"cancelling\") && e.sessionId === sessionId,\n 140     );\n 141   };\n 142 \n 143   /** Count of agents currently in the \"running\" state (cap enforcement). */\n 144   runningCount(): number {\n 145     return this.snapshot.filter((e) => e.status === \"running\" || e.status === \"cancelling\").length;\n 146   }\n 147 \n 148   private notify(): void {\n 149     this.snapshot = [...this.agents.values()];\n 150     for (const cb of this.listeners) {\n 151       try {\n 152         cb();\n 153       } catch {\n 154         // isolate per-listener errors\n 155       }\n 156     }\n 157   }\n 158 "
+        },
+        {
+          "range": [
+            172,
+            179
+          ],
+          "text": " 172         ),\n 173       );\n 174     }\n 175     this.closedDirectionIntake.delete(entry.agentId);\n 176     this.agents.set(entry.agentId, entry);\n 177     this.notify();\n 178   }\n 179 "
+        },
+        {
+          "range": [
+            350,
+            362
+          ],
+          "text": " 350       !e ||\n 351       (e.status !== \"running\" && e.status !== \"cancelling\") ||\n 352       e.childSessionId !== lease.childSessionId ||\n 353       e.runtimeGeneration !== lease.runtimeGeneration ||\n 354       e.writerLease?.ownerToken !== lease.ownerToken ||\n 355       held?.ownerToken !== lease.ownerToken ||\n 356       held.runtimeGeneration !== lease.runtimeGeneration\n 357     ) {\n 358       return false;\n 359     }\n 360     e.status = status;\n 361     e.finishedAt = Date.now();\n 362     e.finishedFadeAt = e.finishedAt + 30_000;"
+        },
+        {
+          "range": [
+            370,
+            372
+          ],
+          "text": " 370     this.notify();\n 371     return true;\n 372   }"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "displayedRanges": [
+        [
+          465,
+          479
+        ],
+        [
+          487,
+          500
+        ],
+        [
+          528,
+          540
+        ],
+        [
+          576,
+          600
+        ],
+        [
+          705,
+          716
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            465,
+            479
+          ],
+          "text": " 465           overrides.resolvedType === \"researcher\" || overrides.resolvedType === \"explorer\",\n 466       })\n 467     : undefined;\n 468 \n 469   const autoBgMs = resolveAutoBgMs();\n 470 \n 471   // ─── Background path ───────────────────────────────────────────\n 472   // Register the agent, kick off execution detached from the current turn,\n 473   // return immediately with the agent_id. Parent abort does NOT cascade\n 474   // (background agents survive the spawning turn). Cancellation goes\n 475   // through AgentCancel(agent_id).\n 476   if (runInBackground) {\n 477     if (asyncAgentRegistry.runningCount() >= MAX_BACKGROUND_AGENTS) {\n 478       return (\n 479         `Error: too many background agents running (limit ${MAX_BACKGROUND_AGENTS}). ` +"
+        },
+        {
+          "range": [
+            487,
+            500
+          ],
+          "text": " 487     asyncAgentRegistry.register({\n 488       agentId,\n 489       name,\n 490       agentType: overrides.resolvedType,\n 491       continuation,\n 492       description,\n 493       // Tag with the spawning session so the parent Engine.run waits only on\n 494       // its own background agents (hasRunningForSession).\n 495       sessionId: ctx?.sessionId,\n 496       childSessionId: agentId,\n 497       runtimeGeneration,\n 498       progress: progressTracker.current(),\n 499       status: \"running\",\n 500       startedAt: Date.now(),"
+        },
+        {
+          "range": [
+            528,
+            540
+          ],
+          "text": " 528           type: \"agent_backgrounded\",\n 529           agentId,\n 530           name,\n 531           description,\n 532           agentType: overrides.resolvedType,\n 533         });\n 534       }\n 535     };\n 536 \n 537     void runSubAgent(\n 538       spawner,\n 539       {\n 540         agentId,"
+        },
+        {
+          "range": [
+            576,
+            600
+          ],
+          "text": " 576         onAgentProgress: progressTracker.onRuntime,\n 577         signal: controller.signal,\n 578       },\n 579       lifecycleSink,\n 580       detailSink,\n 581     )\n 582       .then((text) => {\n 583         if (controller.signal.aborted) {\n 584           if (liveLease) asyncAgentRegistry.completeTerminal(agentId, \"cancelled\", liveLease);\n 585           else asyncAgentRegistry.markCancelled(agentId);\n 586           void ctx?.hooks?.emit(\"notification\", {\n 587             kind: \"agent_cancelled\",\n 588             agentId,\n 589             name,\n 590             description,\n 591           });\n 592           return;\n 593         }\n 594         const transitioned = liveLease\n 595           ? asyncAgentRegistry.completeTerminal(agentId, \"completed\", liveLease)\n 596           : (asyncAgentRegistry.markCompleted(agentId), true);\n 597         if (!transitioned) return;\n 598         // External-readable copy of the result (tail / cross-session history).\n 599         // Best-effort; never blocks the completion path.\n 600         void writeAgentOutputFile(agentId, {"
+        },
+        {
+          "range": [
+            705,
+            716
+          ],
+          "text": " 705           name,\n 706           description,\n 707           error: err.message,\n 708         });\n 709       });\n 710 \n 711     // Mark the foreground completion as waiting for this child's notification.\n 712     // The Engine consumes the marker only after the whole tool batch finishes,\n 713     // and suppresses it for headless/sub-agent runs that cannot be woken later.\n 714     ctx.runYield?.request(\"background_notification\");\n 715     return [\n 716       `Async agent launched successfully.`,"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "displayedRanges": [
+        [
+          2210,
+          2240
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            2210,
+            2240
+          ],
+          "text": "2210         client\n2211           .approve(\n2212             requestId,\n2213             approved ? { approved: true, always, scope } : { approved: false, always, scope },\n2214           )\n2215           .catch(() => {});\n2216       }}\n2217     />\n2218   ) : undefined;\n2219 \n2220   const cols = process.stdout.columns ?? 80;\n2221   const separator = \"─\".repeat(cols);\n2222 \n2223   const bottomContent = (\n2224     <Box flexDirection=\"column\" marginTop={0}>\n2225       <Text dim>{separator}</Text>\n2226 \n2227       <TuiControlSurface\n2228         client={client}\n2229         screen={screen}\n2230         cursorIdx={cursorIdx}\n2231         showOnboarding={showOnboarding}\n2232         setShowOnboarding={setShowOnboarding}\n2233         modelManager={modelManager}\n2234         setModelManager={setModelManager}\n2235         modelEntries={modelEntries}\n2236         setModelEntries={setModelEntries}\n2237         sessionEntries={sessionEntries}\n2238         setSessionEntries={setSessionEntries}\n2239         wizard={wizard}\n2240         setWizard={setWizard}"
+        }
+      ]
+    }
+  ],
+  "scope": "Root66 actual selected producer and App component reachability read; no execution; lease fields363–369 explicitly not selected or displayed."
+}

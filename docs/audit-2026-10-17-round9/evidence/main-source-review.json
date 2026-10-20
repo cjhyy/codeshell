@@ -1,0 +1,34 @@
+{
+  "baseline": "248d091202869c07274adedf4fd50403105f1b1f",
+  "reviewedMain": "6e4b663dc0c6e538a8b754aa53874e4926134b80",
+  "ownedBranchHead": "6e4b663dc0c6e538a8b754aa53874e4926134b80",
+  "changedPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/scripts/confined-electron-fixture.mjs",
+    "packages/desktop/scripts/confined-electron-fixture.test.mjs",
+    "packages/desktop/scripts/e2e-composer-reference-operations.mjs",
+    "packages/desktop/scripts/e2e-memory-pin-operation-cycles.mjs",
+    "packages/desktop/scripts/e2e-panel-operation-cycles.mjs",
+    "packages/desktop/scripts/e2e-preferences-operation-cycles.mjs",
+    "packages/desktop/scripts/e2e-review-diff-path-operations.mjs",
+    "packages/desktop/scripts/e2e-startup-operation-cycles.mjs",
+    "packages/desktop/scripts/electron-harness.mjs",
+    "packages/desktop/scripts/electron-harness.test.mjs",
+    "packages/desktop/scripts/packaged-pet-fixture.mjs",
+    "packages/desktop/scripts/windows-electron-direct-transport-policy.test.mjs",
+    "packages/desktop/scripts/windows-electron-direct-transport.mjs",
+    "packages/desktop/scripts/windows-electron-direct-transport.test.mjs",
+    "packages/desktop/scripts/windows-source-harness.test.mjs"
+  ],
+  "directFindingSourceMatchesFrozen": {
+    "packages/desktop/src/renderer/tool-cards/attachments.ts": true,
+    "packages/core/src/cost-tracker.ts": true,
+    "packages/core/src/engine/model-facade.ts": true,
+    "packages/core/src/engine/turn-loop.ts": true,
+    "packages/core/src/session/session-manager.ts": true
+  },
+  "sourceOnlyReview": true,
+  "runtimeRetested": false,
+  "note": "Concurrent main contains Desktop acceptance harness/native transport/CI/docs work. No native execution or product test rerun. Initial CI dirty change is now committed by another task; preserve current status and original untracked bytes rather than restoring old CI bytes."
+}

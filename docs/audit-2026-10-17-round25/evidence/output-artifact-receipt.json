@@ -1,0 +1,111 @@
+{
+  "base": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "report": "docs/audit-2026-10-17-round25/output-clean.md",
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "artifactCount": 18,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round25/output-clean.md",
+      "bytes": 6624,
+      "sha256": "2b75ce0132efb126a9126c9f941deeff3127ee3a511f035ab98b8bb20087eb07"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-crlf.test.ts",
+      "bytes": 1981,
+      "sha256": "14907b0efd875782bd5ba516fc333ed1c0e9f4f0ee41df94d311a0cdf199454f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-dedup.json",
+      "bytes": 551923,
+      "sha256": "e5b387a0308965385c74cd15c50eebcd314e36aa17c20081c073dd59db478fad"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-dedup.py",
+      "bytes": 3008,
+      "sha256": "9d204e743df685208374577efcf097bdc7536ef538b9c51c3940cbd9105f15aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-findings.json",
+      "bytes": 4309,
+      "sha256": "483ea505c2e8a028579d8ae0ad4cd7832e640b96ddcd4bdca68286885201b50d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-first.exit.json",
+      "bytes": 609,
+      "sha256": "8900f2026968caa8f138f95dcc7a7deed4625ccce5ab49496b2c4f2b3268c3f7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-first.raw.log",
+      "bytes": 2477,
+      "sha256": "3756561600256bdbd45f529d4a6b0d0936c1e6fb49710c36a79a08e6d02c80d0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-history-decisions.json",
+      "bytes": 16847,
+      "sha256": "9b677eacc62657cbf330ab911a9d0764c5ec7c01b453bd8c48b74eb8f2a375ce"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-metadata-check.json",
+      "bytes": 6321,
+      "sha256": "d6f8f454f2194b719b486868e6c46d89830645609a9f1f83520253b8f477d7a7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-metadata-first-responses.json",
+      "bytes": 780,
+      "sha256": "d9368916065fb71af30fdccfd934039145eef8f1e01568eb2d4a1162d281c6c7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-metadata-notes.json",
+      "bytes": 2339,
+      "sha256": "211719b7e221b765215981b6813ff73d7de88a716df40d5ab5c7324377269084"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-preflight.json",
+      "bytes": 1877,
+      "sha256": "32a11864cf2a966a2522575d9b9323df4b9f6798c169e553daf1262dc691e6ac"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-receipt.py",
+      "bytes": 5555,
+      "sha256": "488f60324c1dae5cd1c14c3d1509de033034e47ca9ad40e6e12040160132b279"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-run-first.py",
+      "bytes": 1111,
+      "sha256": "d053cea70cce5c221125c250d37152e3b22f5c4c3165a4633698bac4d758b536"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-source-manifest.json",
+      "bytes": 10011,
+      "sha256": "498ce21c2812e6cf420402d02c36eafa70d9274de2e0fd6223d0ce1cba0d148f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-validation.json",
+      "bytes": 3174,
+      "sha256": "e362727afab16800e63fa9711dd76edeae5b037b13de073211a2d93122a22fb6"
+    }
+  ],
+  "receiptExcludesItself": true,
+  "prepExcludedFromAuthorReceipt": true,
+  "foreignReviewArtifactsExcluded": [
+    "output-static-crosscheck.md",
+    "output-static-source-manifest.json"
+  ],
+  "rawLogs": [
+    "docs/audit-2026-10-17-round25/evidence/output-first.raw.log"
+  ],
+  "productChanges": false,
+  "gitWrites": false
+}

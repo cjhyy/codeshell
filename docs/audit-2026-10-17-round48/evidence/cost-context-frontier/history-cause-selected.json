@@ -1,0 +1,32 @@
+{
+  "scope": "Three old tracker contexts actually selected in 351c28. Historical product executions are not this run or resumed.",
+  "contexts": [
+    {
+      "index": 4,
+      "path": "docs/audit-2026-10-17-round9/README.md",
+      "jsonPointer": null,
+      "line": 8,
+      "needle": "cost-r9-01",
+      "context": "另保留 **1 个 API 契约候选**与 2 个未升级的附件静态观察。只记录，没有修产品；全仓持续审查仍未完成。\n\n| ID | 问题 | 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对调用并阻断 full fork | 实际 Facade/TurnLoop/Transcript/SessionManager + fake client/executor；25 调用对照正常，排除 resume/send 必失败 |\n\n[工具目录报告](tools.md)保留同名 definition-only 注册继续使用旧 executor 的候选。fake executor 能复现组合，但没有“省略 executor 必须清理旧实现”的明确替换契约，当前所读生产调用又显式传 executor，所以不计为确认。附件 Windows 兼容、目录深度与 truncated 标志也仅作静态观察。\n\n**首次验证：9 个 clean guarded shards，123 pass、431 expect、0 fail、0 skipped；106 项既有 baseli",
+      "sha256": "2d4dfef0d761842c4a2cfc07e3941d8eeccfe0017ed8b0394f704dae42d38ede"
+    },
+    {
+      "index": 5,
+      "path": "docs/audit-2026-10-17-round9/evidence/cross-review-usage.md",
+      "jsonPointer": null,
+      "line": 3,
+      "needle": "cost-r9-01",
+      "context": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone record 后累计 token/cost 的 API。完整 ID 的支持不是从外部服务或潜在 TODO 推断出来的。\n\n实际实现先用完整 ID 检查 known，再在 `cost-tracker.ts:115` 仅保存 canonical 名称；`:148` 累计时重新按保存的名称定价。冻结 snapshot 的 `google/gemini-4-argon` input/output 正是 2",
+      "sha256": "938e496163ebc6bb421847619151e7389b3dafcfbc613f7f14a97ee59f22ee91"
+    },
+    {
+      "index": 9,
+      "path": "docs/audit-2026-10-17-round9/usage.md",
+      "jsonPointer": null,
+      "line": 5,
+      "needle": "cost-r9-01",
+      "context": "# 统计数据与独立 CostTracker 审查\n\n冻结源：`248d091202869c07274adedf4fd50403105f1b1f`。本方向 **1 项确认 P3、0 个候选**。2 个首次 guarded shard 共 **28 pass、79 expect、0 fail、0 skipped**，其中新增 5 项，既有纯数据基线 23 项。只记录，不修产品。\n\n## COST-R9-01：独立 CostTracker 记录后丢失完整模型标识，累计估价错误（P3）\n\n`packages/core/src/cost-tracker.ts:115` 把 `record(model, ...)` 的完整标识替换成 canonical 名称。后续 `getEstimatedCost()`（`:148`）再按已截断的名称查价。完整 OpenRouter `vendor/model` 名称属于明确支持的输入：本模块 `:36–46` 说明完整标识优先查 snapshot，`data/model-metadata.ts:103–105` 说明此类名称从 snapshot 定价；`CostTracker` 仍在公共 SDK `index.ts:759` 导出。\n\n[实际 fixture](evidence/root-usage-contracts.test.ts) 使用冻结仓库自带 `openrouter-models.json` 的 `google/gemini-4-argon`，不改数据、不查外部价格。该条目 input/output 为 2/10，且 canonical 名称没有 direct metadata。对 1M input + 1M output，`estimateF",
+      "sha256": "bbf83d716fbf1c0b5c72cc89130bf2d389a9d1110faa8525d30a92975f93280e"
+    }
+  ]
+}

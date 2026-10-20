@@ -1,0 +1,1 @@
+{"args": ["rg", "--files", "packages/core/src/themes"], "exitCode": 0}

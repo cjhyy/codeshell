@@ -1,0 +1,20 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "argv": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+    "docs/audit-2026-10-17-round27/evidence/root-containment.test.ts"
+  ],
+  "attempt": 1,
+  "exitCode": 1,
+  "elapsedSeconds": 0.258,
+  "raw": "docs/audit-2026-10-17-round27/evidence/root-containment-first.raw.log",
+  "rawBytes": 2272,
+  "rawSha256": "3419b38917c264fa865bcca06aa7160da25216f1b056c713ceb57a42f6a33a48",
+  "combinedStdoutStderr": true,
+  "rawAndExitSavedBeforeInspection": true,
+  "productReruns": 0
+}

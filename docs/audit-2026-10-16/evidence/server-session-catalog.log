@@ -1,0 +1,21 @@
+EVIDENCE TYPE: TRANSCRIPT EXCERPT, NOT A RUNNER RAW FILE
+This file was copied verbatim from the retained exec_command tool stdout after execution.
+The original run did not redirect stdout/stderr to disk. No original raw log or JUnit file was retained.
+Original tool response: chunk_id=17a8f0; exit_code=0; wall_time_seconds=0.55983575.
+Command: node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-16/evidence/server-session-catalog.test.ts
+--- retained tool stdout begins ---
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/server-session-catalog.test.ts:
+AUDIT null/number state abort whole disk catalog; malformed JSON is correctly skipped
+(pass) one syntactically valid non-object state prevents listing every healthy session [28.24ms]
+AUDIT tied directory mtimes: full=a,B,c; paged=a,c; B omitted
+(pass) equal directory mtime with valid mixed-case IDs skips a session between pages [12.81ms]
+(pass) different directory mtimes preserve all valid mixed-case IDs [119.85ms]
+
+ 3 pass
+ 0 fail
+ 10 expect() calls
+Ran 3 tests across 1 file. [529.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.
+--- retained tool stdout ends ---

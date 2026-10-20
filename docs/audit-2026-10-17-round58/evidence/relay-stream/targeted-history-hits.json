@@ -1,0 +1,150 @@
+{
+  "capturedUTC": "2026-10-17T19:16:40.699316+00:00",
+  "method": "Own exact raw path/SHA navigation and hit-file bytepins, not whole-corpus escaped JSON scalar scan or semantic read. Root shared batch owns full machine history.",
+  "argv": [
+    "rg",
+    "-l",
+    "--hidden",
+    "--no-ignore",
+    "-F",
+    "-e",
+    "packages/server/src/remote-relay/byte-stream.ts",
+    "-e",
+    "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+    "-e",
+    "packages/server/src/remote-relay/local-stream.ts",
+    "-e",
+    "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+    "-e",
+    "packages/server/src/remote-relay/protocol.ts",
+    "-e",
+    "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+    "docs",
+    "bugs",
+    "-g",
+    "*.md",
+    "-g",
+    "*.MD",
+    "-g",
+    "*.json",
+    "-g",
+    "!**/.git/**",
+    "-g",
+    "!**/node_modules/**"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "bytes": 159179,
+      "sha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+      "bytes": 374980,
+      "sha256": "28bffc7bc8c55ee09323a8b31ce4556f99ebd64d7fe91c1047d49d7a7e3c29d5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+      "bytes": 3322,
+      "sha256": "40af4a551a36222b550dd43dfeb59374c7da65c992a856e8919bb019328bb5bb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "bytes": 29133,
+      "sha256": "060616045585eb9b7c0b0efe8b2af3a8243099bb31da9bad1e5ed4050790d91b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "bytes": 94123,
+      "sha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "bytes": 1891704,
+      "sha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "bytes": 129321,
+      "sha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round41/evidence/root-history.json",
+      "bytes": 764923,
+      "sha256": "451a3c27bf3945c95d9a991e2a84f6e84bb38176106bf580b6e6dd60ba5983b5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "bytes": 231771,
+      "sha256": "27cd461eb89814739256f8af38f01c80142baedc7eb1daea2242463dddab5320"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "bytes": 280965,
+      "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "bytes": 1723612,
+      "sha256": "5f02cde507ce90bc9db4746b693feee572eba1e951b9c8dd65612e4425a614a6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "bytes": 1941044,
+      "sha256": "2e1693238ea4140dcb6f1bc8a4416fe356e1b559d901a7bf2c5bc492192c4c08"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "bytes": 1941121,
+      "sha256": "5adcd53bfca820e03282db45815c370bcc529c3606aa4c8f860126d14e646ee2"
+    },
+    {
+      "path": "docs/review-2026-10-12/server-preflight-round23.md",
+      "bytes": 11230,
+      "sha256": "80ee715fa408a2ed8fcb9a1490301b933d40db9386988e9cc5d6e9dc7dcd2112"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-preflight-round23/server-preflight-round23.md",
+      "bytes": 11044,
+      "sha256": "b1ddf209a80de9260ebf7c1f7fa652aee1814a6e09a5278847a70696295500aa"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+      "bytes": 80193,
+      "sha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61"
+    },
+    {
+      "path": "docs/todo/platform-s0-quick-fixes-plan.md",
+      "bytes": 50003,
+      "sha256": "d4e3235aa3228fd9edbb40ad5d89fd1e53d1b34002c4c735eaf14df90728be39"
+    }
+  ],
+  "hitFileCount": 22
+}

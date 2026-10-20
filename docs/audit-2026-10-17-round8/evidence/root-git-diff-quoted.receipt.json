@@ -1,0 +1,14 @@
+{
+  "baseline": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round8/evidence/root-git-diff-quoted.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "elapsedSeconds": 0.18078303337097168,
+  "limits": "Real worktree diff summary source with in-memory gitOutput module mock and throwing child_process guard. No Git product command/native process/repo/worktree/real file/Host/UI. Git quote format supported by primary docs; no real Git-output capture."
+}

@@ -1,0 +1,77 @@
+overlay-token-path 1 docs/superpowers/plans/2026-07-15-workspace-profile-mvp.md /text line 561
+`bun test packages/core/src/profile/activation.test.ts`
+Expected: PASS（5 pass）
+
+注意：若 `saveProjectSetting` 因 dotted-key 语义把 `"profile"` 当路径处理出问题（它内部用 `setDottedSetting`），值本身是对象、键无点号，应当直接落为顶层键；如失败，读 `settings/manager.ts:443-461` 确认行为后修测试或实现，不要改 manager 的通用语义。
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/core/src/profile/activation.ts packages/core/src/profile/activation.test.ts
+git commit -m 
+overlay-token-path 2 docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md /text line 549
+ay schema
+
+- `SettingsManager.saveProjectSetting(key, value, cwd)`。
+- `SettingsManager.deleteProjectSetting(key, cwd)` 或等价删除能力。
+- settings schema 增加 `capabilityOverrides`。
+- 单元测试覆盖点号路径写入、目录创建、原子写、invalidate。
+
+### Phase 2：能力控制层 project overlay
+
+- `CapabilityService.setEnabled()` 增加 scope/cwd。
+- 新增 `setOverride()` 或等价 API 表达 `inherit/on/off`。
+- descriptor 返回 `globalEnabled`、`projectOverride`、`effectiv
+overlay-token-path 3 docs/todo/claude-repository-optimization-2026-08-30.md /text line 354
+
+> `SettingsManager.saveProjectSetting(key, value, cwd)` —— 它已经做了锁内重读 +
+> 原子 temp+rename + 缓存失效，**不新建第二套 lock/atomic 实现**。key 校验提前到落盘前
+> （在丢弃对象上跑同一个 `setDottedSetting` 验证器），保住「非法 dotted key 不创建
+> settings.json」的既有契约；「不复活已删除项目根」的前置检查原样保留。
+> 引入 `makeConfigTool(deps)` 工厂（对齐 `configure-model-connection.ts` 的
+> `DEFAULT_DEPS` 惯例）作为最窄注入点。
+>
+> **并发语义（已测）**：
+>
+> - **不同 key 并发** —— 全部保留，任何一个都不会被别人的陈旧快照覆盖。
+> - *
+dot-name-generic 0 docs/archive/bug-followups-2026-08-13.md /text line 36
+mplates.ts:35-46`），所以**软链
+  manifest 无法真正被调度执行**；但运维人员在 `InstallCapability` 的 inspect
+  输出里看到的是未加固数据。
+- 建议：复用 `pluginCatalog` 的读取函数，删掉这条独立路径。
+
+### 2. 带点号的插件/Skill 名会静默 no-op 却报告成功
+
+- 位置：`packages/core/src/tool-system/builtin/install-capability.ts:556-560`、`791-797`
+- 现状：`SAFE_PLUGIN_SEGMENT_RE`(`:34`)/`SAFE_SKILL_NAME_RE`(`:35`) 允许 `.`，
+  名字被插进点分设置键 `capabilityOverrides.plugins.${plugin}`；
+  `setDottedSetting`（`settings/manager.ts:137-148`）按 `.` 拆成嵌套对象
+  `{plugins:{a:{b:"off"}}}`，而读取端 `capability-c
+dot-name-generic 1 docs/archive/bug-followups-2026-08-13.md /text line 41
+6-560`、`791-797`
+- 现状：`SAFE_PLUGIN_SEGMENT_RE`(`:34`)/`SAFE_SKILL_NAME_RE`(`:35`) 允许 `.`，
+  名字被插进点分设置键 `capabilityOverrides.plugins.${plugin}`；
+  `setDottedSetting`（`settings/manager.ts:137-148`）按 `.` 拆成嵌套对象
+  `{plugins:{a:{b:"off"}}}`，而读取端 `capability-control/overlay.ts:22-26`
+  期望扁平 `Record<name,"on"|"off">`，非法结构被归一化为 inherit。
+- 结果：`disable plugin a.b` 返回「Disabled ...」但插件依然启用。
+- 建议：禁止名字中的 `.`，或改用非点分的键写入方式。
+
+### 3. 三个 `files:*Turn` IPC handler 未接入统一会话校验
+
+- 位置：`packa
+dot-name-generic 2 docs/archive/todo/review-core-v2.md /text line 4
+## Core Engine Review
+
+### Strengths (file:line specific)
+- `packages/core/src/settings/manager.ts:65-118` hardens dotted setting writes against prototype-pollution segments and inherited-object descent before `Config`/settings writes use them.
+- `packages/core/src/plugins/installer/sourcePath.ts:18-60` adds relative-path, realpath, and symlink-escape checks for marketplace/plugin source subpaths.
+- `packages/core/src/run/ids.ts:1-25`, `packages/core/src/run/FileRunStore.ts:38-50`, and `
+dot-name-generic 3 docs/audit-2026-10-17-round10/evidence/cross-review-catalog.md /text line 7
+模型能力改动 304781e52c0ab18b79514d8e51c6dbf9da672421 是冻结基线祖先；这些断言只是冻结仓库内部一致，不能替代厂商窗口/vision 事实验证。
+
+focused 数据没有网络或凭证：false/0/空字符串与 undefined 的参数投影、同一对象下不同 dotted paths、schema 通过的 vendor/model:revision 替换与原数组保持、参数文档输出均与所读函数契约相符。没有把任意父子 wire conflict 配置当作正常生产 bug。
+
+缓存方向仅证明首次 backfill 和 explicit override 保留，refresh inferred 值没有新的明确契约；已归档的 provenance 设计与错误调用链读取也明确披露。错误路径后的 && 读取未执行，不能作为验证通过或失败 Bun shard。保存/删除、并发/链接、真实 provider/Host/UI 和共享 dist 都没有超范围成功声明。无需改动报告。
+

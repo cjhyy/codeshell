@@ -1,0 +1,213 @@
+{
+  "base": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "independentGitBlobVerification": false,
+  "sourceChecks": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "bytes": 220,
+      "sha256": "d48ac031afd8a3c9196d410d4029286ccae89eac7f9efdf0310758a3a6a291dc",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "bytes": 6380,
+      "sha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.ts",
+      "bytes": 7390,
+      "sha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    },
+    {
+      "path": "packages/coding/src/review/review-target.test.ts",
+      "bytes": 12207,
+      "sha256": "9f3e7b5cb180b6eb3e74c0fcc8a09f9a7bdd5f643bccab9d359388dd78e1ac80",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    },
+    {
+      "path": "packages/coding/src/review/review-target.ts",
+      "bytes": 15379,
+      "sha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.ts",
+      "bytes": 14224,
+      "sha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "bytes": 8173,
+      "sha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/registry.ts",
+      "bytes": 7302,
+      "sha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "currentMatchesReadTime": true,
+      "rangesWithinEOF": true
+    }
+  ],
+  "sourcePinCount": 10,
+  "productContractReadLines": 1140,
+  "instructionReadLines": 217,
+  "historyTotals": {
+    "files": 2509,
+    "markdown": 1241,
+    "json": 1268,
+    "stringLeaves": 426811,
+    "scalarLeaves": 609678,
+    "parseErrors": 0
+  },
+  "archiveFiles": 169,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 1,
+  "productRuns": 0,
+  "gitCommands": 0,
+  "localLinkCount": 23,
+  "localLinks": [
+    {
+      "link": "../../packages/coding/src/review/review-target.ts:1",
+      "exists": true,
+      "line": 1
+    },
+    {
+      "link": "../../packages/coding/src/review/review-target.test.ts:1",
+      "exists": true,
+      "line": 1
+    },
+    {
+      "link": "evidence/target-source-manifest.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "../../packages/tui/src/cli/commands/builtin/git-commands.ts:132",
+      "exists": true,
+      "line": 132
+    },
+    {
+      "link": "../../packages/desktop/src/main/review-service.ts:190",
+      "exists": true,
+      "line": 190
+    },
+    {
+      "link": "../../packages/coding/src/review/review-target.ts:42",
+      "exists": true,
+      "line": 42
+    },
+    {
+      "link": "../../packages/coding/src/review/review-target.ts:161",
+      "exists": true,
+      "line": 161
+    },
+    {
+      "link": "../../packages/coding/src/review/review-prompt.ts:68",
+      "exists": true,
+      "line": 68
+    },
+    {
+      "link": "../../packages/tui/src/ui/App.tsx:124",
+      "exists": true,
+      "line": 124
+    },
+    {
+      "link": "../../packages/tui/src/cli/commands/registry.ts:132",
+      "exists": true,
+      "line": 132
+    },
+    {
+      "link": "evidence/target-registry-history.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "../audit-2026-10-17-round4/root.md:21",
+      "exists": true,
+      "line": 21
+    },
+    {
+      "link": "../audit-2026-10-17-round4/validation.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-dedup.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-history-selected.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-prep/proposal.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-prep-copy-receipt.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-findings.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-candidates.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-related.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-validation.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-metadata-notes.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/target-artifact-receipt.json",
+      "exists": true,
+      "line": null
+    }
+  ],
+  "copiedPrepFileCount": 8,
+  "originalTmpPrepChanged": false
+}

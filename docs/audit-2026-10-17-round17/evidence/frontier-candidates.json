@@ -1,0 +1,12 @@
+{
+  "base": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "candidateCount": 0,
+  "candidates": [],
+  "relatedCount": 0,
+  "exclusions": [
+    "round11 channel baseline 已覆盖，本轮仅静态核对，不计新发现。",
+    "旧 Bound Session 附件交付限制、Unicode 附件名、Link file selection、Slack thread、LINE lengths、DeliveryQueue FIFO/ACK 不重复登记。",
+    "media tracker 同对象并发缺普通合同，不计候选。",
+    "高耦合 Host/Link authorization 路径不作动态实验。"
+  ]
+}

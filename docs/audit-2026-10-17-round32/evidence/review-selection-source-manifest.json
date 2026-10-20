@@ -1,0 +1,1605 @@
+{
+  "formalBaselineProvidedByRoot": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalBranchProvidedByRoot": "codex/audit/selection-taskparse-round32-20261017",
+  "prepSourceManifest": "selection-review-prep/source-manifest.json",
+  "prepSourceManifestSha256": "f893d9a0d9c2bc0f0bbc8321659ba5b015dcad7f03d09497563696092e5e1082",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/contextSelection.ts",
+      "bytes": 7644,
+      "lineCount": 218,
+      "sha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "initialFilesystemSha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "finishFilesystemSha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "pinTiming": "Before direct semantic source read; filename inventory only",
+      "captureRecord": "initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:01.647001+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          218
+        ]
+      ],
+      "coveredLineCount": 218,
+      "prepSourceRow": {
+        "path": "packages/desktop/src/renderer/contextSelection.ts",
+        "bytes": 7644,
+        "lineCount": 218,
+        "sha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+        "initialFilesystemSha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+        "finishFilesystemSha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+        "pinTiming": "Before direct semantic source read; filename inventory only",
+        "captureRecord": "initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:01.647001+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            218
+          ]
+        ],
+        "coveredLineCount": 218
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/modelSelection.ts",
+      "bytes": 714,
+      "lineCount": 21,
+      "sha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "initialFilesystemSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "finishFilesystemSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "pinTiming": "Before direct semantic source read; filename inventory only",
+      "captureRecord": "initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:01.647001+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "coveredLineCount": 21,
+      "prepSourceRow": {
+        "path": "packages/desktop/src/renderer/modelSelection.ts",
+        "bytes": 714,
+        "lineCount": 21,
+        "sha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+        "initialFilesystemSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+        "finishFilesystemSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+        "pinTiming": "Before direct semantic source read; filename inventory only",
+        "captureRecord": "initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:01.647001+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            21
+          ]
+        ],
+        "coveredLineCount": 21
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lineCount": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "initialFilesystemSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "finishFilesystemSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "pinTiming": "Before direct semantic source read; filename inventory only",
+      "captureRecord": "initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:01.647001+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          530,
+          585
+        ],
+        [
+          1140,
+          1210
+        ],
+        [
+          1340,
+          1440
+        ],
+        [
+          1660,
+          1705
+        ],
+        [
+          1940,
+          1986
+        ]
+      ],
+      "coveredLineCount": 321,
+      "prepSourceRow": {
+        "path": "packages/core/src/engine/turn-loop.ts",
+        "bytes": 108774,
+        "lineCount": 2412,
+        "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+        "initialFilesystemSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+        "finishFilesystemSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+        "pinTiming": "Before direct semantic source read; filename inventory only",
+        "captureRecord": "initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:01.647001+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            530,
+            585
+          ],
+          [
+            1140,
+            1210
+          ],
+          [
+            1340,
+            1440
+          ],
+          [
+            1660,
+            1705
+          ],
+          [
+            1940,
+            1986
+          ]
+        ],
+        "coveredLineCount": 321
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "lineCount": 928,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "initialFilesystemSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "finishFilesystemSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+      "captureRecord": "consumer-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          275,
+          315
+        ],
+        [
+          355,
+          405
+        ],
+        [
+          435,
+          452
+        ]
+      ],
+      "coveredLineCount": 110,
+      "prepSourceRow": {
+        "path": "packages/desktop/src/renderer/MessageStream.tsx",
+        "bytes": 37921,
+        "lineCount": 928,
+        "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+        "initialFilesystemSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+        "finishFilesystemSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+        "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+        "captureRecord": "consumer-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            275,
+            315
+          ],
+          [
+            355,
+            405
+          ],
+          [
+            435,
+            452
+          ]
+        ],
+        "coveredLineCount": 110
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lineCount": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "initialFilesystemSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "finishFilesystemSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+      "captureRecord": "consumer-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1388,
+          1478
+        ],
+        [
+          1570,
+          1642
+        ]
+      ],
+      "coveredLineCount": 164,
+      "prepSourceRow": {
+        "path": "packages/core/src/protocol/server.ts",
+        "bytes": 195050,
+        "lineCount": 4949,
+        "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+        "initialFilesystemSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+        "finishFilesystemSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+        "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+        "captureRecord": "consumer-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1388,
+            1478
+          ],
+          [
+            1570,
+            1642
+          ]
+        ],
+        "coveredLineCount": 164
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "bytes": 109011,
+      "lineCount": 2831,
+      "sha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "initialFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "finishFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+      "captureRecord": "consumer-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2160,
+          2238
+        ]
+      ],
+      "coveredLineCount": 79,
+      "prepSourceRow": {
+        "path": "packages/core/src/session/session-manager.ts",
+        "bytes": 109011,
+        "lineCount": 2831,
+        "sha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+        "initialFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+        "finishFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+        "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+        "captureRecord": "consumer-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            2160,
+            2238
+          ]
+        ],
+        "coveredLineCount": 79
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210013,
+      "lineCount": 5072,
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "initialFilesystemSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "finishFilesystemSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+      "captureRecord": "consumer-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1274,
+          1300
+        ]
+      ],
+      "coveredLineCount": 27,
+      "prepSourceRow": {
+        "path": "packages/core/src/engine/engine.ts",
+        "bytes": 210013,
+        "lineCount": 5072,
+        "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+        "initialFilesystemSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+        "finishFilesystemSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+        "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+        "captureRecord": "consumer-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1274,
+            1300
+          ]
+        ],
+        "coveredLineCount": 27
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lineCount": 1892,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "initialFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "finishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+      "captureRecord": "consumer-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          767,
+          782
+        ]
+      ],
+      "coveredLineCount": 16,
+      "prepSourceRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lineCount": 1892,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "initialFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "finishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+        "captureRecord": "consumer-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            767,
+            782
+          ]
+        ],
+        "coveredLineCount": 16
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/contextSelection.test.ts",
+      "bytes": 8019,
+      "lineCount": 223,
+      "sha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "initialFilesystemSha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "finishFilesystemSha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+      "captureRecord": "consumer-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          223
+        ]
+      ],
+      "coveredLineCount": 223,
+      "prepSourceRow": {
+        "path": "packages/desktop/src/renderer/contextSelection.test.ts",
+        "bytes": 8019,
+        "lineCount": 223,
+        "sha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+        "initialFilesystemSha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+        "finishFilesystemSha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+        "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+        "captureRecord": "consumer-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            223
+          ]
+        ],
+        "coveredLineCount": 223
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lineCount": 1377,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "initialFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "finishFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "pinTiming": "Before direct transcript source read; filename locator only",
+      "captureRecord": "transcript-initial-pin.json",
+      "captureRecordUTC": "2026-10-17T12:06:59.791056+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          240,
+          260
+        ],
+        [
+          625,
+          640
+        ],
+        [
+          1140,
+          1320
+        ],
+        [
+          1325,
+          1377
+        ]
+      ],
+      "coveredLineCount": 271,
+      "prepSourceRow": {
+        "path": "packages/core/src/session/transcript.ts",
+        "bytes": 51303,
+        "lineCount": 1377,
+        "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "initialFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "finishFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "pinTiming": "Before direct transcript source read; filename locator only",
+        "captureRecord": "transcript-initial-pin.json",
+        "captureRecordUTC": "2026-10-17T12:06:59.791056+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            240,
+            260
+          ],
+          [
+            625,
+            640
+          ],
+          [
+            1140,
+            1320
+          ],
+          [
+            1325,
+            1377
+          ]
+        ],
+        "coveredLineCount": 271
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/preload/session-transcript-api.ts",
+      "bytes": 1032,
+      "lineCount": 19,
+      "sha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+      "initialFilesystemSha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+      "finishFilesystemSha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+      "pinTiming": "Before direct read; filename/symbol inventory only",
+      "captureRecord": "raw-api-initial-pin.json",
+      "captureRecordUTC": "2026-10-17T12:07:22.578987+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "coveredLineCount": 19,
+      "prepSourceRow": {
+        "path": "packages/desktop/src/preload/session-transcript-api.ts",
+        "bytes": 1032,
+        "lineCount": 19,
+        "sha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+        "initialFilesystemSha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+        "finishFilesystemSha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+        "pinTiming": "Before direct read; filename/symbol inventory only",
+        "captureRecord": "raw-api-initial-pin.json",
+        "captureRecordUTC": "2026-10-17T12:07:22.578987+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            19
+          ]
+        ],
+        "coveredLineCount": 19
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "228adc2e95fab49c35479636e62eabed6f50256e9e9cdde38d52deb5fd9f118b",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/main/session-transcript-ipc.ts",
+      "bytes": 3840,
+      "lineCount": 106,
+      "sha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+      "initialFilesystemSha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+      "finishFilesystemSha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+      "pinTiming": "Before direct source read; filename locator only",
+      "captureRecord": "raw-ipc-initial-pin.json",
+      "captureRecordUTC": "2026-10-17T12:07:44.297904+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          106
+        ]
+      ],
+      "coveredLineCount": 106,
+      "prepSourceRow": {
+        "path": "packages/desktop/src/main/session-transcript-ipc.ts",
+        "bytes": 3840,
+        "lineCount": 106,
+        "sha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+        "initialFilesystemSha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+        "finishFilesystemSha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+        "pinTiming": "Before direct source read; filename locator only",
+        "captureRecord": "raw-ipc-initial-pin.json",
+        "captureRecordUTC": "2026-10-17T12:07:44.297904+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            106
+          ]
+        ],
+        "coveredLineCount": 106
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/main/rawTranscript.ts",
+      "bytes": 4696,
+      "lineCount": 134,
+      "sha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+      "initialFilesystemSha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+      "finishFilesystemSha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+      "pinTiming": "Before independent raw reader direct read; import filename locator only",
+      "captureRecord": "raw-reader-initial-pin.json",
+      "captureRecordUTC": "2026-10-17T12:08:14.322614+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          134
+        ]
+      ],
+      "coveredLineCount": 134,
+      "prepSourceRow": {
+        "path": "packages/desktop/src/main/rawTranscript.ts",
+        "bytes": 4696,
+        "lineCount": 134,
+        "sha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+        "initialFilesystemSha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+        "finishFilesystemSha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+        "pinTiming": "Before independent raw reader direct read; import filename locator only",
+        "captureRecord": "raw-reader-initial-pin.json",
+        "captureRecordUTC": "2026-10-17T12:08:14.322614+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            134
+          ]
+        ],
+        "coveredLineCount": 134
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "docs/review-2026-10-12/context-cancel-quality-round18.md",
+      "bytes": 4903,
+      "lineCount": 31,
+      "sha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+      "initialFilesystemSha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+      "finishFilesystemSha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": null,
+      "pinTiming": "First dedicated source pin after inspection of history scanner excerpts; before direct old-report range read. No pre-excerpt semantic SHA claimed.",
+      "captureRecord": "history-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:09:43.221179+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          31
+        ]
+      ],
+      "coveredLineCount": 31,
+      "prepSourceRow": {
+        "path": "docs/review-2026-10-12/context-cancel-quality-round18.md",
+        "bytes": 4903,
+        "lineCount": 31,
+        "sha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+        "initialFilesystemSha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+        "finishFilesystemSha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": null,
+        "pinTiming": "First dedicated source pin after inspection of history scanner excerpts; before direct old-report range read. No pre-excerpt semantic SHA claimed.",
+        "captureRecord": "history-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:09:43.221179+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            31
+          ]
+        ],
+        "coveredLineCount": 31
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "docs/review-2026-10-12/context-cancel-round18.md",
+      "bytes": 24224,
+      "lineCount": 88,
+      "sha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+      "initialFilesystemSha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+      "finishFilesystemSha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": null,
+      "pinTiming": "First dedicated source pin after inspection of history scanner excerpts; before direct old-report range read. No pre-excerpt semantic SHA claimed.",
+      "captureRecord": "history-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:09:43.221179+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          32
+        ]
+      ],
+      "coveredLineCount": 32,
+      "prepSourceRow": {
+        "path": "docs/review-2026-10-12/context-cancel-round18.md",
+        "bytes": 24224,
+        "lineCount": 88,
+        "sha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+        "initialFilesystemSha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+        "finishFilesystemSha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": null,
+        "pinTiming": "First dedicated source pin after inspection of history scanner excerpts; before direct old-report range read. No pre-excerpt semantic SHA claimed.",
+        "captureRecord": "history-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:09:43.221179+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            32
+          ]
+        ],
+        "coveredLineCount": 32
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "bytes": 36930,
+      "lineCount": 244,
+      "sha256": "3094e217dfda03cffdfd3e2c39198a635b7e860d704aa6e5d1bedcabf8e3e5c2",
+      "initialFilesystemSha256": "3094e217dfda03cffdfd3e2c39198a635b7e860d704aa6e5d1bedcabf8e3e5c2",
+      "finishFilesystemSha256": "3094e217dfda03cffdfd3e2c39198a635b7e860d704aa6e5d1bedcabf8e3e5c2",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": null,
+      "pinTiming": "First dedicated source pin after inspection of history scanner excerpts; before direct old-report range read. No pre-excerpt semantic SHA claimed.",
+      "captureRecord": "history-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:09:43.221179+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          180,
+          202
+        ]
+      ],
+      "coveredLineCount": 23,
+      "prepSourceRow": {
+        "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+        "bytes": 36930,
+        "lineCount": 244,
+        "sha256": "3094e217dfda03cffdfd3e2c39198a635b7e860d704aa6e5d1bedcabf8e3e5c2",
+        "initialFilesystemSha256": "3094e217dfda03cffdfd3e2c39198a635b7e860d704aa6e5d1bedcabf8e3e5c2",
+        "finishFilesystemSha256": "3094e217dfda03cffdfd3e2c39198a635b7e860d704aa6e5d1bedcabf8e3e5c2",
+        "initialEqualsFinish": true,
+        "initialSemanticReadSha256": null,
+        "pinTiming": "First dedicated source pin after inspection of history scanner excerpts; before direct old-report range read. No pre-excerpt semantic SHA claimed.",
+        "captureRecord": "history-initial-pins.json",
+        "captureRecordUTC": "2026-10-17T12:09:43.221179+00:00",
+        "gitBlobComparedByReviewer": false,
+        "runtimeExecuted": false,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            180,
+            202
+          ]
+        ],
+        "coveredLineCount": 23
+      },
+      "semanticReadReusedFromPrep": true,
+      "formalizationNewSemanticRead": false,
+      "formalizationFinishFilesystemSha256": "3094e217dfda03cffdfd3e2c39198a635b7e860d704aa6e5d1bedcabf8e3e5c2",
+      "formalizationInitialEqualsFinish": true
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": null,
+      "pinTiming": "Before direct semantic source read; filename inventory only",
+      "captureRecord": "initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:01.647001+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "hash-only; no semantic reading in this review",
+      "noSemanticReadByThisReview": true,
+      "formalizationFinishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": null,
+      "pinTiming": "Before direct semantic source read; filename inventory only",
+      "captureRecord": "initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:01.647001+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "hash-only; no semantic reading in this review",
+      "noSemanticReadByThisReview": true,
+      "formalizationFinishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "formalizationInitialEqualsFinish": true
+    },
+    {
+      "path": "packages/desktop/src/main/transcript-reader.ts",
+      "bytes": 30529,
+      "lineCount": 792,
+      "sha256": "0d5873f4c80692ea57271a2ea689c6421c00f6ef54de741588e66e7e1ba94124",
+      "initialFilesystemSha256": "0d5873f4c80692ea57271a2ea689c6421c00f6ef54de741588e66e7e1ba94124",
+      "finishFilesystemSha256": "0d5873f4c80692ea57271a2ea689c6421c00f6ef54de741588e66e7e1ba94124",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": null,
+      "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+      "captureRecord": "consumer-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "hash-only; no semantic reading in this review",
+      "noSemanticReadByThisReview": true,
+      "formalizationFinishFilesystemSha256": "0d5873f4c80692ea57271a2ea689c6421c00f6ef54de741588e66e7e1ba94124",
+      "formalizationInitialEqualsFinish": true
+    }
+  ],
+  "sameSemanticReadingAsPrep": true,
+  "reusedProductTestLines": 1709,
+  "reusedPriorReportLines": 86,
+  "formalizationNewSemanticSourceReads": 0,
+  "formalArtifactInitialPinsUTC": "2026-10-17T12:12:57.495292+00:00",
+  "formalArtifactInitialPinTiming": "After selection author freeze notification, before reading formal artifact metadata/report",
+  "currentRound32ArtifactInitialPins": [
+    {
+      "path": "docs/audit-2026-10-17-round32/selection-report.md",
+      "bytes": 4239,
+      "sha256": "44dd3727cbb5a5a28bccdd3d7d8b5a47aa5491522e15c86accd0ba803cd1f5e8",
+      "matchesAuthorReportedFreeze": true,
+      "initialEqualsFinish": true,
+      "finishSha256": "44dd3727cbb5a5a28bccdd3d7d8b5a47aa5491522e15c86accd0ba803cd1f5e8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-artifact-receipt.json",
+      "bytes": 2235,
+      "sha256": "406e2745e012841d140089fec456d55ce064df8bbd4071dc5e56c4684f28e5e3",
+      "matchesAuthorReportedFreeze": true,
+      "initialEqualsFinish": true,
+      "finishSha256": "406e2745e012841d140089fec456d55ce064df8bbd4071dc5e56c4684f28e5e3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "initialEqualsFinish": true,
+      "finishSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "initialEqualsFinish": true,
+      "finishSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-history-decisions.json",
+      "bytes": 2650,
+      "sha256": "f0c47228bb9988385fd0d27077d8eb09e89bcaef6ff51dcea7719c939058313d",
+      "initialEqualsFinish": true,
+      "finishSha256": "f0c47228bb9988385fd0d27077d8eb09e89bcaef6ff51dcea7719c939058313d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-history-delta.json",
+      "bytes": 16572,
+      "sha256": "88ad2f56ee69a8b15d846aacf059a7bb100eb86877cc0f170c719e946de8cee8",
+      "initialEqualsFinish": true,
+      "finishSha256": "88ad2f56ee69a8b15d846aacf059a7bb100eb86877cc0f170c719e946de8cee8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep-copy-receipt.json",
+      "bytes": 3792,
+      "sha256": "ca8dff4c6c16e9278c841907bad88f2a081c069acfb65cace8057806c2f13b07",
+      "initialEqualsFinish": true,
+      "finishSha256": "ca8dff4c6c16e9278c841907bad88f2a081c069acfb65cace8057806c2f13b07"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "initialEqualsFinish": true,
+      "finishSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-source-manifest.json",
+      "bytes": 13953,
+      "sha256": "bcfb42d07b8d20a71a49084e896ed6a596a82f4812b73a895e2e7acea087c988",
+      "matchesAuthorReportedFreeze": true,
+      "initialEqualsFinish": true,
+      "finishSha256": "bcfb42d07b8d20a71a49084e896ed6a596a82f4812b73a895e2e7acea087c988"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-validation.json",
+      "bytes": 897,
+      "sha256": "4bdf9887007275a9f5a5a3eabc3603e2ec8114159f287c54493e8f3baf0dbd91",
+      "initialEqualsFinish": true,
+      "finishSha256": "4bdf9887007275a9f5a5a3eabc3603e2ec8114159f287c54493e8f3baf0dbd91"
+    }
+  ],
+  "pendingFormalMetadataReview": false,
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0,
+  "rootIndependentGitBindingRequired": true,
+  "formalMetadataFinishedUTC": "2026-10-17T12:13:59.054232+00:00",
+  "authorSourceMetadataChecks": [
+    {
+      "path": "packages/desktop/src/renderer/contextSelection.ts",
+      "bytes": 7644,
+      "lineCount": 218,
+      "sha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "prepRowVerbatim": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          218
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/modelSelection.ts",
+      "bytes": 714,
+      "lineCount": 21,
+      "sha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "prepRowVerbatim": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/contextSelection.test.ts",
+      "bytes": 8019,
+      "lineCount": 223,
+      "sha256": "9a36c4f09d1284e081cb93728db8fba09b7e365e834f36c76f32e78f73a9fc36",
+      "prepRowVerbatim": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          223
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/modelSelection.test.ts",
+      "bytes": 1235,
+      "lineCount": 53,
+      "sha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+      "prepRowVerbatim": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "prepRowVerbatim": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2010,
+          2090
+        ],
+        [
+          2200,
+          2245
+        ],
+        [
+          2565,
+          2595
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "lineCount": 928,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "prepRowVerbatim": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          250,
+          320
+        ],
+        [
+          350,
+          405
+        ],
+        [
+          435,
+          460
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lineCount": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "prepRowVerbatim": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          530,
+          595
+        ],
+        [
+          1140,
+          1215
+        ],
+        [
+          1245,
+          1290
+        ],
+        [
+          1945,
+          1985
+        ],
+        [
+          2225,
+          2270
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lineCount": 1377,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "prepRowVerbatim": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          610,
+          640
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/search.md",
+      "bytes": 7070,
+      "lineCount": 45,
+      "sha256": "7843d9bff637e61384301da7173e0e4457b38b6c47b0c5fdaa8ed04f6dc8093e",
+      "prepRowVerbatim": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/review-search.md",
+      "bytes": 1355,
+      "lineCount": 9,
+      "sha256": "9ce89f4ca531d26ed2945328c0897c8d2714a3f59c2e1cd98490e282ec74eb5a",
+      "prepRowVerbatim": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "matchesFrozenSourceAndRange": true
+    }
+  ],
+  "currentRound32AuthorArtifactChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round32/selection-report.md",
+      "bytes": 4239,
+      "lineCount": 17,
+      "sha256": "44dd3727cbb5a5a28bccdd3d7d8b5a47aa5491522e15c86accd0ba803cd1f5e8",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-source-manifest.json",
+      "bytes": 13953,
+      "lineCount": 379,
+      "sha256": "bcfb42d07b8d20a71a49084e896ed6a596a82f4812b73a895e2e7acea087c988",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-validation.json",
+      "bytes": 897,
+      "lineCount": 30,
+      "sha256": "4bdf9887007275a9f5a5a3eabc3603e2ec8114159f287c54493e8f3baf0dbd91",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep-copy-receipt.json",
+      "bytes": 3792,
+      "lineCount": 82,
+      "sha256": "ca8dff4c6c16e9278c841907bad88f2a081c069acfb65cace8057806c2f13b07",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-history-delta.json",
+      "bytes": 16572,
+      "lineCount": 412,
+      "sha256": "88ad2f56ee69a8b15d846aacf059a7bb100eb86877cc0f170c719e946de8cee8",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-history-decisions.json",
+      "bytes": 2650,
+      "lineCount": 63,
+      "sha256": "f0c47228bb9988385fd0d27077d8eb09e89bcaef6ff51dcea7719c939058313d",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-findings.json",
+      "bytes": 3,
+      "lineCount": 1,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-candidates.json",
+      "bytes": 3,
+      "lineCount": 1,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-related.json",
+      "bytes": 3,
+      "lineCount": 1,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "matchesAuthorReceipt": true
+    }
+  ],
+  "authorReceiptCheck": {
+    "path": "docs/audit-2026-10-17-round32/evidence/selection-artifact-receipt.json",
+    "bytes": 2235,
+    "lineCount": 62,
+    "sha256": "406e2745e012841d140089fec456d55ce064df8bbd4071dc5e56c4684f28e5e3"
+  },
+  "prepCopyChecks": [
+    {
+      "receipt": "selection-prep-copy-receipt.json",
+      "count": 10,
+      "files": [
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/artifact-receipt.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/artifact-receipt.json",
+          "bytes": 2651,
+          "sha256": "a1d29fc27477836a45d7830a561fd5423ce53dbb8b4243376c437586c33aab9e",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/consumer-reference.txt",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/consumer-reference.txt",
+          "bytes": 4502,
+          "sha256": "46c05ca7416f1e72b28a4bda7c3d8153967a96909cafc5ac8e442fdd5cde2131",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/decisions.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/decisions.json",
+          "bytes": 1975,
+          "sha256": "9f4046804c7349ceba9b344a75584ff7ca757afb8e089003b6d5de5a83fdbafd",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/history-method.py",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/history-method.py",
+          "bytes": 3652,
+          "sha256": "a5b56a98e1c24703625b959fbba8e0b7ae95c62dcf53b63448890d44a0f1ba64",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/history.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/history.json",
+          "bytes": 629551,
+          "sha256": "a280e31d054f0d84c2618f8011bc4e8cc8b3134a82080b2d0743471ef93ceb15",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/metadata-notes.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/metadata-notes.json",
+          "bytes": 1194,
+          "sha256": "6240cc29e4568b4223a9f6fdbdfd500cd39ac2213b2a606661684a10a5f49b79",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/prior-source-comparison.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+          "bytes": 1377,
+          "sha256": "f533483096e0e77418d86da1348fbb8bb048b851fa6381d77b9d8e3970e42c27",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/report.md",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/report.md",
+          "bytes": 4169,
+          "sha256": "717095015c0470a69e31b633fd4a921c292fb6b37bcef13da2c75ee532639b1d",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/source-manifest.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/source-manifest.json",
+          "bytes": 9981,
+          "sha256": "72f679ca9159239d0c8d548fd794d02df0123af3cc372fe6645d27b44a1aa4fe",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-frontier/validation.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-prep/validation.json",
+          "bytes": 720,
+          "sha256": "e8a8c2a6e4e3925e396dd3714c07a37cabf9b6a3169cf71ead100ba422303f47",
+          "verbatimEqual": true
+        }
+      ]
+    },
+    {
+      "receipt": "review-selection-copy-receipt.json",
+      "count": 13,
+      "files": [
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/consumer-initial-pins.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/consumer-initial-pins.json",
+          "bytes": 2463,
+          "sha256": "d9f50f0326a9553e150e67532b51f350f36dc58a63821eca83497780c34a9abe",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/history-initial-pins.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/history-initial-pins.json",
+          "bytes": 1335,
+          "sha256": "74d66d4656d49c9e6b13c0a3e08908eb46e3cb3ce7086ac56da7c1296886810a",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/history-method.py",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/history-method.py",
+          "bytes": 3307,
+          "sha256": "4d44d4903135c4747d33565f51e3abfbef6c2e8163bf5d50077f70a9ad1cc42f",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/history.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/history.json",
+          "bytes": 628116,
+          "sha256": "f77f57fcab88e23dcf7c2ef4a056d523bb23d2f26fbce3eec4fe18f3521b3f91",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/initial-pins.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/initial-pins.json",
+          "bytes": 1960,
+          "sha256": "0ea3048d01c1cd1126202b6ff7d0bf26dea9552dd68925354ac270b4d2ddd340",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/prep-finalizer.first.exit.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/prep-finalizer.first.exit.json",
+          "bytes": 887,
+          "sha256": "b8ccafbfd84098de68046a05f771b0aff460f91dea5352628ecb7651afbe9263",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/raw-api-initial-pin.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/raw-api-initial-pin.json",
+          "bytes": 306,
+          "sha256": "c65ff9860115c560fc359e4aa777b6f91eff5c076c26ded7fec5bc1ca3e47454",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/raw-ipc-initial-pin.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/raw-ipc-initial-pin.json",
+          "bytes": 302,
+          "sha256": "44339cc627bef72ee71b5593e5bd10735ed34558cc014196e3d45ee266f66383",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/raw-reader-initial-pin.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/raw-reader-initial-pin.json",
+          "bytes": 316,
+          "sha256": "117b5737affb9dda9425d2e19421f961c590920e9d96ce4cfac74b9ff8c2ae60",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/review.md",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/review.md",
+          "bytes": 4894,
+          "sha256": "4cc019dbedc7949c72d2a8dff021322ed1cfd4a255ef8343fe8818db72a67b11",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/reviewer-receipt.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/reviewer-receipt.json",
+          "bytes": 2543,
+          "sha256": "927d6318d3ad59d92c4b0eb1d921c5e418bdfb2f26ce37506cefde2f2d859473",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/source-manifest.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/source-manifest.json",
+          "bytes": 23427,
+          "sha256": "f893d9a0d9c2bc0f0bbc8321659ba5b015dcad7f03d09497563696092e5e1082",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round32-selection-review/transcript-initial-pin.json",
+          "destination": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/transcript-initial-pin.json",
+          "bytes": 303,
+          "sha256": "49f16f787a3bb803916724c5594a827d018a453b7e9e827449235b51d2109007",
+          "verbatimEqual": true
+        }
+      ]
+    }
+  ],
+  "currentHistoryMetadataCheck": {
+    "reference": {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+      "bytes": 817287,
+      "lineCount": 16487,
+      "sha256": "5eea48937df9632c3ee627ec52c8cf637ead09a9884e1316312d7ab511cb8687"
+    },
+    "inventoryMatchesIndependentPrepExactRows": true,
+    "currentFiles": 2988,
+    "preservedAuthorOldRows": 2921,
+    "sharedRowsUnchanged": 2921,
+    "addedFrozenRound31Paths": [
+      "docs/audit-2026-10-17-round31/README.md",
+      "docs/audit-2026-10-17-round31/candidates.json",
+      "docs/audit-2026-10-17-round31/coverage.json",
+      "docs/audit-2026-10-17-round31/entry-report.md",
+      "docs/audit-2026-10-17-round31/evidence-index.json",
+      "docs/audit-2026-10-17-round31/evidence/entry-artifact-receipt.json",
+      "docs/audit-2026-10-17-round31/evidence/entry-prep-copy-receipt.json",
+      "docs/audit-2026-10-17-round31/evidence/entry-prep/artifact-receipt.json",
+      "docs/audit-2026-10-17-round31/evidence/entry-prep/entry-decision.json",
+      "docs/audit-2026-10-17-round31/evidence/entry-prep/report.md",
+      "docs/audit-2026-10-17-round31/evidence/entry-prep/source-manifest.json",
+      "docs/audit-2026-10-17-round31/evidence/entry-source-manifest.json",
+      "docs/audit-2026-10-17-round31/evidence/entry-validation.json",
+      "docs/audit-2026-10-17-round31/evidence/freeze-checks.json",
+      "docs/audit-2026-10-17-round31/evidence/integration-before.json",
+      "docs/audit-2026-10-17-round31/evidence/integration-plan.json",
+      "docs/audit-2026-10-17-round31/evidence/integration-premerge.json",
+      "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+      "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent.md",
+      "docs/audit-2026-10-17-round31/evidence/review-aggregate.md",
+      "docs/audit-2026-10-17-round31/evidence/review-search-byte-checks.json",
+      "docs/audit-2026-10-17-round31/evidence/review-search-copy-receipt.json",
+      "docs/audit-2026-10-17-round31/evidence/review-search-finalizer.first.exit.json",
+      "docs/audit-2026-10-17-round31/evidence/review-search-history-checks.json",
+      "docs/audit-2026-10-17-round31/evidence/review-search-receipt.json",
+      "docs/audit-2026-10-17-round31/evidence/review-search-source-manifest.json",
+      "docs/audit-2026-10-17-round31/evidence/review-search-validation.json",
+      "docs/audit-2026-10-17-round31/evidence/review-search.md",
+      "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.first.json",
+      "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.json",
+      "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+      "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+      "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+      "docs/audit-2026-10-17-round31/evidence/root-findings.json",
+      "docs/audit-2026-10-17-round31/evidence/root-formal-metadata-notes.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep-copy-receipt.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/author-receipt.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/classification.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/consumer-pins.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/external-sources.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/initial-pins.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/source-manifest.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/test-source-pin.json",
+      "docs/audit-2026-10-17-round31/evidence/root-prep/validation.json",
+      "docs/audit-2026-10-17-round31/evidence/root-receipt-checks.json",
+      "docs/audit-2026-10-17-round31/evidence/root-related.json",
+      "docs/audit-2026-10-17-round31/evidence/root-source-manifest.json",
+      "docs/audit-2026-10-17-round31/evidence/root-validation.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/additional-initial-pins.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/author-receipt.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/finish-hash-checks.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/initial-pins.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/producer-initial-pin.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/review.md",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/source-manifest.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/source-reader.first.exit.json",
+      "docs/audit-2026-10-17-round31/evidence/search-review-prep/validation.json",
+      "docs/audit-2026-10-17-round31/evidence/worktrees-before.json",
+      "docs/audit-2026-10-17-round31/findings.json",
+      "docs/audit-2026-10-17-round31/related.json",
+      "docs/audit-2026-10-17-round31/root-report.md",
+      "docs/audit-2026-10-17-round31/source-manifest.json",
+      "docs/audit-2026-10-17-round31/validation.json"
+    ],
+    "removed": [],
+    "changed": [],
+    "current31IncludedCurrent32Excluded": true,
+    "totals": {
+      "markdownFiles": 1304,
+      "jsonFiles": 1684,
+      "stringLeaves": 645399,
+      "scalarLeaves": 957193
+    },
+    "authorSelectionCounts": {
+      "exact": 59,
+      "turn-contract": 60,
+      "old-failed": 2
+    },
+    "independentReviewCounts": {
+      "exact-selection": 19,
+      "turn-range-contract": 303,
+      "old-failed": 2
+    },
+    "patternsDiffer": true,
+    "note": "Author59/60/2 and independent19/303/2 use different regexes; same current inventory is not same keyword count. Only metadata compared during formalization,0newproduct semantic read."
+  },
+  "authorReportLocalLinkCheck": {
+    "count": 10,
+    "missing": []
+  },
+  "authorClassification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "reviewClassification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "metadataFailures": [],
+  "formalizationSemanticSourceReadsAdded": 0,
+  "validation": {
+    "runs": [],
+    "productAttempts": 0,
+    "testsExecuted": 0,
+    "productImports": 0,
+    "productFunctionEvaluations": 0,
+    "languageFixtures": 0,
+    "fixturesWritten": 0,
+    "realSessionForkActions": 0,
+    "realUserDataReads": 0,
+    "nativeRuns": 0,
+    "modelCalls": 0,
+    "networkRequests": 0,
+    "gitCommands": 0,
+    "runtimePasses": 0,
+    "runtimeExpectations": 0
+  },
+  "limitations": [
+    "Current32 artifacts/copy receipts/history references are separate from baseline source files. Root independently binds source files to4be.",
+    "Author backend boundary is preserved: author did not review Core range extension/rejection. Additional backend proof is independent review prep only.",
+    "Same source reading is reused with0formalization new semantic reads. Full hashes do not enlarge selected ranges or turn old tests into current runtime.",
+    "Initial peer parent4dad, initial reviewer context4be, timestamps/history snapshot and two metadata incidents remain verbatim in prep."
+  ]
+}

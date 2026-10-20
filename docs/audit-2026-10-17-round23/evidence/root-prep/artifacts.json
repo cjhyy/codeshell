@@ -1,0 +1,30 @@
+{
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round23-leaf-frontier/dedup.py",
+      "bytes": 3009,
+      "sha256": "29e2ee5d0913ce32091a68a22af1b97da37d072722a314d22e6c6258174ff33c"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round23-leaf-frontier/history.json",
+      "bytes": 531634,
+      "sha256": "8c8fef1017b5aa29be7c78fcea3b821adcc040e7d7d43cd688854a0883e02ddc"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round23-leaf-frontier/proposal.json",
+      "bytes": 3808,
+      "sha256": "1a2c9ebed00d654741af83e3ccb631e8999dc4b7753be21d811f60bc193fc5cf"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round23-leaf-frontier/source-manifest.json",
+      "bytes": 5012,
+      "sha256": "993bf07b5e4eb6754f62e9e9d8a56698c81cb099b241f76979216ef6a5280b90"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round23-leaf-frontier/utils-inventory.txt",
+      "bytes": 1118,
+      "sha256": "a542855963a5f0c19f8782023fa6d3f76efad4d61c96c8da361226b0fdb2cf26"
+    }
+  ],
+  "note": "Metadata-only preparation; self excluded. No dynamic product/tests, no Git writes, no round22 edits."
+}

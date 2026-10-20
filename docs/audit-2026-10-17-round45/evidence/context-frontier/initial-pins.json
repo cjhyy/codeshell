@@ -1,0 +1,38 @@
+{
+  "capturedUTC": "2026-10-17T15:13:37.818950+00:00",
+  "rootContext": "Root reports branch codex/audit/marketplace-and-source-status-round44-20261017 baseline4d5e81a27ac0481113bc523bfbf588d10672ef38; no agent Git query",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "bytes": 12329,
+      "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "lines": 341,
+      "capturedUTC": "2026-10-17T15:13:37.817069+00:00",
+      "timing": "before52 product semantic/body read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "bytes": 12083,
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "lines": 321,
+      "capturedUTC": "2026-10-17T15:13:37.817917+00:00",
+      "timing": "before52 product semantic/body read"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "capturedUTC": "2026-10-17T15:13:37.818619+00:00",
+      "timing": "instruction hash carry; no52 semantic read or invented earlier pin"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "capturedUTC": "2026-10-17T15:13:37.818942+00:00",
+      "timing": "instruction hash carry; no52 semantic read or invented earlier pin"
+    }
+  ]
+}

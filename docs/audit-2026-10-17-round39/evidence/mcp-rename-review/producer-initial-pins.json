@@ -1,0 +1,47 @@
+{
+  "capturedUTC": "2026-10-17T13:29:57.967210+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "bytes": 75319,
+      "lineCount": 2032,
+      "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "pinBeforeNewSelectedRead": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lineCount": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "pinBeforeNewSelectedRead": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "lineCount": 731,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "pinBeforeNewSelectedRead": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.ts",
+      "bytes": 2457,
+      "lineCount": 53,
+      "sha256": "202b36f9698a031050cab0ff094c69e2d5ae27e782660b9261cd48deafbd24e5",
+      "pinBeforeNewSelectedRead": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "bytes": 74360,
+      "lineCount": 1923,
+      "sha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "pinBeforeNewSelectedRead": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "bytes": 6682,
+      "lineCount": 191,
+      "sha256": "eb1fac9ef17b18e42b7e90e2bd009044c3902a75de64355557d36a3d0ee6a494",
+      "pinBeforeNewSelectedRead": true
+    }
+  ]
+}

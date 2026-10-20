@@ -10,6 +10,10 @@
 
 import OpenAI from "openai";
 import { withProviderRequestProjection } from "../../model-request-boundary/context.js";
+import {
+  recordModelTraceAttemptError,
+  recordModelTraceAttemptResult,
+} from "../../model-traces/context.js";
 import type {
   ClientDefaults,
   LLMConfig,
@@ -24,11 +28,10 @@ import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
 import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
-import { capabilitiesFor, type Capability } from "../capabilities/index.js";
+import { capabilitiesForConfig, type Capability } from "../capabilities/index.js";
 import { clampMaxTokens } from "../clamp-max-tokens.js";
 import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
-import type { ProviderKindName } from "../provider-kinds.js";
 import {
   createPromptCacheKey,
   PromptCacheHistory,
@@ -350,15 +353,13 @@ export class OpenAIClient extends LLMClientBase {
   /**
    * Resolve the capability descriptor for the current (provider kind, model)
    * pair. Cached for the lifetime of the client — model never changes
-   * mid-client. `providerKind` defaults to "openai" because legacy LLMConfig
-   * paths (arena, env-derived) don't always populate it; for those, the
-   * built-in rules table treats them as plain OpenAI.
+   * mid-client. Explicit catalog capabilities override the family rules, just
+   * as they do for tools and image attachments.
    */
   private _capability: Capability | null = null;
   private get capability(): Capability {
     if (!this._capability) {
-      const kind = (this.config.providerKind ?? "openai") as ProviderKindName;
-      this._capability = capabilitiesFor(kind, this.model);
+      this._capability = capabilitiesForConfig(this.config);
     }
     return this._capability;
   }
@@ -483,6 +484,7 @@ export class OpenAIClient extends LLMClientBase {
           if (cachePlan && !requestSignal?.aborted && (response.usage?.promptTokens ?? 0) > 0) {
             this.promptCacheHistory.commit(cachePlan);
           }
+          recordModelTraceAttemptResult(response);
           span.end({
             stopReason: response.stopReason,
             promptTokens: response.usage?.promptTokens,
@@ -492,6 +494,7 @@ export class OpenAIClient extends LLMClientBase {
           });
           return response;
         } catch (err) {
+          recordModelTraceAttemptError(err);
           span.fail(err);
           throw err;
         }
@@ -927,6 +930,13 @@ export class OpenAIClient extends LLMClientBase {
         ...cachedTokensOf(streamUsage),
       };
       this.recordUsage(usage, options, streamUsage !== undefined);
+
+      // SDK iteration can end normally when the transport closes before a
+      // terminal choice arrives. EOF (or a usage-only tail) is not a clean stop.
+      // Keep cancellation on its existing path rather than mislabeling it EOF.
+      if (!finishReason && !sdkSignal?.aborted) {
+        throw new LLMError("OpenAI stream ended before receiving a finish_reason", this.provider);
+      }
 
       const inferredToolArgumentTruncation = didHitToolArgumentOutputLimit({
         finishReason,

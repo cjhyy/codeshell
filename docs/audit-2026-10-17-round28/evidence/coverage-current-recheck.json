@@ -1,0 +1,12 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "atUTC": "2026-10-17T11:27:24.897327+00:00",
+  "inventory": "coverage-prep/package-inventory.json",
+  "inventorySha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+  "checkedFiles": 4087,
+  "changed": [],
+  "missing": [],
+  "allFilesystemBytesMatch": true,
+  "coverage": "filesystem hash-only recheck; no Git blob or semantic-source audit for these4087 files",
+  "productAttempts": 0
+}

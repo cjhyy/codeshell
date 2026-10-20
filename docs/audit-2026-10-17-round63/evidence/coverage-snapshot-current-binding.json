@@ -1,0 +1,18 @@
+{
+  "sourcePaths": 4643,
+  "currentFilteredPaths": 4644,
+  "states": {
+    "unknown": 3898,
+    "full": 368,
+    "selected": 377
+  },
+  "notFull": 4275,
+  "changedPaths": [],
+  "addedPaths": [
+    "docs/audit-2026-10-17-round57/evidence/static-path.test.ts"
+  ],
+  "removedPaths": [],
+  "incrementalSemanticRounds": "Through62; current63 source reviews not unioned.",
+  "sourceSemanticReads": 0,
+  "exactWholeRepositoryRemainingCount": null
+}

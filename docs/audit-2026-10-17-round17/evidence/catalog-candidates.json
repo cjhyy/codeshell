@@ -1,0 +1,47 @@
+[
+  {
+    "id": "CATALOG-R17-C1",
+    "status": "candidate",
+    "title": "Panel catalog default omits Core first-connection fallback",
+    "source": {
+      "path": "packages/server/src/panels/agent-task-models.ts",
+      "start": 75,
+      "end": 82
+    },
+    "ordinaryTrigger": "Configured plain text connection with missing or stale defaults.text; settings schema permits an absent default.",
+    "observed": "Actual leaf returns a nonempty models list without defaultModel; an exact default control retains its id.",
+    "contract": "docs/panel-apps.md:373–377 says effective defaultModel and omitted start.model follows the effective CodeShell default; Engine/runtime static paths fall back to the first entry.",
+    "consumerStatic": "packages/server/src/panels/agent-task-host.ts:348–350 requires input.model or catalog.defaultModel.",
+    "reasonNotConfirmed": "Existing Desktop test deliberately expects invalid default omission. Ordinary UI addition fills a default. Host/Engine/settings loading/task execution were not run, so policy and complete task failure remain unverified.",
+    "evidence": [
+      "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts",
+      "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.raw.log"
+    ],
+    "runtimeBoundary": "Actual server leaf only for default; downstream and schema read statically."
+  },
+  {
+    "id": "CATALOG-R17-C2",
+    "status": "candidate",
+    "title": "Panel catalog trim rewrites configured connection identity",
+    "source": {
+      "path": "packages/server/src/panels/agent-task-models.ts",
+      "start": 27,
+      "end": 31
+    },
+    "additionalSource": {
+      "path": "packages/server/src/panels/agent-task-models.ts",
+      "start": 60,
+      "end": 72
+    },
+    "ordinaryTrigger": "Manual catalog editor can retain surrounding spaces in provider id or preset value; actual validateEntry/buildInstance/catalogModelOptions retain those ordinary in-memory records.",
+    "observed": "Actual catalog output changes connection id and default from \" local \" to \"local\". Distinct padded/unpadded ids collapse. Padded model value loses its exact preset label.",
+    "control": "Unpadded catalog id remains equal to actual buildInstance id and picker key.",
+    "contract": "Catalog leaf says connections are real engine pool keys; docs says returned id selects the Task connection. Core model-connections-pool uses raw inst.id, read statically.",
+    "reasonNotConfirmed": "No React editor, IPC persistence, schema.safeParse, Core pool selection or Panel worker execution. Task service separately trims model input, so intended cross-boundary restriction/policy remains unverified; no claim a live model accepts padded model ids.",
+    "evidence": [
+      "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts",
+      "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.raw.log"
+    ],
+    "runtimeBoundary": "Actual buildPanelAgentTaskModelCatalog, validateEntry, buildInstance and catalogModelOptions; downstream static only."
+  }
+]

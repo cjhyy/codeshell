@@ -1,0 +1,25 @@
+{
+  "productFailures": 0,
+  "errors": [],
+  "truncations": [
+    {
+      "tool": "1eca10",
+      "originalTokens": 4051,
+      "maxTokens": 4000,
+      "exitCode": 0,
+      "scope": "Expanded historical path print only; later38 compact scope projections read, not all77path/1227cause windows."
+    },
+    {
+      "tool": "d3e4f8",
+      "originalTokens": 12766,
+      "maxTokens": 12500,
+      "exitCode": 0,
+      "scope": "Focused104 expanded contexts print partially omitted; later104 compact actual-match rows printed completely in cbaa04, only narrowed cause semantics claimed."
+    }
+  ],
+  "withdrawn": [
+    "Initial chat-text compression filename guess corrected to attachment image compression.",
+    "Original-path/metadata stale hypothesis refuted by actual ChatView staging compressed dataUrl and replacing metadata."
+  ],
+  "noProductRetries": true
+}

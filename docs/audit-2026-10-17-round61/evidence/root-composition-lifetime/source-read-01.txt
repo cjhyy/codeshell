@@ -1,0 +1,244 @@
+packages/core/src/composition/lifetime.ts
+1: /** Explicit ownership for resources acquired by one host, engine, session or run. */
+2: export type ModuleScopeKind = "host" | "engine" | "session" | "run";
+3: export type Dispose = () => void | Promise<void>;
+4: export interface Disposable {
+5:   dispose(): void | Promise<void>;
+6: }
+7: export type DisposableLike = Dispose | Disposable | void;
+8: 
+9: export class LifetimeScope {
+10:   private resources: Dispose[] = [];
+11:   private children = new Set<LifetimeScope>();
+12:   private disposal?: Promise<void>;
+13: 
+14:   constructor(
+15:     readonly kind: ModuleScopeKind,
+16:     readonly id: string,
+17:     private readonly detached?: () => void,
+18:     private readonly parent?: LifetimeScope,
+19:   ) {}
+20: 
+21:   get disposed(): boolean {
+22:     return this.disposal !== undefined || this.parent?.disposed === true;
+23:   }
+24: 
+25:   child(kind: ModuleScopeKind, id: string): LifetimeScope {
+26:     this.assertOpen();
+27:     const child = new LifetimeScope(kind, id, () => this.children.delete(child), this);
+28:     this.children.add(child);
+29:     return child;
+30:   }
+31: 
+32:   own(resource: DisposableLike): void {
+33:     this.assertOpen();
+34:     if (typeof resource === "function") this.resources.push(resource);
+35:     else if (resource) this.resources.push(() => resource.dispose());
+36:   }
+37: 
+38:   private assertOpen(): void {
+39:     if (this.disposed) throw new Error(`Lifetime scope ${this.kind}:${this.id} is disposed`);
+40:   }
+41: 
+42:   /** Sync disposers execute immediately; async disposers are awaited in acquisition-reverse order. */
+43:   dispose(): Promise<void> {
+44:     if (this.disposal) return this.disposal;
+45:     let resolve!: () => void;
+46:     let reject!: (error: unknown) => void;
+47:     this.disposal = new Promise<void>((yes, no) => {
+48:       resolve = yes;
+49:       reject = no;
+50:     });
+51:     const tasks: Dispose[] = [
+52:       ...[...this.children].reverse().map((child) => () => child.dispose()),
+53:       ...this.resources.reverse(),
+54:     ];
+55:     this.resources = [];
+56:     this.children.clear();
+57:     const errors: unknown[] = [];
+58:     let index = 0;
+59:     const drain = (): void => {
+60:       while (index < tasks.length) {
+61:         try {
+62:           const result = tasks[index++]();
+63:           if (result && typeof result.then === "function") {
+64:             result.then(drain, (error) => {
+65:               errors.push(error);
+66:               drain();
+67:             });
+68:             return;
+69:           }
+70:         } catch (error) {
+71:           errors.push(error);
+72:         }
+73:       }
+74:       this.detached?.();
+75:       if (errors.length)
+76:         reject(new AggregateError(errors, `Disposal failed: ${this.kind}:${this.id}`));
+77:       else resolve();
+78:     };
+79:     drain();
+80:     return this.disposal;
+81:   }
+82: }
+83: 
+84: /** Bind deletion to one registration, and never execute the same disposer twice. */
+85: export function onceDispose(dispose: Dispose): Dispose {
+86:   let called = false;
+87:   let result: void | Promise<void>;
+88:   return () => {
+89:     if (!called) {
+90:       called = true;
+91:       result = dispose();
+92:     }
+93:     return result;
+94:   };
+95: }
+
+packages/core/src/composition/activation.ts
+1: import type { CapabilityToolServiceHost } from "../capabilities/index.js";
+2: import type { DisposableLike } from "./lifetime.js";
+3: import { LifetimeScope } from "./lifetime.js";
+4: import type {
+5:   AgentModulePrivateServiceContribution,
+6:   EngineModuleActivationContext,
+7:   ModuleServiceHost,
+8:   ResolvedComposition,
+9:   ResolvedContribution,
+10: } from "./types.js";
+11: 
+12: export async function ownActivationResult(
+13:   scope: LifetimeScope,
+14:   result: DisposableLike,
+15: ): Promise<void> {
+16:   if (!scope.disposed) {
+17:     scope.own(result);
+18:     return;
+19:   }
+20:   // Closing while an async factory is pending must not orphan its late resource.
+21:   if (typeof result === "function") await result();
+22:   else if (result) await result.dispose();
+23: }
+24: 
+25: export function activationContext<THost>(
+26:   composition: ResolvedComposition,
+27:   moduleId: string,
+28:   scope: LifetimeScope,
+29:   host: THost,
+30: ) {
+31:   return Object.freeze({
+32:     moduleId,
+33:     resolved: composition.modules.find((module) => module.id === moduleId)!,
+34:     scope,
+35:     host: Object.freeze(host),
+36:     own: (resource: DisposableLike) => scope.own(resource),
+37:   });
+38: }
+39: 
+40: /** A failed factory unwinds the owner's whole partially acquired composition. */
+41: export async function activateEngineModules(
+42:   composition: ResolvedComposition,
+43:   scope: LifetimeScope,
+44:   host: CapabilityToolServiceHost,
+45: ): Promise<void> {
+46:   try {
+47:     for (const contribution of composition.engineActivators) {
+48:       if (scope.disposed) return;
+49:       await ownActivationResult(
+50:         scope,
+51:         await contribution.value(
+52:           activationContext(
+53:             composition,
+54:             contribution.moduleId,
+55:             scope,
+56:             host,
+57:           ) as EngineModuleActivationContext,
+58:         ),
+59:       );
+60:     }
+61:   } catch (error) {
+62:     try {
+63:       await scope.dispose();
+64:     } catch (cleanup) {
+65:       throw new AggregateError([error, cleanup], "Engine module activation failed", {
+66:         cause: cleanup,
+67:       });
+68:     }
+69:     throw error;
+70:   }
+71: }
+72: 
+73: export function createPrivateServices(
+74:   contributions: readonly ResolvedContribution<AgentModulePrivateServiceContribution>[],
+75:   kind: "engine" | "session",
+76:   scope: LifetimeScope,
+77:   host: ModuleServiceHost,
+78:   values: Record<string, unknown>,
+79:   signal?: AbortSignal,
+80: ): Promise<void> {
+81:   const pending: Promise<void>[] = [];
+82:   let rollback: Promise<void> | undefined;
+83:   const beginRollback = (): void => {
+84:     rollback ??= scope.dispose();
+85:     void rollback.catch(() => {});
+86:   };
+87:   const fail = (error: unknown): never => {
+88:     beginRollback();
+89:     throw error;
+90:   };
+91:   const install = (
+92:     moduleId: string,
+93:     declaration: AgentModulePrivateServiceContribution,
+94:     value: unknown,
+95:   ) => {
+96:     const release = () => declaration.dispose?.(value);
+97:     if (scope.disposed) {
+98:       return Promise.resolve(release());
+99:     }
+100:     values[moduleId] = value;
+101:     scope.own(() => {
+102:       delete values[moduleId];
+103:       return release();
+104:     });
+105:   };
+106:   // Only initialization owns this listener. Settled Session services remain
+107:   // alive until their normal owner closes after the active run has settled.
+108:   signal?.addEventListener("abort", beginRollback, { once: true });
+109:   try {
+110:     signal?.throwIfAborted();
+111:     for (const { moduleId, value: declaration } of contributions) {
+112:       if (declaration.scope !== kind) continue;
+113:       signal?.throwIfAborted();
+114:       const value = declaration.create(host);
+115:       if (value && typeof (value as Promise<unknown>).then === "function") {
+116:         pending.push(
+117:           Promise.resolve(value)
+118:             .then((result) => install(moduleId, declaration, result))
+119:             .catch(fail),
+120:         );
+121:       } else {
+122:         const installed = install(moduleId, declaration, value);
+123:         if (installed) pending.push(installed.catch(fail));
+124:       }
+125:     }
+126:   } catch (error) {
+127:     beginRollback();
+128:     pending.push(Promise.reject(error));
+129:   }
+130:   return Promise.allSettled(pending)
+131:     .then(async (results) => {
+132:       const errors = results.flatMap((result) =>
+133:         result.status === "rejected" ? [result.reason] : [],
+134:       );
+135:       if (signal?.aborted && !errors.includes(signal.reason)) errors.push(signal.reason);
+136:       if (errors.length) {
+137:         try {
+138:           await (rollback ?? scope.dispose());
+139:         } catch (error) {
+140:           errors.push(error);
+141:         }
+142:         throw new AggregateError(errors, "Private service activation failed");
+143:       }
+144:     })
+145:     .finally(() => signal?.removeEventListener("abort", beginRollback));
+146: }

@@ -1,0 +1,39 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+      "bytes": 3322,
+      "sha256": "40af4a551a36222b550dd43dfeb59374c7da65c992a856e8919bb019328bb5bb",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T21:06:44.337443+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/bytes.md",
+      "bytes": 5677,
+      "sha256": "afeaf33d0adcb75d3f266f2922ee967867d05b4bea3275bd48eab50fb0a1df01",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T21:06:44.339362+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-candidates.json",
+      "bytes": 855,
+      "sha256": "9dfcd83a2ebb1e774fe22b436a7db84fa8793d138cbaca67cbc9188cccfdb989",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T21:06:44.340135+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/root-source-manifest.json",
+      "bytes": 2888,
+      "sha256": "29f2cf28e68063c1b4c95dd8891d7fbb7de2d03620556327542a13c5c1435656",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T21:06:44.340875+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/fingerprint.md",
+      "bytes": 3762,
+      "sha256": "673d72907472df74737bdac28a32e984189b83418c49c5829458161109314731",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T21:06:44.341650+00:00"
+    }
+  ]
+}

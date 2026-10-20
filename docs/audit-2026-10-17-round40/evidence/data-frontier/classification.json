@@ -1,0 +1,12 @@
+{
+  "newFormalFindings": 0,
+  "newCandidates": 0,
+  "newRelatedRecords": 0,
+  "result": "limited static negative for projectOptions ordinary list/label/select-value contract only",
+  "exclusions": [
+    "stripMarkdown R2-05 already known, excluded before product source content reading",
+    "unsupported or manually malformed relative/sentinel DTO examples not promoted",
+    "no claim that all project paths, backend routing or automation lifecycle have no bugs"
+  ],
+  "oldFailedDirectionsReopened": false
+}

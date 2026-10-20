@@ -1,0 +1,13 @@
+{
+  "baseline": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "corpus": "root-git-dedup.json",
+  "fileCount": 1486,
+  "matches": [
+    {
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "location": "69",
+      "context": "r。10-12 Review R59是首提交无父range错误，不是hunk header、纯rename或quoted path解析。对10-12主Markdown与remaining findings的parseUnifiedDiff/quotePath/rename关键词有限查重未见同项。R2-08只影响外部CLI changedFiles收集，与纯rename Review AST为独立实现/修复，不重复同一缺陷。"
+    }
+  ],
+  "note": "Bounded contexts centered on match; no product execution."
+}

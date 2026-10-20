@@ -1,0 +1,30 @@
+[
+  {
+    "path": "packages/chat/src/delivery-queue.ts",
+    "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+    "displayedLineRanges": [
+      [
+        168,
+        247
+      ],
+      [
+        481,
+        620
+      ]
+    ],
+    "pinReference": "initial-pins.json",
+    "displayAt": "2026-10-17T19:22:26.038618+00:00"
+  },
+  {
+    "path": "packages/chat/src/bound-session-chat.ts",
+    "sha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+    "displayedLineRanges": [
+      [
+        1,
+        99
+      ]
+    ],
+    "pinReference": "initial-pins.json",
+    "displayAt": "2026-10-17T19:22:26.040778+00:00"
+  }
+]

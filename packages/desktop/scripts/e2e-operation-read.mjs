@@ -314,8 +314,8 @@ async function guardedProcesses() {
   }
 }
 async function activityReview() {
-  await navigateSettingsMenu(win, "Task center", { activity: true });
-  const card = win.locator(`[data-task-key="session:${sessionId}"]`);
+  await navigateSettingsMenu(win, "Conversations", { activity: true });
+  const card = win.locator(`[data-session-id="${sessionId}"]`);
   await card.waitFor({ timeout: 20_000 });
   await card.getByRole("button", { name: "Review uncertain external writes", exact: true }).click();
   await card.getByText("Result remains unknown", { exact: true }).waitFor();
@@ -520,6 +520,9 @@ try {
   const processes = await guardedProcesses();
   stage = "actual compiled Engine creates durable unknown Star";
   core = await import(coreUrl);
+  (await import("@cjhyy/code-shell-server/links")).installDefaultLinkProviders(
+    core.registerLocalLinkProviders,
+  );
   (await import(helperUrl)).installOperationReadFixture(core, origin, "original");
   class SyntheticProvider extends core.LLMClientBase {
     initClient() {}
@@ -626,15 +629,24 @@ try {
         row.accountingSessionId === state.costState.accountingSessionId &&
         row.runId === state.runId,
     );
+    // Three primary steps plus one model summary: the ToolSearch batch uses a local label.
     if (
-      physicalRequests === 5 &&
-      own.length === 5 &&
+      physicalRequests === 4 &&
+      own.length === 4 &&
       own.every((row) => row.outcome === "completed") &&
-      state.costState.summary.requests === 5 &&
+      state.costState.summary.requests === 4 &&
       state.status === "unverified_write"
     )
       break;
-    if (attempt >= 150) throw new Error("Actual auxiliary requests did not settle");
+    if (attempt >= 150)
+      throw new Error(
+        `Actual auxiliary requests did not settle: ${JSON.stringify({
+          physicalRequests,
+          receipts: own.map((row) => row.outcome),
+          summaryRequests: state.costState.summary.requests,
+          status: state.status,
+        })}`,
+      );
     await new Promise((done) => setTimeout(done, 100));
   }
   const ledgerPath = join(isolated.codeShellHome, "sessions/.operations/ledger.json");

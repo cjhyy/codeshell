@@ -1,0 +1,74 @@
+{
+  "rows": [
+    {
+      "index": 8,
+      "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "pointer": "/files/4/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading",
+        "selectedLineRanges": [],
+        "lineCount": 173,
+        "kind": "unread-adjacent-hook"
+      }
+    },
+    {
+      "index": 11,
+      "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "pointer": "/hashOnlyChecks/0/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "hash-only; no new semantic source reading"
+      }
+    },
+    {
+      "index": 46,
+      "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "pointer": "/files/0/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            4,
+            46
+          ],
+          [
+            48,
+            65
+          ],
+          [
+            71,
+            79
+          ],
+          [
+            126,
+            150
+          ],
+          [
+            172,
+            173
+          ]
+        ],
+        "lines": 173,
+        "semanticLineCount": 97
+      }
+    },
+    {
+      "index": 48,
+      "historyPath": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/workerSourceChecks/30/path",
+      "row": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "coverage": "selected"
+      }
+    }
+  ],
+  "machineExtractedRows": 49,
+  "actualCompactRowsRead": 4,
+  "scope": "Only explicit canonical/archived manifest rows printed; other metadata rows not semantically exhausted."
+}

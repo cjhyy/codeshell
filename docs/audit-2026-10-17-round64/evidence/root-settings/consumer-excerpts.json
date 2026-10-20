@@ -1,0 +1,1144 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "totalLines": 1139,
+      "selectedLineRanges": [
+        [
+          260,
+          325
+        ],
+        [
+          440,
+          525
+        ],
+        [
+          880,
+          915
+        ],
+        [
+          935,
+          970
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          260,
+          325
+        ],
+        [
+          440,
+          525
+        ],
+        [
+          880,
+          915
+        ],
+        [
+          935,
+          970
+        ]
+      ],
+      "lines": [
+        {
+          "line": 260,
+          "text": "   */"
+        },
+        {
+          "line": 261,
+          "text": "  load("
+        },
+        {
+          "line": 262,
+          "text": "    flagOverrides?: Record<string, unknown>,"
+        },
+        {
+          "line": 263,
+          "text": "    options?: { persistMigrations?: boolean; hookOrigins?: boolean },"
+        },
+        {
+          "line": 264,
+          "text": "  ): ValidatedSettings {"
+        },
+        {
+          "line": 265,
+          "text": "    this.sources = [];"
+        },
+        {
+          "line": 266,
+          "text": "    this.merged = null;"
+        },
+        {
+          "line": 267,
+          "text": "    this.hookOrigins = Object.freeze([]);"
+        },
+        {
+          "line": 268,
+          "text": "    this.mergedHookSources = [];"
+        },
+        {
+          "line": 269,
+          "text": "    this.hookOriginsEnabled = options?.hookOrigins === true;"
+        },
+        {
+          "line": 270,
+          "text": "    this.unavailableHookPriority = -1;"
+        },
+        {
+          "line": 271,
+          "text": ""
+        },
+        {
+          "line": 272,
+          "text": "    // Scope gates which disk layers we read. 'full' reads the host user dir"
+        },
+        {
+          "line": 273,
+          "text": "    // (~/.code-shell); 'project' and 'isolated' never do. See SettingsScope."
+        },
+        {
+          "line": 274,
+          "text": "    const readUser = this.scope === \"full\";"
+        },
+        {
+          "line": 275,
+          "text": "    const readProject = this.scope !== \"isolated\";"
+        },
+        {
+          "line": 276,
+          "text": ""
+        },
+        {
+          "line": 277,
+          "text": "    if (readUser) {"
+        },
+        {
+          "line": 278,
+          "text": "      // 1. Managed (lowest priority)"
+        },
+        {
+          "line": 279,
+          "text": "      this.loadJsonFile(join(this.userConfigDir(), \"settings.managed.json\"), \"managed\", 0);"
+        },
+        {
+          "line": 280,
+          "text": ""
+        },
+        {
+          "line": 281,
+          "text": "      // 2. User — only ~/.code-shell/. We used to also read ~/.claude/settings.json"
+        },
+        {
+          "line": 282,
+          "text": "      // for \"zero-migration from Claude Code\", but Claude Code's schema diverges"
+        },
+        {
+          "line": 283,
+          "text": "      // (e.g. `model` is a string there, an object here). Merging caused boot"
+        },
+        {
+          "line": 284,
+          "text": "      // crashes on machines that had Claude Code installed but never ran us."
+        },
+        {
+          "line": 285,
+          "text": "      // File-level compat (CLAUDE.md, .claude/skills/) is kept elsewhere — only"
+        },
+        {
+          "line": 286,
+          "text": "      // the settings.json read is dropped."
+        },
+        {
+          "line": 287,
+          "text": "      this.loadJsonFile(join(this.userConfigDir(), \"settings.json\"), \"user\", 1);"
+        },
+        {
+          "line": 288,
+          "text": "    }"
+        },
+        {
+          "line": 289,
+          "text": ""
+        },
+        {
+          "line": 290,
+          "text": "    if (readProject) {"
+        },
+        {
+          "line": 291,
+          "text": "      // 3. Project"
+        },
+        {
+          "line": 292,
+          "text": "      const projectPath = this.tryProjectSettingsPath(this.cwd, \"settings.json\");"
+        },
+        {
+          "line": 293,
+          "text": "      if (projectPath) this.loadJsonFile(projectPath, \"project\", 2);"
+        },
+        {
+          "line": 294,
+          "text": "      else if (this.hookOriginsEnabled)"
+        },
+        {
+          "line": 295,
+          "text": "        this.unavailableHookPriority = Math.max(this.unavailableHookPriority, 2);"
+        },
+        {
+          "line": 296,
+          "text": ""
+        },
+        {
+          "line": 297,
+          "text": "      // 4. Local"
+        },
+        {
+          "line": 298,
+          "text": "      const localPath = this.tryProjectSettingsPath(this.cwd, \"settings.local.json\");"
+        },
+        {
+          "line": 299,
+          "text": "      if (localPath) this.loadJsonFile(localPath, \"local\", 3);"
+        },
+        {
+          "line": 300,
+          "text": "      else if (this.hookOriginsEnabled)"
+        },
+        {
+          "line": 301,
+          "text": "        this.unavailableHookPriority = Math.max(this.unavailableHookPriority, 3);"
+        },
+        {
+          "line": 302,
+          "text": "    }"
+        },
+        {
+          "line": 303,
+          "text": ""
+        },
+        {
+          "line": 304,
+          "text": "    // 5. CLI flags (highest priority)"
+        },
+        {
+          "line": 305,
+          "text": "    if (flagOverrides && Object.keys(flagOverrides).length > 0) {"
+        },
+        {
+          "line": 306,
+          "text": "      this.sources.push({ name: \"flag\", priority: 4, data: sanitizeSettingsObject(flagOverrides) });"
+        },
+        {
+          "line": 307,
+          "text": "    }"
+        },
+        {
+          "line": 308,
+          "text": ""
+        },
+        {
+          "line": 309,
+          "text": "    // Sort by priority ascending (merge in order, later wins)"
+        },
+        {
+          "line": 310,
+          "text": "    this.sources.sort((a, b) => a.priority - b.priority);"
+        },
+        {
+          "line": 311,
+          "text": ""
+        },
+        {
+          "line": 312,
+          "text": "    // Version-based config migration (migrate-config.ts), applied per physical"
+        },
+        {
+          "line": 313,
+          "text": "    // file (user + project settings.json) so the write-back lands in the file"
+        },
+        {
+          "line": 314,
+          "text": "    // the data came from. A file is only rewritten (with a .bak) when a step"
+        },
+        {
+          "line": 315,
+          "text": "    // actually changed its content — a version-stamp-only diff isn't worth"
+        },
+        {
+          "line": 316,
+          "text": "    // dirtying the user's (or a repo-tracked project) file for; steps are"
+        },
+        {
+          "line": 317,
+          "text": "    // idempotent, so re-running on unstamped files each load is fine."
+        },
+        {
+          "line": 318,
+          "text": "    if (readUser) {"
+        },
+        {
+          "line": 319,
+          "text": "      this.applyConfigMigration("
+        },
+        {
+          "line": 320,
+          "text": "        join(this.userConfigDir(), \"settings.json\"),"
+        },
+        {
+          "line": 321,
+          "text": "        \"user\","
+        },
+        {
+          "line": 322,
+          "text": "        options?.persistMigrations,"
+        },
+        {
+          "line": 323,
+          "text": "      );"
+        },
+        {
+          "line": 324,
+          "text": "    }"
+        },
+        {
+          "line": 325,
+          "text": "    if (readProject) {"
+        },
+        {
+          "line": 440,
+          "text": "   * Get current effective settings."
+        },
+        {
+          "line": 441,
+          "text": "   */"
+        },
+        {
+          "line": 442,
+          "text": "  get(): ValidatedSettings {"
+        },
+        {
+          "line": 443,
+          "text": "    if (!this.merged) return this.load();"
+        },
+        {
+          "line": 444,
+          "text": "    return this.merged;"
+        },
+        {
+          "line": 445,
+          "text": "  }"
+        },
+        {
+          "line": 446,
+          "text": ""
+        },
+        {
+          "line": 447,
+          "text": "  /**"
+        },
+        {
+          "line": 448,
+          "text": "   * Invalidate cached merge."
+        },
+        {
+          "line": 449,
+          "text": "   */"
+        },
+        {
+          "line": 450,
+          "text": "  invalidate(): void {"
+        },
+        {
+          "line": 451,
+          "text": "    this.clearHookOrigins();"
+        },
+        {
+          "line": 452,
+          "text": "    this.merged = null;"
+        },
+        {
+          "line": 453,
+          "text": "  }"
+        },
+        {
+          "line": 454,
+          "text": ""
+        },
+        {
+          "line": 455,
+          "text": "  /**"
+        },
+        {
+          "line": 456,
+          "text": "   * Host-only parallel view of validated get().hooks. No Settings values are"
+        },
+        {
+          "line": 457,
+          "text": "   * exported, and invalidation never silently reloads an executable origin."
+        },
+        {
+          "line": 458,
+          "text": "   */"
+        },
+        {
+          "line": 459,
+          "text": "  getHookOrigins(): readonly (SettingsHookOrigin | undefined)[] {"
+        },
+        {
+          "line": 460,
+          "text": "    if (!this.merged) return Object.freeze([]);"
+        },
+        {
+          "line": 461,
+          "text": "    const hooks = this.merged.hooks ?? [];"
+        },
+        {
+          "line": 462,
+          "text": "    return Object.freeze("
+        },
+        {
+          "line": 463,
+          "text": "      hooks.map((hook, index) => {"
+        },
+        {
+          "line": 464,
+          "text": "        const origin = this.hookOrigins[index];"
+        },
+        {
+          "line": 465,
+          "text": "        return hooks.length === this.hookOrigins.length &&"
+        },
+        {
+          "line": 466,
+          "text": "          origin?.definitionSha256 === settingsHookDefinitionSha256(hook)"
+        },
+        {
+          "line": 467,
+          "text": "          ? origin"
+        },
+        {
+          "line": 468,
+          "text": "          : undefined;"
+        },
+        {
+          "line": 469,
+          "text": "      }),"
+        },
+        {
+          "line": 470,
+          "text": "    );"
+        },
+        {
+          "line": 471,
+          "text": "  }"
+        },
+        {
+          "line": 472,
+          "text": ""
+        },
+        {
+          "line": 473,
+          "text": "  private clearHookOrigins(): void {"
+        },
+        {
+          "line": 474,
+          "text": "    this.sources = this.sources.map(({ origin: _origin, ...source }) => Object.freeze(source));"
+        },
+        {
+          "line": 475,
+          "text": "    this.hookOrigins = Object.freeze((this.merged?.hooks ?? []).map(() => undefined));"
+        },
+        {
+          "line": 476,
+          "text": "    this.mergedHookSources = [];"
+        },
+        {
+          "line": 477,
+          "text": "  }"
+        },
+        {
+          "line": 478,
+          "text": ""
+        },
+        {
+          "line": 479,
+          "text": "  private clearSourceOrigin(name: SettingsSourceName): void {"
+        },
+        {
+          "line": 480,
+          "text": "    this.sources = this.sources.map((source) => {"
+        },
+        {
+          "line": 481,
+          "text": "      if (source.name !== name) return source;"
+        },
+        {
+          "line": 482,
+          "text": "      const { origin: _origin, ...unpaired } = source;"
+        },
+        {
+          "line": 483,
+          "text": "      return Object.freeze(unpaired);"
+        },
+        {
+          "line": 484,
+          "text": "    });"
+        },
+        {
+          "line": 485,
+          "text": "    this.hookOrigins = Object.freeze((this.merged?.hooks ?? []).map(() => undefined));"
+        },
+        {
+          "line": 486,
+          "text": "    this.mergedHookSources = [];"
+        },
+        {
+          "line": 487,
+          "text": "  }"
+        },
+        {
+          "line": 488,
+          "text": ""
+        },
+        {
+          "line": 489,
+          "text": "  private replaceSource("
+        },
+        {
+          "line": 490,
+          "text": "    name: SettingsSourceName,"
+        },
+        {
+          "line": 491,
+          "text": "    data: Record<string, unknown>,"
+        },
+        {
+          "line": 492,
+          "text": "    origin?: SettingsHookSourceSnapshot,"
+        },
+        {
+          "line": 493,
+          "text": "  ): void {"
+        },
+        {
+          "line": 494,
+          "text": "    this.sources = this.sources.map((source) =>"
+        },
+        {
+          "line": 495,
+          "text": "      source.name === name"
+        },
+        {
+          "line": 496,
+          "text": "        ? Object.freeze({ name, priority: source.priority, data, origin })"
+        },
+        {
+          "line": 497,
+          "text": "        : source,"
+        },
+        {
+          "line": 498,
+          "text": "    );"
+        },
+        {
+          "line": 499,
+          "text": "  }"
+        },
+        {
+          "line": 500,
+          "text": ""
+        },
+        {
+          "line": 501,
+          "text": "  private validateMerged(raw: Record<string, unknown>): ValidatedSettings {"
+        },
+        {
+          "line": 502,
+          "text": "    const validated = validateSettings(raw);"
+        },
+        {
+          "line": 503,
+          "text": "    const hooks = validated.hooks ?? [];"
+        },
+        {
+          "line": 504,
+          "text": "    this.hookOrigins = Object.freeze("
+        },
+        {
+          "line": 505,
+          "text": "      hooks.map((hook, index) => {"
+        },
+        {
+          "line": 506,
+          "text": "        const selected = this.mergedHookSources[index];"
+        },
+        {
+          "line": 507,
+          "text": "        if ("
+        },
+        {
+          "line": 508,
+          "text": "          !this.hookOriginsEnabled ||"
+        },
+        {
+          "line": 509,
+          "text": "          !selected?.source.origin ||"
+        },
+        {
+          "line": 510,
+          "text": "          selected.source.priority <= this.unavailableHookPriority ||"
+        },
+        {
+          "line": 511,
+          "text": "          selected.source.name === \"flag\" ||"
+        },
+        {
+          "line": 512,
+          "text": "          hooks.length !== this.mergedHookSources.length"
+        },
+        {
+          "line": 513,
+          "text": "        )"
+        },
+        {
+          "line": 514,
+          "text": "          return undefined;"
+        },
+        {
+          "line": 515,
+          "text": "        return Object.freeze({"
+        },
+        {
+          "line": 516,
+          "text": "          ...selected.source.origin,"
+        },
+        {
+          "line": 517,
+          "text": "          kind: \"settings\" as const,"
+        },
+        {
+          "line": 518,
+          "text": "          layer: selected.source.name,"
+        },
+        {
+          "line": 519,
+          "text": "          sourceLayerIndex: selected.sourceLayerIndex,"
+        },
+        {
+          "line": 520,
+          "text": "          definitionSha256: settingsHookDefinitionSha256(hook),"
+        },
+        {
+          "line": 521,
+          "text": "        });"
+        },
+        {
+          "line": 522,
+          "text": "      }),"
+        },
+        {
+          "line": 523,
+          "text": "    );"
+        },
+        {
+          "line": 524,
+          "text": "    this.merged = validated;"
+        },
+        {
+          "line": 525,
+          "text": "    return validated;"
+        },
+        {
+          "line": 880,
+          "text": "      assertSafeSettingsWriteTarget(path);"
+        },
+        {
+          "line": 881,
+          "text": "      // Re-read INSIDE the lock: a snapshot taken before acquiring it would be"
+        },
+        {
+          "line": 882,
+          "text": "      // exactly the stale value that drops the other writer's key. Strict read:"
+        },
+        {
+          "line": 883,
+          "text": "      // an existing-but-unreadable file must abort the mutation rather than be"
+        },
+        {
+          "line": 884,
+          "text": "      // rewritten from {} — see readConfigFileForMutation."
+        },
+        {
+          "line": 885,
+          "text": "      const current = this.readJsonObjectForMutation(path);"
+        },
+        {
+          "line": 886,
+          "text": "      if (mutate(current) === false) return;"
+        },
+        {
+          "line": 887,
+          "text": "      this.atomicWriteJson(path, current);"
+        },
+        {
+          "line": 888,
+          "text": "    } finally {"
+        },
+        {
+          "line": 889,
+          "text": "      release();"
+        },
+        {
+          "line": 890,
+          "text": "    }"
+        },
+        {
+          "line": 891,
+          "text": "  }"
+        },
+        {
+          "line": 892,
+          "text": ""
+        },
+        {
+          "line": 893,
+          "text": "  private loadJsonFile(path: string, name: SettingsSourceName, priority: number): void {"
+        },
+        {
+          "line": 894,
+          "text": "    if (this.hookOriginsEnabled) {"
+        },
+        {
+          "line": 895,
+          "text": "      try {"
+        },
+        {
+          "line": 896,
+          "text": "        const snapshot = readSettingsHookSnapshot(path);"
+        },
+        {
+          "line": 897,
+          "text": "        const data = parseConfigContent(snapshot.source.path, snapshot.content);"
+        },
+        {
+          "line": 898,
+          "text": "        if (data) {"
+        },
+        {
+          "line": 899,
+          "text": "          this.sources.push(Object.freeze({ name, priority, data, origin: snapshot.source }));"
+        },
+        {
+          "line": 900,
+          "text": "          return;"
+        },
+        {
+          "line": 901,
+          "text": "        }"
+        },
+        {
+          "line": 902,
+          "text": "      } catch {"
+        },
+        {
+          "line": 903,
+          "text": "        // Only executable provenance becomes unavailable. Ordinary loading"
+        },
+        {
+          "line": 904,
+          "text": "        // keeps the legacy corrupt-file/UTF-8/selection behavior below."
+        },
+        {
+          "line": 905,
+          "text": "      }"
+        },
+        {
+          "line": 906,
+          "text": "      // Keep ordinary tolerant data below, while preserving the fact that an"
+        },
+        {
+          "line": 907,
+          "text": "      // existing layer (including an unsafe candidate) was not proven absent."
+        },
+        {
+          "line": 908,
+          "text": "      for (const candidate of settingsCandidatePaths(path)) {"
+        },
+        {
+          "line": 909,
+          "text": "        try {"
+        },
+        {
+          "line": 910,
+          "text": "          lstatSync(candidate);"
+        },
+        {
+          "line": 911,
+          "text": "          this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);"
+        },
+        {
+          "line": 912,
+          "text": "          break;"
+        },
+        {
+          "line": 913,
+          "text": "        } catch (error) {"
+        },
+        {
+          "line": 914,
+          "text": "          if ((error as NodeJS.ErrnoException).code !== \"ENOENT\") {"
+        },
+        {
+          "line": 915,
+          "text": "            this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);"
+        },
+        {
+          "line": 935,
+          "text": "    // Top-level `hooks` is the one array that CONCATENATES across layers"
+        },
+        {
+          "line": 936,
+          "text": "    // instead of being replaced wholesale: a user-level (global) hook and a"
+        },
+        {
+          "line": 937,
+          "text": "    // project-level hook should BOTH run, mirroring how Claude Code merges"
+        },
+        {
+          "line": 938,
+          "text": "    // hooks from all settings files. Order follows layer priority (user"
+        },
+        {
+          "line": 939,
+          "text": "    // first, project after). An explicit `\"hooks\": null` in a layer still"
+        },
+        {
+          "line": 940,
+          "text": "    // resets everything below it (the escape hatch merge() already gives"
+        },
+        {
+          "line": 941,
+          "text": "    // every other key); per-entry opt-out is the `disabled` field."
+        },
+        {
+          "line": 942,
+          "text": "    let hooks: unknown[] | undefined;"
+        },
+        {
+          "line": 943,
+          "text": "    let hookSources: typeof this.mergedHookSources = [];"
+        },
+        {
+          "line": 944,
+          "text": "    let sawHooks = false;"
+        },
+        {
+          "line": 945,
+          "text": "    for (const source of this.sources) {"
+        },
+        {
+          "line": 946,
+          "text": "      if (!(\"hooks\" in source.data)) continue;"
+        },
+        {
+          "line": 947,
+          "text": "      const v = source.data.hooks;"
+        },
+        {
+          "line": 948,
+          "text": "      if (v === null) {"
+        },
+        {
+          "line": 949,
+          "text": "        hooks = undefined;"
+        },
+        {
+          "line": 950,
+          "text": "        hookSources = [];"
+        },
+        {
+          "line": 951,
+          "text": "        sawHooks = true;"
+        },
+        {
+          "line": 952,
+          "text": "      } else if (Array.isArray(v)) {"
+        },
+        {
+          "line": 953,
+          "text": "        hooks = [...(hooks ?? []), ...v];"
+        },
+        {
+          "line": 954,
+          "text": "        hookSources = ["
+        },
+        {
+          "line": 955,
+          "text": "          ...hookSources,"
+        },
+        {
+          "line": 956,
+          "text": "          ...v.map((_hook, sourceLayerIndex) => ({ source, sourceLayerIndex })),"
+        },
+        {
+          "line": 957,
+          "text": "        ];"
+        },
+        {
+          "line": 958,
+          "text": "        sawHooks = true;"
+        },
+        {
+          "line": 959,
+          "text": "      }"
+        },
+        {
+          "line": 960,
+          "text": "      // Non-array garbage is left to merge()'s wholesale result so"
+        },
+        {
+          "line": 961,
+          "text": "      // validateSettings still sees (and rejects) it unchanged."
+        },
+        {
+          "line": 962,
+          "text": "    }"
+        },
+        {
+          "line": 963,
+          "text": "    if (sawHooks) {"
+        },
+        {
+          "line": 964,
+          "text": "      if (hooks !== undefined) result.hooks = hooks;"
+        },
+        {
+          "line": 965,
+          "text": "      else delete result.hooks;"
+        },
+        {
+          "line": 966,
+          "text": "    }"
+        },
+        {
+          "line": 967,
+          "text": "    this.mergedHookSources = hookSources;"
+        },
+        {
+          "line": 968,
+          "text": "    return result;"
+        },
+        {
+          "line": 969,
+          "text": "  }"
+        },
+        {
+          "line": 970,
+          "text": "}"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/links/operation-hook-custody.ts",
+      "bytes": 3460,
+      "sha256": "ca8631e3c422002f7874c3b474b05e4ce49704996ecee961fe9596864f12bd69",
+      "totalLines": 82,
+      "selectedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "import { lstatSync, realpathSync } from \"node:fs\";"
+        },
+        {
+          "line": 2,
+          "text": "import { dirname, join } from \"node:path\";"
+        },
+        {
+          "line": 3,
+          "text": "import type { ConfiguredToolHook } from \"../hooks/configured-tool-hooks.js\";"
+        },
+        {
+          "line": 4,
+          "text": "import { installedPluginsPath } from \"../plugins/installedPlugins.js\";"
+        },
+        {
+          "line": 5,
+          "text": "import { listPluginHooksForHost, type PluginHookSource } from \"../plugins/loadPluginHooks.js\";"
+        },
+        {
+          "line": 6,
+          "text": "import {"
+        },
+        {
+          "line": 7,
+          "text": "  assertSettingsHookOriginCurrent,"
+        },
+        {
+          "line": 8,
+          "text": "  assertSettingsHookOriginMetadataCurrent,"
+        },
+        {
+          "line": 9,
+          "text": "  type SettingsHookOrigin,"
+        },
+        {
+          "line": 10,
+          "text": "} from \"../settings/hook-provenance.js\";"
+        },
+        {
+          "line": 11,
+          "text": ""
+        },
+        {
+          "line": 12,
+          "text": "function identity(path: string): string {"
+        },
+        {
+          "line": 13,
+          "text": "  const info = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 14,
+          "text": "  if (info.isSymbolicLink()) throw new Error(\"Hook source custody is unsafe\");"
+        },
+        {
+          "line": 15,
+          "text": "  if (info.isDirectory()) return [info.dev, info.ino, info.mode].map(String).join(\":\");"
+        },
+        {
+          "line": 16,
+          "text": "  if (!info.isFile() || info.nlink !== 1n) throw new Error(\"Hook source custody is unsafe\");"
+        },
+        {
+          "line": 17,
+          "text": "  return [info.dev, info.ino, info.mode, info.size, info.mtimeNs, info.ctimeNs, info.nlink]"
+        },
+        {
+          "line": 18,
+          "text": "    .map(String)"
+        },
+        {
+          "line": 19,
+          "text": "    .join(\":\");"
+        },
+        {
+          "line": 20,
+          "text": "}"
+        },
+        {
+          "line": 21,
+          "text": ""
+        },
+        {
+          "line": 22,
+          "text": "export function sourceMatches("
+        },
+        {
+          "line": 23,
+          "text": "  expected: Record<string, unknown>,"
+        },
+        {
+          "line": 24,
+          "text": "  actual: Record<string, unknown> | undefined,"
+        },
+        {
+          "line": 25,
+          "text": "): boolean {"
+        },
+        {
+          "line": 26,
+          "text": "  return ("
+        },
+        {
+          "line": 27,
+          "text": "    actual !== undefined && Object.entries(expected).every(([key, value]) => actual[key] === value)"
+        },
+        {
+          "line": 28,
+          "text": "  );"
+        },
+        {
+          "line": 29,
+          "text": "}"
+        },
+        {
+          "line": 30,
+          "text": ""
+        },
+        {
+          "line": 31,
+          "text": "/** Shared native custody only. No review owner/signal/SettingsManager is retained. */"
+        },
+        {
+          "line": 32,
+          "text": "export function createHookSourceCustody(hook: Readonly<ConfiguredToolHook>): () => void {"
+        },
+        {
+          "line": 33,
+          "text": "  if (!hook.source) throw new Error(\"Hook source provenance unavailable\");"
+        },
+        {
+          "line": 34,
+          "text": "  const source = structuredClone(hook.source);"
+        },
+        {
+          "line": 35,
+          "text": "  if (source.kind === \"settings\") {"
+        },
+        {
+          "line": 36,
+          "text": "    assertSettingsHookOriginCurrent(source as SettingsHookOrigin);"
+        },
+        {
+          "line": 37,
+          "text": "    return () => assertSettingsHookOriginMetadataCurrent(source as SettingsHookOrigin);"
+        },
+        {
+          "line": 38,
+          "text": "  }"
+        },
+        {
+          "line": 39,
+          "text": "  const plugin = source as PluginHookSource;"
+        },
+        {
+          "line": 40,
+          "text": "  if (!plugin.custody) throw new Error(\"Plugin Hook source provenance unavailable\");"
+        },
+        {
+          "line": 41,
+          "text": "  if (realpathSync(plugin.installPath) !== plugin.installPath)"
+        },
+        {
+          "line": 42,
+          "text": "    throw new Error(\"Hook installation is not canonical\");"
+        },
+        {
+          "line": 43,
+          "text": "  const paths = new Set(["
+        },
+        {
+          "line": 44,
+          "text": "    installedPluginsPath(),"
+        },
+        {
+          "line": 45,
+          "text": "    plugin.installPath,"
+        }
+      ]
+    }
+  ]
+}

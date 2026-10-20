@@ -1,0 +1,17 @@
+{
+  "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "sourcePath": "packages/tui/src/render/bidi.ts",
+  "lines": [
+    132,
+    140
+  ],
+  "inputFunctionSha256": "93fbb4adb16d88450a66eb66065f36df95fb8253e511303c82453337558c85ae",
+  "compiledFunctionSha256": "654ca2809e4f6c1d11f45ced2947c9b237852e182db59fffd2ba77af00764706",
+  "actualNewFunctionArgumentSha256": "027570d22702b39bbd626156c3091c6a549e5c49cb56b90b254f79deee845b84",
+  "compiledTextArtifact": "docs/audit-2026-10-17-round16/evidence/bidi-compiled-predicate.js",
+  "artifactIncludesTrailingNewline": true,
+  "transformation": "Only the two TypeScript signature annotations removed. Regex/body copied unchanged. New Function returns the predicate.",
+  "actualProductModuleImported": false,
+  "platformGateExecuted": false,
+  "bidiJsImported": false
+}

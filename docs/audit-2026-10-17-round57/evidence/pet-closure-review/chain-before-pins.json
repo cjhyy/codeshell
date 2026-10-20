@@ -1,0 +1,60 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lineCount": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "pinnedAtUTC": "2026-10-17T19:04:13.709689+00:00",
+      "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+      "bytes": 6984,
+      "lineCount": 207,
+      "sha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "pinnedAtUTC": "2026-10-17T19:04:13.711728+00:00",
+      "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+      "bytes": 17609,
+      "lineCount": 484,
+      "sha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "pinnedAtUTC": "2026-10-17T19:04:13.712662+00:00",
+      "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lineCount": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "pinnedAtUTC": "2026-10-17T19:04:13.714088+00:00",
+      "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session.ts",
+      "bytes": 23896,
+      "lineCount": 586,
+      "sha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "pinnedAtUTC": "2026-10-17T19:04:13.715063+00:00",
+      "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "bytes": 11804,
+      "lineCount": 292,
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "pinnedAtUTC": "2026-10-17T19:04:13.715969+00:00",
+      "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lineCount": 1377,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "pinnedAtUTC": "2026-10-17T19:04:13.716913+00:00",
+      "timing": "before this packet own body/navigation snippets; canonical path confirmed by filename inventory9eac81"
+    }
+  ]
+}

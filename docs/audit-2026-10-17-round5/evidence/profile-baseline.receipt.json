@@ -1,0 +1,21 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/profile/types.test.ts",
+    "packages/core/src/profile/store.test.ts",
+    "packages/core/src/profile/activation.test.ts",
+    "packages/core/src/profile/resolve.test.ts",
+    "packages/core/src/profile/requirements.test.ts",
+    "packages/core/src/profile/switch-plan.test.ts",
+    "packages/core/src/engine/run-setup.test.ts"
+  ],
+  "startedAt": "2026-10-17T05:01:21.711439+00:00",
+  "finishedAt": "2026-10-17T05:01:22.208490+00:00",
+  "exitCode": 0,
+  "firstAttempt": true,
+  "retry": false,
+  "log": "profile-baseline.first.log"
+}

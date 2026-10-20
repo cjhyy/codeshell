@@ -1,0 +1,101 @@
+{
+  "scope": "MD-only bounded first300 characters from retained first100 of118 broad hits; not full old-cause contexts or full historical documents.",
+  "selected": [
+    {
+      "index": 0,
+      "path": "docs/architecture/11-feature-inventory.md",
+      "pointer": "",
+      "boundedText": "c/cli/commands/builtin/plugin-handler.ts:1` | `/plugin list` / `/plugin install foo@official` |\n| `/mcp` | 列已配置 MCP server，含 transport 和 command/url | `packages/tui/src/cli/commands/builtin/extra-commands.ts:168` | `/mcp` |\n\n**会话 / 上下文 / 记忆**\n\n| 命令 | 做什么 | 入口 | 用法 |\n|------|--------|------|------|\n|"
+    },
+    {
+      "index": 1,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "\n\n调研日期：2026-07-08\n\n范围：只覆盖 desktop renderer 的手动 `/compact` UI 体验与 context ring 展示修正。方案不要求改 core 协议、不 runtime import 其他 codeshell 包；renderer 继续只通过 `window.codeshell.*` 与 main 通信。\n\n## 现状总览\n\n这三项问题共享同一条路径：\n\n1. 用户在 `ChatView` 输入或选择 `/compact`。\n2. `ChatView` 调用 `App.compactActiveSession()`。\n3. `App` 通过 `wi"
+    },
+    {
+      "index": 2,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "学习/代码学习/codeshell/packages/desktop/src/renderer/ChatView.tsx:1229)：textarea 固定 `disabled={false}`。\n- [packages/desktop/src/renderer/ChatView.tsx](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/ChatView.tsx:1288)：`ContextRing` 使用 `contextTokens`。\n- [packages/desktop/src/rend"
+    },
+    {
+      "index": 3,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "ges/desktop/src/renderer/ChatView.tsx](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/ChatView.tsx:1288)：`ContextRing` 使用 `contextTokens`。\n- [packages/desktop/src/renderer/chat/ContextRing.tsx](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/chat/Co"
+    },
+    {
+      "index": 4,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "ntextBoundaryView.tsx](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/messages/ContextBoundaryView.tsx:9)：横幅是简单居中灰字。\n- [packages/desktop/src/renderer/chat/compactFeedback.ts](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/chat/compactFeedback.ts:65"
+    },
+    {
+      "index": 5,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "ine；第二次用当前展示值减新的 `before`，baseline 会继续保留。\n- core 未来如果把 `forceCompact().after` 改为真实 prompt usage：该 helper 会重复加 baseline。因此可在代码注释中明确当前依据是 `engine.ts:2913/2969` 的 `estimateTokens()`，若 core API 语义变更要同步删除 renderer baseline。\n\n### 体量估计\n\nS-M。约 15-35 行生产改动，若抽 helper 加测试再增加约 20-40 行。风险集中在 token 数字语义，建议必须补 hel"
+    },
+    {
+      "index": 6,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "复加 baseline。因此可在代码注释中明确当前依据是 `engine.ts:2913/2969` 的 `estimateTokens()`，若 core API 语义变更要同步删除 renderer baseline。\n\n### 体量估计\n\nS-M。约 15-35 行生产改动，若抽 helper 加测试再增加约 20-40 行。风险集中在 token 数字语义，建议必须补 helper 单测：\n\n- `current=60_000, before=45_000, after=20_000 => 35_000`。\n- `current < before => after`。\n- no-op "
+    },
+    {
+      "index": 7,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": " [packages/desktop/src/renderer/i18n/ns/chat.ts](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/i18n/ns/chat.ts:37)：中文 compact 文案标点和空格粗糙。\n- [packages/desktop/src/renderer/i18n/ns/chat.ts](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/i18n/ns/chat."
+    },
+    {
+      "index": 8,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "s/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/i18n/ns/chat.ts:236)：英文 compact 文案也有 ASCII hyphen 和句式不统一。\n- [packages/desktop/src/renderer/MessageStream.tsx](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/MessageStream.tsx:254)：普通流渲染 `ContextBoundaryView"
+    },
+    {
+      "index": 9,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "`ContextBoundaryView`。\n\n### 当前实现分析\n\n当前组件：\n\n```tsx\n<div className=\"flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-2 text-center text-xs text-muted-foreground\">\n  <span>— {t(\"chat.compact.boundaryTitle\")} —</span>\n  <span>{compactBoundaryDetail(message, t, lang)}</span>\n</div>\n```\n"
+    },
+    {
+      "index": 10,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "(\"chat.compact.boundaryTitle\")} —</span>\n  <span>{compactBoundaryDetail(message, t, lang)}</span>\n</div>\n```\n\n问题：\n\n- 手写破折号承担结构，视觉上像临时 debug marker。\n- 没有分隔线，和上下消息之间层级不清。\n- 没有图标，用户不能快速扫描“这是系统事件/压缩事件”。\n- detail 是一整句，数字、节省比例、策略没有结构化。\n- i18n 中文缺少全角标点/空格，英文 `minimal - nothing` 应改为更正式的 dash 或重写句式。\n\n### 具体改"
+    },
+    {
+      "index": 11,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "；no-op 仍只 toast。\n\n### 体量估计\n\nS。约 20-45 行改动，主要是组件 JSX 和文案。建议更新 `compactFeedback.test.ts` 的期望字符串。\n\n## 实施顺序\n\n1. 先做 Feature 1 的 `compactingBuckets`，因为它保护后续两项在用户层面不被重复触发打乱。\n2. 再做 Feature 2，在同一个 `compactActiveSession().then()` 中把 `promptTokens` 改为 baseline 后的数值。\n3. 最后做 Feature 3，纯展示改造，与状态逻辑解耦。\n\n三者关系：\n\n- Fe"
+    },
+    {
+      "index": 12,
+      "path": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "pointer": "",
+      "boundedText": "tView` 组件测试：\n  - `compacting=true` 时 textarea disabled，placeholder 为 compacting 文案，send button 不可用。\n  - `busy=true, compacting=false` 时 textarea 仍可用，保持现有排队行为。\n- `App` 级测试较重，可用 mock `window.codeshell.compactSession` 验证重复触发只调用一次；如果现有测试基础不适合，先保留手工验证。\n\n## 改动文件清单\n\n预计需要改动：\n\n- `packages/desktop/src/rendere"
+    },
+    {
+      "index": 13,
+      "path": "docs/archive/todo/plan-overall-small-features.md",
+      "pointer": "",
+      "boundedText": "文件 |\n| 2 | TodoWrite resume 测试 | A-1 | S(纯测试) | `task.test.ts`/`engine.todo-resume.test.ts` | 0 生产代码，先落防回归 |\n| 3 | skill scanner 兼容 `.agents/skills/` | A-3 | S | `skills/scanner.ts` | 3-8 行 + 测试，独立 |\n| 4 | 压缩 token 估算元数据（一阶段） | A-2 | S-M | `types.ts`/`manager.ts`/`engine.ts`/`turn-loop.ts` | 只加 sour"
+    },
+    {
+      "index": 14,
+      "path": "docs/archive/todo/plan-overall-small-features.md",
+      "pointer": "",
+      "boundedText": "on/project 等控件禁用、composer 显示「正在压缩上下文…」；重复 `/compact` 只 toast in-progress 不发第二个 RPC；`.finally()` 必清 bucket。\n- **ring 修正**：`compactActiveSession` 成功后不再直接写 `data.after`；改 `after + baseline`，`baseline = max(0, promptTokensBefore - data.before)`（补回 system/tools/memory 固定基线）。抽 `compactPromptTokensWithBase"
+    },
+    {
+      "index": 93,
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/report.md",
+      "pointer": "",
+      "boundedText": "elper/fixture/test/UI/native/network operation ran. Own Python stdlib metadata/hash scripts and `rg --files` were the only execution.\n\n| Rank | Candidate (Renderer-relative) | Lines | Metadata status |\n| --- | --- | ---: | --- |\n| 1 | `extensions/pluginPresentation.ts` | 114 | scope unconfirmed |\n| "
+    }
+  ]
+}

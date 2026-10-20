@@ -1,0 +1,24 @@
+{
+  "role": "Independent source opinion; Root owns final classification",
+  "authorAlias": "TRANSCRIPT-R44-C1",
+  "rootIntendedFormalAlias": "TRANSCRIPT-R42-01",
+  "sameItemNotTwoFindings": true,
+  "supportedStaticP3Opinion": 1,
+  "independentAdditionalIssueIds": [],
+  "authorPrepClassification": {
+    "formal": 0,
+    "candidate": 1,
+    "related": 0
+  },
+  "rootPromotionIsNotAnAdditionalFinding": true,
+  "ordinaryCondition": "Background subagent stream emits nonempty partial assistant text; recoverable stream exception reaches normal non-streaming fallback; onStream tombstone is emitted, then replacement text deltas. User may view running/fallback-waiting agent transcript.",
+  "sourceDefect": "Translator does not retain request messageId; tombstone finalizes the current assistant row rather than removing revoked content. Replacement delta appends a second assistant row after local streaming id was cleared.",
+  "scopeLimits": [
+    "No runtime observation or empirical model/UI/native claim",
+    "No durable transcript corruption assertion",
+    "No guaranteed visibility after completion/fade",
+    "No allTUI/allAgent/allfallback correctness claim",
+    "No extra tool-running finding"
+  ],
+  "dynamicValidation": false
+}

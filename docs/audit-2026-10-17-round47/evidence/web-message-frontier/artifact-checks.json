@@ -1,0 +1,67 @@
+{
+  "capturedUTC": "2026-10-17T15:40:22.478144+00:00",
+  "reportLinks": [
+    {
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "target": "initial-pins.json",
+      "exists": true
+    },
+    {
+      "target": "body-initial-pins.json",
+      "exists": true
+    },
+    {
+      "target": "consumer-initial-pins.json",
+      "exists": true
+    },
+    {
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "target": "history-gate-selected.json",
+      "exists": true
+    },
+    {
+      "target": "history-filename-scope-selected.json",
+      "exists": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "exists": true
+    },
+    {
+      "target": "history-display-causes.json",
+      "exists": true
+    },
+    {
+      "target": "history-cause-selected.json",
+      "exists": true
+    },
+    {
+      "target": "decisions.json",
+      "exists": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true
+    },
+    {
+      "target": "metadata-diagnostics.json",
+      "exists": true
+    }
+  ],
+  "linksChecked": 14,
+  "allLocalLinksExist": true,
+  "outsideAliasRequired": false,
+  "productRuns": 0,
+  "testsRun": 0,
+  "notes": "Metadata checks only; no product or installed dependency imported."
+}

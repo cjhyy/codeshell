@@ -1,0 +1,2 @@
+/tmp/codeshell-audit-round129-network-diagnostics/finalize-metadata.py:46: SyntaxWarning: invalid decimal literal
+  print(json.dumps({'totals':manifest['totals'],'allPinsMatch':all(x['matchesInitial']for x in source),'targetedFiles':len(met),'allTargetedMatch':all(x['matchesInitial']for x in met),'batchMatch':sh(bb)==shared['sourceBatchPin']['sha256'],'canonicalRowCapExceeded':sum(len(json.dumps(x['row'],ensure_ascii=False))>1200for x in can['rows'])},ensure_ascii=False,indent=2))

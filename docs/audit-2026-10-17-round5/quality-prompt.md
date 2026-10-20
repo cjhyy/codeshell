@@ -1,0 +1,55 @@
+# Independent read-only review of Web, profile, and Chat evidence
+
+Reviewer: the Round 5 prompt auditor, reviewing the other owners' [root-web.md](root-web.md), [profile.md](profile.md), and [chat-text.md](chat-text.md). Frozen product baseline: `9a421b3e65d5bfe662b78062cb86bd99483a683a`. **New tests and experiments executed by this review: 0.** Only this quality note was written. The reviewed four findings are supported at their stated bounded evidence layers; no severity change is requested.
+
+## WEB-R5-01 — P2 supported
+
+Read both complete new fixtures and original raw logs, then checked the actual `reduceStream` start/text/thinking/tool-start, child/main terminal, agent-end, background-completed, and error branches; `chatFromSnapshot`; background `Agent` forwarding; `wrapChildStream`; and Web Desktop/Mobile consumption of `chat.run`.
+
+The scope mismatch is concrete. Child stream events have a real `agentId`, but start/delta handlers set the single global `run` to `running`. Child terminal events intentionally preserve that global state; `agent_end` and `background_agent_completed` only update child rows/context. The `error` branch also unconditionally sets global error and clears all live buckets, even when the error is scoped to a child. This is the same missing agent-scope distinction, so grouping it with late child detail is reasonable.
+
+The second fixture invokes the **actual Agent background branch** and its registry/notification lifecycle with a deferred in-memory spawner and actual `wrapChildStream`. The parent's terminal event is explicitly simulated. This materially establishes a normal late-child producer path beyond merely hand-writing reducer events, while it does **not** execute actual parent/child Engines, a model, a Host, transport, native application, or UI. The report states that limit correctly. Desktop send gating and Mobile composer behavior are supported by source wiring only. Recovery by a later main lifecycle/snapshot remains possible; the report correctly avoids claiming a permanent Host or UI deadlock.
+
+P2 is supported for incorrect global lifecycle state used by normal input gating and corruption of the live main accumulator. The two current raw logs report **4 pass / 15 expect** plus **1 pass / 8 expect**, each complete, no failures/skips, and saved exit 0. These are the owner's original executions, not new independent reproduction runs.
+
+## WEB-R5-02 — P3 supported under the stated reducer condition
+
+The ordered `tool_result` branch applies `stripSystemReminders`; the orphan-result buffer retains the raw string, and later `tool_use_start` copies it unchanged. The helper explicitly describes a display-only transformation. The fixture compares the same ordinary tool result in the two supported orders and observes different final visible text with both tool cards done.
+
+The current reducer comments and existing `streamReducer.test.ts` regression explicitly support result-before-start replay. That is enough to establish a branch contract mismatch. It does **not** establish that a live WebSocket reorders frames; the report expressly declines that claim. P3 for conditional display inconsistency is appropriate. No sensitive-data, attack, permission, or model-obedience consequence is supported or claimed. This case is already one of the first Web shard's four tests, so it must not be counted again as a separate run.
+
+The June 23 archived report at `docs/archive/beta-prep-audit-2026-06-23.md:489–490` records the earlier missing assistant sealing and lost orphan result, and says that buffer was added. Those older defects are not the present omitted display normalization in the now-supported buffer path.
+
+## PROFILE-R5-01 — P2 supported
+
+Read the entire new catalog fixture and its original log, the original baseline log and both command receipts, the structured finding, source manifest, and historical dedup record. Checked the actual accepted source grammar, lossy key function, registry identity filtering, cache lookup, catalog merge/provenance, removal, Desktop catalog/remove callers, and existing independent-cache removal regression.
+
+Both hypothetical sources are accepted ordinary source names. Their distinct registry identities map to one directory through `sourceToRepoKey`. The new tests exercise the real registry/catalog/details readers and remover using owned synthetic directories. The wrong `sourceRepo` attribution and deletion of the still-registered other source's cache are both demonstrated. The noncolliding control retains the first cache after removing the second, so the result is tied to key collision rather than a generic remover failure.
+
+The registry and cached trees are seeded locally; acquisition is not executed. The report correctly distinguishes this from `addHumanRepo`, clone/update, installation, remote repositories, concurrent publication, and Desktop execution. Source inspection supports normal reader/remove consumers. P2 is appropriate for cache identity/provenance corruption and removal of another registered source's cached definitions. Installed global profiles and portable memory are outside the demonstrated loss and correctly excluded.
+
+The catalog shard reports **4 pass / 21 expect**. The existing baseline shard reports **86 pass / 207 expect across 7 files**. Both have guarded completion, no failures/skips and saved exit 0; combined original scope is **90 tests / 228 assertions across 8 files**. The baseline suite is supporting validation, not 86 fresh bug reproductions. The report correctly excludes the existing catalog suite's remote acquisition test.
+
+## Deduplication and evidence custody
+
+Read root's record-level historical recheck and the profile owner's 698-artifact dedup record. Independently searched parsed JSON finding records in the prompt auditor's previously hashed **808-file** Markdown/JSON corpus covering all pre-existing audit/review/archive roots, using `streamReducer`, `sourceToRepoKey`, `humanRepoDir`, `orphanResults`, and `stripSystemReminders`; **0 matching historical JSON finding records** were found. Parsing records individually avoids unrelated phrases in different entries being joined by a regex over a minified JSON file. This is additional read-only deduplication, not proof that no unrecorded review ever mentioned the behavior.
+
+The old headless JSON child-text finding and provider retry-prefix finding have different consumers and causes. The old orphan-result loss is already fixed and is distinct as described above. Current profile activation/selection/requirement intentional behaviors remain exclusions, not fresh findings.
+
+Independently compared all **25/25** profile source-manifest entries to their recorded SHA-256 and frozen Git blobs, with no mismatch. Also compared these **7/7** Web-related product/test source files to frozen blobs with no mismatch: shared reducer, existing reducer test, SPA chat snapshot helper, Web Desktop app, Mobile app, Core Agent builtin, and Core subagent wrapper. No product files were modified in this review.
+
+The four reviewed original first-run logs and saved exit files support **95 original tests / 251 assertions / 0 failure / 0 skipped** across Web and profile. This review contributes **zero additional executions** to that total. Raw `.log` custody must be preserved during integration, including force-add where repository ignore rules apply. Final root-wide manifest/index assembly remains the coordinating owner's work.
+
+## CHAT-R5-01 — conditional P2 supported
+
+Read the entire Chat fixture and first raw log/exit, the structured receipt and primary-contract receipt, its source manifest and dedup ledger. Traced the current `ChatGateway.dispatch → createMimiPetChat → buildMimiOutgoingReplies → LineAdapter.send` path and the CLI registration. Also checked the actual Pet `GatewayReply` tool schema, runtime button validator, route schema rewrite, and tool execution path. The host tool accepts the ordinary 21–80-character labels and 1001–2048-character absolute HTTP(S) URLs used by the fixture; the upstream tool is static caller/contract evidence, not dynamically invoked by the fixture.
+
+Independently opened the [official LINE Markdown reference](https://developers.line.biz/en/reference/messaging-api/index.html.md). Its action-label table at lines 23057–23108 sets the non-image-carousel template label maximum to 20 characters, and its URI-action field at line 23199 sets the URI maximum to 1000. The adapter explicitly constructs a `buttons` template, so these are the applicable limits. This was a read-only documentation lookup, not a LINE API validation or send.
+
+The fixture exercises actual Gateway middleware and LINE request construction with an in-memory Desktop callback and explicitly injected fetch. It records the exact 20/1000 limits remaining intact, 21/80 labels and 1001/2048 URIs remaining overlong in the native action payload, and 81/2049 inputs being discarded by the generic Gateway validator. All lengths are ordinary ASCII, so Unicode counting conventions do not weaken these boundary observations. The fake HTTP 200 is solely an observation transport; it provides no platform acceptance evidence. Default fetch is blocked before imports and restored in the first test's `finally`; every send in all cases uses the explicit injected transport.
+
+P2 is supported for a normal, internally accepted button reply being projected into a request that violates the current destination contract. Body text and the invalid action share one push request. Actual platform rejection, UI behavior, durable settlement, and retries were not executed; the report correctly limits its dynamic conclusion to constructing the invalid request. For multi-part replies, only the last part receives the button, so earlier successfully delivered parts are not included in the demonstrated impact. Label and URI are one destination-projection root cause, not two findings.
+
+The original guarded log/exit reports **3 pass / 46 assertions / 0 failure / 0 skipped / Completed / exit 0**, with one attempt. This includes one chunking control and two button-field boundary tests; it is not three platform acceptance tests. The dedup ledger lists 855 prior Markdown/JSON/text artifacts and only two LINE-specific inventory hits, neither a prior finding. DingTalk contract insufficiency, WhatsApp's first-open failure, and the excluded Discord failed direction remain unconfirmed/skipped; this review did not revive them or run any new test.
+
+During this supplemental review the checkout HEAD was `dee38295a5e5ea554c69104207d604d8f83637e9`, while the audit baseline remains `9a421b3e65d5bfe662b78062cb86bd99483a683a`. Independently verified **22/22** Chat manifest source files against their stored hashes and frozen Git blobs with zero mismatch, and **7/7** receipt artifact hashes, including the unchanged first raw log/exit/fixture. These file-level matches preserve the Chat evidence boundary despite the separate task's later checkout advance; they do not claim a complete audit of that later commit. New executions contributed by this supplemental review: **0**.

@@ -1,0 +1,21 @@
+{
+  "pin": {
+    "path": "packages/core/src/engine/turn-loop.ts",
+    "bytes": 108774,
+    "lines": 2412,
+    "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+    "pinAt": "2026-10-17T19:00:16.783186+00:00",
+    "coverage": "hash-only before checking assistant ID counterevidence"
+  },
+  "navigation": {
+    "command": [
+      "rg",
+      "-n",
+      "appendMessage\\(\"assistant\"|clientMessageId",
+      "packages/core/src/engine/turn-loop.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "203:   * Returns false only when a present clientMessageId has already entered this\n206:  claimClientMessageId?: (clientMessageId: string, source: \"steer\") => boolean;\n208:  releaseClientMessageId?: (clientMessageId: string) => void;\n210:  setOriginClientMessageId?: (clientMessageId: string | undefined) => void;\n2263:      const { id, text, clientMessageId } = item;\n2265:      if (clientMessageId && this.deps.claimClientMessageId?.(clientMessageId, \"steer\") === false) {\n2267:          clientMessageId,\n2280:        if (clientMessageId) this.deps.releaseClientMessageId?.(clientMessageId);\n2284:          clientMessageId,\n2297:      this.deps.transcript.appendMessage(\"user\", content, { steerId: id, clientMessageId });\n2298:      this.deps.setOriginClientMessageId?.(clientMessageId);\n2300:        { role: \"user\", content, clientMessageId },\n2309:        ...(clientMessageId ? { clientMessageId } : {}),\n",
+    "stderr": ""
+  }
+}

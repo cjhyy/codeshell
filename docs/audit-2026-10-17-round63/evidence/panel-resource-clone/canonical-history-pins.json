@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "bytes": 159179,
+      "sha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+      "beforeTargetedMetadataParse": true,
+      "atUTC": "2026-10-17T20:52:51.697641+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "beforeTargetedMetadataParse": true,
+      "atUTC": "2026-10-17T20:52:51.699352+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+      "bytes": 80193,
+      "sha256": "982d27f3f783ed7bafbf6da9354fcbd50b877a3fd907520d70f1827ca54adb61",
+      "beforeTargetedMetadataParse": true,
+      "atUTC": "2026-10-17T20:52:51.700240+00:00"
+    }
+  ]
+}

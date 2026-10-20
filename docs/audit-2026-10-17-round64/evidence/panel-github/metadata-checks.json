@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-10-17T21:10:50.724298+00:00",
+  "sourceRangesWithinActualEOF": true,
+  "semanticAndDisplayCountsRecomputedFromExplicitUnion": true,
+  "sourcePinsUnchanged": true,
+  "historicalMetadataPinsUnchanged": true,
+  "reportLinks": [
+    "source-manifest.json",
+    "history-gate.json",
+    "ending-checks.json",
+    "diagnostics.json",
+    "validation.json",
+    "classification.json",
+    "reviewer-receipt.json"
+  ],
+  "missingLocalLinks": [],
+  "receiptSelfLinkPendingCreation": true,
+  "doesNotRunProduct": true
+}

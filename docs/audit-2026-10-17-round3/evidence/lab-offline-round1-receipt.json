@@ -1,0 +1,117 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "branch": "codex/audit/broad-round3-20261017",
+  "recordedAtUtc": "2026-10-16T23:43:36.036948+00:00",
+  "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round3/evidence/lab-offline-round1.test.ts > docs/audit-2026-10-17-round3/evidence/lab-offline-round1.raw.log 2>&1",
+  "firstInvocation": true,
+  "guardedRunner": {
+    "path": "scripts/run-bun-test-shard.mjs",
+    "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+    "bytes": 233
+  },
+  "source": {
+    "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round1.test.ts",
+    "sha256": "76759c22bce482b36a15e157939c052d363ef770dfc8b1d76ae096914a773415",
+    "bytes": 6722
+  },
+  "rawOutput": {
+    "path": "docs/audit-2026-10-17-round3/evidence/lab-offline-round1.raw.log",
+    "sha256": "9f02a61eed49105dfcd150e11b99ea8492eb9473d89e08c0e3649d58653ecd38",
+    "bytes": 1263
+  },
+  "processExitCode": 0,
+  "completionMarker": "Completed Bun shard: 4 tests, 0 skipped; 0 failures.",
+  "testFiles": 1,
+  "tests": 4,
+  "businessScenarioTests": 3,
+  "observationEmissionTests": 1,
+  "passed": 4,
+  "failed": 0,
+  "skipped": 0,
+  "expectCalls": 19,
+  "fixtureEnvironmentFailures": 0,
+  "reruns": 0,
+  "modelCalls": 0,
+  "networkOperations": 0,
+  "productSubprocessOperations": 0,
+  "hostOrFeatureStartup": 0,
+  "fixtureTmpDirectories": [],
+  "scope": "Pure grading/reflection/parser/state transforms and the no-client early return of actual Arena runAdjudication. No Controller.start, real model, transport, Host, UI or experiment flag enabled.",
+  "observations": [
+    {
+      "id": "LAB-R3-01",
+      "continuationFullyGraded": true,
+      "latestSemanticPassed": true,
+      "actualReflectionFeedback": {
+        "trialId": "trial-dev",
+        "semanticPassed": null,
+        "criteria": [
+          {
+            "id": "accuracy",
+            "verdict": "inconclusive",
+            "evidence": "Initial review unfinished"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ARENA-R3-01",
+      "raw": {
+        "claimId": "author:f1",
+        "reason": "I have not completed checking this"
+      },
+      "parsedVerdict": "agree",
+      "actualClaimStatus": "verified"
+    },
+    {
+      "id": "ARENA-R3-01",
+      "raw": {
+        "claimId": "author:f1",
+        "verdict": "uncertain",
+        "reason": "Unable to verify"
+      },
+      "parsedVerdict": "agree",
+      "actualClaimStatus": "verified"
+    },
+    {
+      "id": "ARENA-R3-02",
+      "allClaimCount": 2,
+      "actualStatuses": [
+        "proposed",
+        "under_review"
+      ],
+      "summarizedClaimCount": 0
+    }
+  ],
+  "dedup": {
+    "searched": [
+      "docs/audit-2026-10-16",
+      "docs/audit-2026-10-17",
+      "docs/review-remaining-2026-10-12",
+      "docs/review-2026-10-12",
+      "docs/archive/review-2026-05-30"
+    ],
+    "excludedKnown": [
+      "Arena git_show -- object-ref (N33/A1)",
+      "Optimization Lab cold stop -> interrupted (N32/O1)"
+    ],
+    "matchedNewRootCauses": []
+  },
+  "findings": [
+    {
+      "id": "LAB-R3-01",
+      "priority": "P3",
+      "moduleScope": "Desktop-only private experimental optimization_lab; default off"
+    },
+    {
+      "id": "ARENA-R3-01",
+      "priority": "P3",
+      "moduleScope": "retained private Arena; no current host load or published entry"
+    },
+    {
+      "id": "ARENA-R3-02",
+      "priority": "P3",
+      "moduleScope": "retained private Arena; no current host load or published entry"
+    }
+  ]
+}

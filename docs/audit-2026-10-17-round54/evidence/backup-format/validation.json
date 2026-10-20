@@ -1,0 +1,32 @@
+{
+  "GitCalls": 0,
+  "productImports": 0,
+  "productFunctionCalls": 0,
+  "fixtures": 0,
+  "testRuns": 0,
+  "realFsExperiments": 0,
+  "clockTimerExperiments": 0,
+  "networkCalls": 0,
+  "nativeModelProcesses": 0,
+  "ownAuditMetadataExecutionOnly": true,
+  "observedFatalMetadataErrors": 0,
+  "observedMetadataTruncations": 1,
+  "firstDiagnostic": "first-diagnostic.json",
+  "instructionRead": "actual CODESHELL217 and AGENTS5 reread after pins",
+  "navigation": "filename-only toolchunk615bb1 outerexit0; its two individual rg exit codes were not separately recorded. Other persisted subprocess metadata exits0. No fabricated raw stdout or individual exit values.",
+  "sourceCounts": {
+    "fullProductFiles": 0,
+    "selectedProductFiles": 4,
+    "selectedTestDeclarationFiles": 1,
+    "productSemanticLines": 388,
+    "testDeclarationLines": 59,
+    "allSemanticDeclarationLines": 447,
+    "displayedSourceBodyLines": 881,
+    "instructionLines": 222,
+    "testRuns": 0,
+    "navigationLinesBeyondBody": 60,
+    "displayedSourceLinesIncludingNavigation": 941
+  },
+  "endingSourceMatchCount": 8,
+  "endingHistoryUnchanged": true
+}

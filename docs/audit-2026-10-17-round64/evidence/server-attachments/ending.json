@@ -1,0 +1,136 @@
+{
+  "atUTC": "2026-10-17T21:13:43.302189+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/image-byte-probe.ts",
+      "bytes": 12022,
+      "sha256": "e744a050a06249ea20f04d6b0bdf37c00e9c317ec024341d1530214b8b0bd133",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "bytes": 27944,
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/client-message-id.ts",
+      "bytes": 257,
+      "sha256": "ed31c575dd7ee8c5b5cfa98d9476f39efa98b44bafc0df047e7aabc88f552f17",
+      "unchanged": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/attachment-service.test.ts",
+      "bytes": 17409,
+      "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+      "unchanged": true
+    },
+    {
+      "path": "packages/server/src/hub/uploads.ts",
+      "bytes": 9115,
+      "sha256": "cceec9c70f92fd5bd95adb81eb5420cc3aeb507524518efbaba48e2743241511",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102370,
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "bytes": 55140,
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+      "bytes": 3322,
+      "sha256": "40af4a551a36222b550dd43dfeb59374c7da65c992a856e8919bb019328bb5bb",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/bytes.md",
+      "bytes": 5677,
+      "sha256": "afeaf33d0adcb75d3f266f2922ee967867d05b4bea3275bd48eab50fb0a1df01",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-candidates.json",
+      "bytes": 855,
+      "sha256": "9dfcd83a2ebb1e774fe22b436a7db84fa8793d138cbaca67cbc9188cccfdb989",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/root-source-manifest.json",
+      "bytes": 2888,
+      "sha256": "29f2cf28e68063c1b4c95dd8891d7fbb7de2d03620556327542a13c5c1435656",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/fingerprint.md",
+      "bytes": 3762,
+      "sha256": "673d72907472df74737bdac28a32e984189b83418c49c5829458161109314731",
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-2026-10-12/resource-quality-round8.md",
+      "bytes": 11479,
+      "sha256": "144f503bca6049c11ef1eca2faa108998d2d0ef5a4eafaaca3ea0946e9913975",
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-2026-10-12/server-round1.md",
+      "bytes": 11399,
+      "sha256": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8",
+      "unchanged": true
+    },
+    {
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "bytes": 17704,
+      "sha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61",
+      "unchanged": true
+    },
+    {
+      "path": "docs/archive/todo/review-tests-deps-2026-07-08.md",
+      "bytes": 31084,
+      "sha256": "b0a44fd46a8e3d23b3d5e11453e44f4d6a9ede3023739342da85ca855b1a8059",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/recorded-findings-catalog.json",
+      "bytes": 81283,
+      "sha256": "47cbdd93b49496566227409117ab8c01a835ba23e6eff46ee7ae5707cfc1d28b",
+      "unchanged": true
+    }
+  ],
+  "sourceInstructionPins": 11,
+  "canonicalMetadataPins": 10,
+  "sharedHistoryUnchanged": true,
+  "sourceBodyChanges": 0,
+  "noAll6801SemanticReadClaim": true
+}

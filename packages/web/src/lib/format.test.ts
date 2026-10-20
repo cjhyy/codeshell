@@ -52,6 +52,43 @@ test("projectForCwd 用最长项目前缀匹配", () => {
   expect(projectForCwd("/u/other", projects)).toBeUndefined();
 });
 
+test("Host case-sensitive project roots stay distinct regardless of project order", () => {
+  const projects = [
+    { id: "upper", path: "/srv/Example", name: "Upper", pathCaseSensitive: true },
+    { id: "lower", path: "/srv/example", name: "Lower", pathCaseSensitive: true },
+  ];
+  for (const order of [projects, [...projects].reverse()]) {
+    expect(projectForCwd("/srv/example/src", order)?.id).toBe("lower");
+    expect(projectForCwd("/srv/Example/src", order)?.id).toBe("upper");
+  }
+  expect(
+    groupByProject(
+      [
+        { id: "upper-session", cwd: "/srv/Example/src", updatedAt: 1 },
+        { id: "lower-session", cwd: "/srv/example/src", updatedAt: 2 },
+      ],
+      projects,
+    ).map((group) => [group.projectId, group.items.map((item) => item.id)]),
+  ).toEqual([
+    ["upper", ["upper-session"]],
+    ["lower", ["lower-session"]],
+  ]);
+});
+
+test("Host comparison policy preserves insensitive roots and legacy POSIX defaults to exact case", () => {
+  expect(
+    projectForCwd("/Users/OWNED/repo/src", [
+      { id: "mac", path: "/Users/Owned/Repo", name: "Mac", pathCaseSensitive: false },
+    ])?.id,
+  ).toBe("mac");
+  expect(
+    projectForCwd("/srv/example", [{ path: "/srv/Example", name: "Legacy POSIX" }]),
+  ).toBeUndefined();
+  expect(
+    projectForCwd("c:/OWNED/repo/src", [{ path: "C:\\Owned\\Repo", name: "Legacy Windows" }])?.name,
+  ).toBe("Legacy Windows");
+});
+
 test("projectForCwd 和 groupByProject 识别 V2 secondary root", () => {
   const projects = [
     {

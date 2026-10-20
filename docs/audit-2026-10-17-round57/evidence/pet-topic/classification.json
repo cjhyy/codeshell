@@ -1,0 +1,70 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidate": 1,
+    "newRelated": 0
+  },
+  "formal": [],
+  "candidates": [
+    {
+      "id": "PET-R132-C1",
+      "classification": "candidate",
+      "proposedPriority": "P3",
+      "title": "定时续办唤醒成为被收尾reader过滤的话题边界，跳过自动小结和记忆提取",
+      "location": {
+        "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+        "line": 2218
+      },
+      "normalConditions": [
+        "Pet active base/previous segment has ordinary meaningful user/assistant messages; auto-extraction enabled.",
+        "A user-authorized accepted resume follow-up, with a valid idle native source and no pending decision, is due after at least the configured12h idle gap; no taskId short-circuiting into paused-task resume is needed.",
+        "wakeFollowUp runs normally with its generated pet-followup-ID-revision clientMessageId; normal healthy worker run completes."
+      ],
+      "cause": [
+        "wakeFollowUp creates type chat and generated ID. Shared chat branch begins topic with thatID even for hostWake; controller opens new segment with boundaryBeforeMessageId=ID and closes previous with nextBoundary=ID.",
+        "Same worker run marks user injected:true and persists exactID plus injected into message.data.",
+        "Closure transcript reader deliberately skips injected user messages; exact boundary locator cannot find thisID and returns null, close immediately returns null before journal/generate/memory.",
+        "Backfill reuses stored segment boundaries and same reader/locator; it supplies no fallback for this missing boundary."
+      ],
+      "ordinaryImpact": "At least the just-closed topic receives no automatic journal extraction/auto-memory under these conditions; a later closure whose start is this stored synthetic boundary has the same missing-start condition.",
+      "counterevidenceAndLimits": [
+        "The independent Core span/context archival path is distinct; do not infer archive failure, raw message deletion, UI frames, cross-account routing or permission bypass.",
+        "Old plan explicitly discusses injected skipping versus span archival; retain it as related design boundary, not an exact already-reported journal/followup cause.",
+        "notify-only reminders do not go through resume dispatcher. Paused-task direct-control and unavailable/active/pending sources may return early; they are outside this normal accepted branch.",
+        "Manual clear/new user paths are not alleged broken. Without enabled extraction or sufficient content there is no same journal promise to lose.",
+        "Only static source reasoning, no runtime reproduction; whole assistant/transcript nonstandard writer branches and all dispatch policy paths not exhaustively verified."
+      ],
+      "formalCount": 0,
+      "candidateCount": 1,
+      "newRelatedCount": 0,
+      "normalFutureScheduleEvidence": [
+        "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts:272-305",
+        "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts:123-129,145-173",
+        "packages/pet/src/follow-ups.ts:79-128"
+      ],
+      "dedup": "Shared5676 path/SHA count43 is navigation only; own two focused query sets in matched old MD/JSON found14 and32 scalar windows (caps35/60),10 explicitly read bounded windows. No exact prior follow-up→topic boundary→closure null cause established in those windows, not a full-history semantic absence claim.",
+      "normalTimeline": [
+        {
+          "step": "T0",
+          "state": "S0 is current active segment, has at least3 ordinary meaningful user/assistant messages, has not closed or produced its own journal yet; lastInteractionAt=T0. Earlier already-recorded segments are unaffected."
+        },
+        {
+          "step": "T1>=T0+12h",
+          "state": "An accepted registered resume follow-up generates H. beginTurn closes S0 with endH and opens S1 with startH; normal run persists userH injected:true. Immediately after run settles, closureS0 filters outH, cannot find endH, returnsnull before extraction."
+        },
+        {
+          "step": "BetweenT1andT2",
+          "state": "A user turn before another idle gap leaves S1 active; it does not erase or repair H boundary."
+        },
+        {
+          "step": "T2>=lastInteractionAt+12h",
+          "state": "A normal userU opens S2 and closes S1(startH,endU); reader lacks startH so S1 also returnsnull. S2 and later segments with real user anchors may work normally."
+        }
+      ],
+      "shutdownBoundary": "Not read or alleged: this package does not claim shutdown actively closes a segment. ManualClear plus next real turn can also close one, but the core normal timeline uses two ordinary idle crossings.",
+      "earlierPendingBoundary": "No earlier pending closure runtime result assumed. Existing correctly anchored or already-recorded segments can succeed/remain recorded; that does not make the H-anchored segment locatable."
+    }
+  ],
+  "newRelated": [],
+  "otherScope": "notify/bound state and actual Host route caller reviewed with finite negative result; no universal authorization/identity conclusion from DTO/domain logic."
+}

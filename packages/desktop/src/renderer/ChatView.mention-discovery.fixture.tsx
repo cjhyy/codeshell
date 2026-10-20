@@ -143,10 +143,16 @@ try {
     attachmentCalls.some((args) => JSON.stringify(args) === JSON.stringify([{ cwd: "/old-root" }])),
   );
   assert.ok(
-    searchCalls.some((args) => JSON.stringify(args) === JSON.stringify(["project-1", "same"])),
+    searchCalls.some(
+      (args) => JSON.stringify(args) === JSON.stringify(["project-1", "same", "old-root"]),
+    ),
   );
   const listbox = descendants(document.body).find((node) => reactProps(node).role === "listbox");
   assert.ok(listbox, "Mention discovery renders its real floating list");
+  const listboxId = listbox.getAttribute("id");
+  assert.ok(listboxId);
+  assert.equal(textarea.getAttribute("aria-controls"), listboxId);
+  assert.equal(textarea.getAttribute("role"), null, "The composer keeps native textarea semantics");
   assert.equal(container.contains(listbox), false, "Suggestions escape chat clipping");
   const renderedText = descendants(listbox)
     .map((node) => node.nodeValue ?? node.textContent ?? "")
@@ -177,6 +183,8 @@ try {
         await flushMicrotasks();
       });
       assert.ok(currentListbox(), `${query} opens after focus returns`);
+      assert.equal(currentListbox().getAttribute("id"), listboxId);
+      assert.equal(textarea.getAttribute("aria-controls"), listboxId);
       assert.equal(delayedBlurs.length, 1, "The pending blur is controlled by this fixture");
       await act(async () => {
         delayedBlurs.shift()!();
@@ -190,6 +198,8 @@ try {
         await flushMicrotasks();
       });
       assert.equal(currentListbox(), undefined, "Leaving the composer still closes suggestions");
+      assert.equal(textarea.getAttribute("aria-controls"), null);
+      assert.equal(textarea.getAttribute("aria-activedescendant"), null);
     }
   } finally {
     globalThis.setTimeout = originalSetTimeout;

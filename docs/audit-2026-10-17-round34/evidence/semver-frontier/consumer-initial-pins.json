@@ -1,0 +1,59 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "files": [
+    {
+      "path": "packages/core/src/updater.ts",
+      "bytes": 15946,
+      "lines": 441,
+      "sha256": "0d51a491f87043c21a6b3a7cae9306374f2eaae45d157d70fe1b7e8eb75a10f8",
+      "firstSemanticReadSha256": "0d51a491f87043c21a6b3a7cae9306374f2eaae45d157d70fe1b7e8eb75a10f8",
+      "captureUtc": "2026-10-17T12:22:02.788042+00:00",
+      "pinBeforeRead": true
+    },
+    {
+      "path": "packages/tui/src/render/terminal.ts",
+      "bytes": 8286,
+      "lines": 250,
+      "sha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c",
+      "firstSemanticReadSha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c",
+      "captureUtc": "2026-10-17T12:22:02.791474+00:00",
+      "pinBeforeRead": true
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "lines": 536,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "firstSemanticReadSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "captureUtc": "2026-10-17T12:22:02.792272+00:00",
+      "pinBeforeRead": true
+    },
+    {
+      "path": "packages/core/src/version.test.ts",
+      "bytes": 406,
+      "lines": 11,
+      "sha256": "23bffbcbbe977d2fbfceba753672445347bb7ff70db82fb2517f10d5d11e5fda",
+      "firstSemanticReadSha256": "23bffbcbbe977d2fbfceba753672445347bb7ff70db82fb2517f10d5d11e5fda",
+      "captureUtc": "2026-10-17T12:22:02.792770+00:00",
+      "pinBeforeRead": true
+    },
+    {
+      "path": "packages/core/src/index.exports.test.ts",
+      "bytes": 18450,
+      "lines": 587,
+      "sha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "firstSemanticReadSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "captureUtc": "2026-10-17T12:22:02.793468+00:00",
+      "pinBeforeRead": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "lines": 110,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "firstSemanticReadSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "captureUtc": "2026-10-17T12:22:02.800019+00:00",
+      "pinBeforeRead": true
+    }
+  ]
+}

@@ -1,0 +1,286 @@
+{
+  "capturedUTC": "2026-10-17T13:20:20.087905+00:00",
+  "scope": "Metadata-only review; inbox is own author scope, not independent source review; MCP parent/reviewer not yet pinned as final",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/consumer-pins.json",
+      "relativePath": "consumer-pins.json",
+      "bytes": 1609,
+      "sha256": "7593fec13d788cd620f0676e009f43e21190e1fb01571c7477e0346a9e49b6e5",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/dto-pins.json",
+      "relativePath": "dto-pins.json",
+      "bytes": 867,
+      "sha256": "98522031948f495a75333c53a5b35b4bb8b2b539defd9d5841e8c9a4a4b40ba8",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/history-method.py",
+      "relativePath": "history-method.py",
+      "bytes": 3745,
+      "sha256": "9e90de8f359be9f93cca1ea673e75e1904d84e92ec71bd1b39c580d971cad371",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/history-supplement.json",
+      "relativePath": "history-supplement.json",
+      "bytes": 38861,
+      "sha256": "9dafc90b26fd31ba2406d9fe9ab12cb890a08884a7ad9891430ece7f329bbdeb",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/history.json",
+      "relativePath": "history.json",
+      "bytes": 666830,
+      "sha256": "bfbd123b5d6bab127096585f8d736a6bbe98108ebe2fcd7da644c5a2027b69c3",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 1303,
+      "sha256": "d185c81ed002460ff6415d751223dd02d2adf8c50574d4f9923cc9a7e5a6fdb2",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "relativePath": "review.md",
+      "bytes": 4645,
+      "sha256": "9f96d812220c7401b587052adfa74f3c3879b328031ee8da9bdf4827a08a74f1",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/reviewer-receipt.json",
+      "relativePath": "reviewer-receipt.json",
+      "bytes": 3442,
+      "sha256": "74f5a5ce03ab078a44b5ac494425a42977f4e67bc800e9914a6caed39f97eeaf",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/source-excerpts.txt",
+      "relativePath": "source-excerpts.txt",
+      "bytes": 32797,
+      "sha256": "6691a0edb5071cb2f21f600d7a138868f9421f1276a408ba65f212c75841ec05",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 12307,
+      "sha256": "75b53e945baebe23e15021119c4841acf632a46ec3268638fd2c37fb453a8d92",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/type-pins.json",
+      "relativePath": "type-pins.json",
+      "bytes": 480,
+      "sha256": "3f3b94fd19463baf9097b6c79e3fc346063d276eba502a27969ccd184e22e2be",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 3023,
+      "sha256": "3b8faf8412146ded551c5eac713749e1949ef7f6a9860e4bed1f82d1ac5f7ae9",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 3039,
+      "sha256": "9b5a84bc07329cf20f9be10972bfb5e44d9349f1876bb3ffd8f5f78defc03ead",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/consumer-initial-pins.json",
+      "relativePath": "consumer-initial-pins.json",
+      "bytes": 2498,
+      "sha256": "9e82ef2893dc3518736c9bcd5652914f5a32bf7a7dd3f755058df243d34b6170",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/decisions.json",
+      "relativePath": "decisions.json",
+      "bytes": 1932,
+      "sha256": "f93de3616a95dfc259a0591d47db845b17801c797a3c58dde84c52ba7d01a3de",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/delegation-diagnostic.txt",
+      "relativePath": "delegation-diagnostic.txt",
+      "bytes": 47,
+      "sha256": "21bf748c7ed0956d7802c80a66c7aa2904144f3d11c91ebd040b96719ee7af0f",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/finish-checks.json",
+      "relativePath": "finish-checks.json",
+      "bytes": 1179795,
+      "sha256": "18a9aa0c9e089bc1a3d91ce420b62e04f14b2a2686917185447fb2261c64914a",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/history-contexts.json",
+      "relativePath": "history-contexts.json",
+      "bytes": 304709,
+      "sha256": "7c93b9d3e7fea99c8ea8359a8315e89e35214a878cf368e086acb8c280c96ba7",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/history-initial-pins.json",
+      "relativePath": "history-initial-pins.json",
+      "bytes": 729976,
+      "sha256": "5fcfc2b7f83d84dafa8db5d47e0fed3e728b8978be3c34bb7d35f9eaf73a5030",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/history-inventory.raw.txt",
+      "relativePath": "history-inventory.raw.txt",
+      "bytes": 213969,
+      "sha256": "5b938db378927055c96c50ba7e839be685f1bacf6e21a87cd292e092e2f67434",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/history.json",
+      "relativePath": "history.json",
+      "bytes": 724650,
+      "sha256": "a0e73a1177968f5c468572e37c243bbd33280ddd71cca1b45e80c88ce1d02b83",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/initial-pin.json",
+      "relativePath": "initial-pin.json",
+      "bytes": 669,
+      "sha256": "6c0924a0ee702361c1f940779014973b0c194b742cb10160935f1c549e7cfa90",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/metadata-notes.json",
+      "relativePath": "metadata-notes.json",
+      "bytes": 840,
+      "sha256": "ef019b30f8b92dc2f939590fa56f2dfbb41bb4f359e64ee90cd0c59c1cb1b494",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "relativePath": "review.md",
+      "bytes": 3104,
+      "sha256": "cb08a718f89af86a88a6d1f052b9a6b639671b9414a44e7d9225c5d3ce0a7b18",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/scan-history.py",
+      "relativePath": "scan-history.py",
+      "bytes": 5546,
+      "sha256": "b7a8f3ca1b1f2cba17528fc5b7572999e1e2cb8384c346a4a14972db52e26d7d",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/selected-history-contexts.json",
+      "relativePath": "selected-history-contexts.json",
+      "bytes": 4746,
+      "sha256": "0e5c2035e403ae99f2106b385134341f158897a2e5df512c3e3fc8ab2541fe7a",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 9674,
+      "sha256": "425f2088e3b0ce32452d2cc21a9620f53f59ac9c32a24be63611fad371aec2fc",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/test-initial-pin.json",
+      "relativePath": "test-initial-pin.json",
+      "bytes": 297,
+      "sha256": "6d0a0f88f2732283e849743d999e10e3776eeb10edc9c599030ced6dc01f4770",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 838,
+      "sha256": "1b8d168963e29cb588a7542dd4c05005636beb838ff1591ac516cf841c7d0ce5",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 1796,
+      "sha256": "d0174f2a6912df60caea1325ea9539db8fca7052804c754ec3e5d97866b38ba5",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 1455,
+      "sha256": "901fbb0d5a0227c6b3b314ec61c4508b20c3a841e7c174f244625eb66d3b8316",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/review.md",
+      "relativePath": "review.md",
+      "bytes": 2787,
+      "sha256": "ffe8a1d5d99dba20e1a10959457c02e3da8cc4d5af35145aa6992fe94654b4ad",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-excerpts.json",
+      "relativePath": "source-excerpts.json",
+      "bytes": 13587,
+      "sha256": "287e2edb5bd34a6bd0c5a30f867feccd6f628c0ce10c436628684061015797f6",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-excerpts.txt",
+      "relativePath": "source-excerpts.txt",
+      "bytes": 12735,
+      "sha256": "ff0dc9a2ad1bbc2c7179ea8f9dfba4690000122917a80689f4aaae0c7c5832fb",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-manifest.first.json",
+      "relativePath": "source-manifest.first.json",
+      "bytes": 1587,
+      "sha256": "2148ce0a9e5461bd093cb0758b4f0011dcc33ef3c05b13937ee959c0551dea65",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 2724,
+      "sha256": "2e5270378c033ce0bbbd472bb49ca36d082269e25f6206d68e59d73c7ec10355",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-reader.py",
+      "relativePath": "source-reader.py",
+      "bytes": 1966,
+      "sha256": "cccc5eb8b3a3e25916d2815e5a25f49d4f1b241e0533f409bc554df4c76ca880",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-supplement.json",
+      "relativePath": "source-supplement.json",
+      "bytes": 3155,
+      "sha256": "3544291f218698cca0dbcf85118ec1f226ac28c32abc35068c428892b7e366b2",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-supplement2.json",
+      "relativePath": "source-supplement2.json",
+      "bytes": 2395,
+      "sha256": "d4552a08aca2e2a6cbeca942ebfec64f33ab9ae50e2545836912a11e3333ce84",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 405,
+      "sha256": "c774f4c172e1e02ef7eb700f3289f62b3a5156ca8662d86b351d321d6261a5c6",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch"
+    }
+  ]
+}

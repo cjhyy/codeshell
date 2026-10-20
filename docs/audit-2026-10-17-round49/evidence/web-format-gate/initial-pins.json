@@ -1,0 +1,38 @@
+{
+  "rootReportedContext": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684",
+  "gitVerification": "none; parent reported context",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:15:50.839253+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:15:50.840011+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "lines": 140,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:15:50.840507+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "bytes": 1458,
+      "lines": 41,
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:15:50.841044+00:00",
+      "semanticRead": false
+    }
+  ]
+}

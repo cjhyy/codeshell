@@ -1,0 +1,23 @@
+{
+  "createdAt": "2026-10-17T18:39:14.142988+00:00",
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "oldSameShaFullPreBodyExclusions": 1,
+  "oldCauseDecisions": [
+    {
+      "id": "COST-R9-01",
+      "decision": "Existing independent/unbound CostTracker loses full model ID; no new finding or repeated count. Current ledger estimate consumes identity separately; no standalone tracker tests run."
+    },
+    {
+      "id": "R49-/cost-empty-singleton-hypothesis",
+      "decision": "Existing actual in-process local binding refutes former remote empty tracker trigger; not reopened."
+    }
+  ],
+  "assessment": "Finite negative for ordinary bundled estimate math/nullable pricing/unified usage handoff; not all ledger summary/persistence/provider/billing contracts"
+}

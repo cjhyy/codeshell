@@ -1,0 +1,16 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+    "bytes": 7143,
+    "sha256": "1bb1472806c05b9756a18700ef03b8fb8fd785275d2d9bcf4f0e0fde9c971ae1",
+    "pinAtUTC": "2026-10-17T20:36:29.738321+00:00",
+    "kind": "prior-audit-metadata"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json",
+    "bytes": 10532,
+    "sha256": "2823ccfc08f464aecd29a2fae71f0dac1d0287329b6a9943da01087fc7eac059",
+    "pinAtUTC": "2026-10-17T20:36:29.739435+00:00",
+    "kind": "prior-audit-metadata"
+  }
+]

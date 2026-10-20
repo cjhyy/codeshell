@@ -1,0 +1,7 @@
+{
+  "path": "/tmp/codeshell-audit-round131-tool-results/history-batch.json",
+  "bytes": 1362192,
+  "sha256": "03e45f55e814fedcbeed4c19e47f75c1263a24c23af220a5c398463585b1880c",
+  "capturedUTC": "2026-10-17T18:45:00.218671+00:00",
+  "role": "Root shared machine batch metadata, not own full-corpus semantic read"
+}

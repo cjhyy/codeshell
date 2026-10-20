@@ -1,0 +1,84 @@
+{
+  "allRetainedContextsRead": true,
+  "total": 15,
+  "retained": 15,
+  "tool": "current precise print",
+  "rows": [
+    {
+      "path": "docs/archive/core-modules/context.md",
+      "at": "$",
+      "context": "oves accuracy by anchoring on the last real API count and only estimating messages added since.\n- **`microcompact` only clears whitelisted tools** (`COMPACTABLE_TOOL_NAMES` — Read/Glob/Bash/...). Orchestration results (TaskCreate/Agent/etc.) are left intact and don't count toward the keep-recent window.\n- **`onClear` fires synchronously before `microcompact` returns** — defer any token re-estimate until after `result` is reassigned (the manager does this; copy the pattern if you call `microcompact` directly).\n"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-static-lookup-failures.json",
+      "at": "$[\"failures\"][0][\"command\"]",
+      "context": "rg -n 'BrowserInspect|createBrowserInspector|mode: \"performance\"|mode: \"dom\"' packages/core/src/browser packages/desktop/src/browser-library docs --glob '*.md' --glob '*.ts' --glob '!audit-2026-10-17-round10/**' --max-count 20"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup-decisions.json",
+      "at": "$[\"decisions\"][4][\"decision\"]",
+      "context": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/output-metadata-notes.json",
+      "at": "$[\"metadataCorrections\"][0][\"correction\"]",
+      "context": "Concurrent reviewer wrote two output-static-* files during receipt glob. Exclude foreign reviewer files explicitly; author artifact count is18 plus self-excluded receipt. No reviewer bytes modified, no test/fixture/raw/exit changes."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-dedup.json",
+      "at": "$[\"hits\"][\"old-failed\"][59][\"excerpt\"]",
+      "context": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-prep/history.json",
+      "at": "$[\"hits\"][\"old-failed\"][59][\"excerpt\"]",
+      "context": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/devtools-review/history.json",
+      "at": "$[\"hits\"][\"exact-inspector\"][39][\"context\"]",
+      "context": "rg -n 'BrowserInspect|createBrowserInspector|mode: \"performance\"|mode: \"dom\"' packages/core/src/browser packages/desktop/src/browser-library docs --glob '*.md' --glob '*.ts' --glob '!audit-2026-10-17-round10/**' --max-count 20"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+      "at": "$[\"hits\"][\"ordinary-contract\"][43][\"excerpt\"]",
+      "context": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+      "at": "$[\"hits\"][\"ordinary-contract\"][86][\"excerpt\"]",
+      "context": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+      "at": "$[\"hits\"][\"ordinary-contract\"][87][\"excerpt\"]",
+      "context": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+      "at": "$[\"hits\"][\"old-failed\"][3][\"excerpt\"]",
+      "context": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+      "at": "$[\"hits\"][\"old-failed\"][4][\"excerpt\"]",
+      "context": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+      "at": "$[\"hits\"][\"old-failed\"][5][\"excerpt\"]",
+      "context": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-dedup.json",
+      "at": "$[\"markdownMatches\"][7][\"matches\"][0][\"text\"]",
+      "context": "- **`microcompact` only clears whitelisted tools** (`COMPACTABLE_TOOL_NAMES` — Read/Glob/Bash/...). Orchestration results (TaskCreate/Agent/etc.) are left intact and don't count toward the keep-recent window."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/cross-review-tui.md",
+      "at": "$",
+      "context": "ES-R7-04，P3：支持。** `read.ts:77–78` 的上限早于 offset/limit 处理，自己的错误消息却推荐后者。6 MiB 文本的两次相同错误和小文件分页控制直接支持“恢复指引不可能成功”，不支持“上限本身是 bug”或“所有访问途径被堵住”。报告保留 Grep 这一可选建议，边界准确。\n\n初稿三处源码引用已通知作者并核对其最终稿：Glob 合同 `:16`；Grep `--glob` `:220`；fallback 注释 `:268–270`。历史查重决定区分了 Glob 的旧 count-header 格式问题、Grep 的旧 exit-code1 问题、Notebook/patch/history 既有项；没有把它们重复计入新问题。\n\n## Providers\n\n已读 `providers-stream-contract.test.ts`、成功首次 log/exit、normalization baseline log/exit，相关 Anthropic/OpenAI provider、ModelFacade、Web reducer 和 TurnLoop 选择性源码。按 root 与作者最终合同核对口径，此方向 **1 项确认 P3（Anthropic）+ 2 个候选（OpenAI、Thinking）**。成功分片分别 **4 pass / 19 expect** 与 **26 pass / 46 expect**，均 0 fail/skip、有 Completed；26 项是六个既有文件的 baseline，成功的 OpenAI 假分块行为测试也不能单凭 pass 升格为确认 bug。Thinking 续轮的独立首次分片 **1 pass / 1 fail / 13 expec"
+    }
+  ],
+  "limitations": "This is finite relevant-cause reading, not all-history semantic proof."
+}

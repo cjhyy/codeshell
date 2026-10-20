@@ -71,11 +71,14 @@ export const settingsNs = {
         login: "登录",
         register: "注册",
         github: "使用 GitHub 登录",
-        connectGitHub: "同时连接 GitHub",
+        connectGitHub: "首次 GitHub 登录默认 Link",
         cancelGitHubConnection: "取消 GitHub 连接",
         connectGitHubChecking: "正在检查此云服务是否支持同时连接 GitHub…",
+        connectGitHubDefaultChecking: "正在检查已保存的 GitHub Link 连接…",
+        connectGitHubDefaultUnavailable:
+          "暂时无法确认已保存的 GitHub Link，已取消自动勾选。仍可登录，或手动勾选以连接 GitHub；将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
         connectGitHubDescription:
-          "选中后将申请公开和私有仓库读写权限（repo）。连接后，在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
+          "本机尚未保存 GitHub Link 时默认勾选，首次登录即可同时连接，也可取消勾选。已有 Link 连接会保留，默认不重复授权。勾选将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
         connectGitHubUnavailable:
           "此云服务暂不支持登录时连接 GitHub；仍可使用 GitHub 登录，稍后在「凭证 → Link」连接。",
         githubConnection: "GitHub 连接",
@@ -83,10 +86,12 @@ export const settingsNs = {
         githubConnection_connected: "GitHub 已连接。可在「凭证 → Link」中管理仓库和 Actions 权限。",
         githubConnection_failed:
           "云账号已登录，但 GitHub 连接未完成。可稍后在「凭证 → Link」中重试。",
-        githubConnection_skipped: "云账号已登录，尚未连接 GitHub。可稍后在「凭证 → Link」中连接。",
+        githubConnection_skipped:
+          "云账号已登录，GitHub 数据连接步骤已跳过或取消。已有 Link 连接保留，可在「凭证 → Link」中管理。",
         githubCreatesAccount: "首次授权会自动创建 CodeShell 账号，无需先注册或设置密码。",
         githubExistingOnly: "此服务已关闭注册；仅已关联 GitHub 的 CodeShell 账号可继续登录。",
         passwordMethod: "账号密码登录方式",
+        loginMethods: "登录方式",
         passwordLogin: "密码登录",
         createAccount: "创建账号",
         usernameHelp: "3–64 位，以字母或数字开头，可包含字母、数字、点、下划线和短横线。",
@@ -119,6 +124,7 @@ export const settingsNs = {
         linksRevokeUnconfirmed: "尚未确认撤销结果，请重新加载核实；相同撤销可重试。",
         linksConfirmedReloadFailed: "撤销已确认，但无法刷新列表；请稍后重新加载。",
         logout: "退出云账号",
+        logoutUnconfirmed: "本机已退出；服务端未确认撤销，请联网后在账号会话管理中撤销此设备。",
         cancel: "取消登录",
         failed: "云账号操作未完成。",
         "state_signed-out": "本地使用中，尚未登录云账号",
@@ -130,7 +136,7 @@ export const settingsNs = {
         title: "主题",
         desc: "选择应用界面的显示模式。",
         system: "跟随系统",
-        systemDesc: "根据 macOS 外观自动切换",
+        systemDesc: "根据系统外观自动切换",
         light: "浅色",
         lightDesc: "始终使用浅色界面",
         dark: "深色",
@@ -156,7 +162,7 @@ export const settingsNs = {
           importSurfaces: "界面皮肤",
           importFrame: "窗口边框",
           importSounds: "事件音效",
-          importMusic: "音乐与试听链接",
+          importMusic: "音乐条目",
           fullSkin: "全界面主题",
           importNothing: "无内容",
           importConfirmTitle: "安装主题包「{name}」?",
@@ -167,6 +173,10 @@ export const settingsNs = {
           removeTitle: "删除这个主题包?",
           removeBody: "「{name}」将被永久删除。",
           removeAction: "删除",
+          removeNamed: "删除主题包「{name}」",
+          removingNamed: "正在删除主题包「{name}」",
+          removeDone: "已删除主题包「{name}」",
+          removeFailed: "无法删除主题包「{name}」:{error}",
         },
         audio: {
           sounds: "主题音效",
@@ -180,8 +190,7 @@ export const settingsNs = {
           error: "试听出错",
           noSounds: "这个主题包没有附带音效。",
           music: "主题音乐",
-          musicHint:
-            "选歌后点击播放，可返回聊天继续收听；官方歌曲链接将在浏览器中打开。切换主题会停止播放。",
+          musicHint: "选择歌曲后点击播放，可返回聊天继续收听。切换主题会停止播放。",
           musicVolume: "音乐音量",
           chooseTrack: "选择歌曲",
           play: "播放",
@@ -189,13 +198,11 @@ export const settingsNs = {
           stop: "停止播放",
           repeat: "循环播放当前歌曲",
           next: "下一首",
-          openOfficial: "打开官方试听",
           importLocal: "添加本地歌曲",
           localHint:
             "支持 MP3 / WAV，每首不超过 50 MB，最多 12 首；本地歌曲保留到切换主题或关闭应用。",
-          noMusic: "这个主题包没有附带歌曲；可以添加本地音乐。",
+          noMusic: "这个主题包没有可直接播放的歌曲；可以添加本地音乐。",
           playFailed: "无法播放此音频，请检查文件或音频格式。",
-          openFailed: "无法打开试听链接，请稍后重试。",
           importLimit: "部分文件未添加：仅支持 MP3 / WAV，每首最多 50 MB，最多 12 首本地歌曲。",
         },
       },
@@ -444,6 +451,11 @@ export const settingsNs = {
         reset: "恢复默认",
         saved: "上下文设置已保存",
         saveFailed: "保存失败",
+        loading: "正在读取上下文设置…",
+        loadFailed: "无法读取上下文设置：{error}",
+        retry: "重新读取",
+        invalidRatio: "请输入 {min} 到 {max} 之间的整数百分比。",
+        resetting: "正在恢复…",
       },
       agents: {
         title: "子代理",
@@ -642,7 +654,11 @@ export const settingsNs = {
         toastSaveFailed: "保存失败，请重试",
         confirmClearMsg: "清除「{name}」的凭证？",
         confirmClearDetail: "已保存的 API key / Base URL 将被移除。",
-        toastClearFailed: "清除失败，已还原",
+        toastClearFailed: "清除失败，已保留修改，请重试",
+        toastDefaultFailed: "默认搜索连接保存失败，请重试",
+        readFailed: "无法读取搜索连接，请重试。",
+        refreshFailed: "无法刷新搜索连接，已保留当前修改，请重试。",
+        retryRead: "重新读取",
       },
       memory: {
         title: "记忆",
@@ -1222,12 +1238,15 @@ export const settingsNs = {
         login: "Sign in",
         register: "Register",
         github: "Sign in with GitHub",
-        connectGitHub: "Also connect GitHub",
+        connectGitHub: "Link by default on first GitHub sign-in",
         cancelGitHubConnection: "Cancel GitHub connection",
         connectGitHubChecking:
           "Checking whether this service supports connecting GitHub during sign-in…",
+        connectGitHubDefaultChecking: "Checking saved GitHub Link connections…",
+        connectGitHubDefaultUnavailable:
+          "Saved GitHub Link connections could not be checked, so automatic connection is off. You can still sign in or select this to connect GitHub; it requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
         connectGitHubDescription:
-          "When selected, this requests read and write access to public and private repositories (repo). After connecting, choose the repositories and Actions permissions to use in Credentials → Link.",
+          "Selected by default when no GitHub Link is saved on this computer, so your first sign-in can connect GitHub too. You can clear it. Existing Link connections are preserved and are not authorized again by default. Selecting this requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
         connectGitHubUnavailable:
           "This service does not support connecting GitHub during sign-in yet. You can still sign in with GitHub and connect later in Credentials → Link.",
         githubConnection: "GitHub connection",
@@ -1238,12 +1257,13 @@ export const settingsNs = {
         githubConnection_failed:
           "Your cloud account is signed in, but the GitHub connection did not finish. Retry later in Credentials → Link.",
         githubConnection_skipped:
-          "Your cloud account is signed in. GitHub is not connected; connect later in Credentials → Link.",
+          "Your cloud account is signed in. The GitHub data connection step was skipped or cancelled. Existing Link connections are preserved; manage them in Credentials → Link.",
         githubCreatesAccount:
           "Your first authorization automatically creates a CodeShell account. No prior registration or password is needed.",
         githubExistingOnly:
           "Registration is closed. Only CodeShell accounts already linked to GitHub can sign in.",
         passwordMethod: "Username and password sign-in method",
+        loginMethods: "Sign-in methods",
         passwordLogin: "Password sign-in",
         createAccount: "Create account",
         usernameHelp:
@@ -1282,6 +1302,8 @@ export const settingsNs = {
         linksConfirmedReloadFailed:
           "Revocation was confirmed, but the list could not be refreshed. Reload later.",
         logout: "Sign out",
+        logoutUnconfirmed:
+          "Signed out on this device. Server revocation is unconfirmed; reconnect and revoke this device in account session management.",
         cancel: "Cancel sign-in",
         failed: "Cloud account operation failed.",
         "state_signed-out": "Using locally, not signed in",
@@ -1294,7 +1316,7 @@ export const settingsNs = {
         title: "Theme",
         desc: "Choose how the app interface is displayed.",
         system: "Follow system",
-        systemDesc: "Switch automatically with macOS appearance",
+        systemDesc: "Switch automatically with system appearance",
         light: "Light",
         lightDesc: "Always use the light interface",
         dark: "Dark",
@@ -1320,7 +1342,7 @@ export const settingsNs = {
           importSurfaces: "interface surfaces",
           importFrame: "window frame",
           importSounds: "event sounds",
-          importMusic: "music and listening links",
+          importMusic: "music entries",
           fullSkin: "Full interface theme",
           importNothing: "nothing",
           importConfirmTitle: "Install theme pack “{name}”?",
@@ -1331,6 +1353,10 @@ export const settingsNs = {
           removeTitle: "Remove this theme pack?",
           removeBody: "“{name}” will be permanently deleted.",
           removeAction: "Remove",
+          removeNamed: "Remove theme pack “{name}”",
+          removingNamed: "Removing theme pack “{name}”",
+          removeDone: "Removed theme pack “{name}”",
+          removeFailed: "Could not remove theme pack “{name}”: {error}",
         },
         audio: {
           sounds: "Theme sounds",
@@ -1345,7 +1371,7 @@ export const settingsNs = {
           noSounds: "This theme has no sound effects.",
           music: "Theme music",
           musicHint:
-            "Choose a track, then press Play. Music continues while you chat. Official listening links open in your browser. Switching themes stops playback.",
+            "Choose a track, then press Play. Music continues while you chat. Switching themes stops playback.",
           musicVolume: "Music volume",
           chooseTrack: "Choose a track",
           play: "Play",
@@ -1353,13 +1379,11 @@ export const settingsNs = {
           stop: "Stop music",
           repeat: "Repeat current track",
           next: "Next track",
-          openOfficial: "Open official music",
           importLocal: "Add local music",
           localHint:
             "MP3 / WAV, up to 50 MB each and 12 local tracks. Local music is kept until you switch themes or close the app.",
-          noMusic: "This theme has no music. You can add local tracks.",
+          noMusic: "This theme has no playable music. You can add local tracks.",
           playFailed: "This audio could not be played. Check the file or audio format.",
-          openFailed: "Could not open the listening link. Please try again.",
           importLimit:
             "Some files were skipped: MP3 / WAV only, up to 50 MB each and 12 local tracks.",
         },
@@ -1630,6 +1654,11 @@ export const settingsNs = {
         reset: "Reset defaults",
         saved: "Context settings saved",
         saveFailed: "Save failed",
+        loading: "Loading context settings…",
+        loadFailed: "Could not load context settings: {error}",
+        retry: "Retry loading",
+        invalidRatio: "Enter a whole percentage from {min} to {max}.",
+        resetting: "Resetting…",
       },
       agents: {
         title: "Sub-agents",
@@ -1846,7 +1875,11 @@ export const settingsNs = {
         toastSaveFailed: "Save failed, please retry",
         confirmClearMsg: 'Clear the credentials for "{name}"?',
         confirmClearDetail: "The saved API key / Base URL will be removed.",
-        toastClearFailed: "Clear failed, restored",
+        toastClearFailed: "Clear failed. Your edits are kept; please retry.",
+        toastDefaultFailed: "Could not save the default search connection. Please retry.",
+        readFailed: "Could not read search connections. Please retry.",
+        refreshFailed: "Could not refresh search connections. Your edits are kept; please retry.",
+        retryRead: "Read again",
       },
       memory: {
         title: "Memory",

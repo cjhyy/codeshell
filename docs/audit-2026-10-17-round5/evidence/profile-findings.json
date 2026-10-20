@@ -1,0 +1,30 @@
+[
+  {
+    "id": "PROFILE-R5-01",
+    "severity": "P2",
+    "confidence": "high",
+    "title": "Distinct catalog sources share a cache and removing one deletes the other's catalog",
+    "file": "packages/core/src/profile/catalog.ts",
+    "startLine": 91,
+    "endLine": 94,
+    "conditions": "Two distinct registered sources whose owner/repository boundaries collapse to the same hyphenated key, for example acme-labs/agents and acme/labs-agents.",
+    "expected": "Distinct source identities retain independent cache trees and provenance; removing one source preserves the other source's tree.",
+    "actual": "Both humanRepoDir values are equal. The second source's cached definition is attributed to the first registry source. Removing the second source leaves the first registered but deletes its cache.",
+    "relatedSourceRanges": [
+      { "file": "packages/core/src/profile/catalog-store.ts", "startLine": 66, "endLine": 67 },
+      { "file": "packages/core/src/profile/catalog-store.ts", "startLine": 112, "endLine": 116 },
+      { "file": "packages/core/src/profile/catalog-store.ts", "startLine": 365, "endLine": 371 },
+      { "file": "packages/core/src/profile/catalog-store.ts", "startLine": 403, "endLine": 415 },
+      { "file": "packages/desktop/src/main/profiles-service.ts", "startLine": 426, "endLine": 439 },
+      { "file": "packages/desktop/src/main/profiles-service.ts", "startLine": 459, "endLine": 460 }
+    ],
+    "contractEvidence": "packages/core/src/profile/catalog-store.concurrency.test.ts:114-124 explicitly expects removing one repository to preserve another tree.",
+    "fixture": "docs/audit-2026-10-17-round5/evidence/profile-catalog-data.test.ts",
+    "rawLog": "docs/audit-2026-10-17-round5/evidence/profile-catalog-data.first.log",
+    "exit": "docs/audit-2026-10-17-round5/evidence/profile-catalog-data.first.exit.txt",
+    "evidenceLayer": "Actual pure key function and actual local registry/catalog/details/removal paths on synthetic owned temporary directories; Desktop consumer is static evidence.",
+    "limits": "No clone/add/update/install/network, real Desktop/native app, models, credentials, user data, cross-process publication, or installed-profile/portable-memory deletion was executed or claimed.",
+    "dedup": "810 prior audit/review/archived Markdown and JSON artifacts scanned; older Core lifecycle profile coverage read; no prior matching cache identity collision finding found.",
+    "frozenHead": "9a421b3e65d5bfe662b78062cb86bd99483a683a"
+  }
+]

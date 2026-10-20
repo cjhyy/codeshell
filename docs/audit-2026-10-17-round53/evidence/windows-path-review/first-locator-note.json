@@ -1,0 +1,10 @@
+{
+  "toolChunk": "6cb776",
+  "stage": "Extra combined filename-only inventory with core/src/tools guessedscope",
+  "individualExitCode": null,
+  "originalStderrCaptured": false,
+  "observedSelectedNames": [
+    "packages/tui/src/render/README.md"
+  ],
+  "limitation": "Subprocessresult wasoverwritten beforeits exit/stderr persisted; containingtool exit0 isnotproofthat inventory succeeded. No productfunction/fixture/testrun. Do not inventfirstsubcommandexit2orstderr. Separatefilename-only core/src+coding/srcinventory isdocumentedcurrentnavigation,notfailedproductretry."
+}

@@ -1,0 +1,306 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "bytes": 8173,
+      "sha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "frozenSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          205
+        ]
+      ],
+      "lineCount": 262,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/coding/src/git/utils.ts",
+      "bytes": 6524,
+      "sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "frozenSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          172
+        ]
+      ],
+      "lineCount": 178,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/tui/src/cli/commands/registry.ts",
+      "bytes": 7302,
+      "sha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "frozenSha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          166
+        ]
+      ],
+      "lineCount": 200,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "frozenSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          110,
+          144
+        ],
+        [
+          2052,
+          2078
+        ]
+      ],
+      "lineCount": 2318,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "frozenSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          114,
+          146
+        ]
+      ],
+      "lineCount": 344,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/tui/src/ui/query-guard.ts",
+      "bytes": 4947,
+      "sha256": "1908085df5b5c8a197da24a3d396d1bfce7a27656b1abe9588549d5b54150d53",
+      "frozenSha256": "1908085df5b5c8a197da24a3d396d1bfce7a27656b1abe9588549d5b54150d53",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          152
+        ]
+      ],
+      "lineCount": 152,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/review-command.test.ts",
+      "bytes": 6452,
+      "sha256": "686ebad4c48fb1285e32ec98111919ff328a1b7048a4d520dbf528c2099557f2",
+      "frozenSha256": "686ebad4c48fb1285e32ec98111919ff328a1b7048a4d520dbf528c2099557f2",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          150
+        ]
+      ],
+      "lineCount": 150,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/coding/src/review/review-target.ts",
+      "bytes": 15379,
+      "sha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "frozenSha256": "8dff2360595abbbd96d0ae48507b6b4ae178af3dfef8288ae21291194f718a39",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          406
+        ]
+      ],
+      "lineCount": 406,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.ts",
+      "bytes": 7390,
+      "sha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "frozenSha256": "3be471c1f274fe3ea7071c3318c30bd680471e4d1d4286e53d7d3c712800c03b",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          151
+        ]
+      ],
+      "lineCount": 151,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "bytes": 6380,
+      "sha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "frozenSha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          138
+        ]
+      ],
+      "lineCount": 138,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.ts",
+      "bytes": 14224,
+      "sha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "frozenSha256": "a3fef3bc6aa59f4d2b1e4146b8faf7ac16a6c1f80e2b2b84c127bd7a155603e3",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          377
+        ]
+      ],
+      "lineCount": 377,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/useReviewPrompt.ts",
+      "bytes": 2052,
+      "sha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "frozenSha256": "6802b2481cd701dcfe369a54c4cd7045c9c476a25dd84a692c71a2ce0565bfad",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "lineCount": 56,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/composerSeed.ts",
+      "bytes": 2513,
+      "sha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "frozenSha256": "bb817bf91995158d3a664e2c259c5f8755ace0e49d0a65e14719f3a86fed2281",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          61
+        ]
+      ],
+      "lineCount": 61,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "bytes": 437,
+      "sha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "frozenSha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "lineCount": 12,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/desktop/src/shared/review.ts",
+      "bytes": 1932,
+      "sha256": "1f9bce0ddedf33a05205314f279fc1224e1740e20ab93ff6bd2b837a40229679",
+      "frozenSha256": "1f9bce0ddedf33a05205314f279fc1224e1740e20ab93ff6bd2b837a40229679",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "lineCount": 67,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/core/src/protocol/client.ts",
+      "bytes": 22495,
+      "sha256": "5d52fd589f6904ef83cae9939efa8f3542403d83930346bad8048f97665b73b5",
+      "frozenSha256": "5d52fd589f6904ef83cae9939efa8f3542403d83930346bad8048f97665b73b5",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          125,
+          170
+        ]
+      ],
+      "lineCount": 635,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "bytes": 17885,
+      "sha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "frozenSha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          70
+        ],
+        [
+          88,
+          215
+        ],
+        [
+          292,
+          328
+        ]
+      ],
+      "lineCount": 424,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/root.md",
+      "bytes": 5808,
+      "sha256": "8bd078da933e8c4900d896835f592d24e1e3efc9b7454b90c97f6b9704826412",
+      "frozenSha256": "8bd078da933e8c4900d896835f592d24e1e3efc9b7454b90c97f6b9704826412",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          32
+        ]
+      ],
+      "lineCount": 32,
+      "runtimeExecuted": false,
+      "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+    }
+  ],
+  "note": "Root independently verified actual frozen Gitblob/current bytes after declared reading."
+}

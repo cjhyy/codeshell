@@ -1,5 +1,6 @@
 export {
   LOCAL_LINK_PROVIDERS,
+  registerLocalLinkProviders,
   getLocalLinkProvider,
   listLocalLinkProviders,
   validateLocalLinkToken,
@@ -50,6 +51,7 @@ export {
   type RemoteLinkConfiguration,
   type RemoteLinkAttempt,
   type RemoteLinkActionRequest,
+  type RemoteLinkExecutionDiagnostic,
 } from "./remote.js";
 
 export {
@@ -57,6 +59,13 @@ export {
   LocalOAuthLinkError,
   type LocalOAuthLinkActionRequest,
 } from "./local-oauth.js";
+export {
+  executeFigmaMcpLinkAction,
+  isFigmaMcpCredential,
+  McpLinkActionError,
+  type McpLinkActionRequest,
+  type McpLinkActionOptions,
+} from "./figma-mcp.js";
 
 export {
   REMOTE_LINK_PROVIDER_ADAPTERS,

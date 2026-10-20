@@ -1,0 +1,54 @@
+{
+  "createdUTC": "2026-10-17T12:37:20.765337+00:00",
+  "scope": "Future Round34 aggregate metadata-only review; exact directory only. Self-excludes author-receipt.json.",
+  "files": [
+    {
+      "path": "final-input-pins.json",
+      "bytes": 13167,
+      "sha256": "16b2408f45fffce55ce0867aa6726ad9ace85100633d6609f43ffae46de696cc"
+    },
+    {
+      "path": "finish-checks.json",
+      "bytes": 22692,
+      "sha256": "88243e0cca60e936f246950a33d2b2654f2648a5ef196eb536e2befb46437d5c"
+    },
+    {
+      "path": "input-pins.json",
+      "bytes": 10459,
+      "sha256": "699f55fd86b647d65354b6498bb6f3b2fc97899cfd8c0d60f862129a5ef2567b"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 678,
+      "sha256": "548b4096a00f0b8209e34cf69aa04666129c4b66f19ecf0ecc4e2d2c13f12225"
+    },
+    {
+      "path": "packaging-first.stderr.txt",
+      "bytes": 110,
+      "sha256": "27274bdf958145f3d5d1a0b110dccf5009c24e32ace8cc107e5483564bdd4547"
+    },
+    {
+      "path": "review.md",
+      "bytes": 2661,
+      "sha256": "28e931907d4faacf4055ab8dab9cc629143174ab6ec28e8fae5e7fd12a24ec72"
+    },
+    {
+      "path": "source-checks.json",
+      "bytes": 40470,
+      "sha256": "6e6dff5aaa88f92e59aa09c89a0ee6175dd23667c313c044f51157bbe59ae500"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1174,
+      "sha256": "39a0e3b8034b80b5577ac62cc5fe109a085f757d84bbf3c419bd7a57229adbf2"
+    }
+  ],
+  "artifactCount": 8,
+  "reportLocalLinkCount": 6,
+  "allReportLocalLinksExist": true,
+  "metadataPackagingDiagnostic": "metadata-notes.json",
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "webRequests": 0,
+  "frozen": true
+}

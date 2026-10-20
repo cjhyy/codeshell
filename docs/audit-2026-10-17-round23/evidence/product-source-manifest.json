@@ -1,0 +1,285 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "sources": [
+    {
+      "path": "packages/core/src/product/define.ts",
+      "frozenSha256": "a6c80d1da8413b86d9baa954aad66d9892718ac49b86b3dea827bbe503aa09e1",
+      "currentSha256": "a6c80d1da8413b86d9baa954aad66d9892718ac49b86b3dea827bbe503aa09e1",
+      "currentMatchesFrozen": true,
+      "bytes": 6752,
+      "lineCount": 186,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          186
+        ]
+      ],
+      "note": "Primary public option contract and complete runtime forwarding; no import or constructor."
+    },
+    {
+      "path": "packages/core/src/product/types.ts",
+      "frozenSha256": "df7cfd80072fb9e5942eb6d1d4608e1c2ed30570920fa37d46424d693f3bc6fa",
+      "currentSha256": "df7cfd80072fb9e5942eb6d1d4608e1c2ed30570920fa37d46424d693f3bc6fa",
+      "currentMatchesFrozen": true,
+      "bytes": 4091,
+      "lineCount": 135,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          135
+        ]
+      ],
+      "note": "Public ProductDefinition and preset/adapter/contract option contracts."
+    },
+    {
+      "path": "packages/core/src/product/index.ts",
+      "frozenSha256": "c48d3fbebc09473cc53ce8527dbc1b2e95739387dce2a6cbded99ece2039daef",
+      "currentSha256": "c48d3fbebc09473cc53ce8527dbc1b2e95739387dce2a6cbded99ece2039daef",
+      "currentMatchesFrozen": true,
+      "bytes": 301,
+      "lineCount": 17,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "note": "Public product exports; static only."
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "frozenSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "currentSha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "currentMatchesFrozen": true,
+      "bytes": 38404,
+      "lineCount": 999,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          999
+        ]
+      ],
+      "note": "Complete source read; config/defaults/submit/execute forwarding is selected evidence, other lifecycle/security/identity logic not dynamically explored."
+    },
+    {
+      "path": "packages/core/src/run/EngineRunner.ts",
+      "frozenSha256": "515527f9c1855c97e97b692036b095ae88d768a10e42ffecb89df372cb1e1b24",
+      "currentSha256": "515527f9c1855c97e97b692036b095ae88d768a10e42ffecb89df372cb1e1b24",
+      "currentMatchesFrozen": true,
+      "bytes": 11428,
+      "lineCount": 268,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          268
+        ]
+      ],
+      "note": "Complete source read; selected config and protocol.run cwd wiring; no Engine/approval/native/SDK execution."
+    },
+    {
+      "path": "packages/core/src/run/types.ts",
+      "frozenSha256": "961ce437b57609872431a05ac99a35b04864d933b8d4d082151b90dec7f8ef27",
+      "currentSha256": "961ce437b57609872431a05ac99a35b04864d933b8d4d082151b90dec7f8ef27",
+      "currentMatchesFrozen": true,
+      "bytes": 6028,
+      "lineCount": 213,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          213
+        ]
+      ],
+      "note": "RunSnapshot/SubmitRunInput/context contracts; no runtime import."
+    },
+    {
+      "path": "packages/core/src/run/Evaluator.ts",
+      "frozenSha256": "1da891424a7f135a6023159146f0452300b78545905832b4cad6d938a64fb750",
+      "currentSha256": "1da891424a7f135a6023159146f0452300b78545905832b4cad6d938a64fb750",
+      "currentMatchesFrozen": true,
+      "bytes": 3776,
+      "lineCount": 107,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          107
+        ]
+      ],
+      "note": "Contract evaluator/composition source; no construction or evaluate call."
+    },
+    {
+      "path": "packages/core/src/run/factory.ts",
+      "frozenSha256": "a9b8b1cc6c211c344bbba61e77c88f4dd6696dd6c3ac44b84ef9480c1a930ab9",
+      "currentSha256": "a9b8b1cc6c211c344bbba61e77c88f4dd6696dd6c3ac44b84ef9480c1a930ab9",
+      "currentMatchesFrozen": true,
+      "bytes": 4062,
+      "lineCount": 125,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          125
+        ]
+      ],
+      "note": "Second public cwd option and complete same lost-default forwarding; grouped under one finding."
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "frozenSha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "currentSha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "currentMatchesFrozen": true,
+      "bytes": 27572,
+      "lineCount": 862,
+      "coverage": "selected",
+      "ranges": [
+        [
+          625,
+          649
+        ]
+      ],
+      "note": "Public Product exports only; no barrel import."
+    },
+    {
+      "path": "packages/core/package.json",
+      "frozenSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "currentSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "currentMatchesFrozen": true,
+      "bytes": 3452,
+      "lineCount": 110,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "note": "Stable public package entry metadata only; no dist/build/import."
+    },
+    {
+      "path": "packages/core/src/prompt/composer.ts",
+      "frozenSha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "currentSha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "currentMatchesFrozen": true,
+      "bytes": 18842,
+      "lineCount": 436,
+      "coverage": "selected",
+      "ranges": [
+        [
+          300,
+          365
+        ]
+      ],
+      "note": "Old custom prompt + behavior mechanism only; no prompt generation."
+    },
+    {
+      "path": "docs/archive/core-modules/product.md",
+      "frozenSha256": "372e16c46d170d891236df79f55836bf16321bc087ca0806b55bc80d11efbad9",
+      "currentSha256": "372e16c46d170d891236df79f55836bf16321bc087ca0806b55bc80d11efbad9",
+      "currentMatchesFrozen": true,
+      "bytes": 6887,
+      "lineCount": 146,
+      "coverage": "selected",
+      "ranges": [
+        [
+          65,
+          86
+        ]
+      ],
+      "note": "Historical runtime interface; outdated global register statements not treated as current source."
+    },
+    {
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "frozenSha256": "50087b9d5790503161f4f0d3af36229e9716d744997a99d49dfe1a5fed38ecc0",
+      "currentSha256": "50087b9d5790503161f4f0d3af36229e9716d744997a99d49dfe1a5fed38ecc0",
+      "currentMatchesFrozen": true,
+      "bytes": 22431,
+      "lineCount": 359,
+      "coverage": "selected",
+      "ranges": [
+        [
+          84,
+          103
+        ]
+      ],
+      "note": "Ordinary managed-run protocol description only."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "frozenSha256": "e0fd4e2cf69ef0ac2cf43d6b16b61ec2725605d4b856e9139a76ca6922e6d9ee",
+      "currentSha256": "e0fd4e2cf69ef0ac2cf43d6b16b61ec2725605d4b856e9139a76ca6922e6d9ee",
+      "currentMatchesFrozen": true,
+      "bytes": 112336,
+      "lineCount": 1,
+      "coverage": "selected JSON records",
+      "ranges": null,
+      "note": "Parent objects35,36 only semantically read."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "frozenSha256": "dc8abb277b00dfb57b898e77623deef973e01cee67dd21295f8fdd8d3c38c864",
+      "currentSha256": "dc8abb277b00dfb57b898e77623deef973e01cee67dd21295f8fdd8d3c38c864",
+      "currentMatchesFrozen": true,
+      "bytes": 169286,
+      "lineCount": 1,
+      "coverage": "selected JSON records",
+      "ranges": null,
+      "note": "Parent object46 only semantically read."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "frozenSha256": "89770332d75d998120bd9469cb63b328377656caa4bbb34d8c1e715b1e4acba3",
+      "currentSha256": "89770332d75d998120bd9469cb63b328377656caa4bbb34d8c1e715b1e4acba3",
+      "currentMatchesFrozen": true,
+      "bytes": 113942,
+      "lineCount": 1,
+      "coverage": "selected JSON records",
+      "ranges": null,
+      "note": "Parent objects35,36 only semantically read."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "frozenSha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+      "currentSha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+      "currentMatchesFrozen": true,
+      "bytes": 222261,
+      "lineCount": 1,
+      "coverage": "selected JSON records",
+      "ranges": null,
+      "note": "Parent objects73,74,155 only semantically read."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "frozenSha256": "99d2ef32a15255c9d22fe21b2a9f2c7e8cf00c71e7bde5902718c012b6f834fd",
+      "currentSha256": "99d2ef32a15255c9d22fe21b2a9f2c7e8cf00c71e7bde5902718c012b6f834fd",
+      "currentMatchesFrozen": true,
+      "bytes": 111340,
+      "lineCount": 1,
+      "coverage": "selected JSON records",
+      "ranges": null,
+      "note": "Parent object15 only semantically read."
+    },
+    {
+      "path": "docs/audit-2026-10-16/core.md",
+      "frozenSha256": "3fcbedfe12bc2ff4c123453f0bffc54ba25edcdc470a6eda8a4cdcc49241ecc1",
+      "currentSha256": "3fcbedfe12bc2ff4c123453f0bffc54ba25edcdc470a6eda8a4cdcc49241ecc1",
+      "currentMatchesFrozen": true,
+      "bytes": 11330,
+      "lineCount": 64,
+      "coverage": "selected",
+      "ranges": [
+        [
+          44,
+          44
+        ]
+      ],
+      "note": "Distinct hook cwd mechanism only; later bounded historical countercheck."
+    }
+  ],
+  "note": "No runtime execution. SHA verifies full file bytes; semantic reading is full vs selected as declared."
+}

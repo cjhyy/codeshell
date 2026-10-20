@@ -1,0 +1,1180 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/llm/strip-vision.ts",
+      "sha256": "d4c2b0f230941c255daefc838f893c8c10137d32595e0ccf6e1d5a7b74ed50c0",
+      "capturedAfterActualDisplay": true,
+      "blocks": [
+        {
+          "start": 1,
+          "end": 107,
+          "lines": [
+            {
+              "line": 1,
+              "text": "/**"
+            },
+            {
+              "line": 2,
+              "text": " * History-image stripping for non-vision models."
+            },
+            {
+              "line": 3,
+              "text": " *"
+            },
+            {
+              "line": 4,
+              "text": " * Why this exists: the vision gate in `Engine.run` only rejects *new* image"
+            },
+            {
+              "line": 5,
+              "text": " * attachments on the current turn. But a conversation can accumulate image"
+            },
+            {
+              "line": 6,
+              "text": " * content blocks while a vision-capable model is active, then the user"
+            },
+            {
+              "line": 7,
+              "text": " * switches to a non-vision model (e.g. DeepSeek) mid-session. Those"
+            },
+            {
+              "line": 8,
+              "text": " * *historical* image blocks are still in the transcript and get re-serialized"
+            },
+            {
+              "line": 9,
+              "text": " * on every subsequent request — OpenAI-compat backends 400 with"
+            },
+            {
+              "line": 10,
+              "text": " * `unknown variant 'image_url', expected 'text'`, which then falls back out"
+            },
+            {
+              "line": 11,
+              "text": " * of streaming and degrades the turn."
+            },
+            {
+              "line": 12,
+              "text": " *"
+            },
+            {
+              "line": 13,
+              "text": " * Fix: when the active model has `supportsVision: false`, replace each"
+            },
+            {
+              "line": 14,
+              "text": " * message's image blocks with a single text placeholder before the request"
+            },
+            {
+              "line": 15,
+              "text": " * is built. The transcript/store is untouched — only the outgoing copy is"
+            },
+            {
+              "line": 16,
+              "text": " * sanitized — so switching back to a vision model still sees the images."
+            },
+            {
+              "line": 17,
+              "text": " *"
+            },
+            {
+              "line": 18,
+              "text": " * Pure function, no I/O. Tested in `strip-vision.test.ts`."
+            },
+            {
+              "line": 19,
+              "text": " */"
+            },
+            {
+              "line": 20,
+              "text": ""
+            },
+            {
+              "line": 21,
+              "text": "import type { Message, ContentBlock } from \"../types.js\";"
+            },
+            {
+              "line": 22,
+              "text": ""
+            },
+            {
+              "line": 23,
+              "text": "/** Text we substitute for an elided image block. Surfaced to the model so it"
+            },
+            {
+              "line": 24,
+              "text": " *  knows an image *was* here (vs silently vanishing the context). */"
+            },
+            {
+              "line": 25,
+              "text": "export const VISION_PLACEHOLDER ="
+            },
+            {
+              "line": 26,
+              "text": "  \"[图片已省略:当前模型不支持视觉输入]\";"
+            },
+            {
+              "line": 27,
+              "text": ""
+            },
+            {
+              "line": 28,
+              "text": "/**"
+            },
+            {
+              "line": 29,
+              "text": " * Return a copy of `messages` with image content blocks replaced by a text"
+            },
+            {
+              "line": 30,
+              "text": " * placeholder, but only when `supportsVision` is false."
+            },
+            {
+              "line": 31,
+              "text": " *"
+            },
+            {
+              "line": 32,
+              "text": " * Identity-preserving: when vision is supported, or no message carries an"
+            },
+            {
+              "line": 33,
+              "text": " * image, the original array (and untouched message objects) are returned as-is"
+            },
+            {
+              "line": 34,
+              "text": " * so callers pay nothing on the common path."
+            },
+            {
+              "line": 35,
+              "text": " */"
+            },
+            {
+              "line": 36,
+              "text": "export function stripVisionFromHistory("
+            },
+            {
+              "line": 37,
+              "text": "  messages: Message[],"
+            },
+            {
+              "line": 38,
+              "text": "  supportsVision: boolean,"
+            },
+            {
+              "line": 39,
+              "text": "): Message[] {"
+            },
+            {
+              "line": 40,
+              "text": "  if (supportsVision) return messages;"
+            },
+            {
+              "line": 41,
+              "text": ""
+            },
+            {
+              "line": 42,
+              "text": "  let changed = false;"
+            },
+            {
+              "line": 43,
+              "text": "  const out = messages.map((msg) => {"
+            },
+            {
+              "line": 44,
+              "text": "    if (typeof msg.content === \"string\") return msg;"
+            },
+            {
+              "line": 45,
+              "text": "    // Need to process if there's a top-level image, OR a tool_result whose"
+            },
+            {
+              "line": 46,
+              "text": "    // own content array carries a nested image (view_image-produced screenshots"
+            },
+            {
+              "line": 47,
+              "text": "    // live in `tool_result.content: ContentBlock[]`)."
+            },
+            {
+              "line": 48,
+              "text": "    if (!msg.content.some(needsStrip)) return msg;"
+            },
+            {
+              "line": 49,
+              "text": ""
+            },
+            {
+              "line": 50,
+              "text": "    changed = true;"
+            },
+            {
+              "line": 51,
+              "text": "    const rebuilt: ContentBlock[] = [];"
+            },
+            {
+              "line": 52,
+              "text": "    let placeholderInserted = false;"
+            },
+            {
+              "line": 53,
+              "text": "    for (const block of msg.content) {"
+            },
+            {
+              "line": 54,
+              "text": "      if (block.type === \"image\") {"
+            },
+            {
+              "line": 55,
+              "text": "        // Collapse runs of images into a single placeholder per message —"
+            },
+            {
+              "line": 56,
+              "text": "        // five screenshots don't need five identical notes."
+            },
+            {
+              "line": 57,
+              "text": "        if (!placeholderInserted) {"
+            },
+            {
+              "line": 58,
+              "text": "          rebuilt.push({ type: \"text\", text: VISION_PLACEHOLDER });"
+            },
+            {
+              "line": 59,
+              "text": "          placeholderInserted = true;"
+            },
+            {
+              "line": 60,
+              "text": "        }"
+            },
+            {
+              "line": 61,
+              "text": "        continue;"
+            },
+            {
+              "line": 62,
+              "text": "      }"
+            },
+            {
+              "line": 63,
+              "text": "      if ("
+            },
+            {
+              "line": 64,
+              "text": "        block.type === \"tool_result\" &&"
+            },
+            {
+              "line": 65,
+              "text": "        Array.isArray(block.content) &&"
+            },
+            {
+              "line": 66,
+              "text": "        block.content.some((b) => b.type === \"image\")"
+            },
+            {
+              "line": 67,
+              "text": "      ) {"
+            },
+            {
+              "line": 68,
+              "text": "        rebuilt.push({ ...block, content: stripImageBlocks(block.content) });"
+            },
+            {
+              "line": 69,
+              "text": "        continue;"
+            },
+            {
+              "line": 70,
+              "text": "      }"
+            },
+            {
+              "line": 71,
+              "text": "      rebuilt.push(block);"
+            },
+            {
+              "line": 72,
+              "text": "    }"
+            },
+            {
+              "line": 73,
+              "text": "    return { ...msg, content: rebuilt };"
+            },
+            {
+              "line": 74,
+              "text": "  });"
+            },
+            {
+              "line": 75,
+              "text": ""
+            },
+            {
+              "line": 76,
+              "text": "  return changed ? out : messages;"
+            },
+            {
+              "line": 77,
+              "text": "}"
+            },
+            {
+              "line": 78,
+              "text": ""
+            },
+            {
+              "line": 79,
+              "text": "/** True if this block holds an image we must elide — either it *is* an image,"
+            },
+            {
+              "line": 80,
+              "text": " *  or it's a tool_result whose nested content array contains one. */"
+            },
+            {
+              "line": 81,
+              "text": "function needsStrip(block: ContentBlock): boolean {"
+            },
+            {
+              "line": 82,
+              "text": "  if (block.type === \"image\") return true;"
+            },
+            {
+              "line": 83,
+              "text": "  return ("
+            },
+            {
+              "line": 84,
+              "text": "    block.type === \"tool_result\" &&"
+            },
+            {
+              "line": 85,
+              "text": "    Array.isArray(block.content) &&"
+            },
+            {
+              "line": 86,
+              "text": "    block.content.some((b) => b.type === \"image\")"
+            },
+            {
+              "line": 87,
+              "text": "  );"
+            },
+            {
+              "line": 88,
+              "text": "}"
+            },
+            {
+              "line": 89,
+              "text": ""
+            },
+            {
+              "line": 90,
+              "text": "/** Replace image blocks in a ContentBlock[] with a single text placeholder"
+            },
+            {
+              "line": 91,
+              "text": " *  (consecutive/multiple images collapse to one), preserving other blocks."
+            },
+            {
+              "line": 92,
+              "text": " *  Used for both the message top level and nested tool_result.content. */"
+            },
+            {
+              "line": 93,
+              "text": "function stripImageBlocks(blocks: ContentBlock[]): ContentBlock[] {"
+            },
+            {
+              "line": 94,
+              "text": "  const rebuilt: ContentBlock[] = [];"
+            },
+            {
+              "line": 95,
+              "text": "  let placeholderInserted = false;"
+            },
+            {
+              "line": 96,
+              "text": "  for (const block of blocks) {"
+            },
+            {
+              "line": 97,
+              "text": "    if (block.type === \"image\") {"
+            },
+            {
+              "line": 98,
+              "text": "      if (!placeholderInserted) {"
+            },
+            {
+              "line": 99,
+              "text": "        rebuilt.push({ type: \"text\", text: VISION_PLACEHOLDER });"
+            },
+            {
+              "line": 100,
+              "text": "        placeholderInserted = true;"
+            },
+            {
+              "line": 101,
+              "text": "      }"
+            },
+            {
+              "line": 102,
+              "text": "      continue;"
+            },
+            {
+              "line": 103,
+              "text": "    }"
+            },
+            {
+              "line": 104,
+              "text": "    rebuilt.push(block);"
+            },
+            {
+              "line": 105,
+              "text": "  }"
+            },
+            {
+              "line": 106,
+              "text": "  return rebuilt;"
+            },
+            {
+              "line": 107,
+              "text": "}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "capturedAfterActualDisplay": true,
+      "blocks": [
+        {
+          "start": 1028,
+          "end": 1055,
+          "lines": [
+            {
+              "line": 1028,
+              "text": "    promptCache?: PromptCacheRequestContext,"
+            },
+            {
+              "line": 1029,
+              "text": "  ): {"
+            },
+            {
+              "line": 1030,
+              "text": "    messages: OpenAI.ChatCompletionMessageParam[];"
+            },
+            {
+              "line": 1031,
+              "text": "    stablePrefixEndIndex?: number;"
+            },
+            {
+              "line": 1032,
+              "text": "  } {"
+            },
+            {
+              "line": 1033,
+              "text": "    const result: OpenAI.ChatCompletionMessageParam[] = [{ role: \"system\", content: systemPrompt }];"
+            },
+            {
+              "line": 1034,
+              "text": ""
+            },
+            {
+              "line": 1035,
+              "text": "    // Drop historical image blocks when the active model can't accept vision."
+            },
+            {
+              "line": 1036,
+              "text": "    // Engine.run only gates *new* attachments; an image left in history from"
+            },
+            {
+              "line": 1037,
+              "text": "    // when a vision model was active otherwise re-serializes into `image_url`"
+            },
+            {
+              "line": 1038,
+              "text": "    // below and 400s (\"unknown variant `image_url`\") after a model switch."
+            },
+            {
+              "line": 1039,
+              "text": "    // Identity-preserving on the common path (vision models / no images)."
+            },
+            {
+              "line": 1040,
+              "text": "    messages = stripVisionFromHistory(messages, this.capability.supportsVision);"
+            },
+            {
+              "line": 1041,
+              "text": "    const stablePrefixMessageCount = Math.max("
+            },
+            {
+              "line": 1042,
+              "text": "      0,"
+            },
+            {
+              "line": 1043,
+              "text": "      Math.min(messages.length, promptCache?.stablePrefixMessageCount ?? messages.length),"
+            },
+            {
+              "line": 1044,
+              "text": "    );"
+            },
+            {
+              "line": 1045,
+              "text": "    let stablePrefixEndMessage: OpenAI.ChatCompletionMessageParam | undefined ="
+            },
+            {
+              "line": 1046,
+              "text": "      stablePrefixMessageCount === 0 ? result[0] : undefined;"
+            },
+            {
+              "line": 1047,
+              "text": ""
+            },
+            {
+              "line": 1048,
+              "text": "    // Reasoning-content echo-back contract — driven by capability:"
+            },
+            {
+              "line": 1049,
+              "text": "    //   \"when-tools\"  : backfill an empty placeholder if the prior assistant"
+            },
+            {
+              "line": 1050,
+              "text": "    //                   turn doesn't carry one (DeepSeek V4 + tools 400s"
+            },
+            {
+              "line": 1051,
+              "text": "    //                   otherwise). Skip when thinking is explicitly disabled,"
+            },
+            {
+              "line": 1052,
+              "text": "    //                   because empty-string in that mode can degenerate into"
+            },
+            {
+              "line": 1053,
+              "text": "    //                   an empty reply on the *next* turn."
+            },
+            {
+              "line": 1054,
+              "text": "    //   \"never\"       : drop any reasoning_content (deepseek-reasoner 400s"
+            },
+            {
+              "line": 1055,
+              "text": "    //                   if input messages contain it)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "capturedAfterActualDisplay": true,
+      "blocks": [
+        {
+          "start": 414,
+          "end": 442,
+          "lines": [
+            {
+              "line": 414,
+              "text": "        ...(policy.breakpoints.includes(\"system\")"
+            },
+            {
+              "line": 415,
+              "text": "          ? { cache_control: { type: \"ephemeral\" as const } }"
+            },
+            {
+              "line": 416,
+              "text": "          : {}),"
+            },
+            {
+              "line": 417,
+              "text": "      },"
+            },
+            {
+              "line": 418,
+              "text": "    ];"
+            },
+            {
+              "line": 419,
+              "text": "  }"
+            },
+            {
+              "line": 420,
+              "text": ""
+            },
+            {
+              "line": 421,
+              "text": "  private buildMessages("
+            },
+            {
+              "line": 422,
+              "text": "    messages: import(\"../../types.js\").Message[],"
+            },
+            {
+              "line": 423,
+              "text": "    promptCache: PromptCacheRequestContext | undefined,"
+            },
+            {
+              "line": 424,
+              "text": "    policy: PromptCachePolicy,"
+            },
+            {
+              "line": 425,
+              "text": "  ): Anthropic.MessageParam[] {"
+            },
+            {
+              "line": 426,
+              "text": "    messages = stripVisionFromHistory(messages, this.capability.supportsVision);"
+            },
+            {
+              "line": 427,
+              "text": "    const result: Anthropic.MessageParam[] = [];"
+            },
+            {
+              "line": 428,
+              "text": "    const stablePrefixMessageCount = Math.max("
+            },
+            {
+              "line": 429,
+              "text": "      0,"
+            },
+            {
+              "line": 430,
+              "text": "      Math.min(messages.length, promptCache?.stablePrefixMessageCount ?? messages.length),"
+            },
+            {
+              "line": 431,
+              "text": "    );"
+            },
+            {
+              "line": 432,
+              "text": "    let stablePrefixEndMessage: Anthropic.MessageParam | undefined;"
+            },
+            {
+              "line": 433,
+              "text": ""
+            },
+            {
+              "line": 434,
+              "text": "    for (let sourceIndex = 0; sourceIndex < messages.length; sourceIndex++) {"
+            },
+            {
+              "line": 435,
+              "text": "      if (sourceIndex === stablePrefixMessageCount) {"
+            },
+            {
+              "line": 436,
+              "text": "        stablePrefixEndMessage = result[result.length - 1];"
+            },
+            {
+              "line": 437,
+              "text": "      }"
+            },
+            {
+              "line": 438,
+              "text": "      const msg = messages[sourceIndex]!;"
+            },
+            {
+              "line": 439,
+              "text": "      if (msg.role === \"system\") continue;"
+            },
+            {
+              "line": 440,
+              "text": ""
+            },
+            {
+              "line": 441,
+              "text": "      const role = msg.role === \"tool\" ? \"user\" : msg.role;"
+            },
+            {
+              "line": 442,
+              "text": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "capturedAfterActualDisplay": true,
+      "blocks": [
+        {
+          "start": 24,
+          "end": 50,
+          "lines": [
+            {
+              "line": 24,
+              "text": ""
+            },
+            {
+              "line": 25,
+              "text": "// ─── Content & Messages ───────────────────────────────────────────"
+            },
+            {
+              "line": 26,
+              "text": ""
+            },
+            {
+              "line": 27,
+              "text": "export interface ContentBlock {"
+            },
+            {
+              "line": 28,
+              "text": "  type: \"text\" | \"tool_use\" | \"tool_result\" | \"image\" | \"reasoning\";"
+            },
+            {
+              "line": 29,
+              "text": "  text?: string;"
+            },
+            {
+              "line": 30,
+              "text": "  id?: string;"
+            },
+            {
+              "line": 31,
+              "text": "  name?: string;"
+            },
+            {
+              "line": 32,
+              "text": "  input?: Record<string, unknown>;"
+            },
+            {
+              "line": 33,
+              "text": "  content?: string | ContentBlock[];"
+            },
+            {
+              "line": 34,
+              "text": "  tool_use_id?: string;"
+            },
+            {
+              "line": 35,
+              "text": "  /**"
+            },
+            {
+              "line": 36,
+              "text": "   * 标记 tool_result 为出错,让 provider 据此设置 wire 层错误标志"
+            },
+            {
+              "line": 37,
+              "text": "   * (Anthropic 的 `is_error: true`)。不设的话,出错的工具只会以普通"
+            },
+            {
+              "line": 38,
+              "text": "   * content 文字回传,模型可能把超时/中断误当成成功。"
+            },
+            {
+              "line": 39,
+              "text": "   */"
+            },
+            {
+              "line": 40,
+              "text": "  is_error?: boolean;"
+            },
+            {
+              "line": 41,
+              "text": "  source?: { type: \"base64\"; media_type: string; data: string };"
+            },
+            {
+              "line": 42,
+              "text": "  // DeepSeek thinking-mode payload that must be echoed back verbatim"
+            },
+            {
+              "line": 43,
+              "text": "  // on the next request, alongside the assistant's content/tool_calls."
+            },
+            {
+              "line": 44,
+              "text": "  reasoningContent?: string;"
+            },
+            {
+              "line": 45,
+              "text": "}"
+            },
+            {
+              "line": 46,
+              "text": ""
+            },
+            {
+              "line": 47,
+              "text": "export interface Message {"
+            },
+            {
+              "line": 48,
+              "text": "  role: \"system\" | \"user\" | \"assistant\" | \"tool\";"
+            },
+            {
+              "line": 49,
+              "text": "  content: string | ContentBlock[];"
+            },
+            {
+              "line": 50,
+              "text": "  name?: string;"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/strip-vision.test.ts",
+      "sha256": "52b0ddbc2bc1d72a26becbba638832957a1c10824a8c7c8a6b0a6525d649fc7a",
+      "capturedAfterActualDisplay": true,
+      "blocks": [
+        {
+          "start": 13,
+          "end": 36,
+          "lines": [
+            {
+              "line": 13,
+              "text": "describe(\"stripVisionFromHistory\", () => {"
+            },
+            {
+              "line": 14,
+              "text": "  it(\"returns input unchanged when model supports vision\", () => {"
+            },
+            {
+              "line": 15,
+              "text": "    const msgs = [img()];"
+            },
+            {
+              "line": 16,
+              "text": "    const out = stripVisionFromHistory(msgs, true);"
+            },
+            {
+              "line": 17,
+              "text": "    expect(out).toBe(msgs); // identity — no copy when nothing to do"
+            },
+            {
+              "line": 18,
+              "text": "  });"
+            },
+            {
+              "line": 19,
+              "text": ""
+            },
+            {
+              "line": 20,
+              "text": "  it(\"replaces image blocks with a text placeholder when vision unsupported\", () => {"
+            },
+            {
+              "line": 21,
+              "text": "    const out = stripVisionFromHistory([img()], false);"
+            },
+            {
+              "line": 22,
+              "text": "    const content = out[0].content as Exclude<Message[\"content\"], string>;"
+            },
+            {
+              "line": 23,
+              "text": "    expect(content.some((b) => b.type === \"image\")).toBe(false);"
+            },
+            {
+              "line": 24,
+              "text": "    const placeholder = content.find((b) => b.type === \"text\" && b.text === VISION_PLACEHOLDER);"
+            },
+            {
+              "line": 25,
+              "text": "    expect(placeholder).toBeDefined();"
+            },
+            {
+              "line": 26,
+              "text": "    // original text must survive"
+            },
+            {
+              "line": 27,
+              "text": "    expect(content.some((b) => b.type === \"text\" && b.text === \"look at this\")).toBe(true);"
+            },
+            {
+              "line": 28,
+              "text": "  });"
+            },
+            {
+              "line": 29,
+              "text": ""
+            },
+            {
+              "line": 30,
+              "text": "  it(\"does not mutate the input messages (store stays intact)\", () => {"
+            },
+            {
+              "line": 31,
+              "text": "    const msgs = [img()];"
+            },
+            {
+              "line": 32,
+              "text": "    stripVisionFromHistory(msgs, false);"
+            },
+            {
+              "line": 33,
+              "text": "    const orig = msgs[0].content as Exclude<Message[\"content\"], string>;"
+            },
+            {
+              "line": 34,
+              "text": "    expect(orig.some((b) => b.type === \"image\")).toBe(true);"
+            },
+            {
+              "line": 35,
+              "text": "  });"
+            },
+            {
+              "line": 36,
+              "text": ""
+            }
+          ]
+        },
+        {
+          "start": 51,
+          "end": 111,
+          "lines": [
+            {
+              "line": 51,
+              "text": "  it(\"collapses consecutive images into one placeholder per message\", () => {"
+            },
+            {
+              "line": 52,
+              "text": "    const msgs: Message[] = ["
+            },
+            {
+              "line": 53,
+              "text": "      {"
+            },
+            {
+              "line": 54,
+              "text": "        role: \"user\","
+            },
+            {
+              "line": 55,
+              "text": "        content: ["
+            },
+            {
+              "line": 56,
+              "text": "          { type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: \"A\" } },"
+            },
+            {
+              "line": 57,
+              "text": "          { type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: \"B\" } },"
+            },
+            {
+              "line": 58,
+              "text": "        ],"
+            },
+            {
+              "line": 59,
+              "text": "      },"
+            },
+            {
+              "line": 60,
+              "text": "    ];"
+            },
+            {
+              "line": 61,
+              "text": "    const out = stripVisionFromHistory(msgs, false);"
+            },
+            {
+              "line": 62,
+              "text": "    const content = out[0].content as Exclude<Message[\"content\"], string>;"
+            },
+            {
+              "line": 63,
+              "text": "    const placeholders = content.filter((b) => b.type === \"text\" && b.text === VISION_PLACEHOLDER);"
+            },
+            {
+              "line": 64,
+              "text": "    expect(placeholders).toHaveLength(1);"
+            },
+            {
+              "line": 65,
+              "text": "  });"
+            },
+            {
+              "line": 66,
+              "text": ""
+            },
+            {
+              "line": 67,
+              "text": "  it(\"preserves non-image, non-text blocks (e.g. tool_result)\", () => {"
+            },
+            {
+              "line": 68,
+              "text": "    const msgs: Message[] = ["
+            },
+            {
+              "line": 69,
+              "text": "      {"
+            },
+            {
+              "line": 70,
+              "text": "        role: \"user\","
+            },
+            {
+              "line": 71,
+              "text": "        content: ["
+            },
+            {
+              "line": 72,
+              "text": "          { type: \"tool_result\", tool_use_id: \"t1\", content: \"ok\" },"
+            },
+            {
+              "line": 73,
+              "text": "          { type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: \"A\" } },"
+            },
+            {
+              "line": 74,
+              "text": "        ],"
+            },
+            {
+              "line": 75,
+              "text": "      },"
+            },
+            {
+              "line": 76,
+              "text": "    ];"
+            },
+            {
+              "line": 77,
+              "text": "    const out = stripVisionFromHistory(msgs, false);"
+            },
+            {
+              "line": 78,
+              "text": "    const content = out[0].content as Exclude<Message[\"content\"], string>;"
+            },
+            {
+              "line": 79,
+              "text": "    expect(content.some((b) => b.type === \"tool_result\")).toBe(true);"
+            },
+            {
+              "line": 80,
+              "text": "    expect(content.some((b) => b.type === \"image\")).toBe(false);"
+            },
+            {
+              "line": 81,
+              "text": "  });"
+            },
+            {
+              "line": 82,
+              "text": ""
+            },
+            {
+              "line": 83,
+              "text": "  it(\"strips images nested inside tool_result.content when vision unsupported\", () => {"
+            },
+            {
+              "line": 84,
+              "text": "    const msgs: Message[] = ["
+            },
+            {
+              "line": 85,
+              "text": "      {"
+            },
+            {
+              "line": 86,
+              "text": "        role: \"user\","
+            },
+            {
+              "line": 87,
+              "text": "        content: ["
+            },
+            {
+              "line": 88,
+              "text": "          {"
+            },
+            {
+              "line": 89,
+              "text": "            type: \"tool_result\","
+            },
+            {
+              "line": 90,
+              "text": "            tool_use_id: \"call_1\","
+            },
+            {
+              "line": 91,
+              "text": "            content: ["
+            },
+            {
+              "line": 92,
+              "text": "              { type: \"text\", text: \"before\" },"
+            },
+            {
+              "line": 93,
+              "text": "              { type: \"image\", source: { type: \"base64\", media_type: \"image/png\", data: \"AAAA\" } },"
+            },
+            {
+              "line": 94,
+              "text": "            ],"
+            },
+            {
+              "line": 95,
+              "text": "          },"
+            },
+            {
+              "line": 96,
+              "text": "        ],"
+            },
+            {
+              "line": 97,
+              "text": "      },"
+            },
+            {
+              "line": 98,
+              "text": "    ];"
+            },
+            {
+              "line": 99,
+              "text": "    const out = stripVisionFromHistory(msgs, false);"
+            },
+            {
+              "line": 100,
+              "text": "    const content = out[0].content as Exclude<Message[\"content\"], string>;"
+            },
+            {
+              "line": 101,
+              "text": "    const tr = content.find((b) => b.type === \"tool_result\");"
+            },
+            {
+              "line": 102,
+              "text": "    expect(tr).toBeDefined();"
+            },
+            {
+              "line": 103,
+              "text": "    expect(Array.isArray(tr!.content)).toBe(true);"
+            },
+            {
+              "line": 104,
+              "text": "    const inner = tr!.content as Exclude<Message[\"content\"], string>;"
+            },
+            {
+              "line": 105,
+              "text": "    expect(inner.some((b) => b.type === \"image\")).toBe(false);"
+            },
+            {
+              "line": 106,
+              "text": "    // original inner text survives"
+            },
+            {
+              "line": 107,
+              "text": "    expect(inner.some((b) => b.type === \"text\" && b.text === \"before\")).toBe(true);"
+            },
+            {
+              "line": 108,
+              "text": "    // a placeholder replaced the image"
+            },
+            {
+              "line": 109,
+              "text": "    expect(inner.some((b) => b.type === \"text\" && b.text === VISION_PLACEHOLDER)).toBe(true);"
+            },
+            {
+              "line": 110,
+              "text": "  });"
+            },
+            {
+              "line": 111,
+              "text": ""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "productExecution": 0
+}

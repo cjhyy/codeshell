@@ -1,0 +1,1 @@
+{"files": 4492, "stats": {"markdownFiles": 1442, "jsonFiles": 3050, "stringLeaves": 1953735, "scalarLeaves": 2921270}, "counts": {"0-path": 744, "0-sha": 12, "1-path": 14, "1-sha": 5, "2-path": 128, "2-sha": 52, "3-path": 51, "3-sha": 5, "summary-contract": 98}, "rows": 58, "errors": []}

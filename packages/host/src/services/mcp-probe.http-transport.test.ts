@@ -86,17 +86,29 @@ test("Desktop OAuth resolver refreshes once after 401 and every HTTP page uses c
     id: "oauth",
     type: "oauth",
     label: "Fixture",
+    meta: {
+      mcpServerUrl: `${origin}/mcp?access=private-query`,
+      resource: `${origin}/`,
+      issuer: `${origin}/auth`,
+    },
     secret: JSON.stringify({
       accessToken: "expired-secret",
       expiresAt: "2099-01-01T00:00:00.000Z",
+      resource: `${origin}/`,
+      issuer: `${origin}/auth`,
     }),
   });
   const resolutions: boolean[] = [];
   let refreshed = false;
   const oauthService = {
-    resolveAccessToken: async (_id: string, options?: { forceRefresh?: boolean }) => {
-      resolutions.push(!!options?.forceRefresh);
-      if (options?.forceRefresh) refreshed = true;
+    resolveAccessToken: async (
+      id: string,
+      options: { serverUrl: string; forceRefresh?: boolean },
+    ) => {
+      expect(id).toBe("oauth");
+      expect(options.serverUrl).toBe(`${origin}/mcp?access=private-query`);
+      resolutions.push(!!options.forceRefresh);
+      if (options.forceRefresh) refreshed = true;
       return { accessToken: refreshed ? "refreshed-secret" : "expired-secret" };
     },
   };

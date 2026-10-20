@@ -1,0 +1,81 @@
+{
+  "frozenUtc": "2026-10-17T12:06:36.590753+00:00",
+  "parentReportedContext": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "formalRound32Baseline": null,
+  "selfExcluded": true,
+  "artifactCount": 10,
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 2190,
+      "sha": "17a048a1c95d3c24a51c3cb12c2ee87429a36842f07322baa9f3d504558402bc",
+      "sha256": "17a048a1c95d3c24a51c3cb12c2ee87429a36842f07322baa9f3d504558402bc"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 2625,
+      "sha": "c9462610113631cdb870cf8612b1278f9a7ba30f604df178e5fcfe60d781ede9",
+      "sha256": "c9462610113631cdb870cf8612b1278f9a7ba30f604df178e5fcfe60d781ede9"
+    },
+    {
+      "path": "finish-hash-checks.json",
+      "bytes": 1901,
+      "sha": "e31dd5246a63070b0c77e5e272eb81583077073f51d29c704df48f16bd52022b",
+      "sha256": "e31dd5246a63070b0c77e5e272eb81583077073f51d29c704df48f16bd52022b"
+    },
+    {
+      "path": "history.json",
+      "bytes": 803921,
+      "sha": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91",
+      "sha256": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91"
+    },
+    {
+      "path": "history.py",
+      "bytes": 3107,
+      "sha": "eb7f34da0581b9b81a9c742ae2c33f1190664db10b39b2ec3300acb0e26acf7b",
+      "sha256": "eb7f34da0581b9b81a9c742ae2c33f1190664db10b39b2ec3300acb0e26acf7b"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 722,
+      "sha": "8d7b535ec7f41fa75436f4457be50a256bbb5c81f39ca3e48242c7ed6df5ddae",
+      "sha256": "8d7b535ec7f41fa75436f4457be50a256bbb5c81f39ca3e48242c7ed6df5ddae"
+    },
+    {
+      "path": "proposal.md",
+      "bytes": 3689,
+      "sha": "d79622e2b6793a49641031a683e74002705f437e0fe5061aa190b53c33771aea",
+      "sha256": "d79622e2b6793a49641031a683e74002705f437e0fe5061aa190b53c33771aea"
+    },
+    {
+      "path": "reviewed-contexts.json",
+      "bytes": 5315,
+      "sha": "433e9efdf63d72c69242574a3de512050fbd528df3efcf36cb7da349f5c46bef",
+      "sha256": "433e9efdf63d72c69242574a3de512050fbd528df3efcf36cb7da349f5c46bef"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 5840,
+      "sha": "e4530cc1718ac2a2168acfc43e0318876507567225f66df5ab7072c2e550334d",
+      "sha256": "e4530cc1718ac2a2168acfc43e0318876507567225f66df5ab7072c2e550334d"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1018,
+      "sha": "1563f5c3064fa1b135824e95ba6f7ab46ab21c55c5a4cbc0e53550e4fde401f9",
+      "sha256": "1563f5c3064fa1b135824e95ba6f7ab46ab21c55c5a4cbc0e53550e4fde401f9"
+    }
+  ],
+  "reportLinks": 8,
+  "classification": {
+    "newFormalFindings": 0,
+    "newCandidates": 0,
+    "newRelated": 0,
+    "existingCandidateExclusions": 1
+  },
+  "sourceSemanticPaths": 4,
+  "sourceSemanticLines": 513,
+  "hashOnlySourcePaths": 1,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

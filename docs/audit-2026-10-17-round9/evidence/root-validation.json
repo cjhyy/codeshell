@@ -1,0 +1,66 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "confirmedFindings": 1,
+  "candidates": 0,
+  "firstAttempts": 2,
+  "cleanShards": 2,
+  "cleanPass": 28,
+  "cleanExpectCalls": 79,
+  "failedShards": 0,
+  "newTests": 5,
+  "existingBaselineTests": 23,
+  "staticNavigationFailures": 1,
+  "policy": "Raw first combined output and exit saved before inspection. Renderer guessed source path skipped. No retry or product edits.",
+  "shards": [
+    {
+      "name": "root-usage-contracts",
+      "scope": "New standalone cost characterization and token-budget controls",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round9/evidence/root-usage-contracts.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "combinedStdoutStderr": "root-usage-contracts.first.log",
+      "exitReceipt": "root-usage-contracts.first.exit.txt",
+      "completed": true,
+      "status": "passed",
+      "counts": {
+        "pass": 5,
+        "fail": 0,
+        "unhandledErrors": 0,
+        "expectCalls": 25,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "root-usage-existing-baseline",
+      "scope": "Existing pure session/cache and standalone cost tests",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/session/usage.test.ts",
+        "packages/core/src/cost-tracker.test.ts",
+        "tests/cost-tracker.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "combinedStdoutStderr": "root-usage-existing-baseline.first.log",
+      "exitReceipt": "root-usage-existing-baseline.first.exit.txt",
+      "completed": true,
+      "status": "passed",
+      "counts": {
+        "pass": 23,
+        "fail": 0,
+        "unhandledErrors": 0,
+        "expectCalls": 54,
+        "skipped": 0
+      }
+    }
+  ]
+}

@@ -1,11 +1,12 @@
+import type { TurnDiffSnapshot } from "@cjhyy/code-shell-core";
 import type { FileEditEntry, Message, SessionFileDiff, ToolMessage } from "../types";
+import {
+  composeFileEdits,
+  syntheticSnippetDiff,
+  type FileEditOperation,
+} from "../diff/composeFileEdits";
 
-const EDIT_TOOLS = new Set([
-  "edit",
-  "multiedit",
-  "applypatch",
-  "apply_patch",
-]);
+const EDIT_TOOLS = new Set(["edit", "multiedit", "applypatch", "apply_patch"]);
 const WRITE_TOOLS = new Set(["write", "filewrite"]);
 const NOTEBOOK_TOOLS = new Set(["notebookedit", "notebook_edit"]);
 
@@ -36,19 +37,23 @@ interface ToolEditChange {
   added: number;
   removed: number;
   diff: string;
+  operations?: FileEditOperation[];
 }
 
 interface ExternalFileChange {
   sourceId: string;
   path: string;
   identity: string;
-  displayPath: string;
 }
 
 function normalizeFilePath(path: string): string {
   const slash = path.replace(/\\/g, "/");
-  const drive = slash.match(/^[A-Za-z]:\//)?.[0]?.slice(0, 2).toUpperCase();
+  const drive = slash
+    .match(/^[A-Za-z]:\//)?.[0]
+    ?.slice(0, 2)
+    .toUpperCase();
   const absolute = slash.startsWith("/") || drive !== undefined;
+  const unc = slash.startsWith("//");
   const body = drive ? slash.slice(3) : slash.startsWith("/") ? slash.slice(1) : slash;
   const parts: string[] = [];
   for (const part of body.split("/")) {
@@ -60,7 +65,7 @@ function normalizeFilePath(path: string): string {
     }
     parts.push(part);
   }
-  const prefix = drive ? `${drive}/` : absolute ? "/" : "";
+  const prefix = drive ? `${drive}/` : unc ? "//" : absolute ? "/" : "";
   return `${prefix}${parts.join("/")}` || (absolute ? prefix : ".");
 }
 
@@ -72,12 +77,6 @@ function resolveFilePath(cwd: string, path: string): string {
   const normalized = normalizeFilePath(path);
   if (isAbsoluteFilePath(normalized)) return normalized;
   return normalizeFilePath(`${normalizeFilePath(cwd)}/${normalized}`);
-}
-
-function displayExternalPath(cwd: string, path: string): string {
-  const absolute = resolveFilePath(cwd, path);
-  const root = normalizeFilePath(cwd).replace(/\/$/, "");
-  return absolute.startsWith(`${root}/`) ? absolute.slice(root.length + 1) : absolute;
 }
 
 function parseApplyPatch(patch: string): ToolEditChange[] {
@@ -173,17 +172,21 @@ function entryFor(t: ToolMessage): ToolEditChange | ToolEditChange[] | null {
           return {
             oldText: stringOf(record.old_string),
             newText: stringOf(record.new_string),
+            replaceAll: record.replace_all === true,
           };
         })
-        .filter((edit): edit is { oldText: string; newText: string } => edit !== null);
+        .filter((edit): edit is NonNullable<typeof edit> => edit !== null);
       if (pieces.length > 0) {
         return {
           path,
           added: pieces.reduce((sum, edit) => sum + countLines(edit.newText), 0),
           removed: pieces.reduce((sum, edit) => sum + countLines(edit.oldText), 0),
           diff: pieces
-            .map((edit, i) => syntheticSnippetDiff(path, edit.oldText, edit.newText, undefined, i + 1))
+            .map((edit, i) =>
+              syntheticSnippetDiff(path, edit.oldText, edit.newText, undefined, i + 1),
+            )
             .join("\n"),
+          operations: pieces.map((edit) => ({ kind: "edit", ...edit })),
         };
       }
     }
@@ -194,6 +197,7 @@ function entryFor(t: ToolMessage): ToolEditChange | ToolEditChange[] | null {
       added: countLines(newText),
       removed: countLines(oldText),
       diff: syntheticSnippetDiff(path, oldText, newText),
+      operations: [{ kind: "edit", oldText, newText, replaceAll: args.replace_all === true }],
     };
   }
   if (WRITE_TOOLS.has(name)) {
@@ -203,9 +207,11 @@ function entryFor(t: ToolMessage): ToolEditChange | ToolEditChange[] | null {
       added: countLines(content),
       removed: 0,
       diff: syntheticSnippetDiff(path, "", content, "added"),
+      operations: [{ kind: "write", content }],
     };
   }
   if (NOTEBOOK_TOOLS.has(name)) {
+    if (args.action === "read") return null;
     const oldText = stringOf(args.old_source);
     const newText = stringOf(args.new_source);
     return {
@@ -222,76 +228,8 @@ function stringOf(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function linesOf(text: string): string[] {
-  if (!text) return [];
-  return text.endsWith("\n") ? text.slice(0, -1).split("\n") : text.split("\n");
-}
-
 function hunkRange(start: number, count: number): string {
   return count === 1 ? String(start) : `${start},${count}`;
-}
-
-function syntheticSnippetDiff(
-  file: string,
-  oldText: string,
-  newText: string,
-  status: "modified" | "added" = "modified",
-  hunkIndex?: number,
-): string {
-  const oldLinesAll = linesOf(oldText);
-  const newLinesAll = linesOf(newText);
-
-  // Trim the common leading / trailing lines so the diff INTERLEAVES around the
-  // actual change instead of dumping the whole old block then the whole new
-  // block. A one-line edit then reads as context · -old · +new · context,
-  // matching a real unified diff. (An added file has no old side — skip.)
-  let pre = 0;
-  if (status !== "added") {
-    while (
-      pre < oldLinesAll.length &&
-      pre < newLinesAll.length &&
-      oldLinesAll[pre] === newLinesAll[pre]
-    ) {
-      pre++;
-    }
-  }
-  let post = 0;
-  if (status !== "added") {
-    while (
-      post < oldLinesAll.length - pre &&
-      post < newLinesAll.length - pre &&
-      oldLinesAll[oldLinesAll.length - 1 - post] === newLinesAll[newLinesAll.length - 1 - post]
-    ) {
-      post++;
-    }
-  }
-  const oldLines = oldLinesAll.slice(pre, oldLinesAll.length - post);
-  const newLines = newLinesAll.slice(pre, newLinesAll.length - post);
-  // Up to 3 lines of context on each side, like git's default.
-  const ctxBefore = oldLinesAll.slice(Math.max(0, pre - 3), pre);
-  const ctxAfter = oldLinesAll.slice(
-    oldLinesAll.length - post,
-    Math.min(oldLinesAll.length, oldLinesAll.length - post + 3),
-  );
-  const oldStart = oldLinesAll.length === 0 ? 0 : Math.max(1, pre - ctxBefore.length + 1);
-  const newStart = newLinesAll.length === 0 ? 0 : Math.max(1, pre - ctxBefore.length + 1);
-  const oldCount = ctxBefore.length + oldLines.length + ctxAfter.length;
-  const newCount = ctxBefore.length + newLines.length + ctxAfter.length;
-  return [
-    `diff --git a/${file} b/${file}`,
-    ...(status === "added" ? ["new file mode 100644"] : []),
-    status === "added" ? "--- /dev/null" : `--- a/${file}`,
-    `+++ b/${file}`,
-    `@@ -${hunkRange(oldStart, oldCount)} +${hunkRange(
-      newStart,
-      newCount,
-    )} @@${hunkIndex ? ` edit ${hunkIndex}` : ""}`,
-    ...ctxBefore.map((line) => ` ${line}`),
-    ...oldLines.map((line) => `-${line}`),
-    ...newLines.map((line) => `+${line}`),
-    ...ctxAfter.map((line) => ` ${line}`),
-    "",
-  ].join("\n");
 }
 
 /**
@@ -306,7 +244,7 @@ export function aggregateFileChanges(messages: Message[]): FileEditEntry[] | nul
 
 export function aggregateFileChangeSummary(
   messages: Message[],
-): { files: FileEditEntry[]; sessionDiffs: SessionFileDiff[] } | null {
+): { files: FileEditEntry[]; sessionDiffs: SessionFileDiff[]; unresolvedPaths?: string[] } | null {
   // Find the last REAL user turn. Engine-injected user messages (step-gap
   // steering / goal wakeup continuation, marked injected) are transparent: a
   // goal-driven task spans many engine.run boundaries — each inserts an injected
@@ -325,12 +263,61 @@ export function aggregateFileChangeSummary(
   const boundary = messages[start];
   const boundaryClientMessageId = boundary.kind === "user" ? boundary.clientMessageId : undefined;
 
-  // Pre-index external paths before consuming tools. This lets an in-session
-  // relative path (`src/a.ts`) and DriveAgent's absolute transcript path
-  // (`/repo/src/a.ts`) resolve to one physical file regardless of event order.
+  // Execution snapshots replace previews for every tracked path, including
+  // paths absent from files because the turn restored their original content.
+  const snapshots = new Map<string, TurnDiffSnapshot>();
+  const snapshotCapturedAt = new Map<string, number | undefined>();
+  for (const message of messages.slice(start + 1)) {
+    if (message.kind === "system" && message.turnDiff) {
+      const snapshot = message.turnDiff;
+      if (
+        boundary.kind === "user" &&
+        boundary.sourceEventId &&
+        snapshot.turnId !== boundary.sourceEventId
+      )
+        continue;
+      snapshots.set(snapshot.turnId, snapshot);
+      snapshotCapturedAt.set(snapshot.turnId, message.turnDiffCapturedAt);
+    }
+  }
+  const trackedPaths = new Set<string>();
+  const trackedToolCallIds = new Set<string>();
+  const capturedAtByPath = new Map<string, number | undefined>();
+  for (const snapshot of snapshots.values()) {
+    snapshot.trackedPaths.forEach((path) => {
+      const identity = resolveFilePath(snapshot.cwd, path);
+      trackedPaths.add(identity);
+      capturedAtByPath.set(identity, snapshotCapturedAt.get(snapshot.turnId));
+    });
+    snapshot.toolCallIds.forEach((id) => trackedToolCallIds.add(id));
+  }
+  const executionCwd = Array.from(snapshots.values()).at(-1)?.cwd;
+  const toolIdentity = (path: string) =>
+    executionCwd ? resolveFilePath(executionCwd, path) : normalizeFilePath(path);
+  const executionTouchCounts = new Map<string, Set<string>>();
+  // Detached children can finish after a parent capture. Retain their operation
+  // evidence until execution publishes a newer aggregate; never call stale bytes final.
+  const unresolvedPaths = new Set<string>();
+  for (const message of messages.slice(start + 1)) {
+    if (message.kind !== "agent") continue;
+    for (const tool of message.toolCalls) {
+      if (trackedToolCallIds.has(tool.id)) continue;
+      const changes = entryFor({ ...tool, status: "succeeded" });
+      for (const change of Array.isArray(changes) ? changes : changes ? [changes] : []) {
+        const identity = toolIdentity(change.path);
+        if (!trackedPaths.has(identity)) continue;
+        const capturedAt = capturedAtByPath.get(identity);
+        if (capturedAt === undefined || tool.endedAt === undefined || tool.endedAt >= capturedAt)
+          unresolvedPaths.add(identity);
+      }
+    }
+  }
+
+  // External completion carries its own cwd. Keep that absolute identity for
+  // display/open targets; a relative tool path has no caller-cwd evidence and
+  // must not be attributed to whichever external root happens to match first.
   const externalFiles: ExternalFileChange[] = [];
   const externalIdentities = new Set<string>();
-  const externalCwds = new Set<string>();
   const seenExternalAttribution = new Set<string>();
   for (let i = start + 1; i < messages.length; i++) {
     const m = messages[i];
@@ -342,39 +329,40 @@ export function aggregateFileChangeSummary(
     ) {
       continue;
     }
-    externalCwds.add(cwd);
     for (const path of files) {
-      if (typeof path !== "string" || !path.trim()) continue;
-      const identity = resolveFilePath(cwd, path.trim());
+      if (typeof path !== "string" || !path) continue;
+      const identity = resolveFilePath(cwd, path);
       const attributionKey = `${sourceId}\0${identity}`;
       if (seenExternalAttribution.has(attributionKey)) continue;
       seenExternalAttribution.add(attributionKey);
       externalIdentities.add(identity);
+      // Completion markers have no execution receipt identifying which capture
+      // includes their writes. Neither delivery order nor a newer wall clock
+      // can establish coverage, even when this path was previously net-zero.
+      if (trackedPaths.has(identity)) unresolvedPaths.add(identity);
       externalFiles.push({
         sourceId,
         path,
         identity,
-        displayPath: displayExternalPath(cwd, path),
       });
     }
   }
 
-  const identityForToolPath = (path: string): string => {
-    const normalized = normalizeFilePath(path);
-    if (isAbsoluteFilePath(normalized)) return normalized;
-    for (const cwd of externalCwds) {
-      const candidate = resolveFilePath(cwd, normalized);
-      if (externalIdentities.has(candidate)) return candidate;
-    }
-    return normalized;
-  };
-
   const byPath = new Map<string, FileEditEntry>();
-  const sessionDiffs: SessionFileDiff[] = [];
+  const operationsByPath = new Map<
+    string,
+    {
+      firstToolCallId: string;
+      operations: FileEditOperation[];
+      previews: FileEditOperation[];
+      writers: Set<string | null>;
+    }
+  >();
   const consume = (
     toolCallId: string,
     raw: ToolEditChange,
-    identity = identityForToolPath(raw.path),
+    writer: string | null,
+    identity = normalizeFilePath(raw.path),
     displayPath = normalizeFilePath(raw.path),
   ): void => {
     const existing = byPath.get(identity);
@@ -390,8 +378,24 @@ export function aggregateFileChangeSummary(
         count: 1,
       });
     }
-    if (raw.diff.trim()) {
-      sessionDiffs.push({ path: raw.path, toolCallId, diff: raw.diff });
+    const operations =
+      raw.operations ?? (raw.diff.trim() ? [{ kind: "opaque" as const, diff: raw.diff }] : []);
+    if (operations.length) {
+      const previous = operationsByPath.get(identity);
+      const previews: FileEditOperation[] = raw.diff.trim()
+        ? [{ kind: "opaque", diff: raw.diff }]
+        : [];
+      if (previous) {
+        previous.operations.push(...operations);
+        previous.previews.push(...previews);
+        previous.writers.add(writer);
+      } else
+        operationsByPath.set(identity, {
+          firstToolCallId: toolCallId,
+          operations: [...operations],
+          previews,
+          writers: new Set([writer]),
+        });
     }
   };
 
@@ -399,13 +403,30 @@ export function aggregateFileChangeSummary(
     const m = messages[i];
     if (m.kind === "tool") {
       const e = entryFor(m);
-      if (Array.isArray(e)) e.forEach((change) => consume(m.id, change));
-      else if (e) consume(m.id, e);
+      for (const change of Array.isArray(e) ? e : e ? [e] : []) {
+        const identity = toolIdentity(change.path);
+        if (
+          !unresolvedPaths.has(identity) &&
+          (trackedToolCallIds.has(m.id) || trackedPaths.has(identity))
+        ) {
+          const ids = executionTouchCounts.get(identity) ?? new Set<string>();
+          ids.add(m.id);
+          executionTouchCounts.set(identity, ids);
+          continue;
+        }
+        consume(m.id, change, null, identity);
+      }
     } else if (m.kind === "agent") {
       for (const t of m.toolCalls) {
         const e = entryFor(t);
-        if (Array.isArray(e)) e.forEach((change) => consume(t.id, change));
-        else if (e) consume(t.id, e);
+        for (const change of Array.isArray(e) ? e : e ? [e] : []) {
+          const identity = toolIdentity(change.path);
+          if (
+            unresolvedPaths.has(identity) ||
+            (!trackedToolCallIds.has(t.id) && !trackedPaths.has(identity))
+          )
+            consume(t.id, change, m.id, identity);
+        }
       }
     }
   }
@@ -414,11 +435,62 @@ export function aggregateFileChangeSummary(
     consume(
       `external:${external.sourceId}`,
       { path: external.path, added: 0, removed: 0, diff: "" },
+      null,
       external.identity,
-      external.displayPath,
+      external.identity,
     );
+    // An earlier relative preview may share this now-known execution identity.
+    // Keep the external file's authoritative root in its display/open target.
+    byPath.get(external.identity)!.path = external.identity;
   }
 
-  if (byPath.size === 0) return null;
-  return { files: Array.from(byPath.values()), sessionDiffs };
+  const sessionDiffs: SessionFileDiff[] = [];
+  for (const [identity, source] of operationsByPath) {
+    const entry = byPath.get(identity)!;
+    // Agent tools are backfilled into the agent's earlier message card. Card
+    // order therefore cannot establish the order of edits from different
+    // writers; wall-clock tool timestamps cannot prove that order either.
+    // Keep each recorded preview instead of guessing a final file version.
+    const composed = composeFileEdits(
+      entry.path,
+      source.writers.size > 1 ? source.previews : source.operations,
+    );
+    // A successful edit followed by its exact reversal has no net change.
+    // Keep external-only attribution when no payload can establish its result.
+    if (!composed.diff && !externalIdentities.has(identity)) {
+      byPath.delete(identity);
+      continue;
+    }
+    entry.added = composed.added;
+    entry.removed = composed.removed;
+    if (composed.diff)
+      sessionDiffs.push({
+        path: entry.path,
+        toolCallId: source.firstToolCallId,
+        diff: composed.diff,
+      });
+  }
+  for (const snapshot of snapshots.values()) {
+    for (const file of snapshot.files) {
+      const identity = resolveFilePath(snapshot.cwd, file.path);
+      if (unresolvedPaths.has(identity)) continue;
+      byPath.set(identity, {
+        path: identity,
+        added: file.added,
+        removed: file.removed,
+        count: Math.max(1, executionTouchCounts.get(identity)?.size ?? 0),
+      });
+      sessionDiffs.push({
+        path: identity,
+        toolCallId: `turn-diff:${snapshot.turnId}:${identity}`,
+        diff: file.diff,
+      });
+    }
+  }
+  if (byPath.size === 0 && unresolvedPaths.size === 0) return null;
+  return {
+    files: Array.from(byPath.values()),
+    sessionDiffs,
+    ...(unresolvedPaths.size ? { unresolvedPaths: Array.from(unresolvedPaths) } : {}),
+  };
 }

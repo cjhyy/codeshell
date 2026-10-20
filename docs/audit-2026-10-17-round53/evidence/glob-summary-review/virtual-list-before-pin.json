@@ -1,0 +1,8 @@
+{
+  "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+  "bytes": 11173,
+  "lines": 273,
+  "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+  "pinnedBeforeBodyUTC": "2026-10-17T17:54:50.356737+00:00",
+  "purpose": "Only ordinary renderEntry prop forwarding; not scroll/layout mechanism audit"
+}

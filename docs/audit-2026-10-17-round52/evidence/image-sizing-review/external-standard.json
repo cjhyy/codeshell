@@ -1,0 +1,27 @@
+{
+  "readUTC": "2026-10-17T17:39:25.399584+00:00",
+  "title": "WHATWG HTML Living Standard: canvas.toBlob",
+  "url": "https://html.spec.whatwg.org/multipage/canvas.html#dom-canvas-toblob",
+  "displayedPageLastUpdated": "16 October 2026",
+  "webCalls": 3,
+  "webOperations": [
+    "opencanvas#dom-canvas-toblob",
+    "findhasnopixels and Letresultbenull",
+    "openline336"
+  ],
+  "preciseSelectedAlgorithmLines": [
+    336,
+    350
+  ],
+  "selectedAlgorithmSteps": [
+    "2",
+    "3",
+    "4.2.1",
+    "4.2.2"
+  ],
+  "paraphrase": "toBlob先以null初始化result；仅bitmap两边都非零才复制及序列化；最后把result交给callback。因此零宽或零高bitmap的正常序列化回调结果为null。",
+  "externalDocumentationReadingOnly": true,
+  "notProductNetworkOrDOMExperiment": true,
+  "noFullPageArchiveOrFullTextHashClaim": true,
+  "quotationPolicy": "Paraphrase only; no long verbatim standard excerpt."
+}

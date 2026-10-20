@@ -1,0 +1,220 @@
+{
+  "checkedAt": "2026-10-17T19:59:45.997508+00:00",
+  "sourceAndConfigurationChecks": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "initialDurableSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "initialDurableSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "scripts/copy-assets.mjs",
+      "bytes": 2079,
+      "initialDurableSha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+      "endingSha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "packages/coding/package.json",
+      "bytes": 1906,
+      "initialDurableSha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "endingSha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "initialDurableSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "endingSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "initialDurableSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "endingSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "packages/core/src/prompt/section-loader.ts",
+      "bytes": 1723,
+      "initialDurableSha256": "aafec0a8f91a7b9c6a54f10d337bcca74aa9c52c18e81cb6ab671e60c4c586bb",
+      "endingSha256": "aafec0a8f91a7b9c6a54f10d337bcca74aa9c52c18e81cb6ab671e60c4c586bb",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "packages/core/src/data/static-catalogs.ts",
+      "bytes": 1601,
+      "initialDurableSha256": "1a68c79d7dc753c0bcbdc06110d6fb1891573aa2f8a2f905f61589d204b11394",
+      "endingSha256": "1a68c79d7dc753c0bcbdc06110d6fb1891573aa2f8a2f905f61589d204b11394",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/init/index.ts",
+      "bytes": 6498,
+      "initialDurableSha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "endingSha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "bytes": 11585,
+      "initialDurableSha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+      "endingSha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": "not-applicable"
+    },
+    {
+      "path": "packages/core/tsconfig.json",
+      "bytes": 554,
+      "initialDurableSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "endingSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": null
+    },
+    {
+      "path": "packages/coding/tsconfig.json",
+      "bytes": 554,
+      "initialDurableSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "endingSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": null
+    },
+    {
+      "path": "packages/tui/tsconfig.json",
+      "bytes": 917,
+      "initialDurableSha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "endingSha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "unchanged": true,
+      "initialFailedMetadataBatchSha256": null
+    }
+  ],
+  "oldCanonicalChecks": [
+    {
+      "path": "docs/archive/todo/review-infra-2026-07-08.md",
+      "bytes": 17047,
+      "initialSha256": "f929c9ff61b342a1c2f55e6b8d8b960e082856374ae86b5734bbbd38a12321d2",
+      "endingSha256": "f929c9ff61b342a1c2f55e6b8d8b960e082856374ae86b5734bbbd38a12321d2",
+      "unchanged": true,
+      "displayedLineRanges": [
+        [
+          140,
+          159
+        ]
+      ],
+      "scope": "Relevant old zero-match cause plus adjacent old headings; not all source report/history read."
+    },
+    {
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "bytes": 17704,
+      "initialSha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61",
+      "endingSha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61",
+      "unchanged": true,
+      "displayedLineRanges": [
+        [
+          74,
+          77
+        ]
+      ],
+      "scope": "Relevant old zero-match cause plus adjacent old headings; not all source report/history read."
+    },
+    {
+      "path": "docs/archive/todo/fix-batch-4-2026-07-08.md",
+      "bytes": 4339,
+      "initialSha256": "fc2340490ffeaf9eeab334f58cebbf116619f0bbfc4bb7adc67fddf1a6e3ffae",
+      "endingSha256": "fc2340490ffeaf9eeab334f58cebbf116619f0bbfc4bb7adc67fddf1a6e3ffae",
+      "unchanged": true,
+      "displayedLineRanges": [
+        [
+          10,
+          17
+        ]
+      ],
+      "scope": "Relevant old zero-match cause plus adjacent old headings; not all source report/history read."
+    }
+  ],
+  "sharedBatchCheck": {
+    "path": "/tmp/codeshell-audit-round153-release-audit-config/history-batch.json",
+    "initialSha256": "be3ff0ec8e4a82e7e8b72b8a678bda0caeff940e42bb3bebfc2178e1b3d35b56",
+    "endingSha256": "be3ff0ec8e4a82e7e8b72b8a678bda0caeff940e42bb3bebfc2178e1b3d35b56",
+    "unchanged": true
+  },
+  "assetFilenameEndingChecks": [
+    {
+      "command": [
+        "rg",
+        "--files",
+        "--hidden",
+        "packages/core/src/prompt/sections"
+      ],
+      "exitCode": 0,
+      "sameFilenames": true,
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "--files",
+        "--hidden",
+        "packages/core/src/data"
+      ],
+      "exitCode": 0,
+      "sameFilenames": true,
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "--files",
+        "--hidden",
+        "packages/coding/src/prompt"
+      ],
+      "exitCode": 0,
+      "sameFilenames": true,
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "--files",
+        "--hidden",
+        "packages/coding/src/tools/apply-patch"
+      ],
+      "exitCode": 0,
+      "sameFilenames": true,
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "--files",
+        "--hidden",
+        "packages/tui/src/cli/commands/builtin/init/templates"
+      ],
+      "exitCode": 0,
+      "sameFilenames": true,
+      "stderr": ""
+    }
+  ],
+  "allOwnDurablePinsUnchanged": true,
+  "wholeSharedInventoryRecheckedByThisAuthor": false,
+  "actualDistInspected": false,
+  "GitVerified": false
+}

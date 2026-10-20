@@ -1,0 +1,84 @@
+{
+  "finishedUTC": "2026-10-17T14:39:48.949470+00:00",
+  "sourceAndMetadataChecks": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "coverage": "selected",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "coverage": "selected",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/report.md",
+      "bytes": 6408,
+      "sha256": "96de25be63fb54a3c12c6e137fe0b86efb964359f97e40b69a6c7936a4e74d39",
+      "coverage": "full",
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "bytes": 13844,
+      "sha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "coverage": "selected",
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "bytes": 16192,
+      "sha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "coverage": "selected",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/AppDraftOverrides.test.tsx",
+      "bytes": 10680,
+      "sha256": "63f39fcb49763af140b83b952225ea3d6c76b02cf52084d30fc99af5425c316a",
+      "coverage": "navigation-matches-only",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.composer-variant.test.tsx",
+      "bytes": 6398,
+      "sha256": "afc5a7f4bd731991d30638871950f35011c3688223d7df0b5eed174728159325",
+      "coverage": "navigation-matches-only",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "bytes": 58805,
+      "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "coverage": "hash-only inventory candidate",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/CommentBox.tsx",
+      "bytes": 2450,
+      "sha256": "73fd0ab7120bbf488371c30b3d24a50632f4ec3967c273be67ed4eae99b04ae4",
+      "coverage": "hash-only inventory candidate",
+      "unchanged": true
+    }
+  ],
+  "checkCount": 9,
+  "allSourceBytePinsStable": true,
+  "history": {
+    "initialFiles": 3773,
+    "currentSameScopeFiles": 3773,
+    "added": [],
+    "removed": [],
+    "sharedByteChanges": [],
+    "missing": [],
+    "originalInventoryPreserved": true,
+    "canonicalInitialInventorySha256": "cdcdc06848fd55c3de03e86fdee3133426fb85d7540566fd029b34731b477ede",
+    "scope": "includesFrozen41/excludesMutable42 andfuture43–47; no retroactive changing of dated scope",
+    "meaning": "Ending bytes/path metadata only; no new semantic reading"
+  },
+  "gitCommands": 0,
+  "productExecutionTestsFixtures": 0
+}

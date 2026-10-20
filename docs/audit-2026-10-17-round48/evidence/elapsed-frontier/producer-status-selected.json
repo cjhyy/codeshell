@@ -1,0 +1,22 @@
+{
+  "rows": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "line": 499,
+      "text": "      status: \"running\",",
+      "scope": "single exact ordinary status/notification field, no adjacent ownership fields read"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "line": 177,
+      "text": "    this.notify();",
+      "scope": "single exact ordinary status/notification field, no adjacent ownership fields read"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "line": 176,
+      "text": "    this.agents.set(entry.agentId, entry);",
+      "scope": "single ordinary collection insert line; pin already taken before its navigation display; read here before classification"
+    }
+  ]
+}

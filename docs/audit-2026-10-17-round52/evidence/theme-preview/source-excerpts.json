@@ -1,0 +1,105 @@
+{
+  "capturedUTC": "2026-10-17T17:33:38.073835+00:00",
+  "postReadCapture": true,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "captureTiming": "Post actual source display; not before-read snapshot or a new semantic read.",
+      "displayedLineRanges": [
+        [
+          1,
+          121
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1,
+          "end": 121,
+          "text": "import React from \"react\";\nimport type { ThemePack, ThemeSurfaceName, ThemeVars } from \"../theme-packs\";\nimport { resolveThemeSurface } from \"../theme-appearance\";\n\n/** A miniature window uses the pack's own surfaces in each appearance mode. */\nexport function ThemePackPreview({ pack }: { pack: ThemePack }) {\n  return (\n    <span aria-hidden=\"true\" className=\"block w-full\" data-theme-preview={pack.id}>\n      <PreviewMode pack={pack} mode=\"light\" className=\"dark:hidden\" />\n      <PreviewMode pack={pack} mode=\"dark\" className=\"hidden dark:block\" />\n    </span>\n  );\n}\n\nfunction PreviewMode({\n  pack,\n  mode,\n  className,\n}: {\n  pack: ThemePack;\n  mode: \"light\" | \"dark\";\n  className: string;\n}) {\n  const colors = pack.colors[mode];\n  const basePalette: ThemeVars = {\n    \"--cs-background\": mode === \"light\" ? \"240 20% 99%\" : \"240 9% 5.5%\",\n    \"--cs-muted\": mode === \"light\" ? \"240 6% 95.5%\" : \"240 4% 15%\",\n    \"--cs-card\": mode === \"light\" ? \"0 0% 100%\" : \"240 7% 8.5%\",\n    ...colors,\n  };\n  const foreground = colors[\"--cs-foreground\"] ?? (mode === \"light\" ? \"240 6% 18%\" : \"0 0% 92%\");\n  const accent = colors[\"--cs-primary\"] ?? pack.swatch;\n  const surface = (name: ThemeSurfaceName) => {\n    const resolved = resolveThemeSurface(pack, name, mode, basePalette);\n    return {\n      ...resolved,\n      color: `hsl(${resolved.background} / ${resolved.backgroundOpacity})`,\n    };\n  };\n  const windowSurface = surface(\"window\");\n  const frame = pack.frame?.[mode] ?? pack.frame?.light ?? colors[\"--cs-border\"] ?? accent;\n  const paint = (name: \"window\" | \"sidebar\" | \"titlebar\" | \"chat\" | \"composer\") => {\n    const layer = surface(name);\n    return layer.image ? (\n      <img\n        src={layer.image}\n        alt=\"\"\n        className=\"pointer-events-none absolute inset-0 h-full w-full\"\n        style={{\n          objectFit: layer.fit,\n          objectPosition: layer.position,\n          opacity: layer.opacity,\n        }}\n      />\n    ) : null;\n  };\n  return (\n    <span className={className}>\n      <span\n        className=\"relative block h-28 overflow-hidden rounded-lg border\"\n        style={{\n          backgroundColor: windowSurface.color,\n          color: `hsl(${foreground})`,\n          borderColor: `hsl(${frame})`,\n          borderWidth: pack.frame?.width ? Math.min(pack.frame.width, 3) : 1,\n        }}\n      >\n        {paint(\"window\")}\n        <span className=\"relative flex h-full flex-col\">\n          <span\n            className=\"relative flex h-5 shrink-0 items-center gap-1 border-b border-current/10 px-2\"\n            style={{ backgroundColor: surface(\"titlebar\").color }}\n          >\n            {paint(\"titlebar\")}\n            <span className=\"relative size-1 rounded-full bg-current/30\" />\n            <span className=\"relative size-1 rounded-full bg-current/20\" />\n            <span className=\"relative size-1 rounded-full bg-current/20\" />\n          </span>\n          <span className=\"flex min-h-0 flex-1\">\n            <span\n              className=\"relative flex w-12 shrink-0 flex-col gap-2 overflow-hidden border-r border-current/10 p-2\"\n              style={{ backgroundColor: surface(\"sidebar\").color }}\n            >\n              {paint(\"sidebar\")}\n              <span\n                className=\"relative h-1 w-6 rounded-full\"\n                style={{ backgroundColor: `hsl(${accent})` }}\n              />\n              <span className=\"relative h-1 w-5 rounded-full bg-current/20\" />\n              <span className=\"relative h-1 w-6 rounded-full bg-current/10\" />\n            </span>\n            <span\n              className=\"relative flex min-w-0 flex-1 flex-col justify-between overflow-hidden p-2.5\"\n              style={{ backgroundColor: surface(\"chat\").color }}\n            >\n              {paint(\"chat\")}\n              <span className=\"relative block space-y-1.5\">\n                <span\n                  className=\"ml-auto block h-3 w-10 rounded-md\"\n                  style={{ backgroundColor: `hsl(${accent} / 0.2)` }}\n                />\n                <span className=\"block h-1 w-3/5 rounded-full bg-current/20\" />\n                <span className=\"block h-1 w-2/5 rounded-full bg-current/10\" />\n              </span>\n              <span\n                className=\"relative block h-4 overflow-hidden rounded border border-current/15\"\n                style={{ backgroundColor: surface(\"composer\").color }}\n              >\n                {paint(\"composer\")}\n                <span\n                  className=\"absolute right-1 top-1 size-1.5 rounded-sm\"\n                  style={{ backgroundColor: `hsl(${accent})` }}\n                />\n              </span>\n            </span>\n          </span>\n        </span>\n      </span>\n    </span>\n  );\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-appearance.ts",
+      "sha256": "7a33b00e4a4b726495d638220c4eb42fa3f559d8c0d58d1b12c5bd091e071039",
+      "captureTiming": "Post actual source display; not before-read snapshot or a new semantic read.",
+      "displayedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1,
+          "end": 35,
+          "text": "import type { CssVarName, ThemePack, ThemeSurfaceName, ThemeVars } from \"./theme-packs\";\n\nconst SURFACE_BACKGROUNDS: Record<ThemeSurfaceName, [CssVarName, number]> = {\n  window: [\"--cs-background\", 1],\n  sidebar: [\"--cs-muted\", 0.25],\n  titlebar: [\"--cs-background\", 0.9],\n  chat: [\"--cs-background\", 0],\n  composer: [\"--cs-card\", 1],\n  panel: [\"--cs-background\", 1],\n};\n\n/** Resolve once for both the actual host surface and its settings preview.\n * The host retains CSS tokens; miniature previews supply their own base palette.\n */\nexport function resolveThemeSurface(\n  pack: ThemePack,\n  name: ThemeSurfaceName,\n  mode: \"light\" | \"dark\",\n  basePalette: ThemeVars = {},\n) {\n  const appearance = pack.surfaces?.[name];\n  // An explicit slot owns its whole surface, including intentionally no image.\n  const source = appearance ?? (name === \"window\" ? pack.wallpaper : undefined);\n  const image = source?.[mode] ?? source?.light;\n  const color = appearance?.background?.[mode] ?? appearance?.background?.light;\n  const [baseToken, baseOpacity] = SURFACE_BACKGROUNDS[name];\n  return {\n    image,\n    opacity: image ? (source?.opacity ?? 1) : 0,\n    fit: appearance?.fit ?? \"cover\",\n    position: (appearance?.position ?? \"center\").replace(\"-\", \" \"),\n    background: color ?? basePalette[baseToken] ?? `var(${baseToken})`,\n    backgroundOpacity: appearance?.backgroundOpacity ?? (color ? 1 : baseOpacity),\n  };\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "captureTiming": "Post actual source display; not before-read snapshot or a new semantic read.",
+      "displayedLineRanges": [
+        [
+          1,
+          9
+        ],
+        [
+          54,
+          180
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1,
+          "end": 9,
+          "text": "/**\n * Theme packs: swappable app color palettes layered over the light/dark base.\n *\n * A pack overrides a subset of the `--cs-*` semantic variables defined in\n * styles/tailwind.css. Light/dark stay orthogonal — a pack supplies which\n * values each mode uses, and the `.dark` class still decides which mode is\n * active (see theme.ts applyThemePack). Values are unitless HSL triples\n * (\"H S% L%\"), consumed via hsl(var(--cs-*)) exactly like the base sheet.\n *\n"
+        },
+        {
+          "start": 54,
+          "end": 180,
+          "text": "export type ThemeVars = Partial<Record<CssVarName, string>>;\n\n/**\n * Pet visual states a pack can supply a distinct sprite for. `idle`/`running`/\n * `alert` are the core trio; the rest mirror the Codex atlas's richer moods and\n * are optional — a pack that omits them just never shows those moods.\n */\nexport type PetSpriteState =\n  | \"idle\"\n  | \"running\"\n  | \"alert\"\n  | \"waving\"\n  | \"jumping\"\n  | \"waiting\"\n  | \"failed\";\n\n/**\n * Per-state pet sprite urls (builtin: bundled asset url; installed: cstheme://),\n * plus optional drag frame sequences. `walk` is the rightward/default run loop\n * cycled while dragging; `walkLeft` is the leftward loop (falls back to `walk`\n * when absent). A pack with no walk frames simply shows its idle sprite mid-drag.\n */\nexport type PetSprites = Partial<Record<PetSpriteState, string>> & {\n  /** Ordered frames cycled during a rightward (or undirected) drag. */\n  walk?: string[];\n  /** Ordered frames for a leftward drag; falls back to `walk` when absent. */\n  walkLeft?: string[];\n};\n\nexport interface WallpaperSpec {\n  light?: string;\n  dark?: string;\n  /** 0..1 blend over the base color; defaults to 1 when a url is present. */\n  opacity?: number;\n}\n\n/** Static image surfaces supported by the Desktop host. */\nexport const THEME_SURFACE_NAMES = [\n  \"window\",\n  \"sidebar\",\n  \"titlebar\",\n  \"chat\",\n  \"composer\",\n  \"panel\",\n] as const;\n\nexport type ThemeSurfaceName = (typeof THEME_SURFACE_NAMES)[number];\n\nexport interface ThemeSurfaceSpec extends WallpaperSpec {\n  fit?: \"cover\" | \"contain\";\n  position?: \"center\" | \"top\" | \"bottom\" | \"left\" | \"right\" | \"top-right\" | \"bottom-right\";\n  /** Unitless HSL triples, independent of the image's opacity. */\n  background?: { light?: string; dark?: string };\n  backgroundOpacity?: number;\n}\n\nexport interface ThemeFrameSpec {\n  light?: string;\n  dark?: string;\n  /** Inset decorative border in CSS pixels; never changes the layout. */\n  width?: number;\n  radius?: number;\n}\n\nexport interface ThemePack {\n  /** Stable id persisted to localStorage. */\n  id: string;\n  /** i18n key (builtin) or plain display name (installed). */\n  name: TranslationKey | string;\n  /** Representative color (unitless HSL) for the picker swatch — the pack's primary. */\n  swatch: string;\n  colors: {\n    light: ThemeVars;\n    dark: ThemeVars;\n  };\n  /** Optional per-state pet sprites; missing states fall back to the default dog. */\n  pet?: PetSprites;\n  /** Optional background image; absent means the plain color background. */\n  wallpaper?: WallpaperSpec;\n  /** Per-area decoration; the legacy wallpaper is the window fallback. */\n  surfaces?: Partial<Record<ThemeSurfaceName, ThemeSurfaceSpec>>;\n  /** Decorative outer frame for the main app window only. */\n  frame?: ThemeFrameSpec;\n  /** Optional short UI cues, played only after the user enables theme sounds. */\n  sounds?: ThemeSounds;\n  /** Local audio assets or explicit external listening links. Never auto-played. */\n  music?: ThemeMusicTrack[];\n  /** builtin ships with the app; installed comes from ~/.code-shell/themes/. */\n  source?: \"builtin\" | \"installed\";\n}\n\n/**\n * Signals from the pet widget's activity that map to a sprite state, in priority\n * order: a transient `greeting` gesture (idle \"hi, I'm here\") wins briefly,\n * then active work, then a ready/completed alert, else idle. Pure so it can be\n * unit-tested and reused across windows.\n */\nexport function petVisualState(activity: {\n  runningCount?: number;\n  alertCount?: number;\n  /** A short-lived \"just went idle\" cue → a waving gesture. */\n  greeting?: boolean;\n}): PetSpriteState {\n  if (activity.greeting && (activity.runningCount ?? 0) === 0 && (activity.alertCount ?? 0) === 0) {\n    return \"waving\";\n  }\n  if ((activity.runningCount ?? 0) > 0) return \"running\";\n  if ((activity.alertCount ?? 0) > 0) return \"alert\";\n  return \"idle\";\n}\n\nexport const DEFAULT_PACK_ID = \"default\";\n\n/**\n * Built-in packs. `default` overrides nothing (falls through to the base sheet,\n * i.e. the current brand orange). Accent packs recolor the primary + focus ring\n * (and its foreground for contrast) in both modes; everything else inherits the\n * neutral base so density/contrast tuning is preserved. Character themes also\n * provide their full palette, bundled surface artwork and window frame.\n */\nexport const THEME_PACKS: ThemePack[] = [\n  {\n    id: \"default\",\n    source: \"builtin\",\n    name: \"settingsX.appearance.pack.default\",\n    swatch: \"19 63% 45%\",\n    colors: { light: {}, dark: {} },\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "captureTiming": "Post actual source display; not before-read snapshot or a new semantic read.",
+      "displayedLineRanges": [
+        [
+          24,
+          50
+        ],
+        [
+          207,
+          215
+        ],
+        [
+          283,
+          314
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 24,
+          "end": 50,
+          "text": "/**\n * Builtin packs carry an i18n key in `name`; installed packs carry a plain\n * author-supplied string. Resolve to a display string for either.\n */\nfunction packDisplayName(pack: ThemePack, t: (key: TranslationKey) => string): string {\n  return pack.source === \"installed\" ? String(pack.name) : t(pack.name as TranslationKey);\n}\n\nexport function AppearanceSection() {\n  const { t } = useT();\n  const THEMES: Array<{ id: Theme; label: string; description: string }> = [\n    {\n      id: \"system\",\n      label: t(\"settingsX.appearance.system\"),\n      description: t(\"settingsX.appearance.systemDesc\"),\n    },\n    {\n      id: \"light\",\n      label: t(\"settingsX.appearance.light\"),\n      description: t(\"settingsX.appearance.lightDesc\"),\n    },\n    {\n      id: \"dark\",\n      label: t(\"settingsX.appearance.dark\"),\n      description: t(\"settingsX.appearance.darkDesc\"),\n    },\n  ];\n"
+        },
+        {
+          "start": 207,
+          "end": 215,
+          "text": "      setRemoval(null);\n    }\n  };\n\n  const allPacks: ThemePack[] = [...THEME_PACKS, ...installed];\n  const activePack = allPacks.find((pack) => pack.id === packId) ?? THEME_PACKS[0]!;\n\n  return (\n    <section className=\"mb-6 flex flex-col gap-3\">\n"
+        },
+        {
+          "start": 283,
+          "end": 314,
+          "text": "        ref={packListRef}\n        className=\"grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3\"\n        data-appearance-packs\n      >\n        {allPacks.map((pack) => (\n          <div\n            key={pack.id}\n            data-theme-pack={pack.id}\n            aria-busy={removal?.id === pack.id && removal.pending ? true : undefined}\n            className={cn(\n              \"group relative overflow-hidden rounded-xl border text-left\",\n              packId === pack.id\n                ? \"border-primary bg-primary/10 ring-1 ring-primary/30\"\n                : \"border-border\",\n            )}\n          >\n            <Button\n              type=\"button\"\n              variant=\"ghost\"\n              aria-pressed={packId === pack.id}\n              className=\"h-auto w-full flex-col items-stretch gap-3 rounded-xl p-2.5 text-left\"\n              onClick={() => choosePack(pack.id)}\n            >\n              <ThemePackPreview pack={pack} />\n              <span className=\"flex min-w-0 items-center gap-2 px-1 pb-1 pr-6\">\n                <span\n                  aria-hidden=\"true\"\n                  className=\"size-3 shrink-0 rounded-full border border-border/60\"\n                  style={{ backgroundColor: `hsl(${pack.swatch})` }}\n                />\n                <span className=\"min-w-0 flex-1\">\n                  <span className=\"block truncate text-sm font-medium text-foreground\">\n"
+        }
+      ]
+    }
+  ]
+}

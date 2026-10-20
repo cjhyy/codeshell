@@ -1,0 +1,22 @@
+{
+  "inspectedMain": "34553b747f9a5b6acafe7ad1dd21905bcfa53cac",
+  "parallelFixCommit": "658b8c6fcdad0e9d4bfe8809c5adf6f95f19580d",
+  "parallelFixTitle": "fix(web): respect the remote Host project path case policy",
+  "method": "read-only git diff plus git log on main; no new test execution",
+  "runtimeRetestPerformed": false,
+  "findings": [
+    {
+      "id": "WEB-R8-01",
+      "frozenStatus": "confirmed",
+      "inspectedMainDisposition": "exact source condition eliminated by parallel commit; not dynamically retested",
+      "sourceFile": "packages/web/src/lib/format.ts",
+      "sourceDiffObservation": "isSameOrInside uses base directly when it already ends with /; the frozen root / no longer becomes // for descendant prefix matching."
+    },
+    {
+      "id": "WEB-R8-02",
+      "frozenStatus": "confirmed",
+      "inspectedMainDisposition": "source unchanged from frozen base; not dynamically retested",
+      "sourceFile": "packages/web/src/lib/mobileAttachments.ts"
+    }
+  ]
+}

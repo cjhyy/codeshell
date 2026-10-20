@@ -1,0 +1,185 @@
+{
+  "scope": "Only already-displayed explicitly semantic ranges",
+  "files": [
+    {
+      "path": "packages/server/src/hub/run-replay.ts",
+      "range": [
+        5,
+        22
+      ],
+      "text": "export interface HubStreamCursor {\n  epoch: string;\n  sequence: number;\n}\n\ninterface RunLog {\n  baselineEvents: number;\n  events: Array<{ sequence: number; event: unknown }>;\n  bytes: number;\n  truncated: boolean;\n  requests: Set<string>;\n}\n\n/**\n * A refresh can happen before the worker persists its current assistant text.\n * Retain that run's stream separately from the durable pre-run transcript.\n * The host takes snapshots synchronously, so its cursor also covers all live\n * notifications sent before the snapshot response, without replaying twice.",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.ts",
+      "range": [
+        24,
+        27
+      ],
+      "text": "export class HubRunReplay {\n  private readonly epoch = randomUUID();\n  private sequence = 0;\n  private totalBytes = 0;",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.ts",
+      "range": [
+        40,
+        69
+      ],
+      "text": "  constructor(\n    private readonly limits: { maxBytes: number; maxEvents: number; maxTotalBytes?: number } = {\n      maxBytes: 8 * 1024 * 1024,\n      maxEvents: 16_000,\n      maxTotalBytes: 64 * 1024 * 1024,\n    },\n    private readonly persistence?: SessionOutputCoverageStore,\n  ) {}\n\n  begin(sessionId: string, requestId: string, baselineEvents: number): void {\n    let log = this.sessions.get(sessionId);\n    if (!log) {\n      log = {\n        baselineEvents: Number.isSafeInteger(baselineEvents) ? Math.max(0, baselineEvents) : 0,\n        events: [],\n        bytes: 0,\n        truncated: false,\n        requests: new Set(),\n      };\n      this.sessions.set(sessionId, log);\n    }\n    log.requests.add(requestId);\n  }\n\n  /** Only a new, still-tracked conversation can safely replay before disk publication. */\n  hasEmptyBaseline(sessionId: string): boolean {\n    return this.sessions.get(sessionId)?.baselineEvents === 0;\n  }\n\n  append(sessionId: string, event: unknown): HubStreamCursor {",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.ts",
+      "range": [
+        108,
+        146
+      ],
+      "text": "    const outputCursor = (event as { outputCursor?: unknown } | null)?.outputCursor;\n    if (typeof outputCursor === \"string\") coverage.outputCursor = outputCursor;\n    const sequence = ++this.sequence;\n    const log = this.sessions.get(sessionId);\n    if (log && !log.truncated) {\n      const serialized = JSON.stringify(event) ?? \"null\";\n      const bytes = Buffer.byteLength(serialized);\n      if (\n        log.bytes + bytes > this.limits.maxBytes ||\n        log.events.length >= this.limits.maxEvents ||\n        this.totalBytes + bytes > (this.limits.maxTotalBytes ?? 64 * 1024 * 1024)\n      ) {\n        // Never silently present an arbitrary tail as a complete conversation.\n        // The caller falls back to the full durable log and exposes this flag.\n        log.truncated = true;\n        log.events = [];\n        this.totalBytes -= log.bytes;\n        log.bytes = 0;\n      } else {\n        // Own the wire value. Later changes to the worker message object must\n        // not change a previously captured stream or invalidate its byte limit.\n        log.events.push({ sequence, event: JSON.parse(serialized) });\n        log.bytes += bytes;\n        this.totalBytes += bytes;\n      }\n    }\n    return { epoch: this.epoch, sequence };\n  }\n\n  finish(sessionId: string, requestId: string): void {\n    const log = this.sessions.get(sessionId);\n    if (!log) return;\n    log.requests.delete(requestId);\n    if (!log.requests.size) {\n      this.totalBytes -= log.bytes;\n      this.sessions.delete(sessionId);\n      this.retireCoverage(sessionId);\n    }\n  }",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.ts",
+      "range": [
+        178,
+        184
+      ],
+      "text": "  forget(sessionId: string): void {\n    const log = this.sessions.get(sessionId);\n    if (log) this.totalBytes -= log.bytes;\n    this.sessions.delete(sessionId);\n    const coverage = this.coverage.get(sessionId);\n    if (coverage) this.coverageBytes -= coverage.proof.memoryBytes;\n    this.coverage.delete(sessionId);",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.ts",
+      "range": [
+        188,
+        206
+      ],
+      "text": "  snapshot<T>(sessionId: string, durableEvents: readonly T[]) {\n    const log = this.sessions.get(sessionId);\n    return {\n      transcript:\n        log && !log.truncated ? durableEvents.slice(0, log.baselineEvents) : durableEvents.slice(),\n      streamCursor: { epoch: this.epoch, sequence: this.sequence },\n      outputCoverage: this.outputCoverage(sessionId),\n      ...(log\n        ? { liveStream: { events: structuredClone(log.events), truncated: log.truncated } }\n        : {}),\n    };\n  }\n\n  clear(): void {\n    this.sessions.clear();\n    this.totalBytes = 0;\n    for (const sessionId of this.coverage.keys()) this.retireCoverage(sessionId);\n  }\n}",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        220,
+        228
+      ],
+      "text": "  const pendingResponsesByTab = new Map<number, number>();\n  // Independent of response routing: leaving a tab does not stop its worker run.\n  const runningSessions = new Map<string, string>();\n  const runOwners = new Map<string, string>();\n  const runReplay = new HubRunReplay(\n    undefined,\n    new SessionOutputCoverageStore(() => sessionRootDir),\n  );\n  const runInputs = new Map<",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        239,
+        240
+      ],
+      "text": "  const runUploads = new Map<string, PreparedHubUploads>();\n  const isRunning = (sessionId: string): boolean =>",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        257,
+        274
+      ],
+      "text": "    broadcast(JSON.stringify({ jsonrpc: \"2.0\", method, params }));\n  };\n  const publishStream = (sessionId: string, event: unknown): boolean => {\n    let cursor;\n    try {\n      cursor = runReplay.append(sessionId, event);\n    } catch {\n      log(\"stream.coverage_unavailable\", { sessionId });\n      return false;\n    }\n    notify(\"agent/streamEvent\", {\n      sessionId,\n      event,\n      hubSequence: cursor.sequence,\n      hubEpoch: cursor.epoch,\n    });\n    return true;\n  };",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        382,
+        415
+      ],
+      "text": "        const params = message.params as { sessionId?: unknown; event?: unknown } | undefined;\n        if (typeof params?.sessionId === \"string\" && params.event !== undefined) {\n          let event = params.event;\n          let deliveredInput: { echoed: boolean } | undefined;\n          const value = event as Record<string, unknown> | null;\n          if (value?.type === \"session_user_message\" && typeof value.clientMessageId === \"string\") {\n            const input = [...runInputs.values()].find(\n              (candidate) =>\n                candidate.sessionId === params.sessionId &&\n                candidate.event.clientMessageId === value.clientMessageId,\n            );\n            if (input) {\n              if (input.echoed) return;\n              deliveredInput = input;\n              event = {\n                ...input.event,\n                ...(typeof value.outputCursor === \"string\"\n                  ? { outputCursor: value.outputCursor }\n                  : {}),\n              };\n            }\n          }\n          if (publishStream(params.sessionId, event) && deliveredInput)\n            deliveredInput.echoed = true;\n          return;\n        }\n      }\n      if (hubAuth && message?.method === \"agent/runAccepted\") {\n        const params = message.params as { requestId?: unknown; sessionId?: unknown } | undefined;\n        const requestId = String(params?.requestId);\n        const input = runInputs.get(requestId);\n        if (input && !input.echoed) {\n          input.echoed = publishStream(input.sessionId, input.event);\n        }",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        493,
+        499
+      ],
+      "text": "    const runSessionId = runningSessions.get(String(message.id));\n    runInputs.delete(String(message.id));\n    if (runSessionId) {\n      const finishedSession = runningSessions.get(String(message.id));\n      runningSessions.delete(String(message.id));\n      if (finishedSession && !isRunning(finishedSession)) runOwners.delete(finishedSession);\n      runReplay.finish(runSessionId, String(message.id));",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        975,
+        985
+      ],
+      "text": "        const hostReply = replyToHostSessionQuery(\n          parsed,\n          sessionManager,\n          workspaceCwd,\n          isRunning,\n          hubAuth ? runReplay : undefined,\n        );\n        if (hostReply) {\n          sendToTab(ws, hostReply, \"host-session-query\");\n          return;\n        }",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        1166,
+        1173
+      ],
+      "text": "          let baselineEvents = 0;\n          const baselineSessionId = workerMessage.params?.sessionId;\n          if (hubAuth && parsed.method === \"agent/run\" && typeof baselineSessionId === \"string\") {\n            try {\n              if (readOptionalHubSessionState(sessionManager, baselineSessionId)) {\n                baselineEvents = readHubTranscript(sessionRootDir, baselineSessionId).length;\n              }\n            } catch (cause) {",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        1220,
+        1229
+      ],
+      "text": "            const workerRequestId = `serve-${tabId}-${nextWorkerRequestId++}`;\n            pendingWorkerResponses.set(workerRequestId, {\n              tab: ws,\n              originalId: workerMessage.id,\n              tabId,\n              insertedAt: Date.now(),\n              method: parsed.method,\n              ...(approvalId ? { approvalId } : {}),\n            });\n            pendingResponsesByTab.set(tabId, (pendingResponsesByTab.get(tabId) ?? 0) + 1);",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        1235,
+        1246
+      ],
+      "text": "            const runSessionId = workerMessage.params?.sessionId;\n            if (parsed.method === \"agent/run\" && typeof runSessionId === \"string\") {\n              if (hubAuth) {\n                runReplay.begin(runSessionId, workerRequestId, baselineEvents);\n                const params = workerMessage.params ?? {};\n                runInputs.set(workerRequestId, {\n                  sessionId: runSessionId,\n                  echoed: false,\n                  event: {\n                    type: \"session_user_message\",\n                    text: typeof params.displayText === \"string\" ? params.displayText : params.task,\n                    clientMessageId: params.clientMessageId,",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        1256,
+        1263
+      ],
+      "text": "              runningSessions.set(workerRequestId, runSessionId);\n              const ownerId = tabAuth.get(ws)?.sessionId;\n              if (ownerId) runOwners.set(runSessionId, ownerId);\n              if (hubAuth)\n                notify(\"serve/sessionStatus\", { sessionId: runSessionId, running: true });\n            }\n          }\n          const workerLine = JSON.stringify(workerMessage);",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        1473,
+        1485
+      ],
+      "text": "function replyToHostSessionQuery(\n  message: {\n    id?: string | number | null;\n    method?: string;\n    params?: Record<string, unknown>;\n  },\n  sessionManager: SessionManager,\n  workspaceCwd: string,\n  isRunning: (sessionId: string) => boolean = () => false,\n  runReplay?: HubRunReplay,\n): string | undefined {\n  if (message.method !== \"agent/query\" || message.id === undefined) return undefined;\n  const queryType = message.params?.type;",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        1506,
+        1517
+      ],
+      "text": "  if (\n    queryType !== \"session_detail\" &&\n    queryType !== \"output_journal\" &&\n    queryType !== \"output_coverage\"\n  )\n    return undefined;\n\n  const sessionId = message.params?.sessionId;\n  if (typeof sessionId !== \"string\" || sessionId.length === 0) {\n    return hostQueryError(message.id, -32602, \"sessionId required for session_detail\");\n  }\n  let missingSession = false;",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "range": [
+        1559,
+        1605
+      ],
+      "text": "    }\n    const journal =\n      message.params?.outputRecovery === true\n        ? readOutputJournal(sessionManager.getStorageDir(), sessionId)\n        : undefined;\n    const legacy =\n      journal && journal.status !== \"unavailable\"\n        ? readOutputJournalLegacyBase(\n            sessionManager.getStorageDir(),\n            sessionId,\n            journal.legacyBaseThroughEventId,\n          )\n        : undefined;\n    const transcript = legacy\n      ? legacy.events\n      : readHubTranscript(sessionManager.getStorageDir(), sessionId);\n    return JSON.stringify({\n      jsonrpc: \"2.0\",\n      id: message.id,\n      result: {\n        type: \"session_detail\",\n        data: {\n          state,\n          ...(legacy ? { outputJournal: journal, legacyBaseComplete: legacy.complete } : {}),\n          ...(runReplay ? runReplay.snapshot(sessionId, transcript) : { transcript }),\n          running: isRunning(sessionId),\n        },\n      },\n    });\n  } catch (error) {\n    if (\n      runReplay?.hasEmptyBaseline(sessionId) &&\n      isRunning(sessionId) &&\n      (missingSession || (error as { status?: number }).status === 404)\n    ) {\n      return JSON.stringify({\n        jsonrpc: \"2.0\",\n        id: message.id,\n        result: {\n          type: \"session_detail\",\n          data: {\n            state: { sessionId, cwd: workspaceCwd, status: \"active\", turnCount: 0 },\n            ...runReplay.snapshot(sessionId, []),\n            running: true,\n          },\n        },\n      });",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.test.ts",
+      "range": [
+        1,
+        109
+      ],
+      "text": "import { expect, test } from \"bun:test\";\nimport { HubRunReplay } from \"./run-replay.js\";\n\ntest(\"refresh combines a durable pre-run prefix with one live overlay and a race cursor\", () => {\n  const replay = new HubRunReplay();\n  const durable = [{ id: \"old\" }, { id: \"accepted-user\" }, { id: \"persisted-step\" }];\n  replay.begin(\"session\", \"request\", 1);\n  const user = { type: \"session_user_message\", text: \"new turn\" };\n  const partial = { type: \"text_delta\", text: \"unfinished assistant\" };\n  replay.append(\"session\", user);\n  const before = replay.append(\"session\", partial);\n  const snapshot = replay.snapshot(\"session\", durable);\n  expect(snapshot.transcript).toEqual([{ id: \"old\" }]);\n  expect(snapshot.liveStream?.events.map((entry) => entry.event)).toEqual([user, partial]);\n  expect(snapshot.streamCursor).toEqual(before);\n  const after = replay.append(\"session\", { type: \"text_delta\", text: \" tail\" });\n  expect(after.epoch).toBe(before.epoch);\n  expect(after.sequence).toBeGreaterThan(snapshot.streamCursor.sequence);\n  expect(snapshot.liveStream?.events).toHaveLength(2);\n  replay.finish(\"session\", \"request\");\n  expect(replay.snapshot(\"session\", durable).transcript).toEqual(durable);\n  expect(replay.snapshot(\"session\", durable).liveStream).toBeUndefined();\n});\n\ntest(\"overlapping requests keep the earliest baseline until both finish\", () => {\n  const replay = new HubRunReplay();\n  replay.begin(\"session\", \"first\", 1);\n  replay.append(\"session\", { type: \"user_message\", text: \"first\" });\n  replay.begin(\"session\", \"second\", 2);\n  replay.finish(\"session\", \"first\");\n  const snapshot = replay.snapshot(\"session\", [1, 2, 3]);\n  expect(snapshot.transcript).toEqual([1]);\n  expect(snapshot.liveStream?.events).toHaveLength(1);\n  replay.finish(\"session\", \"second\");\n  expect(replay.snapshot(\"session\", [1, 2, 3]).transcript).toEqual([1, 2, 3]);\n});\n\ntest(\"missing-record recovery is limited to a tracked empty baseline\", () => {\n  const replay = new HubRunReplay();\n  expect(replay.hasEmptyBaseline(\"new\")).toBe(false);\n  replay.begin(\"new\", \"first\", 0);\n  expect(replay.hasEmptyBaseline(\"new\")).toBe(true);\n  replay.begin(\"new\", \"second\", 3);\n  replay.finish(\"new\", \"first\");\n  expect(replay.hasEmptyBaseline(\"new\")).toBe(true);\n  replay.finish(\"new\", \"second\");\n  expect(replay.hasEmptyBaseline(\"new\")).toBe(false);\n  replay.begin(\"existing\", \"request\", 1);\n  expect(replay.hasEmptyBaseline(\"existing\")).toBe(false);\n});\n\ntest(\"bounded replay falls back to durable data with an explicit incomplete marker\", () => {\n  const replay = new HubRunReplay({ maxBytes: 60, maxEvents: 2 });\n  replay.begin(\"session\", \"request\", 1);\n  replay.append(\"session\", { text: \"x\".repeat(61) });\n  replay.append(\"session\", { text: \"later\" });\n  const snapshot = replay.snapshot(\"session\", [1, 2]);\n  expect(snapshot.transcript).toEqual([1, 2]);\n  expect(snapshot.liveStream).toEqual({ events: [], truncated: true });\n  expect(snapshot.streamCursor.sequence).toBe(2);\n});\n\ntest(\"worker exit releases overlays without recycling the stream cursor\", () => {\n  const replay = new HubRunReplay();\n  replay.begin(\"session\", \"request\", 0);\n  const cursor = replay.append(\"session\", { text: \"before exit\" });\n  replay.clear();\n  expect(replay.snapshot(\"session\", []).liveStream).toBeUndefined();\n  const next = replay.append(\"other-session\", { text: \"new worker\" });\n  expect(next.epoch).toBe(cursor.epoch);\n  expect(next.sequence).toBeGreaterThan(cursor.sequence);\n  expect(new HubRunReplay().snapshot(\"session\", []).streamCursor.epoch).not.toBe(cursor.epoch);\n});\n\ntest(\"concurrent sessions share a total memory budget and finishing one releases it\", () => {\n  const replay = new HubRunReplay({ maxBytes: 1000, maxEvents: 100, maxTotalBytes: 100 });\n  replay.begin(\"first\", \"request-a\", 0);\n  replay.begin(\"second\", \"request-b\", 0);\n  replay.append(\"first\", { text: \"a\".repeat(60) });\n  replay.append(\"second\", { text: \"b\".repeat(60) });\n  expect(replay.snapshot(\"first\", []).liveStream?.truncated).toBe(false);\n  expect(replay.snapshot(\"second\", [\"durable\"]).liveStream).toEqual({\n    events: [],\n    truncated: true,\n  });\n  replay.finish(\"first\", \"request-a\");\n  replay.begin(\"third\", \"request-c\", 0);\n  replay.append(\"third\", { text: \"c\".repeat(60) });\n  expect(replay.snapshot(\"third\", []).liveStream?.truncated).toBe(false);\n});\n\ntest(\"overlays and snapshot objects cannot mutate each other, and a finished run starts a fresh baseline\", () => {\n  const replay = new HubRunReplay();\n  const event = { text: \"original\" };\n  replay.begin(\"session\", \"first\", 1);\n  replay.append(\"session\", event);\n  event.text = \"changed externally\";\n  const snapshot = replay.snapshot(\"session\", [\"old\", \"persisted\"]);\n  expect(snapshot.liveStream?.events[0]?.event).toEqual({ text: \"original\" });\n  (snapshot.liveStream!.events[0]!.event as { text: string }).text = \"changed by reader\";\n  expect(replay.snapshot(\"session\", []).liveStream?.events[0]?.event).toEqual({ text: \"original\" });\n  replay.finish(\"session\", \"first\");\n  replay.begin(\"session\", \"second\", 2);\n  expect(replay.snapshot(\"session\", [\"old\", \"persisted\", \"current\"]).transcript).toEqual([\n    \"old\",\n    \"persisted\",\n  ]);\n  expect(replay.snapshot(\"session\", []).liveStream?.events).toEqual([]);\n});",
+      "captureTiming": "After actual displayed semantic range read; no new coverage"
+    }
+  ]
+}

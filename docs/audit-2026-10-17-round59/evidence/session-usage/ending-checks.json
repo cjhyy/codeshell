@@ -1,0 +1,354 @@
+{
+  "atUTC": "2026-10-17T19:46:12.328828+00:00",
+  "sourceAndInstructionPins": [
+    {
+      "path": "AGENTS.md",
+      "initialBytes": 206,
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishBytes": 206,
+      "finishSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialBytes": 17639,
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishBytes": 17639,
+      "finishSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/session/usage.ts",
+      "initialBytes": 5944,
+      "initialSha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "finishBytes": 5944,
+      "finishSha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/session/stream-timing.ts",
+      "initialBytes": 1606,
+      "initialSha256": "9306f80c1fa56b8f59f35afc879045140d08129e8cbf167085fb82f63c831ced",
+      "finishBytes": 1606,
+      "finishSha256": "9306f80c1fa56b8f59f35afc879045140d08129e8cbf167085fb82f63c831ced",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/session/usage.test.ts",
+      "initialBytes": 8502,
+      "initialSha256": "56f833d7af2d990b9a712d441f342def79d9dc4ce2f712f81ebaa36ff3489610",
+      "finishBytes": 8502,
+      "finishSha256": "56f833d7af2d990b9a712d441f342def79d9dc4ce2f712f81ebaa36ff3489610",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/session/stream-timing.test.ts",
+      "initialBytes": 2058,
+      "initialSha256": "9dffcaa98d129f79dfd8547a656b796bcf613e848e1c764dee488341f90a0a04",
+      "finishBytes": 2058,
+      "finishSha256": "9dffcaa98d129f79dfd8547a656b796bcf613e848e1c764dee488341f90a0a04",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "initialBytes": 6970,
+      "initialSha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "finishBytes": 6970,
+      "finishSha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/run-state-persistence.ts",
+      "initialBytes": 4502,
+      "initialSha256": "1834ff88a225c3a685c9332f7d4ba92a458b7e711c2595624b01e36510badf4e",
+      "finishBytes": 4502,
+      "finishSha256": "1834ff88a225c3a685c9332f7d4ba92a458b7e711c2595624b01e36510badf4e",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/session/output-publisher.ts",
+      "initialBytes": 6300,
+      "initialSha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "finishBytes": 6300,
+      "finishSha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "initialBytes": 210666,
+      "initialSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "finishBytes": 210666,
+      "finishSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "initialBytes": 10149,
+      "initialSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "finishBytes": 10149,
+      "finishSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "initialBytes": 19306,
+      "initialSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "finishBytes": 19306,
+      "finishSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/run-state-persistence.test.ts",
+      "initialBytes": 3310,
+      "initialSha256": "bbe61d2746ca76bd3b7b06eb74a96dcbcaec64b4f5ed562087a27a423d136e31",
+      "finishBytes": 3310,
+      "finishSha256": "bbe61d2746ca76bd3b7b06eb74a96dcbcaec64b4f5ed562087a27a423d136e31",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.primary-cache-accounting.test.ts",
+      "initialBytes": 11409,
+      "initialSha256": "259b288bfda6eb9105c6968d6f45c97bf5529c15962e2f68f61f03d821fc4fbb",
+      "finishBytes": 11409,
+      "finishSha256": "259b288bfda6eb9105c6968d6f45c97bf5529c15962e2f68f61f03d821fc4fbb",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "initialBytes": 108774,
+      "initialSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "finishBytes": 108774,
+      "finishSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "sameBytesAndSha256": true
+    }
+  ],
+  "all15SourceAndInstructionPinsSame": true,
+  "canonicalAndRawNavigationPins": [
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "initialSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d",
+      "finishSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+      "initialSha256": "81bc4165917263af60b19d5cc46912ca35c82bbf1642cbe58420beb8b08bf64b",
+      "finishSha256": "81bc4165917263af60b19d5cc46912ca35c82bbf1642cbe58420beb8b08bf64b",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-source-manifest.json",
+      "initialSha256": "ed4a9395fbbdb7e4e37d6e8570cbe1fe043efbc6058586345b5072d9b65877f6",
+      "finishSha256": "ed4a9395fbbdb7e4e37d6e8570cbe1fe043efbc6058586345b5072d9b65877f6",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/timing.md",
+      "initialSha256": "84b153340cfb082ef79d7e34a6b438a5a93cc66296071b40301de0607ec37672",
+      "finishSha256": "84b153340cfb082ef79d7e34a6b438a5a93cc66296071b40301de0607ec37672",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/usage.md",
+      "initialSha256": "bbf83d716fbf1c0b5c72cc89130bf2d389a9d1110faa8525d30a92975f93280e",
+      "finishSha256": "bbf83d716fbf1c0b5c72cc89130bf2d389a9d1110faa8525d30a92975f93280e",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "initialSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+      "finishSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "initialSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d",
+      "finishSha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "initialSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a",
+      "finishSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "initialSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec",
+      "finishSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "initialSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7",
+      "finishSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "initialSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676",
+      "finishSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "initialSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+      "finishSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "initialSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90",
+      "finishSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "initialSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37",
+      "finishSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "initialSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f",
+      "finishSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "initialSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+      "finishSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "initialSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c",
+      "finishSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "initialSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+      "finishSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "initialSha256": "2e1693238ea4140dcb6f1bc8a4416fe356e1b559d901a7bf2c5bc492192c4c08",
+      "finishSha256": "2e1693238ea4140dcb6f1bc8a4416fe356e1b559d901a7bf2c5bc492192c4c08",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "initialSha256": "5f02cde507ce90bc9db4746b693feee572eba1e951b9c8dd65612e4425a614a6",
+      "finishSha256": "5f02cde507ce90bc9db4746b693feee572eba1e951b9c8dd65612e4425a614a6",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "initialSha256": "5adcd53bfca820e03282db45815c370bcc529c3606aa4c8f860126d14e646ee2",
+      "finishSha256": "5adcd53bfca820e03282db45815c370bcc529c3606aa4c8f860126d14e646ee2",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "initialSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "finishSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "initialSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "finishSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "initialSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "finishSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "initialSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "finishSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "initialSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+      "finishSha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-15-module-boundary-cleanup-phase0-1a.md",
+      "initialSha256": "dbbf9a17b85654ab59c471c4ced854ef754691017a3f4262bd42b5f0060070eb",
+      "finishSha256": "dbbf9a17b85654ab59c471c4ced854ef754691017a3f4262bd42b5f0060070eb",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "initialSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "finishSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "initialSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "finishSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "initialSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+      "finishSha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/timing.md",
+      "initialSha256": "84b153340cfb082ef79d7e34a6b438a5a93cc66296071b40301de0607ec37672",
+      "finishSha256": "84b153340cfb082ef79d7e34a6b438a5a93cc66296071b40301de0607ec37672",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/source-manifest.json",
+      "initialSha256": "ca08c8f60ca5afc1286adc5f1b54289a25c00489f495594c609efa68d5d25f59",
+      "finishSha256": "ca08c8f60ca5afc1286adc5f1b54289a25c00489f495594c609efa68d5d25f59",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+      "initialSha256": "81bc4165917263af60b19d5cc46912ca35c82bbf1642cbe58420beb8b08bf64b",
+      "finishSha256": "81bc4165917263af60b19d5cc46912ca35c82bbf1642cbe58420beb8b08bf64b",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-dedup.json",
+      "initialSha256": "0614cb8b39ec9d21366b27ecdaa7b0a6653447ae3c781281c0b5aabad7367056",
+      "finishSha256": "0614cb8b39ec9d21366b27ecdaa7b0a6653447ae3c781281c0b5aabad7367056",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-preflight.json",
+      "initialSha256": "c003c4bd1d9c511f11d8a5d853744f13179307bc7af8b83dfed7876fbb47eea4",
+      "finishSha256": "c003c4bd1d9c511f11d8a5d853744f13179307bc7af8b83dfed7876fbb47eea4",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-source-manifest.json",
+      "initialSha256": "ed4a9395fbbdb7e4e37d6e8570cbe1fe043efbc6058586345b5072d9b65877f6",
+      "finishSha256": "ed4a9395fbbdb7e4e37d6e8570cbe1fe043efbc6058586345b5072d9b65877f6",
+      "sameBytesAndSha256": true
+    }
+  ],
+  "all5CanonicalAnd31NavigationPinsSame": true,
+  "sharedBatch": {
+    "path": "/tmp/codeshell-audit-round148-subagent-continuation/history-batch.json",
+    "bytes": 1505906,
+    "sha256": "dc387a8132ac329ec5c8fdd7cb997704d4ba62bfb8c5ffeeb0069edd0f0d76b5",
+    "finishBytes": 1505906,
+    "finishSha256": "dc387a8132ac329ec5c8fdd7cb997704d4ba62bfb8c5ffeeb0069edd0f0d76b5",
+    "sameBytesAndSha256": true
+  },
+  "limits": "No Git query or full-history ending inventory; equality of shared batch does not reverify every6010 historical member."
+}

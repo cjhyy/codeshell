@@ -1,0 +1,90 @@
+{
+  "frozenUTC": "2026-10-17T16:51:48.549379+00:00",
+  "directory": "/tmp/codeshell-audit-round86-trace-store-query",
+  "role": "Independent bounded static source/data review; self metadata freeze only, no independent runtime certification.",
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 730,
+      "sha256": "622bbdc2431848587062de052572e6e9d0436c595a02ec367b4ae2179c7e7922"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 756,
+      "sha256": "29a9254faf7cba17663e74754560df052da2f99348c12e8537e1026876f80916"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 15648,
+      "sha256": "290845af0ea01d79668c64d64a7d7f5ae7876201cd4c997de41846ab70868bbf"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 3048,
+      "sha256": "1aab675dbac51411341d8432c97b8d059e1593bc414ec9bdf961754922163303"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 1265,
+      "sha256": "f02b30adf4f0684fbcf2391933e1a41033a4185b52ea237419f4e0b3c58ea7c5"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 55115,
+      "sha256": "6af43da261dc93167818c69ae61e617944803d97b4acc8f4a6ec3a4c115ca55d"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3912,
+      "sha256": "170dbfdaf2412a1ee7cfb27488b2f4d6dd55e981536a642f638385d70804cffd"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1040931,
+      "sha256": "8dcfc2bdddf611bf1a7cf084c4e3efeb12dccf19c756a59d8b35645f131e9e86"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1041,
+      "sha256": "69110d98584fa9a5e4e3bd8d06552e051ccf0a471b91d37fc2336fd19928bd68"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5891,
+      "sha256": "8850e796a40434cb3f07c76763000d25aff8ad30f9157def5e5333b51cbad0e7"
+    },
+    {
+      "path": "sessions-test-initial-pin.json",
+      "bytes": 301,
+      "sha256": "3a45d858e0575d88c261376eaceef2aff8de1829bdfa72d8a4fef2613e58deaf"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 65763,
+      "sha256": "c7cf48ae5a8b76265d4762597c37115f676b6b29805f5ced23a91d9518f2b5fa"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 13074,
+      "sha256": "6bdec64ed918b057c65867a6d9a65f234a2a29f62dcb1f8ec04f4814f8177abd"
+    },
+    {
+      "path": "support-initial-pins.json",
+      "bytes": 299,
+      "sha256": "f0eb1ce2bf5daba2091ee92af7dcfe9a195bef735dc8d05904ca5e6559636851"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1229,
+      "sha256": "daa2f3d6ed1b9d0997c7aaca11c67a60dadc943b9bcd15d534534398789daf5c"
+    }
+  ],
+  "fileCountExcludingReceipt": 15,
+  "receiptSelfExcluded": true,
+  "reportMarkdownLinks": 15,
+  "allReportRelativeLinksExistIncludingReceiptByConstruction": true,
+  "sourcePinsChecked": 8,
+  "semanticFiles": 6,
+  "ownGitOperations": 0,
+  "productExecutions": 0
+}

@@ -1,0 +1,113 @@
+{
+  "capturedAtUTC": "2026-10-17T14:22:33.397561+00:00",
+  "rootClarification": "Original frozen service row already has16 additionalNavigationSnippetLines;159 ranges+16nav=175. Original manifest is internally consistent.",
+  "priorMismatchInferenceRetracted": true,
+  "noMissingSourceReadingEvidence": true,
+  "sourceCoverageFailureFound": false,
+  "ownReaderBugs": [
+    "7a3417 assumed semanticLineCount instead of adapting coveredLineCount",
+    "16b3d6 and426646 omitted additionalNavigationSnippetLines from displayed set, creating false range mismatch"
+  ],
+  "originalFirstAndSecondDiagnosticsPreserved": true,
+  "rows": [
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "packages/server/src/panels/process-state.ts",
+      "displayedRangeBodyUnique": 127,
+      "additionalNavigationSnippetLines": [],
+      "mergedDisplayedUnique": 127,
+      "declaredDisplayed": 127,
+      "selectedSemanticAllCoveredByCombinedDisplay": true,
+      "displayCountMatchesWhenOriginalBothFieldsUsed": true
+    },
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "packages/server/src/panels/process-service.ts",
+      "displayedRangeBodyUnique": 182,
+      "additionalNavigationSnippetLines": [],
+      "mergedDisplayedUnique": 182,
+      "declaredDisplayed": 182,
+      "selectedSemanticAllCoveredByCombinedDisplay": true,
+      "displayCountMatchesWhenOriginalBothFieldsUsed": true
+    },
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "displayedRangeBodyUnique": 60,
+      "additionalNavigationSnippetLines": [],
+      "mergedDisplayedUnique": 60,
+      "declaredDisplayed": 60,
+      "selectedSemanticAllCoveredByCombinedDisplay": true,
+      "displayCountMatchesWhenOriginalBothFieldsUsed": true
+    },
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "displayedRangeBodyUnique": 55,
+      "additionalNavigationSnippetLines": [],
+      "mergedDisplayedUnique": 55,
+      "declaredDisplayed": 55,
+      "selectedSemanticAllCoveredByCombinedDisplay": true,
+      "displayCountMatchesWhenOriginalBothFieldsUsed": true
+    },
+    {
+      "group": "codeshell-audit-round43-core-data-frontier",
+      "path": "docs/panel-native-tools.md",
+      "displayedRangeBodyUnique": 32,
+      "additionalNavigationSnippetLines": [],
+      "mergedDisplayedUnique": 32,
+      "declaredDisplayed": 32,
+      "selectedSemanticAllCoveredByCombinedDisplay": true,
+      "displayCountMatchesWhenOriginalBothFieldsUsed": true
+    },
+    {
+      "group": "codeshell-audit-round43-process-state-review",
+      "path": "packages/server/src/panels/process-state.ts",
+      "displayedRangeBodyUnique": 127,
+      "additionalNavigationSnippetLines": [],
+      "mergedDisplayedUnique": 127,
+      "declaredDisplayed": 127,
+      "selectedSemanticAllCoveredByCombinedDisplay": true,
+      "displayCountMatchesWhenOriginalBothFieldsUsed": true
+    },
+    {
+      "group": "codeshell-audit-round43-process-state-review",
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "displayedRangeBodyUnique": 55,
+      "additionalNavigationSnippetLines": [],
+      "mergedDisplayedUnique": 55,
+      "declaredDisplayed": 55,
+      "selectedSemanticAllCoveredByCombinedDisplay": true,
+      "displayCountMatchesWhenOriginalBothFieldsUsed": true
+    },
+    {
+      "group": "codeshell-audit-round43-process-state-review",
+      "path": "packages/server/src/panels/process-service.ts",
+      "displayedRangeBodyUnique": 159,
+      "additionalNavigationSnippetLines": [
+        11,
+        12,
+        15,
+        34,
+        35,
+        89,
+        311,
+        318,
+        780,
+        841,
+        969,
+        1061,
+        1083,
+        1117,
+        1123,
+        1124
+      ],
+      "mergedDisplayedUnique": 175,
+      "declaredDisplayed": 175,
+      "selectedSemanticAllCoveredByCombinedDisplay": true,
+      "displayCountMatchesWhenOriginalBothFieldsUsed": true
+    }
+  ],
+  "newProductSemanticReadLines": 0,
+  "gitCommands": 0
+}

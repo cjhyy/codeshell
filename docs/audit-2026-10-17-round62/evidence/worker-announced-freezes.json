@@ -1,0 +1,79 @@
+{
+  "checks": [
+    {
+      "path": "coverage61/report.md",
+      "bytes": 6347,
+      "sha256": "600daddcd5aab8214ea4e98665e270258d57a8f98874d7d65d2b51fddbc1d623"
+    },
+    {
+      "path": "coverage61/source-manifest.json",
+      "bytes": 8430,
+      "sha256": "79b3a5b14d925aad99e14fd3c7f648f77c36f43027abdfd12288ecf4cde00196"
+    },
+    {
+      "path": "coverage61/artifact-receipt.json",
+      "bytes": 8632,
+      "sha256": "66edd55b09ea2478e890d1ad2fa4ec5e31e8b2045187658443f02ef81c0a23ff"
+    },
+    {
+      "path": "model-catalog/report.md",
+      "bytes": 3661,
+      "sha256": "342adc5039cd7e8ad40ccea45bb5fb356102ad25323f98c991031693c0aab511"
+    },
+    {
+      "path": "model-catalog/source-manifest.json",
+      "bytes": 21383,
+      "sha256": "af245685b37352ef6e9c3539d5600f43e45613577763e7a758e292ae42a652a1"
+    },
+    {
+      "path": "model-catalog/reviewer-receipt.json",
+      "bytes": 16345,
+      "sha256": "9760c389c7fb188c5cb36e3a65169d92161ff7cc16735b81b3098c910b8ab761"
+    },
+    {
+      "path": "source-view/report.md",
+      "bytes": 2723,
+      "sha256": "cec66eaf19d2c872e4d33777900ad9866f482e3f77c3e98f0598a1ed6b73d020"
+    },
+    {
+      "path": "source-view/source-manifest.json",
+      "bytes": 16067,
+      "sha256": "42f3c5501b2c947cff2ae0818768fcf80cb38a57b15acf79f66fbb891fa89337"
+    },
+    {
+      "path": "source-view/artifact-receipt.json",
+      "bytes": 6491,
+      "sha256": "1c1be6993cc745a3209bf57f96dff9e23b8d2e31ede8826dcb62e812f23552d1"
+    },
+    {
+      "path": "root-theme-window/report.md",
+      "bytes": 3023,
+      "sha256": "38f5a51713af9284c2f9ca660d30be1d9415a1d821198e3e2b538365686ec939"
+    },
+    {
+      "path": "root-theme-window/source-manifest.json",
+      "bytes": 17868,
+      "sha256": "53c3f7322318e97b5eaa3628712a120f2ba58403dc73b76ed04d41a00aa5ab42"
+    },
+    {
+      "path": "root-theme-window/artifact-receipt.json",
+      "bytes": 6756,
+      "sha256": "159120364ed25bf58dfaf8b6ea8b32efd429b866f11c4cb619558965d2396cf1"
+    },
+    {
+      "path": "server-run-replay/report.md",
+      "bytes": 5728,
+      "sha256": "18fd4982980a3ba138b503ce65dadc8a611cd85b8af605547be64428684713b2"
+    },
+    {
+      "path": "server-run-replay/source-manifest.json",
+      "bytes": 9119,
+      "sha256": "ccd2ee6edf203b0d73e3710598d7da7aa34902cf3c8f12f36bb3f4c09a9edaac"
+    },
+    {
+      "path": "server-run-replay/artifact-receipt.json",
+      "bytes": 4532,
+      "sha256": "749e573ea92881fb34d40c0cabb51d2dde949d753f0f2e8d023df591bd635de6"
+    }
+  ]
+}

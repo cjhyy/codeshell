@@ -1,0 +1,117 @@
+{
+  "baseline": "0f83bbfdfb8f2c6f31148250bd6544f5325c16e7",
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "bun": "1.3.11 (af24e281)",
+  "firstRunStdoutStderrRedirected": true,
+  "dynamicRetries": 0,
+  "dynamicFailures": 0,
+  "runs": [
+    {
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round3/evidence/host-link-selection.test.ts",
+      "actualShellCommand": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round3/evidence/host-link-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-link-selection.raw.log 2>&1",
+      "exitCode": 0,
+      "log": "evidence/host-link-selection.raw.log",
+      "sha256": "2b36a3f4d9e4a11bc625a7c6c1be06ac6de6f958ad333a901d8ec11244d5682a",
+      "executedPassed": 4,
+      "filteredSkipped": 0,
+      "failures": 0,
+      "assertions": 26,
+      "wrapperTestsIncludingSkipped": 4,
+      "completionMarker": "Completed Bun shard: 4 tests, 0 skipped; 0 failures."
+    },
+    {
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts",
+      "actualShellCommand": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1",
+      "exitCode": 0,
+      "log": "evidence/host-baseline.raw.log",
+      "sha256": "c56e5b89bca9f6701119d7ddbf8bd21cf737bdcec9e3dcb93e5bb55583d963a0",
+      "executedPassed": 19,
+      "filteredSkipped": 16,
+      "failures": 0,
+      "assertions": 88,
+      "wrapperTestsIncludingSkipped": 35,
+      "completionMarker": "Completed Bun shard: 35 tests, 16 skipped; 0 failures."
+    },
+    {
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'the complete catalog|legacy Figma summary|full Figma results' packages/link/src/operations.test.ts",
+      "actualShellCommand": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'the complete catalog|legacy Figma summary|full Figma results' packages/link/src/operations.test.ts > docs/audit-2026-10-17-round3/evidence/host-operation-baseline.raw.log 2>&1",
+      "exitCode": 0,
+      "log": "evidence/host-operation-baseline.raw.log",
+      "sha256": "9233da694e7e865fddaa5ae047e74c5903387bb369094a62aceeec2fe09f6c93",
+      "executedPassed": 3,
+      "filteredSkipped": 6,
+      "failures": 0,
+      "assertions": 209,
+      "wrapperTestsIncludingSkipped": 9,
+      "completionMarker": "Completed Bun shard: 9 tests, 6 skipped; 0 failures."
+    }
+  ],
+  "total": {
+    "executedPassed": 26,
+    "filteredSkipped": 22,
+    "failures": 0,
+    "assertions": 323,
+    "wrapperTestsIncludingSkipped": 48
+  },
+  "findings": [
+    {
+      "id": "HL-01",
+      "priority": "P3",
+      "source": "packages/link/src/file-selection.ts",
+      "line": 15,
+      "report": "host-link.md",
+      "reportLine": 7,
+      "evidence": "host-link-selection.raw.log",
+      "status": "confirmed-pure-function-conditional-static-consumer-impact"
+    },
+    {
+      "id": "HL-02",
+      "priority": "P3",
+      "source": "packages/link/src/file-selection.ts",
+      "line": 90,
+      "report": "host-link.md",
+      "reportLine": 16,
+      "evidence": "host-link-selection.raw.log",
+      "status": "confirmed-pure-function-display-only"
+    }
+  ],
+  "boundaryOnly": [
+    "HL-B1",
+    "HL-B2"
+  ],
+  "unconfirmedCandidates": [
+    "HL-C1"
+  ],
+  "artifacts": [
+    {
+      "path": "evidence/host-baseline.raw.log",
+      "sha256": "c56e5b89bca9f6701119d7ddbf8bd21cf737bdcec9e3dcb93e5bb55583d963a0",
+      "bytes": 2725
+    },
+    {
+      "path": "evidence/host-dedup.json",
+      "sha256": "325c49fedad285ec75cd6091342ac1e483751c832fe314b872d0f5a1a3d94456",
+      "bytes": 1534
+    },
+    {
+      "path": "evidence/host-link-selection.raw.log",
+      "sha256": "2b36a3f4d9e4a11bc625a7c6c1be06ac6de6f958ad333a901d8ec11244d5682a",
+      "bytes": 2203
+    },
+    {
+      "path": "evidence/host-link-selection.test.ts",
+      "sha256": "fb1315f209f6e7e4b35dc6ef67f52c45e3c01aa6f2ba9236fef5ca003919b433",
+      "bytes": 3070
+    },
+    {
+      "path": "evidence/host-operation-baseline.raw.log",
+      "sha256": "9233da694e7e865fddaa5ae047e74c5903387bb369094a62aceeec2fe09f6c93",
+      "bytes": 554
+    },
+    {
+      "path": "evidence/host-source-manifest.json",
+      "sha256": "5f8b852d59fade9d6878e4af48bf5036f39a9f0d4264ecab051380f2a7bde352",
+      "bytes": 5777
+    }
+  ]
+}

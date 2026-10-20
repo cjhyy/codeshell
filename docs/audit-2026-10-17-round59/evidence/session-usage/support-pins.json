@@ -1,0 +1,41 @@
+{
+  "atUTC": "2026-10-17T19:40:29.923392+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/session/usage.test.ts",
+      "bytes": 8502,
+      "lines": 258,
+      "sha256": "56f833d7af2d990b9a712d441f342def79d9dc4ce2f712f81ebaa36ff3489610",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/session/stream-timing.test.ts",
+      "bytes": 2058,
+      "lines": 70,
+      "sha256": "9dffcaa98d129f79dfd8547a656b796bcf613e848e1c764dee488341f90a0a04",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "bytes": 6970,
+      "lines": 174,
+      "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/run-state-persistence.ts",
+      "bytes": 4502,
+      "lines": 110,
+      "sha256": "1834ff88a225c3a685c9332f7d4ba92a458b7e711c2595624b01e36510badf4e",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/session/output-publisher.ts",
+      "bytes": 6300,
+      "lines": 176,
+      "sha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "note": "Filename-only candidates pinned before any body; no commitment to read unused consumers."
+}

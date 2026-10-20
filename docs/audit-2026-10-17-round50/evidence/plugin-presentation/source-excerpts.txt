@@ -1,0 +1,255 @@
+packages/desktop/src/renderer/extensions/pluginPresentation.ts
+1: import type { PluginMediaDto } from "../../shared/plugin-media";
+2: import type { PluginHookEntry } from "../../preload/types";
+3: 
+4: const SAFE_PLUGIN_IMAGE_DATA_URL = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/u;
+5: const COMPOSER_SVG_PREFIX = "data:image/svg+xml;base64,";
+6: const MAX_COMPOSER_SVG_BASE64 = Math.ceil((2 * 1024 * 1024) / 3) * 4;
+7: const CANONICAL_BASE64 = /^[A-Za-z0-9+/]+={0,2}$/u;
+8: 
+9: export function safePluginImageDataUrl(value: unknown): string | undefined {
+10:   return typeof value === "string" && SAFE_PLUGIN_IMAGE_DATA_URL.test(value) ? value : undefined;
+11: }
+12: 
+13: /** Main validates SVG bytes; this only permits its bounded image transport. */
+14: export function safePluginComposerIconDataUrl(value: unknown): string | undefined {
+15:   const raster = safePluginImageDataUrl(value);
+16:   if (raster) return raster;
+17:   if (typeof value !== "string" || !value.startsWith(COMPOSER_SVG_PREFIX)) return undefined;
+18:   const base64 = value.slice(COMPOSER_SVG_PREFIX.length);
+19:   if (
+20:     !base64.length ||
+21:     base64.length > MAX_COMPOSER_SVG_BASE64 ||
+22:     base64.length % 4 ||
+23:     !CANONICAL_BASE64.test(base64)
+24:   )
+25:     return undefined;
+26:   const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+27:   if ((base64.length / 4) * 3 - padding > 2 * 1024 * 1024) return undefined;
+28:   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+29:   const last = alphabet.indexOf(base64[base64.length - padding - 1]);
+30:   if ((padding === 2 && (last & 15) !== 0) || (padding === 1 && (last & 3) !== 0)) return undefined;
+31:   return value;
+32: }
+33: 
+34: export function pluginLogoSources(media: PluginMediaDto | null | undefined): {
+35:   light?: string;
+36:   dark?: string;
+37: } {
+38:   const composerIcon = safePluginComposerIconDataUrl(media?.composerIconDataUrl);
+39:   const darkLogo = safePluginImageDataUrl(media?.logoDarkDataUrl);
+40:   const light = safePluginImageDataUrl(media?.logoDataUrl) ?? composerIcon ?? darkLogo;
+41:   const dark = darkLogo ?? light;
+42:   return { light, dark };
+43: }
+44: 
+45: export function pluginScreenshotDataUrls(media: PluginMediaDto | null | undefined): string[] {
+46:   return (media?.screenshotDataUrls ?? [])
+47:     .map(safePluginImageDataUrl)
+48:     .filter((value): value is string => typeof value === "string")
+49:     .slice(0, 3);
+50: }
+51: 
+52: export function shouldLoadPluginListMedia(mediaAvailability: {
+53:   composerIcon: boolean;
+54:   logo: boolean;
+55:   logoDark: boolean;
+56: }): boolean {
+57:   return mediaAvailability.logo || mediaAvailability.logoDark || mediaAvailability.composerIcon;
+58: }
+59: 
+60: export type PluginHookApprovalSummary = "approved" | "pending" | "changed" | "legacy";
+61: 
+62: export function summarizePluginHookApproval(
+63:   hooks: Pick<PluginHookEntry, "approval">[],
+64: ): PluginHookApprovalSummary | null {
+65:   const executable = hooks.filter((hook) => hook.approval !== "none");
+66:   if (executable.length === 0) return null;
+67:   if (executable.some((hook) => hook.approval === "changed")) return "changed";
+68:   if (executable.some((hook) => hook.approval === "pending")) return "pending";
+69:   if (executable.some((hook) => hook.approval === "legacy")) return "legacy";
+70:   return "approved";
+71: }
+72: 
+73: export async function changePluginHookApproval(
+74:   api: Pick<Window["codeshell"], "approvePluginHooks" | "revokePluginHooks">,
+75:   action: "approve" | "revoke",
+76:   installKey: string,
+77: ): Promise<void> {
+78:   if (action === "approve") await api.approvePluginHooks(installKey);
+79:   else await api.revokePluginHooks(installKey);
+80: }
+81: 
+82: export async function changePluginMcpApproval(
+83:   api: Pick<Window["codeshell"], "approvePluginMcp" | "revokePluginMcp">,
+84:   action: "approve" | "revoke",
+85:   installKey: string,
+86: ): Promise<void> {
+87:   if (action === "approve") await api.approvePluginMcp(installKey);
+88:   else await api.revokePluginMcp(installKey);
+89: }
+90: 
+91: export type PluginLegalLinkKind = "website" | "privacy" | "terms";
+92: 
+93: export function pluginLegalLinks(metadata: {
+94:   websiteURL?: string;
+95:   privacyPolicyURL?: string;
+96:   termsOfServiceURL?: string;
+97: }): Array<{ kind: PluginLegalLinkKind; url: string }> {
+98:   const values: Array<[PluginLegalLinkKind, string | undefined]> = [
+99:     ["website", metadata.websiteURL],
+100:     ["privacy", metadata.privacyPolicyURL],
+101:     ["terms", metadata.termsOfServiceURL],
+102:   ];
+103:   return values.flatMap(([kind, value]) => {
+104:     if (!value) return [];
+105:     try {
+106:       const url = new URL(value);
+107:       return url.protocol === "https:" && url.hostname && !url.username && !url.password
+108:         ? [{ kind, url: value }]
+109:         : [];
+110:     } catch {
+111:       return [];
+112:     }
+113:   });
+114: }
+
+packages/desktop/src/shared/plugin-media.ts [1,14]
+1: export interface PluginMediaAvailability {
+2:   composerIcon: boolean;
+3:   logo: boolean;
+4:   logoDark: boolean;
+5:   screenshotCount: number;
+6: }
+7: 
+8: /** Bounded image payloads; author paths never cross the main/renderer boundary. */
+9: export interface PluginMediaDto {
+10:   composerIconDataUrl?: string;
+11:   logoDataUrl?: string;
+12:   logoDarkDataUrl?: string;
+13:   screenshotDataUrls: string[];
+14: }
+
+packages/desktop/src/renderer/extensions/PluginsTab.tsx [84,103]
+84:       .then((d) => {
+85:         if (!alive) return;
+86:         setPlugins(d);
+87:         for (const p of d) {
+88:           if (!shouldLoadPluginListMedia(p.mediaAvailability)) continue;
+89:           void window.codeshell
+90:             .getPluginMedia(p.installKey)
+91:             .then((media) => {
+92:               if (alive) {
+93:                 setMediaByInstallKey((current) => ({
+94:                   ...current,
+95:                   [p.installKey]: media,
+96:                 }));
+97:               }
+98:             })
+99:             .catch(() => {
+100:               if (alive) {
+101:                 setMediaByInstallKey((current) => ({
+102:                   ...current,
+103:                   [p.installKey]: null,
+
+packages/desktop/src/renderer/extensions/PluginsTab.tsx [509,530]
+509:   fallback: React.ReactNode;
+510: }) {
+511:   const sources = pluginLogoSources(media);
+512:   if (!sources.light) return fallback;
+513:   const hasDistinctDark = sources.dark && sources.dark !== sources.light;
+514:   return (
+515:     <>
+516:       <img
+517:         src={sources.light}
+518:         alt={alt}
+519:         className={`h-full w-full object-contain p-1 ${hasDistinctDark ? "dark:hidden" : ""}`}
+520:       />
+521:       {hasDistinctDark && (
+522:         <img
+523:           src={sources.dark}
+524:           alt={alt}
+525:           className="hidden h-full w-full object-contain p-1 dark:block"
+526:         />
+527:       )}
+528:     </>
+529:   );
+530: }
+
+packages/desktop/src/renderer/extensions/PluginDetailView.tsx [100,107]
+100:       </div>
+101:     );
+102: 
+103:   const { content } = detail;
+104:   const logoSources = pluginLogoSources(media);
+105:   const screenshots = pluginScreenshotDataUrls(media);
+106:   const legalLinks = pluginLegalLinks(detail);
+107:   const hookApproval = summarizePluginHookApproval(content.hooks);
+
+packages/desktop/src/renderer/extensions/PluginDetailView.tsx [229,249]
+229:           {logoSources.light ? (
+230:             <>
+231:               <img
+232:                 src={logoSources.light}
+233:                 alt={detail.displayName}
+234:                 className={`h-full w-full object-contain p-1.5 ${
+235:                   logoSources.dark && logoSources.dark !== logoSources.light ? "dark:hidden" : ""
+236:                 }`}
+237:               />
+238:               {logoSources.dark && logoSources.dark !== logoSources.light && (
+239:                 <img
+240:                   src={logoSources.dark}
+241:                   alt={detail.displayName}
+242:                   className="hidden h-full w-full object-contain p-1.5 dark:block"
+243:                 />
+244:               )}
+245:             </>
+246:           ) : (
+247:             <Puzzle className="h-5 w-5" aria-hidden="true" />
+248:           )}
+249:         </span>
+
+packages/desktop/src/renderer/extensions/PluginDetailView.tsx [509,527]
+509:       {screenshots.length > 0 && (
+510:         <section className="rounded-md border p-3">
+511:           <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+512:             <Images className="h-3.5 w-3.5" />
+513:             {t("ext.pluginDetail.screenshotsTitle", { count: screenshots.length })}
+514:           </div>
+515:           <div className="grid gap-2 sm:grid-cols-2">
+516:             {screenshots.map((src, index) => (
+517:               <img
+518:                 key={`${index}-${src.slice(-24)}`}
+519:                 src={src}
+520:                 alt={t("ext.pluginDetail.screenshotAlt", { index: index + 1 })}
+521:                 className="w-full rounded-md border bg-muted/20 object-contain"
+522:                 loading="lazy"
+523:               />
+524:             ))}
+525:           </div>
+526:         </section>
+527:       )}
+
+packages/desktop/src/renderer/extensions/PluginDetailView.tsx [52,73]
+52:   const [media, setMedia] = useState<PluginMediaDto | null>(null);
+53:   const [hookAction, setHookAction] = useState<"approve" | "revoke" | null>(null);
+54:   const [mcpAction, setMcpAction] = useState<"approve" | "revoke" | null>(null);
+55:   const [automationAction, setAutomationAction] = useState<string | null>(null);
+56:   const toast = useToast();
+57:   const confirm = useConfirm();
+58: 
+59:   useEffect(() => {
+60:     let alive = true;
+61:     setLoaded(false);
+62:     setError(null);
+63:     setMedia(null);
+64:     Promise.all([
+65:       window.codeshell.getPluginDetail(installKey),
+66:       window.codeshell.getPluginMedia(installKey, true).catch(() => null),
+67:     ])
+68:       .then(([d, nextMedia]) => {
+69:         if (!alive) return;
+70:         setDetail(d);
+71:         setMedia(nextMedia);
+72:         setLoaded(true);
+73:       })

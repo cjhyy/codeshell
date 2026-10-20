@@ -1,0 +1,132 @@
+{
+  "startedUTC": "2026-10-17T15:37:08.827054+00:00",
+  "finishedUTC": "2026-10-17T15:37:15.502476+00:00",
+  "sourceFiles": 4643,
+  "historyFiles": 4162,
+  "historyStats": {
+    "md": 1416,
+    "json": 2746,
+    "jsonObjects": 748751,
+    "jsonArrays": 75979,
+    "jsonScalars": 2534677,
+    "jsonStrings": 1676345,
+    "mdUTF8Chars": 13334794,
+    "opaqueCountOnlyJson": 1,
+    "candidateObjects": 46207,
+    "inspectionScopeObjects": 20
+  },
+  "historyDriftVsOld49": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "old49Sha256": "8c1b9ca1624268007d7c7c6b92af69c58b619e20cc8cc991b4de1676a12c2db3",
+      "freshSha256": "1ae146ac477f14887a403e670128521c15ee47b23e7f97ab1148c7fcca0a05f3",
+      "kind": "md"
+    }
+  ],
+  "parseErrors": [],
+  "original49Reproduction": {
+    "full": 292,
+    "selectedNoFull": 154,
+    "fullSetDifference": [],
+    "selectedSetDifference": []
+  },
+  "old49DatedWithAdapter": {
+    "full": 302,
+    "selected": 154,
+    "unknown": 4186
+  },
+  "currentStages": {
+    "old49OriginalReboundToCurrent": {
+      "full": 288,
+      "selected": 150,
+      "unknown": 4205
+    },
+    "plusFieldAdapter": {
+      "full": 298,
+      "selected": 150,
+      "unknown": 4195
+    },
+    "plusFrozen43and44": {
+      "full": 301,
+      "selected": 161,
+      "unknown": 4181
+    },
+    "plusFrozen45": {
+      "full": 304,
+      "selected": 169,
+      "unknown": 4170
+    }
+  },
+  "status51Comparison": {
+    "fullSetDifference": [],
+    "selectedSetDifference": [],
+    "meaning": "Exact51 carry sets compared to old49 original classifier bound to fresh current SHA; no new reading inferred."
+  },
+  "inspectionScopeChangedObjects": 20,
+  "vetoReasons": {
+    "no-clear-leading-full-label": 6
+  },
+  "shaInvalidatedPriorSemanticPaths": [
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "old49Status": "current-sha-explicit-full-object",
+      "old49Sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "currentSha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+      "currentSourcePresent": true
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "old49Status": "current-sha-explicit-selected-object",
+      "old49Sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "currentSha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+      "currentSourcePresent": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "old49Status": "current-sha-explicit-selected-object",
+      "old49Sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "currentSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "currentSourcePresent": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "old49Status": "current-sha-explicit-full-object",
+      "old49Sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "currentSha256": "4cb5aa69ccd6492a5c971f98fa4be1c3a9b780792d8567e101cb87e68611d5e5",
+      "currentSourcePresent": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "old49Status": "current-sha-explicit-full-object",
+      "old49Sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "currentSha256": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675",
+      "currentSourcePresent": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx",
+      "old49Status": "current-sha-explicit-selected-object",
+      "old49Sha256": "59e15a04af1bcd9f56ecb21e1a30cccbe9ea27f07d6304d6ce963bdc36185417",
+      "currentSha256": "77047e6362239b7531500bdec1a07674d3b98aeaff1b39bea52fcd326ac4c2bc",
+      "currentSourcePresent": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "old49Status": "current-sha-explicit-full-object",
+      "old49Sha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "currentSha256": "62a86c6e2dbb26b94739e00174eea84e5c2247b6d1e20881d88506164e07738b",
+      "currentSourcePresent": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "old49Status": "current-sha-explicit-selected-object",
+      "old49Sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "currentSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "currentSourcePresent": true
+    }
+  ],
+  "noCoveragePercentage": true,
+  "productSemanticReads": 0,
+  "productExecutions": 0,
+  "gitOperations": 0,
+  "unknownMeaning": "Conservative JSON metadata category, not unread/unfinished/bug count. MD-only/external/unrecognized evidence not exhaustive."
+}

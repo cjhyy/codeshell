@@ -1,0 +1,16 @@
+{
+  "runs": [],
+  "productAttempts": 0,
+  "productFunctions": 0,
+  "productImports": 0,
+  "languageFixtures": 0,
+  "testRuns": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "native": 0,
+  "tty": 0,
+  "networkFixtures": 0,
+  "models": 0,
+  "primaryReferenceBrowsing": true,
+  "limits": "Static code/spec derivation only. Existing9 parameterized cases not executed. No product raw log or exit."
+}

@@ -1,0 +1,39 @@
+{
+  "rootReportedBaseline": "c6a85ac1b69329f35bc1f6ff34d08070f91b1d96",
+  "gitCertified": false,
+  "instructionReuse": "SameSHA previous full instructions reused, no new instruction body here.",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T19:54:32.017269+00:00",
+      "timing": "before any own body/nav this packet; script name confirmed initialinventory, root package known repository manifest"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T19:54:32.017960+00:00",
+      "timing": "before any own body/nav this packet; script name confirmed initialinventory, root package known repository manifest"
+    },
+    {
+      "path": "scripts/verify-release-versions.ts",
+      "bytes": 6500,
+      "lineCount": 189,
+      "sha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "pinnedAtUTC": "2026-10-17T19:54:32.018605+00:00",
+      "timing": "before any own body/nav this packet; script name confirmed initialinventory, root package known repository manifest"
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "lineCount": 129,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "pinnedAtUTC": "2026-10-17T19:54:32.019230+00:00",
+      "timing": "before any own body/nav this packet; script name confirmed initialinventory, root package known repository manifest"
+    }
+  ]
+}

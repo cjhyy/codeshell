@@ -1,0 +1,18 @@
+{
+  "sourcePath": "docs/archive/review-2026-05-30/findings.json",
+  "sourceBytes": 222261,
+  "sourceSha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+  "selectedJsonPath": "$[151]",
+  "record": {
+    "file": "packages/tui/src/cli/commands/plugin.ts",
+    "line": "27-29",
+    "category": "correctness",
+    "severity": "high",
+    "confidence": "high",
+    "title": "Inconsistent await handling of installPluginFromPath",
+    "detail": "Lines 27-29 use a ternary expression where installPluginFromPath is not awaited but installPluginFromSource is awaited. If installPluginFromPath returns a Promise, the variable `dir` will be assigned a Promise instead of a string, causing console.log on line 30 to print the Promise object rather than the path. The pattern is: `parsed.kind === \"local\" ? installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);` If both functions are async, installPluginFromPath must also be awaited.",
+    "fix": "Change line 27-28 to: `const dir = parsed.kind === \"local\" ? await installPluginFromPath(parsed.path, name, ts) : await installPluginFromSource(parsed, name, ts);`"
+  },
+  "firstDedicatedPinTiming": "after history excerpt inspection; no initial semantic pin claim",
+  "currentComparison": "Same local ternary missing await at plugin.ts42–46; current callee async verified in install.ts26; no runtime observation."
+}

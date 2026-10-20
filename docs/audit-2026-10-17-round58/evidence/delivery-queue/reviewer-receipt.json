@@ -1,0 +1,183 @@
+{
+  "frozenAt": "2026-10-17T19:33:21.280075+00:00",
+  "root": "/tmp/codeshell-audit-round138-delivery-queue",
+  "selfExcluded": true,
+  "artifactCount": 31,
+  "files": [
+    {
+      "path": "adjacent-initial-pins.json",
+      "bytes": 1741,
+      "sha256": "71ae80af30a1cc75089f8697ee975f44f6f3d35d9a5fc8ec54b081fc7c16a1c5"
+    },
+    {
+      "path": "candidate-excerpts.json",
+      "bytes": 18089,
+      "sha256": "ff863924e2d2b246d3fcd0499527ef36733085f92291b23666ec0b33d0118dda"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 896,
+      "sha256": "51042c9165a768f8996a01ee0fce96c4579f93cf5e3b4116264f1745acfb8446"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 4507,
+      "sha256": "51ee76267b1c4e006222ba12b34515005ed38d02c7502f5711f4bada625564e7"
+    },
+    {
+      "path": "consumer-test-navigation.json",
+      "bytes": 4628,
+      "sha256": "c5cb9b44303a5f6fc2c7c871709660a5f0c6a21cf58ee9b469580b1cd8dd6f3f"
+    },
+    {
+      "path": "contract-stop-test-display.json",
+      "bytes": 1860,
+      "sha256": "0324de49ae596cd599a352af973c223ccd126607be33ffb470451d0a4808ccbe"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 2117,
+      "sha256": "8b82db6a95ef637b96f27e7b336fe7efe2e884e00a1b21bb4a0b7ca916611b03"
+    },
+    {
+      "path": "dispatch-consumer-filenames.json",
+      "bytes": 391,
+      "sha256": "803b212cc0b376f0f02fdb7370dd2f419976b3d6274c9d313eaa226030e1a19a"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 6535,
+      "sha256": "12b5f82f40d07ae783373b7735ac0a101212352c37aaae4b1411fc93eeb2c43f"
+    },
+    {
+      "path": "entry-and-old-r11-display.json",
+      "bytes": 10505,
+      "sha256": "85effe86f4341708bdc4b2bf48d1794fd8f8c880aa7d834d935ba21ef392ef68"
+    },
+    {
+      "path": "entry-lifecycle-display.json",
+      "bytes": 12674,
+      "sha256": "75fb948e81da321e4a38848a598434c6a98d27f7988c7af49223d8bd96ef149f"
+    },
+    {
+      "path": "entry-lifecycle-navigation.json",
+      "bytes": 3208,
+      "sha256": "a66b6140effeee7caf61c90e85e0745e9a04cd3a9a602c1735f93c202d94a0b2"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 21888,
+      "sha256": "fbd379576a08c09aa81afce550cb3087f5563f5a6f43ed08fb27e5a7da574d84"
+    },
+    {
+      "path": "inflight-lifecycle-display.json",
+      "bytes": 1494,
+      "sha256": "f349cc12f96f5fa5313c07b3c3289cdc06835b5a589e0f1d81bcc688f76c370a"
+    },
+    {
+      "path": "inflight-lifecycle-pins-navigation.json",
+      "bytes": 3148,
+      "sha256": "8fe07cde6f1bf9ecdfc40840bb56f2d01229dc9d30b8e3c9b880c24db13a24c1"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1370,
+      "sha256": "63a6b5afc421a6a67b753c98738c3c45bc813749e7ba02d38eab5d4309040835"
+    },
+    {
+      "path": "package-bin-navigation.json",
+      "bytes": 272,
+      "sha256": "e50325c67746ceb27f1abbc27430e772ecf1ec08a02a7256b82d07e33229fdb3"
+    },
+    {
+      "path": "prior-canonical-read.json",
+      "bytes": 14728,
+      "sha256": "761f84a7d1be1ca6d3b891ddd3fa96b08bafea8d8c2be4b06771e5f155a1999f"
+    },
+    {
+      "path": "prior-locators.json",
+      "bytes": 1899,
+      "sha256": "cfc970293d471887446158c5bb7ce327785cfd20cef3bb3811d8d318c38452d6"
+    },
+    {
+      "path": "prior-shutdown-bounded.json",
+      "bytes": 2318,
+      "sha256": "a756091f1764a237cc664ea5ae009ee37b775dbc723d7c66ffa498d59f512e02"
+    },
+    {
+      "path": "producer-gateway-lifecycle-display.json",
+      "bytes": 1382,
+      "sha256": "3f54bcb93fa540c20c86d57368339ccedbc039b7444116d2aff0c640785d32a2"
+    },
+    {
+      "path": "queue-bound-display.json",
+      "bytes": 670,
+      "sha256": "19747e8b3a8564fa1892c1eedfd3c4a9ca253c5a0440bb27e800531f8405492d"
+    },
+    {
+      "path": "queue-display-first.json",
+      "bytes": 414,
+      "sha256": "07249de086e7a0027e5e3f9b68d3184f40c3facc39b31a82aacd3feb13e13e51"
+    },
+    {
+      "path": "report.md",
+      "bytes": 4290,
+      "sha256": "8a1a8eb2ea0d48d408ff08352f50ebb5d68e050e1d760257ec90e9feb536131e"
+    },
+    {
+      "path": "sender-error-display.json",
+      "bytes": 324,
+      "sha256": "648baae4e46e7b16283b19f6428b948d3c3f473b5452c5a9f7eb2cf6101d3b1b"
+    },
+    {
+      "path": "sender-error-navigation.json",
+      "bytes": 1163,
+      "sha256": "05678e529faee6e11cc1ca27b1007f108319c126a10ea29709e2f68e76dce630"
+    },
+    {
+      "path": "shared-history-projection.json",
+      "bytes": 59722,
+      "sha256": "36825b66a676dacab541cf29ff543af9d83eabb8dbf08b63a0bd7d22310a4061"
+    },
+    {
+      "path": "source-filenames.json",
+      "bytes": 348,
+      "sha256": "7f112604f3c8f8d97968e742c98311146d4b1f5c695916b0b822707e5695b54d"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 19743,
+      "sha256": "8b90b4cecc7b30f055880efd22133e7e532fd7d444a801a14682ca7064ccddf2"
+    },
+    {
+      "path": "watch-abort-display.json",
+      "bytes": 2183,
+      "sha256": "33bd59d64e2d3902454a05f156085d773b6fafcf60539d1c8da0d798b9a5ae67"
+    },
+    {
+      "path": "watch-signal-forwarding-display.json",
+      "bytes": 847,
+      "sha256": "5136b7a553184e32cb299ff699449ad3a5b4dcfd6da3b84ddd96e751de0182c9"
+    }
+  ],
+  "authorClassification": {
+    "formal": 0,
+    "candidate": 1,
+    "newRelated": 0
+  },
+  "sourceTotals": {
+    "productFiles": 9,
+    "productSemanticLines": 1153,
+    "testDeclarationFiles": 2,
+    "testDeclarationLines": 98,
+    "fullFiles": 1,
+    "selectedFiles": 10,
+    "semanticFilesDisplayedLines": 1984,
+    "packageMetadataLines": 7,
+    "packageMetadataDisplayedLines": 38,
+    "hashOnlyFiles": 2,
+    "navigationOnlyFiles": 0
+  },
+  "productOrTestExecutions": 0,
+  "GitCalls": 0
+}

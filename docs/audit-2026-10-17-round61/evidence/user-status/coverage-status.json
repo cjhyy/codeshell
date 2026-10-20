@@ -1,0 +1,17 @@
+{
+  "originalDenominator": 4643,
+  "currentFilenameInventory": 4644,
+  "uniqueCurrentNames": 4644,
+  "addedNames": [
+    "docs/audit-2026-10-17-round57/evidence/static-path.test.ts"
+  ],
+  "removedNames": [],
+  "commandExit": 0,
+  "coverage": {
+    "unknown": 3934,
+    "full": 355,
+    "selected": 354
+  },
+  "notFullInOriginalDenominator": 4288,
+  "currentAddedEvidenceNotProductFull": "Do not add the extra audit evidence fixture to original product coverage denominator."
+}

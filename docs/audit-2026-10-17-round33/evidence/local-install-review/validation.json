@@ -1,0 +1,36 @@
+{
+  "frozenUtc": "2026-10-17T12:20:28.015872+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "CLIOrInstallerActions": 0,
+  "PromiseOrLanguageFixtures": 0,
+  "testsExecuted": 0,
+  "moduleImports": 0,
+  "networkRequests": 0,
+  "nativeActions": 0,
+  "gitCommands": 0,
+  "HOMEOrRealConfigurationActions": 0,
+  "permissionAuthCustodyLockApprovalActions": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataNavigationFailures": [
+    {
+      "receipt": "navigation.first.exit.json",
+      "observedExitCode": 2,
+      "productFailure": false
+    }
+  ],
+  "metadataNoMatchNavigation": [
+    {
+      "toolChunkId": "f5a335",
+      "observedExitCode": 1,
+      "meaning": "No installPluginFromPath symbol in real pluginInstaller.ts facade; no semantic read or retry claimed."
+    }
+  ],
+  "limits": [
+    "Only metadata filesystem/hash/source-reader/JSON/regex operations.",
+    "Lost-await and Promise interpolation consequences are static language/type reasoning, not an executed Promise expression or CLI output.",
+    "Old CLI/Skill/frontmatter/authority failed runtime directions remain skipped.",
+    "No build/typecheck/lint/suite or actual install completion/failure/process exit claim."
+  ]
+}

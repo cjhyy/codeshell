@@ -1,0 +1,28 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "report": "docs/audit-2026-10-17/chat-data.md",
+  "productCodeChanged": false,
+  "gitOperations": false,
+  "confirmed": [
+    { "id": "CHD01", "priority": "P2", "file": "packages/chat/src/slack.ts", "line": 69, "boundary": "actual adapter/gateway data flow and fake SDK callbacks; official Slack thread_ts semantics; no real Slack" },
+    { "id": "CHD02", "priority": "P3", "file": "packages/chat/src/media.ts", "line": 232, "conditional": "long remote or virtual SDK attachment labels crossing a surrogate boundary", "boundary": "shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label" }
+  ],
+  "candidatesNotCounted": ["Discord repeated editReply for long slash-command chunks; fixture dependency failure before assertions", "WhatsApp caption/interactive body length may differ from generic gateway chunks; primary limit not established, no fixture"],
+  "excludedKnownLimit": "Bound Work Session attachment projection is explicitly incomplete in existing delivery documentation",
+  "completedShards": [
+    { "input": "./docs/audit-2026-10-17/evidence/chat-slack-thread.test.ts", "log": "chat-slack-thread.log", "tests": 1, "expectations": 5, "failures": 0, "skipped": 0 },
+    { "input": "./docs/audit-2026-10-17/evidence/chat-text-metadata.test.ts", "log": "chat-text-metadata.log", "tests": 2, "expectations": 16, "failures": 0, "skipped": 0 },
+    { "input": "packages/chat/src/channel.test.ts", "log": "chat-channel-baseline.log", "tests": 2, "expectations": 58, "failures": 0, "skipped": 0 }
+  ],
+  "failedFirstShards": [
+    { "input": "./docs/audit-2026-10-17/evidence/chat-discord-chunks.test.ts", "log": "chat-discord-chunks.log", "exitCode": 1, "bunReportedPass": 0, "bunReportedFail": 1, "bunReportedError": 1, "completed": false, "stage": "top-level discord.js package resolution before business assertions", "retried": false }
+  ],
+  "completedTotals": { "tests": 5, "expectations": 79, "failures": 0, "skipped": 0 },
+  "attemptedShards": 4,
+  "runner": "node scripts/run-bun-test-shard.mjs --timeout 30000",
+  "firstExecutionStdoutStderrRedirected": true,
+  "furtherFixturePlanned": false,
+  "skippedReadOnlyOperations": ["zsh unmatched packages/desktop/src/main/bound-session* auxiliary search", "quality reviewer found original lowercase Slack chat.postmessage URL returns 404; original page skipped"],
+  "slackDocumentationEvidence": "official web search result excerpts; canonical chat.postMessage/ URL verified by quality reviewer; this subreview did not successfully open the original lowercase URL",
+  "externalEffects": "none; production adapter run/send retained; socket start/disconnect and SDK chat.postMessage replaced with in-memory callbacks before invocation"
+}

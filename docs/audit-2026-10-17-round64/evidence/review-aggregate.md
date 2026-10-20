@@ -1,0 +1,5 @@
+# Root64判断
+
+174提出的共享文件/per-ID TTL反例经Root首次guarded临时FS复现与176独立源码反证支持，只登记ATTACH-R64-01/P2一次。普通UI移除chip没有淘汰manifest旧ID；下一次同图可正常发送。过期旧草稿删除仍有效sent引用的文件，独立路径sent控制保留。现有错误未修。
+
+172认证、173Panel与Root175设置来源有限范围未建新反例，不能据局部0认证整个模块。测试/fixture仅Root新attempt1，既有测试声明和其他作者的0执行分账。旧失败方向未重跑。并发MCP源码处理只更新dated状态说明，旧历史记录保留，全仓目标active。

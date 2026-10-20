@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round4/evidence/settings-invalid-write.test.ts:
+{"case":"Config","result":"success string, persisted boolean, next SettingsManager.get throws; correction restores load"}
+(pass) observed bug: Config reports success after persisting a known field with an invalid type [41.50ms]
+(pass) observed shared root: the user single-setting writer accepts the same invalid type [7.99ms]
+(pass) control: the atomic writer rejects that invalid shape without changing disk [4.79ms]
+(pass) control: forward-compatible unknown keys remain accepted by the validated writer [4.86ms]
+
+ 4 pass
+ 0 fail
+ 15 expect() calls
+Ran 4 tests across 1 file. [189.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

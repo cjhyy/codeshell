@@ -16,6 +16,7 @@ import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
 import type { MaskedCredentialView } from "../credentials/types";
 import { buildMcpSettingsPatch } from "./mcpSettingsPatch";
+import { ToolsViewer, ErrorDetailViewer } from "./McpDetailDialogs";
 
 interface McpServer {
   name: string;
@@ -41,6 +42,10 @@ interface McpServer {
   /** Exact raw MCP tool-name policy. Deny is applied after allow. */
   allowedTools?: string[];
   disabledTools?: string[];
+  /** Supported settings options retained across editor renames, not authored here. */
+  connectTimeoutMs?: number;
+  connectRetries?: number;
+  inlineImages?: boolean;
   source?: "settings" | "plugin";
   editable?: boolean;
   /** Plugin server whose OWNER plugin is disabled — listed but inert
@@ -117,6 +122,17 @@ type HttpAuthMode = "none" | "bearer" | "headers" | "oauth";
 
 function isOAuthCredential(c: Pick<MaskedCredentialView, "type">): boolean {
   return c.type === "oauth";
+}
+
+/** Link credentials are used through their provider channel, never a generic MCP server. */
+export function isGenericMcpOAuthCredential(
+  credential: Pick<MaskedCredentialView, "type" | "meta">,
+): boolean {
+  return (
+    isOAuthCredential(credential) &&
+    !credential.meta?.linkProvider &&
+    credential.meta?.agentExposable !== false
+  );
 }
 
 export function inferHttpAuthMode(
@@ -209,8 +225,11 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
   editRef.current = edit;
   const [toolsViewer, setToolsViewer] = useState<McpProbeResult | null>(null);
   const [errorDetailFor, setErrorDetailFor] = useState<McpProbeResult | null>(null);
+  const detailOpener = useRef<HTMLButtonElement | null>(null);
   const [pluginMcpTrust, setPluginMcpTrust] = useState<PluginMcpTrustEntry[]>([]);
   const [pluginTrustAction, setPluginTrustAction] = useState<string | null>(null);
+  const mutationPending = useRef(false);
+  const [mutationBusy, setMutationBusy] = useState(false);
   const confirm = useConfirm();
   const toast = useToast();
   const { t } = useT();
@@ -320,39 +339,79 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
   // Load on mount + auto-refresh on config change anywhere.
   useRefreshOnSettingsChange(() => void load(), [load]);
 
-  const removeServer = async (name: string) => {
-    const ok = await confirm({
-      title: t("settingsX.mcp.confirmRemoveTitle"),
-      message: t("settingsX.mcp.confirmRemoveMsg", { name: truncateTitle(name) }),
-      confirmLabel: t("settingsX.mcp.remove"),
-      destructive: true,
-    });
-    if (!ok || !mounted.current) return;
-    await updateScopedSettings(scope, { mcpServers: { [name]: null } }, projectPath);
-    await window.codeshell.invalidateMcpProbeCache(name);
-    setProbes((prev) => {
-      const { [name]: _, ...rest } = prev;
-      return rest;
-    });
-    setServers((cur) => cur.filter((s) => s.name !== name));
-    broadcastSettingsChanged();
+  const mutate = async (action: () => Promise<void>) => {
+    if (mutationPending.current) return;
+    mutationPending.current = true;
+    setMutationBusy(true);
+    setError(null);
+    try {
+      await action();
+    } finally {
+      mutationPending.current = false;
+      if (mounted.current) setMutationBusy(false);
+    }
   };
 
-  const toggleServer = async (s: McpServer) => {
-    if (!isToggleableMcpServer(s)) return;
-    const nextEnabled = !isEnabled(s);
-    if (s.source === "plugin") {
-      const updated = servers.map((x) =>
-        x.name === s.name ? { ...x, enabled: nextEnabled, hasOverride: true } : x,
-      );
+  const removeServer = async (name: string) =>
+    mutate(async () => {
+      const ok = await confirm({
+        title: t("settingsX.mcp.confirmRemoveTitle"),
+        message: t("settingsX.mcp.confirmRemoveMsg", { name: truncateTitle(name) }),
+        confirmLabel: t("settingsX.mcp.remove"),
+        destructive: true,
+      });
+      if (!ok || !mounted.current) return;
+      await updateScopedSettings(scope, { mcpServers: { [name]: null } }, projectPath);
+      await window.codeshell.invalidateMcpProbeCache(name);
+      setProbes((prev) => {
+        const { [name]: _, ...rest } = prev;
+        return rest;
+      });
+      setServers((cur) => cur.filter((s) => s.name !== name));
+      broadcastSettingsChanged();
+    });
+
+  const toggleServer = async (s: McpServer) =>
+    mutate(async () => {
+      if (!isToggleableMcpServer(s)) return;
+      const nextEnabled = !isEnabled(s);
+      if (s.source === "plugin") {
+        const updated = servers.map((x) =>
+          x.name === s.name ? { ...x, enabled: nextEnabled, hasOverride: true } : x,
+        );
+        await updateScopedSettings(
+          "user",
+          { mcpServerOverrides: { [s.name]: { enabled: nextEnabled } } },
+          undefined,
+        );
+        setServers(updated);
+        broadcastSettingsChanged();
+        if (!nextEnabled) {
+          await window.codeshell.invalidateMcpProbeCache(s.name);
+          setProbes((prev) => {
+            const { [s.name]: _, ...rest } = prev;
+            return rest;
+          });
+        } else {
+          void runProbe(
+            updated.filter((x) => x.name === s.name),
+            true,
+          );
+        }
+        return;
+      }
+      // Settings patches merge recursively. A toggle owns only enabled, so it
+      // must not replay stale credentials or commands loaded before another edit.
+      const updated = servers.map((x) => (x.name === s.name ? { ...x, enabled: nextEnabled } : x));
       await updateScopedSettings(
-        "user",
-        { mcpServerOverrides: { [s.name]: { enabled: nextEnabled } } },
-        undefined,
+        scope,
+        { mcpServers: { [s.name]: { enabled: nextEnabled } } },
+        projectPath,
       );
       setServers(updated);
       broadcastSettingsChanged();
       if (!nextEnabled) {
+        // Drop the stale "connected" probe so the card doesn't look live.
         await window.codeshell.invalidateMcpProbeCache(s.name);
         setProbes((prev) => {
           const { [s.name]: _, ...rest } = prev;
@@ -364,87 +423,77 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
           true,
         );
       }
-      return;
-    }
-    // Settings patches merge recursively. A toggle owns only enabled, so it
-    // must not replay stale credentials or commands loaded before another edit.
-    const updated = servers.map((x) => (x.name === s.name ? { ...x, enabled: nextEnabled } : x));
-    await updateScopedSettings(
-      scope,
-      { mcpServers: { [s.name]: { enabled: nextEnabled } } },
-      projectPath,
-    );
-    setServers(updated);
-    broadcastSettingsChanged();
-    if (!nextEnabled) {
-      // Drop the stale "connected" probe so the card doesn't look live.
-      await window.codeshell.invalidateMcpProbeCache(s.name);
-      setProbes((prev) => {
-        const { [s.name]: _, ...rest } = prev;
-        return rest;
-      });
-    } else {
-      void runProbe(
-        updated.filter((x) => x.name === s.name),
-        true,
-      );
-    }
-  };
+    });
 
-  const saveEdit = async (next: McpServer, originalName?: string) => {
-    if (!mounted.current) return;
-    const owner = editRef.current;
-    // Rename must be ATOMIC: write the new server AND delete the old key in ONE
-    // updateSettings patch. The old two-step (persist new, then a separate patch
-    // to null the old key) could persist BOTH old+new if the second write
-    // failed/crashed. deepMerge in settings-service honors nested `null` to
-    // delete a key, so { mcpServers: { new: {...}, old: null } } does both.
-    // Patch only the edited server; replaying the loaded list could overwrite
-    // an unrelated server changed by another window while this editor was open.
-    const record: Record<string, unknown> = {
-      [next.name]: buildMcpSettingsPatch(
-        next,
-        servers.find((server) => server.name === originalName),
-      ),
-      ...(originalName && originalName !== next.name ? { [originalName]: null } : {}),
-    };
-    await updateScopedSettings(scope, { mcpServers: record }, projectPath);
-    if (mounted.current) {
-      setServers((current) => [
-        ...current.filter((s) => s.name !== originalName && s.name !== next.name),
-        next,
-      ]);
-    }
-    if (originalName && originalName !== next.name) {
-      await window.codeshell.invalidateMcpProbeCache(originalName);
-    }
-    await window.codeshell.invalidateMcpProbeCache(next.name);
-    broadcastSettingsChanged();
-    if (!mounted.current) return;
-    if (editRef.current === owner) setEdit({ kind: "closed" });
-    void runProbe([next], true);
-  };
+  const saveEdit = async (next: McpServer, originalName?: string) =>
+    mutate(async () => {
+      if (!mounted.current) return;
+      const owner = editRef.current;
+      // Rename must be ATOMIC: write the new server AND delete the old key in ONE
+      // updateSettings patch. The old two-step (persist new, then a separate patch
+      // to null the old key) could persist BOTH old+new if the second write
+      // failed/crashed. deepMerge in settings-service honors nested `null` to
+      // delete a key, so { mcpServers: { new: {...}, old: null } } does both.
+      // Patch only the edited server; replaying the loaded list could overwrite
+      // an unrelated server changed by another window while this editor was open.
+      const previous = servers.find((server) => server.name === originalName);
+      const preserved: Pick<McpServer, "connectTimeoutMs" | "connectRetries" | "inlineImages"> = {
+        ...(previous?.connectTimeoutMs !== undefined
+          ? { connectTimeoutMs: previous.connectTimeoutMs }
+          : {}),
+        ...(previous?.connectRetries !== undefined
+          ? { connectRetries: previous.connectRetries }
+          : {}),
+        ...(previous?.inlineImages !== undefined ? { inlineImages: previous.inlineImages } : {}),
+      };
+      const savedNext = { ...preserved, ...next };
+      const record: Record<string, unknown> = {
+        [next.name]: {
+          // A new name has no previous object for the settings merge to retain.
+          // Transfer only supported non-editor options, then apply edits/clears.
+          ...(originalName && originalName !== next.name ? preserved : {}),
+          ...buildMcpSettingsPatch(next, previous),
+        },
+        ...(originalName && originalName !== next.name ? { [originalName]: null } : {}),
+      };
+      await updateScopedSettings(scope, { mcpServers: record }, projectPath);
+      if (mounted.current) {
+        setServers((current) => [
+          ...current.filter((s) => s.name !== originalName && s.name !== next.name),
+          savedNext,
+        ]);
+      }
+      if (originalName && originalName !== next.name) {
+        await window.codeshell.invalidateMcpProbeCache(originalName);
+      }
+      await window.codeshell.invalidateMcpProbeCache(next.name);
+      broadcastSettingsChanged();
+      if (!mounted.current) return;
+      if (editRef.current === owner) setEdit({ kind: "closed" });
+      void runProbe([savedNext], true);
+    });
 
   // Save (or clear) the env/credential supplement for a PLUGIN server. Always
   // writes the GLOBAL mcpServerOverrides layer — never mcpServers — so the
   // plugin's command/url stay owned by the manifest and survive updates.
-  const saveOverride = async (name: string, next: McpServer) => {
-    if (!mounted.current) return;
-    const owner = editRef.current;
-    const supplement = buildMcpSettingsPatch(
-      next,
-      servers.find((server) => server.name === name),
-      MCP_OVERRIDE_FIELDS,
-    );
-    // No fields left → drop the whole override entry (null deletes the key).
-    const value = Object.values(supplement).some((entry) => entry !== null) ? supplement : null;
-    await updateScopedSettings("user", { mcpServerOverrides: { [name]: value } }, undefined);
-    await window.codeshell.invalidateMcpProbeCache(name);
-    broadcastSettingsChanged();
-    if (!mounted.current) return;
-    if (editRef.current === owner) setEdit({ kind: "closed" });
-    await load();
-  };
+  const saveOverride = async (name: string, next: McpServer) =>
+    mutate(async () => {
+      if (!mounted.current) return;
+      const owner = editRef.current;
+      const supplement = buildMcpSettingsPatch(
+        next,
+        servers.find((server) => server.name === name),
+        MCP_OVERRIDE_FIELDS,
+      );
+      // No fields left → drop the whole override entry (null deletes the key).
+      const value = Object.values(supplement).some((entry) => entry !== null) ? supplement : null;
+      await updateScopedSettings("user", { mcpServerOverrides: { [name]: value } }, undefined);
+      await window.codeshell.invalidateMcpProbeCache(name);
+      broadcastSettingsChanged();
+      if (!mounted.current) return;
+      if (editRef.current === owner) setEdit({ kind: "closed" });
+      await load();
+    });
 
   const testOne = async (s: McpServer) => {
     setLoadingProbe((prev) => new Set(prev).add(s.name));
@@ -511,9 +560,9 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
   };
 
   return (
-    <section className="mb-6 flex flex-col gap-3">
-      <header className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-0.5">
+    <section className="mb-6 flex min-w-0 flex-col gap-3">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
             {t("settingsX.mcp.title")}
           </h3>
@@ -522,22 +571,27 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
               「改了没反应」的错觉。 */}
           <p className="text-xs text-muted-foreground">{t("settingsX.mcp.desc")}</p>
         </div>
-        <div className="flex items-center gap-2 ">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           <Button
             variant="default"
             onClick={() => void runProbe(servers, true)}
-            disabled={servers.length === 0 || loadingProbe.size > 0}
+            disabled={mutationBusy || servers.length === 0 || loadingProbe.size > 0}
           >
             {loadingProbe.size > 0 ? t("settingsX.mcp.testing") : t("settingsX.mcp.testAll")}
           </Button>
-          <Button variant="solid" onClick={() => setEdit({ kind: "new" })}>
+          <Button variant="solid" disabled={mutationBusy} onClick={() => setEdit({ kind: "new" })}>
             {t("settingsX.mcp.addServer")}
           </Button>
         </div>
       </header>
 
       {error && (
-        <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>
+        <div
+          role="alert"
+          className="min-w-0 rounded-md bg-status-err/10 p-3 text-sm text-status-err [overflow-wrap:anywhere]"
+        >
+          {error}
+        </div>
       )}
 
       {servers.length === 0 && pluginMcpTrust.length === 0 && edit.kind === "closed" && (
@@ -626,20 +680,29 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
               server={s}
               probe={probe}
               loading={loading}
+              pending={mutationBusy}
               groupedByPlugin={groupedByPlugin}
               onToggle={() => runAction(() => toggleServer(s))}
               onTest={() => void testOne(s)}
               onEdit={() => setEdit({ kind: "edit", original: s.name })}
               onOverride={() => setEdit({ kind: "override", original: s.name })}
               onRemove={() => runAction(() => removeServer(s.name))}
-              onViewTools={() => setToolsViewer(probe ?? null)}
-              onShowErrorDetail={() => setErrorDetailFor(probe ?? null)}
+              onViewTools={(opener) => {
+                detailOpener.current = opener;
+                setToolsViewer(probe ?? null);
+              }}
+              onShowErrorDetail={(opener) => {
+                detailOpener.current = opener;
+                setErrorDetailFor(probe ?? null);
+              }}
             />
           );
         };
         return (
           <>
-            <div className="grid gap-2">{userServers.map((s) => renderCard(s))}</div>
+            <div className="grid min-w-0 grid-cols-1 gap-2">
+              {userServers.map((s) => renderCard(s))}
+            </div>
             {Array.from(byPlugin.entries()).map(([owner, list]) => (
               <div key={owner} className="mt-3">
                 <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -650,7 +713,9 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
                     </span>
                   )}
                 </div>
-                <div className="grid gap-2">{list.map((s) => renderCard(s, true))}</div>
+                <div className="grid min-w-0 grid-cols-1 gap-2">
+                  {list.map((s) => renderCard(s, true))}
+                </div>
               </div>
             ))}
           </>
@@ -676,9 +741,19 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
         />
       )}
 
-      {toolsViewer && <ToolsViewer probe={toolsViewer} onClose={() => setToolsViewer(null)} />}
+      {toolsViewer && (
+        <ToolsViewer
+          probe={toolsViewer}
+          opener={detailOpener.current}
+          onClose={() => setToolsViewer(null)}
+        />
+      )}
       {errorDetailFor && (
-        <ErrorDetailViewer probe={errorDetailFor} onClose={() => setErrorDetailFor(null)} />
+        <ErrorDetailViewer
+          probe={errorDetailFor}
+          opener={detailOpener.current}
+          onClose={() => setErrorDetailFor(null)}
+        />
       )}
     </section>
   );
@@ -688,6 +763,7 @@ interface McpCardProps {
   server: McpServer;
   probe?: McpProbeResult;
   loading: boolean;
+  pending: boolean;
   /** Rendered inside a 「🧩 xxx 插件提供」 group — the group header already
    *  names the plugin and its disabled state, so the card drops the
    *  redundant 插件/已停用 pills and shows the BARE server name. */
@@ -698,14 +774,15 @@ interface McpCardProps {
   /** Open the env/credential supplement editor (plugin servers only). */
   onOverride: () => void;
   onRemove: () => void;
-  onViewTools: () => void;
-  onShowErrorDetail: () => void;
+  onViewTools: (opener: HTMLButtonElement) => void;
+  onShowErrorDetail: (opener: HTMLButtonElement) => void;
 }
 
 function McpCard({
   server,
   probe,
   loading,
+  pending,
   groupedByPlugin = false,
   onToggle,
   onTest,
@@ -733,13 +810,13 @@ function McpCard({
       : server.name;
 
   return (
-    <article className={cn("rounded-md border bg-card p-3", !enabled && "opacity-60")}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <article className={cn("min-w-0 rounded-md border bg-card p-3", !enabled && "opacity-60")}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <Switch
             checked={enabled}
             onCheckedChange={toggleable ? onToggle : undefined}
-            disabled={!toggleable}
+            disabled={pending || !toggleable}
             title={
               toggleable
                 ? enabled
@@ -748,7 +825,9 @@ function McpCard({
                 : t("settingsX.mcp.pluginManagedNoToggle")
             }
           />
-          <strong title={server.name}>{displayName}</strong>
+          <strong className="min-w-0 [overflow-wrap:anywhere]" title={server.name}>
+            {displayName}
+          </strong>
           <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
             {transportLabel(transport)}
           </span>
@@ -815,7 +894,7 @@ function McpCard({
               variant="ghost"
               size="sm"
               onClick={onTest}
-              disabled={loading || !enabled}
+              disabled={pending || loading || !enabled}
               title={enabled ? t("settingsX.mcp.testConn") : t("settingsX.mcp.disabled")}
             >
               {loading ? "…" : t("settingsX.mcp.test")}
@@ -828,6 +907,7 @@ function McpCard({
                 variant="ghost"
                 size="sm"
                 onClick={onEdit}
+                disabled={pending}
                 title={t("settingsX.mcp.edit")}
               >
                 {t("settingsX.mcp.edit")}
@@ -838,6 +918,7 @@ function McpCard({
                 size="sm"
                 className="text-status-err hover:text-status-err"
                 onClick={onRemove}
+                disabled={pending}
                 title={t("settingsX.mcp.delete")}
               >
                 {t("settingsX.mcp.delete")}
@@ -855,6 +936,7 @@ function McpCard({
                   variant="ghost"
                   size="sm"
                   onClick={onOverride}
+                  disabled={pending}
                   title={t("settingsX.mcp.supplementCredTitle")}
                 >
                   {t("settingsX.mcp.supplementCred")}
@@ -905,7 +987,7 @@ function McpCard({
             variant="link"
             size="sm"
             className="h-auto p-0 text-xs"
-            onClick={onViewTools}
+            onClick={(event) => onViewTools(event.currentTarget)}
           >
             {probe.toolCount ?? 0} tools
           </Button>
@@ -921,7 +1003,7 @@ function McpCard({
                 variant="link"
                 size="sm"
                 className="h-auto p-0 text-xs"
-                onClick={onShowErrorDetail}
+                onClick={(event) => onShowErrorDetail(event.currentTarget)}
               >
                 {t("settingsX.mcp.viewDetail")}
               </Button>
@@ -1063,7 +1145,8 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
   );
   const [name, setName] = useState(initial?.name ?? "");
   const [command, setCommand] = useState(initial?.command ?? "");
-  const [args, setArgs] = useState((initial?.args ?? []).join(" "));
+  const initialArgsText = (initial?.args ?? []).join(" ");
+  const [args, setArgs] = useState(initialArgsText);
   const [url, setUrl] = useState(initial?.url ?? "");
   const [envText, setEnvText] = useState(envOrHeadersToText(initial?.env));
   const [forwardEnvVarsText, setForwardEnvVarsText] = useState(envNamesToText(initial?.envVars));
@@ -1132,7 +1215,7 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
     [credentials],
   );
   const oauthCredentials = useMemo(
-    () => credentials.filter((c) => c.type === "oauth"),
+    () => credentials.filter(isGenericMcpOAuthCredential),
     [credentials],
   );
   const oauthCredOptions = useMemo(
@@ -1325,7 +1408,14 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
           ...(isStdio
             ? {
                 command: command.trim(),
-                args: args.trim() ? splitArgs(args.trim()) : undefined,
+                // The display join loses quoting. Keep the original boundaries
+                // until the user actually changes the Args field.
+                args:
+                  args === initialArgsText
+                    ? initial?.args?.slice()
+                    : args.trim()
+                      ? splitArgs(args.trim())
+                      : undefined,
                 env: env && Object.keys(env).length ? env : undefined,
                 envVars: envVars && envVars.length ? envVars : undefined,
               }
@@ -1690,81 +1780,6 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
         <Button variant="solid" onClick={submit} disabled={oauthBusy || saving}>
           {initial ? t("settingsX.mcp.save") : t("settingsX.mcp.add")}
         </Button>
-      </div>
-    </div>
-  );
-}
-
-interface ToolsViewerProps {
-  probe: McpProbeResult;
-  onClose: () => void;
-}
-
-function ToolsViewer({ probe, onClose }: ToolsViewerProps) {
-  const { t } = useT();
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="mb-3 flex items-center justify-between gap-3">
-          <strong>
-            {t("settingsX.mcp.toolsHeader", { name: probe.name, count: probe.tools?.length ?? 0 })}
-          </strong>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            {t("settingsX.mcp.close")}
-          </Button>
-        </header>
-        {probe.tools && probe.tools.length > 0 ? (
-          <ul className="flex flex-col gap-2">
-            {probe.tools.map((tool) => (
-              <li key={tool.name} className="rounded-md border p-2">
-                <code className="font-mono text-xs text-foreground">{tool.name}</code>
-                {tool.description && (
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {tool.description}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="p-4 text-center text-sm text-muted-foreground">
-            {t("settingsX.mcp.noToolReturned")}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ErrorDetailViewer({ probe, onClose }: { probe: McpProbeResult; onClose: () => void }) {
-  const { t } = useT();
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="mb-3 flex items-center justify-between gap-3">
-          <strong>{t("settingsX.mcp.errorDetailHeader", { name: probe.name })}</strong>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            {t("settingsX.mcp.close")}
-          </Button>
-        </header>
-        <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">
-          {probe.errorMessage}
-        </div>
-        <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-muted/40 p-3 font-mono text-xs">
-          {probe.errorDetail}
-        </pre>
       </div>
     </div>
   );

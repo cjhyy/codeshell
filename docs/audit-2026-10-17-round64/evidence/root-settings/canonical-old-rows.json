@@ -1,0 +1,64 @@
+[
+  {
+    "document": "docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json",
+    "documentBytes": 2765,
+    "documentSha256": "939bca1e6f008f3a3df10ae14db96207c7bd9641547e12df3c8022c1e96c57ae",
+    "pointer": "/files/2",
+    "row": {
+      "path": "packages/core/src/settings/personalization.ts",
+      "sha256": "e3ff9e3dc6a89543794b73df00894e150d42da3be3c7a4f244b71c1571db74ea"
+    }
+  },
+  {
+    "document": "docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json",
+    "documentBytes": 2765,
+    "documentSha256": "939bca1e6f008f3a3df10ae14db96207c7bd9641547e12df3c8022c1e96c57ae",
+    "pointer": "/files/5",
+    "row": {
+      "path": "packages/core/src/settings/feature-flags.ts",
+      "sha256": "f7c651347175eebe245977b2a4661a4409fd47690a497c88bb23ff55aa7e5eef"
+    }
+  },
+  {
+    "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+    "documentBytes": 99596,
+    "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+    "pointer": "/hashOnlyFiles/36",
+    "row": {
+      "path": "packages/core/src/settings/hook-provenance.ts",
+      "bytes": 8082,
+      "sha256": "8dc3451a7f23c3ffbca707adc373746a8289d24bcac9eb68201afbbe14f2cd66",
+      "totalLines": 238,
+      "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+      "coverage": "hash-only-before-any-current-semantic-read"
+    }
+  },
+  {
+    "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+    "documentBytes": 99596,
+    "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+    "pointer": "/hashOnlyFiles/37",
+    "row": {
+      "path": "packages/core/src/settings/personalization.ts",
+      "bytes": 736,
+      "sha256": "e3ff9e3dc6a89543794b73df00894e150d42da3be3c7a4f244b71c1571db74ea",
+      "totalLines": 20,
+      "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+      "coverage": "hash-only-before-any-current-semantic-read"
+    }
+  },
+  {
+    "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+    "documentBytes": 99596,
+    "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+    "pointer": "/hashOnlyFiles/41",
+    "row": {
+      "path": "packages/core/src/settings/feature-flags.ts",
+      "bytes": 6075,
+      "sha256": "f7c651347175eebe245977b2a4661a4409fd47690a497c88bb23ff55aa7e5eef",
+      "totalLines": 134,
+      "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+      "coverage": "hash-only-before-any-current-semantic-read"
+    }
+  }
+]

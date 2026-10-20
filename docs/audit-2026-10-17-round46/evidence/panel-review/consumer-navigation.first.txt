@@ -1,0 +1,7 @@
+43:import { PanelTabStrip } from "./PanelTabStrip";
+483:  const closeTab = (id: string): void => {
+591:          <PanelTabStrip
+612:            idPrefix={panelDomId}
+704:                id={`${panelDomId}-body-${panelTab.id}`}
+725:              id={`${panelDomId}-body-${panelTab.id}`}
+917:      aria-labelledby={labelledBy}

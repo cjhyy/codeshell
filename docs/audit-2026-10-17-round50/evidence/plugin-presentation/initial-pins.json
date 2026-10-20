@@ -1,0 +1,15 @@
+{
+  "rootReportedContextOnly": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b; parent reports product bytes not switching",
+  "gitVerification": "none",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "bytes": 4452,
+      "lines": 114,
+      "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "pinnedBeforeBodyUTC": "2026-10-17T16:54:06.866874+00:00",
+      "semanticRead": false
+    }
+  ],
+  "scope": "Ordinary presentation/ordering/data mapping only. Unknown/rank is not never-read. Mutable87 material not read; canonical docs/bugs gate performed independently."
+}

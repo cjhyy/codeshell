@@ -1,0 +1,126 @@
+{
+  "capturedUTC": "2026-10-17T16:06:43.408384+00:00",
+  "sourceRangeChecks": [
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "rangeBoundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "rangeBoundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "rangeBoundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "rangeBoundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "rangeBoundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "rangeBoundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "rangeBoundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.test.tsx",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "rangeBoundsValid": true,
+      "semanticInsideDisplay": true,
+      "firstFinishSHAEqual": true
+    }
+  ],
+  "links": [
+    {
+      "target": "initial-pins.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "history.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "history-cause-selected.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "metadata-notes.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "assessment.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "inside": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": true,
+      "inside": true
+    }
+  ],
+  "allChecksPass": true,
+  "scope": "Artifact/range metadata only, not a React/runtime validator",
+  "conditionalLifecycleGap": "67hasnotreadEngine runYield-before-BG-wait consumption;Rootformal decision must close this source premise.",
+  "unread64AndRoot66Packages": true,
+  "productRuns": 0
+}

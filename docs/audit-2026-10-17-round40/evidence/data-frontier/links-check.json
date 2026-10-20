@@ -1,0 +1,85 @@
+{
+  "kind": "artifact metadata only",
+  "timeUTC": "2026-10-17T13:40:02.841388+00:00",
+  "reportLinks": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/automation/projectOptions.ts",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/automation/AutomationView.tsx:1092",
+      "exists": true,
+      "line": 1092,
+      "withinDeclaredSemanticRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/automation/pathMatch.ts:38",
+      "exists": true,
+      "line": 38,
+      "withinDeclaredSemanticRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/i18n/ns/automation.ts:143",
+      "exists": true,
+      "line": 143,
+      "withinDeclaredSemanticRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round40-data-frontier/replacement-history.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round40-data-frontier/history-decisions.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round40-data-frontier/history-delta.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round40-data-frontier/source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round40-data-frontier/validation.json",
+      "exists": true
+    }
+  ],
+  "linkCount": 10,
+  "allLinksValid": true,
+  "sourceRanges": [
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+      "uniqueDeclaredReadLines": 101,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "uniqueDeclaredReadLines": 107,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+      "uniqueDeclaredReadLines": 127,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+      "uniqueDeclaredReadLines": 29,
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+      "uniqueDeclaredReadLines": 21,
+      "matches": true
+    }
+  ],
+  "sourcePins": 5,
+  "sourceLines": 385,
+  "productExecutions": 0,
+  "newProductSemanticReadLines": 0
+}

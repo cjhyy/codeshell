@@ -1,0 +1,14 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "count": 1,
+  "observations": [
+    {
+      "id": "ROOT-R27-R1",
+      "priorId": "HL-01",
+      "status": "old-related only",
+      "source": "packages/link/src/file-selection.ts:7-15,42",
+      "meaning": "Current path passes common text().trim() before params/identity; same exact-path whitespace cause and same consumer already in R3. HL-02 label slicing also unchanged; no new issue or new runtime confirmation.",
+      "runtimeRetested": false
+    }
+  ]
+}

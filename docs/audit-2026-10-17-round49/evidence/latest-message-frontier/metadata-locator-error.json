@@ -1,0 +1,9 @@
+{
+  "utc": "2026-10-17T16:32:21.102481+00:00",
+  "toolChunkId": "b09b3e",
+  "observedCombinedExitCode": 2,
+  "scope": "Audit guessed producer filename missing; no product or React execution. Workbench navigation output was returned before missing path diagnostic.",
+  "missingPath": "packages/web/app/useChatController.ts",
+  "repair": "Use actual filename inventory; do not invent a missing file or infer individual first-rg exit not captured.",
+  "raw": "metadata-locator-error.txt"
+}

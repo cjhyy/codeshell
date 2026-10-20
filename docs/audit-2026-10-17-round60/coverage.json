@@ -1,0 +1,25 @@
+{
+  "baseline": "c6a85ac1b69329f35bc1f6ff34d08070f91b1d96",
+  "mainHead": "463497e04d75f5a6d999a1fd59ea2f0260653784",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 39,
+  "activeSourceChecks": 50,
+  "incidentalSourceChecks": 0,
+  "hashOnlyChecks": 11,
+  "unboundNavigationReferences": 6,
+  "missingDeclaredByteCounts": 0,
+  "receiptChecks": 208,
+  "verbatimCopies": 106,
+  "frozenWhitespaceArtifacts": 2,
+  "datedCoverageReference": "Old4643 same-SHA snapshot304full/168selected/4171unknown;46–53 DEFERRED_UNPARSED,54–60 not unified. Current filtered4644 includes prior57 evidence-only TS; no new60 TS or semantic coverage union.",
+  "historicalFormalRecords": 118,
+  "priorities": {
+    "P2": 45,
+    "P3": 73
+  },
+  "changedFromFrozenSourcePaths": [],
+  "productRuns": 0,
+  "goalStillActive": true
+}

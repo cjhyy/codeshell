@@ -1,0 +1,29 @@
+{
+  "primary": "/Users/admin/Documents/个人学习/代码学习/codeshell",
+  "head": "248d091202869c07274adedf4fd50403105f1b1f",
+  "statusHex": "204d202e6769746875622f776f726b666c6f77732f6465736b746f702d75692d616363657074616e63652e796d6c00204420627567732f323032362d30372d31332d7265706f2d61756469742e6d64003f3f202e6d696d692d646f776e6c6f61642d636c692f003f3f20646f63732f746f646f2f62726f777365722d70616e656c2d72756e74696d652d64657369676e2e6d6400",
+  "trackedDiffSha256": "3e01245bddd0bbdaeeccf1349fb6bb58a4ace1f87b40140cc19d2a2e6dbf28ff",
+  "stagedDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked": [
+    {
+      "path": ".mimi-download-cli/environment/latest-d07213e0d4b9d574ec9ea08364e9bc3883c422ec7ed5ef4c301f3502ce040e12.json",
+      "bytes": 221,
+      "sha256": "c9fa6015887c3448c839e1831ec71b221b89af75e0269e72da33d774cece9c09"
+    },
+    {
+      "path": ".mimi-download-cli/environment/local-bb6c832be2e44853bd591d95200d9eab998ebb3181493e1841130003d3058b57.json",
+      "bytes": 291,
+      "sha256": "95eff61371f7226b2202df2d41ffc064a3615ff711e62b3de4edb1586d66b692"
+    },
+    {
+      "path": ".mimi-download-cli/queue.json",
+      "bytes": 77,
+      "sha256": "bd7edace82310ca48d793db42f99ce850b9aa88ccbe9a40cbe856738f20e9062"
+    },
+    {
+      "path": "docs/todo/browser-panel-runtime-design.md",
+      "bytes": 24859,
+      "sha256": "98a50347dad126c48a57b1c3e91dbe2bd2c362f9cf4b9962f95b60fbcbea455a"
+    }
+  ]
+}

@@ -68,6 +68,9 @@
   gap: 8px;
   margin: 12px 0;
 }
+.desktop-cli-mode {
+  overflow-wrap: anywhere;
+}
 .desktop-mode-options .library-button {
   display: grid;
   gap: 5px;

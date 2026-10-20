@@ -140,8 +140,16 @@ async function probeOne(cfg: McpServerConfig, options: ProbeOptions): Promise<Mc
   const access = options.oauthService
     ? {
         ...localCredentialAccess,
-        resolveOAuthAccess: (req: { id: string; scope: "full"; forceRefresh?: boolean }) =>
-          options.oauthService!.resolveAccessToken(req.id, { forceRefresh: req.forceRefresh }),
+        resolveOAuthAccess: (req: {
+          id: string;
+          scope: "full";
+          serverUrl: string;
+          forceRefresh?: boolean;
+        }) =>
+          options.oauthService!.resolveAccessToken(req.id, {
+            serverUrl: req.serverUrl,
+            forceRefresh: req.forceRefresh,
+          }),
       }
     : localCredentialAccess;
   const result = await probeMcp(cfg, {

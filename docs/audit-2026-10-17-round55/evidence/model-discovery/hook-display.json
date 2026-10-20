@@ -1,0 +1,11 @@
+{
+  "path": "packages/desktop/src/renderer/app/useExternalRuntimeModels.ts",
+  "sha256": "66f10e3f160bfb62a2e990cfa635f61936410e36fb727632e1c53ff9fd79ba04",
+  "displayRanges": [
+    [
+      1,
+      72
+    ]
+  ],
+  "pinReference": "hook-initial-pin.json"
+}

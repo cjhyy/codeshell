@@ -1,0 +1,76 @@
+
+SOURCE packages/core/src/tool-system/builtin/generate-image.ts
+55:  * Effective key for an instance: its own `apiKey`, or — when empty and
+56:  * `apiKeyRef` is set — the key of the referenced instance in the same list
+57:  * (reuse-key feature). Returns undefined when neither yields a key.
+58:  */
+59: export function effectiveApiKey(inst: GenInstance, list: GenInstance[]): string | undefined {
+60:   if (inst.apiKey) return inst.apiKey;
+61:   if (inst.apiKeyRef) {
+62:     const ref = list.find((p) => p.id === inst.apiKeyRef);
+63:     if (ref?.apiKey) return ref.apiKey;
+64:   }
+65:   return undefined;
+66: }
+67: 
+68: /** Loose shapes read off raw settings for the unified store. */
+69: interface GenInstanceSource {
+70:   tag?: string;
+71:   [k: string]: unknown;
+72: }
+73: interface CredentialSource {
+74:   id?: string;
+75:   [k: string]: unknown;
+76: }
+77: 
+78: /**
+79:  * Resolve a ResolvedImageProvider from a candidate list whose entries already
+80:  * carry a direct `apiKey` (the unified store dereferences credentials upfront).
+81:  * `prefer` selects by id (explicit → no silent fallback); else `def` then the
+82:  * first usable. Shared by the unified-store path.
+83:  */
+84: function resolveFromGenList(
+85:   list: GenInstance[],
+86:   prefer: string | undefined,
+87:   def: string | undefined,
+88: ): ResolvedImageProvider | null {
+89:   const usable = (p: GenInstance): boolean => !!p.apiKey && getImageProvider(p.kind) !== null;
+90:   const credsOf = (p: GenInstance): ImageProviderCreds => ({
+91:     baseUrl: p.baseUrl,
+92:     apiKey: p.apiKey!,
+93:   });
+94:   if (prefer) {
+95:     const chosen = list.find((p) => p.id === prefer);
+96:     if (chosen && usable(chosen))
+97:       return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+98:     return null;
+99:   }
+100:   const preferred = def ? list.find((p) => p.id === def) : undefined;
+101:   const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
+102:   return chosen
+103:     ? { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel }
+104:     : null;
+105: }
+
+SOURCE packages/core/src/model-catalog/types.ts
+113:    * knows what a configured model accepts (different models differ).
+114:    */
+115:   paramsDoc: longText.optional(),
+116: });
+117: 
+118: export type CatalogEntry = z.infer<typeof catalogEntrySchema>;
+
+SOURCE packages/core/src/model-catalog/index.ts
+107:       (e) => e.adapterKind === kindFallback && (!tagFallback || e.tag === tagFallback),
+108:     );
+109:   }
+110:   return undefined;
+111: }
+112: 
+113: export type CatalogEntryOrigin = "builtin" | "user" | "user-override-of-builtin";
+
+SOURCE packages/core/src/model-catalog/upsert.test.ts
+77:       { value: "model-b", label: "B" },
+78:     ]);
+79:   });
+80: });

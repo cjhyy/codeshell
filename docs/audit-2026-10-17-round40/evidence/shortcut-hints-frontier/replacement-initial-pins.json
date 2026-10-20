@@ -1,0 +1,54 @@
+{
+  "capturedUTC": "2026-10-17T13:54:02.161382+00:00",
+  "scope": "Exactly one replacement selected; other filenames were metadata ranking only, no other body read.",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+      "bytes": 337,
+      "lineCount": 9,
+      "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+      "pinBeforeBodyRead": true,
+      "initialSemanticReadSha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+      "datedCoverageRows": [
+        {
+          "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+          "bytes": 337,
+          "lines": 9,
+          "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+          "status": "current-sha-pin-only-no-semantic-coverage",
+          "currentFullClaimVariants": 0,
+          "currentSelectedClaimVariants": 0,
+          "currentSelectedUnionLines": 0,
+          "currentSelectedUnionRanges": [],
+          "priorVersionClaimVariants": 0,
+          "currentPinOnlyVariants": 1,
+          "claimVariants": 1,
+          "claims": [
+            {
+              "sourceSha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": null,
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+                  "jsonLocation": "$[\"files\"][6]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][29]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+                  "jsonLocation": "$[\"workerSourceChecks\"][6]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

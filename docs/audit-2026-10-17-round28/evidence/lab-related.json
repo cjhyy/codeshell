@@ -1,0 +1,9 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "count": 0,
+  "observations": [],
+  "excludedOldIds": [
+    "LAB-R3-01"
+  ],
+  "note": "Old feedback correction bug is an exclusion, not a new related observation; no newly counted cause."
+}

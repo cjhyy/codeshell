@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round7/root-metadata.md",
+      "bytes": 4033,
+      "sha256": "85293596049364a1b941e7e68be4b393f2a97e2d7bca14776ce34aecd01b2e75",
+      "readScope": "MD3/7/9 and nearby23lines; JSON baseline,assemblyWorkingTreeHead,/files/48 only"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "bytes": 26410,
+      "sha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f",
+      "readScope": "MD3/7/9 and nearby23lines; JSON baseline,assemblyWorkingTreeHead,/files/48 only"
+    }
+  ],
+  "targetOnly": true,
+  "consumerFullSeparatelyActivated": false,
+  "sameAuthor102And105": true,
+  "noProductReread": true
+}

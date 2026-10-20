@@ -1,0 +1,52 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "history": {
+    "files": 2375,
+    "markdown": 1223,
+    "json": 1152,
+    "stringLeaves": 370703,
+    "scalarLeaves": 523455,
+    "parseErrors": 0
+  },
+  "matchCounts": {
+    "exact": 7,
+    "mechanism": 44
+  },
+  "retainedContexts": {
+    "exact": 7,
+    "mechanism": 44
+  },
+  "decisions": [
+    {
+      "scope": "Recent NSIS contracts and prior nativeacceptance numbers",
+      "prior": "docs/todo/release-real-operations-2026-10-16.md:315-351",
+      "result": "Priorcontract/scope only. Noother task22tests/83checks/12Main/UIruns arecounted as this audit execution; external raw/CIreceipt uninspected."
+    },
+    {
+      "scope": "Recent introduction of these5files",
+      "prior": "docs/audit-2026-10-17-round22/evidence/integration-plan.json",
+      "result": "History inventory shows externalMain commits/pathsonly, notthisaudit defect proof."
+    },
+    {
+      "scope": "Oldplugin reinstall failure andconsistency noise",
+      "prior": "docs/archive/review-2026-05-30/findings.json:objects67/151 and recursive derivedevidence",
+      "result": "Otherplugin implementation unrelated. CaseinsensitiveNSIS alsooccursin consistency/inconsistent words; noinstallerfinding inferred."
+    },
+    {
+      "scope": "Missing peractionstatus / wrapperstatus only concerns",
+      "result": "Actualproducerand finalconsumer staticcounterevidence recorded, noordinarybad resultestablished; notnewcandidate."
+    },
+    {
+      "scope": "OSdependent registry/COM/installer/custody assumptions",
+      "result": "No unsupportedOSfact upgraded. Contractsourceonly; no product/native/security/attack experiment orfailedroute recovery."
+    }
+  ],
+  "limitations": [
+    "AllrecursiveJSONscalarvaluesscanned,keysnotvalues; archivesincluded/currentbatchexcluded.",
+    "Allsavedmatches are navigation notsemanticexhaustion.",
+    "No sourcefix or actualacceptancepassedclaim."
+  ]
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "TASKNOISE-R16-C1",
+    "status": "candidate",
+    "title": "BOX_RE does not recognize project-defined dashed border glyphs",
+    "source": "packages/core/src/utils/task-sanitizer.ts",
+    "line": 2,
+    "observed": "Actual helper accepts 140 ╌ and 140 ╎ as signal; solid ─ and │ controls reject as noise.",
+    "staticProducer": "packages/tui/src/render/render-border.ts:17-29 defines supported dashed style; actual ordinary UI selection not established.",
+    "contract": "Archived utils role describes box-heavy pasted task detection; no exhaustive glyph requirement.",
+    "limitation": "Renderer, clipboard, Host/Engine and real user path not executed. Hand-constructed helper inputs do not prove normal reachability.",
+    "evidence": [
+      "evidence/tasknoise-pure.test.ts",
+      "evidence/tasknoise-pure.first.raw.log"
+    ]
+  },
+  {
+    "id": "TASKNOISE-R16-C2",
+    "status": "candidate",
+    "title": "ANSI noise stripping does not cover locally supported colon SGR and OSC",
+    "source": "packages/core/src/utils/task-sanitizer.ts",
+    "line": 1,
+    "observed": "Actual helper retains colon RGB SGR-only and OSC8-only strings as signal; semicolon RGB/basic SGR controls reject.",
+    "staticProducer": "Local SGR parser supports colon; local OSC link producer emits OSC8. Neither module imported/invoked.",
+    "contract": "Broad archived ANSI-heavy detection description; no exhaustive terminal protocol promise.",
+    "limitation": "Raw control-preserving ordinary input transport not established. TUI TextInput statically removes ESC. No terminal/Engine/provider invocation.",
+    "evidence": [
+      "evidence/tasknoise-pure.test.ts",
+      "evidence/tasknoise-pure.first.raw.log"
+    ]
+  }
+]

@@ -1,0 +1,691 @@
+{
+  "capturedUTC": "2026-10-17T14:44:59.769073+00:00",
+  "scope": "Future48 prep only. Ordinary market-list DTO grouping/display selected source; no service operation or function was run. Source coverage is current text selection only, not whole-component/repository correctness.",
+  "parentContext": "Root reports formal42 docs-only baseline c2db5d9259afcc4c7264d190ab6bb673d49d5fe0; agent did not query Git. Formal future48 baseline unset.",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "bytes": 7842,
+      "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "lineCount": 193,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "bytes": 7842,
+        "lines": 193,
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "capturedUTC": "2026-10-17T14:40:49.271631+00:00",
+        "coverage": "candidate-selection hash-only before body",
+        "initialPinArtifact": "selection-pins.json"
+      },
+      "finishFilesystemSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "finishCapturedUTC": "2026-10-17T14:44:59.756140+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "prior-scope-excluded-or-selection-ranking"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "bytes": 20235,
+      "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "lineCount": 550,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          19,
+          101
+        ],
+        [
+          142,
+          174
+        ],
+        [
+          258,
+          289
+        ],
+        [
+          334,
+          460
+        ],
+        [
+          498,
+          550
+        ]
+      ],
+      "coveredLineCount": 328,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          174
+        ],
+        [
+          250,
+          460
+        ],
+        [
+          490,
+          550
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        480,
+        487
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          174
+        ],
+        [
+          250,
+          460
+        ],
+        [
+          480,
+          480
+        ],
+        [
+          487,
+          487
+        ],
+        [
+          490,
+          550
+        ]
+      ],
+      "displayedLineCount": 448,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lines": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "capturedUTC": "2026-10-17T14:40:49.299662+00:00",
+        "coverage": "candidate-selection hash-only before body",
+        "initialPinArtifact": "selection-pins.json"
+      },
+      "finishFilesystemSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "finishCapturedUTC": "2026-10-17T14:44:59.759042+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "ordinary-list-producer-consumer"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemeAudioSection.tsx",
+      "bytes": 9413,
+      "sha256": "7e2ebf2d0e85a736ac43d17ceb75a6cabd1bd51a0e3f4092dada5801cb71725a",
+      "lineCount": 243,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/renderer/settings/ThemeAudioSection.tsx",
+        "bytes": 9413,
+        "lines": 243,
+        "sha256": "7e2ebf2d0e85a736ac43d17ceb75a6cabd1bd51a0e3f4092dada5801cb71725a",
+        "capturedUTC": "2026-10-17T14:40:49.300790+00:00",
+        "coverage": "candidate-selection hash-only before body",
+        "initialPinArtifact": "selection-pins.json"
+      },
+      "finishFilesystemSha256": "7e2ebf2d0e85a736ac43d17ceb75a6cabd1bd51a0e3f4092dada5801cb71725a",
+      "finishCapturedUTC": "2026-10-17T14:44:59.760227+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "prior-scope-excluded-or-selection-ranking"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+      "bytes": 2718,
+      "sha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+      "lineCount": 82,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+        "bytes": 2718,
+        "lines": 82,
+        "sha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+        "capturedUTC": "2026-10-17T14:40:49.301490+00:00",
+        "coverage": "candidate-selection hash-only before body",
+        "initialPinArtifact": "selection-pins.json"
+      },
+      "finishFilesystemSha256": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+      "finishCapturedUTC": "2026-10-17T14:44:59.761197+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "prior-scope-excluded-or-selection-ranking"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+      "bytes": 9977,
+      "sha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+      "lineCount": 252,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          47,
+          69
+        ],
+        [
+          161,
+          177
+        ],
+        [
+          192,
+          249
+        ]
+      ],
+      "coveredLineCount": 98,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          86
+        ],
+        [
+          150,
+          252
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        105
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          86
+        ],
+        [
+          105,
+          105
+        ],
+        [
+          150,
+          252
+        ]
+      ],
+      "displayedLineCount": 190,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+        "bytes": 9977,
+        "sha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+        "lineCount": 252,
+        "capturedUTC": "2026-10-17T14:42:05.806318+00:00",
+        "timing": "before source body/navigation read for ordinary list path",
+        "initialPinArtifact": "consumer-initial-pins.json"
+      },
+      "finishFilesystemSha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+      "finishCapturedUTC": "2026-10-17T14:44:59.762126+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "ordinary-list-producer-consumer"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+      "bytes": 8445,
+      "sha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+      "lineCount": 212,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        1,
+        24,
+        26,
+        27,
+        28,
+        29,
+        30,
+        34,
+        38,
+        73,
+        92,
+        155
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          1
+        ],
+        [
+          24,
+          24
+        ],
+        [
+          26,
+          30
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          38,
+          38
+        ],
+        [
+          73,
+          73
+        ],
+        [
+          92,
+          92
+        ],
+        [
+          155,
+          155
+        ]
+      ],
+      "displayedLineCount": 12,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+        "bytes": 8445,
+        "sha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+        "lineCount": 212,
+        "capturedUTC": "2026-10-17T14:42:05.808541+00:00",
+        "timing": "before source body/navigation read for ordinary list path",
+        "initialPinArtifact": "consumer-initial-pins.json"
+      },
+      "finishFilesystemSha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+      "finishCapturedUTC": "2026-10-17T14:44:59.763148+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "navigation-only; no body/test semantic claim"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/ExtensionsPage.tsx",
+      "bytes": 3628,
+      "sha256": "a532030f03846f7b261f73dd89e15a2a38d2519a85ab3b5f3b48c5892de71ee7",
+      "lineCount": 113,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          90,
+          110
+        ]
+      ],
+      "coveredLineCount": 21,
+      "displayedBodyLineRanges": [
+        [
+          90,
+          110
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        1,
+        21,
+        25,
+        26,
+        35,
+        36,
+        47,
+        54,
+        86
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          1
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          35,
+          36
+        ],
+        [
+          47,
+          47
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          86,
+          86
+        ],
+        [
+          90,
+          110
+        ]
+      ],
+      "displayedLineCount": 30,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/ExtensionsPage.tsx",
+        "bytes": 3628,
+        "sha256": "a532030f03846f7b261f73dd89e15a2a38d2519a85ab3b5f3b48c5892de71ee7",
+        "lineCount": 113,
+        "capturedUTC": "2026-10-17T14:42:05.809250+00:00",
+        "timing": "before source body/navigation read for ordinary list path",
+        "initialPinArtifact": "consumer-initial-pins.json"
+      },
+      "finishFilesystemSha256": "a532030f03846f7b261f73dd89e15a2a38d2519a85ab3b5f3b48c5892de71ee7",
+      "finishCapturedUTC": "2026-10-17T14:44:59.763948+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "ordinary-list-producer-consumer"
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "lineCount": 612,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          118,
+          137
+        ],
+        [
+          180,
+          186
+        ],
+        [
+          245,
+          256
+        ],
+        [
+          284,
+          312
+        ],
+        [
+          314,
+          319
+        ]
+      ],
+      "coveredLineCount": 74,
+      "displayedBodyLineRanges": [
+        [
+          99,
+          138
+        ],
+        [
+          180,
+          186
+        ],
+        [
+          245,
+          260
+        ],
+        [
+          284,
+          312
+        ],
+        [
+          314,
+          324
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        20,
+        140,
+        142,
+        168,
+        169,
+        188,
+        231,
+        241,
+        264,
+        265,
+        268,
+        275,
+        515,
+        518
+      ],
+      "displayedLineRanges": [
+        [
+          20,
+          20
+        ],
+        [
+          99,
+          138
+        ],
+        [
+          140,
+          140
+        ],
+        [
+          142,
+          142
+        ],
+        [
+          168,
+          169
+        ],
+        [
+          180,
+          186
+        ],
+        [
+          188,
+          188
+        ],
+        [
+          231,
+          231
+        ],
+        [
+          241,
+          241
+        ],
+        [
+          245,
+          260
+        ],
+        [
+          264,
+          265
+        ],
+        [
+          268,
+          268
+        ],
+        [
+          275,
+          275
+        ],
+        [
+          284,
+          312
+        ],
+        [
+          314,
+          324
+        ],
+        [
+          515,
+          515
+        ],
+        [
+          518,
+          518
+        ]
+      ],
+      "displayedLineCount": 117,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/main/marketplace-service.ts",
+        "bytes": 20169,
+        "lineCount": 612,
+        "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+        "capturedUTC": "2026-10-17T14:42:47.978416+00:00",
+        "timing": "before narrow recommended-list DTO producer source lookup; no IPC/network/install invocation",
+        "initialPinArtifact": "dto-producer-initial-pins.json"
+      },
+      "finishFilesystemSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "finishCapturedUTC": "2026-10-17T14:44:59.764916+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "ordinary-list-producer-consumer"
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.test.ts",
+      "bytes": 5693,
+      "sha256": "5a01d7838157270678ef5dc0a4b425de94fe33989bba7bd7b5e89d434172169b",
+      "lineCount": 146,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [
+        8,
+        53,
+        55,
+        81
+      ],
+      "displayedLineRanges": [
+        [
+          8,
+          8
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          55,
+          55
+        ],
+        [
+          81,
+          81
+        ]
+      ],
+      "displayedLineCount": 4,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/main/marketplace-service.test.ts",
+        "bytes": 5693,
+        "lineCount": 146,
+        "sha256": "5a01d7838157270678ef5dc0a4b425de94fe33989bba7bd7b5e89d434172169b",
+        "capturedUTC": "2026-10-17T14:42:47.980002+00:00",
+        "timing": "before narrow recommended-list DTO producer source lookup; no IPC/network/install invocation",
+        "initialPinArtifact": "dto-producer-initial-pins.json"
+      },
+      "finishFilesystemSha256": "5a01d7838157270678ef5dc0a4b425de94fe33989bba7bd7b5e89d434172169b",
+      "finishCapturedUTC": "2026-10-17T14:44:59.765700+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "navigation-only; no body/test semantic claim"
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "lineCount": 2982,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          863,
+          882
+        ],
+        [
+          2068,
+          2077
+        ],
+        [
+          2093,
+          2094
+        ]
+      ],
+      "coveredLineCount": 32,
+      "displayedBodyLineRanges": [
+        [
+          863,
+          883
+        ],
+        [
+          2068,
+          2081
+        ],
+        [
+          2093,
+          2098
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          863,
+          883
+        ],
+        [
+          2068,
+          2081
+        ],
+        [
+          2093,
+          2098
+        ]
+      ],
+      "displayedLineCount": 41,
+      "firstFilesystemPin": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "lineCount": 2982,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "capturedUTC": "2026-10-17T14:42:47.981100+00:00",
+        "timing": "before narrow recommended-list DTO producer source lookup; no IPC/network/install invocation",
+        "initialPinArtifact": "dto-producer-initial-pins.json"
+      },
+      "finishFilesystemSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "finishCapturedUTC": "2026-10-17T14:44:59.767136+00:00",
+      "unchangedFromInitial": true,
+      "semanticRole": "ordinary-list-producer-consumer"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "firstFilesystemSha256": null,
+      "initialPinTiming": "Earlier instruction semantic read carried forward; no invented48semantic-start pin",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "semanticRole": "instruction hash carry"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "firstFilesystemSha256": null,
+      "initialPinTiming": "Earlier instruction semantic read carried forward; no invented48semantic-start pin",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "semanticRole": "instruction hash carry"
+    }
+  ],
+  "counts": {
+    "semanticFiles": 5,
+    "currentProductSemanticLines": 553,
+    "currentTestSemanticLines": 0,
+    "displayedSourceLines": 842,
+    "fullFiles": 0,
+    "selectedFiles": 5,
+    "navigationOnlyFiles": 2,
+    "hashOnlyFiles": 5,
+    "sourceChecks": 12
+  },
+  "rangeRule": "displayedLineRanges is canonical union of body and actual rg navigation; extra singleton provenance retained, never added twice",
+  "noRuntime": true
+}

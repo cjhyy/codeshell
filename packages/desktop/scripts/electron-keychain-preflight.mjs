@@ -21,6 +21,30 @@ import {
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const sameFile = (a, b) =>
   a.home === b.home && a.path === b.path && a.dev === b.dev && a.ino === b.ino && a.uid === b.uid;
+const stages = Object.freeze({
+  "fixture-home": "validating the private fixture HOME",
+  "pinned-reference": "validating the pinned Keychain metadata reference",
+  "account-before": "verifying the account's existing default login Keychain",
+  "private-preference": "verifying the private Keychain metadata without overwriting preferences",
+  private: "verifying the private default login Keychain",
+  "account-after": "rechecking the account's existing default login Keychain",
+  "bind-private-context": "binding the private HOME to the existing default login Keychain",
+  "pin-reference": "pinning the verified private Keychain metadata",
+});
+const diagnostics = new WeakMap();
+const identityMatches = (a, b) =>
+  Object.freeze({
+    sameHome: a.home === b.home,
+    samePath: a.path === b.path,
+    sameDevice: a.dev === b.dev,
+    sameInode: a.ino === b.ino,
+    sameOwner: a.uid === b.uid,
+  });
+
+/** Only locally produced, frozen enum/boolean diagnostics may cross a suite's log boundary. */
+export function getElectronKeychainPreflightDiagnostic(error) {
+  return diagnostics.get(error) ?? null;
+}
 
 function existing(path) {
   try {
@@ -86,7 +110,9 @@ export function ensureElectronKeychainContext({
   query = readDefaultKeychain,
 }) {
   if (platform !== "darwin") return null;
-  let stage = "validating the private fixture HOME";
+  let stage = "fixture-home";
+  let code = "CODESHELL_KEYCHAIN_PREFLIGHT_FAILED";
+  let identity;
   try {
     if (typeof home !== "string" || !isAbsolute(home) || /[\r\n\0]/.test(home))
       throw new Error("Fixture HOME must be an absolute path");
@@ -119,7 +145,7 @@ export function ensureElectronKeychainContext({
     const receiptInfo = existing(receiptFile);
     if (receiptInfo) assertPrivateFile(receiptInfo, 4_096);
 
-    stage = "validating the pinned Keychain metadata reference";
+    stage = "pinned-reference";
     const pinned = existing(referenceFile) ? readReference(referenceFile) : undefined;
     const explicitFile = environment.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE;
     if (explicitFile !== undefined && (typeof explicitFile !== "string" || !explicitFile))
@@ -129,8 +155,11 @@ export function ensureElectronKeychainContext({
       if (reference && reference.home !== accountHome)
         throw new Error("The Keychain reference must identify the original account HOME");
     }
-    if (pinned && explicit && !sameFile(pinned, explicit))
+    if (pinned && explicit && !sameFile(pinned, explicit)) {
+      code = "CODESHELL_KEYCHAIN_PREFLIGHT_REFERENCE_MISMATCH";
+      identity = identityMatches(pinned, explicit);
       throw new Error("The explicit and pinned Keychain metadata references disagree");
+    }
     if (pinned && !preferenceInfo)
       throw new Error("The pinned fixture is missing its Keychain preference");
     if (!pinned && preferenceInfo && !explicit)
@@ -142,24 +171,28 @@ export function ensureElectronKeychainContext({
         "Existing fixture receipts cannot be overwritten or adopted without a pinned reference",
       );
 
-    stage = "verifying the account's existing default login Keychain";
+    stage = "account-before";
     let reference = pinned ?? explicit;
     if (!reference) reference = { version: 1, home: accountHome, ...query(accountHome) };
     const xml = keychainPreferenceXml(reference.path);
-    const check = (contextHome) => {
+    const check = (contextHome, checkStage) => {
+      stage = checkStage;
       const current = { home: accountHome, ...query(contextHome) };
-      if (!sameFile(reference, current))
+      if (!sameFile(reference, current)) {
+        code = "CODESHELL_KEYCHAIN_PREFLIGHT_IDENTITY_CHANGED";
+        identity = identityMatches(reference, current);
         throw new Error(
           "The existing default Keychain identity changed or the private default differs",
         );
+      }
     };
 
     if (preferenceInfo) {
-      check(accountHome);
-      stage = "verifying the private Keychain metadata without overwriting preferences";
+      check(accountHome, "account-before");
+      stage = "private-preference";
       verifyPreference(preferenceFile, xml);
-      check(actualHome);
-      check(accountHome);
+      check(actualHome, "private");
+      check(accountHome, "account-after");
       if (!pinned) {
         writeFileSync(
           receiptFile,
@@ -176,7 +209,7 @@ export function ensureElectronKeychainContext({
         );
       }
     } else {
-      stage = "binding the private HOME to the existing default login Keychain";
+      stage = "bind-private-context";
       bindPrivateKeychainContext({
         home: actualHome,
         root: dirname(actualHome),
@@ -188,7 +221,7 @@ export function ensureElectronKeychainContext({
     }
 
     if (!pinned) {
-      stage = "pinning the verified private Keychain metadata";
+      stage = "pin-reference";
       const serialized = `${JSON.stringify(reference)}\n`;
       if (Buffer.byteLength(serialized) > 4_096)
         throw new Error("The verified Keychain metadata reference exceeds 4KiB");
@@ -196,9 +229,24 @@ export function ensureElectronKeychainContext({
     }
     return { home: actualHome, referenceFile, receiptFile, reused: Boolean(pinned) };
   } catch (cause) {
-    throw new Error(
-      `macOS Keychain preflight failed while ${stage}. Check the existing default login Keychain and the fixture metadata, then retry. Electron was not started.`,
+    const error = new Error(
+      `macOS Keychain preflight failed while ${stages[stage]}. Check the existing default login Keychain and the fixture metadata, then retry. Electron was not started by this preflight invocation; this check does not launch new Electron processes.`,
       { cause },
     );
+    Object.defineProperties(error, {
+      code: { value: code, enumerable: true },
+      preflightStage: { value: stage, enumerable: true },
+    });
+    diagnostics.set(
+      error,
+      Object.freeze({
+        version: 1,
+        code,
+        stage,
+        launchStarted: false,
+        ...(identity ? { identity } : {}),
+      }),
+    );
+    throw error;
   }
 }

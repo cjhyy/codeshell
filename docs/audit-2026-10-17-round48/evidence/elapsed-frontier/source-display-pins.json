@@ -1,0 +1,156 @@
+[
+  {
+    "path": "packages/tui/src/ui/components/StatusLine.tsx",
+    "bytes": 7462,
+    "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+    "lines": 227,
+    "pinnedBeforeDisplayUTC": "2026-10-17T15:52:14.992111+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        227
+      ]
+    ],
+    "semanticRead": "pending manual interpretation"
+  },
+  {
+    "path": "packages/tui/src/ui/App.tsx",
+    "bytes": 90976,
+    "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+    "lines": 2318,
+    "pinnedBeforeDisplayUTC": "2026-10-17T15:52:27.409506+00:00",
+    "displayedLineRanges": [
+      [
+        340,
+        365
+      ],
+      [
+        385,
+        398
+      ],
+      [
+        428,
+        447
+      ],
+      [
+        728,
+        748
+      ],
+      [
+        793,
+        810
+      ],
+      [
+        2278,
+        2300
+      ],
+      [
+        211,
+        219
+      ],
+      [
+        290,
+        295
+      ],
+      [
+        698,
+        715
+      ],
+      [
+        1058,
+        1085
+      ],
+      [
+        1659,
+        1691
+      ],
+      [
+        1532,
+        1548
+      ],
+      [
+        1558,
+        1565
+      ],
+      [
+        1617,
+        1653
+      ],
+      [
+        1717,
+        1723
+      ]
+    ],
+    "semanticRead": "pending manual interpretation",
+    "additionalBeforeDisplayPinUTC": "2026-10-17T15:52:48.105206+00:00",
+    "additionalPinSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+    "lastAdditionalBeforeDisplayUTC": "2026-10-17T15:54:38.960308+00:00",
+    "lastAdditionalSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+  },
+  {
+    "path": "packages/tui/src/ui/components/StatusLine.test.tsx",
+    "bytes": 710,
+    "sha256": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+    "lines": 23,
+    "pinnedBeforeDisplayUTC": "2026-10-17T15:52:27.411286+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        23
+      ]
+    ],
+    "semanticRead": "pending manual interpretation"
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+    "bytes": 15679,
+    "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+    "lines": 445,
+    "pinnedBeforeDisplayUTC": "2026-10-17T15:53:52.722413+00:00",
+    "displayedLineRanges": [
+      [
+        119,
+        135
+      ],
+      [
+        148,
+        158
+      ],
+      [
+        360,
+        370
+      ]
+    ],
+    "semanticRead": "pending manual interpretation",
+    "lastAdditionalBeforeDisplayUTC": "2026-10-17T15:54:38.962314+00:00",
+    "lastAdditionalSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84"
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/agent.ts",
+    "bytes": 62377,
+    "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+    "lines": 1571,
+    "pinnedBeforeDisplayUTC": "2026-10-17T15:53:52.723817+00:00",
+    "displayedLineRanges": [
+      [
+        226,
+        236
+      ],
+      [
+        269,
+        276
+      ],
+      [
+        487,
+        493
+      ],
+      [
+        704,
+        720
+      ]
+    ],
+    "semanticRead": "pending manual interpretation",
+    "lastAdditionalBeforeDisplayUTC": "2026-10-17T15:54:38.963279+00:00",
+    "lastAdditionalSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca"
+  }
+]

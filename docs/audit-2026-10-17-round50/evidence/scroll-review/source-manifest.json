@@ -1,0 +1,253 @@
+{
+  "schema": "static-source-manifest-v1",
+  "rootReportedContext": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "contextVerification": "Parent only; no Git",
+  "files": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "pinnedBeforeThisTaskBodyUTC": "2026-10-17T16:45:55.953924+00:00",
+      "readBeforeBodyPinConfirmedUTC": "2026-10-17T16:46:51.750828+00:00",
+      "currentReadSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "displayedLineRanges": [
+        [
+          66,
+          173
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          66,
+          173
+        ]
+      ],
+      "semanticLineCount": 108,
+      "bodyDisplayedLineCount": 108,
+      "navigationLineRanges": [],
+      "displayedUnionIncludingNavigationLineCount": 108,
+      "purpose": "Supplemental static review of following/snap, onScroll/at-bottom, ordinary layout effect and ResizeObserver callback/cleanup, jump/focus source. Prior83 selected97 data lines already read at sameSHA. No actual DOM/React/layout/timer/scroll execution or connection/auth certification. Module remains selected, not new full frontier.",
+      "initialSemanticReadSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "endingBytes": 6078,
+      "endingSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:50:44.609046+00:00",
+      "prior83Comparison": {
+        "sameSHA": true,
+        "prior83SemanticLineCount": 97,
+        "overlapWithThisRead": 36,
+        "thisReadOutside83": 72,
+        "notFirstEverUnreadClaim": true,
+        "provenance": {
+          "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+          "pointer": "/files/0"
+        }
+      }
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "lines": 1404,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "pinnedBeforeThisTaskBodyUTC": "2026-10-17T16:45:55.956010+00:00",
+      "readBeforeBodyPinConfirmedUTC": "2026-10-17T16:46:51.752356+00:00",
+      "currentReadSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "displayedLineRanges": [
+        [
+          757,
+          782
+        ],
+        [
+          863,
+          894
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          18,
+          18
+        ],
+        [
+          757,
+          782
+        ],
+        [
+          863,
+          894
+        ]
+      ],
+      "semanticLineCount": 59,
+      "bodyDisplayedLineCount": 58,
+      "navigationLineRanges": [
+        [
+          18,
+          18
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 59,
+      "purpose": "Actual app.css import, scrollable messages element tabindex/id/listRef/onScroll, transcript contentRef, conditional jump button and its onClick plus announcement text. No auth/room identity/approval or Host mechanism expanded.",
+      "initialSemanticReadSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "endingBytes": 53688,
+      "endingSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:50:44.609046+00:00",
+      "prior83Comparison": {
+        "sameSHA": true,
+        "prior83SemanticLineCount": 65,
+        "overlapWithThisRead": 14,
+        "thisReadOutside83": 45,
+        "notFirstEverUnreadClaim": true,
+        "provenance": {
+          "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+          "pointer": "/files/1"
+        }
+      }
+    },
+    {
+      "path": "packages/web/app/app.css",
+      "bytes": 21770,
+      "lines": 1177,
+      "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:47:51.532173+00:00",
+      "displayedLineRanges": [
+        [
+          440,
+          516
+        ],
+        [
+          1085,
+          1101
+        ]
+      ],
+      "additionalBeforeDisplayUTC": "2026-10-17T16:48:05.856620+00:00",
+      "additionalSha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          444,
+          456
+        ],
+        [
+          461,
+          463
+        ],
+        [
+          480,
+          512
+        ],
+        [
+          1090,
+          1095
+        ]
+      ],
+      "semanticLineCount": 55,
+      "bodyDisplayedLineCount": 94,
+      "navigationLineRanges": [
+        [
+          100,
+          100
+        ],
+        [
+          444,
+          444
+        ],
+        [
+          451,
+          451
+        ],
+        [
+          473,
+          473
+        ],
+        [
+          491,
+          491
+        ],
+        [
+          495,
+          495
+        ],
+        [
+          498,
+          498
+        ],
+        [
+          506,
+          506
+        ],
+        [
+          510,
+          510
+        ],
+        [
+          979,
+          979
+        ],
+        [
+          989,
+          989
+        ],
+        [
+          1090,
+          1090
+        ],
+        [
+          1093,
+          1093
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 97,
+      "purpose": "Selected structural sizing/overflow/absolute jump and hidden announcement rules for actual message viewport/messages/transcript; responsive padding/gap. CSS source only, no computed style/layout observation or global stylesheet correctness conclusion; nonTS source not part of earlier4643 denominator.",
+      "initialSemanticReadSha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "endingBytes": 21770,
+      "endingSha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:50:44.609046+00:00",
+      "prior83Comparison": {
+        "sameSHA": null,
+        "prior83SemanticLineCount": 0,
+        "overlapWithThisRead": 0,
+        "thisReadOutside83": 55,
+        "notFirstEverUnreadClaim": true,
+        "provenance": null
+      }
+    }
+  ],
+  "counts": {
+    "selectedProductSourceRows": 3,
+    "fullProductModuleRows": 0,
+    "semanticLines": 222,
+    "bodyDisplayedLines": 260,
+    "displayedUnionIncludingNavigationLines": 264,
+    "testDeclarationLines": 0,
+    "prior83OverlapLines": 50,
+    "thisReadOutside83Lines": 172,
+    "notNewUniqueAllHistoryCoverage": true
+  },
+  "historicalMetadataReads": {
+    "machineExtractedRows": 49,
+    "canonicalCompactRowsRead": 4,
+    "prior83CanonicalRowsRead": 2,
+    "retainedPathWindows": 100,
+    "totalPathHits": 190,
+    "retainedShaWindows": 56,
+    "totalShaHits": 56,
+    "cap": 100,
+    "locatorContextsSemanticallyRead": 0,
+    "sameShaPriorModuleFullEstablished": false,
+    "knownSameShaPriorSelected": 97
+  },
+  "instructionStatus": "Current hashes56d9…/29806470… match prior full CODESHELL/AGENTS reading; no new instruction-body claim.",
+  "scope": "Deliberate complement to83 static data selection; no modification to83, old indexes or global counts. DOM static source only, no real browser/layout/event trace. Root84 mutable not read.",
+  "navigationOnlyUnopened": [
+    "packages/web/app/main.tsx"
+  ],
+  "boundary": [
+    "No actual user data, auth/connection/room identity/native mechanisms",
+    "No product/helper/import/test/fixture/React/DOM/clock/timer/network/Git execution",
+    "NonTS CSS selected rows do not alter earlierTS/TSX coverage denominators"
+  ]
+}

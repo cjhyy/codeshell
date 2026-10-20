@@ -1,0 +1,79 @@
+{
+  "rootReportedBaseline": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "gitCertified": false,
+  "instructionReuse": "Same-SHA previously fully read CODESHELL/AGENTS reused, no new body173",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T21:05:08.643707+00:00",
+      "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T21:05:08.645237+00:00",
+      "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-ref.test.ts",
+      "bytes": 6304,
+      "lineCount": 180,
+      "sha256": "951c1a53e12ba55e229734ce5c5c50bb191c15a1e8fb74c65e087d3b1d20fdaf",
+      "pinnedAtUTC": "2026-10-17T21:05:08.645920+00:00",
+      "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-request.ts",
+      "bytes": 501,
+      "lineCount": 12,
+      "sha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6",
+      "pinnedAtUTC": "2026-10-17T21:05:08.646469+00:00",
+      "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/core/src/panel-apps/update-check.test.ts",
+      "bytes": 21387,
+      "lineCount": 546,
+      "sha256": "1e594d348001c7e42122e4fab4b61f1ca56dec745ea77a3565ae17f9b01a062e",
+      "pinnedAtUTC": "2026-10-17T21:05:08.647383+00:00",
+      "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/core/src/panel-apps/update-check.ts",
+      "bytes": 6600,
+      "lineCount": 171,
+      "sha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b",
+      "pinnedAtUTC": "2026-10-17T21:05:08.647826+00:00",
+      "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-manifest.ts",
+      "bytes": 7723,
+      "lineCount": 210,
+      "sha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af",
+      "pinnedAtUTC": "2026-10-17T21:05:08.648239+00:00",
+      "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/core/src/panel-apps/source.ts",
+      "bytes": 3214,
+      "lineCount": 96,
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "pinnedAtUTC": "2026-10-17T21:05:08.648668+00:00",
+      "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-ref.ts",
+      "bytes": 5668,
+      "lineCount": 134,
+      "sha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f",
+      "pinnedAtUTC": "2026-10-17T21:05:08.648928+00:00",
+      "timing": "before any own prep173 body/nav; actual filename inventory confirmed"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "frozenUTC": "2026-10-17T17:39:43.580627+00:00",
+  "root": "/tmp/codeshell-audit-round105-character-full-gate-review",
+  "reviewType": "Same-author metadata cross-check/self-check only; original independent task wording explicitly corrected by Root",
+  "sameAuthorAs102": true,
+  "independentAuthor": false,
+  "independentProductSourceReview": false,
+  "files": [
+    {
+      "path": "checks.first.json",
+      "bytes": 15192,
+      "sha256": "7d844df5854b24b9ff6713b74cc352f8f621a7978936e2e0ada17e4ce50db691"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 15520,
+      "sha256": "aa1ad3335b214ac00394079b1cf6211ce8c34b920bc61959cea4195d08c29dc0"
+    },
+    {
+      "path": "first-checker-diagnostic.json",
+      "bytes": 889,
+      "sha256": "641ca7c07817352d7363a22e79bc608fbb3effa1ec29fd6cdd39c874190afe57"
+    },
+    {
+      "path": "first-checker-stderr.txt",
+      "bytes": 199,
+      "sha256": "0610ed90775e8652f6c900f2892fdfebf3eca3adcd576ac19121d48e061a4b92"
+    },
+    {
+      "path": "input-before-pins.json",
+      "bytes": 6455,
+      "sha256": "ab9e3f7e31fc1ed2451893c379c3136fa905a5377f0c7d4d209f66c936318ff5"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3697,
+      "sha256": "ad1e4c4ec80e3defb6793e074171e307ef0730846e06313d54a5e9c9377149c0"
+    },
+    {
+      "path": "verify-metadata.first.py",
+      "bytes": 12264,
+      "sha256": "705cc0e1d64216da911489c7bc920780b280e9e832823dd1ec077dfb1f823cde"
+    },
+    {
+      "path": "verify-metadata.py",
+      "bytes": 12914,
+      "sha256": "e8c726c8533dedb8e9f5f826b39f3fa6bab0bc276da9951922fb52f086634299"
+    }
+  ],
+  "fileCountExcludingSelf": 8,
+  "selfExcluded": true,
+  "result": "Limited support for frozen102target-only originalR7full-source exclusion",
+  "currentProductSemanticLines": 0,
+  "currentTestDeclarationLines": 0,
+  "currentProductSourceShaRechecks": 0,
+  "newHistoryScans": 0,
+  "authorMethodsExecuted": 0,
+  "productRuns": 0,
+  "GitOperations": 0,
+  "findingCountsContributed": false,
+  "additionalTargetOrConsumerFullActivations": 0,
+  "globalCoverageUpdated": false,
+  "originalFieldNamesPreserved": true,
+  "metadataFirstFailures": 1,
+  "metadataCheckerCorrections": 1,
+  "metadataTruncations": 0,
+  "firstFailureArtifacts": [
+    "verify-metadata.first.py",
+    "checks.first.json",
+    "first-checker-stderr.txt",
+    "first-checker-diagnostic.json"
+  ],
+  "oldFrozenPacketsChanged": false
+}

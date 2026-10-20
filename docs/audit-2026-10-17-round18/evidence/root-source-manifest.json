@@ -1,0 +1,86 @@
+{
+  "baseline": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "instruction digest revalidated unchanged from prior full read"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "instruction digest revalidated unchanged from prior full read"
+    },
+    {
+      "path": "packages/web/src/lib/environment.ts",
+      "bytes": 1644,
+      "sha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "full source read; isEnvironmentDescriptor actual only,6 first focused tests; projectReferenceKey not called"
+    },
+    {
+      "path": "packages/server/src/environment-identity.ts",
+      "bytes": 2584,
+      "sha256": "e15810d73ed7a91cfdc8d1416e8536036208ba087d0e98d799d95f2887127e7f",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "descriptor producer selected57-69 only assessed; identity-file code printed but not freshly audited or executed; no import"
+    },
+    {
+      "path": "packages/web/app/EnvironmentMenu.tsx",
+      "bytes": 7042,
+      "sha256": "9948e9d1fd7863aa2f9d9984ef54d0d8d19d7b68ec275c30a9b09f8078722c61",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "static selected1-95, especially48-57 guard consumer; React/auth/UI not imported or run"
+    },
+    {
+      "path": "packages/web/app/environments.ts",
+      "bytes": 3934,
+      "sha256": "788bc33467203f6c90cb78495af2e548e6b8b12602e3c5b04e3aed6fffe53563",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "static selected1-92, especially41-50 descriptor guard consumer; no storage/navigation/identity operation executed"
+    },
+    {
+      "path": "packages/web/src/index.ts",
+      "bytes": 2491,
+      "sha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "rg-selected export references59-60 only; barrel not imported"
+    },
+    {
+      "path": "packages/web/app/environments.test.ts",
+      "bytes": 3016,
+      "sha256": "783d0c9a371790b55baaef41397926876eecbc91770c14c92b92112c3f2b1f62",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "rg-selected guard/projectReferenceKey references71-76 only, not executed or claimed full read"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/hosts.md",
+      "bytes": 16168,
+      "sha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "selected55-91 prior static coverage/dedup acknowledgement only, not rerun"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "prescribed guard wrapper pin; actual first shard run"
+    }
+  ],
+  "note": "Selected source pins only; prior static module read acknowledged, no identity service/storage/navigation/auth or transitive/full environment runtime."
+}

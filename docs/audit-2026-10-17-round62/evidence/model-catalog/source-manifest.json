@@ -1,0 +1,927 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "d195788bc2c18cd85c81aea4a431ab29074df5cf",
+  "rootReportedBranch": "codex/audit/catalog-source-theme-round62-20261018",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "packages/core/src/model-catalog/resolve.ts",
+      "bytes": 4284,
+      "lines": 113,
+      "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "initialPinAtUTC": "2026-10-17T20:34:36.398034+00:00",
+      "initialSemanticReadSha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          113
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          113
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          113
+        ]
+      ],
+      "semanticReadLines": 113,
+      "sourceKind": "product",
+      "scope": "Full physical body read; ordinary exact catalog/preset lookup and returned model/paramValues fields. Credential compatibility, secret use and runtime behavior are not certified.",
+      "navigationLineRanges": [],
+      "navigationOnlyLineRanges": [],
+      "oldOverlap": "R10 catalog report/source pins document prior static reading; exact full-file extent was not explicit in that source manifest. resolve additionally has explicit R17 80–113 same-SHA selected overlap."
+    },
+    {
+      "path": "packages/core/src/model-catalog/gen-connections.ts",
+      "bytes": 1539,
+      "lines": 43,
+      "sha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+      "initialPinAtUTC": "2026-10-17T20:34:36.398790+00:00",
+      "initialSemanticReadSha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "semanticReadLines": 43,
+      "sourceKind": "product",
+      "scope": "Full physical body read; normal tag filtering and id/kind/baseUrl/defaultModel projection; no real provider or credential operation.",
+      "navigationLineRanges": [],
+      "navigationOnlyLineRanges": [],
+      "oldOverlap": "R10 catalog report/source pins document prior static reading; exact full-file extent was not explicit in that source manifest. resolve additionally has explicit R17 80–113 same-SHA selected overlap."
+    },
+    {
+      "path": "packages/core/src/model-catalog/upsert.ts",
+      "bytes": 1099,
+      "lines": 25,
+      "sha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+      "initialPinAtUTC": "2026-10-17T20:34:36.399605+00:00",
+      "initialSemanticReadSha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "semanticReadLines": 25,
+      "sourceKind": "product",
+      "scope": "Full physical body read; exact id/value append/replace and copied input array; no storage durability certification.",
+      "navigationLineRanges": [],
+      "navigationOnlyLineRanges": [],
+      "oldOverlap": "R10 catalog report/source pins document prior static reading; exact full-file extent was not explicit in that source manifest. resolve additionally has explicit R17 80–113 same-SHA selected overlap."
+    },
+    {
+      "path": "packages/core/src/model-catalog/types.ts",
+      "bytes": 5401,
+      "lines": 121,
+      "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "initialPinAtUTC": "2026-10-17T20:37:23.191028+00:00",
+      "initialSemanticReadSha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          66,
+          118
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          66,
+          118
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          66,
+          118
+        ]
+      ],
+      "semanticReadLines": 53,
+      "sourceKind": "product",
+      "scope": "Selected catalog/preset field shape and ordinary merge-mode declarations only; schema not executed.",
+      "navigationLineRanges": [
+        [
+          66,
+          66
+        ],
+        [
+          76,
+          76
+        ],
+        [
+          102,
+          102
+        ],
+        [
+          105,
+          106
+        ]
+      ],
+      "navigationOnlyLineRanges": [],
+      "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/model-catalog/index.ts",
+      "bytes": 4933,
+      "lines": 127,
+      "sha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "initialPinAtUTC": "2026-10-17T20:37:23.193570+00:00",
+      "initialSemanticReadSha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          68,
+          113
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          68,
+          113
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          68,
+          113
+        ]
+      ],
+      "semanticReadLines": 46,
+      "sourceKind": "product",
+      "scope": "Selected getMergedCatalog and findCatalogEntry value/order contracts only; user-catalog filesystem loader not read or run in this packet.",
+      "navigationLineRanges": [
+        [
+          26,
+          26
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          68,
+          68
+        ],
+        [
+          73,
+          73
+        ],
+        [
+          78,
+          79
+        ],
+        [
+          83,
+          83
+        ],
+        [
+          95,
+          95
+        ],
+        [
+          120,
+          120
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          26,
+          26
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          120,
+          120
+        ]
+      ],
+      "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/model-catalog/save-entry.ts",
+      "bytes": 6541,
+      "lines": 189,
+      "sha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+      "initialPinAtUTC": "2026-10-17T20:37:23.194351+00:00",
+      "initialSemanticReadSha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          118,
+          141
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          118,
+          141
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          118,
+          141
+        ]
+      ],
+      "semanticReadLines": 24,
+      "sourceKind": "product",
+      "scope": "Selected validation/result and actual upsert call site. Lock/backup/atomic-write names appear, but their implementations and durability are not audited or run.",
+      "navigationLineRanges": [
+        [
+          25,
+          25
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          118,
+          118
+        ],
+        [
+          123,
+          123
+        ],
+        [
+          138,
+          138
+        ],
+        [
+          161,
+          161
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          25,
+          25
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          161,
+          161
+        ]
+      ],
+      "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "bytes": 20093,
+      "lines": 500,
+      "sha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+      "initialPinAtUTC": "2026-10-17T20:37:23.195598+00:00",
+      "initialSemanticReadSha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          55,
+          105
+        ],
+        [
+          186,
+          241
+        ],
+        [
+          424,
+          445
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          55,
+          105
+        ],
+        [
+          186,
+          241
+        ],
+        [
+          424,
+          445
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          55,
+          105
+        ],
+        [
+          186,
+          241
+        ],
+        [
+          424,
+          445
+        ]
+      ],
+      "semanticReadLines": 129,
+      "sourceKind": "product",
+      "scope": "Selected unified connection list, model default selection and downstream call model precedence. Adjacent legacy/key and trace setup are shown, without authentication, transport or model execution certification.",
+      "navigationLineRanges": [
+        [
+          41,
+          41
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          97,
+          97
+        ],
+        [
+          103,
+          103
+        ],
+        [
+          170,
+          170
+        ],
+        [
+          186,
+          186
+        ],
+        [
+          196,
+          196
+        ],
+        [
+          226,
+          226
+        ],
+        [
+          239,
+          239
+        ],
+        [
+          347,
+          347
+        ],
+        [
+          424,
+          424
+        ],
+        [
+          437,
+          437
+        ],
+        [
+          439,
+          439
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          41,
+          41
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          170,
+          170
+        ],
+        [
+          347,
+          347
+        ]
+      ],
+      "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "bytes": 24537,
+      "lines": 640,
+      "sha256": "409b6675fd7cb582a63bf0158d84ae28519fc2881a8e6413c30266242c17729b",
+      "initialPinAtUTC": "2026-10-17T20:37:23.196664+00:00",
+      "initialSemanticReadSha256": "409b6675fd7cb582a63bf0158d84ae28519fc2881a8e6413c30266242c17729b",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          234,
+          265
+        ],
+        [
+          350,
+          374
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          234,
+          265
+        ],
+        [
+          350,
+          374
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          234,
+          265
+        ],
+        [
+          350,
+          374
+        ]
+      ],
+      "semanticReadLines": 57,
+      "sourceKind": "product",
+      "scope": "Selected unified connection list, default model forwarding and call override precedence. No upload, transport, authentication or generation is run or certified.",
+      "navigationLineRanges": [
+        [
+          40,
+          40
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          167,
+          167
+        ],
+        [
+          231,
+          231
+        ],
+        [
+          234,
+          234
+        ],
+        [
+          242,
+          242
+        ],
+        [
+          257,
+          257
+        ],
+        [
+          263,
+          263
+        ],
+        [
+          281,
+          281
+        ],
+        [
+          289,
+          289
+        ],
+        [
+          308,
+          308
+        ],
+        [
+          312,
+          312
+        ],
+        [
+          350,
+          350
+        ],
+        [
+          356,
+          356
+        ],
+        [
+          367,
+          367
+        ],
+        [
+          370,
+          370
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          40,
+          40
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          167,
+          167
+        ],
+        [
+          231,
+          231
+        ],
+        [
+          281,
+          281
+        ],
+        [
+          289,
+          289
+        ],
+        [
+          308,
+          308
+        ],
+        [
+          312,
+          312
+        ]
+      ],
+      "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/model-catalog/gen-connections.test.ts",
+      "bytes": 3587,
+      "lines": 86,
+      "sha256": "4f780bb60279f1e22c90d0117b20f294f46727a018b3290cecbd5635ac9eba03",
+      "initialPinAtUTC": "2026-10-17T20:37:23.197623+00:00",
+      "initialSemanticReadSha256": "4f780bb60279f1e22c90d0117b20f294f46727a018b3290cecbd5635ac9eba03",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          60
+        ],
+        [
+          72,
+          85
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          60
+        ],
+        [
+          72,
+          85
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          1,
+          60
+        ],
+        [
+          72,
+          85
+        ]
+      ],
+      "semanticReadLines": 74,
+      "sourceKind": "test-declaration",
+      "scope": "Selected existing test declarations; tests/imports/assertions were not executed and no current pass is claimed.",
+      "navigationLineRanges": [
+        [
+          2,
+          2
+        ],
+        [
+          9,
+          9
+        ],
+        [
+          38,
+          39
+        ],
+        [
+          43,
+          43
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          59,
+          60
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          68,
+          68
+        ],
+        [
+          72,
+          72
+        ],
+        [
+          76,
+          76
+        ],
+        [
+          79,
+          79
+        ],
+        [
+          84,
+          84
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          63,
+          63
+        ],
+        [
+          68,
+          68
+        ]
+      ],
+      "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/model-catalog/upsert.test.ts",
+      "bytes": 2537,
+      "lines": 80,
+      "sha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8",
+      "initialPinAtUTC": "2026-10-17T20:37:23.198638+00:00",
+      "initialSemanticReadSha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          29,
+          80
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          29,
+          80
+        ]
+      ],
+      "semanticReadLineRanges": [
+        [
+          29,
+          80
+        ]
+      ],
+      "semanticReadLines": 52,
+      "sourceKind": "test-declaration",
+      "scope": "Selected existing test declarations; tests/imports/assertions were not executed and no current pass is claimed.",
+      "navigationLineRanges": [
+        [
+          2,
+          2
+        ],
+        [
+          9,
+          9
+        ],
+        [
+          29,
+          31
+        ],
+        [
+          35,
+          36
+        ],
+        [
+          40,
+          40
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          56,
+          57
+        ],
+        [
+          59,
+          59
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          68,
+          68
+        ]
+      ],
+      "navigationOnlyLineRanges": [
+        [
+          2,
+          2
+        ],
+        [
+          9,
+          9
+        ]
+      ],
+      "oldOverlap": "Necessary chain/test selected reading; no claim of first or unique new coverage."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialPinAtUTC": "2026-10-17T20:34:36.394943+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticReadLineRanges": [],
+      "semanticReadLines": 0,
+      "sourceKind": "instruction",
+      "scope": "Previously read unchanged instructions, hash-only reuse; no new instruction semantic lines."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialPinAtUTC": "2026-10-17T20:34:36.396828+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticReadLineRanges": [],
+      "semanticReadLines": 0,
+      "sourceKind": "instruction",
+      "scope": "Previously read unchanged instructions, hash-only reuse; no new instruction semantic lines."
+    }
+  ],
+  "metadataFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+      "bytes": 7143,
+      "sha256": "1bb1472806c05b9756a18700ef03b8fb8fd785275d2d9bcf4f0e0fde9c971ae1",
+      "pinAtUTC": "2026-10-17T20:36:29.738321+00:00",
+      "kind": "prior-audit-metadata"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json",
+      "bytes": 10532,
+      "sha256": "2823ccfc08f464aecd29a2fae71f0dac1d0287329b6a9943da01087fc7eac059",
+      "pinAtUTC": "2026-10-17T20:36:29.739435+00:00",
+      "kind": "prior-audit-metadata"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/catalog.md",
+      "bytes": 4690,
+      "lines": 35,
+      "sha256": "f7f958a8b13d27694c8b61c81330fa1d8ef695f54a797b973ca72a90e813399d",
+      "pinAtUTC": "2026-10-17T20:36:38.875969+00:00",
+      "kind": "prior-audit-report"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md",
+      "bytes": 570,
+      "lines": 10,
+      "sha256": "7bdc168137ef8248bbe9e5c0483fb7fb184a946da6256db9354841dbd21fdf61",
+      "pinAtUTC": "2026-10-17T20:36:38.878676+00:00",
+      "kind": "prior-audit-report"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/catalog.md",
+      "bytes": 8419,
+      "lines": 43,
+      "sha256": "2a8acde17a0ab61a9a1975dff3ed83bc0f26b1ae6c59148ea0be087eead7f5ce",
+      "pinAtUTC": "2026-10-17T20:36:38.879687+00:00",
+      "kind": "prior-audit-report"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-navigation-skip.md",
+      "bytes": 1800,
+      "lines": 31,
+      "sha256": "89df4c2777bd599f2b6d72599d6e628e813bf2d7507888417bc29912058d0e14",
+      "pinAtUTC": "2026-10-17T20:36:38.880660+00:00",
+      "kind": "prior-audit-report"
+    }
+  ],
+  "sharedHistory": {
+    "path": "/tmp/codeshell-audit-round166-desktop-theme-window/history-batch.json",
+    "bytes": 1802741,
+    "sha256": "ef4df7a319131c0faaf06d395d75705091386a4b243fe9899c693f29195de07a"
+  },
+  "counts": {
+    "files": 12,
+    "productFiles": 8,
+    "testDeclarationFiles": 2,
+    "instructionHashOnlyFiles": 2,
+    "productSemanticLines": 490,
+    "testDeclarationLines": 126,
+    "productAndTestDisplayedLines": 616,
+    "fullProductFiles": 3,
+    "selectedProductFiles": 5
+  },
+  "coverageMeaning": "Physical full/selected source reading for the stated ordinary contract only, not all-behavior validation, first reading, unique new coverage or runtime certification. Navigation outside selected ranges is separate and not semantic-body coverage.",
+  "priorMetadataRead": {
+    "canonicalObjects": 4,
+    "canonicalObjectEvidence": "canonical-selected-objects.json",
+    "reports": [
+      {
+        "path": "docs/audit-2026-10-17-round10/catalog.md",
+        "selectedLineRanges": [
+          [
+            1,
+            35
+          ]
+        ],
+        "displayLines": 35,
+        "totalLines": 35
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md",
+        "selectedLineRanges": [
+          [
+            1,
+            10
+          ]
+        ],
+        "displayLines": 10,
+        "totalLines": 10
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/catalog.md",
+        "selectedLineRanges": [
+          [
+            1,
+            43
+          ]
+        ],
+        "displayLines": 43,
+        "totalLines": 43
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/catalog-navigation-skip.md",
+        "selectedLineRanges": [
+          [
+            1,
+            31
+          ]
+        ],
+        "displayLines": 31,
+        "totalLines": 31
+      }
+    ],
+    "totalSelectedMarkdownLines": 119
+  },
+  "productExecutions": 0,
+  "testsExecuted": 0,
+  "gitCalls": 0,
+  "networkCalls": 0
+}

@@ -16,6 +16,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -84,6 +85,13 @@ async function installFixture(version, marker, installSnapshot = true) {
     `window.codeshellPanel.registerTool("echo_marker", async (args) => ({ marker: ${JSON.stringify(
       marker,
     )}, value: args.value ?? null }));`,
+    `window.wasmProbe = (async () => {
+      const response = await fetch("./engine.wasm");
+      const { instance } = await WebAssembly.instantiate(await response.arrayBuffer());
+      let dynamicEvalDenied = false;
+      try { new Function("return 1")(); } catch { dynamicEvalDenied = true; }
+      return { answer: instance.exports.answer(), dynamicEvalDenied, mime: response.headers.get("content-type") };
+    })();`,
     "",
   ].join("\n");
 
@@ -96,6 +104,11 @@ async function installFixture(version, marker, installSnapshot = true) {
   );
   await writeFile(join(panelSourceAssetsDir, "index.html"), html);
   await writeFile(join(panelSourceAssetsDir, "app.js"), script);
+  const wasmBytes = Buffer.from([
+    0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 127, 3, 2, 1, 0, 7, 10, 1, 6, 97, 110, 115, 119,
+    101, 114, 0, 0, 10, 6, 1, 4, 0, 65, 42, 11,
+  ]);
+  await writeFile(join(panelSourceAssetsDir, "engine.wasm"), wasmBytes);
   await writeFile(
     join(panelSourceDir, "agent", "skills", "panel-e2e", "SKILL.md"),
     "---\nname: panel-e2e\ndescription: E2E Panel App Skill.\n---\n",
@@ -121,6 +134,7 @@ async function installFixture(version, marker, installSnapshot = true) {
     );
     await writeFile(join(panelAssetsDir, "index.html"), html);
     await writeFile(join(panelAssetsDir, "app.js"), script);
+    await writeFile(join(panelAssetsDir, "engine.wasm"), wasmBytes);
     await writeFile(
       join(panelAppDir, "agent", "skills", "panel-e2e", "SKILL.md"),
       "---\nname: panel-e2e\ndescription: E2E Panel App Skill.\n---\n",
@@ -328,7 +342,7 @@ try {
   assert(firstPrepared.revision === first.revision, "prepare/list revision mismatch");
   const firstView = await attachPanel(win, first, firstPrepared);
 
-  await win.waitForFunction(async () => {
+  await waitForAsyncFunction(win, async () => {
     const candidate = document.getElementById("panel-app-e2e");
     if (typeof candidate?.executeJavaScript !== "function") return false;
     return (
@@ -347,11 +361,19 @@ try {
     })`,
   );
   assert(sandbox.marker === "panel-v1", "Panel App asset did not load");
+  const wasm = await execute(firstView, "window.wasmProbe");
+  assert(wasm?.answer === 42, "reviewed package Wasm did not compile in the sandboxed guest");
+  assert(wasm?.mime === "application/wasm", "package Wasm MIME was not preserved");
+  assert(wasm?.dynamicEvalDenied === true, "Wasm support unexpectedly enabled JavaScript eval");
   assert(sandbox.hasBridge, "scoped preload bridge was not exposed");
   assert(!sandbox.hasProcess && !sandbox.hasRequire, "Node globals escaped into the panel");
   assert(!sandbox.popup, "plugin popup was not denied");
 
   const context = await execute(firstView, "window.codeshellPanel.getContext()");
+  assert(
+    context.capabilities?.packageAssets?.wasm === true,
+    "package Wasm capability was not advertised",
+  );
   assert(context.sessionId === "session-e2e", "session permission was not scoped correctly");
   assert(context.cwd === projectDir, "workspace permission was not scoped correctly");
   assert(context.trusted === false, "workspace trust must be decided by main");
@@ -468,12 +490,16 @@ try {
     .waitFor({ state: "visible" });
   await reviewDialog.getByRole("button", { name: /^(确认并更新|Review and update)$/ }).click();
   await reviewDialog.waitFor({ state: "hidden" });
-  await win.waitForFunction(async (cwd) => {
-    const selected = (await window.codeshell.getPanelAppBindings(cwd)).find(
-      (item) => item.appId === "panel-e2e",
-    );
-    return selected?.version === "1.0.1" && selected?.bound && !!selected?.packageDigest;
-  }, projectDir);
+  await waitForAsyncFunction(
+    win,
+    async (cwd) => {
+      const selected = (await window.codeshell.getPanelAppBindings(cwd)).find(
+        (item) => item.appId === "panel-e2e",
+      );
+      return selected?.version === "1.0.1" && selected?.bound && !!selected?.packageDigest;
+    },
+    projectDir,
+  );
   const staleReviewRejected = await win.evaluate(
     async ({ revision, cwd }) => {
       try {
@@ -511,7 +537,7 @@ try {
     "Panel App update reused stale storage",
   );
   const secondView = await attachPanel(win, second, secondPrepared);
-  await win.waitForFunction(async () => {
+  await waitForAsyncFunction(win, async () => {
     const candidate = document.getElementById("panel-app-e2e");
     if (typeof candidate?.executeJavaScript !== "function") return false;
     return (

@@ -1,5 +1,6 @@
 /** Public SDK, default transport, and actual lost-response HTTP fixtures; synthetic tokens only. */
 import assert from "node:assert/strict";
+import { linkProviderModuleUrl } from "./fixtures/link-provider-module.mjs";
 import { createServer, request as httpRequest } from "node:http";
 import https from "node:https";
 import { syncBuiltinESMExports } from "node:module";
@@ -55,6 +56,8 @@ globalThis.fetch = async () => {
 try {
   const { CredentialStore, executeLocalOAuthLinkAction } =
     await import("../packages/core/dist/index.js");
+  const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+  installDefaultLinkProviders();
   const results = [];
   for (const [provider, mode] of [
     ["github", "refresh"],

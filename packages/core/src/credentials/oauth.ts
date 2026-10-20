@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import type {
   Credential,
   OAuthCredentialPublicStatus,
@@ -136,7 +137,10 @@ export function parseOAuthCredentialSecret(secret: string): OAuthCredentialSecre
 export function isBrowserOAuthLinkCredential(
   credential: Pick<Credential, "type" | "meta">,
 ): boolean {
-  return credential.type === "link" && credential.meta?.linkAuthSource === "browser-oauth";
+  return (
+    credential.type === "link" &&
+    linkConnectionMetadata(credential.meta).linkAuthSource === "browser-oauth"
+  );
 }
 
 /** Return only the bearer token from a Link secret, never its refresh material. */

@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-16/evidence/root-git.test.ts:
+(pass) A03 first unstaged status entry loses first filename character [300.38ms]
+(pass) A04 pipe in legitimate commit subject corrupts log fields [271.51ms]
+(pass) A05 failed model result still causes /commit to stage and commit [458.60ms]
+(pass) A06 /commit generates from unstaged diff then commits unseen staged changes too [442.87ms]
+
+ 4 pass
+ 0 fail
+ 13 expect() calls
+Ran 4 tests across 1 file. [1.94s]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

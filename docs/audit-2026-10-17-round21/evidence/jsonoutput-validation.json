@@ -1,0 +1,54 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round21/evidence/jsonoutput-focused.test.ts"
+      ],
+      "exitCode": 0,
+      "raw": "docs/audit-2026-10-17-round21/evidence/jsonoutput-first.raw.log",
+      "exit": "docs/audit-2026-10-17-round21/evidence/jsonoutput-first.exit.json",
+      "completed": true,
+      "pass": 16,
+      "expect": 52,
+      "fail": 0,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 16,
+      "actualProductionLeafCalls": true,
+      "manualMirroredRecipe": false,
+      "firstAttempt": true
+    }
+  ],
+  "cleanTotals": {
+    "runs": 1,
+    "pass": 16,
+    "expect": 52,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 0,
+    "focusedTests": 16
+  },
+  "failedShards": 0,
+  "reruns": 0,
+  "productChanges": false,
+  "firstRunHandling": "Combined raw stdout/stderr+exit persisted before inspection; one guarded first attempt; fixture/raw unchanged after run.",
+  "scope": "Actual JSON classes/createRenderer JSON branches with owned in-memory normal StreamEvent/terminal metadata shapes. Text-only Core internal/truncate imports replaced before actual module import by unused throw-if-called function exports; call counter stays0. Chalk real resolution/import. stdout.write spy only within isolated test subprocess and restored in finally.",
+  "excluded": [
+    "Existing mixed renderer.test.ts not executed",
+    "TextRenderer/helpers/Core barrel/real truncation not invoked",
+    "No actual CLI/AgentClient/AgentServer/Engine/run-finalize/model/provider or background work",
+    "Old A12 fallback child pollution not reproduced",
+    "No malformed/colliding metadata/renderer reuse cases",
+    "No native/PTY/real timers/network/userdata/permission/custody/security/product Git experiments",
+    "All earlier failed directions remain skipped; no build/typecheck/lint/full suite"
+  ],
+  "metadataNotes": "docs/audit-2026-10-17-round21/evidence/jsonoutput-metadata-notes.json"
+}

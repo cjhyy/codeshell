@@ -1,0 +1,30 @@
+packages/core/src/model-catalog/upsert.test.ts:2: * upsertCatalogEntry — pure add-or-update of a CatalogEntry into the user
+packages/core/src/model-catalog/upsert.test.ts:9:import { upsertCatalogEntry, upsertModelPreset } from "./upsert.js";
+packages/core/src/model-catalog/upsert.test.ts:29:describe("upsertCatalogEntry", () => {
+packages/core/src/model-catalog/upsert.test.ts:30:  test("adds a new entry to an empty list", () => {
+packages/core/src/model-catalog/upsert.test.ts:31:    const out = upsertCatalogEntry([], A);
+packages/core/src/model-catalog/upsert.test.ts:35:  test("appends when the id is new", () => {
+packages/core/src/model-catalog/upsert.test.ts:36:    const out = upsertCatalogEntry([A], B);
+packages/core/src/model-catalog/upsert.test.ts:40:  test("replaces the existing entry with the same id (update), in place", () => {
+packages/core/src/model-catalog/upsert.test.ts:42:    const out = upsertCatalogEntry([A, B], updated);
+packages/core/src/model-catalog/upsert.test.ts:49:  test("does not mutate the input array", () => {
+packages/core/src/model-catalog/upsert.test.ts:51:    upsertCatalogEntry(input, B);
+packages/core/src/model-catalog/upsert.test.ts:56:describe("upsertModelPreset", () => {
+packages/core/src/model-catalog/upsert.test.ts:57:  test("appends a new model without changing existing presets", () => {
+packages/core/src/model-catalog/upsert.test.ts:59:    expect(upsertModelPreset(existing, { value: "model-b", label: "B" })).toEqual([
+packages/core/src/model-catalog/upsert.test.ts:66:  test("updates an existing model by value without duplicating it", () => {
+packages/core/src/model-catalog/upsert.test.ts:68:      upsertModelPreset(
+packages/core/src/model-catalog/gen-connections.test.ts:2: * genInstancesFromConnections — project unified modelConnections (tag=image or
+packages/core/src/model-catalog/gen-connections.test.ts:9:import { genInstancesFromConnections } from "./gen-connections.js";
+packages/core/src/model-catalog/gen-connections.test.ts:38:describe("genInstancesFromConnections", () => {
+packages/core/src/model-catalog/gen-connections.test.ts:39:  test("projects image connections to {id, kind, baseUrl, apiKey, defaultModel}", () => {
+packages/core/src/model-catalog/gen-connections.test.ts:43:    const out = genInstancesFromConnections(conns, CREDS, CATALOG, "image");
+packages/core/src/model-catalog/gen-connections.test.ts:54:  test("filters by tag (image vs video)", () => {
+packages/core/src/model-catalog/gen-connections.test.ts:59:    expect(genInstancesFromConnections(conns, CREDS, CATALOG, "image").map((i) => i.id)).toEqual(["img1"]);
+packages/core/src/model-catalog/gen-connections.test.ts:60:    expect(genInstancesFromConnections(conns, CREDS, CATALOG, "video").map((i) => i.id)).toEqual(["vid1"]);
+packages/core/src/model-catalog/gen-connections.test.ts:63:  test("key comes from the credential; connections sharing one credential share the key", () => {
+packages/core/src/model-catalog/gen-connections.test.ts:68:    const out = genInstancesFromConnections(conns, CREDS, CATALOG, "image");
+packages/core/src/model-catalog/gen-connections.test.ts:72:  test("connection model overrides the catalog defaultModel", () => {
+packages/core/src/model-catalog/gen-connections.test.ts:76:    expect(genInstancesFromConnections(conns, CREDS, CATALOG, "image")[0]!.defaultModel).toBe("dall-e-3");
+packages/core/src/model-catalog/gen-connections.test.ts:79:  test("unknown catalogId connection is skipped", () => {
+packages/core/src/model-catalog/gen-connections.test.ts:84:    expect(genInstancesFromConnections(conns, CREDS, CATALOG, "image").map((i) => i.id)).toEqual(["ok"]);

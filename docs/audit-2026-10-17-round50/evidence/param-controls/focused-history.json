@@ -1,0 +1,1577 @@
+{
+  "capturedUTC": "2026-10-17T16:57:32.968598+00:00",
+  "sameDatedInventoryFiles": 4693,
+  "queryPatterns": {
+    "parameter-bounds": "(?:paramValues|参数|parameter|temperature|top_p).{0,180}(?:越界|范围|边界|out.of.range|bounds|clamp|validat|NaN|非数)",
+    "numeric-save": "(?:number input|numeric|数值|数字).{0,180}(?:保存|persist|save|限制|reject)",
+    "model-selection-patch": "modelSelectionPatch"
+  },
+  "totalMatches": {
+    "parameter-bounds": 243,
+    "numeric-save": 55
+  },
+  "capPerQuery": 100,
+  "retainedCounts": {
+    "parameter-bounds": 100,
+    "numeric-save": 55,
+    "model-selection-patch": 0
+  },
+  "contexts": {
+    "parameter-bounds": [
+      {
+        "document": "docs/architecture/12-package-boundaries-and-release-units.md",
+        "locator": "paragraph/24",
+        "kind": "markdown-paragraph",
+        "excerpt": "Core supplies the generic mechanisms these responsibilities need:\n`RunBehaviorProfile`, extension tools, run parameter validation, protocol\nobservers, extension result slots and hidden session kinds. The dependency is\ntherefore one-way:",
+        "excerptStart": 0,
+        "excerptEnd": 236,
+        "originalChars": 236,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "paragraph/2",
+        "kind": "markdown-paragraph",
+        "excerpt": "oks/mcp/memory/context)3 候选**:#1 `context-tools.executeReadFile` 负 limit→`slice` 丢尾 ✅**已修**(`f64e376a`,limit 缺失/NaN→默认 200、≤0→空,+3 测);#2/#3 MCP `listResources`/`readResource` 不转发 abort signal ✅**已修**(`7e36048b`,加 signal 参数转发 SDK client + 工具读 `__signal`,Stop 可提前取消;subagent「永久挂起」夸大——SDK 默认超时本兜底,实为与 callTool 一致性 gap;tsc 验 SDK 签名正确,33 MCP 测回归绿)。范围其余(openai/anthropic JSON.parse·cost-tracker·model-pool·extract-memories·hooks emit)均已妥善守卫。\n> - **bug-scan 第一批(新代码:credentials/model-catalog/cdp/新工具)4 候选三筛**:#1 secretHint ✅修;#2 cdp scroll 负 amount 翻向→**判低价值不修**(自纠正、非安全);#3/#4 **path-traversal 真 gap ✅已修**(`78bf8b9c`+`436a1498`)——`generate-image.referenceImages` + `generate-video.images/image` 读本地文件**未走 pathPolicy**,`../../etc/passwd` 绕过工作区 \"ask\" 门。两部分修:① executor `resolvePathPolicyTargets` 扩支持 **string[] arg**(相对路径按 ctx.cwd 解析、跳 http(s) URL)② 给 GenerateImage/Video 声明 pathPolicy。TDD +2 测,19 回归绿,tsc/build 0。关联记忆 `path_containment_realpath`/`path_permission_system`。\n>\n> **续(G)打包 CLI 运行时冒烟(实跑 tui dist,非单测)**:`code-shell --version`→`0.5.0-rc.2`·`--help`/`run --help` 子命令(run/repl/sessions/arena/runs)全注册与 README 一致·**`run \"say hi\"` 完成一轮真 LLM 对话**(默认 gpt-5.5,cost summary,干净退出,无崩——确认打包 CLI 端到端引擎链路正常 + dist 含本会话 core 改动无回归)·`sessions` 列真实磁盘会话(trans",
+        "excerptStart": 9132,
+        "excerptEnd": 10377,
+        "originalChars": 17913,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "paragraph/31",
+        "kind": "markdown-paragraph",
+        "excerpt": "> **进度(2026-06-23)**:优先级 1/2/3 + 全部中低优先级缺口均已补完,并顺手修了一个真 bug。\n> - P1:`validateSettings` 端到端 effort(commit 70b7db38)— TDD 验证退回闭合 enum 时恰好转红。\n> - P2:`reasoningFromParamValues` 未知 effort round-trip + 过 validateSettings(commit 2be894aa)。\n> - P3:`classifyLocalInstallError`(从 installLocalPluginForUi 抽纯函数)+ marketplace-service.test.ts(commit 0000c931)。\n> - InjectCredential 工具 11 例(commit 0e54d0d8);resolveSafePluginPath 9 例(commit bb0db988)。\n> - EditModelCatalog summarizeWrite 9 例 **+ 修真 bug**:saveCatalogEntry 缺父目录时崩 ENOENT,改 mkdirSync(commit 358efbb0)。\n> - 全量:core 1571 pass / 0 fail;core+desktop typecheck 均 0 error。",
+        "excerptStart": 0,
+        "excerptEnd": 615,
+        "originalChars": 615,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "paragraph/34",
+        "kind": "markdown-paragraph",
+        "excerpt": "ema.test.ts`。\n  断言 `validateSettings({ providers:[{…, reasoning:{mode:\"effort\",effort:\"xhigh\"} }] })` 以及一个**未知**档(如 `\"max\"`)**都不抛**。\n  当前 `reasoning-setting.test.ts` 只证叶子 schema,没覆盖真正崩过的 `validateSettings` 集成路径。\n  崩溃路径:`paramValues.reasoning`(schema.ts:314 `z.unknown()`)→ `reasoningFromParamValues()`(`engine/model-connections-pool.ts`)→ `providers[].reasoning`(schema.ts:150)/`models[].reasoning`(:195)→ `validateSettings()`(schema.ts:739)boot 时抛。",
+        "excerptStart": 107,
+        "excerptEnd": 556,
+        "originalChars": 556,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "paragraph/35",
+        "kind": "markdown-paragraph",
+        "excerpt": "**优先级 2:**\n- `paramValues.reasoning` 把未知 effort round-trip 成 ReasoningSetting 不抛 —— 加在 `packages/core/src/engine/model-connections-pool.test.ts`。\n  断言 `reasoningFromParamValues({reasoning:\"max\"})` → `{mode:\"effort\",effort:\"max\"}`,且携带它的连接能过 `validateSettings`。",
+        "excerptStart": 0,
+        "excerptEnd": 259,
+        "originalChars": 259,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/archive/core-complete-review.md",
+        "locator": "paragraph/699",
+        "kind": "markdown-paragraph",
+        "excerpt": "- `supportsVision`：是否接受 image content blocks。\n- `tokenLimitField`：`max_tokens` 或 `max_completion_tokens`。\n- `rejectedParams`：不应发送的 sampling params。\n- `reasoning`：reasoning/thinking 参数形状。\n- `echoReasoning`：历史 reasoning 是否要回传。\n- `parallelToolCalls`：并行工具调用参数形状。\n- `streamUsage`：stream usage 获取方式。\n- `maxOutputTokens`：已知输出上限，用于 clamp。",
+        "excerptStart": 0,
+        "excerptEnd": 330,
+        "originalChars": 330,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/archive/model-adapter-deharcoding-assessment-2026-06-23.md",
+        "locator": "paragraph/22",
+        "kind": "markdown-paragraph",
+        "excerpt": "### P1 — 接上 `applyParams`(最高价值,基础已就绪)\n**做什么**:在请求构造时调用 `applyParams(connection.paramValues, preset.params)`,把结果合并进请求体。让 catalog 声明的任意参数真正下发。\n**收益**:catalog 声明参数即生效,无需在 client 写死每个参数怎么发。直接解决「Zhipu 参数设不了」。\n**风险/边界**:\n- 要碰 client 请求构造层(openai.ts），需与现有 sampling 规则(rules.ts 的 rejectedParams）协调 —— `applyParams` 下发的参数仍要过 rejectedParams 过滤,否则给 gpt-5 发 temperature 会 400。**这是设计要点:applyParams 是「按 catalog 下发」,rejectedParams 是「按厂商契约拦截」,两者叠加。**\n- ⚠️ **依赖**:`builtin.ts` 正被在途会话大改(Zhipu/OpenAI/OpenRouter catalog 扩充 + live-verify,2026-06-23 未提交)。P1 直接读这些 params,**必须等在途工作落地或协调**,否则冲突。",
+        "excerptStart": 0,
+        "excerptEnd": 572,
+        "originalChars": 572,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "locator": "/30/verify_reason",
+        "kind": "json-recursive-value",
+        "excerpt": "C}8;;${url}${BEL}${text}${OSC}8;;${BEL}`. If a URL contains the BEL character (\\x07), it will prematurely terminate the hyperlink sequence. If it contains ESC (\\x1b), it could inject additional escape sequences. The url parameter comes from user input via Link components (see squash-text-nodes.ts line 56 and Ansi.tsx line 71-77), making this an unvalidated sink for attacker-controlled data.",
+        "excerptStart": 139,
+        "excerptEnd": 532,
+        "originalChars": 532,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "locator": "/60/reason",
+        "kind": "json-recursive-value",
+        "excerpt": "g describes a scenario where settings.model is a scalar string 'claude-opus', but the settings schema (schema.ts lines 47-56) enforces that model is always an object with properties like provider, name, apiKey, baseUrl, temperature, maxTokens. Schema validation via SettingsManager prevents scalar values at the model key. The overwrite behavior (line 64) is real but cannot occur with valid settings because the schema would have coerced or rejected scalar model values before this code executes. The tool's documented behavior is \"creates nested objects as needed\", making this the intended design for nested key writes.",
+        "excerptStart": 10,
+        "excerptEnd": 632,
+        "originalChars": 632,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "locator": "/118/reason",
+        "kind": "json-recursive-value",
+        "excerpt": "C}8;;${url}${BEL}${text}${OSC}8;;${BEL}`. If a URL contains the BEL character (\\x07), it will prematurely terminate the hyperlink sequence. If it contains ESC (\\x1b), it could inject additional escape sequences. The url parameter comes from user input via Link components (see squash-text-nodes.ts line 56 and Ansi.tsx line 71-77), making this an unvalidated sink for attacker-controlled data.",
+        "excerptStart": 139,
+        "excerptEnd": 532,
+        "originalChars": 532,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/findings.json",
+        "locator": "/72/detail",
+        "kind": "json-recursive-value",
+        "excerpt": "Line 165 performs an unsafe type assertion: `const builtin = BUILTIN_AGENT_PRESETS[name as AgentPresetName]`. The `name` parameter comes from the caller (could be any string), and casting it to AgentPresetName without validation assumes it matches one of the built-in presets. While the function later handles the case where it's not found (lines 172-173), the type assertion misleads TypeScript into thinking the string is definitely a BuiltinPresetName when it's not validated yet.",
+        "excerptStart": 0,
+        "excerptEnd": 483,
+        "originalChars": 483,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/low_section.md",
+        "locator": "paragraph/2",
+        "kind": "markdown-paragraph",
+        "excerpt": "UI components are exported, but they are not | Either: (1) add 'export { startInkRepl, type InkReplOptions } from \"./ui/index.j… |\n| ⬜ | 正确性 | `tui/render/components/Newline.tsx:21-24` | No validation for negative count parameter | Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(… |\n| ⬜ | 正确性 | `tui/render/devtools.ts:54-66` | WriteStream resource leak - stream never closed | Add an explicit close mechanism - either store a cleanup function that calls `st… |\n| ⬜ | 正确性 | `tui/render/parse-keypress.ts:177-179` | splitNumericParams does not handle empty numeric parameters | Filter out empty strings before parsing, or use parseInt with a fallback default… |\n| ⬜ | 正确性 | `tui/render/terminal-focus-state.ts:18-23` | Dead code: resolvers set is never populated | Either populate the `resolvers` set in `waitForBlur()` or similar function, or r… |\n| ⬜ | 正确性 | `tui/render/termio/osc.ts:367-393` | Incomplete escape sequence handling at end of input | Before the final yield on line 392, check if `esc` is true (indicating a trailin… |\n| ⬜ | 正确性 | `tui/render/wrap-text.ts:59` | Unsafe non-null assertion on opt",
+        "excerptStart": 8588,
+        "excerptEnd": 9731,
+        "originalChars": 11517,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+        "locator": "paragraph/62",
+        "kind": "markdown-paragraph",
+        "excerpt": "kGuard，见 `packages/core/src/tool-system/executor.ts:55`。`executeSingle()` 的顺序是：abort fast-path；拒绝 disabled builtins / goal-only / visibility guard / session 外 MCP；plan-mode gate；JSON schema validation；pre_tool_use hook 和参数重写复验；path policy；permission classify + hook clamp + ask；registry execute；post hooks 和 file_changed，见 `packages/core/src/tool-system/executor.ts:119`、`packages/core/src/tool-system/executor.ts:219`、`packages/core/src/tool-system/executor.ts:250`、`packages/core/src/tool-system/executor.ts:302`、`packages/core/src/tool-system/executor.ts:366`、`packages/core/src/tool-system/executor.ts:433`。",
+        "excerptStart": 124,
+        "excerptEnd": 735,
+        "originalChars": 735,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+        "locator": "paragraph/6",
+        "kind": "markdown-paragraph",
+        "excerpt": " \"updatedInput|Tool not found|additional context from post_tool_use hook|post_tool_use\" packages/core/src -g '*test.ts'` 只命中 hook/plugin 解析层或 preset whitelist 注释；未命中 `ToolExecutor.executeSingle` 对这些分支的行为断言。 | 若回归，hook 可把参数改成非法形状后仍执行；模型 hallucinated tool 可能杀死整轮；linter/typecheck 等 hook 附加上下文不会反馈给模型。 | `ToolExecutor revalidates updatedInput before path policy and handler`：hook 返回缺必填字段，断言标准 invalid input 且 handler 未执行；`ToolExecutor returns tool error for ToolNotFoundError`；`ToolExecutor appends post_tool_use additionalContext only on successful result`。 | 中 |\n| `packages/desktop/src/renderer/transcriptsReducer.ts:128` | `stream_batch` 将 50ms 事件批量按顺序 fold，并在全 no-op 时保持原 map 引用。 | desktop renderer 的高频流式入口；批量事件顺序决定 assistant/text/tool 状态一致性。 | `rg \"stream_batch|reducer.batch|timePhase\" packages/desktop/src/renderer -g '*test.*'` 无命中；`applyStreamEvent` 本身覆盖较多，但 batch action 没有 reducer 级断言。 | 若回归，批量事件可能顺序错乱、部分事件丢失，或 no-op batch 仍触发无意义重渲染。 | `transcriptsReducer stream_batch applies events in order`：同一 batch 内 `stream_request_start -> text_delta -> assistant_message`，断言一条 done assistant；`transcriptsReducer all-noop stream_batch returns same map reference`。 | 低 |\n| `packages/core/src/protocol/chat-session-manager.ts:",
+        "excerptStart": 6830,
+        "excerptEnd": 8054,
+        "originalChars": 9315,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-16/core.md",
+        "locator": "paragraph/6",
+        "kind": "markdown-paragraph",
+        "excerpt": "`:432`（updatedInput 替换）。\n- 触发一：Plan 模式原始参数是 `ls -la`；受信任的 pre_tool_use hook 将它改写成 `echo x > result.txt`。\n- 触发二：当前 MCP server 的 `delete_all` 被 disabledTools 禁用；原始调用是允许的 `list`，hook 将其改成同 server 的 `delete_all`。\n- 预期：应对最终执行参数重新检查 Plan 只读承诺与 MCP per-tool 禁用策略。\n- 实际：原参数通过 gate 后才改写，改写只重跑 schema/path/普通 permission，未重跑上述 gate。两者均进入 fake recorder handler；直接提交相同 write/disabled tool 的对照调用均被拒绝。\n- 影响和边界：这是受信任 hook 与权限策略组合的正确性缺陷；hook 本身是用户配置可执行代码，不声称隔离恶意 hook。MCPManager `callToolResult` 仍对连接/run scope 绑定，因此本条限定同一个已授权 server 的 disabled tool；没有声称跨项目 server 身份绕过。生产 Bash 不再执行 Plan 分类，MCPManager 不再重复 mcpToolPolicies。实际 shell/MCP 外部动作没有执行。\n- 验证：与 C01 同一 guarded fixture，测试使用 default 权限模式加该工具显式 allow rule，未靠 bypassPermissions 绕过 Plan；只注册内存 recorder handler。\n- 查重：当前代码独立发现后核对到旧 `docs/review-remaining-2026-10-12/core.md` 的 C1。不能计为本轮首次新发现。",
+        "excerptStart": 101,
+        "excerptEnd": 927,
+        "originalChars": 927,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/hooks-dedup.json",
+        "locator": "/hits/158/text",
+        "kind": "json-recursive-value",
+        "excerpt": "kGuard，见 `packages/core/src/tool-system/executor.ts:55`。`executeSingle()` 的顺序是：abort fast-path；拒绝 disabled builtins / goal-only / visibility guard / session 外 MCP；plan-mode gate；JSON schema validation；pre_tool_use hook 和参数重写复验；path policy；permission classify + hook clamp + ask；registry execute；post hooks 和 file_changed，见 `packages/core/src/tool-system/executor.ts:119`、`packages/core/src/tool-system/executor.ts:219`、`packages/core/src/tool-system/executor.ts:250`、`packages/core/src/tool-system/executor.ts:302`、`packages/core/src/tool-system/executor.ts:366`、`packages/core/src/tool-system/executor.ts:433`。",
+        "excerptStart": 124,
+        "excerptEnd": 735,
+        "originalChars": 735,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/hooks-dedup.json",
+        "locator": "/hits/293/text",
+        "kind": "json-recursive-value",
+        "excerpt": "kGuard，见 `packages/core/src/tool-system/executor.ts:55`。`executeSingle()` 的顺序是：abort fast-path；拒绝 disabled builtins / goal-only / visibility guard / session 外 MCP；plan-mode gate；JSON schema validation；pre_tool_use hook 和参数重写复验；path policy；permission classify + hook clamp + ask；registry execute；post hooks 和 file_changed，见 `packages/core/src/tool-system/executor.ts:119`、`packages/core/src/tool-system/executor.ts:219`、`packages/core/src/tool-system/executor.ts:250`、`packages/core/src/tool-system/executor.ts:302`、`packages/core/src/tool-system/executor.ts:366`、`packages/core/src/tool-system/executor.ts:433`。",
+        "excerptStart": 124,
+        "excerptEnd": 735,
+        "originalChars": 735,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/desktop.md",
+        "locator": "paragraph/4",
+        "kind": "markdown-paragraph",
+        "excerpt": "x:40](../../packages/desktop/src/renderer/tool-cards/BashToolCard.tsx#L40) 的命令摘要使用 90。本次测试均使用这些真实正上限，没有构造负数或零限额。\n- 触发：合法输入 `x.repeat(max - 2) + \"😀tail\"` 长于摘要上限，保留末尾恰好是 emoji 的高代理项。对 70 上限，它也是长度小于普通单文件名限制的相对路径字符串；Generic 参数和 Bash 命令文本没有路径长度约束。\n- 预期契约：摘要可省略后半段，但应保留合法 Unicode 文本；短 Unicode、保留完整 emoji 的边界、ASCII、BMP 中文对照均保持合法文本。\n- 实际：生产 helper 对 70、80、90 三种限额分别返回末尾 `0xd83d + …`，`isWellFormed()=false`；同一字符串经标准 UTF-8 编码/解码后变成 `�…`。输入 `isWellFormed()=true`。\n- 影响与边界：工具卡摘要可能显示损坏字符，影响路径/命令/任务摘要可读性。完整参数、原始路径与正文未被这个 helper 改写，不推断实际工具执行错误。实际运行的是生产纯函数和 TextEncoder/TextDecoder；UI 消费来自上述源码核对，未挂载 React/Electron，也没有观察真实平台 glyph。\n- 证据：[首次 fixture](evidence/desktop-display-contracts.test.ts) 的三个限额观测与独立正常对照；[raw log](evidence/desktop-display-contracts.first.log)、[exit](evidence/desktop-display-contracts.first.exit.txt)。只运行一次。\n- 查重：全历史 docs/bugs Markdown 与 parsed JSON 叶子搜索见 [dedup](evidence/desktop-dedup.json)。CHD02 是 Chat attachment 标签转换，HL-02 是 Host GitHub file selection 默认标签；类别相同，但它们都不调用或修复本 Desktop `truncate` 实现。本次未找到该生产路径/消费实现的旧同项；这是有界关键词上下文查重，不声称语义穷尽证明。\n- 修复方向：按 code point 或在边界退让一个高代理项，保留现有省略号与正上限语义。",
+        "excerptStart": 473,
+        "excerptEnd": 1572,
+        "originalChars": 1572,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/1/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui",
+        "excerptStart": 0,
+        "excerptEnd": 604,
+        "originalChars": 604,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/3/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui 117",
+        "excerptStart": 0,
+        "excerptEnd": 608,
+        "originalChars": 608,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/6/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))`",
+        "excerptStart": 0,
+        "excerptEnd": 600,
+        "originalChars": 600,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/8/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui",
+        "excerptStart": 0,
+        "excerptEnd": 604,
+        "originalChars": 604,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/11/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/13/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui 117",
+        "excerptStart": 0,
+        "excerptEnd": 608,
+        "originalChars": 608,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/16/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))`",
+        "excerptStart": 0,
+        "excerptEnd": 600,
+        "originalChars": 600,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/18/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui",
+        "excerptStart": 0,
+        "excerptEnd": 604,
+        "originalChars": 604,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/21/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/23/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui 117",
+        "excerptStart": 0,
+        "excerptEnd": 608,
+        "originalChars": 608,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/26/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))`",
+        "excerptStart": 0,
+        "excerptEnd": 600,
+        "originalChars": 600,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/29/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/38/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui",
+        "excerptStart": 0,
+        "excerptEnd": 604,
+        "originalChars": 604,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/41/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))`",
+        "excerptStart": 0,
+        "excerptEnd": 600,
+        "originalChars": 600,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/43/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/44/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui 117",
+        "excerptStart": 0,
+        "excerptEnd": 608,
+        "originalChars": 608,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.initial.json",
+        "locator": "/hits/47/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/0/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui",
+        "excerptStart": 0,
+        "excerptEnd": 604,
+        "originalChars": 604,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/3/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))`",
+        "excerptStart": 0,
+        "excerptEnd": 600,
+        "originalChars": 600,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/5/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/6/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui 117",
+        "excerptStart": 0,
+        "excerptEnd": 608,
+        "originalChars": 608,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/9/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/33/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui",
+        "excerptStart": 0,
+        "excerptEnd": 604,
+        "originalChars": 604,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/35/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui 117",
+        "excerptStart": 0,
+        "excerptEnd": 608,
+        "originalChars": 608,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/38/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))`",
+        "excerptStart": 0,
+        "excerptEnd": 600,
+        "originalChars": 600,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/40/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui",
+        "excerptStart": 0,
+        "excerptEnd": 604,
+        "originalChars": 604,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/43/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/45/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui 117",
+        "excerptStart": 0,
+        "excerptEnd": 608,
+        "originalChars": 608,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/48/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))`",
+        "excerptStart": 0,
+        "excerptEnd": 600,
+        "originalChars": 600,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/50/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui",
+        "excerptStart": 0,
+        "excerptEnd": 604,
+        "originalChars": 604,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/53/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/55/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` tui 117",
+        "excerptStart": 0,
+        "excerptEnd": 608,
+        "originalChars": 608,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/58/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "packages/tui/src/render/parse-keypress.ts 177-179 correctness medium medium splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))`",
+        "excerptStart": 0,
+        "excerptEnd": 600,
+        "originalChars": 600,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/tui-dedup.json",
+        "locator": "/hits/61/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "tui packages/tui/src/render/parse-keypress.ts 177-179 correctness low splitNumericParams does not handle empty numeric parameters The function splits by ';' and parses each part with parseInt. If the input contains empty segments (e.g., '1;;3' from malformed DA1 responses), parseInt('', 10) returns NaN instead of a sensible default. This would create NaN entries in the params array, potentially breaking downstream code expecting only valid numbers. Filter out empty strings before parsing, or use parseInt with a fallback default: `return params.split(';').map(p => parseInt(p || '0', 10))` While the bug is technically real (NaN values will be created), the practical impact is near-zero because the params field is never accessed by any code in the repository. The TerminalQuerier only uses the da1 response to detect sentinel messages (checking r.type === 'da1'), and no downstream code inspects the params array. The malformed array never causes failures or incorrect behavior. This is a defensive programming improvement rather than a critical bug fix. splitNumericParams (lines 177-179) will create NaN entries when the input string contains empty segments. The DA1_RE and DA2_RE regex patt",
+        "excerptStart": 0,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/groups.md",
+        "locator": "paragraph/7",
+        "kind": "markdown-paragraph",
+        "excerpt": "r-only delete 的摘要条目会被丢弃；只有该操作时 `:158` / `:422` 会导向 null，和支持的普通 Add/Update 不同。\n- 潜在影响：Files Changed 文件名/计数摘要缺少删除文件；`types.ts:1897` 只在非空 summary 时创建卡。工具消息和原始 patch 仍保留。没有实测卡片、实际删除、Undo/Redo、Review 或磁盘状态，不声称文件丢失或撤销失效。删除内容不在参数里，确切删除行数可能本来不可知；候选只要求不遗漏受影响文件名，并不要求凭空计算内容。\n- 拟定混合 Add/Update、嵌套子代理对照未执行。现有 Add/Update 基线通过只能说明它已有范围有效，不能验证此候选。\n- 全历史检索未找到相同 Desktop header-only delete 摘要项。旧 ApplyPatch undo 新文件问题属于真实文件快照路线，不是这里的展示摘要。",
+        "excerptStart": 432,
+        "excerptEnd": 853,
+        "originalChars": 853,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/3/matches/0/match",
+        "kind": "json-recursive-value",
+        "excerpt": "ath imports.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-1",
+        "excerptStart": 6356,
+        "excerptEnd": 7561,
+        "originalChars": 29411,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/3/matches/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "ath imports.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-1",
+        "excerptStart": 6596,
+        "excerptEnd": 7801,
+        "originalChars": 30101,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/4/matches/0/match",
+        "kind": "json-recursive-value",
+        "excerpt": "\", \"pkg\": \"tui\", \"_id\": 109}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\", \"_id\": 110}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys o",
+        "excerptStart": 6476,
+        "excerptEnd": 7681,
+        "originalChars": 29879,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/4/matches/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "\", \"pkg\": \"tui\", \"_id\": 109}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\", \"_id\": 110}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys o",
+        "excerptStart": 6716,
+        "excerptEnd": 7921,
+        "originalChars": 30569,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/5/matches/0/match",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50732,
+        "excerptEnd": 51937,
+        "originalChars": 146567,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/5/matches/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50972,
+        "excerptEnd": 52177,
+        "originalChars": 146947,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/6/matches/0/match",
+        "kind": "json-recursive-value",
+        "excerpt": "ath imports.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-1",
+        "excerptStart": 6356,
+        "excerptEnd": 7561,
+        "originalChars": 29411,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/6/matches/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "ath imports.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-1",
+        "excerptStart": 6596,
+        "excerptEnd": 7801,
+        "originalChars": 30101,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/8/matches/0/match",
+        "kind": "json-recursive-value",
+        "excerpt": "\", \"pkg\": \"tui\", \"_id\": 109}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\", \"_id\": 110}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys o",
+        "excerptStart": 6476,
+        "excerptEnd": 7681,
+        "originalChars": 29879,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/8/matches/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "\", \"pkg\": \"tui\", \"_id\": 109}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\", \"_id\": 110}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys o",
+        "excerptStart": 6716,
+        "excerptEnd": 7921,
+        "originalChars": 30569,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/9/matches/0/match",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50732,
+        "excerptEnd": 51937,
+        "originalChars": 146567,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/9/matches/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50972,
+        "excerptEnd": 52177,
+        "originalChars": 146947,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/10/matches/0/match",
+        "kind": "json-recursive-value",
+        "excerpt": "ath imports.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-1",
+        "excerptStart": 6356,
+        "excerptEnd": 7561,
+        "originalChars": 29411,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/10/matches/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "ath imports.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-1",
+        "excerptStart": 6596,
+        "excerptEnd": 7801,
+        "originalChars": 30101,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/12/matches/0/match",
+        "kind": "json-recursive-value",
+        "excerpt": "\", \"pkg\": \"tui\", \"_id\": 109}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\", \"_id\": 110}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys o",
+        "excerptStart": 6476,
+        "excerptEnd": 7681,
+        "originalChars": 29879,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/12/matches/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "\", \"pkg\": \"tui\", \"_id\": 109}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\", \"_id\": 110}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys o",
+        "excerptStart": 6716,
+        "excerptEnd": 7921,
+        "originalChars": 30569,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/13/matches/0/match",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50732,
+        "excerptEnd": 51937,
+        "originalChars": 146567,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/13/matches/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50972,
+        "excerptEnd": 52177,
+        "originalChars": 146947,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/tabstops-dedup.json",
+        "locator": "/hits/direct_sources/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "e. If it contains ESC (\\x1b), it could inject additional escape sequences. The url parameter comes from user input via Link components (see squash-text-nodes.ts line 56 and Ansi.tsx line 71-77), making this an unvalidated sink for attacker-controlled data.",
+        "excerptStart": 0,
+        "excerptEnd": 256,
+        "originalChars": 256,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/tabstops-dedup.json",
+        "locator": "/hits/direct_sources/1/context",
+        "kind": "json-recursive-value",
+        "excerpt": "e. If it contains ESC (\\x1b), it could inject additional escape sequences. The url parameter comes from user input via Link components (see squash-text-nodes.ts line 56 and Ansi.tsx line 71-77), making this an unvalidated sink for attacker-controlled data.",
+        "excerptStart": 0,
+        "excerptEnd": 256,
+        "originalChars": 256,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/tabstops-dedup.json",
+        "locator": "/hits/direct_sources/4/context",
+        "kind": "json-recursive-value",
+        "excerpt": ". If it contains ESC (\\\\x1b), it could inject additional escape sequences. The url parameter comes from user input via Link components (see squash-text-nodes.ts line 56 and Ansi.tsx line 71-77), making this an unvalidated sink for attacker-controlled data.\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/render/render-node-to-output.ts\", \"line\": \"453-460, 546, 1241\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Absolute-posi",
+        "excerptStart": 0,
+        "excerptEnd": 437,
+        "originalChars": 437,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/tabstops-dedup.json",
+        "locator": "/hits/direct_sources/5/context",
+        "kind": "json-recursive-value",
+        "excerpt": ". If it contains ESC (\\\\x1b), it could inject additional escape sequences. The url parameter comes from user input via Link components (see squash-text-nodes.ts line 56 and Ansi.tsx line 71-77), making this an unvalidated sink for attacker-controlled data.\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/render/render-node-to-output.ts\", \"line\": \"453-460, 546, 1241\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Absolute-posi",
+        "excerptStart": 0,
+        "excerptEnd": 437,
+        "originalChars": 437,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+        "locator": "/hits/mime_classification/0/context",
+        "kind": "json-recursive-value",
+        "excerpt": "es the generic mechanisms these responsibilities need:\n`RunBehaviorProfile`, extension tools, run parameter validation, protocol\nobservers, extension result slots and hidden session kinds. The dependency is\ntherefore one-way:\n\n```text\npet policy + projection + tool\n              │\n              ▼\n      core/extension contracts\n              │\n              ▼\n        generic engine runtime\n```\n\nKeeping Pet in core would make every SDK consumer inherit the Mimi prompt,\n`DelegateWork`",
+        "excerptStart": 0,
+        "excerptEnd": 486,
+        "originalChars": 486,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "locator": "/hits/all_429/90/context",
+        "kind": "json-recursive-value",
+        "excerpt": "参数解析器和实际 HTTP 边界。不能只用宽松 mock 返回一个旧响应形状：本次 `depth` 不兼容正是这种测试漏项。保留 Core、Host、broker 和 provider 的边界测试；Schema 快照门禁在 CI 阻止未声明的契约漂移。\n\n### 权限 状态与故障\n\n- 普通动作参数错误、契约不兼容与 429/5xx 不改变授权。token_refresh 只对已证实发生在消费 token 前的配置错误恢复原凭据；`invalid_grant`、`invalid_scope`、未知 400、坏成功响应与丢失回执分别按撤销或未知刷新处理。现有 OAuth 库在 scope 校验前消费 refresh token，不能把“非 invalid_grant 的 400”一概视为可安全重试。\n- Main/Worker/Renderer 状态 revision 一致；覆盖状态事件与错误响应两种到达顺序，以及旧响应不能覆盖新连接；本地 API、CLI、MCP 与 remote 动作均覆盖。\n- 账号替换、项目同 ID 覆盖、资源撤销、刷新中移除连接和返回前撤销均不能交付越权结果。\n- CLI session 不导出 token；MCP 配置/endpoint/schema 变化与旧 Run 正确隔离；未知",
+        "excerptStart": 0,
+        "excerptEnd": 563,
+        "originalChars": 563,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/root-dedup.json",
+        "locator": "/hits/param_source/16/context",
+        "kind": "json-recursive-value",
+        "excerpt": "用/循环/流式解析 | ❌ 不能 | 引擎控制流,厂商结构不同需翻译 |\n| rules.ts 厂商契约差异 | ⚠️ 能搬不能消 | 可从 rules.ts 迁到 catalog params,但差异本身永远要声明 |\n\n---\n\n## 3. 三项优化方案(按价值/风险排序)\n\n### P1 — 接上 `applyParams`(最高价值,基础已就绪)\n**做什么**:在请求构造时调用 `applyParams(connection.paramValues, preset.params)`,把结果合并进请求体。让 catalog 声明的任意参数真正下发。\n**收益**:catalog 声明参数即生效,无需在 client 写死每个参数怎么发。直接解决「Zhipu 参数设不了」。\n**风险/边界**:\n- 要碰 client 请求构造层(openai.ts），需与现有 sampling 规则(rules.ts 的 rejectedParams）协调 —— `applyParams` 下发的参数仍要过 rejectedParams 过滤,否则给 gpt-5 发 temperature 会 400。**这是设计要点:applyParams 是「按 catalog 下发」,rejectedParams 是「按厂商契约拦",
+        "excerptStart": 6,
+        "excerptEnd": 571,
+        "originalChars": 571,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/root-dedup.json",
+        "locator": "/hits/param_source/17/context",
+        "kind": "json-recursive-value",
+        "excerpt": "| rules.ts 厂商契约差异 | ⚠️ 能搬不能消 | 可从 rules.ts 迁到 catalog params,但差异本身永远要声明 |\n\n---\n\n## 3. 三项优化方案(按价值/风险排序)\n\n### P1 — 接上 `applyParams`(最高价值,基础已就绪)\n**做什么**:在请求构造时调用 `applyParams(connection.paramValues, preset.params)`,把结果合并进请求体。让 catalog 声明的任意参数真正下发。\n**收益**:catalog 声明参数即生效,无需在 client 写死每个参数怎么发。直接解决「Zhipu 参数设不了」。\n**风险/边界**:\n- 要碰 client 请求构造层(openai.ts），需与现有 sampling 规则(rules.ts 的 rejectedParams）协调 —— `applyParams` 下发的参数仍要过 rejectedParams 过滤,否则给 gpt-5 发 temperature 会 400。**这是设计要点:applyParams 是「按 catalog 下发」,rejectedParams 是「按厂商契约拦截」,两者叠加。**\n- ⚠️ **依赖**:`builtin.ts` 正被在途会话大",
+        "excerptStart": 0,
+        "excerptEnd": 571,
+        "originalChars": 571,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/root-dedup.json",
+        "locator": "/hits/param_source/18/context",
+        "kind": "json-recursive-value",
+        "excerpt": "数真正下发。\n**收益**:catalog 声明参数即生效,无需在 client 写死每个参数怎么发。直接解决「Zhipu 参数设不了」。\n**风险/边界**:\n- 要碰 client 请求构造层(openai.ts），需与现有 sampling 规则(rules.ts 的 rejectedParams）协调 —— `applyParams` 下发的参数仍要过 rejectedParams 过滤,否则给 gpt-5 发 temperature 会 400。**这是设计要点:applyParams 是「按 catalog 下发」,rejectedParams 是「按厂商契约拦截」,两者叠加。**\n- ⚠️ **依赖**:`builtin.ts` 正被在途会话大改(Zhipu/OpenAI/OpenRouter catalog 扩充 + live-verify,2026-06-23 未提交)。P1 直接读这些 params,**必须等在途工作落地或协调**,否则冲突。\n\n### P2 — adapterKind / factory 对齐(未知 provider 零代码上车)\n**做什么**:\n- `client-factory` 对未知但 protocol=openai-compat 的 kind,回退到 OpenAIClien",
+        "excerptStart": 0,
+        "excerptEnd": 571,
+        "originalChars": 571,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round24/evidence/review-browser-scenes.md",
+        "locator": "paragraph/3",
+        "kind": "markdown-paragraph",
+        "excerpt": "已选读实际 Auth `authOperationsPassed`、SW `serviceWorkerOperationsPassed` 与 CLI/environment 起始条件，以及 subagent 参数、runCase/最终 cleanup 选段。Auth 4、SW 11、subagent 8 是源码中的期待，现有 8 个 Auth 与 9 个 SW test 声明也只是声明；report/validation 没有把它们算为通过、运行、expect 或额外浏览器行为。validation.runs 为空，所有当前 pass/expect/attempt 都为 0；元数据扫描的 first.exit 不属于产品 shard，不能称本批实际验收。",
+        "excerptStart": 0,
+        "excerptEnd": 331,
+        "originalChars": 331,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round24/evidence/root-package-prep/selected-history.json",
+        "locator": "/2/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "元数据验证函数；没有 npm 查询、发布或网络请求。\n\n## 保留的静态候选，未计入确认\n\n`package.json:42` 的 `test:watch` 仍直接调用 `bun test --watch`，与 `CODESHELL.md:140–145` 所述 unit shard 采用 guarded runner 的操作要求不一致；`scripts/bun-test-completion.mjs:117` 又明确拒绝 watch 参数。静态上可确定两条入口不同，但本批未运行 watch，未检查操作者状态、凭据或外部行为，也没有进一步确认该脚本的维护意图和实际运行影响。因此仅记录为待核对的测试入口配置候选，不定优先级、不作为产品缺陷、不展开安全实验。\n\n## 证据边界\n\n未在共享 checkout 执行构建脚本或构建共享 `dist`；仅执行临时目录中的逐字副本。未执行完整 package release smoke、打包安装、真实发布、CLI watch、真实应用、模型、远端服务或平台实验。`package-release-smoke.ts` 的完整模式会 clean-build 多个包，包含本批范围以外的消费者验证，因此只读审查。未运行全仓 build/typecheck/lint/test；复用现有依赖，不能由这 17 个测试推断干净安装后发布成功。所有产品文件保持不变。",
+        "excerptStart": 1044,
+        "excerptEnd": 1644,
+        "originalChars": 1644,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+        "locator": "/hits/retention_context/60/context",
+        "kind": "json-recursive-value",
+        "excerpt": "r-only delete 的摘要条目会被丢弃；只有该操作时 `:158` / `:422` 会导向 null，和支持的普通 Add/Update 不同。\n- 潜在影响：Files Changed 文件名/计数摘要缺少删除文件；`types.ts:1897` 只在非空 summary 时创建卡。工具消息和原始 patch 仍保留。没有实测卡片、实际删除、Undo/Redo、Review 或磁盘状态，不声称文件丢失或撤销失效。删除内容不在参数里，确切删除行数可能本来不可知；候选只要求不遗漏受影响文件名，并不要求凭空计算内容。\n- 拟定混合 Add/Update、嵌套子代理对照未执行。现有 Add/Update 基线通过只能说明它已有范围有效，不能验证此候选。\n- 全历史检索未找到相同 Desktop header-only delete 摘要项。旧 ApplyPatch undo 新文件问题属于真实文件快照路线，不是这里的展示摘要。\n\n## GROUPS-R13-C2：合法 V4A 内容行可能被当成 unified diff header 排除\n\n- 正常输入：把 JavaScript `--counter;` 改成 `++counter;`，V4A 内容会写成 `---counter;` 与 `+++counte",
+        "excerptStart": 51,
+        "excerptEnd": 616,
+        "originalChars": 616,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/README.md",
+        "locator": "paragraph/4",
+        "kind": "markdown-paragraph",
+        "excerpt": "[Target报告](review-target-report.md) 深读新scope/quote parser与prompt，未确认新的target缺陷；全参数空白压缩已是旧CLI-R4-01且原组失败，当前Review consumer只登记 [TARGET-R26-R1](related.json)，不升级原候选、不重跑。PERF别名的新TUI parser反证不等于旧public parseDimensions整体修复。服务/多仓库/范围/快照方向 [Service报告](review-service-report.md) 也未建立新违约，partial-error、empty、binary、size等反证明确；现有测试只有静态声明。Source范围按各作者full/selected/导航列出，不把新Review17/28路径或全部传递依赖说成全覆盖。",
+        "excerptStart": 0,
+        "excerptEnd": 386,
+        "originalChars": 386,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/77/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50632,
+        "excerptEnd": 51837,
+        "originalChars": 145360,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/78/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50632,
+        "excerptEnd": 51837,
+        "originalChars": 145360,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/79/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50632,
+        "excerptEnd": 51837,
+        "originalChars": 145360,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/80/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50632,
+        "excerptEnd": 51837,
+        "originalChars": 145360,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/81/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50632,
+        "excerptEnd": 51837,
+        "originalChars": 145360,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/82/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": " NO_OP_CURSOR_DECLARATION`\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-110), this retu",
+        "excerptStart": 50632,
+        "excerptEnd": 51837,
+        "originalChars": 145360,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/147/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "ath imports.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-1",
+        "excerptStart": 86683,
+        "excerptEnd": 87888,
+        "originalChars": 111073,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/148/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "\", \"pkg\": \"tui\", \"_id\": 109}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\", \"_id\": 110}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys o",
+        "excerptStart": 87893,
+        "excerptEnd": 89098,
+        "originalChars": 112643,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/149/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "ow\", \"confidence\": \"medium\", \"title\": \"Unsafe type assertion on untrusted preset name\", \"detail\": \"Line 165 performs an unsafe type assertion: `const builtin = BUILTIN_AGENT_PRESETS[name as AgentPresetName]`. The `name` parameter comes from the caller (could be any string), and casting it to AgentPresetName without validation assumes it matches one of the built-in presets. While the function later handles the case where it's not found (lines 172-173), the type assertion misleads TypeScript into thinking the string is definitely a BuiltinPresetName when it's not validated yet.\", \"fix\": \"Remove the type assertion. Use `name in BUILTIN_AGENT_PRESETS` to check without casting, or simply rely on the `undefined` check on line 166: `const builtin = (BUILTIN_AGENT_PRESETS as Record<string, AgentPreset | undefined>)[name]; if (builtin) return builtin;`\"}, {\"file\": \"packages/core/src/product/define.ts\", \"line\": \"156-157\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Redundant tool disable list passed to RunManager\", \"detail\": \"Lines 92-94 already filter enabledSet by removing tools from adapter?.disableTools. Then line 156 passes the filtered enabledSet as enabledBuiltinTools, AN",
+        "excerptStart": 55179,
+        "excerptEnd": 56403,
+        "originalChars": 220729,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/150/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "ath imports.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-1",
+        "excerptStart": 86683,
+        "excerptEnd": 87888,
+        "originalChars": 111073,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/151/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "8;;${url}${BEL}${text}${OSC}8;;${BEL}`. If a URL contains the BEL character (\\\\x07), it will prematurely terminate the hyperlink sequence. If it contains ESC (\\\\x1b), it could inject additional escape sequences. The url parameter comes from user input via Link components (see squash-text-nodes.ts line 56 and Ansi.tsx line 71-77), making this an unvalidated sink for attacker-controlled data.\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/render/render-node-to-output.ts\", \"line\": \"453-460, 546, 1241\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Absolute-positioned element y-clamping not reflected in cached geometry\", \"detail\": \"When an absolute-positioned element computes y < 0, line 459 clamps it to 0 for rendering. However, the cached rect stored at line 546 and 1241 uses this clamped y value. On the next frame, the node's cached.y will be 0 (the clamped value), not the actual computed yogaTop. This causes the blit-check comparison at line 470-471 to incorrectly believe the position hasn't changed when it actually has, potentially skipping necessary re-renders or causing visual glitches with partially off-screen absolute overlays.\", \"fix\": \"Store the actual computed yogaTop separately from the rendered y position. Use the ac",
+        "excerptStart": 34619,
+        "excerptEnd": 35875,
+        "originalChars": 138898,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/152/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "\", \"pkg\": \"tui\", \"_id\": 109}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\", \"_id\": 110}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys o",
+        "excerptStart": 87893,
+        "excerptEnd": 89098,
+        "originalChars": 112643,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/153/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "ow\", \"confidence\": \"medium\", \"title\": \"Unsafe type assertion on untrusted preset name\", \"detail\": \"Line 165 performs an unsafe type assertion: `const builtin = BUILTIN_AGENT_PRESETS[name as AgentPresetName]`. The `name` parameter comes from the caller (could be any string), and casting it to AgentPresetName without validation assumes it matches one of the built-in presets. While the function later handles the case where it's not found (lines 172-173), the type assertion misleads TypeScript into thinking the string is definitely a BuiltinPresetName when it's not validated yet.\", \"fix\": \"Remove the type assertion. Use `name in BUILTIN_AGENT_PRESETS` to check without casting, or simply rely on the `undefined` check on line 166: `const builtin = (BUILTIN_AGENT_PRESETS as Record<string, AgentPreset | undefined>)[name]; if (builtin) return builtin;`\"}, {\"file\": \"packages/core/src/product/define.ts\", \"line\": \"156-157\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Redundant tool disable list passed to RunManager\", \"detail\": \"Lines 92-94 already filter enabledSet by removing tools from adapter?.disableTools. Then line 156 passes the filtered enabledSet as enabledBuiltinTools, AN",
+        "excerptStart": 55179,
+        "excerptEnd": 56403,
+        "originalChars": 220729,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/154/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "ath imports.\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\"}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys on lines 61-1",
+        "excerptStart": 86683,
+        "excerptEnd": 87888,
+        "originalChars": 111073,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/155/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "8;;${url}${BEL}${text}${OSC}8;;${BEL}`. If a URL contains the BEL character (\\\\x07), it will prematurely terminate the hyperlink sequence. If it contains ESC (\\\\x1b), it could inject additional escape sequences. The url parameter comes from user input via Link components (see squash-text-nodes.ts line 56 and Ansi.tsx line 71-77), making this an unvalidated sink for attacker-controlled data.\"}, {\"pkg\": \"tui\", \"file\": \"packages/tui/src/render/render-node-to-output.ts\", \"line\": \"453-460, 546, 1241\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Absolute-positioned element y-clamping not reflected in cached geometry\", \"detail\": \"When an absolute-positioned element computes y < 0, line 459 clamps it to 0 for rendering. However, the cached rect stored at line 546 and 1241 uses this clamped y value. On the next frame, the node's cached.y will be 0 (the clamped value), not the actual computed yogaTop. This causes the blit-check comparison at line 470-471 to incorrectly believe the position hasn't changed when it actually has, potentially skipping necessary re-renders or causing visual glitches with partially off-screen absolute overlays.\", \"fix\": \"Store the actual computed yogaTop separately from the rendered y position. Use the ac",
+        "excerptStart": 34619,
+        "excerptEnd": 35875,
+        "originalChars": 138898,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/156/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "\", \"pkg\": \"tui\", \"_id\": 109}, {\"file\": \"packages/tui/src/render/components/Newline.tsx\", \"line\": \"21-24\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"No validation for negative count parameter\", \"detail\": \"Line 21 defaults count to 1 if undefined, but does not validate that count is a non-negative number. If a caller passes count={-1}, line 24 will throw a RangeError when calling String.prototype.repeat() with a negative argument. The JSDoc on line 5-8 states 'Number of newlines to insert' and line 14 says 'one or more', which implies count should be >= 1, but there's no runtime check.\", \"fix\": \"Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(1, t1 ?? 1);\", \"pkg\": \"tui\", \"_id\": 110}, {\"file\": \"packages/tui/src/render/components/Text.tsx\", \"line\": \"242\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Potential undefined access from memoizedStylesForWrap due to @ts-nocheck\", \"detail\": \"Line 242 accesses `memoizedStylesForWrap[wrap]` without validation. Due to `@ts-nocheck` on line 1, TypeScript's type safety is disabled. If an invalid `wrap` value is passed (not in the hardcoded keys o",
+        "excerptStart": 87893,
+        "excerptEnd": 89098,
+        "originalChars": 112643,
+        "excerptTruncated": true
+      }
+    ],
+    "numeric-save": [
+      {
+        "document": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "paragraph/78",
+        "kind": "markdown-paragraph",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(desktop/panels/mobile)+ tui 全扫,无剩余 renderer/tui 盲区**;真正剩下的只有 core 之外的端到端**真机冒烟**(代码静态审已饱和)。 |\n| model-catalog resolveInstance + 默认选择 | 干净(亲核,补 agent review):baseUrl 回退 `inst??cred??entry.defaultBaseUrl`(末项 schema 必填恒非空)·cred 缺→apiKey undefined→client resolveApiKey 兜底·entry 缺→null caller skip·paramValues??{};**stale `defaults.text`(指向已删连接)经 `pool.list().some(key===defaultText)` 存在性检查才",
+        "excerptStart": 8609,
+        "excerptEnd": 9887,
+        "originalChars": 14172,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-16/README.md",
+        "locator": "paragraph/4",
+        "kind": "markdown-paragraph",
+        "excerpt": "| P2 | headless run 的显式模型/端点被 seed catalog 默认值覆盖；apiKey 覆盖也遗漏 | [CLI；动态/静态分账](root.md) |\n| SWC-04 | P2 | 合法省略 Matrix botUserId 时自己的回复进入输入，产生回复回环 | [Chat；内存平台替身](server-web-chat.md) |\n| SWC-05 | P2 | 单个 state.json 为 null/数字可使整个磁盘会话查询 reject | [Server](server-web-chat.md) |\n| D01 | P2 | Git 中文/特殊文件名未解码，@ 搜索不到真实名或返回不可读路径 | [Desktop](desktop.md) |\n| D02 | P2 | 多根搜索先全局截断再筛当前根，当前根真实匹配会消失 | [Desktop](desktop.md) |\n| D03 | P2 | Native JSON-lines 每 chunk 解 UTF-8，合法分片会把中文/emoji 改成乱码 | [Desktop；仅 decoder](desktop.md) |\n| A11 | P2 | release --push 可在任务分支给未合入 main 的 HEAD 打发布 tag | [根脚本；仅静态](root.md) |\n| A03 | P3 | 首条未暂存 git status 前导空格被 trim，模型上下文中的文件名缺首字符 | [Coding](root.md) |\n| A04 | P3 | 合法提交标题里的竖线截断标题，并把作者/日期字段错位 | [Coding](root.md) |\n| A12 | P3 | 父代理最终正文为空时，JSON fallback 可能采用子代理 delta | [TUI](root.md) |\n| SWC-06 | P3 | 相同目录 mtime 下排序/游标 comparator 不一致，混合大小写会话分页漏项 | [Server；自然生产相等 mtime 未证明](server-web-chat.md) |",
+        "excerptStart": 1155,
+        "excerptEnd": 2072,
+        "originalChars": 2072,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-16/server-web-chat.md",
+        "locator": "paragraph/19",
+        "kind": "markdown-paragraph",
+        "excerpt": "med JSON 分支保持一致；实际：`null` 在读取 `.ephemeral` 时抛错，`42` 在 `\"parentSessionId\" in state` 抛 TypeError，整个 async list reject。\n- 影响：Desktop 磁盘会话恢复、侧栏导入与依赖该 catalog 的 host read model 无法读取任何会话，直到损坏文件被人工处理。未证明正常 Core writer 会写入 null/数字；这是明确的本地损坏隔离缺陷，不声称远程攻击入口。\n- 验证：真实 reader、真实独立文件系统；健康+null 和健康+42 均 reject；相邻 `listSessions()` 仍正常返回健康记录；损坏内容改成 `not JSON` 后 listDiskSessions 也正常略过并返回健康记录。证据：`evidence/server-session-catalog.test.ts` 第一个测试。\n- 是否已知：按 listDiskSessions / corrupt / non-object / null 查重，没有找到同一旧已确认条目。\n- 建议：JSON.parse 后在局部 try 范围内验证非 null、非数组对象，再读取字段；单条不合格直接 continue。",
+        "excerptStart": 253,
+        "excerptEnd": 820,
+        "originalChars": 820,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/cli.md",
+        "locator": "paragraph/6",
+        "kind": "markdown-paragraph",
+        "excerpt": "Cases cover positive decimal integer conversion, leading zeros, invalid/nonnumeric/zero/negative/trailing-garbage rejection, model-over-settings context limits and the documented default. Actual Commander argument parsing, process exit behavior and a running CLI were not exercised. The imported InvalidArgumentError class alone is not whole-Commander or CLI validation.",
+        "excerptStart": 0,
+        "excerptEnd": 370,
+        "originalChars": 370,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round19/evidence/review-aggregate.md",
+        "locator": "paragraph/3",
+        "kind": "markdown-paragraph",
+        "excerpt": "致，均为 guarded runner、Completed/exit 0：**29/49 + 15/44 + 10/37 + 17/57 = 71 tests / 187 expect**；**43 existing + 28 focused**。每组现有/聚焦合计与 raw passed 数一致，0 fail/skip/rerun。仅两个 reviewprompt characterization 断言当前错误行为。Timing 受控数字时钟、simple diff 小字符串、undo 自有元数据均未被扩大为 Engine、recorder、FileHistory、恢复文件或 renderer 的运行覆盖。默认/异常系统时钟、非法限额参数和 legacy 当前 producer 的限制保留。",
+        "excerptStart": 34,
+        "excerptEnd": 385,
+        "originalChars": 385,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/friendly-error.md",
+        "locator": "paragraph/11",
+        "kind": "markdown-paragraph",
+        "excerpt": "历史去重扫描 `docs/`、`bugs/` 下 2,232 个 Markdown/JSON 文件，含 archive，递归解析 309,994 个字符串叶子、436,035 个全标量，0 parse error。精确 quota+429/异常类组合未命中旧发现；friendly helper 命中主要为库存、架构说明和旧提案，不作为新覆盖。第二个宽搜的 429 包含行号/统计数字噪声，共 102 匹配、最多保存 100 上下文；它不是全仓语义穷尽保证。详见 [初次去重](evidence/root-dedup.json)、[补充宽搜](evidence/root-quota-dedup.json)、[判断收据](evidence/root-dedup-decisions.json)。",
+        "excerptStart": 0,
+        "excerptEnd": 347,
+        "originalChars": 347,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/root-branch-scan.json",
+        "locator": "/hits/review_integration/3/context",
+        "kind": "json-recursive-value",
+        "excerpt": "致，均为 guarded runner、Completed/exit 0：**29/49 + 15/44 + 10/37 + 17/57 = 71 tests / 187 expect**；**43 existing + 28 focused**。每组现有/聚焦合计与 raw passed 数一致，0 fail/skip/rerun。仅两个 reviewprompt characterization 断言当前错误行为。Timing 受控数字时钟、simple diff 小字符串、undo 自有元数据均未被扩大为 Engine、recorder、FileHistory、恢复文件或 renderer 的运行覆盖。默认/异常系统时钟、非法限额参数和 legacy 当前 producer 的限制保留。\n\n独立重新核对：**71 个 indexed files / 72 个含 index 的文件**，无重复/遗漏且所有 SHA/bytes 匹配；**42 个唯一全局 source pins** 的 froz",
+        "excerptStart": 344,
+        "excerptEnd": 799,
+        "originalChars": 799,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+        "locator": "/contexts/mechanism/93/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "致，均为 guarded runner、Completed/exit 0：**29/49 + 15/44 + 10/37 + 17/57 = 71 tests / 187 expect**；**43 existing + 28 focused**。每组现有/聚焦合计与 raw passed 数一致，0 fail/skip/rerun。仅两个 reviewprompt characterization 断言当前错误行为。Timing 受控数字时钟、simple diff 小字符串、undo 自有元数据均未被扩大为 Engine、recorder、FileHistory、恢复文件或 renderer 的运行覆盖。默认/异常系统时钟、非法限额参数和 legacy 当前 producer 的限制保留。",
+        "excerptStart": 34,
+        "excerptEnd": 385,
+        "originalChars": 385,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "locator": "/hits/admitted-name-local/7/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "excerptStart": 308,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "locator": "/hits/uninstall-local-marketplace/6/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "excerptStart": 308,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "locator": "/hits/collision-local-marketplace/4/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "excerptStart": 308,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "locator": "/hits/exact-cause-cooccurrence/2/excerpt",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "excerptStart": 308,
+        "excerptEnd": 1200,
+        "originalChars": 1200,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused.json",
+        "locator": "/hits/tui_revoke/3/context",
+        "kind": "json-recursive-value",
+        "excerpt": "| P2 | headless run 的显式模型/端点被 seed catalog 默认值覆盖；apiKey 覆盖也遗漏 | [CLI；动态/静态分账](root.md) |\n| SWC-04 | P2 | 合法省略 Matrix botUserId 时自己的回复进入输入，产生回复回环 | [Chat；内存平台替身](server-web-chat.md) |\n| SWC-05 | P2 | 单个 state.json 为 null/数字可使整个磁盘会话查询 reject | [Server](server-web-chat.md) |\n| D01 | P2 | Git 中文/特殊文件名未解码，@ 搜索不到真实名或返回不可读路径 | [Desktop](desktop.md) |\n| D02 | P2 | 多根搜索先全局截断再筛当前根，当前根真实匹配会消失 | [Desktop](desktop.md) |\n| D03 | P2 | Native JSON-lines 每 chunk 解 UTF-8，合法分片会把中文/emoji 改成乱码 | [Desktop；仅 decoder](desktop.md) |\n| A11 | P2 | release --push 可在任务分支给未合入 main 的 HEAD 打发布 tag | [根脚本；仅静态](root.md) |\n| A03 | P3 | 首条未暂存 git status 前导空格被 trim，模型上下文中的文件名缺首字符 | [Coding](root.md) |\n| A04 | P3 | 合法提交标题里的竖线截断标题，并把作者/日期字段错位 | [Coding](root.md) |\n| A12 | P3 | 父代理最终正文为空时，JSON fallback 可能采用子代理 delta | [TUI](root.md) |\n| SWC-06 | P3 | 相同目录 mtime 下排序/游标 comparator 不一致，混合大小写会话分页漏项 | [Server；自然生产相等 mtime 未证明](server-web-chat.md) |",
+        "excerptStart": 372,
+        "excerptEnd": 1289,
+        "originalChars": 1289,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/cause-history.json",
+        "locator": "/contexts/draft-plugin-race/35/text",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "excerptStart": 98,
+        "excerptEnd": 990,
+        "originalChars": 990,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/cause-history.json",
+        "locator": "/contexts/draft-plugin-race/36/text",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "excerptStart": 98,
+        "excerptEnd": 990,
+        "originalChars": 990,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/cause-history.json",
+        "locator": "/contexts/draft-plugin-race/37/text",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "excerptStart": 98,
+        "excerptEnd": 990,
+        "originalChars": 990,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/cause-history.json",
+        "locator": "/contexts/draft-plugin-race/38/text",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "excerptStart": 98,
+        "excerptEnd": 990,
+        "originalChars": 990,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-focused.json",
+        "locator": "/hits/draft_switch/1/context",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-",
+        "excerptStart": 438,
+        "excerptEnd": 842,
+        "originalChars": 842,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-focused.json",
+        "locator": "/hits/draft_switch/2/context",
+        "kind": "json-recursive-value",
+        "excerpt": "rage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/pre",
+        "excerptStart": 347,
+        "excerptEnd": 795,
+        "originalChars": 795,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/README.md",
+        "locator": "paragraph/1",
+        "kind": "markdown-paragraph",
+        "excerpt": "mp允许，双语提示明确为≤，没有把源码旧注释的严格<当成新bug。保存实际经settingsBus/user分支到main普通配置patch，reset的null在deepMerge中删除覆盖；SettingsManager→Engine ratios→run-context→ContextManager阈值消费链在选定范围内相符。权限、identity resolver与Host机制只导航，不作正确性结论。旧发布记录里的读取保护、正常数字草稿、保存/reset失败保留与slider名称修复均作为旧反证，不另立ID。",
+        "excerptStart": 91,
+        "excerptEnd": 352,
+        "originalChars": 352,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/history-contexts.json",
+        "locator": "/hits/settings_contract/59/context",
+        "kind": "json-recursive-value",
+        "excerpt": "hable; native environment-dialog close\n  restores its trigger. Fourteen layouts and real keyboard navigation passed.\n- `2dcd041ff`: Context settings cannot overwrite unknown settings after a failed\n  read, accept normal numeric drafts, preserve failed save/reset drafts and name\n  actual slider thumbs. Sixteen layouts and 24 related tests passed.\n- `bd17170a6`, `9fab94dee`: accepted send/queue/Guide closes suggestions, rejected\n  submission retains the draft, and later input/focus/scope operations invalidate\n  stale caret callbacks. Ten submission and 15 deterministic caret cases passed,\n  plus independent native-keyboard review.\n\nBoth merge conflicts preserved all changes: Appearance + Context fixture entries,\nand the listbox useId + new caret hook in ChatView. CI now includes all 19 Desktop\nbrowser fixtures and all three Web navigation",
+        "excerptStart": 218,
+        "excerptEnd": 1066,
+        "originalChars": 1066,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/history-contract-selected.json",
+        "locator": "/contexts/52/context",
+        "kind": "json-recursive-value",
+        "excerpt": "hable; native environment-dialog close\n  restores its trigger. Fourteen layouts and real keyboard navigation passed.\n- `2dcd041ff`: Context settings cannot overwrite unknown settings after a failed\n  read, accept normal numeric drafts, preserve failed save/reset drafts and name\n  actual slider thumbs. Sixteen layouts and 24 related tests passed.\n- `bd17170a6`, `9fab94dee`: accepted send/queue/Guide closes suggestions, rejected\n  submission retains the draft, and later input/focus/scope operations invalidate\n  stale caret callbacks. Ten submission and 15 deterministic caret cases passed,\n  plus independent native-keyboard review.\n\nBoth merge conflicts preserved all changes: Appearance + Context fixture entries,\nand the listbox useId + new caret hook in ChatView. CI now includes all 19 Desktop\nbrowser fixtures and all three Web navigation",
+        "excerptStart": 218,
+        "excerptEnd": 1066,
+        "originalChars": 1066,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/history-decisions.json",
+        "locator": "/priorFix/scope",
+        "kind": "json-recursive-value",
+        "excerpt": "Context read-error safety, normal numeric drafts, failed save/reset preservation and slider names already recorded; historical reported tests not rerun/adopted as current pass",
+        "excerptStart": 0,
+        "excerptEnd": 175,
+        "originalChars": 175,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/history-focused.json",
+        "locator": "/patterns/context_form_recovery",
+        "kind": "json-recursive-value",
+        "excerpt": "(?:context|上下文).{0,90}(?:numeric draft|failed (?:read|save)|save/reset|reset draft|load failure|read failure|数值草稿|保存失败)|(?:numeric draft|failed (?:read|save)|save/reset|reset draft|load failure|read failure).{0,90}(?:context|上下文)",
+        "excerptStart": 0,
+        "excerptEnd": 229,
+        "originalChars": 229,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/report.first.md",
+        "locator": "paragraph/0",
+        "kind": "markdown-paragraph",
+        "excerpt": "Future 52 Context settings review is a limited static negative: 0 new formal findings, 0 candidates, 0 related. No ordinary numeric/text form counterexample was established in the selected save/default/ratio-consumer chain. This does not certify every settings mechanism or UI behavior.",
+        "excerptStart": 0,
+        "excerptEnd": 286,
+        "originalChars": 286,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/report.first.md",
+        "locator": "paragraph/3",
+        "kind": "markdown-paragraph",
+        "excerpt": "The old release-ui-20261015.md record at 129 already names 2 dcd 041 ff: failed-read protection, normal numeric drafts, failed save/reset preservation and slider naming. Those are prior fixes/references, not new findings or current rerun evidence. The old R 10 wrong Engine-path/cache-refresh static failure was read only as historical metadata; reloadCachedContextWindows and every old failed dynamic direction remained closed. Root later integrated 44 docs-only; this original 3979 history time point was not backfilled.",
+        "excerptStart": 0,
+        "excerptEnd": 522,
+        "originalChars": 522,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/report.first.md",
+        "locator": "paragraph/5",
+        "kind": "markdown-paragraph",
+        "excerpt": "- Component 80–83/159–180 keeps raw numeric drafts, rejects empty/noninteger/out-of-bounds input, permits persistence only after ready loading and guards overlapping writes. Save normalizes ordering and serializes percentages as ratios. Rejection does not replace the draft, and reset can bypass an invalid draft to write three null tombstones. No generated NaN/Infinity/malformed DTO or UI event fixture was used.\n- UI ranges 10–95/98/99 and defaults 70/85/92 match schema 297–331 and the consumer defaults 0.7/0.85/0.92. Core clamp 228–261 and the existing ratio-test declarations explicitly clamp floor down and summarize up to equality. Strict-inequality prose alone is therefore insufficient for a new ordering bug.\n- writeSettings delegates the unchanged user patch through settingsBus and only the user branch of settingsAuthority 14–20; project resolution is outside scope. settings-service selected user-patch/deepMerge 171–215 recursively deletes null keys and preserves other context keys. File/lock/recovery/authority mechanisms were not validated. A later read-erro",
+        "excerptStart": 0,
+        "excerptEnd": 1078,
+        "originalChars": 1534,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/report.md",
+        "locator": "paragraph/0",
+        "kind": "markdown-paragraph",
+        "excerpt": "Future 52 Context settings review is a limited static negative: 0 new formal findings, 0 candidates, 0 related. No ordinary numeric/text form counterexample was established in the selected save/default/ratio-consumer chain. This does not certify every settings mechanism or UI behavior.",
+        "excerptStart": 0,
+        "excerptEnd": 286,
+        "originalChars": 286,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/report.md",
+        "locator": "paragraph/3",
+        "kind": "markdown-paragraph",
+        "excerpt": "The old release-ui-20261015.md record at 129 already names 2dcd041ff: failed-read protection, normal numeric drafts, failed save/reset preservation and slider naming. Those are prior fixes/references, not new findings or current rerun evidence. The old R 10 wrong Engine-path/cache-refresh static failure was read only as historical metadata; reloadCachedContextWindows and every old failed dynamic direction remained closed. Root later integrated 44 docs-only; this original 3979 history time point was not backfilled.",
+        "excerptStart": 0,
+        "excerptEnd": 519,
+        "originalChars": 519,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-frontier/report.md",
+        "locator": "paragraph/5",
+        "kind": "markdown-paragraph",
+        "excerpt": "- Component 80–83/159–180 keeps raw numeric drafts, rejects empty/noninteger/out-of-bounds input, permits persistence only after ready loading and guards overlapping writes. Save normalizes ordering and serializes percentages as ratios. Rejection does not replace the draft, and reset can bypass an invalid draft to write three null tombstones. No generated NaN/Infinity/malformed DTO or UI event fixture was used.\n- UI ranges 10–95/98/99 and defaults 70/85/92 match schema 297–331 and the consumer defaults 0.7/0.85/0.92. Core clamp 228–261 and the existing ratio-test declarations explicitly clamp floor down and summarize up to equality. Strict-inequality prose alone is therefore insufficient for a new ordering bug.\n- writeSettings delegates the unchanged user patch through settingsBus and only the user branch of settingsAuthority 14–20; project resolution is outside scope. settings-service selected user-patch/deepMerge 171–215 recursively deletes null keys and preserves other context keys. File/lock/recovery/authority mechanisms were not validated. A later read-erro",
+        "excerptStart": 0,
+        "excerptEnd": 1078,
+        "originalChars": 1534,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round45/evidence/context-review/source-manifest.json",
+        "locator": "/boundary",
+        "kind": "json-recursive-value",
+        "excerpt": "Only ordinary numeric/text settings DTO form and selected save/consumer data. Permission, identity, authority, custody/native/worker/file-lock correctness stopped at visible call boundaries.",
+        "excerptStart": 0,
+        "excerptEnd": 190,
+        "originalChars": 190,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/chat-adapter-frontier/cause-history.json",
+        "locator": "/hits/matrix-loop/0/text",
+        "kind": "json-recursive-value",
+        "excerpt": "| P2 | headless run 的显式模型/端点被 seed catalog 默认值覆盖；apiKey 覆盖也遗漏 | [CLI；动态/静态分账](root.md) |\n| SWC-04 | P2 | 合法省略 Matrix botUserId 时自己的回复进入输入，产生回复回环 | [Chat；内存平台替身](server-web-chat.md) |\n| SWC-05 | P2 | 单个 state.json 为 null/数字可使整个磁盘会话查询 reject | [Server](server-web-chat.md) |\n| D01 | P2 | Git 中文/特殊文件名未解码，@ 搜索不到真实名或返回不可读路径 | [Desktop](desktop.md) |\n| D02 | P2 | 多根搜索先全局截断再筛当前根，当前根真实匹配会消失 | [Desktop](desktop.md) |\n| D03 | P2 | Native JSON-lines 每 chunk 解 UTF-8，合法分片会把中文/emoji 改成乱码 | [Desktop；仅 decoder](desktop.md) |\n| A11 | P2 | release --push 可在任务分支给未合入 main 的 HEAD 打发布 tag | [根脚本；仅静态](root.md) |\n| A03 | P3 | 首条未暂存 git status 前导空格被 trim，模型上下文中的文件名缺首字符 | [Coding](root.md) |\n| A04 | P3 | 合法提交标题里的竖线截断标题，并把作者/日期字段错位 | [Coding](root.md) |\n| A12 | P3 | 父代理最终正文为空时，JSON fallback 可能采用子代理 delta | [TUI](root.md) |\n| SWC-06 | P3 | 相同目录 mtime 下排序/游标 comparator 不一致，混合大小写会话分页漏项 | [Server；自然生产相等 mtime 未证明](server-web-chat.md) |\n\n## 验证收据\n\n新问题的聚焦测试为 **33 个不同测试**：root 12、C",
+        "excerptStart": 110,
+        "excerptEnd": 1070,
+        "originalChars": 1070,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/chat-adapter-frontier/cause-history.json",
+        "locator": "/hits/matrix-loop/3/text",
+        "kind": "json-recursive-value",
+        "excerpt": "| P2 | headless run 的显式模型/端点被 seed catalog 默认值覆盖；apiKey 覆盖也遗漏 | [CLI；动态/静态分账](root.md) |\n| SWC-04 | P2 | 合法省略 Matrix botUserId 时自己的回复进入输入，产生回复回环 | [Chat；内存平台替身](server-web-chat.md) |\n| SWC-05 | P2 | 单个 state.json 为 null/数字可使整个磁盘会话查询 reject | [Server](server-web-chat.md) |\n| D01 | P2 | Git 中文/特殊文件名未解码，@ 搜索不到真实名或返回不可读路径 | [Desktop](desktop.md) |\n| D02 | P2 | 多根搜索先全局截断再筛当前根，当前根真实匹配会消失 | [Desktop](desktop.md) |\n| D03 | P2 | Native JSON-lines 每 chunk 解 UTF-8，合法分片会把中文/emoji 改成乱码 | [Desktop；仅 decoder](desktop.md) |\n| A11 | P2 | release --push 可在任务分支给未合入 main 的 HEAD 打发布 tag | [根脚本；仅静态](root.md) |\n| A03 | P3 | 首条未暂存 git status 前导空格被 trim，模型上下文中的文件名缺首字符 | [Coding](root.md) |\n| A04 | P3 | 合法提交标题里的竖线截断标题，并把作者/日期字段错位 | [Coding](root.md) |\n| A12 | P3 | 父代理最终正文为空时，JSON fallback 可能采用子代理 delta | [TUI](root.md) |\n| SWC-06 | P3 | 相同目录 mtime 下排序/游标 comparator 不一致，混合大小写会话分页漏项 | [Server；自然生产相等 mtime 未证明](server-web-chat.md) |",
+        "excerptStart": 110,
+        "excerptEnd": 1027,
+        "originalChars": 1027,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/formal-finding-input.json",
+        "locator": "/impact",
+        "kind": "json-recursive-value",
+        "excerpt": "Understates the same foreground query elapsed time by the interval before the background-triggered reset. No observed frame, numeric measurement, pricing/accounting error, persistent corruption, or every-notification claim.",
+        "excerptStart": 0,
+        "excerptEnd": 223,
+        "originalChars": 223,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/findings.json",
+        "locator": "/findings/0/impact",
+        "kind": "json-recursive-value",
+        "excerpt": "Understates the same foreground query elapsed time by the interval before the background-triggered reset. No observed frame, numeric measurement, pricing/accounting error, persistent corruption, or every-notification claim.",
+        "excerptStart": 0,
+        "excerptEnd": 223,
+        "originalChars": 223,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/cost-review/history-contexts.json",
+        "locator": "/mainPath/51/context",
+        "kind": "json-recursive-value",
+        "excerpt": "g. The latter is a source integration assertion, not an executed REPL or model session.\n\nCases cover positive decimal integer conversion, leading zeros, invalid/nonnumeric/zero/negative/trailing-garbage rejection, model-over-settings context limits and the documented default. Actual Commander argument parsing, process exit behavior and a running CLI were not exercised. The imported InvalidArgumentError class alone is not whole-Commander or CLI validation.\n\n## Ordinary producers and exclusions\n\n`packages/tui/src/cli/main.ts:71,101,131` statically wires positiveIntOption for max turns, background wait and session limit; `commands/runs.ts:101,276` does so for run/event limits. `commands/run.ts:128`, `repl.ts:157` and `runs.ts:64` use the shared context-limit resolver. Only relevant source ranges and search references were read; these commands were not imported or run.\n\nThe May 30 unvalidated parseInt/NaN case and old REPL duplicated context fallback already have historical records and current defensive/helper wiring. They are not new findings. An arbitrary integer beyond JS's exact-integer range",
+        "excerptStart": 0,
+        "excerptEnd": 1109,
+        "originalChars": 1428,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/cost-review/history-contexts.json",
+        "locator": "/mainFilename/80/context",
+        "kind": "json-recursive-value",
+        "excerpt": "urce integration assertion, not an executed REPL or model session.\n\nCases cover positive decimal integer conversion, leading zeros, invalid/nonnumeric/zero/negative/trailing-garbage rejection, model-over-settings context limits and the documented default. Actual Commander argument parsing, process exit behavior and a running CLI were not exercised. The imported InvalidArgumentError class alone is not whole-Commander or CLI validation.\n\n## Ordinary producers and exclusions\n\n`packages/tui/src/cli/main.ts:71,101,131` statically wires positiveIntOption for max turns, background wait and session limit; `commands/runs.ts:101,276` does so for run/event limits. `commands/run.ts:128`, `repl.ts:157` and `runs.ts:64` use the shared context-limit resolver. Only relevant source ranges and search references were read; these commands were not imported or run.\n\nThe May 30 unvalidated parseInt/NaN case and old REPL duplicated context fallback already have historical records and current defensive/helper wiring. They are not new findings. An arbitrary integer beyond JS's exact-integer range",
+        "excerptStart": 0,
+        "excerptEnd": 1088,
+        "originalChars": 1407,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/model-display-gate/history-contexts.json",
+        "locator": "/hits/fallback_name/2/context",
+        "kind": "json-recursive-value",
+        "excerpt": "t reads the owned REPL source and asserts resolver wiring. The latter is a source integration assertion, not an executed REPL or model session.\n\nCases cover positive decimal integer conversion, leading zeros, invalid/nonnumeric/zero/negative/trailing-garbage rejection, model-over-settings context limits and the d",
+        "excerptStart": 602,
+        "excerptEnd": 916,
+        "originalChars": 916,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/preset-review/history-contexts.first.json",
+        "locator": "/hits/fallback_name/2/context",
+        "kind": "json-recursive-value",
+        "excerpt": "t reads the owned REPL source and asserts resolver wiring. The latter is a source integration assertion, not an executed REPL or model session.\n\nCases cover positive decimal integer conversion, leading zeros, invalid/nonnumeric/zero/negative/trailing-garbage rejection, model-over-settings context limits and the d",
+        "excerptStart": 602,
+        "excerptEnd": 916,
+        "originalChars": 916,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/audit-2026-10-17/operations-memory.md",
+        "locator": "paragraph/6",
+        "kind": "markdown-paragraph",
+        "excerpt": "a temporary error.”，scope=global。两条 `type` 都是 reference。真实 orchestrator 调用 fake LLM 得到明确 `ADD` 决策（保留两条不同请求类别事实）。\n- 预期：ADD 不能替换现有不同正文；若需更新，应经过 UPDATE 的目标 ID 和同主题判定。\n- 现有契约：`memory-orchestrator.ts:613–615` 要求对照旧正文，保留方向、否定、数字、范围差异，缺失/相似主题不能证明 UPDATE/DELETE，不能确定时选择 ADD；`:661–663` 明确相似词不能证明新事实取代旧事实，只有完全重复才可在没有显式 LLM UPDATE 时压掉。gate 的按名称覆盖绕开了这两处写入层契约。\n- 实际：gate 忽略 ADD 语义，只按名称挑现有项目 dream，再用其 ID `save()` 新正文；项目只剩 ID=`original` 的 read 规则，charge 规则正文被覆盖。pending 同时写入新正文。\n- 影响：自动提取可在未作 UPDATE 决策时丢失另一条 auto/dream 持久记忆。范围限项目 auto/dream；未证明 manual 记忆损坏、真实模型行为或外部副作用。\n- 证据：`evidence/ops-memory-promotion-round2.test.ts` 第一个测试；原始 `evidence/ops-memory-promotion-round2.log`，整组 **2 pass / 0 fail / 13 expect，Completed**。实际 MemoryManager、MemoryOrchestrator、promotion gate 与自有临时文件；模型是两次内存 JSON 响应。\n- 查重：未在本轮检索的旧审查报告发现同一问题；旧 auto-dream cadence 竞态与本项不同。",
+        "excerptStart": 287,
+        "excerptEnd": 1123,
+        "originalChars": 1123,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/bug-review-report-2026-08-13.md",
+        "locator": "paragraph/12",
+        "kind": "markdown-paragraph",
+        "excerpt": " App KV：修复普通对象原型键污染/继承读取；改用 null-prototype 数据对象与 own-property 查询；配额在读取前执行；链接 namespace/file 拒绝；跨进程锁覆盖重新读取和保存。\n- Pet receipt、work inbox、long task：统一复用有界 JSON 存储；输出原子、owner-only；active task 也受总量限制，最新 flush 失败不会被旧成功静默掩盖。\n- 数字人团队：team 文件 64KB 限额、无跟随打开、目录流式枚举上限；保存与删除在跨进程锁内完成。",
+        "excerptStart": 7,
+        "excerptEnd": 278,
+        "originalChars": 278,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/bug-review-report-2026-08-13.md",
+        "locator": "paragraph/18",
+        "kind": "markdown-paragraph",
+        "excerpt": "- Panel App registry：4MB 有界无跟随读取；普通损坏可从发现列表隔离，但写操作拒绝覆盖损坏/链接状态；写入原子且 owner-only。\n- Panel App installer：manifest、declared skill 与 review digest 的实际读取均在打开句柄后重新 `fstat`，堵住扫描后替换成超大文件的 TOCTOU。\n- Workspace profile / Git 数字人目录：profile、manifest 与目录扫描有界；远程仓库提交的链接 manifest/profile 不会被读取；仓库列表严格去重并限制为 32 项。\n- Model catalog：provider/model/param/option/text/number 全部有 schema 上限；目录文件 4MB 有界；编辑在跨进程锁内重读，备份后缀防路径注入，备份排他创建，保存 owner-only 原子替换。\n- Theme installer：manifest/registry 有界无跟随；损坏 registry fail closed；registry 锁内更新，真实 8 进程并发安装不丢条目。\n- Plugin marketplaces / installed plugins：注册表有界无跟随、严格结构验证，append/remove 与 Hook/MCP 审批均在跨进程锁内重新读取后保存；canonical manifest 不能通过链接贡献自动化模板。\n- Plugin 重装：成功后完整性信息回写与失败回滚恢复均改为锁内原子合并，不再用旧快照覆盖同时安装的其他插件记录。\n- Chrome native bridge：状态文件 64KB、严格 token/port/pid、无跟随读取与 owner-only 原子写；写状态失败会关闭监听并回滚内存状态。\n- CredentialStore 与旧凭据迁移：真实父目录、32MB 限额、无跟随读取、锁内原子写；链接凭据文件不会泄露或被替换。",
+        "excerptStart": 0,
+        "excerptEnd": 875,
+        "originalChars": 875,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/desktop-cloud-account.md",
+        "locator": "paragraph/10",
+        "kind": "markdown-paragraph",
+        "excerpt": "Saving preserves the stable account UUID, GitHub identity, sessions, devices and\nLink ownership. After a username change, password login uses the new username;\nGitHub login still resolves by numeric identity. Renaming a GitHub-only account\ndoes not add a password. Main validates the returned account and saves encrypted\ncredentials before publishing success. Logout, account switching, refresh and\nconcurrent windows cannot publish an older profile over a newer account state.",
+        "excerptStart": 0,
+        "excerptEnd": 477,
+        "originalChars": 477,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/desktop-cloud-account.md",
+        "locator": "paragraph/15",
+        "kind": "markdown-paragraph",
+        "excerpt": "wser. The account service verifies that job with the configured Link service\nbefore requesting `repo read:user` in one GitHub authorization. It exchanges the\nupstream code once, creates or finds the CodeShell account by numeric GitHub ID, and\nissues the account session. A short-lived authenticated server handoff carries only\nthe GitHub credential and verified identity to Link. Desktop saves the account first,\nthen opens a one-use Link claim in the system browser. The usual repository and action\nconsent is still required before Desktop receives a Link grant.",
+        "excerptStart": 90,
+        "excerptEnd": 653,
+        "originalChars": 653,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/superpowers/specs/2026-05-27-subagent-config-panel-design.md",
+        "locator": "paragraph/16",
+        "kind": "markdown-paragraph",
+        "excerpt": "角色列表。内置 4 个带「内置」标；被用户覆盖的标「已覆盖」；用户自建的另列。每项一个**启用/禁用**勾选（写 `settings.disabledAgents`）。\n- 右栏：选中角色的**全字段编辑表单**：\n  - `name`（自建可改；内置不可改名）。\n  - `description`（文本）。\n  - `model`（下拉：settings.models[].key + 「跟随父模型」）。\n  - `maxTurns`（数字）。\n  - `tools`（多选勾选，候选来自 core 工具清单；不勾 = 继承父全集）。\n  - system prompt（多行 textarea = md body）。\n- 操作：内置编辑后「保存」→ 在用户级生成同名覆盖文件；自建直接存用户级。「新增子代理」按钮；「删除」（仅用户级/覆盖文件）。\n- settings 读写沿用 `window.codeshell.getSettings/updateSettings`（参考 ModelSection）。",
+        "excerptStart": 56,
+        "excerptEnd": 512,
+        "originalChars": 512,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/todo/2026-09-11-overnight-polish-results.md",
+        "locator": "paragraph/13",
+        "kind": "markdown-paragraph",
+        "excerpt": "- cc-room 的历史加载、失败重试、切房间、发送确认、输入法和审批操作补齐异步所有权检查。\n- 重复审批编号按房间隔离，连续冲突只产生一次有效拒绝，不遗留卡片或重复控制回复。\n- 后台 Shell 面板暂停隐藏时的轮询并隔离旧请求；Review/Files 面板正确清理过期筛选和错误。\n- 数字人编辑器修复特殊 Skill 名称触发的原型键问题，并对依赖预览、确认、安装、保存和项目切换加上生命周期检查。\n- 多 Skill 安装改为逐项参数，具名依赖拒绝会被安装器解释为开关或全部选择的特殊值；以官方发布的 CLI 纯参数解析器验证选择范围，未执行真实安装。\n- MCP 设置页在目标项目或编辑对象改变时隔离草稿和旧读结果；凭证加载、探测和保存失败显示错误，失败保留草稿并可重试。同步重复点击只提交一次，旧保存不能关闭新编辑器，保存仅更新当前条目与原子重命名的旧键。\n- MCP 的启停只写启停字段，编辑或重命名保留停用状态；递归设置合并使用明确的删除标记，清除已删除的环境变量、鉴权字段以及更换传输方式后的旧连接字段。经过 JSON 传输与实际配置文件写入的回归通过。最终真实 Electron 界面另外完成两次保存，直接核对临时配置文件：删除单个环境变量、重命名并清空可选字段、停用状态与相邻条目均正确；没有触发 probe/OAuth。\n- preload 不再依赖某些 Electron 上下文缺失的 `crypto.randomUUID()`，以 `getRandomValues()` 生成标准 UUID；真实导航回归通过。\n- TTS 准备结束时，锁文件关闭失败仍继续清理其他自有资源；保留原始失败或取消对象，并记录附带的清理错误。没有取得锁的尝试不能删除其他尝试的锁，已成功的准备仍会报告清理失败。第四轮偶发的 EBADF 未在 100 次真实前提失败/GC 探针中复现，不宣称已找到它的底层来源；清理异常覆盖主错误、跳过释放这一缺陷则有稳定故障注入回归。",
+        "excerptStart": 0,
+        "excerptEnd": 841,
+        "originalChars": 841,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/todo/gpt-cache-optimization-2026-09-06.md",
+        "locator": "paragraph/25",
+        "kind": "markdown-paragraph",
+        "excerpt": "6次验证请求的响应usage.cost合计 **US$0.0346484**。原始数值保存在同目录 `gpt-cache-optimization-evidence-2026-09-06.json`，没有凭据或项目内容。",
+        "excerptStart": 0,
+        "excerptEnd": 110,
+        "originalChars": 110,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/todo/profile-memory-promotion-delivery.md",
+        "locator": "paragraph/4",
+        "kind": "markdown-paragraph",
+        "excerpt": "复制会创建目标数字人的新手动记忆，原项目记忆保留。目标未启用可移植记忆时仍可保存，页面明确提示暂不参与使用；本操作不启用该设置。目标启用后，记忆沿用现有 Profile memory 注入路径。",
+        "excerptStart": 0,
+        "excerptEnd": 97,
+        "originalChars": 97,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/todo/profile-memory-promotion-delivery.md",
+        "locator": "paragraph/9",
+        "kind": "markdown-paragraph",
+        "excerpt": "副本只包含本次编辑的名称、摘要、类型、正文和置顶状态，创建新的 ID 和手动所有权；命中次数、更新时间和 dream 的提升／来源项目标记不沿用。数字人未启用长期记忆时明确显示“仅保存”，不会切换当前 Profile、修改开关或重启已有 Run。后续使用该数字人的运行仍沿现有 Profile 选择和 PromptComposer 的注入规则。",
+        "excerptStart": 0,
+        "excerptEnd": 172,
+        "originalChars": 172,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/todo/project-cloud-panels-delivery.md",
+        "locator": "paragraph/785",
+        "kind": "markdown-paragraph",
+        "excerpt": "明确同来源刷新后，腾讯指纹不变；Yahoo 调整历史数值出现细微变化，因此“刷新后\n完全相同字节”的额外断言失败，不能记为稳定数据。随后通过实际 engine.mjs 的 CSV\n解析及 fingerprintBars 复验，两来源当前数据指纹都与 sidecar 一致；Yahoo 指纹由\nfnv1a32:a5702c95 变为 fnv1a32:c714f68b，变化被保存记录。此处未证明上游变化原因，\n也未修改生产数值或放宽一致性验证。证据\n/tmp/quant-live-provider-acceptance.log；临时资料及 verified.json 位于\n/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-live-market-oQQzZU。\n这是本机真实公开来源与解析验证，不替代云端界面、付费来源、自动化和全部业务验收。\n整体目标仍 active；真实账号／模型、目标部署／发布和设备目录／中继仍未完成。",
+        "excerptStart": 0,
+        "excerptEnd": 448,
+        "originalChars": 448,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/todo/release-real-operations-2026-10-16.md",
+        "locator": "paragraph/56",
+        "kind": "markdown-paragraph",
+        "excerpt": "pImage follow-up retains complete source and extracted 07777 permission\ntriples before the current validator runs, with a 20,000-entry/4 MiB limit and\nexclusive 0600 evidence files. A rejected normalization records both numeric\nand octal modes in the runtime receipt. Privilege/write-bit rejection still\nfails under the same policy, with both inventories retained. Eight focused\nruntime tests and the three build-contract tests pass together; no new directory\nconversion is allowed. The workflow explicitly uploads the extracted inventory.",
+        "excerptStart": 6,
+        "excerptEnd": 545,
+        "originalChars": 545,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/todo/release-ui-20261015.md",
+        "locator": "paragraph/14",
+        "kind": "markdown-paragraph",
+        "excerpt": "hable; native environment-dialog close\n  restores its trigger. Fourteen layouts and real keyboard navigation passed.\n- `2dcd041ff`: Context settings cannot overwrite unknown settings after a failed\n  read, accept normal numeric drafts, preserve failed save/reset drafts and name\n  actual slider thumbs. Sixteen layouts and 24 related tests passed.\n- `bd17170a6`, `9fab94dee`: accepted send/queue/Guide closes suggestions, rejected\n  submission retains the draft, and later input/focus/scope operations invalidate\n  stale caret callbacks. Ten submission and 15 deterministic caret cases passed,\n  plus independent native-keyboard review.",
+        "excerptStart": 437,
+        "excerptEnd": 1073,
+        "originalChars": 1073,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/todo/workspace-datasource-binding-adr.md",
+        "locator": "paragraph/29",
+        "kind": "markdown-paragraph",
+        "excerpt": "?: Array<{sourceId, scopes, readPolicy}>`：省略继承 workspace binding；显式 `[]` 禁止全部源，包含隐式项目上传。数组为 allowlist，没有声明的源不可见，scope 求交，任何一层 deny 都禁读。\n- **Profile 永远不能越过 workspace binding**。未绑定的 source/scope 不会被 Profile 新增；不存在 allow 档。数字人编辑设置可填写 JSON，导入/导出和编辑保存保留策略。\n- 原生 Engine 把已解析的 Profile 身份传给工具及动态摘要，并复查 live Session pin/project selection；异步结束读取当前 Profile revision，切换/删除/修改及绑定/源定义变更都会使在途结果失效。",
+        "excerptStart": 32,
+        "excerptEnd": 414,
+        "originalChars": 414,
+        "excerptTruncated": true
+      },
+      {
+        "document": "docs/todo/workspace-datasource-binding-adr.md",
+        "locator": "paragraph/35",
+        "kind": "markdown-paragraph",
+        "excerpt": "历史演示记录可用 `bun scripts/cleanup-legacy-source-mocks.ts --registered-projects`\n先预览，确认非空清单后关闭应用并加 `--apply` 执行。工具仅删除 `kind=mock`\n记录及其精确 ID 在项目设置、数字人 `sourceAccess` 中的引用；真实同 ID 记录、\n普通失效引用和其他字段保留。每个改动文件先备份原始字节再原子替换，目录锁\n按固定顺序获取；引用先清理、全局源清单最后保存，失败可重试。显式 `sourceAccess: []`\n继续保留，不能通过删除策略字段恢复访问。空清单不创建备份、不改写文件。",
+        "excerptStart": 0,
+        "excerptEnd": 300,
+        "originalChars": 300,
+        "excerptTruncated": false
+      },
+      {
+        "document": "docs/todo/workspace-profile-switch-preview.md",
+        "locator": "paragraph/3",
+        "kind": "markdown-paragraph",
+        "excerpt": "- projectId 由 Main 解析为当前项目主目录；sessionId 由 Main 解析为 Session 已绑定的主目录，二者可以不同。Renderer 不提供可信路径。\n- 只替换或删除该配置根的 settings.json 中 profile 子树，保留无关设置。现有显式 Session 绑定不改写。\n- 同一配置根下未显式绑定 Profile 的普通工作 Session 在后续回合读取新默认。数字人主指令与 portable memory 的实际读取仍由既有每轮配置解析负责。\n- 采用复用 withWebConfigurationMutation：存在当前任务时先返回 409，保存与现有 worker reload/通知期间阻止新任务进入。仅成功采用触发一次既有重载；不会额外派发 settings-changed。这不覆盖 legacy 直接 API、其他客户端或手工文件编辑。",
+        "excerptStart": 0,
+        "excerptEnd": 403,
+        "originalChars": 403,
+        "excerptTruncated": false
+      }
+    ],
+    "model-selection-patch": []
+  },
+  "actualHumanRead": "pending; machine count not claimed as fullcontext reading"
+}

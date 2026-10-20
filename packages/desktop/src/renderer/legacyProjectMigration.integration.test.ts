@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionCwdIndex } from "../main/session-cwd-index";
@@ -72,6 +80,107 @@ describe("localStorage-only project migration", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  test("concurrent empty Main migration tokens complete once and retain completion-only replay", async () => {
+    let pickerCalls = 0;
+    let writes = 0;
+    const complete = store.completeLegacyMigration.bind(store);
+    store.completeLegacyMigration = async () => {
+      writes++;
+      await complete();
+    };
+    const service = createLegacyProjectMigrationService({
+      store,
+      pickDirectory: async () => {
+        pickerCalls++;
+        return null;
+      },
+    });
+    const [first, second] = await Promise.all([service.begin([]), service.begin([])]);
+    expect(first.token).toBeString();
+    expect(second.token).not.toBe(first.token);
+    await expect(
+      Promise.all([service.complete(first.token!), service.complete(second.token!)]),
+    ).resolves.toEqual([undefined, undefined]);
+    const marker = { bytes: readFileSync(markerFile), info: statSync(markerFile) };
+    await service.complete(first.token!);
+    await service.complete(second.token!);
+    expect(readFileSync(markerFile)).toEqual(marker.bytes);
+    expect(statSync(markerFile).ino).toBe(marker.info.ino);
+    expect(statSync(markerFile).mtimeMs).toBe(marker.info.mtimeMs);
+    expect(writes).toBe(1);
+    expect(pickerCalls).toBe(0);
+    await expect(service.complete("unissued-token")).rejects.toThrow(/invalid|expired/i);
+    await expect(service.authorizePath(first.token!, legacyPath)).rejects.toThrow(/complete/i);
+    expect(await store.list()).toEqual([]);
+    const restartedService = createLegacyProjectMigrationService({
+      store,
+      pickDirectory: async () => legacyPath,
+    });
+    await expect(restartedService.begin([])).resolves.toEqual({ completed: true });
+    await expect(restartedService.complete(first.token!)).rejects.toThrow(/invalid|expired/i);
+  });
+
+  test("parallel renderer startup and later repeated startup complete without migration errors", async () => {
+    const service = createLegacyProjectMigrationService({
+      store,
+      pickDirectory: async () => {
+        throw new Error("Empty startup must not request picker authorization");
+      },
+    });
+    const completedTokens: string[] = [];
+    const registry = {
+      list: () => store.list(),
+      beginLegacyMigration: (paths: string[]) => service.begin(paths),
+      authorizeLegacyMigration: (token: string, path: string) => service.authorizePath(token, path),
+      completeLegacyMigration: async (token: string) => {
+        completedTokens.push(token);
+        await service.complete(token);
+      },
+    };
+    const startup = async () =>
+      migrateLegacyProjects({
+        diskProjects: await registry.list(),
+        cachedProjects: readLegacyProjectsForMigration(),
+        registry,
+      });
+    const results = await Promise.all([startup(), startup()]);
+    expect(results).toEqual([
+      { projects: [], projectIdRemap: {}, results: [], completed: true },
+      { projects: [], projectIdRemap: {}, results: [], completed: true },
+    ]);
+    expect(new Set(completedTokens).size).toBe(2);
+    const marker = { bytes: readFileSync(markerFile), info: statSync(markerFile) };
+    __resetProjectSnapshotForTest();
+    await expect(startup()).resolves.toEqual(results[0]);
+    expect(completedTokens).toHaveLength(2);
+    expect(readFileSync(markerFile)).toEqual(marker.bytes);
+    expect(statSync(markerFile).ino).toBe(marker.info.ino);
+    expect(statSync(markerFile).mtimeMs).toBe(marker.info.mtimeMs);
+    expect(localStorage.getItem("codeshell.repos")).toBeNull();
+  });
+
+  test("completion still rejects unissued tokens and pending picker authorization", async () => {
+    let releasePicker!: (path: string | null) => void;
+    const service = createLegacyProjectMigrationService({
+      store,
+      pickDirectory: () => new Promise((resolve) => (releasePicker = resolve)),
+    });
+    const pending = await service.begin([legacyPath]);
+    await expect(service.complete("unissued-token")).rejects.toThrow(/invalid|expired/i);
+    await expect(service.complete(pending.token!)).rejects.toThrow(/picker authorization/i);
+    const authorization = service.authorizePath(pending.token!, legacyPath);
+    await expect(service.complete(pending.token!)).rejects.toThrow(/picker authorization/i);
+    expect(existsSync(markerFile)).toBe(false);
+    releasePicker(null);
+    await expect(authorization).resolves.toMatchObject({ status: "reauthorization_required" });
+    await expect(service.complete(pending.token!)).rejects.toThrow(/picker authorization/i);
+    const empty = await service.begin([]);
+    await service.complete(empty.token!);
+    await expect(service.complete(pending.token!)).rejects.toThrow();
+    await expect(service.authorizePath(pending.token!, legacyPath)).rejects.toThrow(/complete/i);
+    expect(await store.list()).toEqual([]);
+  });
+
   test("keeps an unprovable localStorage path pending, retries, and completes only after same-path picker authorization", async () => {
     const legacyRecord = {
       id: "legacy-renderer-id",
@@ -96,8 +205,7 @@ describe("localStorage-only project migration", () => {
     const registry = {
       list: () => store.list(),
       beginLegacyMigration: (paths: string[]) => service.begin(paths),
-      authorizeLegacyMigration: (token: string, path: string) =>
-        service.authorizePath(token, path),
+      authorizeLegacyMigration: (token: string, path: string) => service.authorizePath(token, path),
       completeLegacyMigration: (token: string) => service.complete(token),
     };
 

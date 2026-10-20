@@ -10,7 +10,6 @@ import {
   FlaskConical,
   ListTodo,
   MessageSquare,
-  PlayCircle,
   Puzzle,
   ScrollText,
   Settings,
@@ -19,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { TaskInboxPageProps } from "../task-inbox/TaskInboxPage";
+import type { ModelTracesViewProps } from "../activity/ModelTracesView";
 import type { ViewMode } from "../view";
 
 /**
@@ -47,14 +47,18 @@ export interface PageNav {
 
 /** App-owned state a full-screen page render may need. Grows per consumer. */
 export interface PageRenderContext {
-  /** Deep-link into the runs view (set by the automation view). */
-  runsInitialRunId: string | null;
+  onOpenTrace?: (sessionId?: string, traceId?: string) => void;
+  tracesInitialSessionId?: string | null;
+  tracesInitialTraceId?: string | null;
+  tracesInitialRequestId?: string | null;
   onOpenTaskInboxRecord?: TaskInboxPageProps["onOpenTaskInboxRecord"];
   /** Active repository, used by project-aware standalone pages. */
   activeProjectPath: string | null;
   activeProjectId?: string | null;
   /** Start a conversation from a standalone page through the host's normal flow. */
   onNewSession?: () => void;
+  /** Open durable history through the host's project-aware session navigation. */
+  onOpenSession?: (id: string) => void | boolean | Promise<void | boolean>;
   /** Update the host's cached session metadata after successful history-page mutations. */
   onSessionRenamed?: (id: string, title: string) => void;
   onSessionDeleted?: (id: string) => void;
@@ -87,11 +91,16 @@ const builtin = (entry: Omit<PageEntry, "owner">): PageEntry => ({
 const LogsView: LazyExoticComponent<ComponentType> = lazy(() =>
   import("../logs/LogsView").then((module) => ({ default: module.LogsView })),
 );
-const RunsView: LazyExoticComponent<ComponentType<{ initialRunId?: string | null }>> = lazy(() =>
-  import("../runs/RunsView").then((module) => ({ default: module.RunsView })),
+const ModelTracesView: LazyExoticComponent<ComponentType<ModelTracesViewProps>> = lazy(() =>
+  import("../activity/ModelTracesView").then((module) => ({ default: module.ModelTracesView })),
 );
 const SessionsView: LazyExoticComponent<
-  ComponentType<Pick<PageRenderContext, "onNewSession" | "onSessionRenamed" | "onSessionDeleted">>
+  ComponentType<
+    Pick<
+      PageRenderContext,
+      "onNewSession" | "onOpenSession" | "onSessionRenamed" | "onSessionDeleted" | "onOpenTrace"
+    >
+  >
 > = lazy(() =>
   import("../sessions/SessionsView").then((module) => ({ default: module.SessionsView })),
 );
@@ -114,6 +123,24 @@ const OptimizationLabPage = lazy(() =>
 
 const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
   builtin({
+    key: "traces",
+    title: { kind: "i18n", key: "observability.title" },
+    icon: Workflow,
+    nav: { order: 15, target: "traces", isActive: (mode) => mode === "traces" },
+    render: ({
+      tracesInitialSessionId,
+      tracesInitialTraceId,
+      tracesInitialRequestId,
+      onOpenSession,
+    }) =>
+      createElement(ModelTracesView, {
+        initialSessionId: tracesInitialSessionId,
+        initialTraceId: tracesInitialTraceId,
+        initialRequestId: tracesInitialRequestId,
+        onOpenSession,
+      }),
+  }),
+  builtin({
     key: "extensions",
     title: { kind: "i18n", key: "sidebar.extensions" },
     icon: Puzzle,
@@ -132,7 +159,8 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "task_inbox",
     title: { kind: "i18n", key: "sidebar.taskInbox" },
     icon: ListTodo,
-    render: ({ onOpenTaskInboxRecord }) => createElement(TaskInboxPage, { onOpenTaskInboxRecord }),
+    render: ({ onOpenTaskInboxRecord, onOpenTrace }) =>
+      createElement(TaskInboxPage, { onOpenTaskInboxRecord, onOpenTrace }),
   }),
   builtin({
     key: "optimization_lab",
@@ -144,11 +172,7 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "automation",
     title: { kind: "i18n", key: "sidebar.automation" },
     icon: Workflow,
-    // Highlights on the view it actually navigates to. This previously said
-    // `mode === "runs"`, carried over from the hardcoded Sidebar: clicking the
-    // item opened Automation but left it un-highlighted, while the Runs page lit
-    // up an item that does not lead there. `runs` has no sidebar entry of its
-    // own (it is reached from Automation), so it highlights nothing.
+    // Navigation and highlight always refer to the same automation page.
     nav: { order: 10, target: "automation", isActive: (mode) => mode === "automation" },
     render: null,
   }),
@@ -174,17 +198,17 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     render: () => createElement(LogsView),
   }),
   builtin({
-    key: "runs",
-    title: { kind: "i18n", key: "panels.palette.openRuns" },
-    icon: PlayCircle,
-    render: ({ runsInitialRunId }) => createElement(RunsView, { initialRunId: runsInitialRunId }),
-  }),
-  builtin({
     key: "sessions",
     title: { kind: "i18n", key: "panels.palette.openSessions" },
     icon: MessageSquare,
-    render: ({ onNewSession, onSessionRenamed, onSessionDeleted }) =>
-      createElement(SessionsView, { onNewSession, onSessionRenamed, onSessionDeleted }),
+    render: ({ onNewSession, onOpenSession, onSessionRenamed, onSessionDeleted, onOpenTrace }) =>
+      createElement(SessionsView, {
+        onNewSession,
+        onOpenSession,
+        onSessionRenamed,
+        onSessionDeleted,
+        onOpenTrace,
+      }),
   }),
 ];
 

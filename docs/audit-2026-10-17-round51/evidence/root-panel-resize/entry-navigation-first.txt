@@ -1,0 +1,9 @@
+packages/desktop/src/renderer/App.tsx:1139:    panelWidth,
+packages/desktop/src/renderer/App.tsx:1140:    beginPanelResize,
+packages/desktop/src/renderer/App.tsx:2743:                      style={{ width: panelWidth }}
+packages/desktop/src/renderer/App.tsx:2764:                    panelWidth={panelWidth}
+packages/desktop/src/renderer/App.tsx:2765:                    beginPanelResize={beginPanelResize}
+packages/desktop/src/renderer/app/SessionPanelDock.tsx:45:  panelWidth: number;
+packages/desktop/src/renderer/app/SessionPanelDock.tsx:46:  beginPanelResize: (startX: number, startWidth: number, target: HTMLElement) => void;
+packages/desktop/src/renderer/app/SessionPanelDock.tsx:207:        width={props.panelWidth}
+packages/desktop/src/renderer/app/SessionPanelDock.tsx:208:        onResizeStart={props.beginPanelResize}

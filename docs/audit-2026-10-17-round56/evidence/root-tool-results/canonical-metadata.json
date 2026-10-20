@@ -1,0 +1,56 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+      "jsonPointer": "/sources/3",
+      "row": {
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "review": "full"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+      "jsonPointer": "/sources/4",
+      "row": {
+        "path": "packages/core/src/context/tool-result-storage.ts",
+        "sha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+        "review": "full"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+      "jsonPointer": "/files/0",
+      "row": {
+        "path": "packages/core/src/context/tool-output-budget.ts",
+        "frozenSha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "currentSha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+        "matchesFrozen": true,
+        "bytes": 6990,
+        "lineCount": 173,
+        "ranges": [
+          "1-173 (full source)"
+        ],
+        "kind": "actual runtime leaf, no mock/extraction"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+      "jsonPointer": "/files/6",
+      "row": {
+        "path": "packages/core/src/context/tool-result-storage.ts",
+        "frozenSha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+        "currentSha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+        "matchesFrozen": true,
+        "bytes": 19859,
+        "lineCount": 493,
+        "ranges": [
+          "180-220",
+          "330-420"
+        ],
+        "kind": "selected preview/persistence budget caller static only; not imported/no storage operation"
+      }
+    }
+  ],
+  "scope": "Four exact original rows, R4 full and R21 full/selected qualifiers retained."
+}

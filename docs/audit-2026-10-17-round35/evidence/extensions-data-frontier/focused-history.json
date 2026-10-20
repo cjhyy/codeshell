@@ -1,0 +1,125 @@
+{
+  "readAtUTC": "2026-10-17T12:33:41.218416+00:00",
+  "basedOnInventoryCanonicalSha256": "0534950d949663e1eb0ac730c6c1ddf357b902a5281b5965bd674649682acf07",
+  "searchedFiles": 3137,
+  "patterns": {
+    "recommendation-identifiers": "recommendedPanelApps|recommendedPanelSource|OFFICIAL_PANEL_APP_REPOSITORY",
+    "known-local-route": "(?:uninstallTarget|resolveUninstallTarget).{0,200}(?:local|truthy|null|marketplace)|(?:uninstall.{0,40}(?:nothing|already-installed)|本地插件可卸载)",
+    "recommendation-ordinary-cause": "(?:recommend(?:ed|ation)?|推荐).{0,90}(?:appId|subdir|i18nKey|installedAppIds|duplicate|重复|禁用)|(?:installedAppIds|recommendedPanelApps|recommendedPanelSource)"
+  },
+  "matchCounts": {
+    "recommendation-identifiers": 0,
+    "known-local-route": 14,
+    "recommendation-ordinary-cause": 5
+  },
+  "contextCap": null,
+  "retainedContextCounts": {
+    "recommendation-identifiers": 0,
+    "known-local-route": 14,
+    "recommendation-ordinary-cause": 5
+  },
+  "currentDriftFromFirstInventory": [],
+  "hits": {
+    "recommendation-identifiers": [],
+    "known-local-route": [
+      {
+        "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+        "location": "31",
+        "excerpt": "## Task B:本地插件可卸载(uninstallTarget + UI)"
+      },
+      {
+        "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+        "location": "33",
+        "excerpt": "**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。"
+      },
+      {
+        "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+        "location": "36",
+        "excerpt": "- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `{ uninstallable:true, kind:\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace\"`)。"
+      },
+      {
+        "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+        "location": "42",
+        "excerpt": "- [ ] RED: uninstallTarget.test.ts 加测试:本地插件(marketplace=null)→ 期望 `uninstallable:true, kind:\"local\", pluginName` (当前返回 false,失败)。marketplace 插件仍 `kind:\"marketplace\"`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"mime_classification\"][1][\"context\"]",
+        "excerpt": " core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `{ uninstallable:true, kind:\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace\"`)。\n- `packages/desktop/src/renderer/extensions/uninstallTarget.test.ts` — 新测试。\n- `packages/desktop/src/renderer/extensions/PluginsTab.tsx:86` — uninstall 按 kind 分派:local 调新 IPC `uninstallLocalPlugin(name)`,marketplace 走原路径。\n- preload + ma"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"mime_classification\"][2][\"context\"]",
+        "excerpt": "load + marketplace-service + main:加 `plugins:uninstallLocal` → core `uninstallPluginByName`。\n\n**TDD steps:**\n- [ ] RED: uninstallTarget.test.ts 加测试:本地插件(marketplace=null)→ 期望 `uninstallable:true, kind:\"local\", pluginName` (当前返回 fal"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+        "location": "$[\"hits\"][\"local-install-await\"][18][\"context\"]",
+        "excerpt": "] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+        "location": "$[\"hits\"][\"local-install-await\"][18][\"context\"]",
+        "excerpt": " + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+        "location": "$[\"hits\"][\"local-await\"][22][\"context\"]",
+        "excerpt": "] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**File"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+        "location": "$[\"hits\"][\"local-await\"][22][\"context\"]",
+        "excerpt": " + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**File"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+        "location": "65",
+        "excerpt": "      resolveUninstallTarget({ name: \"superpowers\", installKey: \"superpowers@official\", marketplace: \"official\" }),"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+        "location": "71",
+        "excerpt": "      resolveUninstallTarget({ name: \"mine\", installKey: \"mine\", marketplace: null }),"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+        "location": "77",
+        "excerpt": "      resolveUninstallTarget({ name: \"x\", installKey: \"real-name@mkt\", marketplace: \"mkt\" }),"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+        "location": "711",
+        "excerpt": "- **类型一致**：`resolveUninstallTarget`（Task1）↔ PluginsTab 调用（Task6）一致；`UninstallablePlugin` 字段是 PluginSummary 的子集 ✓；`uninstallPlugin(pluginName, marketplaceName)` 三处（core/IPC/preload/调用）参数名顺序一致 ✓。"
+      }
+    ],
+    "recommendation-ordinary-cause": [
+      {
+        "path": "docs/archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md",
+        "location": "102",
+        "excerpt": "1. 短期推荐方案：承认这是设计折中，把行为显式暴露为“启用 builtin 需要新 session / 重启，禁用下一条消息生效”。"
+      },
+      {
+        "path": "docs/archive/todo/plan-todo-batch-2026-07.md",
+        "location": "208",
+        "excerpt": "推荐：方向一选方案 A。它最契合现有“user 修改必须用户拍板”的权限架构，又能让 dream 帮忙发现 stale/duplicate。"
+      },
+      {
+        "path": "docs/archive/todo/plan-todo-batch-2026-07.md",
+        "location": "360",
+        "excerpt": "推荐先做方案 1：在 `App.tsx` 两个 announce dispatch 落点加稳定 `clientMessageId`。现有 reducer 能直接吃这个 key：重复 `user_message` 同 key会替换，hydrate 若 snapshot 也有同 key会去重。"
+      },
+      {
+        "path": "docs/archive/todo/review-tests-deps-2026-07-08.md",
+        "location": "42",
+        "excerpt": "- Recommended regression tests: add a `ContextManager.manageAsync` test with duplicate `Read` results and multiple browser observations under the microcompact floor, and add a turn-loop-level test proving the async-managed messages sent to the next model call have old reads/snapshots masked."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round17/evidence/root-dedup.json",
+        "location": "$[\"hits\"][\"identity_contract\"][7][\"context\"]",
+        "excerpt": "/session heuristic 去重\n   - 优点：无需跨进程传 key。\n   - 缺点：同文案不同 intent 会误去重；不如稳定 key 可解释。\n\n### 推荐\n\n推荐先做方案 1：在 `App.tsx` 两个 announce dispatch 落点加稳定 `clientMessageId`。现有 reducer 能直接吃这个 key：重复 `user_message` 同 key会替换，hydrate 若 snapshot 也有同 key会去重。\n\n风险点要写进实现说明：renderer-only key 不会自动进入 core transcript。如果观测到的是 hydrate 后重复，而不是重复 announce dispatch，则需要升级到方案 2，让 automation/mobile 的 Engine.run 也持久化同一 key。\n\n### 量级\n\nS。\n\n### 涉及文件清单 + 需要测试\n\n- 涉及：\n  - `packages/desktop/src/renderer/App.tsx`\n  - 可选补测：`packages/desktop/src/renderer/tra"
+      }
+    ]
+  },
+  "scope": "same listed MD lines + recursive JSON values; source names/ordinary cause focused; no product execution"
+}

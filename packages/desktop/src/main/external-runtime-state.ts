@@ -24,6 +24,7 @@ import {
   SessionOutputJournal,
   outputUserMessage,
   createRunTiming,
+  normalizeCumulativeUsageCounters,
 } from "@cjhyy/code-shell-core/internal";
 import {
   textWithAttachmentReferences,
@@ -546,6 +547,7 @@ export class ExternalRuntimeSessionRecorder {
         this.unresolvedTools.delete(event.result.id);
         break;
       case "usage_update": {
+        event = { ...event, cacheUsageVersion: 1 };
         // Provider totals belong to its thread, not Session aggregate accounting
         // (which can include another producer or auxiliary requests). A cold
         // resume's first total-last establishes only that provider's old history.
@@ -618,6 +620,26 @@ export class ExternalRuntimeSessionRecorder {
         break;
     }
     if (event.type === "turn_complete" && providerTerminalOnly) return undefined;
+    if (event.type === "usage_update") {
+      const state = this.manager.readSessionState(this.sessionId);
+      const cache = normalizeCumulativeUsageCounters(state, state?.tokenUsage);
+      const prompt = Math.max(0, this.usage.promptTokens - this.usageAtTurnStart.promptTokens);
+      const read = Math.max(0, this.usage.cacheReadTokens - this.usageAtTurnStart.cacheReadTokens);
+      const creation = Math.max(
+        0,
+        this.usage.cacheCreationTokens - this.usageAtTurnStart.cacheCreationTokens,
+      );
+      event = {
+        ...event,
+        cacheUsageVersion: 1,
+        singleTurnPromptTokens: prompt,
+        singleTurnCacheReadTokens: read,
+        singleTurnCacheCreationTokens: creation,
+        cumulativePromptTokens: cache.cumulativePromptTokens + prompt,
+        cumulativeCacheReadTokens: cache.cumulativeCacheReadTokens + read,
+        cumulativeCacheCreationTokens: cache.cumulativeCacheCreationTokens + creation,
+      };
+    }
     const published = this.appendOutput(event);
     if (event.type === "turn_complete") this.runClosed = true;
     return published;
@@ -710,39 +732,40 @@ export class ExternalRuntimeSessionRecorder {
       0,
       this.usage.cacheCreationTokens - this.usageAtTurnStart.cacheCreationTokens,
     );
-    this.manager.updateSessionRunState(this.sessionId, this.runId!, (state) => ({
-      status: terminalRun ? reason : "active",
-      turnCount: (state.turnCount ?? 0) + 1,
-      tokenUsage: {
-        promptTokens: state.tokenUsage.promptTokens + turnPromptTokens,
-        completionTokens: state.tokenUsage.completionTokens + turnCompletionTokens,
-        totalTokens: state.tokenUsage.totalTokens + turnPromptTokens + turnCompletionTokens,
-        cacheReadTokens: (state.tokenUsage.cacheReadTokens ?? 0) + turnCacheReadTokens,
-        cacheCreationTokens: (state.tokenUsage.cacheCreationTokens ?? 0) + turnCacheCreationTokens,
-      },
-      cumulativePromptTokens:
-        (state.cumulativePromptTokens ?? state.tokenUsage.promptTokens) + turnPromptTokens,
-      cumulativeCacheReadTokens:
-        (state.cumulativeCacheReadTokens ?? state.tokenUsage.cacheReadTokens ?? 0) +
-        turnCacheReadTokens,
-      cumulativeCacheCreationTokens:
-        (state.cumulativeCacheCreationTokens ?? state.tokenUsage.cacheCreationTokens ?? 0) +
-        turnCacheCreationTokens,
-      ...(this.contextAnchorPromptTokens > 0
-        ? {
-            contextUsageAnchor: {
-              promptTokens: this.contextAnchorPromptTokens,
-              messageCount: this.transcript.toMessages().length,
-              recordedAt: Date.now(),
-              provider: this.provider,
-              model: this.model,
-            },
-          }
-        : {}),
-      ...(terminalRun && reason === "completed"
-        ? { completedSnapshotVersion: 1, completedThroughEventId: boundary.id }
-        : {}),
-    }));
+    this.manager.updateSessionRunState(this.sessionId, this.runId!, (state) => {
+      const cache = normalizeCumulativeUsageCounters(state, state.tokenUsage);
+      return {
+        status: terminalRun ? reason : "active",
+        turnCount: (state.turnCount ?? 0) + 1,
+        tokenUsage: {
+          promptTokens: state.tokenUsage.promptTokens + turnPromptTokens,
+          completionTokens: state.tokenUsage.completionTokens + turnCompletionTokens,
+          totalTokens: state.tokenUsage.totalTokens + turnPromptTokens + turnCompletionTokens,
+          cacheReadTokens: (state.tokenUsage.cacheReadTokens ?? 0) + turnCacheReadTokens,
+          cacheCreationTokens:
+            (state.tokenUsage.cacheCreationTokens ?? 0) + turnCacheCreationTokens,
+        },
+        cacheUsageVersion: 1,
+        cumulativePromptTokens: cache.cumulativePromptTokens + turnPromptTokens,
+        cumulativeCacheReadTokens: cache.cumulativeCacheReadTokens + turnCacheReadTokens,
+        cumulativeCacheCreationTokens:
+          cache.cumulativeCacheCreationTokens + turnCacheCreationTokens,
+        ...(this.contextAnchorPromptTokens > 0
+          ? {
+              contextUsageAnchor: {
+                promptTokens: this.contextAnchorPromptTokens,
+                messageCount: this.transcript.toMessages().length,
+                recordedAt: Date.now(),
+                provider: this.provider,
+                model: this.model,
+              },
+            }
+          : {}),
+        ...(terminalRun && reason === "completed"
+          ? { completedSnapshotVersion: 1, completedThroughEventId: boundary.id }
+          : {}),
+      };
+    });
     this.outcome = {
       ok: reason === "completed",
       reason,

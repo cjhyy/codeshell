@@ -1,0 +1,34 @@
+{
+  "role": "Independent canonical historical-scope gate, not runtime/product source verifier",
+  "executions": {
+    "productFunctions": 0,
+    "helpers": 0,
+    "imports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "UI": 0,
+    "timer": 0,
+    "model": 0,
+    "network": 0,
+    "native": 0,
+    "Git": 0,
+    "realConfigurationOrSessionData": 0
+  },
+  "freshProductBodyReads": 0,
+  "freshProductLineNavigationReads": 0,
+  "sourceFilenameOnlyInventory": [
+    "host-requests.ts",
+    "runtime.ts",
+    "runtime.test.ts",
+    "ask-user-unavailable.test.ts"
+  ],
+  "canonicalMetadataReadChunks": [
+    "e25db8 (truncated metadata)",
+    "0ce7cf (target original row, R3 pin, R11 MD)",
+    "cbb961 (fallback original row)"
+  ],
+  "testStatus": "Filenames only, no test body or title read/executed. Old report pass counts were read as historical metadata only, not borrowed as current verification.",
+  "allowedMetadata": "Independent standard-library JSON/hash/search scripts only; neither author methods nor product modules imported/evaluated.",
+  "firstDiagnostic": "diagnostics.json records first truncation; all tool exits0, no product failure or rerun."
+}

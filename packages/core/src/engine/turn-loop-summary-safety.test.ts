@@ -13,43 +13,75 @@ function makeDeps(opts: {
   summarize: (sys: string, user: string) => Promise<string>;
 }): TurnLoopDeps {
   let i = 0;
-  const call = async (): Promise<LLMResponse> => opts.responses[Math.min(i++, opts.responses.length - 1)];
+  const call = async (): Promise<LLMResponse> =>
+    opts.responses[Math.min(i++, opts.responses.length - 1)];
   const model = {
     call,
     callWithoutStreaming: call,
-    getUsage: () => ({ records: [], totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0, requestCount: 0 }),
+    getUsage: () => ({
+      records: [],
+      totalPromptTokens: 0,
+      totalCompletionTokens: 0,
+      totalTokens: 0,
+      requestCount: 0,
+    }),
     getOutputTokens: () => 0,
     summarize: opts.summarize,
   } as unknown as TurnLoopDeps["model"];
   const contextManager = {
-    async manageAsync(m: Message[]) { return m; },
-    manage(m: Message[]) { return m; },
+    async manageAsync(m: Message[]) {
+      return m;
+    },
+    manage(m: Message[]) {
+      return m;
+    },
     recordActualUsage() {},
-    shouldReactiveCompact() { return false; },
+    shouldReactiveCompact() {
+      return false;
+    },
   } as unknown as TurnLoopDeps["contextManager"];
-  const hooks = { async emit() { return {}; } } as unknown as TurnLoopDeps["hooks"];
+  const hooks = {
+    async emit() {
+      return {};
+    },
+  } as unknown as TurnLoopDeps["hooks"];
   const transcript = {
-    appendToolUse() {}, appendToolResult() {}, appendTurnBoundary() {}, appendMessage() {},
+    appendToolUse() {},
+    appendToolResult() {},
+    appendTurnBoundary() {},
+    appendMessage() {},
   } as unknown as TurnLoopDeps["transcript"];
   const toolExecutor = {
     setLogger() {},
-    getInvestigationGuard() { return undefined; },
-    getTaskGuard() { return undefined; },
-    isConcurrencySafe() { return false; },
+    getInvestigationGuard() {
+      return undefined;
+    },
+    getTaskGuard() {
+      return undefined;
+    },
+    isConcurrencySafe() {
+      return false;
+    },
     async executeSingle(c: ToolCall): Promise<ToolResult> {
       return { id: c.id, toolName: c.toolName, result: "ok" };
     },
   } as unknown as TurnLoopDeps["toolExecutor"];
   return {
-    model, toolExecutor, contextManager, hooks, transcript,
-    systemPrompt: "sys", tools: [], sessionId: "test",
+    model,
+    toolExecutor,
+    contextManager,
+    hooks,
+    transcript,
+    systemPrompt: "sys",
+    tools: [],
+    sessionId: "test",
     ctxOverheadStore: { get: () => 0, set: () => {} },
   };
 }
 
 const toolResp = (): LLMResponse => ({
   text: "",
-  toolCalls: [{ id: "c0", toolName: "Read", args: {} }],
+  toolCalls: [{ id: "c0", toolName: "SpecializedTool", args: {} }],
   stopReason: "tool_use",
   usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
 });
@@ -61,6 +93,35 @@ const doneResp = (): LLMResponse => ({
 });
 
 describe("TurnLoop tool-summary is crash-safe (B-2)", () => {
+  it("keeps local progress observer failures out of the model loop", async () => {
+    let summaryRequests = 0;
+    let observed = 0;
+    const response = toolResp();
+    response.toolCalls[0]!.toolName = "Read";
+    const deps = makeDeps({
+      responses: [response, doneResp()],
+      summarize: async () => {
+        summaryRequests += 1;
+        throw new Error("No auxiliary request expected");
+      },
+    });
+    const config = {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      onStream: (event: { type: string }) => {
+        if (event.type === "tool_summary") {
+          observed += 1;
+          throw new Error("Progress observer failed");
+        }
+      },
+    } as unknown as TurnLoopConfig;
+    const result = await new TurnLoop(deps, config).run([{ role: "user", content: "go" }]);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(result.text).toBe("done");
+    expect(observed).toBe(1);
+    expect(summaryRequests).toBe(0);
+  });
+
   it("completes without an unhandled rejection when summarize() rejects", async () => {
     const unhandled: unknown[] = [];
     const onUnhandled = (e: unknown) => unhandled.push(e);

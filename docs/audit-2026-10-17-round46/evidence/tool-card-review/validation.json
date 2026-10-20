@@ -1,0 +1,40 @@
+{
+  "capturedAtUTC": "2026-10-17T15:34:47.060145+00:00",
+  "productFunctions": 0,
+  "helpers": 0,
+  "imports": 0,
+  "testsRun": 0,
+  "fixtures": 0,
+  "reactRendererOrBrowser": 0,
+  "uiClickExpandOrScroll": 0,
+  "native": 0,
+  "network": 0,
+  "gitCommands": 0,
+  "productOrRepositoryWrites": 0,
+  "existingTestDeclarationsRead": {
+    "ToolCardShellStatic": 2,
+    "sharedDisclosureToolCardRelevant": 3,
+    "groupOnlyVariant": "Displayed but not added to ToolCard semantic/test coverage; describe.each is not an executed test count."
+  },
+  "sourceCoverage": {
+    "semanticFiles": 8,
+    "fullFiles": 3,
+    "selectedFiles": 5,
+    "productSemanticLines": 303,
+    "testSemanticLines": 100,
+    "allSemanticLines": 403,
+    "allDisplayedLines": 672
+  },
+  "endingSourceInstructionPins": 10,
+  "allPinsSame": true,
+  "historyInitialEndingFiles": 4088,
+  "historyByteDrifts": 0,
+  "oldFailedDirectionsRetried": false,
+  "oldRuntimePassesBorrowed": false,
+  "limits": [
+    "No actual generic tool invocation or UI interaction, no fixture/React render, no tool/backend execution.",
+    "No all-specialized-card, no-details caller, preview/media/attachment mechanism, anchored scroll timing or actual transcript turn epoch schedule certification.",
+    "All legal ToolStatus types mapped; arbitrary invalid status/NaN/manual bad DTO not constructed.",
+    "Scope/snapshot claims refer to this same read, not extra verification from later snapshot capture."
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootContextCommitExternal": "424ef9c8953eaaa295d24d63c49127aa8b3ea79e",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinnedUTC": "2026-10-17T17:20:36.239449+00:00",
+      "timing": "Before current98 contentlocator/body review"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinnedUTC": "2026-10-17T17:20:36.240219+00:00",
+      "timing": "Before current98 contentlocator/body review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "bytes": 4521,
+      "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "lines": 110,
+      "pinnedUTC": "2026-10-17T17:20:36.240645+00:00",
+      "timing": "Before current98 contentlocator/body review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+      "bytes": 2721,
+      "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "lines": 67,
+      "pinnedUTC": "2026-10-17T17:21:10.123909+00:00",
+      "timing": "Before current98 contentlocator/body review; test filename only already inventoried"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/tmp/codeshell-audit-20261018-round64-finalize.py", line 58, in <module>
+    assert set(headers)==expected_headers
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

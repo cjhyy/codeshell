@@ -1,0 +1,27 @@
+{
+  "capturedUTC": "2026-10-17T14:20:56.754110+00:00",
+  "scope": "Static ordinary display data only; no TUI import/renderer/native/keyboard execution. Desktop prior ambiguous pins stayhash-only.",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "lineCount": 2318,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "bytes": 11173,
+      "lineCount": 273,
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/tui/src/ui/store.ts",
+      "bytes": 6412,
+      "lineCount": 195,
+      "sha256": "2bfaa003f88b5bf3f53d845f660b8491b9f9280fee066f169766feb4ff647744",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    }
+  ]
+}

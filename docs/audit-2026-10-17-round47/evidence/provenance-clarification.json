@@ -1,0 +1,35 @@
+{
+  "scope": "Formal display provenance override only; frozen57/60 artifacts and category counts unchanged",
+  "sourcePath": "packages/optimization-lab/src/contracts/dataset.ts",
+  "canonicalDocument": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+  "canonicalDocumentSha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda",
+  "canonicalJsonPointer": "/files/3",
+  "canonicalRow": {
+    "path": "packages/optimization-lab/src/contracts/dataset.ts",
+    "bytes": 12327,
+    "sha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+    "lines": 345,
+    "coverage": "selected",
+    "selectedLineRanges": [
+      [
+        1,
+        181
+      ]
+    ],
+    "coveredLineCount": 181,
+    "firstPinArtifact": "active-consumer-pins.json",
+    "firstPinCapturedAtUTC": "2026-10-17T14:36:50.728377+00:00",
+    "firstSourceDisplayToolChunk": "40e66d",
+    "sourceDisplayTimeExactUTC": null,
+    "sourceDisplayTimeNote": "Tool chunk is exact display provenance; exact wall-clock not separately captured. First pin was captured before content display.",
+    "byteCaptureAtUTC": "2026-10-17T14:39:05.380377+00:00",
+    "byteCaptureTiming": "Selected text snapshot captured after the recorded content displays, not retroactively represented as pre-read. Whole-file SHA still equals first pin.",
+    "scope": "Ordinary validation DTO/policy counterevidence; imports and Buffer/schema calls only read, never invoked; remaining filesystem/store body not read"
+  },
+  "oldRepresentative": "docs/audit-2026-10-17-round43/evidence/aggregate-review/checks.json /inputSourceRangeMetadataChecks/3",
+  "notNewSemanticRead": true,
+  "notFullFile": true,
+  "countsChanged": false,
+  "originalFrozen57Modified": false,
+  "peerClarification": "evidence/coverage-review/provenance-clarification.json"
+}

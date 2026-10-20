@@ -1,0 +1,246 @@
+{
+  "checkedUTC": "2026-10-17T16:52:20.276867+00:00",
+  "products": [
+    {
+      "path": "packages/desktop/src/renderer/app/appUtils.ts",
+      "bytes": 4377,
+      "sha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.580493+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/panelResize.ts",
+      "bytes": 4944,
+      "sha256": "5b675510d786e7ff066a37d640a82b81e7a424625b71356dbbf42c2231cea1eb",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.582547+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+      "bytes": 5792,
+      "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.583521+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "bytes": 3310,
+      "sha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.584333+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+      "bytes": 9089,
+      "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.585064+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/InlineMedia.tsx",
+      "bytes": 7496,
+      "sha256": "e524441cab42116d22f65d92cd5426f1208443f8e5b10e9baefef60b551a00fd",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.585922+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/Lightbox.tsx",
+      "bytes": 10637,
+      "sha256": "121cf951006b6fccb3480b434f138f5c6da31f38411a8697b9f332961595ca2f",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.586898+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+      "bytes": 13960,
+      "sha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.587663+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/ModelPill.tsx",
+      "bytes": 12043,
+      "sha256": "76035097cf49fd084e37b40af41083399abccdb9fb8001a3e794f9c0ae006606",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.588365+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "bytes": 8303,
+      "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.589147+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/useAnchoredPopover.ts",
+      "bytes": 5982,
+      "sha256": "4e65c1ce50d43e503cb08a0996f278d5a5517274f4b6dbb0eca818d92ac3094d",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.589828+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/dialog.tsx",
+      "bytes": 3796,
+      "sha256": "0976fd006b5a53f9f9d757b3f29db5b70398574206c57979561368014d6aeb9b",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.590618+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx",
+      "bytes": 7507,
+      "sha256": "7a72942d0501c35855369da74d054e521f7ee894c300b69e8e07503138f84d9a",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.591182+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/select.tsx",
+      "bytes": 5824,
+      "sha256": "2ccde9d04ba947ebbc836787ff7f4a4de93417fc2b5a1b3b9c88d3f9b21d06dd",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.591844+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "bytes": 4452,
+      "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.592618+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AgentMessageView.tsx",
+      "bytes": 5654,
+      "sha256": "a4c449c3edd5ba7aedd0c8a7a97e61edcecf4c46a4ca541079510ef1ad680f3b",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.593172+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/ContextBoundaryView.tsx",
+      "bytes": 5293,
+      "sha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.593662+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "bytes": 4978,
+      "sha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.594040+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "bytes": 5946,
+      "sha256": "72ed464af77d98bb613c179ee3fab5e46e41f946ec448cbb9ee517b09933ab58",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.594397+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "bytes": 4292,
+      "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.594706+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "bytes": 3874,
+      "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.594968+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "bytes": 3183,
+      "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.595370+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "bytes": 4521,
+      "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.595869+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "bytes": 4694,
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.596320+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "bytes": 10856,
+      "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.596766+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "bytes": 6201,
+      "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.597171+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "bytes": 6976,
+      "sha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.597609+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "bytes": 6626,
+      "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.598168+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.598582+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+      "bytes": 6806,
+      "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T16:52:18.599071+00:00"
+    }
+  ],
+  "selectionMetadataInputs": [
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "sameAsInitial": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/status-transitions.json",
+      "bytes": 54654,
+      "sha256": "96105e210c3c48dbc209edc6e4e9e26c239bcd1bb98db90a158988403c679ed5",
+      "sameAsInitial": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/summary.json",
+      "bytes": 4928,
+      "sha256": "8ee2c70b131469c29f074e413bca14032264b317bf5dcdb202cd9825aa42e000",
+      "sameAsInitial": true
+    }
+  ],
+  "history": {
+    "initialCount": 4693,
+    "endingIncludedPathCount": 4693,
+    "sameIncludedPathSet": true,
+    "changed": [],
+    "missing": [],
+    "addedIncludedPaths": [],
+    "removedIncludedPaths": [],
+    "excludedAudit50PlusPaths": [],
+    "method": "Only metadata endingbyte/SHA/path inventory; original scan not overwritten or rerun."
+  }
+}

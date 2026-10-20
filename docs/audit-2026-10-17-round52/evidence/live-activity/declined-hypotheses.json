@@ -1,0 +1,19 @@
+{
+  "topbarCounterReset": {
+    "promoted": false,
+    "counterevidence": "StatusPopover explicitly retains activity only for compatibility; current TopBar/Popover path does not display tool/count/elapsed summary."
+  },
+  "pendingQueueClearsActivity": {
+    "promoted": false,
+    "counterevidence": "Normal reviewed busy queue sends steer; no optimistic user bubble per reducer comment; injected event creates confirmed bubble. No ordinary unconsumed pending message producer established."
+  },
+  "injectedUserBoundary": {
+    "promoted": false,
+    "limitation": "Summary last-user boundary is explicit. Real inline consumer only displays describe text. No source proof established of old running tool plus confirmed injection producing wrong visible text; not an all-steer correctness assertion."
+  },
+  "hiddenProducerLiteralSearch": {
+    "promoted": false,
+    "limitation": "Exact double-quoted core .ts literal filename search returned no match; no proof of absence or ordinary hidden path. Not expanded; no synthetic DTO used."
+  },
+  "otherConsumers": "Pet/streamGroups filename navigation only, no global unused-field or timer conclusion."
+}

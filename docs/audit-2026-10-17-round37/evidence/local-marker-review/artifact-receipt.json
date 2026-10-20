@@ -1,0 +1,103 @@
+{
+  "frozenAtUTC": "2026-10-17T12:54:25.739582+00:00",
+  "prepOnly": true,
+  "rootSuppliedFrozenContextShort": "99e9",
+  "formalBaseline": null,
+  "role": "one independent P3 static support opinion; Root assigns unified classification/ID",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/admission-path-initial-pins.json",
+      "bytes": 815,
+      "sha256": "305bad9af241472ac00c2f29d3b70e706211a78a65bf0612b7aa2adc2f590ec8"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/classification.json",
+      "bytes": 931,
+      "sha256": "6e71676ba3c13ac74b533579a0eff723fdcc35410f4de4bd169f05fd9e451fb1"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/dispatch-initial-pins.json",
+      "bytes": 706,
+      "sha256": "d4b03f43654289db563d13a333ff60f24aecf4c7797f5f5b16384f7ca1e48467"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/focused-history.json",
+      "bytes": 6910,
+      "sha256": "8bc2021a68a6c82075089c79eb543c22fa04658a4b67be5e626d2196e7bd80fc"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history-decisions.json",
+      "bytes": 2576,
+      "sha256": "e022604e3e8dc638231a00e6520598a837e4f20bfed7294ed0b755bbe684e7d6"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history-delta.json",
+      "bytes": 16332,
+      "sha256": "38b7378452be64c8ece8b656a254589cc56275c5b71af532170dfdacbac54594"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history-method.py",
+      "bytes": 3437,
+      "sha256": "bca3797375d9a548c90422fed8660abba8755d850c79b36282c0fd211763c870"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history.json",
+      "bytes": 717288,
+      "sha256": "8576d62f35c680f16bc9a3ac5f25f4480e28bc85d964e5e0d2d57de67bf20fb2"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/initial-pins.json",
+      "bytes": 3697,
+      "sha256": "b27e808e8ac914ab34f6e820a1c6d97d53c6e4e0a091a23c2ef4ef2ccdb8ce44"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/links-check.json",
+      "bytes": 2557,
+      "sha256": "81a3d17b9ee9049ba6904ea6a5be6aaa1c8186eb9a2006d32533f4435edca69a"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/old-collision-history-late-pin.json",
+      "bytes": 448,
+      "sha256": "2cda7502c0b60e3fc1e58ad6a73fc10f3aa91fcf759f2dcc7a89c170253866cc"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/prior-source-claims.json",
+      "bytes": 191013,
+      "sha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/registry-admission-initial-pins.json",
+      "bytes": 718,
+      "sha256": "4cb60a6e801782d4d29d969b57b9026c61019b2dff7cb51f93f2e624742a83ee"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "bytes": 8075,
+      "sha256": "72e547ef28ed078220f036c67a0a12f046e2cf2babd4f58a7c34190165c14eee"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/scope.json",
+      "bytes": 872,
+      "sha256": "1c3e250f8eb7291cd56925eb7b5b72ea1a7710d85ffe10c8b8e8144b99f9b5c7"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "bytes": 31633,
+      "sha256": "8137cda5638a5581625641f15b1acd10136023df5871c74a6f7814de74f66f67"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/validation.json",
+      "bytes": 1185,
+      "sha256": "0f7f6b4c39846ed564e1d4e134e08877a265dcec216bf3b073d818e4db8d465b"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/writer-type-initial-pins.json",
+      "bytes": 1134,
+      "sha256": "d8c3681850e03df93b02064634eeeb9823a27a28069b3b00f360c50568acdf97"
+    }
+  ],
+  "selfExcluded": true,
+  "sourceBeforeFinishStable": true,
+  "noProductOrGitExecution": true,
+  "onlyWrittenDirectory": "/tmp/codeshell-audit-round37-local-marker-review"
+}

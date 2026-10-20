@@ -1,0 +1,173 @@
+{
+  "exactDirectory": "/tmp/codeshell-audit-round128-trace-history",
+  "frozenAt": "2026-10-17T18:47:57.066565+00:00",
+  "selfExcluded": "reviewer-receipt.json",
+  "files": [
+    {
+      "path": "adjacent-initial-pins.json",
+      "bytes": 1222,
+      "sha256": "631020b5c2e5ecf770a20ddd825de3c66dccd4c2e383d5a8c86ec4b05dfcf36e"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1545,
+      "sha256": "aeb2d32cef46382dd0b870a75dedbe4d729847136081ee43137dba7fda233697"
+    },
+    {
+      "path": "corrected-producer-locator.json",
+      "bytes": 588,
+      "sha256": "5ffc1aef7d6320176c54867a0ad2e3584a6269f9f3f3ce2567903e37be7c8cae"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 4413,
+      "sha256": "6363220af514b12e56600904d49f3b03f84b560e292d9d7cd62a60248d30a77b"
+    },
+    {
+      "path": "filter-display.json",
+      "bytes": 334,
+      "sha256": "aeb618648c7049ab34d0ca5e0cc64b04c04a994450708ffd12841c2b7bb33835"
+    },
+    {
+      "path": "first-diagnostic.json",
+      "bytes": 947,
+      "sha256": "07947384439ef71ad5a739c7f74f6dae8a50308b6f24ea10226bb17d7a60f151"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1542,
+      "sha256": "5686e3116d5f936d102c88efd80adaeb793d0473238d0635dc60d3acbd8eaca0"
+    },
+    {
+      "path": "ordinary-display.json",
+      "bytes": 1450,
+      "sha256": "efed060b967794a708a9adb5e40e68f1eea268781d44453db1bfc7a7cb04debd"
+    },
+    {
+      "path": "prior-artifact-locators.json",
+      "bytes": 425,
+      "sha256": "7f93114a9f7677ef544b598ca4d9bc6bc20781818372bbaf153b0acfcfa7a960"
+    },
+    {
+      "path": "prior-canonical-read.json",
+      "bytes": 13962,
+      "sha256": "f566bffa8d32f0afa49a6b676bcd49c5f05234bf810faa6c857facee5d6ac2cc"
+    },
+    {
+      "path": "prior-store-canonical.json",
+      "bytes": 13528,
+      "sha256": "3abc26409432254c6a8b3be6051fac05af511ae62bf49190202bf3c2c22bea5f"
+    },
+    {
+      "path": "producer-display.json",
+      "bytes": 335,
+      "sha256": "7d1e1c5993650de10c45ad24c24faf1d4d5ffe98826dc11f3102e458878fc9e0"
+    },
+    {
+      "path": "producer-filenames.json",
+      "bytes": 901,
+      "sha256": "8aca1471e2cd110372418891f362b920a4cd7af779f2110f430cf11fa3337743"
+    },
+    {
+      "path": "producer-initial-pin.json",
+      "bytes": 269,
+      "sha256": "b69e166c1d6c4bbdcebbc2a4016b07772aadbb1b7ff300aa36b2684e906238bd"
+    },
+    {
+      "path": "producer-navigation.json",
+      "bytes": 1806,
+      "sha256": "6488dc50ea76052505a0e5c2a594256f679da92bcc757c23509c2ec473e33b0a"
+    },
+    {
+      "path": "producer-write-display.json",
+      "bytes": 838,
+      "sha256": "eb7454124e37f0a7aad3452c8df4297aace9626122b2be82b8d318dae0ff81fd"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3057,
+      "sha256": "8fb7f29c37a39dfef4125479400e45908fa8a29e848e5b94735bc702a918e3a1"
+    },
+    {
+      "path": "shared-history-projection.json",
+      "bytes": 34796,
+      "sha256": "d0d34c5506095c7da134dabc2f6e7c98c5bf03b98cd332dd28d133f39602cc2c"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 10607,
+      "sha256": "90ed52f8c985d3d6e50196b1e1670aa05cf1ccb09b8dcef44d48c6c47f555a63"
+    },
+    {
+      "path": "store-and-old-locators.json",
+      "bytes": 673,
+      "sha256": "863bee4e3204edabd14e891cbb3cda7df171526094d20214a985130693550c12"
+    },
+    {
+      "path": "store-source-locator.json",
+      "bytes": 200,
+      "sha256": "be683900d98432fbb0b6410c445955605d28f5f52441000217057ba84ae94cdc"
+    },
+    {
+      "path": "store-write-navigation.json",
+      "bytes": 292,
+      "sha256": "f2f36f2f11e256cd3a47fafe9d9fb8f76f193b87a8af3b153a23ae37a702cd5e"
+    },
+    {
+      "path": "target-display.json",
+      "bytes": 452,
+      "sha256": "90251bdd84f2afad845def4207a33541e793da71d4dace4632fde20392057287"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1136,
+      "sha256": "a5a8cc89eedeb08f1ec98351269fd3b3dfab712ee898f6b3a33ac47e8dfeae39"
+    }
+  ],
+  "artifactCountExcludingReceipt": 24,
+  "totalFilesIncludingReceipt": 25,
+  "reportLinks": [
+    {
+      "target": "initial-pins.json",
+      "exists": true
+    },
+    {
+      "target": "prior-canonical-read.json",
+      "exists": true
+    },
+    {
+      "target": "prior-store-canonical.json",
+      "exists": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "shared-history-projection.json",
+      "exists": true
+    },
+    {
+      "target": "first-diagnostic.json",
+      "exists": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true
+    },
+    {
+      "target": "classification.json",
+      "exists": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": true
+    }
+  ],
+  "productExecutions": 0,
+  "GitCalls": 0
+}

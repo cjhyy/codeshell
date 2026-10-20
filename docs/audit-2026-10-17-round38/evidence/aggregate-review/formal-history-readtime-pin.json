@@ -1,0 +1,11 @@
+{
+  "capturedUTC": "2026-10-17T13:26:34.946095+00:00",
+  "files": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round38/evidence/root-history.json",
+      "bytes": 829377,
+      "sha256": "940be8d907e56a30513521a0a3013da575071da4d367f0d75f9182e83145de31",
+      "timing": "before read-time metadata inspection; current38artifact, not baseline product source or final author freeze claim"
+    }
+  ]
+}

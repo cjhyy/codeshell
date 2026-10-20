@@ -1,0 +1,13 @@
+{
+  "originalHistoryFiles": 5433,
+  "changed": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "oldSha256": "90d5c4041483645ff74c5ff103c7fb762d0ab53606d5795b58154d2a086b0bc0",
+      "currentSha256": "c8065c02dfc58fb447cbadb58b100edd391d9fdcd8c5c6c49ddcf59f8e309df0",
+      "currentBytes": 266949
+    }
+  ],
+  "missing": [],
+  "scope": "Original5433 cohort only after all source authors froze,55 excluded; never backfilled into initial batch."
+}

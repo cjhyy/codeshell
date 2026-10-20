@@ -1,0 +1,11 @@
+{
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productReruns": 0
+  },
+  "gitCommandsInThisPrep": 0,
+  "note": "Root global Git metadata operations are separately recorded; no total-network zero claim."
+}

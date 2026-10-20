@@ -1,0 +1,166 @@
+{
+  "baseline": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "totals": {
+    "firstBunShards": 6,
+    "completedCleanShards": 4,
+    "passedTests": 31,
+    "expectations": 78,
+    "skippedOrFilteredTests": 0,
+    "failedShardsSeparatelyRetained": 2,
+    "existingBaselineTests": 14,
+    "newFocusedObservationsAndControls": 17,
+    "failedShardPassedTests": 0,
+    "failedShardFailures": 2,
+    "failedShardErrors": 2,
+    "failedFocusedTestBodiesExecuted": 0
+  },
+  "runs": [
+    {
+      "log": "evidence/root-trace-data.first.log",
+      "exitFile": "evidence/root-trace-data.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round14/evidence/root-trace-data.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 32,
+      "skipped": 0,
+      "sha256": "f9eaa4b80be2810db35d37cb03bd0b07b165e7b742cb9bff0d06c2951235f92d"
+    },
+    {
+      "log": "evidence/bytes-image-probe.first.log",
+      "exitFile": "evidence/bytes-image-probe.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 31,
+      "skipped": 0,
+      "sha256": "c89f08b57d00aa09d619ab0e6a60e42f700762d7572f78026ba894da1765a0de"
+    },
+    {
+      "log": "evidence/web-room-history.first.raw.log",
+      "exitFile": "evidence/web-room-history.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/web/src/lib/roomHistory.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 9,
+      "skipped": 0,
+      "sha256": "3da37ec6595211fcd84370e0f30d8199aab13ea7809718cdbf0a6c32d75bdd8c"
+    },
+    {
+      "log": "evidence/utils-format-existing.first.raw.log",
+      "exitFile": "evidence/utils-format-existing.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/utils/format.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 6,
+      "skipped": 0,
+      "sha256": "c57d556a4b03d3bd5c2cacf98035bdf1c1093c4745d2062ea4c3e2a59b2ff416"
+    },
+    {
+      "log": "evidence/web-user-display.first.raw.log",
+      "exitFile": "evidence/web-user-display.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round14/evidence/web-user-display.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 1,
+      "completed": false,
+      "clean": false,
+      "passed": 0,
+      "failed": 1,
+      "errors": 1,
+      "expectations": null,
+      "skipped": null,
+      "sha256": "5ea8f0c8538679395f20284290366429e735807311d9016218c44c3ad656e126",
+      "disposition": "SKIP entire corresponding focused direction; wrong fixture relative import; no repair/rerun/extraction/alternate validation",
+      "focusedTestBodiesExecuted": 0
+    },
+    {
+      "log": "evidence/utils-slice-columns.first.raw.log",
+      "exitFile": "evidence/utils-slice-columns.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round14/evidence/utils-slice-columns.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 1,
+      "completed": false,
+      "clean": false,
+      "passed": 0,
+      "failed": 1,
+      "errors": 1,
+      "expectations": null,
+      "skipped": null,
+      "sha256": "d8cdd4fea84b2aec613adba982ac420f09737d3ab14e890ab0395fcfc8386409",
+      "disposition": "SKIP entire corresponding focused direction; wrong fixture relative import; no repair/rerun/extraction/alternate validation",
+      "focusedTestBodiesExecuted": 0
+    }
+  ],
+  "unexecutedFixtures": [
+    {
+      "path": "evidence/utils-cache-format-controls.test.ts",
+      "attempts": 0,
+      "disposition": "Wrong import retained unchanged, never launched; assertions are plans only"
+    }
+  ],
+  "notes": [
+    "Six first raw combined stdout/stderr logs and exits saved before inspection; four completed clean, two focused import failures. No product rerun or alternate validation.",
+    "Clean31=14 existing+17focused; failed raw reports separately retain0pass/1fail/1error each; source/test bodies not loaded. Absent expectation/skip summary remains null.",
+    "Utils only existing six formatDuration cases dynamically pass; intl is static/dependency scope, not an independently validated baseline. Slice and unused cache fixture not restored.",
+    "Web only existing roomHistory baseline dynamically passes; ordinary XML display projection remains static after focused load failure.",
+    "Bytes actual probe/sanitizer in-memory maintained samples/subviews and candidate marker sequence only; no independent sample decoder, actual staging/upload or ordinary downstream lossless support contract.",
+    "Trace presentation actual pure data helpers and key-echo callback only; components/selection/title hook/preload/backend/source fixes static, no Core/localization runtime.",
+    "Old UTF-16 summary and generated-image attachment path branches changed by other tasks before freeze; source changes tracked separately, no old defect/fix runtime retest.",
+    "No models/paid APIs/accounts/user data/external messages/network/socket/native apps/PTY/auth/permission/security/custody/watchdog experiments, shared deps/dist rebuild or full build/typecheck/lint/test."
+  ]
+}

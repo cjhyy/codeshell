@@ -1,0 +1,53 @@
+{
+  "atUTC": "2026-10-17T16:59:25.510585+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "displayedLineRanges": [
+        [
+          609,
+          628
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 609,
+          "end": 628,
+          "text": "609:   goalExtend: (\n610:     sessionId: string,\n611:     opts: {\n612:       addTurns?: number;\n613:       addTokenBudget?: number;\n614:       addTimeBudgetMs?: number;\n615:       addStopBlocks?: number;\n616:     },\n617:   ) =>\n618:     rpc(\"agent/goalExtend\", { sessionId, ...opts }).then(rpcResult) as Promise<{\n619:       ok: boolean;\n620:       limits: {\n621:         maxTurns: number;\n622:         tokenBudget?: number;\n623:         timeBudgetMs?: number;\n624:         maxStopBlocks: number;\n625:       };\n626:     }>,\n627:   /** Clear a session's persisted active goal (CC /goal clear). */\n628:   goalClear: (sessionId: string) =>"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "displayedLineRanges": [
+        [
+          1124,
+          1147
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1124,
+          "end": 1147,
+          "text": "1124:   goalExtend(\n1125:     sessionId: string,\n1126:     opts: {\n1127:       addTurns?: number;\n1128:       addTokenBudget?: number;\n1129:       addTimeBudgetMs?: number;\n1130:       addStopBlocks?: number;\n1131:     },\n1132:   ): Promise<{\n1133:     ok: boolean;\n1134:     limits: {\n1135:       maxTurns: number;\n1136:       tokenBudget?: number;\n1137:       timeBudgetMs?: number;\n1138:       maxStopBlocks: number;\n1139:     };\n1140:   }>;\n1141:   /** Clear a session's persisted active goal (CC /goal clear). */\n1142:   goalClear(sessionId: string): Promise<{ ok: boolean; cleared: boolean }>;\n1143:   /** Edit or pause/resume a session's persisted active goal. */\n1144:   goalUpdate(\n1145:     sessionId: string,\n1146:     update: {\n1147:       objective?: string;"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/external-runtime-goal-rpc.ts",
+      "displayedLineRanges": [
+        [
+          125,
+          153
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 125,
+          "end": 153,
+          "text": "125:             break;\n126:           }\n127:           case \"agent/goalClear\":\n128:             result = await service.deleteGoal(sessionId, {}, callerWebContentsId);\n129:             break;\n130:           case \"agent/goalExtend\": {\n131:             const limits: {\n132:               addTurns?: number;\n133:               addTokenBudget?: number;\n134:               addTimeBudgetMs?: number;\n135:               addStopBlocks?: number;\n136:             } = {};\n137:             for (const key of [\n138:               \"addTurns\",\n139:               \"addTokenBudget\",\n140:               \"addTimeBudgetMs\",\n141:               \"addStopBlocks\",\n142:             ] as const) {\n143:               if (params[key] !== undefined) limits[key] = positiveInteger(params[key], key);\n144:             }\n145:             if (Object.keys(limits).length === 0)\n146:               throw new Error(\"at least one goal extension is required\");\n147:             result = await service.extendGoal(sessionId, limits, callerWebContentsId);\n148:             break;\n149:           }\n150:         }\n151:         return { jsonrpc: \"2.0\", id: request.id, result };\n152:       } catch (error) {\n153:         return {"
+        }
+      ]
+    }
+  ]
+}

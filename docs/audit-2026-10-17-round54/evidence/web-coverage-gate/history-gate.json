@@ -1,0 +1,2624 @@
+{
+  "createdAt": "2026-10-17T18:06:45.934656+00:00",
+  "queryTotals": {
+    "exact-path": 66,
+    "sha256": 50,
+    "basename": 430
+  },
+  "capPerQuery": 100,
+  "contextCapCharacters": 1800,
+  "hits": {
+    "exact-path": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/2403",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "pointer": "/files/24/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/74/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/workerSourceChecks/24/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/49/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+        "pointer": "/paths/59",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/1037/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/4061/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "pointer": "/files/33/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "pointer": "/workerSourceChecks/0/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "pointer": "/workerSourceChecks/44/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "pointer": "/sourcePins/0/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "pointer": "/authorManifestChecks/0/sourceRows/0/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "pointer": "/authorReportLinkChecks/0/links/0/target",
+        "text": "../../packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 44,
+        "originalValueSha256": "ab175b2ffcd044d74cc8afc82a507de614a53fde893e865433d9eba39c3c2aea",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "pointer": "/reviewReportLocalLinkChecks/3/target",
+        "text": "../../../packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 47,
+        "originalValueSha256": "e5bc0d5346e63d0c90e71c045e265861db806e3c225d27af827f120cbef07c08",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime.md",
+        "line": 11,
+        "text": "- [outputCoverage.ts](../../../packages/web/src/lib/outputCoverage.ts) 全文 168 行：copy 新建实例并逐项复制输入 Set；128 条/32 KiB 上限触发 discard 后维持 overflow/incomplete。cursor 观察不清除旧 blocked barrier。这里只认可显式边界存在，没有实验 cursor、身份或 journal 协议。",
+        "originalCharacters": 220,
+        "originalValueSha256": "204d8ca85ffcf527efdba600bdaf50f5f8a0a472f2a0896f4a5ad90b81075e96",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/exact/19/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/exact/49/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/exact/50/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/exact/51/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/recovery-contract/4/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/recovery-contract/89/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/recovery-contract/90/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+        "pointer": "/hits/recovery-contract/91/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-initial-source-pins.json",
+        "pointer": "/files/0/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+        "pointer": "/files/0/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/root-report.md",
+        "line": 5,
+        "text": "[outputCoverage.ts](../../packages/web/src/lib/outputCoverage.ts) 168行与 [mobileOutputRecovery.ts](../../packages/web/src/lib/mobileOutputRecovery.ts) 161行完整阅读。coverage 的有界输入集合溢出会保留 incomplete 屏障，copy 独立复制集合；带游标事件不会自行消除历史屏障。这里遇到的身份、epoch和journal字段仅静态核对，不做权限、身份、认证或持久化实验，也不声称已经验证整个协议。",
+        "originalCharacters": 282,
+        "originalValueSha256": "e5285dfce6b04d2576ddfad07a71e84f9821b1c1a61f468600377e6a2041eec5",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "pointer": "/files/33/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "pointer": "/workerSourceChecks/0/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "pointer": "/workerSourceChecks/44/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16388/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16388/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16389/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16389/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16390/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16390/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16391/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16391/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16392/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16392/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16393/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16393/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16394/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16394/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16395/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16395/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16396/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16396/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16397/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16397/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16398/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16398/directSourcePathsInObject/0",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/4384/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/4384/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "pointer": "/fullPaths/274",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/4385/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "pointer": "/dated49/fullPaths/278",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+        "pointer": "/current51/fullPaths/274",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "pointer": "/stageFullSelectedSets/old49-current/full/274",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "pointer": "/stageFullSelectedSets/plus-inspectionScope/full/284",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "pointer": "/stageFullSelectedSets/plus-frozen43-44/full/287",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+        "pointer": "/stageFullSelectedSets/plus-frozen45/full/290",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "pointer": "/sources/6/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "pointer": "/files/91/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "pointer": "/module_inventory/84740d56/paths/176",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "pointer": "/module_inventory/a66f4ef2/paths/177",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      }
+    ],
+    "sha256": [
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "pointer": "/files/24/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/74/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/74/currentSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/74/mainSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/workerSourceChecks/24/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/1037/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "pointer": "/files/1037/claims/0/sourceSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "pointer": "/files/4061/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "pointer": "/files/33/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "pointer": "/files/33/currentSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "pointer": "/files/33/mainSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "pointer": "/workerSourceChecks/0/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "pointer": "/workerSourceChecks/44/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "pointer": "/sourcePins/0/initialSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "pointer": "/sourcePins/0/finishSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "pointer": "/authorManifestChecks/0/sourceRows/0/currentSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "pointer": "/authorManifestChecks/0/sourceRows/0/initialFilesystemSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-initial-source-pins.json",
+        "pointer": "/files/0/initialFilesystemSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-initial-source-pins.json",
+        "pointer": "/files/0/firstDurableSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+        "pointer": "/files/0/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+        "pointer": "/files/0/initialFilesystemSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+        "pointer": "/files/0/firstDurableSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+        "pointer": "/files/0/finishFilesystemSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "pointer": "/files/33/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "pointer": "/files/33/currentSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "pointer": "/files/33/mainSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "pointer": "/workerSourceChecks/0/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "pointer": "/workerSourceChecks/44/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16388/sourceHashFields/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16389/sourceHashFields/initialSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16389/sourceHashFields/finishSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16390/sourceHashFields/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16390/sourceHashFields/initialFilesystemSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16390/sourceHashFields/firstDurableSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16390/sourceHashFields/finishFilesystemSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16392/sourceHashFields/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16392/sourceHashFields/currentSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16392/sourceHashFields/mainSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16393/sourceHashFields/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16395/sourceHashFields/initialFilesystemSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16395/sourceHashFields/firstDurableSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16396/sourceHashFields/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16397/sourceHashFields/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16398/sourceHashFields/currentSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "pointer": "/claims/16398/sourceHashFields/initialFilesystemSha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "pointer": "/files/4384/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "pointer": "/files/4384/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "pointer": "/files/4385/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+        "pointer": "/sources/6/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+        "pointer": "/files/91/sha256",
+        "text": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "originalCharacters": 64,
+        "originalValueSha256": "b11ead0efa81e5f47f41509452af12dfd4d70e6503b5df43421dda987c43212b",
+        "contextCapCharacters": 1800
+      }
+    ],
+    "basename": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "pointer": "/source_inventory/2403",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "pointer": "/matches/52/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "pointer": "/matches/65/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/1/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/20/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/21/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "pointer": "/matches/projection/24/text",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/15/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/16/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/28/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/29/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/30/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/31/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round17/evidence/mappers-dedup.json",
+        "pointer": "/matches/mapper_functions/contexts/37/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/21/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/22/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/40/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/44/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/45/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/46/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/84/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/85/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/86/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/87/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/88/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/89/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/90/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/113/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "pointer": "/hits/history_projection/141/context",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "pointer": "/files/24/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/files/74/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "pointer": "/workerSourceChecks/24/path",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/patterns/output-projection",
+        "text": "outputCoverage|outputJournalRecovery|mobileOutputRecovery|transcriptReplay|streamReducer",
+        "originalCharacters": 88,
+        "originalValueSha256": "3d63d60cf7949d872a9278165450f4a7404296b9490093c3cc2fba4b2320662c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/2/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/3/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/10/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/21/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/22/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/24/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/91/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/92/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/93/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/94/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/95/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/96/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/97/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/113/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/114/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/115/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/120/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/121/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/122/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/127/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/128/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/129/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/130/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/131/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/132/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/133/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/134/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/135/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/145/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/user-display/161/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/11/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/12/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/24/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/25/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/26/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/27/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/47/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/48/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/60/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/61/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/62/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/63/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/69/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/101/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/102/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/103/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/104/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/105/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/106/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/107/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/108/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/109/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/110/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/111/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/112/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/113/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l",
+        "originalCharacters": 239,
+        "originalValueSha256": "bb7683f9b02ca06b70e59378753fb33dee3048b1cec63f2e010cc0e8c8756d6e",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/114/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/115/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/118/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/message-mapper/140/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/49/excerpt",
+        "text": "packages/web/src/lib/outputCoverage.ts",
+        "originalCharacters": 38,
+        "originalValueSha256": "ca10d597acdc027b223836d9a00ca5b6cf8ae555c0fcc52610d6b083d5c361e9",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/62/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/63/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/64/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/65/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/79/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "pointer": "/matches/output-projection/80/excerpt",
+        "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+        "originalCharacters": 287,
+        "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+        "contextCapCharacters": 1800
+      }
+    ]
+  },
+  "directSourceRows": [
+    {
+      "document": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "pointer": "/files/24",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "scope": "Full exploratory static only; no cursor/identity/recovery authority/runtime experiment.",
+        "lineCount": 168,
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/files/74",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "mainSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "pointer": "/workerSourceChecks/24",
+      "row": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/output-projection/49",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][2403]",
+        "excerpt": "packages/web/src/lib/outputCoverage.ts",
+        "wholeValueCharacters": 38
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/1037",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "lines": 168,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][24]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+                "jsonLocation": "$[\"files\"][74]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][24]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][6]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][91]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/4061",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "lines": 168,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+      "pointer": "/files/33",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "currentBytes": 5644,
+        "currentSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "mainBytes": 5644,
+        "mainSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+      "pointer": "/workerSourceChecks/0",
+      "row": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "coverage": "full",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+      "pointer": "/workerSourceChecks/44",
+      "row": {
+        "manifest": "review-root-runtime-source-manifest.json",
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "coverage": "full",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+      "pointer": "/sourcePins/0",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "lineCount": 168,
+        "ranges": [
+          [
+            1,
+            168
+          ]
+        ],
+        "coverage": "full",
+        "coveredLineCount": 168,
+        "initialSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "initialPinTiming": "before independent reviewer semantic read; not a reconstruction of author initial pins",
+        "finishSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "matchesInitialPin": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+      "pointer": "/authorManifestChecks/0/sourceRows/0",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "currentSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "bytes": 5644,
+        "lineCount": 168,
+        "ranges": [
+          [
+            1,
+            168
+          ]
+        ],
+        "coveredLineCount": 168,
+        "role": "product",
+        "validCurrentBytesAndBounds": true,
+        "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "firstPinBeforeThisTaskSemanticRead": null,
+        "pinTiming": "Before semantic source reading; earlier wc/rg navigation only."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "pointer": "/hits/exact/19",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][2403]",
+        "excerpt": "packages/web/src/lib/outputCoverage.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "pointer": "/hits/exact/49",
+      "row": {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "location": "$[\"files\"][24][\"path\"]",
+        "excerpt": "packages/web/src/lib/outputCoverage.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "pointer": "/hits/exact/50",
+      "row": {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "location": "$[\"files\"][74][\"path\"]",
+        "excerpt": "packages/web/src/lib/outputCoverage.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "pointer": "/hits/exact/51",
+      "row": {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "location": "$[\"workerSourceChecks\"][24][\"path\"]",
+        "excerpt": "packages/web/src/lib/outputCoverage.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "pointer": "/hits/recovery-contract/4",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][2403]",
+        "excerpt": "packages/web/src/lib/outputCoverage.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "pointer": "/hits/recovery-contract/89",
+      "row": {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+        "location": "$[\"files\"][24][\"path\"]",
+        "excerpt": "packages/web/src/lib/outputCoverage.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "pointer": "/hits/recovery-contract/90",
+      "row": {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "location": "$[\"files\"][74][\"path\"]",
+        "excerpt": "packages/web/src/lib/outputCoverage.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "pointer": "/hits/recovery-contract/91",
+      "row": {
+        "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+        "location": "$[\"workerSourceChecks\"][24][\"path\"]",
+        "excerpt": "packages/web/src/lib/outputCoverage.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-initial-source-pins.json",
+      "pointer": "/files/0",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "lineCount": 168,
+        "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "firstDurableSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "pinTiming": "Before semantic source reading; earlier wc/rg navigation only."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+      "pointer": "/files/0",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "lineCount": 168,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            168
+          ]
+        ],
+        "coveredLineCount": 168,
+        "role": "product",
+        "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "firstDurableSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "pinTiming": "Before semantic source reading; earlier wc/rg navigation only.",
+        "finishFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "matchesFirstDurablePin": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+      "pointer": "/files/33",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "currentBytes": 5644,
+        "currentSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "mainBytes": 5644,
+        "mainSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+      "pointer": "/workerSourceChecks/0",
+      "row": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "coverage": "full",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+      "pointer": "/workerSourceChecks/44",
+      "row": {
+        "manifest": "review-root-runtime-source-manifest.json",
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "coverage": "full",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16388",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {
+          "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "explicit-full",
+        "scopeFields": {
+          "coverage": "full"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {
+          "note": "Original full/selected ranges, pin timing and same-prep-read limits remain authoritative."
+        },
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1431,
+            "jsonPointer": "/workerSourceChecks/0"
+          },
+          {
+            "historyRow": 1431,
+            "jsonPointer": "/workerSourceChecks/44"
+          },
+          {
+            "historyRow": 1508,
+            "jsonPointer": "/workerSourceChecks/0"
+          },
+          {
+            "historyRow": 1508,
+            "jsonPointer": "/workerSourceChecks/44"
+          }
+        ],
+        "claimId": "C016389"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16389",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {
+          "initialSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "finishSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "explicit-full",
+        "scopeFields": {
+          "coverage": "full"
+        },
+        "rangeFields": {
+          "ranges": [
+            [
+              1,
+              168
+            ]
+          ]
+        },
+        "rangeBoundsValidForCurrent": true,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1440,
+            "jsonPointer": "/sourcePins/0"
+          }
+        ],
+        "claimId": "C016390"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16390",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {
+          "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "firstDurableSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "finishFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "explicit-full",
+        "scopeFields": {
+          "coverage": "full"
+        },
+        "rangeFields": {
+          "selectedLineRanges": [
+            [
+              1,
+              168
+            ]
+          ]
+        },
+        "rangeBoundsValidForCurrent": true,
+        "roleBoundaryFields": {
+          "role": "product"
+        },
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1465,
+            "jsonPointer": "/files/0"
+          }
+        ],
+        "claimId": "C016391"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16391",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "list-scalar",
+        "provenance": [
+          {
+            "historyRow": 198,
+            "jsonPointer": "/source_inventory/2403"
+          },
+          {
+            "historyRow": 1184,
+            "jsonPointer": "/paths/59"
+          },
+          {
+            "historyRow": 3390,
+            "jsonPointer": "/module_inventory/84740d56/paths/176"
+          },
+          {
+            "historyRow": 3390,
+            "jsonPointer": "/module_inventory/a66f4ef2/paths/177"
+          }
+        ],
+        "claimId": "C016392"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16392",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {
+          "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "currentSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "mainSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1032,
+            "jsonPointer": "/files/74"
+          },
+          {
+            "historyRow": 1431,
+            "jsonPointer": "/files/33"
+          },
+          {
+            "historyRow": 1508,
+            "jsonPointer": "/files/33"
+          }
+        ],
+        "claimId": "C016393"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16393",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {
+          "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1032,
+            "jsonPointer": "/workerSourceChecks/24"
+          },
+          {
+            "historyRow": 1348,
+            "jsonPointer": "/files/1037"
+          },
+          {
+            "historyRow": 1350,
+            "jsonPointer": "/files/4061"
+          },
+          {
+            "historyRow": 2612,
+            "jsonPointer": "/files/91"
+          }
+        ],
+        "claimId": "C016394"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16394",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {},
+        "hashBinding": "no-same-object-sha",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1183,
+            "jsonPointer": "/matches/output-projection/49"
+          },
+          {
+            "historyRow": 1458,
+            "jsonPointer": "/hits/exact/19"
+          },
+          {
+            "historyRow": 1458,
+            "jsonPointer": "/hits/exact/49"
+          },
+          {
+            "historyRow": 1458,
+            "jsonPointer": "/hits/exact/50"
+          },
+          {
+            "historyRow": 1458,
+            "jsonPointer": "/hits/exact/51"
+          },
+          {
+            "historyRow": 1458,
+            "jsonPointer": "/hits/recovery-contract/4"
+          },
+          {
+            "historyRow": 1458,
+            "jsonPointer": "/hits/recovery-contract/89"
+          },
+          {
+            "historyRow": 1458,
+            "jsonPointer": "/hits/recovery-contract/90"
+          },
+          {
+            "historyRow": 1458,
+            "jsonPointer": "/hits/recovery-contract/91"
+          }
+        ],
+        "claimId": "C016395"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16395",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {
+          "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "firstDurableSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1461,
+            "jsonPointer": "/files/0"
+          }
+        ],
+        "claimId": "C016396"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16396",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {
+          "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "scope-unknown",
+        "scopeFields": {
+          "review": "whole-file"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 2602,
+            "jsonPointer": "/sources/6"
+          }
+        ],
+        "claimId": "C016397"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16397",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {
+          "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "scope-unknown",
+        "scopeFields": {
+          "scope": "Full exploratory static only; no cursor/identity/recovery authority/runtime experiment."
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false,
+        "roleBoundaryFields": {},
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1026,
+            "jsonPointer": "/files/24"
+          }
+        ],
+        "claimId": "C016398"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/16398",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sourceHashFields": {
+          "currentSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+          "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5"
+        },
+        "hashBinding": "current-same-object",
+        "coverageKind": "scope-unknown",
+        "scopeFields": {},
+        "rangeFields": {
+          "ranges": [
+            [
+              1,
+              168
+            ]
+          ]
+        },
+        "rangeBoundsValidForCurrent": true,
+        "roleBoundaryFields": {
+          "role": "product"
+        },
+        "sourcePathIncludesLocator": false,
+        "directSourcePathsInObject": [
+          "packages/web/src/lib/outputCoverage.ts"
+        ],
+        "origin": "object-scalar-field",
+        "provenance": [
+          {
+            "historyRow": 1440,
+            "jsonPointer": "/authorManifestChecks/0/sourceRows/0"
+          }
+        ],
+        "claimId": "C016399"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4384",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "lines": 168,
+        "status": "current-sha-explicit-full-object",
+        "currentExplicitFullClaimIds": [
+          "C016389",
+          "C016390",
+          "C016391"
+        ],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C016389",
+          "C016390",
+          "C016391",
+          "C016392",
+          "C016393",
+          "C016394",
+          "C016395",
+          "C016396",
+          "C016397",
+          "C016398",
+          "C016399"
+        ],
+        "claimKindCounts": {
+          "explicit-full": 3,
+          "incidental-path-or-pin-object": 5,
+          "scope-unknown": 3
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4384",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "lines": 168
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4385",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "lines": 168,
+        "initial49ShaMatches": true,
+        "blockedBy49EndingOverlay": false,
+        "coverageStatus": "carryable-explicit-full"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "pointer": "/sources/6",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "matchesFrozenGitBlobAtAudit": true,
+        "review": "whole-file"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "pointer": "/files/91",
+      "row": {
+        "path": "packages/web/src/lib/outputCoverage.ts",
+        "bytes": 5644,
+        "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "allMarkdownBasenameHits": [
+    {
+      "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime.md",
+      "line": 11,
+      "text": "- [outputCoverage.ts](../../../packages/web/src/lib/outputCoverage.ts) 全文 168 行：copy 新建实例并逐项复制输入 Set；128 条/32 KiB 上限触发 discard 后维持 overflow/incomplete。cursor 观察不清除旧 blocked barrier。这里只认可显式边界存在，没有实验 cursor、身份或 journal 协议。",
+      "originalCharacters": 220,
+      "originalValueSha256": "204d8ca85ffcf527efdba600bdaf50f5f8a0a472f2a0896f4a5ad90b81075e96",
+      "contextCapCharacters": 1800
+    },
+    {
+      "document": "docs/audit-2026-10-17-round29/root-report.md",
+      "line": 5,
+      "text": "[outputCoverage.ts](../../packages/web/src/lib/outputCoverage.ts) 168行与 [mobileOutputRecovery.ts](../../packages/web/src/lib/mobileOutputRecovery.ts) 161行完整阅读。coverage 的有界输入集合溢出会保留 incomplete 屏障，copy 独立复制集合；带游标事件不会自行消除历史屏障。这里遇到的身份、epoch和journal字段仅静态核对，不做权限、身份、认证或持久化实验，也不声称已经验证整个协议。",
+      "originalCharacters": 282,
+      "originalValueSha256": "e5285dfce6b04d2576ddfad07a71e84f9821b1c1a61f468600377e6a2041eec5",
+      "contextCapCharacters": 1800
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/root-web.md",
+      "line": 31,
+      "text": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。",
+      "originalCharacters": 287,
+      "originalValueSha256": "fb8080129f289f2d3d27ad4f84a18344ef5219474bbae53c31222e691b3c5e1c",
+      "contextCapCharacters": 1800
+    },
+    {
+      "document": "docs/todo/visible-output-coverage-delivery.md",
+      "line": 8,
+      "text": "The existing Session directory and state lock own the proof. `outputCoverageIdentity`",
+      "originalCharacters": 85,
+      "originalValueSha256": "01127ffc448c6d5312a27e64f0373308f7d7e6b27fe7f02602463e555419f890",
+      "contextCapCharacters": 1800
+    }
+  ]
+}

@@ -1,0 +1,529 @@
+{
+  "scope": "All retained contract navigation records, later actual displayed selections recorded; not a whole-history semantic claim",
+  "contexts": [
+    {
+      "path": "docs/architecture/03-llm-and-model-layer.md",
+      "jsonPointer": null,
+      "line": 117,
+      "needle": "contextwindow",
+      "context": "snapshot (`llm/model-fetcher.ts:76`, `llm/model-fetcher.ts:117`, `llm/model-fetcher.ts:131`, `llm/model-fetcher.ts:167`, `llm/model-fetcher.ts:257`). Results cache as one JSON file per provider key under `~/.code-shell/cache/models`, with a 7-day TTL (`llm/model-cache.ts:1`, `llm/model-cache.ts:25`, `llm/model-cache.ts:61`). `ModelPool.reloadCachedContextWindows()` later reads those cache files and applies context windows to entries that did not already specify one (`llm/model-pool.ts:128`).\n\nOpenRouter metadata is a committed snapshot, not a build-time network dependency. `openrouter-models.ts` loads `openrouter-models.json` once and falls back to an empty snapshot if the file is missing or corrupt (`data/openrouter-models.ts:1`, `data/openrouter-models.ts:57`). `syncOpenRouterCatalog()` can refresh that snapshot in memory for the current process (`data/openrouter-sync.ts:53`); the TUI calls it from the model manager and also fire-and-forgets a refresh when the bundled snapshot is older than 24h unless `CODESHELL_NO_MODEL_SYNC=1` (`packages/tui/s",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "667e72889d4d55bc14952e02e072e874d7db98e2ccbec1d18bd7024f4005e009"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "jsonPointer": null,
+      "line": 151,
+      "needle": "上下文设置",
+      "context": "络策略和项目覆盖 | `packages/desktop/src/renderer/settings/SandboxSection.tsx:39`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:292` | 设置页选 Sandbox |\n| **对话设置** | 管理对话级设置，例如自动记忆抽取等 | `packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx:59`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:297` | 设置页选 Conversation |\n| **上下文设置** | 管理上下文策略与 token 预算相关配置 | `packages/desktop/src/renderer/settings/ContextSettingsSection.tsx:79`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:298` | 设置页选 Context |\n| **手机遥控** | 启停远程主机、设备、配对、passcode、tunnel/cloudflared | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:1475`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:299` | 设置页选 Mobile Remote |\n| **记忆** | 选择全局/项目 store，查看、编辑、Pin、批量处理 pending memory，手动 Dream | `packages/desktop/src/renderer/settings/MemorySection.tsx:87`，`packages/desktop/src/renderer/settings/MemorySection.tsx:163`，`packages/desktop/src/renderer/settings/MemorySection.tsx:311` | 设置页选 Memory |\n| **已归档会话** | 列出各项目归档会话并恢复或删除 | `packages/d",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "jsonPointer": null,
+      "line": 151,
+      "needle": "contextsettingssection",
+      "context": "`packages/desktop/src/renderer/settings/SettingsPage.tsx:292` | 设置页选 Sandbox |\n| **对话设置** | 管理对话级设置，例如自动记忆抽取等 | `packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx:59`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:297` | 设置页选 Conversation |\n| **上下文设置** | 管理上下文策略与 token 预算相关配置 | `packages/desktop/src/renderer/settings/ContextSettingsSection.tsx:79`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:298` | 设置页选 Context |\n| **手机遥控** | 启停远程主机、设备、配对、passcode、tunnel/cloudflared | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:1475`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:299` | 设置页选 Mobile Remote |\n| **记忆** | 选择全局/项目 store，查看、编辑、Pin、批量处理 pending memory，手动 Dream | `packages/desktop/src/renderer/settings/MemorySection.tsx:87`，`packages/desktop/src/renderer/settings/MemorySection.tsx:163`，`packages/desktop/src/renderer/settings/MemorySection.tsx:311` | 设置页选 Memory |\n| **已归档会话** | 列出各项目归档会话并恢复或删除 | `packages/desktop/src/renderer/settings/AdvancedSections.tsx:1274`，`packages/desktop/src/renderer/sett",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8"
+    },
+    {
+      "path": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+      "jsonPointer": null,
+      "line": 210,
+      "needle": "contextwindow",
+      "context": "ed/list、subscribe 和 unsubscribe。\n3. **Turn**：`turn/start` 返回权威 `turnId`；steer 必须带 `expectedTurnId`；interrupt 只作用于明确的 Turn。\n4. **Item**：消息、推理、工具、文件变更、计划和审批均有稳定 `itemId`；\n   `item/completed` 只对该 Item 的最终状态权威。Turn 的最终状态由 `turn/completed`\n   表达；连接错误或 Turn 级错误不应被强行伪装成 Item。\n5. **Schema**：由协议定义生成 TypeScript 与 JSON Schema，并在 CI 中保存兼容性快照。\n6. **错误**：在线路层表达 ContextWindowExceeded、UsageLimitExceeded、Unauthorized、ConnectionFailed、SandboxError、Cancelled、BadRequest 和 InternalError；保留 HTTP 状态与可重试信息。\n7. **事件信封**：所有 Session/Turn 事件带 `sessionId`；Turn 内事件带 `turnId`；只有\n   Item 生命周期和 delta 带 `itemId`。每条可恢复事件带单调 `sequence` 或 opaque cursor，\n   并定义重复、迟到、越序、缺口和重放规则。\n8. **传输**：stdio、WebSocket、Unix socket/TCP 使用同一上层协议；每种传输都要有消息\n   上限、背压、关闭语义和认证能力声明。远程传输还必须定义身份认证、Session ownership、\n   多客户端订阅、审批请求路由、断线接管和重放授权。\n9. **幂等**：`turn/start` 继承并推广现有 `clientMessageId` 语义，客户端重试不能产生重复\n   用户消息或重复副作用；服务端要明确幂等记录的生命周期和冲突响应。\n10. **扩展**：CapabilityModule 可以贡献命名空间方法或 Item 类型，但不能退回到无限扩张\n    的通用 query 字符串。Phase 0 必须先清点 coding、Arena、Pet 的现有 query、RunParams\n    兼容字段和 projection 方法，再确定 v2 命名空间与废弃策略。\n\n",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "bacc655b69f03373f5f1dbeb1547312015ccbd0b5c38bc7d00000202da9d3430"
+    },
+    {
+      "path": "docs/archive/architecture/05-state-config-storage.md",
+      "jsonPointer": null,
+      "line": 108,
+      "needle": "contextwindow",
+      "context": "oint/approval/artifact history.\n\n## Model Cache\n\nModel discovery uses:\n\n- [`model-fetcher.ts`](../../src/llm/model-fetcher.ts) for provider model lists;\n- [`model-cache.ts`](../../src/llm/model-cache.ts) for cached catalog data;\n- [`scripts/sync-models.ts`](../../scripts/sync-models.ts) and `src/data/` for bundled catalogs.\n\n`ModelPool.reloadCachedContextWindows()` patches model entries with cached context lengths when available.\n\n## Memory\n\nMemory has two layers:\n\n- [`session/memory.ts`](../../src/session/memory.ts): project/user memory loading for prompt context.\n- [`services/memory-orchestrator.ts`](../../src/services/memory-orchestrator.ts): end-of-session extraction, session summary, and optional consolidation.\n\nThe prompt composer injects memory context into the user-context reminder message, alongside project instructions.\n\n## Logs\n\n[`logger.ts`](../../src/logging/logger.ts) writes JSONL logs under:\n\n```text\n~/.code-shell/logs/\n  engine-YYYY-MM-DD.log\n  ui-ink-YYYY-MM-DD.log\n```\n\nRouting is based on log category:\n\n- UI/render/stream categor",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "b8006eec7ace69cd9584fcf9c8b31614d22976b510cbc8d3382681d5d0934047"
+    },
+    {
+      "path": "docs/archive/core-modules/llm.md",
+      "jsonPointer": null,
+      "line": 75,
+      "needle": "contextwindow",
+      "context": "Entry[], defaultKey?: string);\n  get(key?: string): ModelEntry | undefined;       // no key = active\n  switch(key: string): ModelEntry;                 // throws if missing\n  register(entry: ModelEntry): void;\n  list(): ModelEntry[];\n  toLLMConfig(entry: ModelEntry): LLMConfig;\n  resolveLLMConfig(key?: string): LLMConfig | undefined;\n  reloadCachedContextWindows(): void;\n  setProviderCatalog(cat: ProviderCatalog): void; setCacheDir(dir: string): void;\n}\n\n// Capability layer (pure)\nfunction capabilitiesFor(kind: ProviderKindName, model: string): Capability;\n\n// Helpers\nfunction isAbortError(err: unknown): boolean;   // from client-base.ts (used by turn-loop)\nfunction isClientError(err: unknown): boolean;  // 4xx detection (incl. buried .details.status)\nfunction countTokens(text: string): number;     // live token estimate\nfunction isTruncatedStop(stopReason?: string): boolean;\n```\n\n## 怎么用 / How to use\n\nResolve a config from the pool, build a client, send a message. Based on the arena cross-review phase (`arena/phases/cross-review.ts`) and `engine.t",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "dddd637314fef15aebce95d8a14eb1601ae661327cb765c3dd2788c35af996a4"
+    },
+    {
+      "path": "docs/archive/core-modules/llm.md",
+      "jsonPointer": null,
+      "line": 113,
+      "needle": "contextwindow",
+      "context": "if (response.stopReason === \"length\") {\n  // truncated — re-ask with a shorter-output instruction\n}\n```\n\nDriving it through the `ModelPool` (how the Engine picks the active or aux model — see `engine.ts`):\n\n```ts\nconst pool = new ModelPool(entries, defaultKey);\npool.setProviderCatalog(catalog);\npool.setCacheDir(defaultCacheDir());\npool.reloadCachedContextWindows();          // backfill context windows\n\nconst entry = pool.get();                   // active model\nconst client = await createLLMClient(pool.toLLMConfig(entry), clientDefaults);\n\n// request-shape rules for this exact (kind, model) — spread by the client internally,\n// also read by the engine to decide e.g. vision support:\nconst cap = capabilitiesFor(entry.providerKind ?? \"openai\", entry.model);\n```\n\n## 注意 / Gotchas\n\n- **`LLMConfig` (identity) vs `ClientDefaults` (runtime knobs) are deliberately split.** Identity = provider/model/apiKey/baseUrl/maxTokens/reasoning/providerKind. Runtime = temperature/timeout/retryMaxAttempts/imageDetail, owned by the Engine and stable across hot model swit",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "dddd637314fef15aebce95d8a14eb1601ae661327cb765c3dd2788c35af996a4"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPointer": "/source_inventory/1688",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.browser.fixture.mjs",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPointer": "/source_inventory/1689",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/catalog.md",
+      "jsonPointer": null,
+      "line": 15,
+      "needle": "contextwindow",
+      "context": "ata-controls.test.ts) 验证 `false`、`0`、空文本、未设置值、同层多个 dotted path、schema 通过的 `vendor/model:revision` 替换、输入数组保持和参数文档格式。它们是正常行为控制，没有故意失败断言，也没有修产品代码。\n- 冻结已包含 `304781e52c0ab18b79514d8e51c6dbf9da672421`（`fix(core): honor current model capabilities across tools and requests`）对所读模型目录/池的最近改动。本分项以冻结版本为准，不将先前 vision 行为当成当前缺陷。\n\n## 未升级的观察\n\n`ModelPool.reloadCachedContextWindows()` 在 [model-pool.ts](../../packages/core/src/llm/model-pool.ts#L145) 只填未设 `maxContextTokens` 的条目，并将推断结果写入同一字段。不能仅凭方法名认定缓存更新后必须刷新已推断值：源码注释明确保留 prior code path 的已有值，尚缺正常调用者触发与产品契约。推断来源丢失已有 [归档设计记录](../refactor/_archive/goal-judge-context-refactor-FINAL.md#L129)。因此没有新增 bug 或候选，首次 backfill baseline 也不证明后续 refresh。\n\n`applyParams` 的父/子 wire path 冲突虽可由自造参数表构成，但未找到正常内置 producer 或重叠优先级要求；没有将接受的任意配置冲突升级成产品缺陷。\n\n全历史查重覆盖先前 `docs/`、`bugs/` 中 audit/review/archive/_archive 的 Markdown 行和解析后的 JSON 字符串，排除本批。扫描 1,054 文件；[初始命中](evidence/catalog-dedup-initial.json) 和 [去除元数据噪声后的摘要](evidence/catalog-dedup-summary.json) 保留。`round9` 独立 CostTracker 身份估价问题未重复审查或重新计数。\n\n## 首次失败与跳过\n\n一次静态调用链读取误写了不存在的 `packages/core/src/e",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "f7f958a8b13d27694c8b61c81330fa1d8ef695f54a797b973ca72a90e813399d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-initial.json",
+      "jsonPointer": "/hits/167/2",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c903c8a8b1e4ccbd05af0ac28d3dde7848afe920f9c63e1f487d0f80d8443945"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-initial.json",
+      "jsonPointer": "/hits/501/2",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "`ModelPool.reloadCachedContextWindows()` patches model entries with cached context lengths when available.",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c903c8a8b1e4ccbd05af0ac28d3dde7848afe920f9c63e1f487d0f80d8443945"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-initial.json",
+      "jsonPointer": "/hits/521/2",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "  reloadCachedContextWindows(): void;",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c903c8a8b1e4ccbd05af0ac28d3dde7848afe920f9c63e1f487d0f80d8443945"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-initial.json",
+      "jsonPointer": "/hits/522/2",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "pool.reloadCachedContextWindows();          // backfill context windows",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c903c8a8b1e4ccbd05af0ac28d3dde7848afe920f9c63e1f487d0f80d8443945"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-summary.json",
+      "jsonPointer": "/semanticHits/23/2",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "aa542abb6741dfe6588d18fa0f0674aec134451abd4baa87afe3c2e12dfb1737"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-summary.json",
+      "jsonPointer": "/semanticHits/27/2",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "`ModelPool.reloadCachedContextWindows()` patches model entries with cached context lengths when available.",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "aa542abb6741dfe6588d18fa0f0674aec134451abd4baa87afe3c2e12dfb1737"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-summary.json",
+      "jsonPointer": "/semanticHits/47/2",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "  reloadCachedContextWindows(): void;",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "aa542abb6741dfe6588d18fa0f0674aec134451abd4baa87afe3c2e12dfb1737"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-dedup-summary.json",
+      "jsonPointer": "/semanticHits/48/2",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "pool.reloadCachedContextWindows();          // backfill context windows",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "aa542abb6741dfe6588d18fa0f0674aec134451abd4baa87afe3c2e12dfb1737"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md",
+      "jsonPointer": null,
+      "line": 7,
+      "needle": "contextwindow",
+      "context": "# 首次静态读取失败转录\n\n以下为工具返回的原文转录，非 Bun 测试原始日志。首次命令使用错误的 `packages/core/src/engine.ts` 路径，`rg` exit 2，`&&` 后两个 sed 未执行。保留此材料后跳过 cache refresh 调用链方向；没有改路径、重跑或用另一方法恢复验证。\n\n```text\nrg: packages/core/src/engine.ts: No such file or directory (os error 2)\npackages/core/src/llm/model-pool.ts:145:  reloadCachedContextWindows(): void {\n```\n\n工具 exit_code: 2。此失败不计为产品 bug，不计为 Bun shard。\n",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7bdc168137ef8248bbe9e5c0483fb7fb184a946da6256db9354841dbd21fdf61"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "jsonPointer": "/hits/steering_queue/5/context",
+      "line": 7,
+      "needle": "contextwindow",
+      "context": "ed/list、subscribe 和 unsubscribe。\n3. **Turn**：`turn/start` 返回权威 `turnId`；steer 必须带 `expectedTurnId`；interrupt 只作用于明确的 Turn。\n4. **Item**：消息、推理、工具、文件变更、计划和审批均有稳定 `itemId`；\n   `item/completed` 只对该 Item 的最终状态权威。Turn 的最终状态由 `turn/completed`\n   表达；连接错误或 Turn 级错误不应被强行伪装成 Item。\n5. **Schema**：由协议定义生成 TypeScript 与 JSON Schema，并在 CI 中保存兼容性快照。\n6. **错误**：在线路层表达 ContextWindowExceeded、Usage",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7b2a3423fc1d8a4bdf3a2246d2d87541c6eb979c3fe8ff1e7c8d3784d4586968"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "jsonPointer": "/hits/steering_queue/72/context",
+      "line": 3,
+      "needle": "contextwindow",
+      "context": " V0 **grandfathered**，仅限重构前已经发送的 objective + clock + final + background 字段，且只在既有 aux 配置路径、V1 未授权/不可用时使用；不得夹带 DTO、digest、tool status、summary、steering provenance 或任何新 evidence。telemetry 必须标 `cross_trust_v0_legacy=true`。此决定把“出域需 opt-in”的强约束明确限定为新增 V1 evidence，保留回滚兼容；后续若要禁用跨域 V0，另走 breaking-policy 迁移。\n\n窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallb",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7b2a3423fc1d8a4bdf3a2246d2d87541c6eb979c3fe8ff1e7c8d3784d4586968"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "jsonPointer": "/hits/steering_queue/72/context",
+      "line": 3,
+      "needle": "contextwindow",
+      "context": "k + final + background 字段，且只在既有 aux 配置路径、V1 未授权/不可用时使用；不得夹带 DTO、digest、tool status、summary、steering provenance 或任何新 evidence。telemetry 必须标 `cross_trust_v0_legacy=true`。此决定把“出域需 opt-in”的强约束明确限定为新增 V1 evidence，保留回滚兼容；后续若要禁用跨域 V0，另走 breaking-policy 迁移。\n\n窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallb",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7b2a3423fc1d8a4bdf3a2246d2d87541c6eb979c3fe8ff1e7c8d3784d4586968"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "jsonPointer": "/hits/migration/9/text",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c58ff1751f433e8afe81d51281b8e3d7bf854e39727a9616c2396c2b5ade67a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "jsonPointer": "/hits/migration/10/text",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c58ff1751f433e8afe81d51281b8e3d7bf854e39727a9616c2396c2b5ade67a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "jsonPointer": "/hits/migration/27/text",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c58ff1751f433e8afe81d51281b8e3d7bf854e39727a9616c2396c2b5ade67a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+      "jsonPointer": "/contexts/request_accounting/2/context",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "6. **错误**：在线路层表达 ContextWindowExceeded、UsageLimitExceeded、Unauthorized、ConnectionFailed、SandboxError、Cancelled、BadRequest 和 InternalError；保留 HTTP 状态与可重试信息。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "ec9c35efee5c80ec69a6c5b33d273ef095133164b5e4e6b8a0f2669495c0f8a0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup.json",
+      "jsonPointer": "/contexts/child and fallback aggregation/0/text",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "snapshot (`llm/model-fetcher.ts:76`, `llm/model-fetcher.ts:117`, `llm/model-fetcher.ts:131`, `llm/model-fetcher.ts:167`, `llm/model-fetcher.ts:257`). Results cache as one JSON file per provider key under `~/.code-shell/cache/models`, with a 7-day TTL (`llm/model-cache.ts:1`, `llm/model-cache.ts:25`, `llm/model-cache.ts:61`). `ModelPool.reloadCachedContextWindows()` later reads those cache files and applies context windows to entries that did not already specify one (`llm/model-pool.ts:128`).",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "5dc4c600193ece5b49b5ebe4f3bd0858dbb3f94d1e1f60764c1404e80ed6538b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/link-manifest-config/92/excerpt",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c2252fa38b1492179492a3bfdef6a7060553d44f26b849bd8f2675440849c1fe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history.json",
+      "jsonPointer": "/hits/link-manifest-config/98/excerpt",
+      "line": 1,
+      "needle": "contextwindow",
+      "context": "窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "c2252fa38b1492179492a3bfdef6a7060553d44f26b849bd8f2675440849c1fe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3004/path",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "lines": 341,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e"
+      },
+      "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "jsonPointer": "/hits/local-await/4/context",
+      "line": 23,
+      "needle": "contextwindow",
+      "context": "if (response.stopReason === \"length\") {\n  // truncated — re-ask with a shorter-output instruction\n}\n```\n\nDriving it through the `ModelPool` (how the Engine picks the active or aux model — see `engine.ts`):\n\n```ts\nconst pool = new ModelPool(entries, defaultKey);\npool.setProviderCatalog(catalog);\npool.setCacheDir(defaultCacheDir());\npool.reloadCachedContextWindows();          // backfill ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "54791da7dffc7eb829c0c8afa3304f7449bedff268fe00a3e5fd172e5f2a03c3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "jsonPointer": "/hits/local-await/5/context",
+      "line": 2,
+      "needle": "contextwindow",
+      "context": "(defaultCacheDir());\npool.reloadCachedContextWindows();          // backfill context windows\n\nconst entry = pool.get();                   // active model\nconst client = await createLLMClient(pool.toLLMConfig(entry), clientDefaults);\n\n// request-shape rules for this exact (kind, model) — spread by the client internally,\n// also read by the engine to decide e.g. vision support:\nconst cap = capabilitiesFor(entry.providerKind ?? \"openai\", entry.model);\n```\n\n## 注意 / Gotchas\n\n- **`LLMConfig` (identity) vs `ClientDefaults` (runtime knobs) are deliberately split.** Identity = provider/model/apiKey/baseUrl/maxTokens/reasoning/providerKind. Runtime = temperature/timeout/retryMaxAttempts/imageDetail, owned by the Engine and stable acro",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "54791da7dffc7eb829c0c8afa3304f7449bedff268fe00a3e5fd172e5f2a03c3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/root-history.json",
+      "jsonPointer": "/hits/args-roundtrip/15/context",
+      "line": 9,
+      "needle": "contextwindow",
+      "context": "ata-controls.test.ts) 验证 `false`、`0`、空文本、未设置值、同层多个 dotted path、schema 通过的 `vendor/model:revision` 替换、输入数组保持和参数文档格式。它们是正常行为控制，没有故意失败断言，也没有修产品代码。\n- 冻结已包含 `304781e52c0ab18b79514d8e51c6dbf9da672421`（`fix(core): honor current model capabilities across tools and requests`）对所读模型目录/池的最近改动。本分项以冻结版本为准，不将先前 vision 行为当成当前缺陷。\n\n## 未升级的观察\n\n`ModelPool.reloadCachedContextWindows()` 在 [model-pool.ts](",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "940be8d907e56a30513521a0a3013da575071da4d367f0d75f9182e83145de31"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/groupChecks/0/separateHashOnlyRows/100/path",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "sourceSha256": "a3047874d9017eba08b4c125d3596baff258da8d47f759bf65779b8083ec38ae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "jsonPointer": "/files/118/path",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "totalLines": 341,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "sourceSha256": "473a806b5c355b3ddd6209af125053df592d626d1cd70a7d8543e96111bde811"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "jsonPointer": "/hashOnlyFiles/100/path",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "totalLines": 341,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "sourceSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/author-metadata-checks.json",
+      "jsonPointer": "/sourceByteChecks/129/path",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "kind": "hashOnlyFiles",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "matches": true
+      },
+      "sourceSha256": "cd2e0bfe680df1633c509110a9210e57b8cbed0c269291cda0e09e6581233604"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "jsonPointer": "/files/127/path",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "bytes": 12329,
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "currentBytes": 12329,
+        "currentSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "mainBytes": 12329,
+        "mainSha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sourceSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "jsonPointer": "/hashOnlyChecks/102/path",
+      "line": 1,
+      "needle": "contextsettingssection",
+      "context": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "immediateParentForExactValue": {
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+        "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "sourceSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383"
+    },
+    {
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "jsonPointer": null,
+      "line": 108,
+      "needle": "contextwindow",
+      "context": "el/baseUrl/maxContextTokens/providerKind`（`packages/core/src/types.ts:654`—`packages/core/src/types.ts:690`），当前 aux 可由不同 provider/baseUrl 构建（`packages/core/src/engine/engine.ts:2467`—`packages/core/src/engine/engine.ts:2496`）。Phase -1 把 client 与元数据解析为内部 `GoalJudgeRoute`：`client`、`modelIdentity`、`trustDomain`、`effectiveEndpoint`、`maxContextTokens`、`contextWindowSource`、`maxOutputTokens`、`routeKind`；apiKey 不得进入结构或日志。\n\n固定路由如下：\n\n| 条件 | V1 evidence route | 明示 fallback |\n|---|---|---|\n| aux 与 primary 同信任域且容量已知 | aux | aux 失败后 primary V1；仍失败则合规 V0/无 LLM |\n| 跨域且显式允许 `allowCrossTrustGoalEvidence` | aux，并记 `cross_trust_opt_in=true` | primary V1；再失败走合规 V0/无 LLM |\n| 跨域且未 opt-in | primary V1，绝不向 aux 发 V1 | primary 不合格时可按下述 grandfathering 向既有 aux 发 V0，或零请求 |\n| 容量未知、budget/cap 不准入或无 client | 不发 V1 | V0 也不能证明准入则零请求；普通 provider 故障为 `unavailable`，ledger exhausted 则硬终止 |\n\nprimary fallback 是安全路由，不是首版 `goalJudgeModel=aux|primary|auto` 设置。紧急开关只能把 V1 留在 primary 或整体关闭 V1，不能强制未授权跨域发送。\n\npayload 日志只允许 context/policy version、各 section token/byte 数和 per-run keyed HMAC-SHA256 ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "8d96dd089e2b10129d7df13f12a3ad30438d32d7ae3fb401c0998b14e7a91e99"
+    },
+    {
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "jsonPointer": null,
+      "line": 129,
+      "needle": "contextwindow",
+      "context": "rigin，但 providerKind 必须一致。\n\n**V0 兼容决定：** 跨域 V0 **grandfathered**，仅限重构前已经发送的 objective + clock + final + background 字段，且只在既有 aux 配置路径、V1 未授权/不可用时使用；不得夹带 DTO、digest、tool status、summary、steering provenance 或任何新 evidence。telemetry 必须标 `cross_trust_v0_legacy=true`。此决定把“出域需 opt-in”的强约束明确限定为新增 V1 evidence，保留回滚兼容；后续若要禁用跨域 V0，另走 breaking-policy 迁移。\n\n窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。\n\n**Contract tests：**\n\n- 缺省 baseUrl 的 OpenAI/Anthropic fake client 解析到实际 effective origin，而不是 unknown/空字符串；\n- provider 相同但 effective origin 不同、providerKind 不同均跨域；model/apiKey 相同不改变结果；\n- custom 同 host 同规范化 path 同域，不同 path 跨域；`/v1` 与 `/v1/` 等价；显式 trust alias 才能",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "8d96dd089e2b10129d7df13f12a3ad30438d32d7ae3fb401c0998b14e7a91e99"
+    },
+    {
+      "path": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+      "jsonPointer": null,
+      "line": 129,
+      "needle": "contextwindow",
+      "context": "k + final + background 字段，且只在既有 aux 配置路径、V1 未授权/不可用时使用；不得夹带 DTO、digest、tool status、summary、steering provenance 或任何新 evidence。telemetry 必须标 `cross_trust_v0_legacy=true`。此决定把“出域需 opt-in”的强约束明确限定为新增 V1 evidence，保留回滚兼容；后续若要禁用跨域 V0，另走 breaking-policy 迁移。\n\n窗口必须带 `contextWindowSource: explicit | catalog | provider_cache | fallback | unknown`。`reloadCachedContextWindows()` 在 catalog/cache 失败后写入 200k fallback 且当前丢失来源（`packages/core/src/llm/model-pool.ts:128`、`packages/core/src/llm/model-pool.ts:153`、`packages/core/src/llm/model-pool.ts:175`），所以 **200k fallback 一律视为 unknown**，不得让 V1 准入。`explicit/catalog` 可作为已知；`provider_cache` 仅在缓存同时保留原始 catalog/provider 来源与版本时可作为已知，否则降为 unknown。显式用户值必须作为显式保守上限使用，不得被 fallback 放大。\n\n**Contract tests：**\n\n- 缺省 baseUrl 的 OpenAI/Anthropic fake client 解析到实际 effective origin，而不是 unknown/空字符串；\n- provider 相同但 effective origin 不同、providerKind 不同均跨域；model/apiKey 相同不改变结果；\n- custom 同 host 同规范化 path 同域，不同 path 跨域；`/v1` 与 `/v1/` 等价；显式 trust alias 才能合并 gateway paths，且 telemetry 标记；\n- 跨域未 opt-in 的 fake aux 从未收到 V1；仅能收到字段严格等于 legacy schema 的 ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "8d96dd089e2b10129d7df13f12a3ad30438d32d7ae3fb401c0998b14e7a91e99"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-12-model-module-redesign.md",
+      "jsonPointer": null,
+      "line": 2058,
+      "needle": "contextwindow",
+      "context": "erCatalog([\n      { key: \"deepseek\", kind: \"deepseek\", baseUrl: \"https://api.deepseek.com/v1\", apiKey: \"k\" },\n    ]);\n    const pool = new ModelPool([\n      { key: \"ds-flash\", provider: \"openai\", model: \"deepseek-v4-flash\", providerKey: \"deepseek\" } as never,\n    ]);\n    pool.setProviderCatalog(cat);\n    pool.setCacheDir(dir);\n    pool.reloadCachedContextWindows();\n    const e = pool.get(\"ds-flash\")!;\n    expect(e.maxContextTokens).toBe(1_000_000);\n  });\n\n  it(\"does not override an explicit maxContextTokens in the entry\", () => {\n    writeCache(dir, \"deepseek\", [\n      { id: \"deepseek-v4-flash\", contextLength: 1_000_000, maxOutputTokens: 8192 },\n    ]);\n    const pool = new ModelPool([\n      { key: \"ds-flash\", provider: \"openai\", model: \"deepseek-v4-flash\", providerKey: \"deepseek\", maxContextTokens: 500_000 } as never,\n    ]);\n    pool.setProviderCatalog(new ProviderCatalog([{ key: \"deepseek\", kind: \"deepseek\", baseUrl: \"x\", apiKey: \"k\" }]));\n    pool.setCacheDir(dir);\n    pool.reloadCachedContextWindows();\n    const e = pool.get(\"ds-flash\")!;\n   ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0b4ffe726c8e8d8a9188f4c72d1c929b5d9c39909ceb806dfc0935ea0bd17233"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-12-model-module-redesign.md",
+      "jsonPointer": null,
+      "line": 2072,
+      "needle": "contextwindow",
+      "context": "   ]);\n    const pool = new ModelPool([\n      { key: \"ds-flash\", provider: \"openai\", model: \"deepseek-v4-flash\", providerKey: \"deepseek\", maxContextTokens: 500_000 } as never,\n    ]);\n    pool.setProviderCatalog(new ProviderCatalog([{ key: \"deepseek\", kind: \"deepseek\", baseUrl: \"x\", apiKey: \"k\" }]));\n    pool.setCacheDir(dir);\n    pool.reloadCachedContextWindows();\n    const e = pool.get(\"ds-flash\")!;\n    expect(e.maxContextTokens).toBe(500_000);\n  });\n});\n```\n\n- [ ] **Step 2: Run test to verify failure**\n\nRun: `bun test tests/model-pool-cache-ctx.test.ts`\nExpected: FAIL — `setCacheDir`/`reloadCachedContextWindows` not defined.\n\n- [ ] **Step 3: Implement**\n\nIn `src/llm/model-pool.ts`:\n\n```ts\nimport { readCache } from \"./model-cache.js\";\n\n// Add fields:\nprivate cacheDir: string | undefined;\n\nsetCacheDir(dir: string): void { this.cacheDir = dir; }\n\nreloadCachedContextWindows(): void {\n  if (!this.cacheDir || !this.providerCatalog) return;\n  for (const [key, entry] of this.models) {\n    if (entry.maxContextTokens != null) continue;\n    if (!entry.pro",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0b4ffe726c8e8d8a9188f4c72d1c929b5d9c39909ceb806dfc0935ea0bd17233"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-12-model-module-redesign.md",
+      "jsonPointer": null,
+      "line": 2082,
+      "needle": "contextwindow",
+      "context": " \"deepseek\", baseUrl: \"x\", apiKey: \"k\" }]));\n    pool.setCacheDir(dir);\n    pool.reloadCachedContextWindows();\n    const e = pool.get(\"ds-flash\")!;\n    expect(e.maxContextTokens).toBe(500_000);\n  });\n});\n```\n\n- [ ] **Step 2: Run test to verify failure**\n\nRun: `bun test tests/model-pool-cache-ctx.test.ts`\nExpected: FAIL — `setCacheDir`/`reloadCachedContextWindows` not defined.\n\n- [ ] **Step 3: Implement**\n\nIn `src/llm/model-pool.ts`:\n\n```ts\nimport { readCache } from \"./model-cache.js\";\n\n// Add fields:\nprivate cacheDir: string | undefined;\n\nsetCacheDir(dir: string): void { this.cacheDir = dir; }\n\nreloadCachedContextWindows(): void {\n  if (!this.cacheDir || !this.providerCatalog) return;\n  for (const [key, entry] of this.models) {\n    if (entry.maxContextTokens != null) continue;\n    if (!entry.providerKey) continue;\n    const file = readCache(this.cacheDir, entry.providerKey);\n    if (!file) continue;\n    const match = file.models.find((m) => m.id === entry.model);\n    if (match?.contextLength) {\n      this.models.set(key, { ...entry, maxContextToke",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0b4ffe726c8e8d8a9188f4c72d1c929b5d9c39909ceb806dfc0935ea0bd17233"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-12-model-module-redesign.md",
+      "jsonPointer": null,
+      "line": 2096,
+      "needle": "contextwindow",
+      "context": " test tests/model-pool-cache-ctx.test.ts`\nExpected: FAIL — `setCacheDir`/`reloadCachedContextWindows` not defined.\n\n- [ ] **Step 3: Implement**\n\nIn `src/llm/model-pool.ts`:\n\n```ts\nimport { readCache } from \"./model-cache.js\";\n\n// Add fields:\nprivate cacheDir: string | undefined;\n\nsetCacheDir(dir: string): void { this.cacheDir = dir; }\n\nreloadCachedContextWindows(): void {\n  if (!this.cacheDir || !this.providerCatalog) return;\n  for (const [key, entry] of this.models) {\n    if (entry.maxContextTokens != null) continue;\n    if (!entry.providerKey) continue;\n    const file = readCache(this.cacheDir, entry.providerKey);\n    if (!file) continue;\n    const match = file.models.find((m) => m.id === entry.model);\n    if (match?.contextLength) {\n      this.models.set(key, { ...entry, maxContextTokens: match.contextLength });\n    }\n  }\n}\n```\n\nCall `pool.setCacheDir(defaultCacheDir())` and `pool.reloadCachedContextWindows()` in `engine.ts` right after `setProviderCatalog`.\n\n- [ ] **Step 4: Run the test**\n\nRun: `bun test tests/model-pool-cache-ctx.test.ts`\nExp",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0b4ffe726c8e8d8a9188f4c72d1c929b5d9c39909ceb806dfc0935ea0bd17233"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-12-model-module-redesign.md",
+      "jsonPointer": null,
+      "line": 2111,
+      "needle": "contextwindow",
+      "context": "e;\n    const file = readCache(this.cacheDir, entry.providerKey);\n    if (!file) continue;\n    const match = file.models.find((m) => m.id === entry.model);\n    if (match?.contextLength) {\n      this.models.set(key, { ...entry, maxContextTokens: match.contextLength });\n    }\n  }\n}\n```\n\nCall `pool.setCacheDir(defaultCacheDir())` and `pool.reloadCachedContextWindows()` in `engine.ts` right after `setProviderCatalog`.\n\n- [ ] **Step 4: Run the test**\n\nRun: `bun test tests/model-pool-cache-ctx.test.ts`\nExpected: PASS.\n\n- [ ] **Step 5: Commit**\n\n```bash\ngit add src/llm/model-pool.ts src/engine/engine.ts tests/model-pool-cache-ctx.test.ts\ngit commit -m \"feat(llm): use cached contextLength when entry has no maxContextTokens\"\n```\n\n---\n\n## Task 15 — Full integration smoke test\n\n**Files:**\n- Manual verification, no file changes\n\n- [ ] **Step 1: Run full test suite**\n\nRun: `bun test`\nExpected: PASS (all new tests + existing tests untouched).\n\n- [ ] **Step 2: Try the build**\n\nRun: `bun run build`\nExpected: success.\n\n- [ ] **Step 3: Manually drive the new flow**\n",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0b4ffe726c8e8d8a9188f4c72d1c929b5d9c39909ceb806dfc0935ea0bd17233"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-13-provider-model-flow-merge.md",
+      "jsonPointer": null,
+      "line": 365,
+      "needle": "contextwindow",
+      "context": "w + arena selections.\n\n`src/cli/onboarding.ts` changes:\n- The `PROVIDERS[].models[]` arrays are no longer authoritative for onboarding (they were the hardcoded \"what you can pick\" lists). Mark them as legacy or remove. If anything else still references `PROVIDERS`, leave them for now.\n- Keep `detectEnvKeys`, `modelKey`, `OnboardingResult`, `resolveContextWindow`, `resolveMaxOutput`.\n\n- [ ] **Step 1: Backup current OnboardingPrompt structure** — read whole file, note Arena UI specifics for porting\n- [ ] **Step 2: Write the new OnboardingPrompt** — much shorter (target ~250 lines vs current 745)\n- [ ] **Step 3: Strip PROVIDERS[].models[] entries** in `src/cli/onboarding.ts` if not used elsewhere; verify with `grep -r \"PROVIDERS\\[.*\\]\\.models\" src/`.\n- [ ] **Step 4: bun test + tsc --noEmit + bun run build**\n- [ ] **Step 5: Commit**\n```bash\ngit add src/ui/components/OnboardingPrompt.tsx src/cli/onboarding.ts\ngit commit -m \"refactor(ui): OnboardingPrompt embeds ProviderModelFlow\"\n```\n\n---\n\n## Task 5 — Verification\n\n- [ ] **Step 1:** `bun test` — must p",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "20534b58ee980382291fdf160de34684210166b2c82c4c907c68d6f4e6039dbc"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-26-core-stabilization.md",
+      "jsonPointer": null,
+      "line": 224,
+      "needle": "contextwindow",
+      "context": "cit in prompts and tools.\n\n### C3. Observability\n\n- [ ] Add standard spans around `Engine.run`, model calls, tool calls, MCP calls, and compaction.\n- [ ] Keep the local log/session-recorder path working without an OTLP collector.\n- [ ] Make OTLP export optional and off by default.\n\n### C4. Cost/context feedback\n\n- [ ] Surface current `tokenUsage / contextWindow` to the model as a compact system reminder near thresholds.\n- [ ] Trigger stronger reminders around 80% and emergency compaction around 95%.\n- [ ] Keep UI context bar and model-facing reminders sourced from the same accounting.\n\n### C5. Serve mode\n\n- [ ] Add `codeshell serve --port <n>` only after the core protocol/session layer is stable.\n- [ ] Prefer a real transport implementation over duplicating protocol handling.\n- [ ] Treat auth and workspace boundary as part of the feature, not a follow-up.\n\n---\n\n## Suggested Implementation Order\n\n1. A1 permission classifier + `acceptEdits` allowlist + hook trust boundary.\n2. A3 WebFetch SSRF guard.\n3. A4 cwd consistency.\n4. A2 sandbox fail-closed +",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "f1c5ba07a5978c929d4c927868229c3e87e9a988c0ce7eda50cc2414581095da"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+      "jsonPointer": null,
+      "line": 277,
+      "needle": "contextwindow",
+      "context": "Summary,\n          });\n        }\n        // Build catalog from settings.providers[] ...\n        if (settings.providers?.length) {\n          this.modelPool.setProviderCatalog(\n            new ProviderCatalog(settings.providers as never),\n          );\n        }\n        this.modelPool.setCacheDir(defaultCacheDir());\n        this.modelPool.reloadCachedContextWindows();\n```\n\n替换为(只保留 connections 路径下的 pool 配置):\n```typescript\n      if (hasConnections) {\n        this.modelPool.setCacheDir(defaultCacheDir());\n        this.modelPool.reloadCachedContextWindows();\n```\n\n> 注意:`ProviderCatalog` 的 import 若不再被其它地方使用,一并删除其 import 语句(grep `ProviderCatalog` 确认)。\n\n- [ ] **Step 4: 删 activeKey / model.name fallback,只留 defaults.text**\n\n找到这段(engine.ts ~813-843):\n```typescript\n          const defaultText = (settings as { defaults?: { text?: string } }).defaults?.text;\n          const activeKey = (settings as { activeKey?: string }).activeKey;\n          let matchKey: string | undefined;\n          if (defaultText && this.modelPool.list().some((e) => e.key === defaultText)) {\n",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0584ba05087ada47559a204edfa8753a754dcaf5471a0fa88456a63055594e39"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-22-remove-legacy-model-storage.md",
+      "jsonPointer": null,
+      "line": 284,
+      "needle": "contextwindow",
+      "context": " ProviderCatalog(settings.providers as never),\n          );\n        }\n        this.modelPool.setCacheDir(defaultCacheDir());\n        this.modelPool.reloadCachedContextWindows();\n```\n\n替换为(只保留 connections 路径下的 pool 配置):\n```typescript\n      if (hasConnections) {\n        this.modelPool.setCacheDir(defaultCacheDir());\n        this.modelPool.reloadCachedContextWindows();\n```\n\n> 注意:`ProviderCatalog` 的 import 若不再被其它地方使用,一并删除其 import 语句(grep `ProviderCatalog` 确认)。\n\n- [ ] **Step 4: 删 activeKey / model.name fallback,只留 defaults.text**\n\n找到这段(engine.ts ~813-843):\n```typescript\n          const defaultText = (settings as { defaults?: { text?: string } }).defaults?.text;\n          const activeKey = (settings as { activeKey?: string }).activeKey;\n          let matchKey: string | undefined;\n          if (defaultText && this.modelPool.list().some((e) => e.key === defaultText)) {\n            matchKey = defaultText;\n          }\n          if (!matchKey && activeKey) {\n            matchKey = settings.models.find((m: any) => m.key === activeKey)?.key;\n          }\n       ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "0584ba05087ada47559a204edfa8753a754dcaf5471a0fa88456a63055594e39"
+    },
+    {
+      "path": "docs/todo/release-ui-20261015.md",
+      "jsonPointer": null,
+      "line": 106,
+      "needle": "context settings",
+      "context": "The fixture now drains the callback after every pointer/Enter/Tab pick and retains\nthe original failure context; no assertions were loosened. The complete browser\nmatrix passed on rerun. The corresponding real fast-user-interaction race is\nbeing fixed separately in the second composer commit.\n\nThe second review wave uses independent trees: Desktop context settings read,\nedit and reset recovery; Web workspace/session navigation; and autocomplete\ncleanup after an accepted send and cancellation of stale caret restoration.\nRoot also reproduced update-settings issues with production components and an\nowned bridge: a long error expands a 320px page to 5,853px, a delayed initial status\noverwrites a newer event, and version/action rejections are unhandled. Evidence:\n`/tmp/codeshell-updater-ui-before-20261015/report.json`; no network was allowed.\nContinue with the current commits and evidence instead of redoing the initial audit.\n\nSecond wave was delivered to remote main at `f7287c91c`. CI `38717940777`\npassed all 12 jobs. Combined local verification\npassed: ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "17e5d9fa104498c883ead08dbaecde9f26d90515618381f574c6679d06448542"
+    },
+    {
+      "path": "docs/todo/release-ui-20261015.md",
+      "jsonPointer": null,
+      "line": 129,
+      "needle": "context settings",
+      "context": "and 15 behavior cases,\n  including Sidebar error toasts; no native update or external request was made.\n- `2134bfe99`: short-screen Web sidebar keeps navigation/session/root lists\n  scrollable and account controls reachable; native environment-dialog close\n  restores its trigger. Fourteen layouts and real keyboard navigation passed.\n- `2dcd041ff`: Context settings cannot overwrite unknown settings after a failed\n  read, accept normal numeric drafts, preserve failed save/reset drafts and name\n  actual slider thumbs. Sixteen layouts and 24 related tests passed.\n- `bd17170a6`, `9fab94dee`: accepted send/queue/Guide closes suggestions, rejected\n  submission retains the draft, and later input/focus/scope operations invalidate\n  stale caret callbacks. Ten submission and 15 deterministic caret cases passed,\n  plus independent native-keyboard review.\n\nBoth merge conflicts preserved all changes: Appearance + Context fixture entries,\nand the listbox useId + new caret hook in ChatView. CI now includes all 19 Desktop\nbrowser fixtures and all three Web navigation",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "17e5d9fa104498c883ead08dbaecde9f26d90515618381f574c6679d06448542"
+    }
+  ]
+}

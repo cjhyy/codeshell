@@ -1,0 +1,2700 @@
+[
+  {
+    "path": "packages/core/src/model-traces/store.ts",
+    "sha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+    "captureTiming": "After actual prior source displays in tool chunks70a617/38d9de/b21382/331e7b/58dc5f; this snapshot is not the first-read or pre-read pin. It includes only previously displayed lines.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import { createHash, randomUUID } from \"node:crypto\";"
+      },
+      {
+        "line": 2,
+        "text": "import {"
+      },
+      {
+        "line": 14,
+        "text": "import { isAbsolute, join, relative, resolve, sep } from \"node:path\";"
+      },
+      {
+        "line": 15,
+        "text": "import { deriveModelTraceCallType, isModelTraceCallType } from \"./classification.js\";"
+      },
+      {
+        "line": 16,
+        "text": "import type {"
+      },
+      {
+        "line": 17,
+        "text": "  ModelTraceConfig,"
+      },
+      {
+        "line": 18,
+        "text": "  ModelTraceConfigPatch,"
+      },
+      {
+        "line": 19,
+        "text": "  ModelTraceEvent,"
+      },
+      {
+        "line": 20,
+        "text": "  ModelTraceListQuery,"
+      },
+      {
+        "line": 21,
+        "text": "  ModelTracePage,"
+      },
+      {
+        "line": 22,
+        "text": "  ModelTraceRecord,"
+      },
+      {
+        "line": 23,
+        "text": "  ModelTraceSessionPage,"
+      },
+      {
+        "line": 24,
+        "text": "  ModelTraceSessionSummary,"
+      },
+      {
+        "line": 25,
+        "text": "  ModelTraceSummary,"
+      },
+      {
+        "line": 26,
+        "text": "} from \"./types.js\";"
+      },
+      {
+        "line": 27,
+        "text": ""
+      },
+      {
+        "line": 28,
+        "text": "export const DEFAULT_MODEL_TRACE_CONFIG: Readonly<ModelTraceConfig> = Object.freeze({"
+      },
+      {
+        "line": 29,
+        "text": "  policyRevision: \"defaults-v2\","
+      },
+      {
+        "line": 30,
+        "text": "  enabled: true,"
+      },
+      {
+        "line": 31,
+        "text": "  captureContent: true,"
+      },
+      {
+        "line": 32,
+        "text": "  retentionDays: 7,"
+      },
+      {
+        "line": 33,
+        "text": "  includeEphemeral: true,"
+      },
+      {
+        "line": 34,
+        "text": "});"
+      },
+      {
+        "line": 35,
+        "text": "const MAX_RECORD_BYTES = 4 * 1024 * 1024;"
+      },
+      {
+        "line": 36,
+        "text": "const MAX_SUMMARY_BYTES = 32 * 1024;"
+      },
+      {
+        "line": 37,
+        "text": "const key = (id: string) => createHash(\"sha256\").update(id).digest(\"hex\");"
+      },
+      {
+        "line": 38,
+        "text": "const statuses = new Set([\"running\", \"completed\", \"failed\", \"cancelled\"]);"
+      },
+      {
+        "line": 40,
+        "text": "function readJson(file: string, maxBytes: number): any {"
+      },
+      {
+        "line": 49,
+        "text": "function validId(value: unknown): value is string {"
+      },
+      {
+        "line": 50,
+        "text": "  return ("
+      },
+      {
+        "line": 51,
+        "text": "    typeof value === \"string\" && value.length > 0 && value.length <= 1024 && !value.includes(\"\\0\")"
+      },
+      {
+        "line": 52,
+        "text": "  );"
+      },
+      {
+        "line": 53,
+        "text": "}"
+      },
+      {
+        "line": 54,
+        "text": "function summary(record: ModelTraceRecord): ModelTraceSummary {"
+      },
+      {
+        "line": 55,
+        "text": "  const { input: _input, output: _output, attempts, ...metadata } = record;"
+      },
+      {
+        "line": 56,
+        "text": "  return { ...metadata, attemptCount: attempts.length };"
+      },
+      {
+        "line": 57,
+        "text": "}"
+      },
+      {
+        "line": 58,
+        "text": ""
+      },
+      {
+        "line": 59,
+        "text": "/** Host-owned local trace store. Readers never open user-provided paths or return keys. */"
+      },
+      {
+        "line": 60,
+        "text": "export class ModelTraceStore {"
+      },
+      {
+        "line": 62,
+        "text": "  private lastPruned = 0;"
+      },
+      {
+        "line": 63,
+        "text": "  constructor({ storageDir }: { storageDir: string }) {"
+      },
+      {
+        "line": 137,
+        "text": "  private matchingSummaries(query: ModelTraceListQuery): ModelTraceSummary[] {"
+      },
+      {
+        "line": 138,
+        "text": "    if (!query || typeof query !== \"object\" || Array.isArray(query))"
+      },
+      {
+        "line": 139,
+        "text": "      throw new Error(\"Invalid model trace query\");"
+      },
+      {
+        "line": 140,
+        "text": "    const limit = query.limit ?? 50;"
+      },
+      {
+        "line": 141,
+        "text": "    if ("
+      },
+      {
+        "line": 142,
+        "text": "      !Number.isSafeInteger(limit) ||"
+      },
+      {
+        "line": 143,
+        "text": "      limit < 1 ||"
+      },
+      {
+        "line": 144,
+        "text": "      limit > 500 ||"
+      },
+      {
+        "line": 145,
+        "text": "      (query.status !== undefined && !statuses.has(query.status)) ||"
+      },
+      {
+        "line": 146,
+        "text": "      (query.callType !== undefined && !isModelTraceCallType(query.callType)) ||"
+      },
+      {
+        "line": 147,
+        "text": "      (query.withoutSession !== undefined && typeof query.withoutSession !== \"boolean\") ||"
+      },
+      {
+        "line": 148,
+        "text": "      [query.since, query.until].some("
+      },
+      {
+        "line": 149,
+        "text": "        (time) => time !== undefined && (!Number.isFinite(time) || time < 0),"
+      },
+      {
+        "line": 150,
+        "text": "      )"
+      },
+      {
+        "line": 151,
+        "text": "    )"
+      },
+      {
+        "line": 152,
+        "text": "      throw new Error(\"Invalid model trace query\");"
+      },
+      {
+        "line": 153,
+        "text": "    for (const field of ["
+      },
+      {
+        "line": 154,
+        "text": "      \"cursor\","
+      },
+      {
+        "line": 155,
+        "text": "      \"search\","
+      },
+      {
+        "line": 156,
+        "text": "      \"traceId\","
+      },
+      {
+        "line": 157,
+        "text": "      \"sessionId\","
+      },
+      {
+        "line": 158,
+        "text": "      \"workspacePath\","
+      },
+      {
+        "line": 159,
+        "text": "      \"model\","
+      },
+      {
+        "line": 160,
+        "text": "      \"provider\","
+      },
+      {
+        "line": 161,
+        "text": "      \"purpose\","
+      },
+      {
+        "line": 162,
+        "text": "      \"source\","
+      },
+      {
+        "line": 163,
+        "text": "    ] as const)"
+      },
+      {
+        "line": 164,
+        "text": "      if ("
+      },
+      {
+        "line": 165,
+        "text": "        query[field] !== undefined &&"
+      },
+      {
+        "line": 166,
+        "text": "        (typeof query[field] !== \"string\" ||"
+      },
+      {
+        "line": 167,
+        "text": "          query[field]!.length > 4096 ||"
+      },
+      {
+        "line": 168,
+        "text": "          query[field]!.includes(\"\\0\"))"
+      },
+      {
+        "line": 169,
+        "text": "      )"
+      },
+      {
+        "line": 170,
+        "text": "        throw new Error(\"Invalid model trace query\");"
+      },
+      {
+        "line": 171,
+        "text": "    if (query.workspaceScopes !== undefined) {"
+      },
+      {
+        "line": 172,
+        "text": "      if ("
+      },
+      {
+        "line": 173,
+        "text": "        !Array.isArray(query.workspaceScopes) ||"
+      },
+      {
+        "line": 174,
+        "text": "        query.workspaceScopes.length < 1 ||"
+      },
+      {
+        "line": 175,
+        "text": "        query.workspaceScopes.length > 8 ||"
+      },
+      {
+        "line": 176,
+        "text": "        query.workspacePath !== undefined ||"
+      },
+      {
+        "line": 177,
+        "text": "        query.workspaceScopes.some("
+      },
+      {
+        "line": 178,
+        "text": "          (scope) =>"
+      },
+      {
+        "line": 179,
+        "text": "            !scope ||"
+      },
+      {
+        "line": 180,
+        "text": "            typeof scope !== \"object\" ||"
+      },
+      {
+        "line": 181,
+        "text": "            Array.isArray(scope) ||"
+      },
+      {
+        "line": 182,
+        "text": "            Object.keys(scope).some("
+      },
+      {
+        "line": 183,
+        "text": "              (field) => ![\"workspacePath\", \"sourcePrefix\"].includes(field),"
+      },
+      {
+        "line": 184,
+        "text": "            ) ||"
+      },
+      {
+        "line": 185,
+        "text": "            typeof scope.workspacePath !== \"string\" ||"
+      },
+      {
+        "line": 186,
+        "text": "            !scope.workspacePath ||"
+      },
+      {
+        "line": 187,
+        "text": "            scope.workspacePath.length > 4096 ||"
+      },
+      {
+        "line": 188,
+        "text": "            scope.workspacePath.includes(\"\\0\") ||"
+      },
+      {
+        "line": 189,
+        "text": "            (scope.sourcePrefix !== undefined &&"
+      },
+      {
+        "line": 190,
+        "text": "              (typeof scope.sourcePrefix !== \"string\" ||"
+      },
+      {
+        "line": 191,
+        "text": "                !scope.sourcePrefix ||"
+      },
+      {
+        "line": 192,
+        "text": "                scope.sourcePrefix.length > 256 ||"
+      },
+      {
+        "line": 193,
+        "text": "                scope.sourcePrefix.includes(\"\\0\"))),"
+      },
+      {
+        "line": 194,
+        "text": "        )"
+      },
+      {
+        "line": 195,
+        "text": "      )"
+      },
+      {
+        "line": 196,
+        "text": "        throw new Error(\"Invalid model trace workspace scopes\");"
+      },
+      {
+        "line": 197,
+        "text": "    }"
+      },
+      {
+        "line": 198,
+        "text": "    this.prune();"
+      },
+      {
+        "line": 199,
+        "text": "    const cutoff = Date.now() - this.getConfig().retentionDays * 86_400_000;"
+      },
+      {
+        "line": 200,
+        "text": "    const words = query.search?.trim().toLowerCase().split(/\\s+/).filter(Boolean) ?? [];"
+      },
+      {
+        "line": 201,
+        "text": "    const rows: ModelTraceSummary[] = [];"
+      },
+      {
+        "line": 202,
+        "text": "    for (const name of this.files(\"summaries\")) {"
+      },
+      {
+        "line": 203,
+        "text": "      const row = readJson(join(this.storageDir, \"summaries\", name), MAX_SUMMARY_BYTES);"
+      },
+      {
+        "line": 204,
+        "text": "      if ("
+      },
+      {
+        "line": 205,
+        "text": "        !row ||"
+      },
+      {
+        "line": 206,
+        "text": "        row.version !== 1 ||"
+      },
+      {
+        "line": 207,
+        "text": "        !validId(row.id) ||"
+      },
+      {
+        "line": 208,
+        "text": "        !validId(row.traceId) ||"
+      },
+      {
+        "line": 209,
+        "text": "        !Number.isFinite(row.startedAt) ||"
+      },
+      {
+        "line": 210,
+        "text": "        row.startedAt < cutoff ||"
+      },
+      {
+        "line": 211,
+        "text": "        !statuses.has(row.status)"
+      },
+      {
+        "line": 212,
+        "text": "      )"
+      },
+      {
+        "line": 213,
+        "text": "        continue;"
+      },
+      {
+        "line": 214,
+        "text": "      const callType = deriveModelTraceCallType(row);"
+      },
+      {
+        "line": 215,
+        "text": "      if (query.callType !== undefined && callType !== query.callType) continue;"
+      },
+      {
+        "line": 216,
+        "text": "      if (query.withoutSession && validId(row.sessionId)) continue;"
+      },
+      {
+        "line": 217,
+        "text": "      if ("
+      },
+      {
+        "line": 218,
+        "text": "        query.workspaceScopes &&"
+      },
+      {
+        "line": 219,
+        "text": "        !query.workspaceScopes.some("
+      },
+      {
+        "line": 220,
+        "text": "          (scope) =>"
+      },
+      {
+        "line": 221,
+        "text": "            row.workspacePath === scope.workspacePath &&"
+      },
+      {
+        "line": 222,
+        "text": "            (scope.sourcePrefix === undefined ||"
+      },
+      {
+        "line": 223,
+        "text": "              (typeof row.source === \"string\" && row.source.startsWith(scope.sourcePrefix))),"
+      },
+      {
+        "line": 224,
+        "text": "        )"
+      },
+      {
+        "line": 225,
+        "text": "      )"
+      },
+      {
+        "line": 226,
+        "text": "        continue;"
+      },
+      {
+        "line": 227,
+        "text": "      if ("
+      },
+      {
+        "line": 228,
+        "text": "        ["
+      },
+      {
+        "line": 229,
+        "text": "          \"traceId\","
+      },
+      {
+        "line": 230,
+        "text": "          \"sessionId\","
+      },
+      {
+        "line": 231,
+        "text": "          \"workspacePath\","
+      },
+      {
+        "line": 232,
+        "text": "          \"model\","
+      },
+      {
+        "line": 233,
+        "text": "          \"provider\","
+      },
+      {
+        "line": 234,
+        "text": "          \"purpose\","
+      },
+      {
+        "line": 235,
+        "text": "          \"source\","
+      },
+      {
+        "line": 236,
+        "text": "          \"status\","
+      },
+      {
+        "line": 237,
+        "text": "        ].some((field) => query[field] !== undefined && row[field] !== query[field])"
+      },
+      {
+        "line": 238,
+        "text": "      )"
+      },
+      {
+        "line": 239,
+        "text": "        continue;"
+      },
+      {
+        "line": 240,
+        "text": "      if ("
+      },
+      {
+        "line": 241,
+        "text": "        (query.since !== undefined && row.startedAt < query.since) ||"
+      },
+      {
+        "line": 242,
+        "text": "        (query.until !== undefined && row.startedAt > query.until)"
+      },
+      {
+        "line": 243,
+        "text": "      )"
+      },
+      {
+        "line": 244,
+        "text": "        continue;"
+      },
+      {
+        "line": 245,
+        "text": "      const haystack = ["
+      },
+      {
+        "line": 246,
+        "text": "        row.id,"
+      },
+      {
+        "line": 247,
+        "text": "        row.traceId,"
+      },
+      {
+        "line": 248,
+        "text": "        row.sessionId,"
+      },
+      {
+        "line": 249,
+        "text": "        row.runId,"
+      },
+      {
+        "line": 250,
+        "text": "        row.provider,"
+      },
+      {
+        "line": 251,
+        "text": "        row.model,"
+      },
+      {
+        "line": 252,
+        "text": "        row.purpose,"
+      },
+      {
+        "line": 253,
+        "text": "        row.source,"
+      },
+      {
+        "line": 254,
+        "text": "        row.error,"
+      },
+      {
+        "line": 255,
+        "text": "      ]"
+      },
+      {
+        "line": 256,
+        "text": "        .join(\" \")"
+      },
+      {
+        "line": 257,
+        "text": "        .toLowerCase();"
+      },
+      {
+        "line": 258,
+        "text": "      if (!words.every((word) => haystack.includes(word))) continue;"
+      },
+      {
+        "line": 259,
+        "text": "      rows.push({"
+      },
+      {
+        "line": 260,
+        "text": "        ...Object.fromEntries("
+      },
+      {
+        "line": 261,
+        "text": "          ["
+      },
+      {
+        "line": 262,
+        "text": "            \"version\","
+      },
+      {
+        "line": 263,
+        "text": "            \"id\","
+      },
+      {
+        "line": 264,
+        "text": "            \"traceId\","
+      },
+      {
+        "line": 265,
+        "text": "            \"sessionId\","
+      },
+      {
+        "line": 266,
+        "text": "            \"runId\","
+      },
+      {
+        "line": 267,
+        "text": "            \"parentSessionId\","
+      },
+      {
+        "line": 268,
+        "text": "            \"workspacePath\","
+      },
+      {
+        "line": 269,
+        "text": "            \"source\","
+      },
+      {
+        "line": 270,
+        "text": "            \"purpose\","
+      },
+      {
+        "line": 271,
+        "text": "            \"provider\","
+      },
+      {
+        "line": 272,
+        "text": "            \"providerKind\","
+      },
+      {
+        "line": 273,
+        "text": "            \"model\","
+      },
+      {
+        "line": 274,
+        "text": "            \"startedAt\","
+      },
+      {
+        "line": 275,
+        "text": "            \"endedAt\","
+      },
+      {
+        "line": 276,
+        "text": "            \"status\","
+      },
+      {
+        "line": 277,
+        "text": "            \"stream\","
+      },
+      {
+        "line": 278,
+        "text": "            \"inputState\","
+      },
+      {
+        "line": 279,
+        "text": "            \"outputState\","
+      },
+      {
+        "line": 280,
+        "text": "            \"error\","
+      },
+      {
+        "line": 281,
+        "text": "            \"usage\","
+      },
+      {
+        "line": 282,
+        "text": "            \"attemptCount\","
+      },
+      {
+        "line": 283,
+        "text": "            \"estimatedCostUsd\","
+      },
+      {
+        "line": 284,
+        "text": "            \"pricing\","
+      },
+      {
+        "line": 285,
+        "text": "            \"unknownCostAttempts\","
+      },
+      {
+        "line": 286,
+        "text": "          ]"
+      },
+      {
+        "line": 287,
+        "text": "            .filter((field) => row[field] !== undefined)"
+      },
+      {
+        "line": 288,
+        "text": "            .map((field) => [field, row[field]]),"
+      },
+      {
+        "line": 289,
+        "text": "        ),"
+      },
+      {
+        "line": 290,
+        "text": "        callType,"
+      },
+      {
+        "line": 291,
+        "text": "      } as unknown as ModelTraceSummary);"
+      },
+      {
+        "line": 292,
+        "text": "    }"
+      },
+      {
+        "line": 293,
+        "text": "    return rows;"
+      },
+      {
+        "line": 294,
+        "text": "  }"
+      },
+      {
+        "line": 295,
+        "text": "  list(query: ModelTraceListQuery = {}): ModelTracePage {"
+      },
+      {
+        "line": 296,
+        "text": "    const rows = this.matchingSummaries(query);"
+      },
+      {
+        "line": 297,
+        "text": "    const limit = query.limit ?? 50;"
+      },
+      {
+        "line": 298,
+        "text": "    rows.sort((a, b) => b.startedAt - a.startedAt || b.id.localeCompare(a.id));"
+      },
+      {
+        "line": 299,
+        "text": "    const total = rows.length;"
+      },
+      {
+        "line": 300,
+        "text": "    let after: { startedAt: number; id: string } | undefined;"
+      },
+      {
+        "line": 301,
+        "text": "    if (query.cursor) {"
+      },
+      {
+        "line": 302,
+        "text": "      try {"
+      },
+      {
+        "line": 303,
+        "text": "        after = JSON.parse(Buffer.from(query.cursor, \"base64url\").toString(\"utf8\"));"
+      },
+      {
+        "line": 304,
+        "text": "      } catch {"
+      },
+      {
+        "line": 305,
+        "text": "        throw new Error(\"Invalid model trace cursor\");"
+      },
+      {
+        "line": 306,
+        "text": "      }"
+      },
+      {
+        "line": 307,
+        "text": "      if (!after || !Number.isFinite(after.startedAt) || !validId(after.id))"
+      },
+      {
+        "line": 308,
+        "text": "        throw new Error(\"Invalid model trace cursor\");"
+      },
+      {
+        "line": 309,
+        "text": "    }"
+      },
+      {
+        "line": 310,
+        "text": "    const candidates = after"
+      },
+      {
+        "line": 311,
+        "text": "      ? rows.filter("
+      },
+      {
+        "line": 312,
+        "text": "          (row) =>"
+      },
+      {
+        "line": 313,
+        "text": "            row.startedAt < after!.startedAt ||"
+      },
+      {
+        "line": 314,
+        "text": "            (row.startedAt === after!.startedAt && row.id.localeCompare(after!.id) < 0),"
+      },
+      {
+        "line": 315,
+        "text": "        )"
+      },
+      {
+        "line": 316,
+        "text": "      : rows;"
+      },
+      {
+        "line": 317,
+        "text": "    const items = candidates.slice(0, limit);"
+      },
+      {
+        "line": 318,
+        "text": "    const last = items.at(-1);"
+      },
+      {
+        "line": 319,
+        "text": "    return {"
+      },
+      {
+        "line": 320,
+        "text": "      items,"
+      },
+      {
+        "line": 321,
+        "text": "      total,"
+      },
+      {
+        "line": 322,
+        "text": "      ...(candidates.length > limit && last"
+      },
+      {
+        "line": 323,
+        "text": "        ? {"
+      },
+      {
+        "line": 324,
+        "text": "            nextCursor: Buffer.from("
+      },
+      {
+        "line": 325,
+        "text": "              JSON.stringify({ startedAt: last.startedAt, id: last.id }),"
+      },
+      {
+        "line": 326,
+        "text": "            ).toString(\"base64url\"),"
+      },
+      {
+        "line": 327,
+        "text": "          }"
+      },
+      {
+        "line": 328,
+        "text": "        : {}),"
+      },
+      {
+        "line": 329,
+        "text": "    };"
+      },
+      {
+        "line": 330,
+        "text": "  }"
+      },
+      {
+        "line": 331,
+        "text": "  /** Group matching metadata before pagination; never load Prompt or response bodies. */"
+      },
+      {
+        "line": 332,
+        "text": "  sessions(query: ModelTraceListQuery = {}): ModelTraceSessionPage {"
+      },
+      {
+        "line": 333,
+        "text": "    const rows = this.matchingSummaries(query);"
+      },
+      {
+        "line": 334,
+        "text": "    const groups = new Map<"
+      },
+      {
+        "line": 335,
+        "text": "      string,"
+      },
+      {
+        "line": 336,
+        "text": "      { item: ModelTraceSessionSummary; traces: Set<string>; latestStartedAt: number }"
+      },
+      {
+        "line": 337,
+        "text": "    >();"
+      },
+      {
+        "line": 338,
+        "text": "    for (const row of rows) {"
+      },
+      {
+        "line": 339,
+        "text": "      const sessionId = validId(row.sessionId) ? row.sessionId : undefined;"
+      },
+      {
+        "line": 340,
+        "text": "      const groupKey = sessionId === undefined ? `trace:${row.traceId}` : `session:${sessionId}`;"
+      },
+      {
+        "line": 341,
+        "text": "      const updatedAt ="
+      },
+      {
+        "line": 342,
+        "text": "        row.endedAt !== undefined && Number.isFinite(row.endedAt)"
+      },
+      {
+        "line": 343,
+        "text": "          ? Math.max(row.startedAt, row.endedAt)"
+      },
+      {
+        "line": 344,
+        "text": "          : row.startedAt;"
+      },
+      {
+        "line": 345,
+        "text": "      let group = groups.get(groupKey);"
+      },
+      {
+        "line": 346,
+        "text": "      if (!group) {"
+      },
+      {
+        "line": 347,
+        "text": "        group = {"
+      },
+      {
+        "line": 348,
+        "text": "          item: {"
+      },
+      {
+        "line": 349,
+        "text": "            key: groupKey,"
+      },
+      {
+        "line": 350,
+        "text": "            ...(sessionId === undefined ? { traceId: row.traceId } : { sessionId }),"
+      },
+      {
+        "line": 351,
+        "text": "            latestRequestId: row.id,"
+      },
+      {
+        "line": 352,
+        "text": "            latestTraceId: row.traceId,"
+      },
+      {
+        "line": 353,
+        "text": "            startedAt: row.startedAt,"
+      },
+      {
+        "line": 354,
+        "text": "            updatedAt,"
+      },
+      {
+        "line": 355,
+        "text": "            callCount: 0,"
+      },
+      {
+        "line": 356,
+        "text": "            traceCount: 0,"
+      },
+      {
+        "line": 357,
+        "text": "            sources: [],"
+      },
+      {
+        "line": 358,
+        "text": "            models: [],"
+      },
+      {
+        "line": 359,
+        "text": "            callTypes: [],"
+      },
+      {
+        "line": 360,
+        "text": "            runningCount: 0,"
+      },
+      {
+        "line": 361,
+        "text": "            failedCount: 0,"
+      },
+      {
+        "line": 362,
+        "text": "          },"
+      },
+      {
+        "line": 363,
+        "text": "          traces: new Set(),"
+      },
+      {
+        "line": 364,
+        "text": "          latestStartedAt: row.startedAt,"
+      },
+      {
+        "line": 365,
+        "text": "        };"
+      },
+      {
+        "line": 366,
+        "text": "        groups.set(groupKey, group);"
+      },
+      {
+        "line": 367,
+        "text": "      }"
+      },
+      {
+        "line": 368,
+        "text": "      const item = group.item;"
+      },
+      {
+        "line": 369,
+        "text": "      item.startedAt = Math.min(item.startedAt, row.startedAt);"
+      },
+      {
+        "line": 370,
+        "text": "      item.callCount++;"
+      },
+      {
+        "line": 371,
+        "text": "      group.traces.add(row.traceId);"
+      },
+      {
+        "line": 372,
+        "text": "      if (typeof row.source === \"string\" && !item.sources.includes(row.source))"
+      },
+      {
+        "line": 373,
+        "text": "        item.sources.push(row.source);"
+      },
+      {
+        "line": 374,
+        "text": "      if (typeof row.model === \"string\" && !item.models.includes(row.model))"
+      },
+      {
+        "line": 375,
+        "text": "        item.models.push(row.model);"
+      },
+      {
+        "line": 376,
+        "text": "      if (row.callType && !item.callTypes!.includes(row.callType))"
+      },
+      {
+        "line": 377,
+        "text": "        item.callTypes!.push(row.callType);"
+      },
+      {
+        "line": 378,
+        "text": "      if (row.status === \"running\") item.runningCount++;"
+      },
+      {
+        "line": 379,
+        "text": "      if (row.status === \"failed\") item.failedCount++;"
+      },
+      {
+        "line": 380,
+        "text": "      if ("
+      },
+      {
+        "line": 381,
+        "text": "        updatedAt > item.updatedAt ||"
+      },
+      {
+        "line": 382,
+        "text": "        (updatedAt === item.updatedAt &&"
+      },
+      {
+        "line": 383,
+        "text": "          (row.startedAt > group.latestStartedAt ||"
+      },
+      {
+        "line": 384,
+        "text": "            (row.startedAt === group.latestStartedAt &&"
+      },
+      {
+        "line": 385,
+        "text": "              row.id.localeCompare(item.latestRequestId) > 0)))"
+      },
+      {
+        "line": 386,
+        "text": "      ) {"
+      },
+      {
+        "line": 387,
+        "text": "        item.updatedAt = updatedAt;"
+      },
+      {
+        "line": 388,
+        "text": "        item.latestRequestId = row.id;"
+      },
+      {
+        "line": 389,
+        "text": "        item.latestTraceId = row.traceId;"
+      },
+      {
+        "line": 390,
+        "text": "        group.latestStartedAt = row.startedAt;"
+      },
+      {
+        "line": 391,
+        "text": "      }"
+      },
+      {
+        "line": 392,
+        "text": "    }"
+      },
+      {
+        "line": 393,
+        "text": "    const items = [...groups.values()].map(({ item, traces }) => ({"
+      },
+      {
+        "line": 394,
+        "text": "      ...item,"
+      },
+      {
+        "line": 395,
+        "text": "      traceCount: traces.size,"
+      },
+      {
+        "line": 396,
+        "text": "      sources: item.sources.sort(),"
+      },
+      {
+        "line": 397,
+        "text": "      models: item.models.sort(),"
+      },
+      {
+        "line": 398,
+        "text": "      callTypes: item.callTypes!.sort(),"
+      },
+      {
+        "line": 399,
+        "text": "    }));"
+      },
+      {
+        "line": 400,
+        "text": "    items.sort((a, b) => b.updatedAt - a.updatedAt || b.key.localeCompare(a.key));"
+      },
+      {
+        "line": 401,
+        "text": "    let after: { kind: \"sessions\"; updatedAt: number; key: string } | undefined;"
+      },
+      {
+        "line": 402,
+        "text": "    if (query.cursor) {"
+      },
+      {
+        "line": 403,
+        "text": "      try {"
+      },
+      {
+        "line": 404,
+        "text": "        after = JSON.parse(Buffer.from(query.cursor, \"base64url\").toString(\"utf8\"));"
+      },
+      {
+        "line": 405,
+        "text": "      } catch {"
+      },
+      {
+        "line": 406,
+        "text": "        throw new Error(\"Invalid model trace session cursor\");"
+      },
+      {
+        "line": 407,
+        "text": "      }"
+      },
+      {
+        "line": 408,
+        "text": "      if ("
+      },
+      {
+        "line": 409,
+        "text": "        !after ||"
+      },
+      {
+        "line": 410,
+        "text": "        after.kind !== \"sessions\" ||"
+      },
+      {
+        "line": 411,
+        "text": "        !Number.isFinite(after.updatedAt) ||"
+      },
+      {
+        "line": 412,
+        "text": "        after.updatedAt < 0 ||"
+      },
+      {
+        "line": 413,
+        "text": "        typeof after.key !== \"string\" ||"
+      },
+      {
+        "line": 414,
+        "text": "        !/^(session|trace):./s.test(after.key) ||"
+      },
+      {
+        "line": 415,
+        "text": "        after.key.length > 1032 ||"
+      },
+      {
+        "line": 416,
+        "text": "        after.key.includes(\"\\0\") ||"
+      },
+      {
+        "line": 417,
+        "text": "        Object.keys(after).some((field) => ![\"kind\", \"updatedAt\", \"key\"].includes(field))"
+      },
+      {
+        "line": 418,
+        "text": "      )"
+      },
+      {
+        "line": 419,
+        "text": "        throw new Error(\"Invalid model trace session cursor\");"
+      },
+      {
+        "line": 420,
+        "text": "    }"
+      },
+      {
+        "line": 421,
+        "text": "    const candidates = after"
+      },
+      {
+        "line": 422,
+        "text": "      ? items.filter("
+      },
+      {
+        "line": 423,
+        "text": "          (item) =>"
+      },
+      {
+        "line": 424,
+        "text": "            item.updatedAt < after!.updatedAt ||"
+      },
+      {
+        "line": 425,
+        "text": "            (item.updatedAt === after!.updatedAt && item.key.localeCompare(after!.key) < 0),"
+      },
+      {
+        "line": 426,
+        "text": "        )"
+      },
+      {
+        "line": 427,
+        "text": "      : items;"
+      },
+      {
+        "line": 428,
+        "text": "    const limit = query.limit ?? 50;"
+      },
+      {
+        "line": 429,
+        "text": "    const pageItems = candidates.slice(0, limit);"
+      },
+      {
+        "line": 430,
+        "text": "    const last = pageItems.at(-1);"
+      },
+      {
+        "line": 431,
+        "text": "    return {"
+      },
+      {
+        "line": 432,
+        "text": "      items: pageItems,"
+      },
+      {
+        "line": 433,
+        "text": "      total: items.length,"
+      },
+      {
+        "line": 434,
+        "text": "      ...(candidates.length > limit && last"
+      },
+      {
+        "line": 435,
+        "text": "        ? {"
+      },
+      {
+        "line": 436,
+        "text": "            nextCursor: Buffer.from("
+      },
+      {
+        "line": 437,
+        "text": "              JSON.stringify({ kind: \"sessions\", updatedAt: last.updatedAt, key: last.key }),"
+      },
+      {
+        "line": 438,
+        "text": "            ).toString(\"base64url\"),"
+      },
+      {
+        "line": 439,
+        "text": "          }"
+      },
+      {
+        "line": 440,
+        "text": "        : {}),"
+      },
+      {
+        "line": 441,
+        "text": "    };"
+      },
+      {
+        "line": 442,
+        "text": "  }"
+      },
+      {
+        "line": 443,
+        "text": "  get(id: string): ModelTraceRecord | null {"
+      },
+      {
+        "line": 444,
+        "text": "    if (!validId(id)) throw new Error(\"Invalid model trace ID\");"
+      },
+      {
+        "line": 445,
+        "text": "    if (!this.directorySafe(join(this.storageDir, \"records\"))) return null;"
+      },
+      {
+        "line": 446,
+        "text": "    const record = readJson(join(this.storageDir, \"records\", `${key(id)}.json`), MAX_RECORD_BYTES);"
+      },
+      {
+        "line": 529,
+        "text": "  private files(relative: string): string[] {"
+      },
+      {
+        "line": 538,
+        "text": "  private writeJson(directory: string, name: string, value: unknown): void {"
+      },
+      {
+        "line": 550,
+        "text": "  private directorySafe(directory: string, create = false): boolean {"
+      },
+      {
+        "line": 570,
+        "text": "  private prune(force = false): void {"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/model-traces/types.ts",
+    "sha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+    "captureTiming": "After actual prior source displays in tool chunks70a617/38d9de/b21382/331e7b/58dc5f; this snapshot is not the first-read or pre-read pin. It includes only previously displayed lines.",
+    "displayedLines": [
+      {
+        "line": 4,
+        "text": "export type ModelTraceContentState = \"recorded\" | \"not-recorded\" | \"truncated\" | \"redacted\";"
+      },
+      {
+        "line": 5,
+        "text": "export type ModelTraceStatus = \"running\" | \"completed\" | \"failed\" | \"cancelled\";"
+      },
+      {
+        "line": 6,
+        "text": "export type ModelTraceCallType ="
+      },
+      {
+        "line": 22,
+        "text": "export interface ModelTraceConfig {"
+      },
+      {
+        "line": 30,
+        "text": "export type ModelTraceConfigPatch = Partial<Omit<ModelTraceConfig, \"policyRevision\">>;"
+      },
+      {
+        "line": 32,
+        "text": "export interface ModelTraceOutput {"
+      },
+      {
+        "line": 40,
+        "text": "export interface ModelTraceAttempt {"
+      },
+      {
+        "line": 58,
+        "text": "export interface ModelTraceRecord {"
+      },
+      {
+        "line": 94,
+        "text": "export interface ModelTraceSummary extends Omit<ModelTraceRecord, \"input\" | \"output\" | \"attempts\"> {"
+      },
+      {
+        "line": 95,
+        "text": "  attemptCount: number;"
+      },
+      {
+        "line": 96,
+        "text": "}"
+      },
+      {
+        "line": 97,
+        "text": "export interface ModelTraceListQuery {"
+      },
+      {
+        "line": 98,
+        "text": "  limit?: number;"
+      },
+      {
+        "line": 99,
+        "text": "  cursor?: string;"
+      },
+      {
+        "line": 100,
+        "text": "  search?: string;"
+      },
+      {
+        "line": 101,
+        "text": "  traceId?: string;"
+      },
+      {
+        "line": 102,
+        "text": "  sessionId?: string;"
+      },
+      {
+        "line": 103,
+        "text": "  /** Restrict to calls with no actual session identity, including when trace IDs coincide. */"
+      },
+      {
+        "line": 104,
+        "text": "  withoutSession?: boolean;"
+      },
+      {
+        "line": 105,
+        "text": "  workspacePath?: string;"
+      },
+      {
+        "line": 106,
+        "text": "  /** Host-only read scopes; transport query validators must reject this field. */"
+      },
+      {
+        "line": 107,
+        "text": "  workspaceScopes?: ReadonlyArray<{ workspacePath: string; sourcePrefix?: string }>;"
+      },
+      {
+        "line": 108,
+        "text": "  model?: string;"
+      },
+      {
+        "line": 109,
+        "text": "  provider?: string;"
+      },
+      {
+        "line": 110,
+        "text": "  purpose?: string;"
+      },
+      {
+        "line": 111,
+        "text": "  callType?: ModelTraceCallType;"
+      },
+      {
+        "line": 112,
+        "text": "  source?: string;"
+      },
+      {
+        "line": 113,
+        "text": "  status?: ModelTraceStatus;"
+      },
+      {
+        "line": 114,
+        "text": "  since?: number;"
+      },
+      {
+        "line": 115,
+        "text": "  until?: number;"
+      },
+      {
+        "line": 116,
+        "text": "}"
+      },
+      {
+        "line": 117,
+        "text": "export interface ModelTracePage {"
+      },
+      {
+        "line": 118,
+        "text": "  items: ModelTraceSummary[];"
+      },
+      {
+        "line": 119,
+        "text": "  nextCursor?: string;"
+      },
+      {
+        "line": 120,
+        "text": "  total: number;"
+      },
+      {
+        "line": 121,
+        "text": "}"
+      },
+      {
+        "line": 122,
+        "text": "/** One real session, or one independently attributed trace when no session exists. */"
+      },
+      {
+        "line": 123,
+        "text": "export interface ModelTraceSessionSummary {"
+      },
+      {
+        "line": 124,
+        "text": "  key: string;"
+      },
+      {
+        "line": 125,
+        "text": "  sessionId?: string;"
+      },
+      {
+        "line": 126,
+        "text": "  /** Present only for calls that have no session identity. */"
+      },
+      {
+        "line": 127,
+        "text": "  traceId?: string;"
+      },
+      {
+        "line": 128,
+        "text": "  latestRequestId: string;"
+      },
+      {
+        "line": 129,
+        "text": "  latestTraceId: string;"
+      },
+      {
+        "line": 130,
+        "text": "  startedAt: number;"
+      },
+      {
+        "line": 131,
+        "text": "  updatedAt: number;"
+      },
+      {
+        "line": 132,
+        "text": "  callCount: number;"
+      },
+      {
+        "line": 133,
+        "text": "  traceCount: number;"
+      },
+      {
+        "line": 134,
+        "text": "  sources: string[];"
+      },
+      {
+        "line": 135,
+        "text": "  models: string[];"
+      },
+      {
+        "line": 136,
+        "text": "  /** Categories of the matching calls, after all query filters and before paging. */"
+      },
+      {
+        "line": 137,
+        "text": "  callTypes?: ModelTraceCallType[];"
+      },
+      {
+        "line": 138,
+        "text": "  runningCount: number;"
+      },
+      {
+        "line": 139,
+        "text": "  failedCount: number;"
+      },
+      {
+        "line": 140,
+        "text": "}"
+      },
+      {
+        "line": 141,
+        "text": "export interface ModelTraceSessionPage {"
+      },
+      {
+        "line": 142,
+        "text": "  items: ModelTraceSessionSummary[];"
+      },
+      {
+        "line": 143,
+        "text": "  nextCursor?: string;"
+      },
+      {
+        "line": 144,
+        "text": "  total: number;"
+      },
+      {
+        "line": 145,
+        "text": "}"
+      },
+      {
+        "line": 146,
+        "text": "export interface ModelTraceEvent {"
+      },
+      {
+        "line": 164,
+        "text": "export type ModelTraceEventInput = Omit<"
+      },
+      {
+        "line": 177,
+        "text": "export interface ModelTraceContext {"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/model-trace-history.ts",
+    "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+    "captureTiming": "After actual prior source displays in tool chunks70a617/38d9de/b21382/331e7b/58dc5f; this snapshot is not the first-read or pre-read pin. It includes only previously displayed lines.",
+    "displayedLines": [
+      {
+        "line": 21,
+        "text": "  \"limit\","
+      },
+      {
+        "line": 22,
+        "text": "  \"cursor\","
+      },
+      {
+        "line": 54,
+        "text": "export function validateModelTraceQuery(input?: unknown): ModelTraceListQuery {"
+      },
+      {
+        "line": 55,
+        "text": "  if (input === undefined) return {};"
+      },
+      {
+        "line": 56,
+        "text": "  const query = record(input, \"query\");"
+      },
+      {
+        "line": 57,
+        "text": "  const result: Record<string, unknown> = {};"
+      },
+      {
+        "line": 58,
+        "text": "  for (const [key, value] of Object.entries(query)) {"
+      },
+      {
+        "line": 59,
+        "text": "    if (!QUERY_FIELDS.has(key))"
+      },
+      {
+        "line": 60,
+        "text": "      throw new ModelTraceRequestError(400, `Unknown model trace query field: ${key}`);"
+      },
+      {
+        "line": 61,
+        "text": "    if (value === undefined) continue;"
+      },
+      {
+        "line": 62,
+        "text": "    if (key === \"callType\") {"
+      },
+      {
+        "line": 63,
+        "text": "      if (!isModelTraceCallType(value))"
+      },
+      {
+        "line": 64,
+        "text": "        throw new ModelTraceRequestError(400, \"Invalid model trace callType\");"
+      },
+      {
+        "line": 65,
+        "text": "    } else if (key === \"withoutSession\") {"
+      },
+      {
+        "line": 66,
+        "text": "      if (typeof value !== \"boolean\")"
+      },
+      {
+        "line": 67,
+        "text": "        throw new ModelTraceRequestError(400, \"Invalid model trace withoutSession\");"
+      },
+      {
+        "line": 68,
+        "text": "    } else if (key === \"limit\") {"
+      },
+      {
+        "line": 69,
+        "text": "      if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 200)"
+      },
+      {
+        "line": 70,
+        "text": "        throw new ModelTraceRequestError(400, \"Model trace limit must be between 1 and 200\");"
+      },
+      {
+        "line": 71,
+        "text": "    } else if (key === \"since\" || key === \"until\") {"
+      },
+      {
+        "line": 72,
+        "text": "      if (typeof value !== \"number\" || !Number.isFinite(value) || value < 0)"
+      },
+      {
+        "line": 73,
+        "text": "        throw new ModelTraceRequestError(400, `Invalid model trace ${key}`);"
+      },
+      {
+        "line": 74,
+        "text": "    } else {"
+      },
+      {
+        "line": 75,
+        "text": "      const max = key === \"search\" || key === \"cursor\" ? 2048 : 512;"
+      },
+      {
+        "line": 76,
+        "text": "      if (typeof value !== \"string\" || value.length > max || value.includes(\"\\0\"))"
+      },
+      {
+        "line": 77,
+        "text": "        throw new ModelTraceRequestError(400, `Invalid model trace ${key}`);"
+      },
+      {
+        "line": 78,
+        "text": "      if (key === \"status\" && ![\"running\", \"completed\", \"failed\", \"cancelled\"].includes(value))"
+      },
+      {
+        "line": 79,
+        "text": "        throw new ModelTraceRequestError(400, \"Invalid model trace status\");"
+      },
+      {
+        "line": 80,
+        "text": "    }"
+      },
+      {
+        "line": 81,
+        "text": "    result[key] = value;"
+      },
+      {
+        "line": 82,
+        "text": "  }"
+      },
+      {
+        "line": 83,
+        "text": "  if ("
+      },
+      {
+        "line": 84,
+        "text": "    typeof result.since === \"number\" &&"
+      },
+      {
+        "line": 85,
+        "text": "    typeof result.until === \"number\" &&"
+      },
+      {
+        "line": 86,
+        "text": "    result.since > result.until"
+      },
+      {
+        "line": 87,
+        "text": "  )"
+      },
+      {
+        "line": 88,
+        "text": "    throw new ModelTraceRequestError(400, \"Model trace time range is reversed\");"
+      },
+      {
+        "line": 89,
+        "text": "  return result as ModelTraceListQuery;"
+      },
+      {
+        "line": 92,
+        "text": "export function validateModelTraceId(input: unknown): string {"
+      },
+      {
+        "line": 98,
+        "text": "export function validateModelTraceConfigPatch(input: unknown): ModelTraceConfigPatch {"
+      },
+      {
+        "line": 117,
+        "text": "/** Host fixes storageDir once; no query or request can select a different store. */"
+      },
+      {
+        "line": 180,
+        "text": "    // Events do not carry a source. A prefix-limited related scope may only"
+      },
+      {
+        "line": 203,
+        "text": "    list(query?: unknown): ModelTracePage {"
+      },
+      {
+        "line": 204,
+        "text": "      const validated = validateModelTraceQuery(query);"
+      },
+      {
+        "line": 205,
+        "text": "      return store.list({"
+      },
+      {
+        "line": 206,
+        "text": "        ...validated,"
+      },
+      {
+        "line": 207,
+        "text": "        ...(scopes"
+      },
+      {
+        "line": 208,
+        "text": "          ? { workspaceScopes: scopes }"
+      },
+      {
+        "line": 209,
+        "text": "          : workspacePath === undefined"
+      },
+      {
+        "line": 210,
+        "text": "            ? {}"
+      },
+      {
+        "line": 211,
+        "text": "            : { workspacePath }),"
+      },
+      {
+        "line": 212,
+        "text": "      });"
+      },
+      {
+        "line": 213,
+        "text": "    },"
+      },
+      {
+        "line": 214,
+        "text": "    sessions(query?: unknown): ModelTraceSessionPage {"
+      },
+      {
+        "line": 215,
+        "text": "      const validated = validateModelTraceQuery(query);"
+      },
+      {
+        "line": 216,
+        "text": "      try {"
+      },
+      {
+        "line": 217,
+        "text": "        return store.sessions({"
+      },
+      {
+        "line": 218,
+        "text": "          ...validated,"
+      },
+      {
+        "line": 219,
+        "text": "          ...(scopes"
+      },
+      {
+        "line": 220,
+        "text": "            ? { workspaceScopes: scopes }"
+      },
+      {
+        "line": 221,
+        "text": "            : workspacePath === undefined"
+      },
+      {
+        "line": 222,
+        "text": "              ? {}"
+      },
+      {
+        "line": 223,
+        "text": "              : { workspacePath }),"
+      },
+      {
+        "line": 224,
+        "text": "        });"
+      },
+      {
+        "line": 225,
+        "text": "      } catch (error) {"
+      },
+      {
+        "line": 226,
+        "text": "        if (error instanceof Error && error.message === \"Invalid model trace session cursor\")"
+      },
+      {
+        "line": 227,
+        "text": "          throw new ModelTraceRequestError(400, error.message);"
+      },
+      {
+        "line": 228,
+        "text": "        throw error;"
+      },
+      {
+        "line": 229,
+        "text": "      }"
+      },
+      {
+        "line": 232,
+        "text": "      const entry = store.get(validateModelTraceId(id));"
+      },
+      {
+        "line": 239,
+        "text": "      return store.setConfig(validateModelTraceConfigPatch(patch));"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+    "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+    "captureTiming": "After actual prior source displays in tool chunks70a617/38d9de/b21382/331e7b/58dc5f; this snapshot is not the first-read or pre-read pin. It includes only previously displayed lines.",
+    "displayedLines": [
+      {
+        "line": 106,
+        "text": "    nextCursor?: string;"
+      },
+      {
+        "line": 240,
+        "text": "    }"
+      },
+      {
+        "line": 241,
+        "text": "  }, [initialSessionId, initialTraceId, initialRequestId]);"
+      },
+      {
+        "line": 242,
+        "text": ""
+      },
+      {
+        "line": 243,
+        "text": "  useEffect(() => {"
+      },
+      {
+        "line": 244,
+        "text": "    const version = ++listVersion.current;"
+      },
+      {
+        "line": 245,
+        "text": "    listPending.current = true;"
+      },
+      {
+        "line": 246,
+        "text": "    setListLoading(true);"
+      },
+      {
+        "line": 247,
+        "text": "    setListError(null);"
+      },
+      {
+        "line": 248,
+        "text": "    void Promise.resolve()"
+      },
+      {
+        "line": 249,
+        "text": "      .then(() =>"
+      },
+      {
+        "line": 250,
+        "text": "        window.codeshell.modelTraces.sessions({"
+      },
+      {
+        "line": 251,
+        "text": "          ...query,"
+      },
+      {
+        "line": 252,
+        "text": "          limit: 50,"
+      },
+      {
+        "line": 253,
+        "text": "          ...(cursor ? { cursor } : {}),"
+      },
+      {
+        "line": 254,
+        "text": "        }),"
+      },
+      {
+        "line": 255,
+        "text": "      )"
+      },
+      {
+        "line": 256,
+        "text": "      .then((page) => {"
+      },
+      {
+        "line": 257,
+        "text": "        if (!mounted.current || version !== listVersion.current) return;"
+      },
+      {
+        "line": 258,
+        "text": "        setList(page);"
+      },
+      {
+        "line": 259,
+        "text": "        if (!selectedRequestRef.current) {"
+      },
+      {
+        "line": 260,
+        "text": "          const first = selectedSessionRef.current"
+      },
+      {
+        "line": 261,
+        "text": "            ? (page.items.find((item) => item.key === selectedSessionRef.current?.key) ??"
+      },
+      {
+        "line": 262,
+        "text": "              (filters.callType ? page.items[0] : undefined))"
+      },
+      {
+        "line": 263,
+        "text": "            : page.items[0];"
+      },
+      {
+        "line": 264,
+        "text": "          if (first) {"
+      },
+      {
+        "line": 265,
+        "text": "            if (selectedSessionRef.current?.key !== first.key) callsVersion.current++;"
+      },
+      {
+        "line": 266,
+        "text": "            setSelectedSession(first);"
+      },
+      {
+        "line": 267,
+        "text": "            setSelectedTrace(first.latestTraceId);"
+      },
+      {
+        "line": 268,
+        "text": "            setSelectedRequest(first.latestRequestId);"
+      },
+      {
+        "line": 269,
+        "text": "            setExpanded((current) => new Set([...current, first.latestRequestId]));"
+      },
+      {
+        "line": 270,
+        "text": "          }"
+      },
+      {
+        "line": 271,
+        "text": "        }"
+      },
+      {
+        "line": 272,
+        "text": "      })"
+      },
+      {
+        "line": 273,
+        "text": "      .catch((error) => {"
+      },
+      {
+        "line": 274,
+        "text": "        if (mounted.current && version === listVersion.current) setListError(errorText(error));"
+      },
+      {
+        "line": 275,
+        "text": "      })"
+      },
+      {
+        "line": 276,
+        "text": "      .finally(() => {"
+      },
+      {
+        "line": 277,
+        "text": "        if (mounted.current && version === listVersion.current) {"
+      },
+      {
+        "line": 295,
+        "text": "    setCalls((current) =>"
+      },
+      {
+        "line": 296,
+        "text": "      current.scopeKey === callScopeKey ? current : { scopeKey: callScopeKey, items: [] },"
+      },
+      {
+        "line": 297,
+        "text": "    );"
+      },
+      {
+        "line": 298,
+        "text": "    void Promise.resolve()"
+      },
+      {
+        "line": 299,
+        "text": "      .then(() => window.codeshell.modelTraces.list({ ...selectedCallQuery!, limit: 100 }))"
+      },
+      {
+        "line": 300,
+        "text": "      .then((page) => {"
+      },
+      {
+        "line": 301,
+        "text": "        if (!mounted.current || version !== callsVersion.current) return;"
+      },
+      {
+        "line": 302,
+        "text": "        setCalls({"
+      },
+      {
+        "line": 303,
+        "text": "          scopeKey: callScopeKey,"
+      },
+      {
+        "line": 304,
+        "text": "          items: mergeTraceCalls([], page.items),"
+      },
+      {
+        "line": 305,
+        "text": "          nextCursor: page.nextCursor,"
+      },
+      {
+        "line": 306,
+        "text": "        });"
+      },
+      {
+        "line": 307,
+        "text": "        if (!selectedRequestRef.current && page.items[0]) {"
+      },
+      {
+        "line": 308,
+        "text": "          setSelectedRequest(page.items[0].id);"
+      },
+      {
+        "line": 309,
+        "text": "          setExpanded((current) => new Set([...current, page.items[0].id]));"
+      },
+      {
+        "line": 310,
+        "text": "        }"
+      },
+      {
+        "line": 311,
+        "text": "      })"
+      },
+      {
+        "line": 312,
+        "text": "      .catch((error) => {"
+      },
+      {
+        "line": 313,
+        "text": "        if (mounted.current && version === callsVersion.current) setCallsError(errorText(error));"
+      },
+      {
+        "line": 331,
+        "text": "      .then(() => window.codeshell.modelTraces.get(selectedRequest))"
+      },
+      {
+        "line": 365,
+        "text": "  const loadMoreCalls = async () => {"
+      },
+      {
+        "line": 366,
+        "text": "    if (callsPending.current || !calls.nextCursor || !selectedSession) return;"
+      },
+      {
+        "line": 367,
+        "text": "    callsPending.current = true;"
+      },
+      {
+        "line": 368,
+        "text": "    setCallsLoading(true);"
+      },
+      {
+        "line": 369,
+        "text": "    setCallsError(null);"
+      },
+      {
+        "line": 370,
+        "text": "    const version = callsVersion.current;"
+      },
+      {
+        "line": 371,
+        "text": "    try {"
+      },
+      {
+        "line": 372,
+        "text": "      const page = await window.codeshell.modelTraces.list({"
+      },
+      {
+        "line": 373,
+        "text": "        ...selectedCallQuery!,"
+      },
+      {
+        "line": 374,
+        "text": "        limit: 100,"
+      },
+      {
+        "line": 375,
+        "text": "        cursor: calls.nextCursor,"
+      },
+      {
+        "line": 376,
+        "text": "      });"
+      },
+      {
+        "line": 377,
+        "text": "      if (mounted.current && version === callsVersion.current)"
+      },
+      {
+        "line": 378,
+        "text": "        setCalls((current) => ({"
+      },
+      {
+        "line": 379,
+        "text": "          scopeKey: callScopeKey,"
+      },
+      {
+        "line": 380,
+        "text": "          items: mergeTraceCalls(current.items, page.items),"
+      },
+      {
+        "line": 381,
+        "text": "          nextCursor: page.nextCursor,"
+      },
+      {
+        "line": 382,
+        "text": "        }));"
+      },
+      {
+        "line": 383,
+        "text": "    } catch (error) {"
+      },
+      {
+        "line": 384,
+        "text": "      if (mounted.current && version === callsVersion.current) setCallsError(errorText(error));"
+      },
+      {
+        "line": 385,
+        "text": "    } finally {"
+      },
+      {
+        "line": 581,
+        "text": "                {t(\"observability.sessionCount\", { count: list.total })}"
+      },
+      {
+        "line": 634,
+        "text": "                        if (selectedRequestRef.current !== group.latestRequestId)"
+      },
+      {
+        "line": 638,
+        "text": "                        setSelectedRequest(group.latestRequestId);"
+      },
+      {
+        "line": 640,
+        "text": "                        setExpanded((current) => new Set([...current, group.latestRequestId]));"
+      },
+      {
+        "line": 656,
+        "text": "                            calls: group.callCount,"
+      },
+      {
+        "line": 657,
+        "text": "                            traces: group.traceCount,"
+      },
+      {
+        "line": 680,
+        "text": "                        {traceTime(group.updatedAt, lang)}"
+      },
+      {
+        "line": 708,
+        "text": "              disabled={listLoading || !list?.nextCursor}"
+      },
+      {
+        "line": 709,
+        "text": "              onClick={() => setCursors((current) => [...current, list?.nextCursor])}"
+      },
+      {
+        "line": 802,
+        "text": "            {calls.nextCursor && ("
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/model-traces/store.test.ts",
+    "sha256": "58fbf77e8021ee91211fc1275aff1fb0315934dbdbc7751342fd45677fdf012e",
+    "captureTiming": "After actual prior source displays in tool chunks70a617/38d9de/b21382/331e7b/58dc5f; this snapshot is not the first-read or pre-read pin. It includes only previously displayed lines.",
+    "displayedLines": [
+      {
+        "line": 38,
+        "text": "describe(\"ModelTraceStore\", () => {"
+      },
+      {
+        "line": 44,
+        "text": "  test(\"configuration is private, validated and hot across store instances\", () => {"
+      },
+      {
+        "line": 63,
+        "text": "  test(\"the v2 rollout enables old defaults once and preserves later explicit opt-outs\", () => {"
+      },
+      {
+        "line": 101,
+        "text": "  test(\"saving an unrelated setting persists upgraded defaults without changing its generation\", () => {"
+      },
+      {
+        "line": 119,
+        "text": "  test(\"pages stable IDs and searches metadata without returning bodies\", () => {"
+      },
+      {
+        "line": 120,
+        "text": "    const store = new ModelTraceStore({ storageDir: directory });"
+      },
+      {
+        "line": 121,
+        "text": "    for (let index = 0; index < 5; index++)"
+      },
+      {
+        "line": 122,
+        "text": "      store.write("
+      },
+      {
+        "line": 123,
+        "text": "        record(`id-${index}`, {"
+      },
+      {
+        "line": 124,
+        "text": "          startedAt: Date.now() - index,"
+      },
+      {
+        "line": 125,
+        "text": "          workspacePath: index === 4 ? \"/other\" : \"/workspace\","
+      },
+      {
+        "line": 126,
+        "text": "          sessionId: \"s\","
+      },
+      {
+        "line": 127,
+        "text": "          model: index === 2 ? \"second-model\" : \"model\","
+      },
+      {
+        "line": 128,
+        "text": "        }),"
+      },
+      {
+        "line": 129,
+        "text": "      );"
+      },
+      {
+        "line": 130,
+        "text": "    const first = store.list({ limit: 2, workspacePath: \"/workspace\" });"
+      },
+      {
+        "line": 131,
+        "text": "    expect(first.total).toBe(4);"
+      },
+      {
+        "line": 132,
+        "text": "    expect(first.items).toHaveLength(2);"
+      },
+      {
+        "line": 133,
+        "text": "    expect(first.items[0]).not.toHaveProperty(\"input\");"
+      },
+      {
+        "line": 134,
+        "text": "    expect(first.items[0]).not.toHaveProperty(\"attempts\");"
+      },
+      {
+        "line": 135,
+        "text": "    const second = store.list({ limit: 2, workspacePath: \"/workspace\", cursor: first.nextCursor });"
+      },
+      {
+        "line": 136,
+        "text": "    expect(new Set([...first.items, ...second.items].map((item) => item.id)).size).toBe(4);"
+      },
+      {
+        "line": 137,
+        "text": "    expect(store.list({ search: \"SECOND-model fixture\" }).items.map((item) => item.id)).toEqual(["
+      },
+      {
+        "line": 138,
+        "text": "      \"id-2\","
+      },
+      {
+        "line": 139,
+        "text": "    ]);"
+      },
+      {
+        "line": 140,
+        "text": "    expect(store.list({ traceId: \"missing\" }).total).toBe(0);"
+      },
+      {
+        "line": 141,
+        "text": "    expect(store.get(\"id-2\")?.input?.systemPrompt).toBe(\"private prompt\");"
+      },
+      {
+        "line": 142,
+        "text": "    expect(() => store.list({ cursor: \"bad cursor\" })).toThrow();"
+      },
+      {
+        "line": 143,
+        "text": "  });"
+      },
+      {
+        "line": 144,
+        "text": "  test(\"derives categories for legacy records on read and ignores caller or saved labels\", () => {"
+      },
+      {
+        "line": 166,
+        "text": "  test(\"Host workspace scopes union exact and prefix-limited sources before stable pagination\", () => {"
+      },
+      {
+        "line": 195,
+        "text": "  test(\"Host-only workspace scopes are bounded, explicit and reject unknown authority fields\", () => {"
+      },
+      {
+        "line": 215,
+        "text": "  test(\"expired traces and events are unavailable and pruned\", () => {"
+      },
+      {
+        "line": 234,
+        "text": "  test(\"exact event lookup validates identity and rejects symlink directories\", () => {"
+      },
+      {
+        "line": 259,
+        "text": "  test(\"retention removes orphan bodies after a failed summary write\", () => {"
+      },
+      {
+        "line": 272,
+        "text": "  test(\"rejects symlink directories and malformed record files\", () => {"
+      },
+      {
+        "line": 289,
+        "text": "  test(\"caps oversized bodies and retains attempt identity and coverage\", () => {"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/model-traces/sessions.test.ts",
+    "sha256": "a7b0ed309b87a93f39eef3269cb6db43d1c6b52bda4fa7e5e288cfcc4eb7f346",
+    "captureTiming": "After actual prior source displays in tool chunks70a617/38d9de/b21382/331e7b/58dc5f; this snapshot is not the first-read or pre-read pin. It includes only previously displayed lines.",
+    "displayedLines": [
+      {
+        "line": 39,
+        "text": "test(\"all calls in the same session aggregate before paging, across executions and without body reads\", () => {"
+      },
+      {
+        "line": 40,
+        "text": "  for (let i = 0; i < 515; i++)"
+      },
+      {
+        "line": 41,
+        "text": "    write(`call-${i}`, {"
+      },
+      {
+        "line": 42,
+        "text": "      traceId: i % 2 ? \"run-2\" : \"run-1\","
+      },
+      {
+        "line": 43,
+        "text": "      startedAt: now - i,"
+      },
+      {
+        "line": 44,
+        "text": "      source: i % 2 ? \"panel:fixture\" : \"desktop\","
+      },
+      {
+        "line": 45,
+        "text": "      model: i % 2 ? \"second\" : \"fixture-model\","
+      },
+      {
+        "line": 46,
+        "text": "      status: i === 1 ? \"failed\" : i === 2 ? \"running\" : \"completed\","
+      },
+      {
+        "line": 47,
+        "text": "    });"
+      },
+      {
+        "line": 48,
+        "text": "  write(\"old-request-finished-last\", { startedAt: now - 1000, endedAt: now + 10 });"
+      },
+      {
+        "line": 49,
+        "text": "  write(\"other-session\", { sessionId: \"conversation-2\", startedAt: now - 2000 });"
+      },
+      {
+        "line": 50,
+        "text": "  // The matching summary is sufficient even if its body becomes unreadable."
+      },
+      {
+        "line": 51,
+        "text": "  writeFileSync("
+      },
+      {
+        "line": 52,
+        "text": "    join(directory, \"records\", `${createHash(\"sha256\").update(\"call-0\").digest(\"hex\")}.json`),"
+      },
+      {
+        "line": 53,
+        "text": "    \"invalid-body\","
+      },
+      {
+        "line": 54,
+        "text": "  );"
+      },
+      {
+        "line": 55,
+        "text": "  const first = store.sessions({ limit: 1 });"
+      },
+      {
+        "line": 56,
+        "text": "  expect(first.total).toBe(2);"
+      },
+      {
+        "line": 57,
+        "text": "  expect(first.items).toEqual(["
+      },
+      {
+        "line": 58,
+        "text": "    {"
+      },
+      {
+        "line": 59,
+        "text": "      key: \"session:conversation-1\","
+      },
+      {
+        "line": 60,
+        "text": "      sessionId: \"conversation-1\","
+      },
+      {
+        "line": 61,
+        "text": "      latestRequestId: \"old-request-finished-last\","
+      },
+      {
+        "line": 62,
+        "text": "      latestTraceId: \"run-1\","
+      },
+      {
+        "line": 63,
+        "text": "      startedAt: now - 1000,"
+      },
+      {
+        "line": 64,
+        "text": "      updatedAt: now + 10,"
+      },
+      {
+        "line": 65,
+        "text": "      callCount: 516,"
+      },
+      {
+        "line": 66,
+        "text": "      traceCount: 2,"
+      },
+      {
+        "line": 67,
+        "text": "      sources: [\"desktop\", \"panel:fixture\"],"
+      },
+      {
+        "line": 68,
+        "text": "      models: [\"fixture-model\", \"second\"],"
+      },
+      {
+        "line": 69,
+        "text": "      callTypes: [\"execution\", \"panel\"],"
+      },
+      {
+        "line": 70,
+        "text": "      runningCount: 1,"
+      },
+      {
+        "line": 71,
+        "text": "      failedCount: 1,"
+      },
+      {
+        "line": 72,
+        "text": "    },"
+      },
+      {
+        "line": 73,
+        "text": "  ]);"
+      },
+      {
+        "line": 74,
+        "text": "  expect(first.items[0]).not.toHaveProperty(\"input\");"
+      },
+      {
+        "line": 75,
+        "text": "  expect(first.items[0]).not.toHaveProperty(\"traceId\");"
+      },
+      {
+        "line": 76,
+        "text": "  const second = store.sessions({ limit: 1, cursor: first.nextCursor });"
+      },
+      {
+        "line": 77,
+        "text": "  expect(second.total).toBe(2);"
+      },
+      {
+        "line": 78,
+        "text": "  expect(second.items[0].sessionId).toBe(\"conversation-2\");"
+      },
+      {
+        "line": 79,
+        "text": "  expect(second.nextCursor).toBeUndefined();"
+      },
+      {
+        "line": 80,
+        "text": "});"
+      },
+      {
+        "line": 81,
+        "text": ""
+      },
+      {
+        "line": 82,
+        "text": "test(\"sessionless calls group only by their real trace identity and never collide with sessions\", () => {"
+      },
+      {
+        "line": 106,
+        "text": "test(\"filters and Host workspace scopes apply before session counts and stable pagination\", () => {"
+      },
+      {
+        "line": 149,
+        "text": "test(\"session cursors reject corrupt or call-list cursors and share query bounds\", () => {"
+      },
+      {
+        "line": 172,
+        "text": "test(\"type filters precede session counts, trace counts and pagination without leaking scopes\", () => {"
+      }
+    ]
+  }
+]

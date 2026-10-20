@@ -1,0 +1,181 @@
+{
+  "createdUTC": "2026-10-17T15:46:36.207563+00:00",
+  "role": "independent metadata reviewer of57 adaptation, not product source reader or runtime validator",
+  "files": [],
+  "inputDirectory": "/tmp/codeshell-audit-round57-coverage-adapter",
+  "explicitFreezeBeforeFirstRead": true,
+  "inputArtifacts": 25,
+  "receiptRows": 24,
+  "relativeLinks": 15,
+  "integrityAllPass": true,
+  "baseline49Counts": {
+    "full": 292,
+    "selectedNoFull": 154,
+    "unknown": 4196,
+    "paths": 4642
+  },
+  "baseline51Counts": {
+    "full": 288,
+    "selectedNoFull": 150,
+    "unknown": 4205,
+    "paths": 4643
+  },
+  "fieldOnlyNewFullPaths": 10,
+  "all10RawCanonicalObjectsChecked": true,
+  "positiveObjects": 14,
+  "positiveDistinctPaths": 12,
+  "limitedObjectsNotFull": 6,
+  "originalInspectionScopeObjects": 21,
+  "sourceAnchoredInspectionScopeObjects": 20,
+  "checkedReferences": 55,
+  "distinctDocumentPointers": 45,
+  "transitionRepresentatives": 35,
+  "canonicalSourceManifestRepresentatives": 34,
+  "canonicalDisplayClarifications": 1,
+  "allOriginalRangeSupportValid": true,
+  "stageCounts": {
+    "old49-current": {
+      "unknown": 4205,
+      "full": 288,
+      "selected": 150
+    },
+    "plus-inspectionScope": {
+      "unknown": 4195,
+      "full": 298,
+      "selected": 150
+    },
+    "plus-frozen43-44": {
+      "unknown": 4181,
+      "full": 301,
+      "selected": 161
+    },
+    "plus-frozen45": {
+      "unknown": 4170,
+      "full": 304,
+      "selected": 169
+    }
+  },
+  "stageChanges": [
+    10,
+    14,
+    11
+  ],
+  "oldSHAInvalidatedSemanticPaths": 8,
+  "datedHistoryMemberCount": 4162,
+  "datedCountsAllMatch": true,
+  "historyMemberBytesDrift": 0,
+  "authorFilesModified": false,
+  "authorMethodExecuted": false,
+  "productSourceBodyOrBytesRead": 0,
+  "productImportsHelpersFixturesTestsUINativeNetwork": 0,
+  "gitOperations": 0,
+  "firstDiagnosticsPreserved": true,
+  "reviewerFalseSHARequirementRetracted": true,
+  "negativeGuardCoverage": "Static code read plus6 actual limited objects and5 original49 veto examples; no claim all synthetic combinations executed",
+  "limitations": [
+    "304/169/4170 are dated conservative JSON metadata categories, not current remaining or buggy files.",
+    "Current source bytes/Git not independently read; SHA comparisons use frozen51 metadata plus57 empty delta.",
+    "dataset canonical selected1–181 original scope retained; aggregate copy not new semantic evidence.",
+    "No new source reading, bug, candidate or related issue inferred from metadata index adaptation."
+  ],
+  "artifacts": {
+    "baseline-set-checks.json": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182",
+    "inspection-decisions.json": "814965c74fc403a4901a50941fc6161c73eab5c7de1dd973550c53c44e0e25d0",
+    "canonical-pointer-checks.first.json": "32e84851ab22a76a86962d2fe12e89b5e9203387c0106198a1a6645dd943cb7b",
+    "canonical-pointer-checks.json": "c0d5e21075fa1ffe3440cf4759b6d018d8721f5161bcc306c60dbfa080b2c89c",
+    "independent-stage-checks.json": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e",
+    "provenance-clarification.json": "0fb954c211fe620d412bd0061459d922f3b0c3041cf383c822e76dc635ca900f",
+    "dated-history-count-checks.json": "80c8a86e29aed8b1ab246a0cd365f110e14eb917f446a8d6e8202d27f954f0aa",
+    "final57-integrity-checks.json": "73849c3c980ff67e1bbe9c90d35ba18a1a730dcfe9665f60887aa79b751b38c3",
+    "inspection-object-set-checks.json": "fd7c5aa4825b6e9198026b3b26c489acee801eae1548f6b8c11cc977c0702983"
+  },
+  "all20InspectionObjectIdentitiesIndependentlyLocated": true,
+  "limitsWholeClassifierNotRerun": true,
+  "ownReportRelativeLinks": [
+    {
+      "target": "final57-input-pins.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "final57-integrity-checks.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "baseline-integrity-checks.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "baseline-set-checks.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "independent-stage-checks.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "inspection-decisions.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "inspection-object-set-checks.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "baseline-inspection-objects.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "canonical-pointer-checks.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "baseline-veto-controls.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "provenance-clarification.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "dated-history-count-checks.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "initial-diagnostic-notes.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "canonical-pointer-checks.first.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "ending-input-checks.json",
+      "exists": true,
+      "canonicalInside": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": true,
+      "canonicalInside": true
+    }
+  ],
+  "ownReportRelativeLinkCount": 16,
+  "ownFirstMetadataOutputsPreserved": [
+    "initial-diagnostic-notes.json",
+    "canonical-pointer-checks.first.json"
+  ]
+}

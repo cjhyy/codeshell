@@ -1,0 +1,23 @@
+{
+  "role": "source author static opinion for Root unified audit",
+  "rootProposedFindingId": "MCP-R38-01",
+  "supportedP3StaticOpinions": 1,
+  "suggestedSeverity": "P3",
+  "globalClassificationOwner": "Root",
+  "helperStandaloneFindings": 0,
+  "standaloneCandidateRecords": 0,
+  "newRelatedRecords": 0,
+  "unpromotedBoundaries": [
+    {
+      "name": "rename extras",
+      "status": "unfinished boundary only, not candidate/finding",
+      "detail": "Schema extras connectTimeoutMs/connectRetries/inlineImages are outside editor-authored fields and rename writes a new key; no additional ordinary producer/field retention contract investigation completed. Initial belief that loader drops them was refuted by mcpServersFromSettings raw spread. Do not upgrade or count."
+    }
+  ],
+  "oldCauseExclusions": [
+    "May30 MCP header display delimiter old issue: parseKeyValueLines accepts both delimiters; current headers initializer explicitly uses colon separator.",
+    "CLI-R4-01 / TARGET-R26-R1: TUI registry split then join collapses interior spaces in already quoted command text; old first fixture failure remains SKIP, different module/producer/repair from this array formatter.",
+    "PLUGIN-R8-01: plugin command tokenizer discards explicitly empty quote token; current opinion is nonempty whitespace-bearing argument lost by editor formatter, no empty-token claim."
+  ],
+  "dynamicValidation": false
+}

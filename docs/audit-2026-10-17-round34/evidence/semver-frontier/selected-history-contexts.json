@@ -1,0 +1,640 @@
+{
+  "selectedCount": 79,
+  "matches": [
+    {
+      "pattern": "semver-wrapper",
+      "index": 0,
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "at": "$[\"source_inventory\"][738]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 1,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][98][\"text\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 2,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][291][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 3,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][297][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 4,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][303][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 5,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][309][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 6,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][315][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 7,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][321][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 8,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][327][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 9,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][333][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 10,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][339][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 11,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][345][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 12,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][351][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 13,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][357][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 14,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][363][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 15,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][369][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 16,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][376][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 17,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][382][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 18,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][388][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 19,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][394][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 20,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][400][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 21,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][406][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 22,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][412][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 23,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][418][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 24,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][424][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 25,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][430][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 26,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][436][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 27,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][442][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 28,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][448][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 29,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][454][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 30,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][460][\"text\"]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 31,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][469][\"text\"]",
+      "context": "utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 32,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+      "at": "$[\"sources\"][0][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 33,
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "at": "$[\"files\"][22][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 34,
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "at": "$[\"workerSourceChecks\"][46][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 35,
+      "path": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+      "at": "$[\"files\"][8][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 36,
+      "path": "docs/audit-2026-10-17-round19/source-manifest.json",
+      "at": "$[\"files\"][31][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 37,
+      "path": "docs/audit-2026-10-17-round19/source-manifest.json",
+      "at": "$[\"workerSourceChecks\"][23][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 38,
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "at": "$[\"files\"][327]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 39,
+      "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-source-manifest.json",
+      "at": "$[\"files\"][0][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 40,
+      "path": "docs/audit-2026-10-17-round27/root-frontier-report.md",
+      "at": "$",
+      "context": "# Round27 Core/Link 小型静态补充\n\n**0 formal / 0 candidate / 1 old-related**，0产品、测试、import、native、网络执行。本补充与 Root 的失败 compose 运行分别记账；没有借此恢复该动态方向。\n\n全文读 [semver](../../packages/core/src/utils/semver.ts)、[memoize](../../packages/core/src/utils/memoize.ts)、[task sanitizer](../../packages/core/src/utils/task-sanitizer.ts)、[cwd normalize](../../packages/core/src/utils/cwd-normalize.ts)、[Link selection](../../packages/link/src/file-selection.ts) 及其 test 声明；另选读 Engine 的 noise 分支、plugin/skill cache resolver 和 linked-file source identity 消费点。精确范围与 frozen SHA 在 [manifest](evidence/root-frontier-source-manifest.json)，全文字节固定不意味着周围调用链也全文审完。\n\n`memoize` 同时检查 `get` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 41,
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "at": "$[\"files\"][24][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 42,
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "at": "$[\"workerSourceChecks\"][9][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 43,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "at": "$[\"files\"][523][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 44,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][1557][\"path\"]",
+      "context": "packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 45,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 46,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 47,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 48,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 49,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 50,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 51,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"final\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 52,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 53,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 54,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 55,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 56,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 57,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 58,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"final\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 59,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "at": "$[\"snapshot\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 60,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 61,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 62,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 63,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 64,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 65,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 66,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"final\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 67,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "at": "$[\"snapshot\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 68,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 69,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 70,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 71,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 72,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"snapshot\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 73,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "at": "$[\"snapshot\"][\"loadedWorkspaceModules\"][466]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/semver.ts"
+    },
+    {
+      "pattern": "semver-wrapper",
+      "index": 74,
+      "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+      "at": "$[\"modules\"][39][\"productionFiles\"][14]",
+      "context": "utils/semver.ts"
+    },
+    {
+      "pattern": "updater-contract",
+      "index": 0,
+      "path": "docs/audit-2026-10-17-round27/evidence/review-root-frontier.md",
+      "at": "$",
+      "context": "lls scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽"
+    },
+    {
+      "pattern": "updater-contract",
+      "index": 1,
+      "path": "docs/audit-2026-10-17-round27/root-frontier-report.md",
+      "at": "$",
+      "context": "` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Li"
+    },
+    {
+      "pattern": "updater-contract",
+      "index": 2,
+      "path": "docs/superpowers/specs/2026-05-29-plugin-cc-codex-compat-design.md",
+      "at": "$",
+      "context": " 未消费 plugin 内 agent |\n| Hooks | `hooks/hooks.json`(CC schema) | `hooks.json`(差异 schema) | ✅ 已支持 CC 风格 |\n| Commands | `commands/<name>.md` | **已 deprecated**,推荐 skills 替代 | 未消费 |\n| 自动更新 | 2.0.70+ 有 marketplace auto-update | `version` 字段 cache key + `marketplace startup-sync` | 无 |\n\n**关键事实**:Skills 完全同构(零转换),MCP 配置同构(透传),agents 字段重合 90%(逐字段映射可解决);Codex hooks/commands 差异大或 deprecated,v1 不转换。CC hooks/commands 仍按 CC 布局加载。\n\n---\n\n## 4. 设计概览\n\n### 4.1 三条核心路径\n\n```\n┌─────────────────────────────────────────────────────────────┐\n│  codeshell plugin install <local-path>                       │\n│                                                              │\n│      detect format                                           │\n│      │                                                       │\n│      ├─ has .codex-plugin/plugin.json? ─── yes ─► Codex path │\n│      │                         "
+    },
+    {
+      "pattern": "updater-contract",
+      "index": 3,
+      "path": "docs/todo/link-connector-refactor-plan-2026-10-16.md",
+      "at": "$",
+      "context": "on/2026-07-28/server/tools)                                                                                                              |\n\n采用上述模式，自有运行时继续负责权限和结果交付。Nango 当前托管目录允许动作自动更新，并明确建议对稳定契约有要求的应用拉取并部署自有实现；因此 CodeShell 使用固定版本的已审阅实现，运行中的远端目录不能自动替换实现。[稳定性说明](https://nango.dev/docs/guides/functions/functions-guide)\n\n源码公开与宽松开源许可需要区分。Nango 当前为 ELv2；Activepieces 企业目录单独许可，其余适用 MIT；Composio 的 MIT 仓库是 SDK monorepo，不能据此认为托管后端也开源；Pipedream 当前使用 Source Available License。本方案先采用模型，直接引入代码或平台时再核验具体版本、路径及许可。[Nango 许可](https://raw.githubusercontent.com/NangoHQ/nango/master/LICENSE)、[Activepieces 许可](https://raw.githubusercontent.com/activepieces/activepieces/main/LICENSE)、[Composio 仓库](https://github.com/ComposioHQ/composio)、[Pipedream 许可](https://github.com/PipedreamHQ/pipedream/blob/master/LICENSE)\n\n## 现状与本次故障暴露的问题\n\nCodeShell 源码现状以 main `8c872e4bd`（2026-10-16）为准；Services 仍引用 `ac"
+    }
+  ],
+  "displayedPrefix": 18,
+  "actualInspectedPrefix": 18,
+  "limit": "Only displayed selected prefix is counted inspected. All saved match contexts may be present, but no semantic exhaustion is asserted.",
+  "additionalTargetedInspected": [
+    {
+      "pattern": "semver-wrapper",
+      "index": 40,
+      "path": "docs/audit-2026-10-17-round27/root-frontier-report.md",
+      "at": "$",
+      "context": "# Round27 Core/Link 小型静态补充\n\n**0 formal / 0 candidate / 1 old-related**，0产品、测试、import、native、网络执行。本补充与 Root 的失败 compose 运行分别记账；没有借此恢复该动态方向。\n\n全文读 [semver](../../packages/core/src/utils/semver.ts)、[memoize](../../packages/core/src/utils/memoize.ts)、[task sanitizer](../../packages/core/src/utils/task-sanitizer.ts)、[cwd normalize](../../packages/core/src/utils/cwd-normalize.ts)、[Link selection](../../packages/link/src/file-selection.ts) 及其 test 声明；另选读 Engine 的 noise 分支、plugin/skill cache resolver 和 linked-file source identity 消费点。精确范围与 frozen SHA 在 [manifest](evidence/root-frontier-source-manifest.json)，全文字节固定不意味着周围调用链也全文审完。\n\n`memoize` 同时检查 `get` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托"
+    },
+    {
+      "pattern": "version-comparison",
+      "index": 1,
+      "path": "docs/archive/core-modules/utils.md",
+      "at": "$",
+      "context": "pawn failure (`code: null`) from non-zero exit. |\n| `memoize.ts` | Minimal `memoize(fn, resolver)` (lodash-shaped) with a `.cache` Map; in-tree to drop the lodash dependency. |\n| `semver.ts` | Thin re-export of `semver`'s `gt`/`gte`/`lt`. |\n| `task-sanitizer.ts` | `detectPastedNoise` — flags ANSI/box-drawing-heavy pasted task text. |\n| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |\n| `intl.ts` | Locale/timezone/segmenter helpers (`getRelativeTimeFormat`, `getTimeZone`, `getWordSegmenter`, `lastGrapheme`, …). |\n| `env.ts` | Host/runtime/platform detection (`env`, `getHostPlatform`, `getRuntime`, `getPackageManager`, `isWSL`, global dir helpers). |\n| `envUtils.ts` | Env-var parsing & policy (`isEnvTruthy`, `parseEnvVars`, AWS/Vertex region helpers, `isInProtectedNamespace`). |\n| `e"
+    },
+    {
+      "pattern": "version-comparison",
+      "index": 5,
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "at": "$",
+      "context": "用输出或计量合同，不重复新增候选。\n- `formatDuration` 的旧 [1,1000)ms→`0s` 案例已经有修复和现有测试，本轮基线再次通过，不重复登记。`formatResetTime(showTime=false)` 的短时间分支及 relative-time style 边界没有找到当前普通消费者，未以孤立 API 输入增加问题。\n- `semver` 只是 maintained dependency 的 gt/gte/lt 薄封装；`memoize` 在当前同步 scanOnce 调用形状下用 `Map.has` 正确区分 undefined 命中，并且 `.cache.clear()` 有真实静态消费者。未验证真实扫描或用户目录，没有制造无实际消费者的 `this`、rejected Promise、替换 `.cache` 等合同。\n\n## 去重和覆盖限制\n\n全历史扫描 **1088 个 MD + 680 个 JSON = 1768 文件**（`docs` 与 `bugs` 的全部递归库存，含 `archive/_archive`，排除本批），解析 **260285 个 JSON 叶子，0 解析错误**；文件字节/SHA 与命中叶子保存在 [utils-dedup.json](evidence/utils-dedup.json)。进一步比对 [Slice/ANSI](evidence/utils-slice-dedup.json) 和 [列宽/裁剪](evidence/utils-width-dedup.json)。旧 `render-border` 确认项是直接 substring 分割 ANSI codes；当前调用已用 Slice，和这里的 helper UTF-16 索引/尾 reset 推演不是同一代码根因。查重没有把只有文件库存的命中误当旧 bug。\n\n静态阅读了五个目标 helper、format/intl、两个同步缓存消费者及 TUI 中相关普通显示接线；没有完整执行它们。实际动"
+    },
+    {
+      "pattern": "updater-contract",
+      "index": 0,
+      "path": "docs/audit-2026-10-17-round27/evidence/review-root-frontier.md",
+      "at": "$",
+      "context": "lls scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽"
+    },
+    {
+      "pattern": "updater-contract",
+      "index": 1,
+      "path": "docs/audit-2026-10-17-round27/root-frontier-report.md",
+      "at": "$",
+      "context": "` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Li"
+    }
+  ],
+  "additionalTargetedInspectedCount": 5,
+  "priorSameVersionManifestCheck": {
+    "path": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+    "matchingRows": [
+      {
+        "at": "$[\"sources\"][0]",
+        "row": {
+          "path": "packages/core/src/utils/semver.ts",
+          "frozenBytes": 398,
+          "bytes": 398,
+          "sha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+          "frozenSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+          "currentSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+          "currentMatchesFrozen": true,
+          "scope": "static only; Slice source was not loaded"
+        }
+      }
+    ]
+  },
+  "priorFullReadSameVersionManifestCheck": {
+    "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-source-manifest.json",
+    "matchingRows": [
+      {
+        "at": "$[\"files\"][0]",
+        "row": {
+          "path": "packages/core/src/utils/semver.ts",
+          "bytes": 398,
+          "sha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              17
+            ]
+          ],
+          "lineCount": 17,
+          "coveredLineCount": 17,
+          "note": "Thin wrappers only; delegated library behavior not tested."
+        }
+      }
+    ]
+  }
+}

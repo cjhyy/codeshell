@@ -1,0 +1,76 @@
+{
+  "capturedAtUTC": "2026-10-17T15:34:47.060145+00:00",
+  "historyScope": {
+    "roots": [
+      "docs",
+      "bugs"
+    ],
+    "includeFrozenThrough": 44,
+    "excludedExactRounds": [
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55
+    ],
+    "requestedExclusions": [
+      45,
+      52,
+      53,
+      54,
+      55
+    ],
+    "method": "MD lines and recursive JSON value scalars including archives; keys excluded. Original full/scope/review fields kept."
+  },
+  "totals": {
+    "files": 4088,
+    "md": 1410,
+    "json": 2678,
+    "strings": 1631727,
+    "scalars": 2469249,
+    "exactArchivePaths": 169
+  },
+  "inventoryCanonicalSha256": "489e1db249cd6872f62ce1a4d67da4e1eed26541a8acefef5ceff5f0890dac69",
+  "queryCounts": {
+    "path": 25,
+    "filename": 26,
+    "sha": 7,
+    "ordinary-contract": 218,
+    "old-failed": 19
+  },
+  "caps": {
+    "path": 160,
+    "filename": 160,
+    "sha": 160,
+    "ordinary-contract": 100,
+    "old-failed": 100
+  },
+  "retained": {
+    "path": 25,
+    "filename": 26,
+    "sha": 7,
+    "ordinary-contract": 100,
+    "old-failed": 19
+  },
+  "gateDecision": "Eight original structured source objects read; current-SHA entries are inventory/ranking/incidental claims without full or selected audit scope. MD mentions are feature inventory and source-edit plan, not a completed same-SHA full audit. Missing full evidence is not historical-unread proof.",
+  "filenameOnlyExtraContext": "One clipped architecture-table excerpt in old draft-review history, no independent full claim.",
+  "exactPathContextReadPolicy": "Compact original objects and selected MD contexts only; do not claim all25raw path windows or every SHA scalar semantically read.",
+  "ordinaryContexts": "218matches cap100 retained100. Overwide filtered print truncated; all-context exhaustion not claimed. Direct R12desktop.md lines7/10/14 identify old Unicode cause, not new issue.",
+  "oldSummaryCause": "July9 archive tool-summary attribution statements remain old historical context; current selected id-targeted summary producer is read as DTO counterevidence. Legacy/no-id or agent scope not certified or new-counted.",
+  "noNewCauseDedupClaimForWholeRepo": true,
+  "endingHistory": {
+    "initial": 4088,
+    "ending": 4088,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "scopePreserved": true
+  },
+  "laterVersionContext": "Root reports ec1f6ae458d3646d07db20e876a2b9ce8c9939b9 formal45 docs-only; initial0b/4088 and exclude45 remain unchanged, ownGit0."
+}

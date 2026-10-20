@@ -1,0 +1,241 @@
+
+SOURCE packages/core/src/model-traces/native-frames.ts
+1: const MAX_FRAME_BYTES = 256 * 1024;
+2: const MAX_CHUNK_BYTES = 192;
+3: const MAX_INFLIGHT = 64;
+4: const MAX_PARTIAL_BYTES = 8 * 1024 * 1024;
+5: const MAX_AGE_MS = 30_000;
+6: const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+7: 
+8: /** Atomic FD 3 fragments are reassembled separately for each opaque message id. */
+9: export function createNativeModelTraceFrameDecoder(options: { now?: () => number } = {}) {
+10:   const partials = new Map<
+11:     string,
+12:     { part: number; startedAt: number; bytes: number; chunks: Buffer[] }
+13:   >();
+14:   let partialBytes = 0;
+15:   const remove = (id: string) => {
+16:     const partial = partials.get(id);
+17:     if (partial) partialBytes -= partial.bytes;
+18:     partials.delete(id);
+19:   };
+20:   const invalid = (): never => {
+21:     throw new Error("Invalid native model observation fragment");
+22:   };
+23:   return {
+24:     read(line: string): string | undefined {
+25:       if (Buffer.byteLength(line) > MAX_FRAME_BYTES) invalid();
+26:       const value = JSON.parse(line);
+27:       if (value?.type !== "model_trace_chunk") return line;
+28:       const now = (options.now ?? Date.now)();
+29:       for (const [id, partial] of partials) if (now - partial.startedAt > MAX_AGE_MS) remove(id);
+30:       if (
+31:         !value ||
+32:         typeof value !== "object" ||
+33:         Array.isArray(value) ||
+34:         Object.keys(value).some(
+35:           (key) => !["version", "type", "messageId", "part", "data", "final"].includes(key),
+36:         ) ||
+37:         value.version !== 1 ||
+38:         typeof value.messageId !== "string" ||
+39:         !UUID.test(value.messageId) ||
+40:         !Number.isSafeInteger(value.part) ||
+41:         value.part < 0 ||
+42:         value.part > Math.ceil(MAX_FRAME_BYTES / MAX_CHUNK_BYTES) ||
+43:         typeof value.final !== "boolean" ||
+44:         typeof value.data !== "string" ||
+45:         !value.data ||
+46:         value.data.length > 256 ||
+47:         Buffer.byteLength(line) + 1 > 512 ||
+48:         !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.data)
+49:       )
+50:         invalid();
+51:       const bytes = Buffer.from(value.data, "base64");
+52:       if (
+53:         !bytes.length ||
+54:         bytes.length > MAX_CHUNK_BYTES ||
+55:         bytes.toString("base64") !== value.data
+56:       )
+57:         invalid();
+58:       let partial = partials.get(value.messageId);
+59:       if (!partial) {
+60:         if (value.part !== 0 || partials.size >= MAX_INFLIGHT) invalid();
+61:         partial = { part: 0, startedAt: now, bytes: 0, chunks: [] };
+62:         partials.set(value.messageId, partial);
+63:       }
+64:       if (
+65:         value.part !== partial.part ||
+66:         partial.bytes + bytes.length > MAX_FRAME_BYTES ||
+67:         partialBytes + bytes.length > MAX_PARTIAL_BYTES
+68:       )
+69:         invalid();
+70:       partial.part++;
+71:       partial.bytes += bytes.length;
+72:       partialBytes += bytes.length;
+73:       partial.chunks.push(bytes);
+74:       if (!value.final) return undefined;
+75:       remove(value.messageId);
+76:       const decoded = new TextDecoder("utf-8", { fatal: true }).decode(
+77:         Buffer.concat(partial.chunks),
+78:       );
+79:       if (decoded.includes("\n") || decoded.includes("\r")) invalid();
+80:       // Validate before returning, so a nested fragment cannot bypass parser limits.
+81:       const message = JSON.parse(decoded);
+82:       if (message?.type !== "model_trace") invalid();
+83:       return decoded;
+84:     },
+85:     clear() {
+86:       partials.clear();
+87:       partialBytes = 0;
+88:     },
+89:   };
+90: }
+
+SOURCE packages/core/src/model-traces/sanitize.ts
+1: import { redactSecrets } from "../logging/sanitize-messages.js";
+2: import type { ModelTraceContentState } from "./types.js";
+3: 
+4: const MAX_STRING = 64 * 1024;
+5: const MAX_NODES = 12_000;
+6: const REDACTED = "<redacted>";
+7: const SECRET_KEY =
+8:   /(^|[._-])(api[_-]?key|authorization|x[_-]api[_-]key|bearer[_-]?token|access[_-]?token|refresh[_-]?token|session[_-]?token|token|secret|password|client[_-]?secret|cookie)($|[._-])/i;
+9: const HEADERS = /^(httpHeaders|headers|defaultHeaders|envHeaders)$/;
+10: 
+11: /** Provider-neutral diagnostic clone. Never mutate the actual outbound request. */
+12: export function sanitizeTraceValue(
+13:   value: unknown,
+14:   redactions?: ReadonlyMap<string, string>,
+15: ): {
+16:   value: any;
+17:   state: ModelTraceContentState;
+18: } {
+19:   let truncated = false,
+20:     redacted = false,
+21:     nodes = 0;
+22:   let remaining = 256 * 1024;
+23:   const seen = new WeakSet<object>();
+24:   const walk = (input: unknown, depth = 0): unknown => {
+25:     if (++nodes > MAX_NODES || depth > 32) {
+26:       truncated = true;
+27:       return "<truncated>";
+28:     }
+29:     if (typeof input === "string") {
+30:       if (/^data:(image|audio|video|application\/pdf)[^,]*,/i.test(input)) {
+31:         redacted = true;
+32:         return "<media payload omitted>";
+33:       }
+34:       let scrubbed = redactSecrets(input);
+35:       if (/^\s*[{[]/.test(scrubbed) && scrubbed.length <= MAX_STRING) {
+36:         try {
+37:           scrubbed = JSON.stringify(walk(JSON.parse(scrubbed), depth + 1));
+38:         } catch {
+39:           /* Partial streamed JSON still needs secret scalar scrubbing below. */
+40:         }
+41:       }
+42:       // Tool arguments are wire-encoded JSON strings and can fail halfway through a
+43:       // secret value. Scrub such scalars before persisting even malformed partial JSON.
+44:       scrubbed = scrubbed.replace(
+45:         /"([^"\\]*(?:\\.[^"\\]*)*)"\s*:\s*("(?:[^"\\]|\\.)*(?:"|$)|[^,}\]\s]+)/g,
+46:         (match, key: string, scalar: string) => {
+47:           let name = key;
+48:           try {
+49:             name = JSON.parse(`"${key}"`);
+50:           } catch {
+51:             /* Use the literal key. */
+52:           }
+53:           if (!SECRET_KEY.test(name) || /^(null|"")$/.test(scalar)) return match;
+54:           redacted = true;
+55:           return `${JSON.stringify(name)}:${JSON.stringify(REDACTED)}`;
+56:         },
+57:       );
+58:       if (scrubbed !== input) redacted = true;
+59:       const length = Math.min(MAX_STRING, remaining);
+60:       remaining -= Math.min(scrubbed.length, length);
+61:       if (scrubbed.length > length) {
+62:         truncated = true;
+63:         return `${scrubbed.slice(0, length)}\n<truncated>`;
+64:       }
+65:       return scrubbed;
+66:     }
+67:     if (["bigint", "symbol", "function"].includes(typeof input)) return String(input);
+68:     if (input === null || typeof input !== "object") return input;
+69:     if (seen.has(input)) {
+70:       truncated = true;
+71:       return "<circular>";
+72:     }
+73:     seen.add(input);
+74:     if (Array.isArray(input)) {
+75:       const result = input.slice(0, 2048).map((item) => walk(item, depth + 1));
+76:       if (input.length > 2048) truncated = true;
+77:       seen.delete(input);
+78:       return result;
+79:     }
+80:     const object = input as Record<string, unknown>;
+81:     const callId = object.tool_use_id ?? object.tool_call_id;
+82:     if (
+83:       object.type === "image" ||
+84:       object.type === "image_url" ||
+85:       object.type === "input_image" ||
+86:       (object.type === "base64" && typeof object.data === "string")
+87:     ) {
+88:       redacted = true;
+89:       seen.delete(input);
+90:       return {
+91:         type: object.type,
+92:         media_type: object.media_type ?? (object.source as any)?.media_type,
+93:         omitted: true,
+94:       };
+95:     }
+96:     const result: Record<string, unknown> = Object.create(null);
+97:     for (const [name, child] of Object.entries(object)) {
+98:       if (
+99:         typeof callId === "string" &&
+100:         redactions?.has(callId) &&
+101:         ["content", "result", "contentBlocks"].includes(name)
+102:       ) {
+103:         redacted = true;
+104:         result[name] = redactions.get(callId) ?? REDACTED;
+105:       } else if (SECRET_KEY.test(name)) {
+106:         if (child === null || child === undefined || child === "") result[name] = child;
+107:         else {
+108:           redacted = true;
+109:           result[name] = REDACTED;
+110:         }
+111:       } else if (
+112:         HEADERS.test(name) &&
+113:         child &&
+114:         typeof child === "object" &&
+115:         !Array.isArray(child)
+116:       ) {
+117:         redacted = true;
+118:         result[name] = Object.fromEntries(
+119:           Object.entries(child).map(([header, value]) => [
+120:             header,
+121:             value === null || value === undefined || value === "" ? value : REDACTED,
+122:           ]),
+123:         );
+124:       } else if (
+125:         (name === "inline_data" || name === "inlineData") &&
+126:         child &&
+127:         typeof child === "object" &&
+128:         typeof (child as any).data === "string"
+129:       ) {
+130:         redacted = true;
+131:         result[name] = {
+132:           mime_type: (child as any).mime_type ?? (child as any).mimeType,
+133:           omitted: true,
+134:         };
+135:       } else if (name === "b64_json" && typeof child === "string") {
+136:         redacted = true;
+137:         result[name] = "<media payload omitted>";
+138:       } else result[name] = walk(child, depth + 1);
+139:     }
+140:     seen.delete(input);
+141:     return result;
+142:   };
+143:   return {
+144:     value: walk(value),
+145:     state: truncated ? "truncated" : redacted ? "redacted" : "recorded",
+146:   };
+147: }

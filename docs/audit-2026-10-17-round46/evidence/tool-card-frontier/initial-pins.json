@@ -1,0 +1,22 @@
+{
+  "parentReportedContext": "Root44 docs-only c466dca42b9e4f1677ee2c386126d72312e5e8f7; product same4d5, no own Git certification",
+  "purpose": "before whole-history sameSHA/full/scope gate or product body",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx",
+      "bytes": 5192,
+      "sha256": "4a8597d1e9f055fc855f9b4a601da7e0289df3102a8309ab598e12ccb716f3ea",
+      "lineCount": 133,
+      "pinUTC": "2026-10-17T15:19:13.138199+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+      "bytes": 5067,
+      "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "lineCount": 142,
+      "pinUTC": "2026-10-17T15:19:13.140316+00:00",
+      "semanticRead": false
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "rg",
+    "--files",
+    "packages/desktop/src/renderer"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "paths": [
+    "packages/desktop/src/renderer/credentials/types.ts",
+    "packages/desktop/src/renderer/cc-room/types.ts",
+    "packages/desktop/src/renderer/digital-humans/types.ts",
+    "packages/desktop/src/renderer/types.ts",
+    "packages/desktop/src/renderer/diff/composeFileEdits.ts",
+    "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+    "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+    "packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts",
+    "packages/desktop/src/renderer/messages/FilesChangedCard.test.tsx",
+    "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+    "packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts",
+    "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+    "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+    "packages/desktop/src/renderer/browser/types.ts"
+  ]
+}

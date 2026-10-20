@@ -1,0 +1,62 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 1,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round20/evidence/toolsummary-focused.test.ts"
+      ],
+      "exitCode": 0,
+      "raw": "docs/audit-2026-10-17-round20/evidence/toolsummary-first.raw.log",
+      "exit": "docs/audit-2026-10-17-round20/evidence/toolsummary-first.exit.json",
+      "completed": true,
+      "pass": 14,
+      "expect": 42,
+      "fail": 0,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 14,
+      "ordinaryControlTests": 11,
+      "handcraftedRelatedRejectionTests": 3,
+      "actualProductionLeafCalls": true,
+      "manualMirroredRecipe": false,
+      "firstAttempt": true
+    }
+  ],
+  "cleanTotals": {
+    "runs": 1,
+    "pass": 14,
+    "expect": 42,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 0,
+    "focusedTests": 14
+  },
+  "failedShards": 0,
+  "skippedDirections": [
+    "All prior failed directions, especially JSON summary repair; never recovered",
+    "Coupled TurnLoop existing tests not run"
+  ],
+  "firstRunHandling": "Combined raw stdout/stderr file and exit JSON saved before inspecting raw; single clean guarded shard; zero test/fixture modification after run.",
+  "preflight": "Actual paths/Git bytes, exact absolute logger preimport mock, no guessed root dependency paths.",
+  "scope": "Only actual tool-summary leaf executes. ToolCall/ToolResult are owned in-memory shapes; summarize callback and logger.warn are fake in-memory functions; full Engine/TurnLoop/client/provider/realtools excluded.",
+  "excluded": [
+    "Real provider/model/paid API/network/real tools/userdata/native timers",
+    "security/custody/permission experiments",
+    "broad build/typecheck/lint/full suite",
+    "invalid JSON/array mismatch/normal result+error invented combination",
+    "Unicode truncation and largeinput performance"
+  ],
+  "metadataFailures": [
+    "Read-only navigation guessed absent types/tools dirs exit2 (transcribed).",
+    "Dedup display output truncated; persisted full JSON and bounded follow-up reads only."
+  ],
+  "productChanges": false,
+  "reruns": 0
+}

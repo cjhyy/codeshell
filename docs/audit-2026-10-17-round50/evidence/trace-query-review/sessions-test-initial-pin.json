@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T16:48:39.062812+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/model-traces/sessions.test.ts",
+      "bytes": 8848,
+      "lines": 243,
+      "sha256": "a7b0ed309b87a93f39eef3269cb6db43d1c6b52bda4fa7e5e288cfcc4eb7f346",
+      "beforeBody": true
+    }
+  ]
+}

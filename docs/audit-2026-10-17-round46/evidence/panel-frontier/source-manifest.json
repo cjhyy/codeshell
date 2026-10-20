@@ -1,0 +1,435 @@
+{
+  "capturedUTC": "2026-10-17T15:29:46.367512+00:00",
+  "scope": "55 original Conversation domain boundary plus Root-authorized PanelTabStrip fallback ordinary tab DTO/selection arithmetic. Not a capability, permission, native window, runtime or whole PanelArea review.",
+  "rootContext": "Root stated initial0b17496707e0f4d679a86a9d8b4c22477093e8a6; later ec1f6ae docs45-only reported. Agent0Git; actual source SHA ending checked.",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "bytes": 12083,
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "lineCount": 321,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          17
+        ],
+        [
+          49,
+          56
+        ],
+        [
+          59,
+          74
+        ],
+        [
+          76,
+          90
+        ]
+      ],
+      "coveredLineCount": 56,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        118,
+        147,
+        173,
+        212
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          95
+        ],
+        [
+          118,
+          118
+        ],
+        [
+          147,
+          147
+        ],
+        [
+          173,
+          173
+        ],
+        [
+          212,
+          212
+        ]
+      ],
+      "displayedLineCount": 99,
+      "initialFilesystemPin": {
+        "artifact": "initial-pins.json",
+        "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+        "bytes": 12083,
+        "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+        "lines": 321,
+        "capturedUTC": "2026-10-17T15:24:20.081868+00:00",
+        "timing": "before55 body read; prior52 was hash-only fallback"
+      },
+      "finishFilesystemSha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "finishCapturedUTC": "2026-10-17T15:29:46.356051+00:00",
+      "unchangedFromInitial": true,
+      "role": "original selection domain-boundary/UI-wrapper text only, not capability correctness"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialFilesystemPin": {
+        "artifact": "initial-pins.json",
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lines": 217,
+        "capturedUTC": "2026-10-17T15:24:20.083439+00:00",
+        "timing": "instruction hash carry only; no new semantic read"
+      },
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishCapturedUTC": "2026-10-17T15:29:46.357858+00:00",
+      "unchangedFromInitial": true,
+      "role": "instruction carry hash only",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedBodyLineRanges": [],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialFilesystemPin": {
+        "artifact": "initial-pins.json",
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lines": 5,
+        "capturedUTC": "2026-10-17T15:24:20.083861+00:00",
+        "timing": "instruction hash carry only; no new semantic read"
+      },
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishCapturedUTC": "2026-10-17T15:29:46.358421+00:00",
+      "unchangedFromInitial": true,
+      "role": "instruction carry hash only",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+      "bytes": 5067,
+      "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "lineCount": 142,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          142
+        ]
+      ],
+      "coveredLineCount": 142,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          142
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          142
+        ]
+      ],
+      "displayedLineCount": 142,
+      "initialFilesystemPin": {
+        "artifact": "panel-initial-pin.json",
+        "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+        "bytes": 5067,
+        "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+        "lines": 142,
+        "capturedUTC": "2026-10-17T15:26:14.569427+00:00",
+        "timing": "before55 fallback semantic/body/navigation read after Root confirmed54 hash-only/body0"
+      },
+      "finishFilesystemSha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "finishCapturedUTC": "2026-10-17T15:29:46.361974+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary tab id/label/selection/close DTO source"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "bytes": 34235,
+      "sha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "lineCount": 928,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          270,
+          274
+        ],
+        [
+          484,
+          485
+        ],
+        [
+          490,
+          500
+        ],
+        [
+          590,
+          619
+        ]
+      ],
+      "coveredLineCount": 48,
+      "displayedBodyLineRanges": [
+        [
+          270,
+          274
+        ],
+        [
+          484,
+          505
+        ],
+        [
+          587,
+          626
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        43,
+        86,
+        191,
+        258,
+        277,
+        278,
+        281,
+        368,
+        410,
+        412,
+        417,
+        429,
+        433,
+        444,
+        464,
+        467,
+        480,
+        483,
+        531,
+        535,
+        687,
+        696,
+        697
+      ],
+      "displayedLineRanges": [
+        [
+          43,
+          43
+        ],
+        [
+          86,
+          86
+        ],
+        [
+          191,
+          191
+        ],
+        [
+          258,
+          258
+        ],
+        [
+          270,
+          274
+        ],
+        [
+          277,
+          278
+        ],
+        [
+          281,
+          281
+        ],
+        [
+          368,
+          368
+        ],
+        [
+          410,
+          410
+        ],
+        [
+          412,
+          412
+        ],
+        [
+          417,
+          417
+        ],
+        [
+          429,
+          429
+        ],
+        [
+          433,
+          433
+        ],
+        [
+          444,
+          444
+        ],
+        [
+          464,
+          464
+        ],
+        [
+          467,
+          467
+        ],
+        [
+          480,
+          480
+        ],
+        [
+          483,
+          505
+        ],
+        [
+          531,
+          531
+        ],
+        [
+          535,
+          535
+        ],
+        [
+          587,
+          626
+        ],
+        [
+          687,
+          687
+        ],
+        [
+          696,
+          697
+        ]
+      ],
+      "displayedLineCount": 90,
+      "initialFilesystemPin": {
+        "artifact": "panel-consumer-initial-pins.json",
+        "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+        "bytes": 34235,
+        "sha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+        "lines": 928,
+        "capturedUTC": "2026-10-17T15:27:04.197279+00:00",
+        "timing": "before55 actual tab array/active/close producer and existing test declaration navigation/read, no UI/native invocation"
+      },
+      "finishFilesystemSha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "finishCapturedUTC": "2026-10-17T15:29:46.366872+00:00",
+      "unchangedFromInitial": true,
+      "role": "ordinary tab id/label/selection/close DTO source"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.test.tsx",
+      "bytes": 6603,
+      "sha256": "82061aa01ddeb1f2ecb3b0ca9ca1c6cc100e13de7fe807c4ae0a6d496af87940",
+      "lineCount": 184,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          108,
+          184
+        ]
+      ],
+      "coveredLineCount": 77,
+      "displayedBodyLineRanges": [
+        [
+          108,
+          184
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        6,
+        31,
+        42,
+        43,
+        44,
+        49,
+        54,
+        59
+      ],
+      "displayedLineRanges": [
+        [
+          6,
+          6
+        ],
+        [
+          31,
+          31
+        ],
+        [
+          42,
+          44
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          59,
+          59
+        ],
+        [
+          108,
+          184
+        ]
+      ],
+      "displayedLineCount": 85,
+      "initialFilesystemPin": {
+        "artifact": "panel-consumer-initial-pins.json",
+        "path": "packages/desktop/src/renderer/panels/PanelTabStrip.test.tsx",
+        "bytes": 6603,
+        "sha256": "82061aa01ddeb1f2ecb3b0ca9ca1c6cc100e13de7fe807c4ae0a6d496af87940",
+        "lines": 184,
+        "capturedUTC": "2026-10-17T15:27:04.198348+00:00",
+        "timing": "before55 actual tab array/active/close producer and existing test declaration navigation/read, no UI/native invocation"
+      },
+      "finishFilesystemSha256": "82061aa01ddeb1f2ecb3b0ca9ca1c6cc100e13de7fe807c4ae0a6d496af87940",
+      "finishCapturedUTC": "2026-10-17T15:29:46.367501+00:00",
+      "unchangedFromInitial": true,
+      "role": "test declarations only; never executed"
+    }
+  ],
+  "counts": {
+    "sourceRows": 6,
+    "semanticFiles": 4,
+    "fullFiles": 1,
+    "selectedFiles": 3,
+    "hashOnlyFiles": 2,
+    "productSemanticLines": 246,
+    "testDeclarationSemanticLines": 77,
+    "displayedSourceLines": 416,
+    "totalSemanticLines": 323
+  },
+  "displayRule": "Canonical union of actual body and navigation snippets. Body95 forConversation+4outside navigation are not full321 or capability mechanism coverage."
+}

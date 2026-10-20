@@ -1,0 +1,123 @@
+{
+  "status": "negative-static-frontier-proposal",
+  "summary": "No new independent ordinary target-selection/argument-producer contradiction established. Do not schedule baseline controls merely to exercise the new parser.",
+  "parentReportedInitialCommitPrefix": "d9d2",
+  "parentReportedLaterRound26Freeze": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "independentGitBlobVerification": false,
+  "sourcePinEvidence": "source-manifest.json",
+  "readAtUTC": "2026-10-17T10:31:14.728550+00:00",
+  "history": {
+    "file": "history.json",
+    "selectedPrimaryParents": "history-selected.json",
+    "totals": {
+      "files": 2509,
+      "markdown": 1241,
+      "json": 1268,
+      "stringLeaves": 426811,
+      "scalarLeaves": 609678,
+      "parseErrors": 0
+    },
+    "round25Partition": {
+      "files": 56,
+      "markdown": 7,
+      "json": 49,
+      "stringLeaves": 21645,
+      "scalarLeaves": 34322
+    },
+    "excluded": [
+      "docs/audit-2026-10-17-round26/**"
+    ],
+    "archivesIncluded": true,
+    "matchCounts": {
+      "target": 4,
+      "prompt-prior": 109,
+      "ordinary-target": 151
+    },
+    "caps": 80,
+    "limits": "All recursive MD/JSON scalar values searched; capped contexts are navigation, not semantic exhaustion. Round25 is the read-time filesystem while parent integrates metadata, not an immutable source of new runs."
+  },
+  "counts": {
+    "formal": 0,
+    "newCandidates": 0,
+    "newRelated": 0,
+    "productRuns": 0,
+    "testRuns": 0,
+    "imports": 0,
+    "fixtures": 0,
+    "vm": 0,
+    "native": 0,
+    "pty": 0,
+    "gitCommands": 0,
+    "network": 0,
+    "securityAuthCustodyExperiments": 0
+  },
+  "ordinaryConsumer": {
+    "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+    "range": [
+      132,
+      188
+    ],
+    "flow": "usage permits one file plus output/dimension/scope options; parser options.target -> collectReviewTarget(ctx.cwd) -> buildReviewPrompt with same dimensions/json/label and maxChars=review.content.length -> client.run. Only static source.",
+    "counterevidence": "Missing/invalid arguments and collection errors return status. Empty content returns no-review status. Full complete scope length bypasses the old prompt legacy truncation limit.",
+    "adjacentDesktop": "review-service.ts190-235 calls buildReviewPrompt with a separately collected/snapshot content and declared composer limit, not collectReviewTarget."
+  },
+  "staticCounterevidence": [
+    {
+      "scope": "parseReviewArguments42-158",
+      "contract": "Default all; mutually exclusive scopes; one quoted/escaped path; explicit -- for dash-prefixed path; json uniqueness; canonical dimensions/perf alias; unknown/incomplete input is explicit error.",
+      "observedSource": "Current parser maps perf to performance at86; TUI usage uses performance at137; tests38-58 declare both mapping and quoted/literal paths. Existing unknown-option policy is explicit, not a silent path collector. No normal producer mismatch found."
+    },
+    {
+      "scope": "collectReviewTarget161-244",
+      "contract": "All/staged/unstaged and commit/base scopes are separate; complete bounded patch or visible failure.",
+      "observedSource": "Working all selects HEAD comparison and includes untracked; staged excludes untracked; unstaged includes untracked. Base uses merge-base; commit uses show. Unborn all gathers cached+untracked names and reads final worktree. Current tests declare these expected cases but were not run."
+    },
+    {
+      "scope": "target limits and representation",
+      "contract": "Explicit file/diff byte limits and file count; text-only review may fail visibly rather than silently return incomplete content.",
+      "observedSource": "Source includes numstat binary check, NUL/name handling, strict UTF8 decode, added-file newline metadata and visible size/timeout/error results. Reading these guards is not OS/FS/security verification. No concrete ordinary input violating the declared target contract established."
+    },
+    {
+      "scope": "review-prompt adjacent",
+      "contract": "Model prompt discloses actual inspected scope and truncation; no claim model reasoning was exercised.",
+      "observedSource": "Dynamic evidence fences/label JSON quoting and options normalization are current code, already related to old recorded families. Legacy parseDimensions alone still differs from new parser, but actual new TUI target path no longer calls it. Do not re-report old R19."
+    }
+  ],
+  "knownPriorExcluded": [
+    {
+      "id": "REVIEWPROMPT-R19-01",
+      "reason": "Old perf help/parser mismatch; current new TUI parser explicitly normalizes perf and usage now spells performance. Source-status observation only, no old test rerun or new finding."
+    },
+    {
+      "id": "REVIEWPROMPT-R19-R1/R2-03",
+      "reason": "Old fence mechanism; current longer fence exists. No Markdown/model/security experiment or new claim."
+    },
+    {
+      "id": "REVIEWPROMPT-R19-R2/DESKTOP-R12-01",
+      "reason": "Old UTF16 slice family; no repeat or dynamic input."
+    }
+  ],
+  "selectedNewDynamicLane": null,
+  "safeFollowUp": {
+    "status": "No runtime proposal selected.",
+    "possibleStaticLeaf": "parseReviewArguments/tokenize logic only if a real normal producer contradiction appears.",
+    "runtimeBoundary": "The actual exported function shares review-target.ts with child_process/fs/core-extension imports and top-level promisify; it is not a zero-dependency import. Existing test file hooks initialize and modify real temporary Git repos even for parser tests.",
+    "notAuthorized": "No import, eval/VM/extraction/mirrored parser, fake Git, new fixture or real Git/FS validation was performed or proposed for immediate execution."
+  },
+  "limits": [
+    "Source/static contract and declared tests do not prove runtime correctness.",
+    "Git semantics, specific OS behavior and target filesystem/identity/security races not experimentally checked.",
+    "Filesystem SHA pins do not prove commit membership; parent-reported freeze is explicitly separated.",
+    "Negative result is limited to listed files and actual consumer sections, not full repository coverage."
+  ],
+  "artifacts": [
+    "proposal.json",
+    "source-manifest.json",
+    "inventory.json",
+    "history.json",
+    "history-selected.json",
+    "metadata-notes.json",
+    "dedup.py",
+    "artifact-receipt.json"
+  ]
+}

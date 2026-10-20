@@ -1,0 +1,22 @@
+{
+  "createdAt": "2026-10-17T18:11:28.296298+00:00",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "oldSameShaFullExclusions": 2,
+  "productSemanticLineCount": 0,
+  "productDisplayedLineCount": 0,
+  "testDeclarationLineCount": 0,
+  "productExecutions": 0,
+  "helperExecutions": 0,
+  "fixtureExecutions": 0,
+  "testExecutions": 0,
+  "chatGatewayAccountExternalMessageNetworkNativeProcessExecutions": 0,
+  "gitExecutions": 0,
+  "authorOldMethodsExecuted": 0,
+  "guardedTestPlan": "None proposed: no concrete new ordinary-input issue after the pre-body gate; old dynamic directions remain skipped",
+  "metadataCommandErrors": 0,
+  "metadataOutputTruncations": 0
+}

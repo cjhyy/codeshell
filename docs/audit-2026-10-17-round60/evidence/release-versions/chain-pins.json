@@ -1,0 +1,66 @@
+[
+  {
+    "path": "scripts/package-release-audit-config.ts",
+    "bytes": 9020,
+    "lines": 297,
+    "sha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+    "pinnedAtUTC": "2026-10-17T19:56:23.811865+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "scripts/release.ts",
+    "bytes": 9343,
+    "lines": 208,
+    "sha256": "c2cc6e0ea1b1ac6997825c779eeaae6747ea3d96e5d5bea8f1ff7f10ee345ec7",
+    "pinnedAtUTC": "2026-10-17T19:56:23.812607+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "scripts/publish-release-packages.ts",
+    "bytes": 16487,
+    "lines": 470,
+    "sha256": "640ce2719b67f9ee63b1c7febe3a751af6144025e8838b47a7d7d5c658d1d9e9",
+    "pinnedAtUTC": "2026-10-17T19:56:23.812881+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "bytes": 15885,
+    "lines": 368,
+    "sha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+    "pinnedAtUTC": "2026-10-17T19:56:23.813172+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": ".github/workflows/release-recovery.yml",
+    "bytes": 4915,
+    "lines": 128,
+    "sha256": "000e878c0954d42fc1f541b9c06c9a682682777f8ea85ccb5bd21b00cbdedac6",
+    "pinnedAtUTC": "2026-10-17T19:56:23.813457+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/core/src/index.ts",
+    "bytes": 27608,
+    "lines": 864,
+    "sha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+    "pinnedAtUTC": "2026-10-17T19:56:23.814203+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "bun.lock",
+    "bytes": 339166,
+    "lines": 3080,
+    "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+    "pinnedAtUTC": "2026-10-17T19:56:23.815202+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "docs/audit-2026-10-16/root.md",
+    "bytes": 14642,
+    "lines": 119,
+    "sha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+    "pinnedAtUTC": "2026-10-17T19:56:23.815441+00:00",
+    "timing": "before own body/nav"
+  }
+]

@@ -1,0 +1,196 @@
+{
+  "parentReportedHead": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "priorReport": {
+    "path": "docs/audit-2026-10-17-round3/arena-lab.md",
+    "coverage": "full report read",
+    "decisions": [
+      "LAB-R3-01 feedback.find first record is an old formal and remains same current strategy source; not a new candidate.",
+      "Old Arena reviewer-cap fixture failed before business callback and remains skipped; no arena code or alternative runtime used.",
+      "Round3 report explicitly selected report/denominators/cost/latest-correction/data flows; individual source-manifest hashes do not reveal full line coverage."
+    ]
+  },
+  "priorByteComparisons": [
+    {
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "firstCurrentFilesystemSha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "firstCurrentFilesystemSha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "firstCurrentFilesystemSha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "firstCurrentFilesystemSha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/report.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "firstCurrentFilesystemSha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/queries.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+      "firstCurrentFilesystemSha256": "64246e7cbc4da4dc2faf85e22fda4a0720e4e380cbb77f7a7709783fb7b433a4",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "firstCurrentFilesystemSha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/runner.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+      "firstCurrentFilesystemSha256": "f72f569da0e1abdc6073c68f4e58e34a424bc1706d92792b2d4b42c54bd6f9eb",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/store.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+      "firstCurrentFilesystemSha256": "e50ed4b76e95431cf572b43ba6e4d5396059389e6dd8787cbaee902e08c0d8df",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/store-paths.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "firstCurrentFilesystemSha256": "cdc8e3f4b560da90d6b426aa87ef5c6d1aafaef5f65d660c981a3c8f43608a02",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/evidence.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+      "firstCurrentFilesystemSha256": "249891fcdc75798227443f2ddbe9a7d3f6a680c01fc0077077a2cf4d551eef89",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "firstCurrentFilesystemSha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "firstCurrentFilesystemSha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "firstCurrentFilesystemSha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/canonical-json.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "firstCurrentFilesystemSha256": "9bca0f06abf6401c304f4c4e8ccd0963cb12405f36ed90bc9e30b2197728058f",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/experiment.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+      "firstCurrentFilesystemSha256": "87a910d26336a7a82ce3ea8dc9b35f4f4a7437a33d1207ec9d97ebb9553fe3a9",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "firstCurrentFilesystemSha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.test.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "firstCurrentFilesystemSha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/report.test.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "firstCurrentFilesystemSha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.test.ts",
+      "oldSourceReport": "docs/audit-2026-10-17-round3/evidence/lab-source-manifest.json",
+      "oldSha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "firstCurrentFilesystemSha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "sameBytes": true,
+      "coverageMeaning": "Prior manifest explicitly says some targeted ranges, but each row gives only a hash/bytes. Do not infer full prior semantic reading. This comparison is hash-only, not current semantic reading."
+    }
+  ],
+  "priorPackageEntryCoverage": {
+    "source": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+    "paths": [
+      "packages/optimization-lab/src/index.capability.ts",
+      "packages/optimization-lab/src/index.exports.test.ts",
+      "packages/optimization-lab/src/index.ts"
+    ],
+    "coverage": "Explicit inventory/hash-only. Does not cover report/scoring helper semantics."
+  },
+  "currentCounterevidence": [
+    "report.ts trialVerdict independently checks recorded observations, recomputes hard assertions and treats missing evidence unknown; hard failure cannot be overridden by semantic pass.",
+    "latestGrade selects a unique unsuperseded correction head, competing heads remain unknown by existing test intention.",
+    "buildReport keeps analysis-only cases unknown and in the denominator; missing/cache-incomparable cost remains unknown; reports are not generalized quality proofs.",
+    "controller exportGrading reuses saved templateRef instead of creating a fresh competing template each export; no ordinary new competing-head trigger established.",
+    "overfitHints is explicitly bounded/advisory; false-negative/approximate hint coverage is not a scoring/ranking bug.",
+    "Candidate validation rejects unchanged/duplicate bodies, so identical-body preview edge alone is not an ordinary producer defect."
+  ],
+  "unconfirmedIdeasNotRegistered": [
+    "Malformed trial repeat indices or supplied forged assertion fields lack an ordinary production origin within this scoped prep.",
+    "Adoption, budgets, grants, credentials, native execution and network lifecycle are outside this prep."
+  ],
+  "limitations": "Negative for read scope only. No full-package or full-repository no-bug assertion; earlier source equality is not proof of a current fix or test pass."
+}

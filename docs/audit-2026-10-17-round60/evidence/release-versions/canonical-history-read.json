@@ -1,0 +1,69 @@
+{
+  "sharedNavigation": "history-projection.json",
+  "actuallyRead": [
+    {
+      "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "pointers": [
+        "/files/94",
+        "/note",
+        "/baseline",
+        "/assemblyWorkingTreeHead"
+      ],
+      "sourceRow": {
+        "path": "scripts/verify-release-versions.ts",
+        "bytes": 6500,
+        "sha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      },
+      "scopeNote": "SHA refers to frozen Git blobs. Current equality is separate. Source inventory is selected evidence, not a full-depth review coverage claim."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/root-package.md",
+      "lineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "note": "Historical tests/results are read as old metadata, never rerun or borrowed as prep152 validation."
+    },
+    {
+      "path": "docs/audit-2026-10-16/findings.json",
+      "pointers": [
+        "/issues/10"
+      ],
+      "value": {
+        "id": "A11",
+        "priority": "P2",
+        "title": "[P2，静态确认] release --push 在任务分支可能推送未合入 main 的标签",
+        "file": "scripts/release.ts",
+        "line": 185,
+        "report": "root.md",
+        "reportLine": 91,
+        "evidenceLevel": "static-reachable",
+        "receipt": "source-only",
+        "history": "no-matching-item-found-in-limited-deduplication",
+        "conditional": false,
+        "fixed": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "lineRanges": [
+        [
+          88,
+          100
+        ]
+      ],
+      "semanticOldCauseRanges": [
+        [
+          91,
+          97
+        ]
+      ]
+    }
+  ],
+  "gateDecision": "Known same-SHA earlier read overlap, without explicit same-SHA full-depth certification in canonical R6. Proceeded with finite actual version-consistency contract review; no unread/first-full claim.",
+  "oldCauseExclusion": "A11 task-branch --push integration/tag problem, not a new package-version finding. No revalidation of push behavior."
+}

@@ -1,0 +1,1213 @@
+[
+  {
+    "path": "packages/server/src/model-trace-history.ts",
+    "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+    "captureTiming": "After actual displays bb8b81/a4b60c/50d7fa; snapshot is not first-read/pre-read evidence. Only lines actually displayed in those chunks are captured.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import {"
+      },
+      {
+        "line": 2,
+        "text": "  ModelTraceStore,"
+      },
+      {
+        "line": 3,
+        "text": "  isModelTraceCallType,"
+      },
+      {
+        "line": 4,
+        "text": "  type ModelTraceConfig,"
+      },
+      {
+        "line": 5,
+        "text": "  type ModelTraceConfigPatch,"
+      },
+      {
+        "line": 6,
+        "text": "  type ModelTraceEvent,"
+      },
+      {
+        "line": 7,
+        "text": "  type ModelTraceListQuery,"
+      },
+      {
+        "line": 8,
+        "text": "  type ModelTracePage,"
+      },
+      {
+        "line": 9,
+        "text": "  type ModelTraceSessionPage,"
+      },
+      {
+        "line": 10,
+        "text": "  type ModelTraceRecord,"
+      },
+      {
+        "line": 11,
+        "text": "} from \"@cjhyy/code-shell-core/internal\";"
+      },
+      {
+        "line": 12,
+        "text": "import { resolve } from \"node:path\";"
+      },
+      {
+        "line": 13,
+        "text": ""
+      },
+      {
+        "line": 14,
+        "text": "export type ModelTraceDetail = { record: ModelTraceRecord; events: ModelTraceEvent[] };"
+      },
+      {
+        "line": 15,
+        "text": "export type ModelTraceReader = Pick<"
+      },
+      {
+        "line": 16,
+        "text": "  ModelTraceStore,"
+      },
+      {
+        "line": 17,
+        "text": "  \"list\" | \"sessions\" | \"get\" | \"events\" | \"getConfig\" | \"setConfig\""
+      },
+      {
+        "line": 18,
+        "text": ">;"
+      },
+      {
+        "line": 19,
+        "text": ""
+      },
+      {
+        "line": 20,
+        "text": "const QUERY_FIELDS = new Set(["
+      },
+      {
+        "line": 21,
+        "text": "  \"limit\","
+      },
+      {
+        "line": 22,
+        "text": "  \"cursor\","
+      },
+      {
+        "line": 23,
+        "text": "  \"search\","
+      },
+      {
+        "line": 24,
+        "text": "  \"traceId\","
+      },
+      {
+        "line": 25,
+        "text": "  \"sessionId\","
+      },
+      {
+        "line": 26,
+        "text": "  \"withoutSession\","
+      },
+      {
+        "line": 27,
+        "text": "  \"model\","
+      },
+      {
+        "line": 28,
+        "text": "  \"provider\","
+      },
+      {
+        "line": 29,
+        "text": "  \"purpose\","
+      },
+      {
+        "line": 30,
+        "text": "  \"callType\","
+      },
+      {
+        "line": 31,
+        "text": "  \"source\","
+      },
+      {
+        "line": 32,
+        "text": "  \"status\","
+      },
+      {
+        "line": 33,
+        "text": "  \"since\","
+      },
+      {
+        "line": 34,
+        "text": "  \"until\","
+      },
+      {
+        "line": 35,
+        "text": "]);"
+      },
+      {
+        "line": 36,
+        "text": "const CONFIG_FIELDS = new Set([\"enabled\", \"captureContent\", \"includeEphemeral\", \"retentionDays\"]);"
+      },
+      {
+        "line": 37,
+        "text": ""
+      },
+      {
+        "line": 38,
+        "text": "export class ModelTraceRequestError extends Error {"
+      },
+      {
+        "line": 39,
+        "text": "  constructor("
+      },
+      {
+        "line": 40,
+        "text": "    readonly status: number,"
+      },
+      {
+        "line": 41,
+        "text": "    message: string,"
+      },
+      {
+        "line": 42,
+        "text": "  ) {"
+      },
+      {
+        "line": 43,
+        "text": "    super(message);"
+      },
+      {
+        "line": 44,
+        "text": "  }"
+      },
+      {
+        "line": 45,
+        "text": "}"
+      },
+      {
+        "line": 46,
+        "text": ""
+      },
+      {
+        "line": 47,
+        "text": "function record(value: unknown, label: string): Record<string, unknown> {"
+      },
+      {
+        "line": 48,
+        "text": "  if (!value || typeof value !== \"object\" || Array.isArray(value))"
+      },
+      {
+        "line": 49,
+        "text": "    throw new ModelTraceRequestError(400, `Invalid model trace ${label}`);"
+      },
+      {
+        "line": 50,
+        "text": "  return value as Record<string, unknown>;"
+      },
+      {
+        "line": 51,
+        "text": "}"
+      },
+      {
+        "line": 52,
+        "text": ""
+      },
+      {
+        "line": 53,
+        "text": "/** Never forward renderer/browser-owned filesystem paths or unknown scan options. */"
+      },
+      {
+        "line": 54,
+        "text": "export function validateModelTraceQuery(input?: unknown): ModelTraceListQuery {"
+      },
+      {
+        "line": 55,
+        "text": "  if (input === undefined) return {};"
+      },
+      {
+        "line": 56,
+        "text": "  const query = record(input, \"query\");"
+      },
+      {
+        "line": 57,
+        "text": "  const result: Record<string, unknown> = {};"
+      },
+      {
+        "line": 58,
+        "text": "  for (const [key, value] of Object.entries(query)) {"
+      },
+      {
+        "line": 59,
+        "text": "    if (!QUERY_FIELDS.has(key))"
+      },
+      {
+        "line": 60,
+        "text": "      throw new ModelTraceRequestError(400, `Unknown model trace query field: ${key}`);"
+      },
+      {
+        "line": 61,
+        "text": "    if (value === undefined) continue;"
+      },
+      {
+        "line": 62,
+        "text": "    if (key === \"callType\") {"
+      },
+      {
+        "line": 63,
+        "text": "      if (!isModelTraceCallType(value))"
+      },
+      {
+        "line": 64,
+        "text": "        throw new ModelTraceRequestError(400, \"Invalid model trace callType\");"
+      },
+      {
+        "line": 65,
+        "text": "    } else if (key === \"withoutSession\") {"
+      },
+      {
+        "line": 66,
+        "text": "      if (typeof value !== \"boolean\")"
+      },
+      {
+        "line": 67,
+        "text": "        throw new ModelTraceRequestError(400, \"Invalid model trace withoutSession\");"
+      },
+      {
+        "line": 68,
+        "text": "    } else if (key === \"limit\") {"
+      },
+      {
+        "line": 69,
+        "text": "      if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 200)"
+      },
+      {
+        "line": 70,
+        "text": "        throw new ModelTraceRequestError(400, \"Model trace limit must be between 1 and 200\");"
+      },
+      {
+        "line": 71,
+        "text": "    } else if (key === \"since\" || key === \"until\") {"
+      },
+      {
+        "line": 72,
+        "text": "      if (typeof value !== \"number\" || !Number.isFinite(value) || value < 0)"
+      },
+      {
+        "line": 73,
+        "text": "        throw new ModelTraceRequestError(400, `Invalid model trace ${key}`);"
+      },
+      {
+        "line": 74,
+        "text": "    } else {"
+      },
+      {
+        "line": 75,
+        "text": "      const max = key === \"search\" || key === \"cursor\" ? 2048 : 512;"
+      },
+      {
+        "line": 76,
+        "text": "      if (typeof value !== \"string\" || value.length > max || value.includes(\"\\0\"))"
+      },
+      {
+        "line": 77,
+        "text": "        throw new ModelTraceRequestError(400, `Invalid model trace ${key}`);"
+      },
+      {
+        "line": 78,
+        "text": "      if (key === \"status\" && ![\"running\", \"completed\", \"failed\", \"cancelled\"].includes(value))"
+      },
+      {
+        "line": 79,
+        "text": "        throw new ModelTraceRequestError(400, \"Invalid model trace status\");"
+      },
+      {
+        "line": 80,
+        "text": "    }"
+      },
+      {
+        "line": 81,
+        "text": "    result[key] = value;"
+      },
+      {
+        "line": 82,
+        "text": "  }"
+      },
+      {
+        "line": 83,
+        "text": "  if ("
+      },
+      {
+        "line": 84,
+        "text": "    typeof result.since === \"number\" &&"
+      },
+      {
+        "line": 85,
+        "text": "    typeof result.until === \"number\" &&"
+      },
+      {
+        "line": 86,
+        "text": "    result.since > result.until"
+      },
+      {
+        "line": 87,
+        "text": "  )"
+      },
+      {
+        "line": 88,
+        "text": "    throw new ModelTraceRequestError(400, \"Model trace time range is reversed\");"
+      },
+      {
+        "line": 89,
+        "text": "  return result as ModelTraceListQuery;"
+      },
+      {
+        "line": 90,
+        "text": "}"
+      },
+      {
+        "line": 91,
+        "text": ""
+      },
+      {
+        "line": 92,
+        "text": "export function validateModelTraceId(input: unknown): string {"
+      },
+      {
+        "line": 93,
+        "text": "  if (typeof input !== \"string\" || !/^[A-Za-z0-9_-]{1,128}$/.test(input))"
+      },
+      {
+        "line": 94,
+        "text": "    throw new ModelTraceRequestError(400, \"Invalid model trace id\");"
+      },
+      {
+        "line": 95,
+        "text": "  return input;"
+      },
+      {
+        "line": 96,
+        "text": "}"
+      },
+      {
+        "line": 97,
+        "text": ""
+      },
+      {
+        "line": 98,
+        "text": "export function validateModelTraceConfigPatch(input: unknown): ModelTraceConfigPatch {"
+      },
+      {
+        "line": 99,
+        "text": "  const patch = record(input, \"configuration\");"
+      },
+      {
+        "line": 100,
+        "text": "  for (const [key, value] of Object.entries(patch)) {"
+      },
+      {
+        "line": 101,
+        "text": "    if (!CONFIG_FIELDS.has(key))"
+      },
+      {
+        "line": 102,
+        "text": "      throw new ModelTraceRequestError(400, `Unknown model trace configuration field: ${key}`);"
+      },
+      {
+        "line": 103,
+        "text": "    if ("
+      },
+      {
+        "line": 104,
+        "text": "      (key === \"enabled\" || key === \"captureContent\" || key === \"includeEphemeral\") &&"
+      },
+      {
+        "line": 105,
+        "text": "      typeof value !== \"boolean\""
+      },
+      {
+        "line": 106,
+        "text": "    )"
+      },
+      {
+        "line": 107,
+        "text": "      throw new ModelTraceRequestError(400, `Invalid model trace ${key}`);"
+      },
+      {
+        "line": 108,
+        "text": "    if ("
+      },
+      {
+        "line": 109,
+        "text": "      key === \"retentionDays\" &&"
+      },
+      {
+        "line": 110,
+        "text": "      (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > 365)"
+      },
+      {
+        "line": 111,
+        "text": "    )"
+      },
+      {
+        "line": 112,
+        "text": "      throw new ModelTraceRequestError(400, \"Model trace retention must be between 1 and 365 days\");"
+      },
+      {
+        "line": 113,
+        "text": "  }"
+      },
+      {
+        "line": 114,
+        "text": "  return { ...patch } as ModelTraceConfigPatch;"
+      },
+      {
+        "line": 115,
+        "text": "}"
+      },
+      {
+        "line": 116,
+        "text": ""
+      },
+      {
+        "line": 117,
+        "text": "/** Host fixes storageDir once; no query or request can select a different store. */"
+      },
+      {
+        "line": 202,
+        "text": "  return {"
+      },
+      {
+        "line": 203,
+        "text": "    list(query?: unknown): ModelTracePage {"
+      },
+      {
+        "line": 204,
+        "text": "      const validated = validateModelTraceQuery(query);"
+      },
+      {
+        "line": 205,
+        "text": "      return store.list({"
+      },
+      {
+        "line": 206,
+        "text": "        ...validated,"
+      },
+      {
+        "line": 207,
+        "text": "        ...(scopes"
+      },
+      {
+        "line": 208,
+        "text": "          ? { workspaceScopes: scopes }"
+      },
+      {
+        "line": 209,
+        "text": "          : workspacePath === undefined"
+      },
+      {
+        "line": 210,
+        "text": "            ? {}"
+      },
+      {
+        "line": 211,
+        "text": "            : { workspacePath }),"
+      },
+      {
+        "line": 212,
+        "text": "      });"
+      },
+      {
+        "line": 213,
+        "text": "    },"
+      },
+      {
+        "line": 214,
+        "text": "    sessions(query?: unknown): ModelTraceSessionPage {"
+      },
+      {
+        "line": 215,
+        "text": "      const validated = validateModelTraceQuery(query);"
+      },
+      {
+        "line": 216,
+        "text": "      try {"
+      },
+      {
+        "line": 217,
+        "text": "        return store.sessions({"
+      },
+      {
+        "line": 218,
+        "text": "          ...validated,"
+      },
+      {
+        "line": 219,
+        "text": "          ...(scopes"
+      },
+      {
+        "line": 220,
+        "text": "            ? { workspaceScopes: scopes }"
+      },
+      {
+        "line": 221,
+        "text": "            : workspacePath === undefined"
+      },
+      {
+        "line": 222,
+        "text": "              ? {}"
+      },
+      {
+        "line": 223,
+        "text": "              : { workspacePath }),"
+      },
+      {
+        "line": 224,
+        "text": "        });"
+      },
+      {
+        "line": 225,
+        "text": "      } catch (error) {"
+      },
+      {
+        "line": 226,
+        "text": "        if (error instanceof Error && error.message === \"Invalid model trace session cursor\")"
+      },
+      {
+        "line": 227,
+        "text": "          throw new ModelTraceRequestError(400, error.message);"
+      },
+      {
+        "line": 228,
+        "text": "        throw error;"
+      },
+      {
+        "line": 229,
+        "text": "      }"
+      },
+      {
+        "line": 230,
+        "text": "    },"
+      },
+      {
+        "line": 231,
+        "text": "    get(id: unknown): ModelTraceDetail | null {"
+      },
+      {
+        "line": 232,
+        "text": "      const entry = store.get(validateModelTraceId(id));"
+      },
+      {
+        "line": 233,
+        "text": "      return entry && visible(entry) ? { record: entry, events: visibleEvents(entry) } : null;"
+      },
+      {
+        "line": 234,
+        "text": "    },"
+      },
+      {
+        "line": 235,
+        "text": "    getConfig(): ModelTraceConfig {"
+      },
+      {
+        "line": 236,
+        "text": "      return store.getConfig();"
+      },
+      {
+        "line": 237,
+        "text": "    },"
+      },
+      {
+        "line": 238,
+        "text": "    setConfig(patch: unknown): ModelTraceConfig {"
+      },
+      {
+        "line": 239,
+        "text": "      return store.setConfig(validateModelTraceConfigPatch(patch));"
+      },
+      {
+        "line": 240,
+        "text": "    },"
+      },
+      {
+        "line": 241,
+        "text": "  };"
+      },
+      {
+        "line": 242,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/model-trace-http.ts",
+    "sha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+    "captureTiming": "After actual displays bb8b81/a4b60c/50d7fa; snapshot is not first-read/pre-read evidence. Only lines actually displayed in those chunks are captured.",
+    "displayedLines": [
+      {
+        "line": 11,
+        "text": "function json(response: ServerResponse, status: number, body: unknown) {"
+      },
+      {
+        "line": 20,
+        "text": "function queryFromUrl(url: URL) {"
+      },
+      {
+        "line": 21,
+        "text": "  const query: Record<string, unknown> = {};"
+      },
+      {
+        "line": 22,
+        "text": "  for (const key of new Set(url.searchParams.keys())) {"
+      },
+      {
+        "line": 23,
+        "text": "    if (key === \"workspace\") continue; // Resolved and authorized by the outer Host route."
+      },
+      {
+        "line": 24,
+        "text": "    const values = url.searchParams.getAll(key);"
+      },
+      {
+        "line": 25,
+        "text": "    if (values.length !== 1)"
+      },
+      {
+        "line": 26,
+        "text": "      throw new ModelTraceRequestError(400, \"Duplicate model trace query field\");"
+      },
+      {
+        "line": 27,
+        "text": "    const value = values[0]!;"
+      },
+      {
+        "line": 28,
+        "text": "    if (key === \"withoutSession\") {"
+      },
+      {
+        "line": 29,
+        "text": "      if (value !== \"true\" && value !== \"false\")"
+      },
+      {
+        "line": 30,
+        "text": "        throw new ModelTraceRequestError(400, \"Invalid model trace withoutSession\");"
+      },
+      {
+        "line": 31,
+        "text": "      query[key] = value === \"true\";"
+      },
+      {
+        "line": 32,
+        "text": "    } else if ([\"limit\", \"since\", \"until\"].includes(key)) {"
+      },
+      {
+        "line": 33,
+        "text": "      if (!value.trim()) throw new ModelTraceRequestError(400, \"Invalid numeric model trace query\");"
+      },
+      {
+        "line": 34,
+        "text": "      query[key] = Number(value);"
+      },
+      {
+        "line": 35,
+        "text": "    } else query[key] = value;"
+      },
+      {
+        "line": 36,
+        "text": "  }"
+      },
+      {
+        "line": 37,
+        "text": "  return query;"
+      },
+      {
+        "line": 38,
+        "text": "}"
+      },
+      {
+        "line": 41,
+        "text": "export function createModelTraceHttp(options: {"
+      },
+      {
+        "line": 70,
+        "text": "        const workspaceScopes = await resolveScopes(request);"
+      },
+      {
+        "line": 71,
+        "text": "        const history = createModelTraceHistory({ ...options, workspaceScopes });"
+      },
+      {
+        "line": 72,
+        "text": "        let result: unknown;"
+      },
+      {
+        "line": 73,
+        "text": "        if (url.pathname === ROOT) result = history.list(queryFromUrl(url));"
+      },
+      {
+        "line": 74,
+        "text": "        else if (url.pathname === `${ROOT}/sessions`) result = history.sessions(queryFromUrl(url));"
+      },
+      {
+        "line": 75,
+        "text": "        else if (url.pathname === `${ROOT}/config`) {"
+      },
+      {
+        "line": 76,
+        "text": "          if (Object.keys(queryFromUrl(url)).length)"
+      },
+      {
+        "line": 82,
+        "text": "          if (Object.keys(queryFromUrl(url)).length)"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/trace-history-service.ts",
+    "sha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+    "captureTiming": "After actual displays bb8b81/a4b60c/50d7fa; snapshot is not first-read/pre-read evidence. Only lines actually displayed in those chunks are captured.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import { join } from \"node:path\";"
+      },
+      {
+        "line": 2,
+        "text": "import { sessionsRoot } from \"@cjhyy/code-shell-core\";"
+      },
+      {
+        "line": 3,
+        "text": "import { createModelTraceHistory, type ModelTraceReader } from \"@cjhyy/code-shell-server/storage\";"
+      },
+      {
+        "line": 4,
+        "text": ""
+      },
+      {
+        "line": 5,
+        "text": "/** The native application can inspect its own complete Host model history. */"
+      },
+      {
+        "line": 6,
+        "text": "export function createTraceHistoryService("
+      },
+      {
+        "line": 7,
+        "text": "  options: { storageDir?: string; store?: ModelTraceReader } = {},"
+      },
+      {
+        "line": 8,
+        "text": ") {"
+      },
+      {
+        "line": 9,
+        "text": "  return createModelTraceHistory({"
+      },
+      {
+        "line": 10,
+        "text": "    storageDir: options.storageDir ?? join(sessionsRoot(), \".model-traces\"),"
+      },
+      {
+        "line": 11,
+        "text": "    store: options.store,"
+      },
+      {
+        "line": 12,
+        "text": "  });"
+      },
+      {
+        "line": 13,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+    "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+    "captureTiming": "After actual displays bb8b81/a4b60c/50d7fa; snapshot is not first-read/pre-read evidence. Only lines actually displayed in those chunks are captured.",
+    "displayedLines": [
+      {
+        "line": 250,
+        "text": "        window.codeshell.modelTraces.sessions({"
+      },
+      {
+        "line": 251,
+        "text": "          ...query,"
+      },
+      {
+        "line": 252,
+        "text": "          limit: 50,"
+      },
+      {
+        "line": 253,
+        "text": "          ...(cursor ? { cursor } : {}),"
+      },
+      {
+        "line": 254,
+        "text": "        }),"
+      },
+      {
+        "line": 255,
+        "text": "      )"
+      },
+      {
+        "line": 256,
+        "text": "      .then((page) => {"
+      },
+      {
+        "line": 257,
+        "text": "        if (!mounted.current || version !== listVersion.current) return;"
+      },
+      {
+        "line": 258,
+        "text": "        setList(page);"
+      },
+      {
+        "line": 299,
+        "text": "      .then(() => window.codeshell.modelTraces.list({ ...selectedCallQuery!, limit: 100 }))"
+      },
+      {
+        "line": 300,
+        "text": "      .then((page) => {"
+      },
+      {
+        "line": 301,
+        "text": "        if (!mounted.current || version !== callsVersion.current) return;"
+      },
+      {
+        "line": 302,
+        "text": "        setCalls({"
+      },
+      {
+        "line": 303,
+        "text": "          scopeKey: callScopeKey,"
+      },
+      {
+        "line": 304,
+        "text": "          items: mergeTraceCalls([], page.items),"
+      },
+      {
+        "line": 305,
+        "text": "          nextCursor: page.nextCursor,"
+      },
+      {
+        "line": 306,
+        "text": "        });"
+      },
+      {
+        "line": 372,
+        "text": "      const page = await window.codeshell.modelTraces.list({"
+      },
+      {
+        "line": 373,
+        "text": "        ...selectedCallQuery!,"
+      },
+      {
+        "line": 374,
+        "text": "        limit: 100,"
+      },
+      {
+        "line": 375,
+        "text": "        cursor: calls.nextCursor,"
+      },
+      {
+        "line": 376,
+        "text": "      });"
+      },
+      {
+        "line": 377,
+        "text": "      if (mounted.current && version === callsVersion.current)"
+      },
+      {
+        "line": 378,
+        "text": "        setCalls((current) => ({"
+      },
+      {
+        "line": 379,
+        "text": "          scopeKey: callScopeKey,"
+      },
+      {
+        "line": 380,
+        "text": "          items: mergeTraceCalls(current.items, page.items),"
+      },
+      {
+        "line": 381,
+        "text": "          nextCursor: page.nextCursor,"
+      },
+      {
+        "line": 382,
+        "text": "        }));"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/model-trace-http.test.ts",
+    "sha256": "efbd633353aeccb8ba90e25ef98d5aae74549f48367de2c2e7962f99c053deb1",
+    "captureTiming": "After actual displays bb8b81/a4b60c/50d7fa; snapshot is not first-read/pre-read evidence. Only lines actually displayed in those chunks are captured.",
+    "displayedLines": [
+      {
+        "line": 24,
+        "text": "function entry(id: string, workspacePath?: string): ModelTraceRecord {"
+      },
+      {
+        "line": 42,
+        "text": "async function fixture() {"
+      },
+      {
+        "line": 46,
+        "text": "  const storageDir = join(root, \"sessions\", \".model-traces\");"
+      },
+      {
+        "line": 84,
+        "text": "  await new Promise<void>((resolve) => server.listen(0, \"127.0.0.1\", resolve));"
+      },
+      {
+        "line": 108,
+        "text": "test(\"trace HTTP authenticates, fixes workspace scope, and associates events only by trace identity and workspace\", async () => {"
+      },
+      {
+        "line": 125,
+        "text": "test(\"remote trace queries cannot select paths, override workspace, or mutate capture policy\", async () => {"
+      },
+      {
+        "line": 128,
+        "text": "  for (const query of ["
+      },
+      {
+        "line": 143,
+        "text": "    expect((await f.request(query)).status).toBe(400);"
+      },
+      {
+        "line": 154,
+        "text": "test(\"two Host stores stay isolated and native setters validate complete configuration before writing\", async () => {"
+      },
+      {
+        "line": 158,
+        "text": "  expect(second.list().items).toEqual([]);"
+      },
+      {
+        "line": 181,
+        "text": "test(\"trusted related scopes expose project Panel calls without exposing ordinary project chats or events\", async () => {"
+      },
+      {
+        "line": 231,
+        "text": "test(\"revoking a related workspace during a request discards its already-read prompts\", async () => {"
+      },
+      {
+        "line": 243,
+        "text": "test(\"session HTTP groups all authorized executions before pagination and keeps standalone calls separate\", async () => {"
+      },
+      {
+        "line": 263,
+        "text": "  expect((await f.request(\"/sessions\", \"GET\", false)).status).toBe(401);"
+      },
+      {
+        "line": 264,
+        "text": "  const first = await (await f.request(\"/sessions?limit=1\")).json();"
+      },
+      {
+        "line": 265,
+        "text": "  expect(first.total).toBe(3);"
+      },
+      {
+        "line": 266,
+        "text": "  expect(first.items[0]).toMatchObject({"
+      },
+      {
+        "line": 267,
+        "text": "    key: \"session:real-session\","
+      },
+      {
+        "line": 268,
+        "text": "    sessionId: \"real-session\","
+      },
+      {
+        "line": 269,
+        "text": "    callCount: 205,"
+      },
+      {
+        "line": 270,
+        "text": "    traceCount: 2,"
+      },
+      {
+        "line": 271,
+        "text": "    latestRequestId: \"session-call-0\","
+      },
+      {
+        "line": 272,
+        "text": "    latestTraceId: \"first-run\","
+      },
+      {
+        "line": 273,
+        "text": "  });"
+      },
+      {
+        "line": 274,
+        "text": "  const second = await ("
+      },
+      {
+        "line": 275,
+        "text": "    await f.request(\"/sessions?limit=1&cursor=\" + encodeURIComponent(first.nextCursor))"
+      },
+      {
+        "line": 276,
+        "text": "  ).json();"
+      },
+      {
+        "line": 277,
+        "text": "  expect(second.items[0]).toMatchObject({"
+      },
+      {
+        "line": 278,
+        "text": "    key: \"trace:shared-run\","
+      },
+      {
+        "line": 279,
+        "text": "    traceId: \"shared-run\","
+      },
+      {
+        "line": 280,
+        "text": "    callCount: 1,"
+      },
+      {
+        "line": 281,
+        "text": "  });"
+      },
+      {
+        "line": 282,
+        "text": "  expect(second.items[0]).not.toHaveProperty(\"sessionId\");"
+      },
+      {
+        "line": 283,
+        "text": "  const filtered = await ("
+      },
+      {
+        "line": 284,
+        "text": "    await f.request(\"/sessions?sessionId=real-session&traceId=second-run\")"
+      },
+      {
+        "line": 285,
+        "text": "  ).json();"
+      },
+      {
+        "line": 286,
+        "text": "  expect(filtered.total).toBe(1);"
+      },
+      {
+        "line": 287,
+        "text": "  expect(filtered.items[0]).toMatchObject({ callCount: 102, traceCount: 1 });"
+      },
+      {
+        "line": 288,
+        "text": "  expect((await (await f.request(\"/sessions?withoutSession=true\")).json()).total).toBe(2);"
+      },
+      {
+        "line": 290,
+        "text": "  for (const query of ["
+      },
+      {
+        "line": 299,
+        "text": "    expect((await f.request(\"/sessions\" + query)).status).toBe(400);"
+      },
+      {
+        "line": 301,
+        "text": "  expect((await f.request(\"/sessions\")).status).toBe(401);"
+      },
+      {
+        "line": 304,
+        "text": "test(\"session aggregation rechecks related workspace authority before responding\", async () => {"
+      },
+      {
+        "line": 313,
+        "text": "    (await (await f.request(\"/sessions?sessionId=root-session\")).json()).items[0].callCount,"
+      },
+      {
+        "line": 319,
+        "text": "  const response = await f.request(\"/sessions\");"
+      },
+      {
+        "line": 324,
+        "text": "test(\"call category queries filter only authorized metadata before call and session paging\", async () => {"
+      },
+      {
+        "line": 352,
+        "text": "  const sessions = await (await f.request(\"/sessions?callType=summary&limit=1\")).json();"
+      },
+      {
+        "line": 353,
+        "text": "  expect(sessions.total).toBe(2);"
+      },
+      {
+        "line": 354,
+        "text": "  expect(sessions.items[0]).toMatchObject({"
+      },
+      {
+        "line": 355,
+        "text": "    sessionId: \"session-b\","
+      },
+      {
+        "line": 356,
+        "text": "    callCount: 1,"
+      },
+      {
+        "line": 357,
+        "text": "    callTypes: [\"summary\"],"
+      },
+      {
+        "line": 358,
+        "text": "  });"
+      },
+      {
+        "line": 359,
+        "text": "  const nextSessions = await ("
+      },
+      {
+        "line": 360,
+        "text": "    await f.request("
+      },
+      {
+        "line": 361,
+        "text": "      \"/sessions?callType=summary&limit=1&cursor=\" + encodeURIComponent(sessions.nextCursor),"
+      },
+      {
+        "line": 362,
+        "text": "    )"
+      },
+      {
+        "line": 363,
+        "text": "  ).json();"
+      },
+      {
+        "line": 364,
+        "text": "  expect(nextSessions.items[0]).toMatchObject({"
+      },
+      {
+        "line": 365,
+        "text": "    sessionId: \"session-a\","
+      },
+      {
+        "line": 366,
+        "text": "    callCount: 1,"
+      },
+      {
+        "line": 367,
+        "text": "    callTypes: [\"summary\"],"
+      },
+      {
+        "line": 368,
+        "text": "  });"
+      },
+      {
+        "line": 369,
+        "text": "  expect((await (await f.request(\"/title-a\")).json()).record.callType).toBe(\"title\");"
+      },
+      {
+        "line": 371,
+        "text": "  for (const query of ["
+      },
+      {
+        "line": 377,
+        "text": "    expect((await f.request(\"/sessions\" + query)).status).toBe(400);"
+      }
+    ]
+  }
+]

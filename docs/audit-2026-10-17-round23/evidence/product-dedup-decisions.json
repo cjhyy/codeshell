@@ -1,0 +1,60 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "scan": "evidence/product-dedup.json",
+  "supplement": "evidence/product-cwd-dedup.json",
+  "history": {
+    "files": 2301,
+    "markdown": 1213,
+    "json": 1088,
+    "stringLeaves": 335490,
+    "scalarLeaves": 472091,
+    "parseErrors": 0
+  },
+  "matchCounts": {
+    "exact": 139,
+    "cwd": 13,
+    "config": 62,
+    "factory": 86,
+    "cwd_loss": 7
+  },
+  "caps": {
+    "allPatterns": 100,
+    "exactRetained": 100
+  },
+  "decisions": [
+    {
+      "mechanism": "ProductRuntimeOptions.cwd / CreateRunManagerOptions.cwd omission",
+      "classification": "one new static P3",
+      "reason": "May30 Product parent records only cover disable and prompt precedence. Factory hits include no ignored-cwd report; broad cwd-loss hits include distinct FileHistory hook, external-agent stored cwd and plans. Clear current public option contracts + full factories/manager/runner source distinguish this loss."
+    },
+    {
+      "mechanism": "customPrompt sections precedence",
+      "classification": "one old related, no new severity",
+      "prior": "May30 _id36 and confirmed[46]",
+      "reason": "Current composer selected source still adds custom_system and behavior. No new fixture/model/prompt generation."
+    },
+    {
+      "mechanism": "redundant disable lists",
+      "classification": "not promoted",
+      "prior": "May30 _id35; selected parent objects",
+      "reason": "Repeated filtering alone does not establish conflicting enabled state; no ordinary wrong tool set shown."
+    },
+    {
+      "mechanism": "global preset registry side effect",
+      "classification": "not promoted",
+      "prior": "docs/archive/core-modules/product.md historical inventory",
+      "reason": "Current define synthesizes local AgentModule; do not apply outdated global register description."
+    },
+    {
+      "mechanism": "other cwd ignores",
+      "classification": "excluded as distinct",
+      "prior": "docs/audit-2026-10-16/core.md:44 and broad cwd_loss contexts",
+      "reason": "FileHistory hook and external-agent persisted cwd have separate call paths; no repeated experiment or claimed fix."
+    }
+  ],
+  "limits": [
+    "All MD and recursive JSON scalar values searched, keys excluded; archive included, current round excluded.",
+    "Capped contexts and narrow keywords do not prove whole-repository semantic exhaustion.",
+    "No actual in-repo defineProduct construction caller beyond definition/example/type-doc references was found; finding relies on exported SDK contract, not observed user execution."
+  ]
+}

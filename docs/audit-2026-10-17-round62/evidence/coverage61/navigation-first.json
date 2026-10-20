@@ -1,0 +1,8 @@
+{
+  "purpose": "Filename navigation before metadata pin/body read",
+  "toolChunk": "4f21c7",
+  "exitCode": 2,
+  "stderr": "rg: docs/audit-2026-10-18-round61: No such file or directory (os error 2)",
+  "actualDirectory": "docs/audit-2026-10-17-round61",
+  "correction": "Use the actual filename inventory only. No product or source body was read or executed by this navigation."
+}

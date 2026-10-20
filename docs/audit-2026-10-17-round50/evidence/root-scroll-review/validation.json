@@ -1,0 +1,16 @@
+{
+  "formal": 0,
+  "candidate": 0,
+  "newRelated": 0,
+  "productRuns": 0,
+  "helperRuns": 0,
+  "testRuns": 0,
+  "fixtureRuns": 0,
+  "browserRuns": 0,
+  "reactDomLayoutRuns": 0,
+  "timerRuns": 0,
+  "businessNetworkRuns": 0,
+  "nativeRuns": 0,
+  "testPassClaims": 0,
+  "metadataOnlyChecks": "Hash/byte/range and own evidence generation; no source imports or product functions executed."
+}

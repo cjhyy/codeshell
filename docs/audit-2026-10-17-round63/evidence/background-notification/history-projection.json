@@ -1,0 +1,1374 @@
+{
+  "atUTC": "2026-10-17T20:51:39.407022+00:00",
+  "excludedFormalAtOrAbove": 63,
+  "historyFiles": 6669,
+  "jsonValueScalarsVisited": 4882650,
+  "capPerTarget": 100,
+  "errors": [],
+  "note": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading.",
+  "productExecution": 0,
+  "sharedBatch": {
+    "path": "/tmp/codeshell-audit-round171-coverage62/history-batch.json",
+    "bytes": 1553692,
+    "sha256": "819a414f68c2331ea87455754e0cc724d7ba623b3daa40b1de5137638c571bd0"
+  },
+  "queries": {
+    "packages/desktop/src/main/background-notification-content.ts": [
+      "packages/desktop/src/main/background-notification-content.ts",
+      "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+    ],
+    "packages/desktop/src/main/desktop-notification-routes.ts": [
+      "packages/desktop/src/main/desktop-notification-routes.ts",
+      "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+    ],
+    "packages/desktop/src/main/native-desktop-notification.ts": [
+      "packages/desktop/src/main/native-desktop-notification.ts",
+      "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+    ]
+  },
+  "counts": {
+    "packages/desktop/src/main/background-notification-content.ts": 48,
+    "packages/desktop/src/main/desktop-notification-routes.ts": 52,
+    "packages/desktop/src/main/native-desktop-notification.ts": 48
+  },
+  "hits": {
+    "packages/desktop/src/main/background-notification-content.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/891",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/1651/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/1651/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7405/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7405/directSourcePathsInObject/0",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7406/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7406/sourceHashFields/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7406/directSourcePathsInObject/0",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/1787",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/1969/oldSha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/1969/oldSha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/1969/oldSha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/1969/original55Sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/1969/oldSha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json",
+        "location": "/filenames/1898",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/1969/path",
+        "matched": [
+          "packages/desktop/src/main/background-notification-content.ts"
+        ],
+        "value": "packages/desktop/src/main/background-notification-content.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/1969/sha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/1969/oldSha256",
+        "matched": [
+          "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025"
+        ],
+        "value": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+        "truncatedValue": false
+      }
+    ],
+    "packages/desktop/src/main/desktop-notification-routes.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/963",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "location": "/hits/localized_quota/2/context",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "但其 urgent 分支必须等前一项完成才能运行。\n\n触发条件：应用无聚焦窗口、系统通知支持，10 秒内已有五个普通结果提示显示，第六个普通提示已经进入 10 秒 rate-window 等待；随后发生需要 urgent 的提醒，如续接目标被删除或定时任务错过。它即使设置 urgent，仍在第六个普通通知后等待。单独在额度饱和时调用 urgent、而没有已等待的普通通知，能够正常绕过限流，不能写成所有紧急通知都受限流。\n\n生产可达链：[Main:3599](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts:3599) 订阅真实 agentNotificationBus，并调用 [notifyBackgroundResult:91](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/desktop-notification-routes.ts:91)，后者对 completed/failed/cancelled 的结果发布普通提示。bus 的同步 fan-out 没有等待一个通知显示完才发布下一条。独立复核确认Main内的headle",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/1786/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/1786/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7760/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7760/directSourcePathsInObject/0",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7761/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7761/sourceHashFields/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/7761/directSourcePathsInObject/0",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/1919",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/2104/oldSha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/2104/oldSha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/2104/oldSha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/2104/original55Sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/2104/oldSha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json",
+        "location": "/filenames/2978",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/2104/path",
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "packages/desktop/src/main/desktop-notification-routes.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/2104/sha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/2104/oldSha256",
+        "matched": [
+          "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac"
+        ],
+        "value": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/notification-quality-round14.md",
+        "location": 13,
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "真实停止路由 `packages/desktop/src/main/desktop-notification-routes.ts:47–69` 用 `automationLifecycleNotification(job_stopped)` 生成持久 deliveryKey，并提交标题“定时任务已停止”、`urgent:true`。mapper `automation-notification.ts:16–25,46–53` 以 job ID/runCount/type 生成 key；fixture 的 job ID、名称、runCount 满足此分支实际读取字段，不依赖伪造通知 key 或错误映射。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/notification-round14.md",
+        "location": 11,
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "生产可达链：[Main:3599](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts:3599) 订阅真实 agentNotificationBus，并调用 [notifyBackgroundResult:91](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/desktop-notification-routes.ts:91)，后者对 completed/failed/cancelled 的结果发布普通提示。bus 的同步 fan-out 没有等待一个通知显示完才发布下一条。独立复核确认Main内的headless Engine支持最多6个background Agent，其完成通知可从同一Main进程bus进入此订阅；不混用worker内独立bus，完整模型源头本轮仍未运行。[Main:3542](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts:3542) 在缺续接目标时 await 实际 [notifyMissingAutomationResumeTarget:47](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/desktop-notification-routes.ts:47)，该 route 明确传 `urgent:true`；job_missed 的 route 同样传 urgent。Main 的这一完整错误/调度分支仅静态核对，本轮没有启动计划任务或模型。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-terminal-lifecycle-round14/notification-audit.md",
+        "location": 13,
+        "matched": [
+          "packages/desktop/src/main/desktop-notification-routes.ts"
+        ],
+        "value": "真实停止路由 `packages/desktop/src/main/desktop-notification-routes.ts:47–69` 用 `automationLifecycleNotification(job_stopped)` 生成持久 deliveryKey，并提交标题“定时任务已停止”、`urgent:true`。mapper `automation-notification.ts:16–25,46–53` 以 job ID/runCount/type 生成 key；fixture 的 job ID、名称、runCount 满足此分支实际读取字段，不依赖伪造通知 key 或错误映射。",
+        "truncatedValue": false
+      }
+    ],
+    "packages/desktop/src/main/native-desktop-notification.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/1053",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/1955/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/1955/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/8291/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/8291/directSourcePathsInObject/0",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/8292/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/8292/sourceHashFields/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/8292/directSourcePathsInObject/0",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/2079",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/2273/oldSha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/2273/oldSha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/2273/oldSha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/current-source-inventory.json",
+        "location": "/rows/2273/original55Sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/ending-source-inventory.json",
+        "location": "/rows/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+        "location": "/files/2273/oldSha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round61/evidence/user-status/current-ts-filename-inventory.json",
+        "location": "/filenames/1902",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/baselineFiles/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage-source-git-bindings.json",
+        "location": "/mainFiles/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/current-source-inventory.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/ending-source-inventory.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/2273/path",
+        "matched": [
+          "packages/desktop/src/main/native-desktop-notification.ts"
+        ],
+        "value": "packages/desktop/src/main/native-desktop-notification.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/2273/sha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round62/evidence/coverage61/unified-current-index.json",
+        "location": "/files/2273/oldSha256",
+        "matched": [
+          "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f"
+        ],
+        "value": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+        "truncatedValue": false
+      }
+    ]
+  }
+}

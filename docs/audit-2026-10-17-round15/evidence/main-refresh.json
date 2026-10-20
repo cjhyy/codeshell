@@ -1,0 +1,22 @@
+{
+  "frozenBase": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "mainHead": "41429f1b93f0316c019b8246b54d26585832c8bc",
+  "originMain": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "commits": [
+    "41429f1b9 docs(audit): seal Windows CI11 acceptance and current run",
+    "3466cad1e docs(audit): record first complete platform matrix and follow-up gates",
+    "cc4e7958f Merge commit 'ae777b3fce6fc9986e69ceb62802f3bb3f6aa478' into codex/desktop/real-operation-cycles-20261016",
+    "dbb7c3f48 test(ci): retain image attachment size regression evidence",
+    "b73a9c0b3 test(ci): record Linux Chinese fonts before visual acceptance",
+    "c1bee99b4 fix(web): apply image size limits to JPEG aliases"
+  ],
+  "changedPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/web/src/lib/mobileAttachments.alias-limit.test.ts",
+    "packages/web/src/lib/mobileAttachments.ts"
+  ],
+  "dirtyPreserved": true,
+  "initialSnapshotRetained": true,
+  "productReruns": false
+}

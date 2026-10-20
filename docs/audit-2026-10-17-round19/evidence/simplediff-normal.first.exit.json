@@ -1,0 +1,20 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/session/simple-diff.test.ts",
+    "docs/audit-2026-10-17-round19/evidence/simplediff-focused.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "startedAt": "2026-10-17T08:32:30.777241+00:00",
+  "endedAt": "2026-10-17T08:32:30.924374+00:00",
+  "exitCode": 0,
+  "attempt": 1,
+  "rawLog": "docs/audit-2026-10-17-round19/evidence/simplediff-normal.first.raw.log",
+  "rawBytes": 1850,
+  "rawSha256": "b6f3347ad1b1a34e5b75413f9de8d127959f6b0a8aa47426daa453b91406ba01",
+  "combinedStdoutStderr": true,
+  "rawAndExitSavedBeforeInspection": true
+}

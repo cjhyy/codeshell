@@ -1,0 +1,320 @@
+{
+  "scope": "All retained generic filename prose/context candidates; current Web versus other MessageContent paths kept distinct; no runtime adoption",
+  "contexts": [
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "jsonPointer": null,
+      "line": 318,
+      "needle": "messagecontent.tsx",
+      "context": ":20` | agent 思考或工具运行时显示 |\n| **Banner / UpdateBanner / WelcomeTips** | 顶部启动信息、更新提示和欢迎提示 | `packages/tui/src/ui/components/Banner.tsx:42`，`packages/tui/src/ui/components/UpdateBanner.tsx:25`，`packages/tui/src/ui/components/WelcomeTips.tsx:36` | REPL 启动或更新可用时显示 |\n| **消息内容渲染** | Markdown、代码块、错误、限流、上下文限制、thinking 等消息视图 | `packages/tui/src/ui/components/MessageContent.tsx:425`，`packages/tui/src/ui/components/CodeBlock.tsx:16` | transcript 自动渲染 |\n| **工具调用视图** | 展示工具 start/running/result 和嵌套前缀 | `packages/tui/src/ui/components/ToolCall.tsx:42`，`packages/tui/src/ui/components/ToolCall.tsx:98`，`packages/tui/src/ui/components/AgentBlock.tsx:26` | 工具调用时自动折叠/展开 |\n| **Diff 视图** | 渲染 diff 行、结构化 diff 和普通 diff view | `packages/tui/src/ui/components/DiffView.tsx:18`，`packages/tui/src/ui/components/DiffLine.tsx:52`，`packages/tui/src/ui/components/StructuredDiff.tsx:17` | `/diff`、审批和文件编辑结果中使用 |\n| **输入历史** | 按 session/project 记录、搜索、导航、flush 历史 | `packages/tui/src/ui/input-history.ts:66`，`packages/tui/src/ui/input-history.ts:192`，`packages/tui/src/ui/input-history.ts:286` |",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8"
+    },
+    {
+      "path": "docs/archive/todo/fix-batch-8-2026-07-08.md",
+      "jsonPointer": null,
+      "line": 16,
+      "needle": "messagecontent.tsx",
+      "context": "ll an owned pty; existing resize/shell tests rerun | Failing regression observed, then `bun test packages/desktop/src/main/pty-ownership.test.ts packages/desktop/src/main/pty-resize-clamp.test.ts` passed twice before commit. |\n| Markdown render cache ignores width | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/ui/components/MessageContent.tsx:23` | `1f59c49cd3d56f07813af6e7ca4d4c6fd31a6dff` | `packages/tui/src/ui/components/MessageContent.test.ts`: same markdown renders separately for different terminal widths | Failing regression observed, then `bun test packages/tui/src/ui/components/MessageContent.test.ts` passed before and after formatting, before commit. |\n\nFinal focused verification:\n\n`bun test tests/provider-model-flow-secret.test.tsx tests/text-input.test.ts packages/tui/src/ui/App.slash-command.test.ts packages/tui/src/ui/App.render-entry.test.tsx packages/desktop/src/main/pty-ownership.test.ts packages/desktop/src/main/pty-resize-clamp.test.ts packages/tui/src/ui/components/MessageContent.test.ts`\n\nResult: `19 pass`, `",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "3ec27298fc5aa8b160a6955b49950b9fc751e816214b457126de6e071880cadb"
+    },
+    {
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "jsonPointer": null,
+      "line": 69,
+      "needle": "messagecontent.tsx",
+      "context": "lay time | `packages/desktop/src/renderer/types.ts:702` | `agent_start`/`agent_end` still call `Date.now()` despite replay clock support. | Use reducer `now()` for sub-agent start/end timestamps and add foldTranscript regression coverage. | `review-desktop-2026-07-08.md` |\n| 🟡 | Markdown render cache ignores width | `packages/tui/src/ui/components/MessageContent.tsx:23` | Render cache keys only by markdown text, and `marked-terminal` width is captured once. | Include effective width in cache key and recreate/parameterize marked renderer on resize. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | New-message pill/divider has no scroll-away source | `packages/tui/src/ui/components/FullscreenLayout.tsx:170` | `useUnseenDivider().onScrollAway` exists but is not wired from `VirtualMessageList`/`ScrollBox`. | Expose sticky/scroll-away changes and call `onScrollAway`; keep jump-to-bottom clearing. | `review-tui-cdp-2026-07-08.md` |\n| 🟡 | Compact tool-result flag is not rendered | `packages/tui/src/ui/App.tsx:2101` | Tool-result entries set `compact`, but `renderEntry",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61"
+    },
+    {
+      "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+      "jsonPointer": null,
+      "line": 111,
+      "needle": "messagecontent.tsx",
+      "context": "lers cannot distinguish a stale extract ref from a generic image-read failure, so they may not know to re-run extraction/snapshot before retrying.\n\nFix: include `staleRef: true` on missing-ref returns, and consider doing the same for ref lookup failures that indicate the tagged DOM node disappeared.\n\n## 🟡 Minor\n\n### `packages/tui/src/ui/components/MessageContent.tsx:23` - markdown render cache ignores terminal width\n\nProblem: the LRU cache is keyed only by markdown text, and `getMarkedInstance()` captures `process.stdout.columns` only when the singleton is first created at lines 82-86.\n\nImpact: after terminal resize, rows can re-render because `MessageRow` receives new `columns`, but cached ANSI and the singleton `marked-terminal` width can still reflect the old terminal width. This causes stale wrapping/reflow.\n\nFix: include effective width in the cache key and recreate or parameterize the `Marked` instance when width changes. Clear width-sensitive cache entries on resize.\n\n### `packages/tui/src/ui/components/FullscreenLayout.tsx:170` - new-message pi",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "dc0153bc7f0e9fed765900d98921fe5c59f0cf3b1fb29bce16a7674306f0859f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "jsonPointer": "/hits/transcript_projection/19/context",
+      "line": 2,
+      "needle": "messagecontent.tsx",
+      "context": "t_start`/`agent_end` still call `Date.now()` despite replay clock support. | Use reducer `now()` for sub-agent start/end timestamps and add foldTranscript regression coverage. | `review-desktop-2026-07-08.md` |\n| 🟡 | Markdown render cache ignores width | `packages/tui/src/ui/components/MessageContent.tsx:23` | Render cache keys only by markdown text, and `marked-terminal` width is captured once. | Include effective width in cache ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "acb6dd8a20c8e4e5a2fc7130d49be5a72beeb07c61bc51cfa9671a8dfff8c68e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "jsonPointer": "/hits/chat-view/16/context",
+      "line": 3,
+      "needle": "messagecontent.tsx",
+      "context": "lay time | `packages/desktop/src/renderer/types.ts:702` | `agent_start`/`agent_end` still call `Date.now()` despite replay clock support. | Use reducer `now()` for sub-agent start/end timestamps and add foldTranscript regression coverage. | `review-desktop-2026-07-08.md` |\n| 🟡 | Markdown render cache ignores width | `packages/tui/src/ui/components/MessageContent.tsx:23` | Render ca",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9890d9ac95aa04ea48492fcabce19383624a97e8957bc195da762fd54ba95eb0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "jsonPointer": "/hits/ordinary-contract/11/context",
+      "line": 4,
+      "needle": "messagecontent.tsx",
+      "context": "lay time | `packages/desktop/src/renderer/types.ts:702` | `agent_start`/`agent_end` still call `Date.now()` despite replay clock support. | Use reducer `now()` for sub-agent start/end timestamps and add foldTranscript regression coverage. | `review-desktop-2026-07-08.md` |\n| 🟡 | Markdown render cache ignores width | `packages/tui/src/ui/components/MessageContent.tsx:23` | ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9890d9ac95aa04ea48492fcabce19383624a97e8957bc195da762fd54ba95eb0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/source_path/2/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/source_path/29/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/source_path/59/context",
+      "line": 6,
+      "needle": "messagecontent.tsx",
+      "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/source_path/60/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/source_filename/2/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/source_filename/33/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/source_filename/63/context",
+      "line": 6,
+      "needle": "messagecontent.tsx",
+      "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/source_filename/64/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "ssages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/format_contract/56/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "jsonPointer": "/hits/format_contract/126/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "jsonPointer": "/rows/1/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "jsonPointer": "/rows/8/context",
+      "line": 6,
+      "needle": "messagecontent.tsx",
+      "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "jsonPointer": "/rows/9/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "jsonPointer": "/rows/16/context",
+      "line": 6,
+      "needle": "messagecontent.tsx",
+      "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "jsonPointer": "/rows/17/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "ssages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-focused.json",
+      "jsonPointer": "/hits/draft_switch/25/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "4e25135927eddee1fb4b28674f1d434bda91adde1f6f5b9b270327e39b9bcc0b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-focused.json",
+      "jsonPointer": "/hits/draft_switch/26/context",
+      "line": 1,
+      "needle": "messagecontent.tsx",
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "4e25135927eddee1fb4b28674f1d434bda91adde1f6f5b9b270327e39b9bcc0b"
+    },
+    {
+      "path": "docs/audit-2026-10-17/desktop-data.md",
+      "jsonPointer": null,
+      "line": 32,
+      "needle": "messagecontent.tsx",
+      "context": "on-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "71e9ee030f1e0bb0945f67407051fff6238a58b8c054784dd81009af55988ce3"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "jsonPointer": null,
+      "line": 48,
+      "needle": "messagecontent.tsx",
+      "context": "未有正常Claude writer写null证据，影响限定该会话而非所有正常历史。和10-16 SWC-05导致整个磁盘会话目录查询失败的广泛影响不同。保留“本地损坏边界”条件，勿宣传正常writer可触发。2 pass /4 expect /Completed与报告一致。 |\n| R2-05 | 保留P3。`stripMarkdown.ts:6–8` 明确fenced code正文verbatim；`:14` 先移围栏，`:39–40` 后改暴露代码，Python正文实际变成name/main/abc。2 pass /6 expect /Completed、普通prose及简单代码对照充分；只影响回复整段“纯文本复制”，不是代码块独立复制、原消息丢失。 |\n| R2-06 | 建议P3。`MessageContent.tsx:158–175` 在原始文本扫描表格而不跟踪fence，`:316` hybrid先提取表格，故代码示例被拆成真正表格。真实TUI fixture输出保留尾部三反引号却丢失表格源码分隔符；简单含pipe代码与普通表格对照正常。不是支架自行渲染替代实现。 |\n| R2-07 | 建议P3。`MessageContent.tsx:177–181` 用split(\"\\u007c\")错误切escaped pipe，header两列使第三项expected-tail不被展示。真实TUI输出为left反斜杠/right，原last-column文本消失；属于内容误列/缺列，原消息仍在。规范明确escaped pipe属于cell内容，因此不是要求支持未承诺扩展。 |\n| R2-08 | 建议P3。`external-agent-changes.ts:121` 只识别Update/Add/Delete File，不含Move to；正常rename返回已移除旧路径却遗漏新路径，违背该模块`:16–20` “set of changed files / N files edited”归属目标。3 pass /6 expect /Completed，包括普通三种header对照。第三项JSON arguments异常确有观察，但是否实际Codex writer用JSON包装apply_patch尚待证明，应该继续标候选，不能扩为第二正式bug。未执行真实外部CLI、patch或UI review。 |\n\nR2-06与07共享 `root-tui-tables.log`，整组只有3 pass /",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "bc36d2bce383850cdff300651d6647353695858fd8062f81fe5519ae627b6b2c"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+      "jsonPointer": null,
+      "line": 49,
+      "needle": "messagecontent.tsx",
+      "context": "kdown.ts:6–8` 明确fenced code正文verbatim；`:14` 先移围栏，`:39–40` 后改暴露代码，Python正文实际变成name/main/abc。2 pass /6 expect /Completed、普通prose及简单代码对照充分；只影响回复整段“纯文本复制”，不是代码块独立复制、原消息丢失。 |\n| R2-06 | 建议P3。`MessageContent.tsx:158–175` 在原始文本扫描表格而不跟踪fence，`:316` hybrid先提取表格，故代码示例被拆成真正表格。真实TUI fixture输出保留尾部三反引号却丢失表格源码分隔符；简单含pipe代码与普通表格对照正常。不是支架自行渲染替代实现。 |\n| R2-07 | 建议P3。`MessageContent.tsx:177–181` 用split(\"\\u007c\")错误切escaped pipe，header两列使第三项expected-tail不被展示。真实TUI输出为left反斜杠/right，原last-column文本消失；属于内容误列/缺列，原消息仍在。规范明确escaped pipe属于cell内容，因此不是要求支持未承诺扩展。 |\n| R2-08 | 建议P3。`external-agent-changes.ts:121` 只识别Update/Add/Delete File，不含Move to；正常rename返回已移除旧路径却遗漏新路径，违背该模块`:16–20` “set of changed files / N files edited”归属目标。3 pass /6 expect /Completed，包括普通三种header对照。第三项JSON arguments异常确有观察，但是否实际Codex writer用JSON包装apply_patch尚待证明，应该继续标候选，不能扩为第二正式bug。未执行真实外部CLI、patch或UI review。 |\n\nR2-06与07共享 `root-tui-tables.log`，整组只有3 pass /10 expect /Completed；不能把每项分别计3个测试。R2-08日志含2项rename/正常对照与1项JSON候选，总3个测试，只1个正式发现。\n\nGFM契约已核对官方[4.5 Fenced code blocks](https://github.github.com/gfm/#fenced-code-block",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "bc36d2bce383850cdff300651d6647353695858fd8062f81fe5519ae627b6b2c"
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "jsonPointer": null,
+      "line": 55,
+      "needle": "messagecontent.tsx",
+      "context": "top/src/renderer/messages/AssistantMessageView.tsx:53` 将此函数结果交给复制 hook。\n- 证据：`evidence/root-copy-code.test.ts` 调用真实转换函数，普通 prose 强调和简单代码块为正常对照。日志 `root-copy-code.log` 为 2 pass / 6 expect / 0 fail/skip / Completed；未操作实际剪贴板。\n- 查重：上一轮 root/desktop 报告和主 findings 索引未找到相同根因确认项。\n\n### R2-06 [P3] TUI 把代码围栏内的表格源码提取成真实表格\n\n- 位置：`packages/tui/src/ui/components/MessageContent.tsx:164-175` 逐行检测表格，没有保留代码围栏状态；`:316` 在 Markdown parser 前运行该提取器。\n- 触发：回复用 md 代码围栏展示三行 Markdown 表格源码。预期管道符和分隔行作为代码保留；实际渲染为 flex table，原始管道符/分隔行消失，并把闭合围栏单独显示为三个反引号。\n- 影响：用户看到的示例结构与代码原文不符，难以照着抄写；原消息数据仍在，不属于持久数据丢失。\n- 证据：`evidence/root-tui-tables.test.ts` 第一项直接挂载真实 MessageContent 与本仓 renderer，用 PassThrough 捕获输出；普通 fenced code 中的管道符和真实表格为正常对照。原始 `root-tui-tables.log` 为 3 pass / 10 expect / 0 fail/skip / Completed（也包含 R2-07）。未启动真实终端或模型；logger 等包依赖读取安装的 dist，组件和 renderer 从源码导入。\n- 语义依据：代码围栏正文作为 literal text 保留，见 [CommonMark §4.5](https://spec.commonmark.org/0.31.2/#fenced-code-blocks)。\n- 查重：上一轮主 findings 和 root/TUI 报告未见同根因确认项。\n\n### R2-07 [P3] TUI 表格单元格含转义管道符时，后列正文从显示中消失\n\n- 位置：`packages/tui/src/ui/compon",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074"
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "jsonPointer": null,
+      "line": 64,
+      "needle": "messagecontent.tsx",
+      "context": ".log` 为 3 pass / 10 expect / 0 fail/skip / Completed（也包含 R2-07）。未启动真实终端或模型；logger 等包依赖读取安装的 dist，组件和 renderer 从源码导入。\n- 语义依据：代码围栏正文作为 literal text 保留，见 [CommonMark §4.5](https://spec.commonmark.org/0.31.2/#fenced-code-blocks)。\n- 查重：上一轮主 findings 和 root/TUI 报告未见同根因确认项。\n\n### R2-07 [P3] TUI 表格单元格含转义管道符时，后列正文从显示中消失\n\n- 位置：`packages/tui/src/ui/components/MessageContent.tsx:177-181` 直接按每个 `|` split；表格 renderer `:297-303` 按 header 列数渲染 data cell。\n- 触发：两列表格第一格包含合法的 `left \\| right`，第二格是 `expected-tail`。预期两格分别显示 `left | right` 和 `expected-tail`；实际被切成三格，显示前两格 `left` 加一个反斜杠、`right`，最后一格完全不显示。原始日志的 JSON 表示会将这个反斜杠转义成两个。\n- 影响：普通表格回复在显示层静默丢失后列内容并错列，原始消息没有改变；未宣称导出/复制或其他 host renderer 同样受影响。\n- 证据：上述 `root-tui-tables.test.ts` 第三项挂载真实组件，原始日志保存输入与扁平显示文本；同组真实普通表格为正常对照。只执行 isolated renderer，没有外部会话/UI自动化。\n- 语义依据：[GFM §4.10 Example 200](https://github.github.com/gfm/#example-200) 明确单元格内的转义管道符是正文的一部分；本组件采用的 marked-terminal 支持 GFM，但该前置手工提取器绕过 parser。\n- 查重：上一轮主 findings 和 root/TUI 报告未见同根因确认项。与 R2-06 的围栏状态错误分别记录，修复边界不同。\n\n### R2-08 [P3] Codex apply_patch 重命名的变更文件列表遗漏新路径\n\n- 位置：`packag",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-04-tui-cdp-config.md",
+      "jsonPointer": null,
+      "line": 31,
+      "needle": "messagecontent.tsx",
+      "context": "kages/cdp/README.md:7` 写 `npm install @cjhyy/code-shell-cdp`。\n- 建议：不发布就改 README 为 internal 说明；要公开则移除 private 并加入发布流程。\n- 阻塞 beta：是（公开文档误导安装不存在的包）。\n\n### M3 第三方来源归属缺随包 notice（法律，确证）\n- 证据：Yoga TS port（`tui/src/native-ts/yoga-layout/index.ts:1`、`enums.ts:1` 来自 Facebook Yoga）；CDP keymap（`cdp/src/keymap.ts:1` 翻译自 browser-use）；Claude Code restored-src 引用（`MessageContent.tsx:352`、`setup.ts:1`、`query.ts:1`）。均未见随包 license/notice。\n- 建议：逐项确认来源许可证，补 copyright/license/notice 并确保进发布包；来源不明的重写。\n- 阻塞 beta：建议阻塞到 provenance 明确。\n\n## Minor\n- m1 README（`:130` 中英）写 general preset 47 个 built-ins 且漏 `AddMarketplace`；实际 `preset/index.ts:34` GENERAL_BUILTINS 有 48 个，AddMarketplace 在 `:89`。\n- m2 `tui/README.md:34` 子命令表漏 `runs`（`main.ts:159` 已注册）。\n- m3 `CHANGELOG.md:34` 写 sample roles 在 `examples/agents/`（不存在，实际 `packages/desktop/resources/agents/`）；`:45` 写 `apiKeyRef`，实际 schema 用 `credentialId`（`schema.ts:170`）。\n- m4 clean checkout 未 build 时 source-dev 命令因找不到 `@cjhyy/code-shell-core` 失败（贡献者体验，npm 发布路径不受影响，workflow 会 build）。\n\n## Nit\n- `tui/README.md:15` 写 Node 17+、`cdp/README.md:15` ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "8102fe9a7a97ebc24023454ffa082ec4b3256ab61a0654026e16cbd2f53b9fea"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "jsonPointer": null,
+      "line": 26,
+      "needle": "messagecontent.tsx",
+      "context": "-design.md`](../specs/2026-05-16-tui-render-capability-design.md)\n\n---\n\n## File map\n\nPer milestone — files created or modified.\n\n**M1 — Contract & test floor**\n- Modify: `src/render/README.md` — rewrite to canonical API contract.\n- Modify: `src/render/index.ts` — add `Ansi` re-export.\n- Modify: `src/ui/components/TextInput.tsx`, `src/ui/components/MessageContent.tsx` — switch from `../../render/Ansi.js` to `../../render/index.js`.\n- Modify: `docs/architecture/11-render-tui-capability-plan.md` — drop the duplicate API table, point to the README.\n- Create: `tests/fixtures/render/keypress/plain.txt`, `ctrl-meta.txt`, `kitty.txt`, `modify-other-keys.txt`, `bracketed-paste.txt`, `mouse-wheel.txt` — captured byte fixtures for input parser tests.\n- Create: `tests/render-screen.test.ts` — layout / wide-char / ANSI / hyperlink / NoSelect / soft-wrap.\n- Create: `tests/render-diff.test.ts` — frame diff, blit, alt-screen clamp, resize.\n- Create: `tests/render-input.test.ts` — keypress parser against fixtures.\n\n**M2 — Scroll acceptance**\n- Commit (no edits): `src/u",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "16ed766fc22e90fdb9ccc959531fdf5ca77df062a90eca2fb80ba990ba786552"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "jsonPointer": null,
+      "line": 82,
+      "needle": "messagecontent.tsx",
+      "context": " Milestone M1 — Contract & Test Floor\n\n### Task 1: Re-export `<Ansi>` from `src/render/index.ts`\n\n**Why:** Two UI files deep-import `../../render/Ansi.js`. Per spec §4.2, anything `supported` must be reachable through `index.ts`.\n\n**Files:**\n- Modify: `src/render/index.ts`\n- Modify: `src/ui/components/TextInput.tsx:12`\n- Modify: `src/ui/components/MessageContent.tsx:12`\n\n- [ ] **Step 1: Add the re-export**\n\nAppend to `src/render/index.ts` after the existing `AlternateScreen` line:\n\n```ts\n// Ansi — pre-rendered ANSI string into the React tree\nexport { default as Ansi } from \"./Ansi.js\";\n```\n\n- [ ] **Step 2: Update the two consumers**\n\nIn `src/ui/components/TextInput.tsx`, replace line 12:\n\n```ts\nimport { Ansi } from \"../../render/Ansi.js\";\n```\n\nwith:\n\n```ts\nimport { Ansi } from \"../../render/index.js\";\n```\n\n(Merge into the existing `from \"../../render/index.js\"` line at the top if the file already imports from it — check first; if so, just add `Ansi` to that import list and drop the deep-path line.)\n\nIn `src/ui/components/MessageContent.tsx`, do the sam",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "16ed766fc22e90fdb9ccc959531fdf5ca77df062a90eca2fb80ba990ba786552"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "jsonPointer": null,
+      "line": 109,
+      "needle": "messagecontent.tsx",
+      "context": " line 12:\n\n```ts\nimport { Ansi } from \"../../render/Ansi.js\";\n```\n\nwith:\n\n```ts\nimport { Ansi } from \"../../render/index.js\";\n```\n\n(Merge into the existing `from \"../../render/index.js\"` line at the top if the file already imports from it — check first; if so, just add `Ansi` to that import list and drop the deep-path line.)\n\nIn `src/ui/components/MessageContent.tsx`, do the same on line 12.\n\n- [ ] **Step 3: Type-check**\n\nRun: `bun run typecheck`\nExpected: PASS, no `Ansi`-related errors.\n\n- [ ] **Step 4: Verify no other deep imports of Ansi remain**\n\nRun: `grep -rn \"render/Ansi\" src/ui src/cli 2>/dev/null`\nExpected: empty output.\n\n- [ ] **Step 5: Commit**\n\n```bash\ngit add src/render/index.ts src/ui/components/TextInput.tsx src/ui/components/MessageContent.tsx\ngit commit -m \"refactor(render): re-export <Ansi> from index; drop deep imports\"\n```\n\n---\n\n### Task 2: Rewrite `src/render/README.md` with API status table\n\n**Why:** Spec §4.1. The README is the single source of truth for the contract. The current README marks `ScrollBox` / `AlternateScreen` as \"c",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "16ed766fc22e90fdb9ccc959531fdf5ca77df062a90eca2fb80ba990ba786552"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "jsonPointer": null,
+      "line": 124,
+      "needle": "messagecontent.tsx",
+      "context": " **Step 3: Type-check**\n\nRun: `bun run typecheck`\nExpected: PASS, no `Ansi`-related errors.\n\n- [ ] **Step 4: Verify no other deep imports of Ansi remain**\n\nRun: `grep -rn \"render/Ansi\" src/ui src/cli 2>/dev/null`\nExpected: empty output.\n\n- [ ] **Step 5: Commit**\n\n```bash\ngit add src/render/index.ts src/ui/components/TextInput.tsx src/ui/components/MessageContent.tsx\ngit commit -m \"refactor(render): re-export <Ansi> from index; drop deep imports\"\n```\n\n---\n\n### Task 2: Rewrite `src/render/README.md` with API status table\n\n**Why:** Spec §4.1. The README is the single source of truth for the contract. The current README marks `ScrollBox` / `AlternateScreen` as \"currently unused\" — false; UI uses both.\n\n**Files:**\n- Modify: `src/render/README.md` (full rewrite, ~150 lines)\n\n- [ ] **Step 1: Replace `src/render/README.md` with the contract README**\n\nReplace the entire file with:\n\n````markdown\n# `src/render/` — CodeShell Terminal Render Engine\n\nA React-based terminal UI runtime: Yoga flexbox layout, virtual DOM reconciler,\nANSI output diffing, alt-screen + mou",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "16ed766fc22e90fdb9ccc959531fdf5ca77df062a90eca2fb80ba990ba786552"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-16-tui-render-capability-design.md",
+      "jsonPointer": null,
+      "line": 64,
+      "needle": "messagecontent.tsx",
+      "context": "ons`\n- `internal`: everything not exported from `src/render/index.ts`\n\n### 4.2 Export hygiene\n\n- Anything marked `supported` or `experimental` must be re-exported from `src/render/index.ts`.\n- `<Ansi>` is currently imported via `src/render/Ansi.js`. M1 adds an `Ansi` re-export from `index.ts` and migrates the two known consumers (`TextInput.tsx`, `MessageContent.tsx`) to import from `index.js`. The deep path stays working but README marks it `internal`.\n- `selection.ts` and other non-listed files stay un-exported. Adding a re-export is a contract change.\n\n### 4.3 Tests added in M1\n\nTest framework: `bun test`. All tests are pure unit tests against the in-process render engine. No real terminal, no Playwright, no docker. Terminal-specific behavior is verified via fixtures — captured escape-sequence byte strings stored under `tests/fixtures/render/`.\n\n| File | What it covers |\n|---|---|\n| `tests/render-screen.test.ts` | `<Box>` + `<Text>` layout (width / height / wrap), wide-char width, ANSI style application, hyperlink (OSC 8), `<NoSelect>` regions, soft",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9554d03ac57dfadcdd6fff16aa454958758b819a02ccbb9e0a8ee4ef4796fe5d"
+    }
+  ]
+}

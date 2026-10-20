@@ -4,6 +4,10 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { withProviderRequestProjection } from "../../model-request-boundary/context.js";
+import {
+  recordModelTraceAttemptError,
+  recordModelTraceAttemptResult,
+} from "../../model-traces/context.js";
 import type {
   ClientDefaults,
   LLMConfig,
@@ -18,8 +22,7 @@ import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
 import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
-import { capabilitiesFor, type Capability } from "../capabilities/index.js";
-import type { ProviderKindName } from "../provider-kinds.js";
+import { capabilitiesForConfig, type Capability } from "../capabilities/index.js";
 import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
 import {
@@ -98,15 +101,13 @@ export class AnthropicClient extends LLMClientBase {
   }
 
   /**
-   * Resolve the capability descriptor for the current model. `providerKind`
-   * defaults to "anthropic" (this client only serves the Anthropic API).
-   * Memoized — the model doesn't change mid-client.
+   * Resolve the same configured model capabilities used by tools/attachments.
+   * Memoized — the model configuration doesn't change mid-client.
    */
   private _capability: Capability | null = null;
   private get capability(): Capability {
     if (!this._capability) {
-      const kind = (this.config.providerKind ?? "anthropic") as ProviderKindName;
-      this._capability = capabilitiesFor(kind, this.model);
+      this._capability = capabilitiesForConfig(this.config);
     }
     return this._capability;
   }
@@ -211,6 +212,7 @@ export class AnthropicClient extends LLMClientBase {
             options.stream && options.onChunk
               ? await this.streamMessage(options, messages, tools, requestSignal)
               : await this.nonStreamMessage(options, messages, tools, requestSignal);
+          recordModelTraceAttemptResult(response);
           span.end({
             stopReason: response.stopReason,
             promptTokens: response.usage?.promptTokens,
@@ -220,6 +222,7 @@ export class AnthropicClient extends LLMClientBase {
           });
           return response;
         } catch (err) {
+          recordModelTraceAttemptError(err);
           span.fail(err);
           throw err;
         }

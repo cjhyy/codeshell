@@ -1,0 +1,13 @@
+{
+  "atUTC": "2026-10-17T15:33:21.253121+00:00",
+  "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+  "sha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+  "displayedRanges": [
+    [
+      567,
+      572
+    ]
+  ],
+  "text": " 567       // guests to stay alive instead of returning blank after display:none.\n 568       style={panelStyle}\n 569       data-theme-surface=\"panel\"\n 570       aria-hidden={hidden || undefined}\n 571       inert={hidden || undefined}\n 572     >",
+  "reason": "Parent root explicitly inert and aria-hidden when dock hidden; no hidden-focus issue established. Supplemental successful rg locator output was viewed in transcript, not separately file-captured; no failed direction or product run."
+}

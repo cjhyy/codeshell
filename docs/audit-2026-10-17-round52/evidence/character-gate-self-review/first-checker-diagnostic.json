@@ -1,0 +1,15 @@
+{
+  "toolChunk": "deddbb",
+  "exitCode": 1,
+  "stage": "Own metadata aggregate assert after checks.json written; no author method or product executed",
+  "error": "AssertionError at assert allChecks",
+  "firstFiles": [
+    "verify-metadata.first.py",
+    "checks.first.json",
+    "first-checker-stderr.txt"
+  ],
+  "rootCause": "Ownchecker normalized linktargets via resolve() but compared them against unresolved /tmp packetroot; macOS /tmp resolves to /private/tmp. All12targets exist, but alias mismatch produced false outside-root flags.",
+  "packetRootUnresolved": "/tmp/codeshell-audit-round102-character-themes",
+  "packetRootResolved": "/private/tmp/codeshell-audit-round102-character-themes",
+  "metadataOnlyCorrection": "Compare resolved linktarget to resolvedpacketroot. Preserve firstchecks/script/stderr. Do not execute author methods or product; no author packet mutation."
+}

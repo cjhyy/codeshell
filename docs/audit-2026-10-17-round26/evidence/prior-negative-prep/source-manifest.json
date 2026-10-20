@@ -1,0 +1,158 @@
+{
+  "worktree": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "parentReportedOldRound25Freeze": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "parentReportedCurrentHeadAfterFF": "d9d2c33ddd1b2edea28a719e4cd0a505a96c0b08",
+  "headVerifiedByGit": false,
+  "gitCommands": 0,
+  "firstHashCaptureUTC": "2026-10-17T10:28:59.488260+00:00",
+  "initialSemanticReadSha256": null,
+  "hashChronology": "Initial tool text reads did not separately save first-read hashes. First captured filesystem pins here are after all selected reads and parent FF notice; do not reconstruct pre-FF hashes or label all sources8b.",
+  "initialReadChronology": {
+    "connectionLivenessAndUseRemoteSocket": "Read before parent FF notice; first semantic-read SHA unavailable.",
+    "codexUserTextTurnInputAndSelectedCallers": "Read after parent FF notice; filesystem-only pin."
+  },
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "lineCount": 217,
+      "coveredLineCount": 217,
+      "bytes": 17639,
+      "firstCapturedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "instruction",
+      "note": "Instructions; full read earlier in same audit task and unchanged digest checked at round26 start."
+    },
+    {
+      "path": "packages/web/src/lib/connectionLiveness.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          106
+        ]
+      ],
+      "lineCount": 106,
+      "coveredLineCount": 106,
+      "bytes": 2886,
+      "firstCapturedSha256": "99aedd6c3718ae3ab40eb9d1b0ce1a415332bec3c861edd6d15ecedba63f2677",
+      "currentSha256": "99aedd6c3718ae3ab40eb9d1b0ce1a415332bec3c861edd6d15ecedba63f2677",
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "considered-static-source",
+      "note": "Static client connection-health state considered. Real timer/transport lifecycle: not a future pure-data execution recommendation."
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          145
+        ]
+      ],
+      "lineCount": 321,
+      "coveredLineCount": 145,
+      "bytes": 12268,
+      "firstCapturedSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "currentSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "considered-static-source",
+      "note": "Actual ConnectionLiveness import/constructor wiring only; hook/socket/storage/auth functions never invoked."
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-user-text.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "lineCount": 38,
+      "coveredLineCount": 38,
+      "bytes": 1495,
+      "firstCapturedSha256": "c1713b7f8e31074d92d533abc745def88c946202d3339c759c0b52564a2a809e",
+      "currentSha256": "c1713b7f8e31074d92d533abc745def88c946202d3339c759c0b52564a2a809e",
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "considered-static-source",
+      "note": "Zero-import user-text helper considered. Known leading-context removal has actual consumers; no independent ordinary producer violation established."
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/turn-input.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          32
+        ]
+      ],
+      "lineCount": 32,
+      "coveredLineCount": 32,
+      "bytes": 1137,
+      "firstCapturedSha256": "5d1fb46f58390a4790e63059b92635fd1bce2a3cab107e134c78c5297078b6a3",
+      "currentSha256": "5d1fb46f58390a4790e63059b92635fd1bce2a3cab107e134c78c5297078b6a3",
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "considered-static-source",
+      "note": "Pure reference-string builder considered; no new independent defect, attachment scope excluded."
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-history.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          45,
+          87
+        ],
+        [
+          98,
+          123
+        ]
+      ],
+      "lineCount": 258,
+      "coveredLineCount": 69,
+      "bytes": 8844,
+      "firstCapturedSha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "currentSha256": "7b6eb8798f83dd14783eab1f5db8b2796255f21b3779a690d5ed1693a0fff7f9",
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "considered-static-source",
+      "note": "Actual history/live user-text consumers only; no parser, file I/O, real transcript or user HOME access."
+    },
+    {
+      "path": "packages/coding/src/cc-orchestrator/codex-session-discovery.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          354,
+          398
+        ]
+      ],
+      "lineCount": 398,
+      "coveredLineCount": 45,
+      "bytes": 14325,
+      "firstCapturedSha256": "83703ced8d60abe1a5ea89e8eeaad40dd2fdc38f957d50ce795df0ed12d98e6e",
+      "currentSha256": "83703ced8d60abe1a5ea89e8eeaad40dd2fdc38f957d50ce795df0ed12d98e6e",
+      "frozenSha256": null,
+      "frozenGitBlob": null,
+      "role": "considered-static-source",
+      "note": "Documented parts shape and title consumer only. Original sed upper bound400 ended at actual EOF398; no source loss or failure."
+    }
+  ],
+  "sourcePinCount": 7,
+  "newProductSourceCount": 6,
+  "semanticReadLineCountWithoutInstruction": 435,
+  "sourceScopeRule": "Hashes pin entire file bytes. Only declared full/selected scope is semantic reading; source sections already read are not counted twice.",
+  "frozenComparison": "Not performed: parent required0Git. Future adoption requires Root to establish its new frozen/current/main comparison."
+}

@@ -1,0 +1,64 @@
+{
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "unpromotedLead": {
+    "topic": "Numeric min/max enforcement on edit/save",
+    "status": "Unconfirmed, not promoted in this bounded audit",
+    "proven": [
+      "ParamControls69–74 sets min/max input attributes and conditionally Number/undefined onChange.",
+      "Current Input wrapper forwards props; Card164 patches paramValues directly; current hook persist constructs modelConnections payload; save invokes persist.",
+      "Current modelSelectionPatch131–138 has bounds compatibility checks only during model selection; current record schema259 is unknown-valued."
+    ],
+    "notEstablished": [
+      "Current must-reject contract for every edited out-of-range number versus permissive chosen values.",
+      "Ordinary DOM event/constraint-validation observations, final authority/store processing or actual error consumer.",
+      "Provider rejection, model request, real settings persistence outcome."
+    ],
+    "historicalSpecStatus": "Old design open question is context, not proof of current implementation correctness or exemption."
+  },
+  "ordinaryNegativeObservations": [
+    "Empty params returns null; enum/toggle preserve explicit typed values; numeric0 is preserved, blank emitsundefined; text forwards string.",
+    "Current buildInstance seeds nonundefined defaults includingfalse/0; modelSelectionPatch supports compatible values and reseeds defaults when incompatible.",
+    "Generic applyParams explicitly skips unset/undefined and unknown names; reading this helper does not prove each text provider invokes it."
+  ],
+  "execution": {
+    "product": 0,
+    "helper": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "DOM": 0,
+    "timers": 0,
+    "UI": 0,
+    "network": 0,
+    "native": 0,
+    "Git": 0,
+    "realConfigOrUserDataReads": 0
+  },
+  "tests": "62+76 declaration lines read; no test function/render helper/import executed, no runtime pass claimed. Old logs stay historic.",
+  "authorityBoundary": "settingsBus27→updateScopedSettings import is navigation stop; no authority/provider/native/credential mechanism expansion.",
+  "metadataDiagnostics": [
+    {
+      "toolChunk": "7657f7",
+      "exitCode": 0,
+      "metadataPresentationTruncated": true,
+      "maxOutputTokens": 6500,
+      "originalTokenCount": 12559,
+      "warning": "Warning: truncated output (original token count: 12559)",
+      "requestedRows": {
+        "parameter-bounds": 19,
+        "numeric-save": 24,
+        "model-selection-patch": 0
+      },
+      "actualReadClaim": "Do not claim all requested records fully read. Subsequent bounded presentations separately recorded. Original full contexts remain focused-history.json; not regenerated raw stdout.",
+      "productFailure": false,
+      "sourceOrProductRerun": false
+    }
+  ],
+  "metadataCommandFailures": 0,
+  "metadataTruncatedPresentations": 1,
+  "laterExactCausePresentationsUntruncated": true
+}

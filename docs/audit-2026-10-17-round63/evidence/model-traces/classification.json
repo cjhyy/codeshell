@@ -1,0 +1,41 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "newRelatedFindings": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "result": "Finite static negative; no ordinary producer-consumer contradiction established.",
+  "oldFullGate": {
+    "path": "packages/core/src/model-traces/classification.ts",
+    "canonical": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json#/files/7",
+    "scope": "full static read; not imported/executed",
+    "currentBodyReads": 0
+  },
+  "ordinaryEvidence": [
+    {
+      "range": "native-frames.ts:58-83",
+      "observation": "Per-message id sequence accumulates raw chunks, final UTF8 decoding follows reassembly; assembled model_trace is validated before return. No runtime or broad transport correctness claim."
+    },
+    {
+      "range": "native-process.ts:164-188,126-152",
+      "observation": "Real data channel sends complete decoder strings into accept, then ordinary start/finish shape and projected input/output to record callback. Native launcher/writer and actual FD transport not audited."
+    },
+    {
+      "range": "sanitize.ts:24-79,96-145",
+      "observation": "Diagnostic clone is separate from source arrays/objects; bounded content and state accompany return value. No arbitrary secret formats or malformed DTOs used as findings."
+    },
+    {
+      "range": "context.ts:222-245,757-770,787-788",
+      "observation": "Actual capture and event plumbing consume sanitized value/state and feed the event writer; no store, timer, account or policy runtime validation."
+    }
+  ],
+  "limits": [
+    "No concrete new normal-input counterexample established; finite0 is not proof of all valid traces, truncation/retention policy or secrets coverage.",
+    "Actual native producer/launcher, storage lifecycle, provider wire format and GUI consumers remain outside this packet.",
+    "Existing Core model-trace backend/i18n failed dynamic directions remain permanently skipped; static source and declaration reading are not replacement verification."
+  ],
+  "runtimeValidation": "none"
+}

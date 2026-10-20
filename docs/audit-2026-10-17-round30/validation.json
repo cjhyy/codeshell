@@ -1,0 +1,15 @@
+{
+  "baseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productReruns": 0
+  },
+  "validations": [
+    "evidence/root-validation.json",
+    "evidence/data-validation.json"
+  ],
+  "note": "Metadata assembly, old successful tests and existing declarations are not current runtime validation."
+}

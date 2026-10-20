@@ -1,0 +1,6 @@
+{
+  "exitCode": 0,
+  "method": "migrate.py",
+  "methodSHA256": "e37e94b40be0c673ee09137a36da3bd347a1bb88d2c19765c234afba38c2c3b3",
+  "kind": "Independent standard-library metadata adapter; no product execution; preserve migration-first outputs"
+}

@@ -1,0 +1,71 @@
+{
+  "frozen": true,
+  "files": [
+    {
+      "path": "canonical-objects.json",
+      "bytes": 1151,
+      "sha256": "eea683ca80037e8353fa0fe7d84fbc139ef9b947054617d3d152cf185f65d101"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 260,
+      "sha256": "d0ee79f1668c06c233e27aebfbda13f3e5ada979e12cee4a2039794ef5647c23"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 507,
+      "sha256": "fd99903b9c570188d64ff58f4cb2e971fbcfdf9d9916f2030c21b8db1197a020"
+    },
+    {
+      "path": "history-batch-first-exit.json",
+      "bytes": 16,
+      "sha256": "982b9e9bfb10ffe83cad665807abcfd3fa97b37822db5ab7831157a499548a9e"
+    },
+    {
+      "path": "history-batch-first.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "history-batch-first.stdout",
+      "bytes": 364,
+      "sha256": "092835e41b5cee60b118fe5af34060a2f0c883e4d3d42092f1f7c094458e7c1a"
+    },
+    {
+      "path": "history-batch.json",
+      "bytes": 1299889,
+      "sha256": "2c09e39e6c332c5f04395af3c02d637bc3dabec28a7045c9817aa7e98ae88b27"
+    },
+    {
+      "path": "history-batch.py",
+      "bytes": 2394,
+      "sha256": "8c78d2f666cd150fdad81342aae3cf2b1324ee1bc699b945e4117120d1db8cdc"
+    },
+    {
+      "path": "initial-pin.py",
+      "bytes": 653,
+      "sha256": "3e6af0bd406e71baf7b589277dd0a90c0938ec965e262077d97d130c6b7636a3"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 581,
+      "sha256": "5c3c476d78f2613225a8cbc0367b04c5dd01641724113c5b288f1a9f49b91f62"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 718,
+      "sha256": "917ab0359e14dc8df4793029bff49fa456e3f14005824a3d72ae33e43e8493b2"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2108,
+      "sha256": "c4a8776f170341bff0b0a4896032f7609cd261c3c6c7560adb0fbed867f160df"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 2411,
+      "sha256": "ef89e209a51984f2e8e554d3de0e83311f2877326852877134f0c903646cb82a"
+    }
+  ],
+  "scope": "Self-excluded exact Root125 metadata evidence only; no product execution."
+}

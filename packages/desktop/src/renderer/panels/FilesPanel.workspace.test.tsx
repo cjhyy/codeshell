@@ -39,6 +39,30 @@ function findElement(node: unknown, tagName: string): any {
   return undefined;
 }
 
+function findByProps(node: any, matches: (props: Record<string, any>) => boolean): any {
+  if (matches(reactPropsOf(node))) return node;
+  for (const child of node.childNodes ?? []) {
+    const found = findByProps(child, matches);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+// Root selection remains a component contract here; real pointer/keyboard
+// selection through the portaled menu is covered by the dropdown browser fixture.
+function rootSelectProps(): Record<string, any> {
+  const visit = (fiber: any): Record<string, any> | undefined => {
+    if (!fiber) return undefined;
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    return visit(fiber.child) ?? visit(fiber.sibling);
+  };
+  const current = (root as unknown as { _internalRoot: { current: unknown } })._internalRoot
+    .current;
+  const props = visit(current);
+  if (!props) throw new Error("Expected the workspace root selector");
+  return props;
+}
+
 function textOf(node: any): string {
   return node.nodeType === 3
     ? (node.nodeValue ?? node.textContent ?? "")
@@ -137,6 +161,104 @@ afterEach(async () => {
 });
 
 describe("FilesPanel workspace identity", () => {
+  test.each([
+    ["win32", "C:\\owned\\repo", "C:\\owned\\repo\\报告 alpha.txt", "报告 alpha.txt"],
+    ["win32", "\\\\owned-server\\share", "\\\\owned-server\\share\\alpha.txt", "alpha.txt"],
+    ["linux", "/repo", "/repo/back\\slash.txt", "back\\slash.txt"],
+    ["darwin", "/repo", "/repo/ 报告 alpha.txt ", " 报告 alpha.txt "],
+  ])(
+    "uses native file labels on %s while preserving the full comment locator",
+    async (platform, directory, file, basename) => {
+      window.codeshell.platform = platform;
+      cwd = directory;
+      project = {
+        ...project!,
+        path: directory,
+        roots: [{ id: "primary", path: directory, name: "repo", addedAt: 1 }],
+      };
+      engineSessionId = undefined;
+      sessionMainRootId = undefined;
+      revealPath = file;
+      revealNonce += 1;
+      await render();
+
+      const header = findByProps(
+        container,
+        (props) => props.className === "truncate text-sm font-medium text-foreground",
+      );
+      await act(async () => {
+        const button = findByProps(container, (props) => props["aria-label"] === "评论此行");
+        expect(button).toBeDefined();
+        reactPropsOf(button).onClick({ currentTarget: button });
+        await flushMicrotasks();
+      });
+      const textarea = findElement(container, "TEXTAREA");
+      expect(reactPropsOf(textarea)["aria-label"]).toBe(`本地评论 · ${basename}:1`);
+      expect(textOf(header)).toBe(basename);
+
+      const anchors: any[] = [];
+      const onAnchor = (event: Event) => anchors.push((event as CustomEvent).detail.anchor);
+      window.addEventListener("codeshell:add-anchor", onAnchor);
+      try {
+        await act(async () => {
+          reactPropsOf(textarea).onChange({ target: { value: "Owned comment" } });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          reactPropsOf(textarea).onKeyDown({
+            key: "Enter",
+            ctrlKey: true,
+            nativeEvent: { isComposing: false },
+            preventDefault() {},
+          });
+          await flushMicrotasks();
+        });
+        expect(anchors).toHaveLength(1);
+        expect(anchors[0]).toMatchObject({
+          kind: "file",
+          label: `${basename}:1`,
+          locator: { 文件: file, 行号: "1", 代码: "content" },
+          comment: "Owned comment",
+        });
+        expect(findElement(container, "TEXTAREA")).toBeUndefined();
+      } finally {
+        window.removeEventListener("codeshell:add-anchor", onAnchor);
+      }
+    },
+  );
+
+  test.each([
+    ["win32", "C:\\", "C:\\README.md", "C:\\"],
+    ["linux", "/", "/README.md", "/"],
+    ["linux", "/repo", "/repo/back\\slash.md", "/repo"],
+  ])(
+    "loads a Markdown image relative to the native file's directory on %s",
+    async (platform, directory, file, expectedCwd) => {
+      window.codeshell.platform = platform;
+      const reads: Array<[string, { cwd?: string } | undefined]> = [];
+      window.codeshell.readImageDataUrl = async (path, options) => {
+        reads.push([path, options]);
+        return "data:image/png;base64,AA==";
+      };
+      window.codeshell.readLocalFilePreview = async (path) => ({
+        path,
+        text: "![owned](owned.png)",
+        size: 19,
+      });
+      cwd = null;
+      project = undefined;
+      engineSessionId = undefined;
+      sessionMainRootId = undefined;
+      revealCwd = directory;
+      revealPath = file;
+      revealNonce += 1;
+      await render();
+      expect(reads).toHaveLength(1);
+      expect(reads[0][1]).toEqual({ cwd: expectedCwd });
+      expect(reactPropsOf(findElement(container, "IMG")).src).toBe("data:image/png;base64,AA==");
+    },
+  );
+
   test("keeps an external reveal when switching workspaces from a secondary root", async () => {
     project = {
       ...project!,
@@ -145,7 +267,7 @@ describe("FilesPanel workspace identity", () => {
     revealConsumed = true;
     await render();
     await act(async () => {
-      reactPropsOf(findElement(container, "SELECT")).onChange({ target: { value: "secondary" } });
+      rootSelectProps().onChange("secondary");
       await flushMicrotasks();
     });
 
@@ -235,9 +357,17 @@ describe("FilesPanel workspace identity", () => {
   });
 
   test("keeps a manually hidden tree hidden after previewing an external file", async () => {
-    // The first button is the tree visibility control in the panel toolbar.
+    // Find the actual visibility action; the tree has its own refresh control.
+    const findHideTree = (node: any): any => {
+      if (reactPropsOf(node)["aria-label"] === "隐藏文件树") return node;
+      for (const child of node.childNodes ?? []) {
+        const found = findHideTree(child);
+        if (found) return found;
+      }
+      return undefined;
+    };
     await act(async () => {
-      reactPropsOf(findElement(container, "BUTTON")).onClick();
+      reactPropsOf(findHideTree(container)).onClick();
       await flushMicrotasks();
     });
     expect(findElement(container, "INPUT")).toBeUndefined();
@@ -349,10 +479,10 @@ describe("FilesPanel workspace identity", () => {
     revealConsumed = true;
     await render();
 
-    const select = findElement(container, "SELECT");
-    expect(select).toBeDefined();
+    const select = rootSelectProps();
+    expect(select.options.map((option: { value: string }) => option.value)).toContain("secondary");
     await act(async () => {
-      reactPropsOf(select).onChange({ target: { value: "secondary" } });
+      select.onChange("secondary");
       await flushMicrotasks();
     });
 
@@ -378,14 +508,12 @@ describe("FilesPanel workspace identity", () => {
     await render();
 
     expect(readSessionDirs).toContainEqual(["old-session", "old-main", WORKTREE]);
-    const select = findElement(container, "SELECT");
-    const optionValues = (select?.childNodes ?? []).map(
-      (option: unknown) => reactPropsOf(option).value,
-    );
+    const select = rootSelectProps();
+    const optionValues = select.options.map((option: { value: string }) => option.value);
     expect(optionValues).toEqual(["old-main", "new-primary"]);
 
     await act(async () => {
-      reactPropsOf(select).onChange({ target: { value: "new-primary" } });
+      select.onChange("new-primary");
       await flushMicrotasks();
     });
     expect(readSessionDirs).toContainEqual(["old-session", "new-primary", "/notes"]);

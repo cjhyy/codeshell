@@ -1,0 +1,25 @@
+{
+  "baseline": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "findings": [
+    {
+      "id": "ERROR-R22-01",
+      "priority": "P3",
+      "title": "Billing/quota HTTP429 loses its cause and becomes a temporary rate-limit hint",
+      "source": "packages/core/src/llm/providers/openai.ts",
+      "line": 1354,
+      "helper": "packages/core/src/engine/friendly-error.ts:45",
+      "trigger": "Documented OpenAI billing/quota condition delivered as SDK APIError.status429; other compatible endpoints conditional on equivalent response",
+      "actual": "Wrapper drops original message/code/type into generic LLMRateLimitError; actual helper recommends waiting/lowering frequency/switching model rather than fixing quota or billing",
+      "expected": "Retain and classify billing/quota cause distinctly from transient request throttling",
+      "evidence": "friendly-error.md",
+      "validation": "12focused/25expect actual helper and lightweight exception; provider/SDK/TurnLoop connection source-only",
+      "limits": [
+        "No SDK429 construction or actual wrapper execution",
+        "No provider/SDK/Engine/network/account/auth/custody/retry/timer run",
+        "Status-prefixed owned message is a supporting characterization, not proof of SDK message formatting",
+        "Static retry branch noted without measured request count or wait duration"
+      ],
+      "externalContract": "evidence/root-external-contract.json"
+    }
+  ]
+}

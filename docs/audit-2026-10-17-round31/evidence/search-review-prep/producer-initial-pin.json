@@ -1,0 +1,14 @@
+{
+  "parentReportedContext": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "files": [
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "bytes": 27146,
+      "lines": 814,
+      "firstSemanticReadSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "captureTiming": "Before independent selected producer source read; function/field rg locators only",
+      "capturedUtc": "2026-10-17T11:54:16.232263+00:00"
+    }
+  ]
+}

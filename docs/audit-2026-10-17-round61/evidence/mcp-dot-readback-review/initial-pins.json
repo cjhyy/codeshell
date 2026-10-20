@@ -1,0 +1,55 @@
+{
+  "rootReportedBaseline": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+  "gitCertified": false,
+  "instructionReuse": "Same SHA previously read; no instruction body161",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T20:19:50.812896+00:00",
+      "timing": "before any own prep161 body/nav"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T20:19:50.814784+00:00",
+      "timing": "before any own prep161 body/nav"
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "lineCount": 1139,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "pinnedAtUTC": "2026-10-17T20:19:50.815946+00:00",
+      "timing": "before any own prep161 body/nav"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "lineCount": 731,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "pinnedAtUTC": "2026-10-17T20:19:50.816724+00:00",
+      "timing": "before any own prep161 body/nav"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lineCount": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "pinnedAtUTC": "2026-10-17T20:19:50.818366+00:00",
+      "timing": "before any own prep161 body/nav"
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lineCount": 1892,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "pinnedAtUTC": "2026-10-17T20:19:50.819569+00:00",
+      "timing": "before any own prep161 body/nav"
+    }
+  ]
+}

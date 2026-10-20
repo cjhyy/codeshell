@@ -1,0 +1,22 @@
+{
+  "parentReportedContext": "646f9243e03b50c49878f966f18ae98b08919177",
+  "atUTC": "2026-10-17T12:24:56.312992+00:00",
+  "prepOnly": true,
+  "files": [
+    {
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "bytes": 927,
+      "lineCount": 21,
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "pinBeforeSemanticRead": true
+    },
+    {
+      "path": "packages/core/src/runtime/utf8-cut.test.ts",
+      "bytes": 2163,
+      "lineCount": 51,
+      "sha256": "dae1bd9bde8a4f0fcee66aaf3045fe1d7ff288372e9af396d2f8ff7b62e26f10",
+      "pinBeforeSemanticRead": true
+    }
+  ],
+  "productRuns": 0
+}

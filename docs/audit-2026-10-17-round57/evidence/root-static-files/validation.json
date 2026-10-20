@@ -1,0 +1,23 @@
+{
+  "productAttempts": 1,
+  "productReruns": 0,
+  "passedTests": 3,
+  "expectations": 8,
+  "failedTests": 0,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round57/evidence/static-path.test.ts"
+      ],
+      "stdout": "static-path-first.stdout",
+      "stderr": "static-path-first.stderr",
+      "exit": "static-path-first-exit.json",
+      "firstAttempt": true
+    }
+  ],
+  "limitations": "Isolated unit handler execution only; no HTTP server/socket/browser/model/worker/Core Engine/proxy/native process/account or business-network calls. No claims about actual built assets, Electron, auth, custody, platform matrix. All existing test source declarations not run."
+}

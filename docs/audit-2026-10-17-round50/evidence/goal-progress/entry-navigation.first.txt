@@ -1,0 +1,5 @@
+packages/desktop/src/renderer/ChatView.tsx:183:  onExtendGoal?: (opts: {
+packages/desktop/src/renderer/ChatView.tsx:419:  onExtendGoal,
+packages/desktop/src/renderer/ChatView.tsx:1803:            onExtendGoal={onExtendGoal}
+packages/desktop/src/renderer/App.tsx:1062:    extendGoal,
+packages/desktop/src/renderer/App.tsx:2657:                    onExtendGoal={extendGoal}

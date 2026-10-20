@@ -1,0 +1,38 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootContextCommitExternal": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinnedUTC": "2026-10-17T16:54:18.631325+00:00",
+      "timing": "Before current90 body/locator review"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinnedUTC": "2026-10-17T16:54:18.634742+00:00",
+      "timing": "Before current90 body/locator review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "bytes": 3183,
+      "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+      "lines": 103,
+      "pinnedUTC": "2026-10-17T16:54:18.635683+00:00",
+      "timing": "Before current90 body/locator review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+      "bytes": 2402,
+      "sha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+      "lines": 62,
+      "pinnedUTC": "2026-10-17T16:54:18.636778+00:00",
+      "timing": "Before current90 body/locator review"
+    }
+  ]
+}

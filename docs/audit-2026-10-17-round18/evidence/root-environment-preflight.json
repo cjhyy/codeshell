@@ -1,0 +1,7 @@
+{
+  "base": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "source": "packages/web/src/lib/environment.ts",
+  "bytes": 1644,
+  "sha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+  "nature": "Actual source/Git bytes only; no dependency resolver, producer import, storage or navigation"
+}

@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { PluginInstallError } from "@cjhyy/code-shell-core";
+import { PluginInstallError, type PluginCatalogEntry } from "@cjhyy/code-shell-core";
 import { updatePluginEntry } from "./plugins-service.js";
 
 function services(
-  catalog: Array<{ installKey: string; name: string; marketplace: string | null }>,
+  catalog: Array<
+    Pick<PluginCatalogEntry, "installKey" | "name" | "marketplace" | "installationKind">
+  >,
 ) {
   const calls: string[] = [];
   return {
@@ -35,6 +37,7 @@ describe("updatePluginEntry", () => {
         installKey: "media-downloader@mimi-plugins",
         name: "media-downloader",
         marketplace: "mimi-plugins",
+        installationKind: "marketplace",
       },
     ]);
 
@@ -55,6 +58,7 @@ describe("updatePluginEntry", () => {
         installKey: "media-downloader@mimi-plugins",
         name: "media-downloader",
         marketplace: "mimi-plugins",
+        installationKind: "marketplace",
       },
     ]);
 
@@ -64,7 +68,12 @@ describe("updatePluginEntry", () => {
 
   test("routes local installs through their recorded source updater", async () => {
     const fake = services([
-      { installKey: "mimi-video@local", name: "mimi-video", marketplace: "local" },
+      {
+        installKey: "mimi-video@local",
+        name: "mimi-video",
+        marketplace: "local",
+        installationKind: "direct",
+      },
     ]);
 
     await expect(updatePluginEntry("mimi-video@local", fake.value)).resolves.toEqual({
@@ -76,8 +85,8 @@ describe("updatePluginEntry", () => {
 
   test("fails closed for an ambiguous legacy bare name", async () => {
     const fake = services([
-      { installKey: "same@one", name: "same", marketplace: "one" },
-      { installKey: "same@two", name: "same", marketplace: "two" },
+      { installKey: "same@one", name: "same", marketplace: "one", installationKind: "marketplace" },
+      { installKey: "same@two", name: "same", marketplace: "two", installationKind: "marketplace" },
     ]);
 
     await expect(updatePluginEntry("same", fake.value)).rejects.toBeInstanceOf(PluginInstallError);
@@ -85,7 +94,14 @@ describe("updatePluginEntry", () => {
   });
 
   test("does not reinstall when refreshing the marketplace fails", async () => {
-    const fake = services([{ installKey: "media@shop", name: "media", marketplace: "shop" }]);
+    const fake = services([
+      {
+        installKey: "media@shop",
+        name: "media",
+        marketplace: "shop",
+        installationKind: "marketplace",
+      },
+    ]);
     fake.value.refreshMarket = async (name: string) => {
       fake.calls.push(`refresh:${name}`);
       return { ok: false as const, error: "offline" };

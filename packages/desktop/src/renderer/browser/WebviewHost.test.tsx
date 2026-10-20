@@ -85,4 +85,45 @@ describe("WebviewHost readiness", () => {
     ]);
     expect(bucketRegistrations).toHaveLength(1);
   });
+
+  test("a retained hidden tab cannot replace the selected automation guest", async () => {
+    const render = (active: boolean) => (
+      <WebviewHost
+        initialUrl="https://example.test"
+        bucket="project::session"
+        engineSessionId="session-1"
+        active={active}
+      />
+    );
+    await act(async () => {
+      root?.render(render(false));
+      await flushMicrotasks();
+    });
+    const view = findElement(container, "WEBVIEW");
+    view.getWebContentsId = () => 42;
+    await act(async () => {
+      view.dispatchEvent(new Event("dom-ready"));
+      await flushMicrotasks();
+    });
+    expect(guestRegistrations).toEqual([]);
+    expect(bucketRegistrations).toEqual([]);
+
+    await act(async () => {
+      root?.render(render(true));
+      await flushMicrotasks();
+    });
+    expect(findElement(container, "WEBVIEW")).toBe(view);
+    expect(guestRegistrations).toHaveLength(1);
+    expect(bucketRegistrations).toHaveLength(1);
+
+    await act(async () => {
+      root?.render(render(false));
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      view.dispatchEvent(new Event("dom-ready"));
+      await flushMicrotasks();
+    });
+    expect(guestRegistrations).toHaveLength(1);
+  });
 });

@@ -1,0 +1,132 @@
+[
+  {
+    "path": "packages/core/src/tool-system/builtin/agent.ts",
+    "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+    "displayAt": "2026-10-17T19:47:42.672335+00:00",
+    "displayedLineRanges": [
+      [
+        51,
+        115
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 51,
+        "last": 115,
+        "text": "51: export interface AgentTypeOverrides {\n52:   resolvedType?: string;\n53:   model?: string;\n54:   maxTurns?: number;\n55:   toolAllowlist?: string[];\n56:   skillAllowlist?: string[];\n57:   sandboxMode?: AgentDefinition[\"sandbox\"];\n58:   mcpAllowlist?: string[];\n59:   appendSystemPrompt?: string;\n60: }\n61: \n62: /** Preferred default role when the caller omits agent_type but roles exist. */\n63: const DEFAULT_AGENT_TYPE = \"general-purpose\";\n64: \n65: /**\n66:  * Resolve an `agent_type` against the role registry into spawn overrides.\n67:  *\n68:  * - Omitted type + non-empty registry → fall back to a configured role\n69:  *   (\"general-purpose\" if present, else the first available) instead of\n70:  *   running a nameless ephemeral agent. Relaxed from the earlier \"throw when\n71:  *   agent_type omitted\": the model habitually omits it, and a hard error just\n72:  *   turned every spawn into a failure. Falling back to a real role keeps the\n73:  *   tool-allowlist / system-prompt benefits without breaking the call.\n74:  * - Omitted type + empty registry → empty overrides (true ephemeral; nothing\n75:  *   to fall back to).\n76:  * - Unknown explicit type → throw, so the LLM gets a clear correction rather\n77:  *   than silently running a generic agent.\n78:  */\n79: export function resolveAgentTypeOverrides(\n80:   agentType: string | undefined,\n81:   registry: AgentDefinitionRegistry | undefined,\n82: ): AgentTypeOverrides {\n83:   const available = registry?.list().map((d) => d.name) ?? [];\n84:   let resolvedType = agentType;\n85:   if (!resolvedType) {\n86:     if (available.length === 0) return {};\n87:     resolvedType = available.includes(DEFAULT_AGENT_TYPE) ? DEFAULT_AGENT_TYPE : available[0]!;\n88:   }\n89:   const def = registry?.get(resolvedType);\n90:   if (!def) {\n91:     const list = available.join(\", \") || \"(none defined)\";\n92:     throw new Error(`unknown agent_type '${resolvedType}'. Available: ${list}`);\n93:   }\n94:   return {\n95:     resolvedType,\n96:     model: def.model,\n97:     maxTurns: def.maxTurns,\n98:     toolAllowlist: def.tools,\n99:     skillAllowlist: namespacePluginSkills(def.skills, def.source, def.pluginName),\n100:     sandboxMode: def.sandbox,\n101:     mcpAllowlist: def.mcp,\n102:     appendSystemPrompt: def.systemPrompt,\n103:   };\n104: }\n105: \n106: /**\n107:  * A plugin-bundled agent's frontmatter lists its own skills by BARE name\n108:  * (`skills: director-skill`), matching Claude Code's convention where a\n109:  * plugin agent references same-plugin skills unqualified. But the skill\n110:  * scanner registers plugin skills under their NAMESPACED name\n111:  * (`mimi-video:director-skill`), and the allowlist filter is an exact match —\n112:  * so a bare entry never matches and the sub-agent reports the skill \"not\n113:  * found\", forcing it to fall back to reading SKILL.md by hand.\n114:  *\n115:  * Bridge the two conventions: for a plugin-source agent, rewrite each bare"
+      }
+    ],
+    "pinReference": "initial-source-pins.json"
+  },
+  {
+    "path": "packages/core/src/engine/subagent-spawner.ts",
+    "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+    "displayAt": "2026-10-17T19:47:42.673958+00:00",
+    "displayedLineRanges": [
+      [
+        29,
+        40
+      ],
+      [
+        328,
+        357
+      ],
+      [
+        414,
+        430
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 29,
+        "last": 40,
+        "text": "29: \n30: export function resolveChildLlm(\n31:   modelKey: string | undefined,\n32:   pool: ModelPool | undefined,\n33:   parentLlm: LLMConfig,\n34: ): LLMConfig {\n35:   if (modelKey && pool?.has(modelKey)) {\n36:     const resolved = pool.resolveLLMConfig(modelKey);\n37:     if (resolved) return resolved;\n38:   }\n39:   return parentLlm;\n40: }"
+      },
+      {
+        "first": 328,
+        "last": 357,
+        "text": "328:       const scope = resolveChildToolScope(\n329:         request.toolAllowlist,\n330:         deps.parentConfig.disabledBuiltinTools,\n331:         deps.parentConfig.enabledBuiltinTools,\n332:       );\n333:       const childConfig: EngineConfig = {\n334:         llm: resolveChildLlm(request.model, deps.modelPool, deps.parentConfig.llm),\n335:         clientDefaults: {\n336:           ...(deps.parentConfig.clientDefaults ?? {}),\n337:           retryMaxAttempts: 2,\n338:         },\n339:         cwd: deps.cwd,\n340:         workspaceContext: deps.workspaceContext ?? deps.parentConfig.workspaceContext,\n341:         permissionMode: deps.permissionMode,\n342:         preset: deps.presetName,\n343:         enabledBuiltinTools: scope.enabled,\n344:         disabledBuiltinTools: scope.disabled,\n345:         composition: deps.parentConfig.composition,\n346:         modules: deps.parentConfig.modules,\n347:         builtinToolHost: deps.parentConfig.builtinToolHost,\n348:         documentParserExecutable: deps.parentConfig.documentParserExecutable,\n349:         customSystemPrompt: deps.parentConfig.customSystemPrompt,\n350:         appendSystemPrompt:\n351:           [deps.parentConfig.appendSystemPrompt, request.appendSystemPrompt]\n352:             .filter(Boolean)\n353:             .join(\"\\n\\n\") || undefined,\n354:         responseLanguage: deps.parentConfig.responseLanguage,\n355:         userProfile: deps.parentConfig.userProfile,\n356:         instructions: deps.parentConfig.instructions,\n357:         maxTurns: request.maxTurns,"
+      },
+      {
+        "first": 414,
+        "last": 430,
+        "text": "414:           return await supervisor.run(request.prompt, {\n415:             signal: request.signal,\n416:             onStream: wrapChildRuntimeStream(destination, request.agentId, request.onProgressEvent),\n417:             sessionId: childSessionId,\n418:             subAgentContinuation: request.continuation,\n419:             toolAllowlist: request.toolAllowlist === undefined ? undefined : scope.enabled,\n420:             onAgentProgress: request.onAgentProgress,\n421:           });\n422:         }\n423:         host?.activate?.();\n424:         const result = await deps.childRunner.runChild(childConfig, request.prompt, {\n425:           signal: request.signal,\n426:           onStream: wrapChildRuntimeStream(destination, request.agentId, request.onProgressEvent),\n427:           sessionId: childSessionId,\n428:           subAgentContinuation: request.continuation,\n429:           toolAllowlist: request.toolAllowlist === undefined ? undefined : scope.enabled,\n430:         });"
+      }
+    ],
+    "pinReference": "initial-source-pins.json"
+  },
+  {
+    "path": "packages/core/src/session/session-manager.ts",
+    "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+    "displayAt": "2026-10-17T19:47:42.674864+00:00",
+    "displayedLineRanges": [
+      [
+        736,
+        769
+      ],
+      [
+        792,
+        817
+      ],
+      [
+        1043,
+        1053
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 736,
+        "last": 769,
+        "text": "736:     const continuation =\n737:       subAgentContinuation === undefined\n738:         ? undefined\n739:         : parseSubAgentContinuation(subAgentContinuation, parentSessionId);\n740:     if (subAgentContinuation !== undefined && !continuation) {\n741:       throw new SessionError(\"Invalid sub-agent continuation metadata or parent ownership\");\n742:     }\n743:     const sessionId = explicitSessionId ?? nanoid(16);\n744:     const state: SessionState = {\n745:       sessionId,\n746:       kind,\n747:       stateRevision: 0,\n748:       cwd,\n749:       workspace: { root: cwd, kind: \"main\" },\n750:       startedAt: Date.now(),\n751:       model,\n752:       provider,\n753:       tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },\n754:       cacheUsageVersion: 1,\n755:       cumulativePromptTokens: 0,\n756:       cumulativeCacheReadTokens: 0,\n757:       cumulativeCacheCreationTokens: 0,\n758:       turnCount: 0,\n759:       invokedSkills: [],\n760:       status: \"active\",\n761:       // Always write the key: a sub-agent gets its parent sid; a top-level\n762:       // session gets explicit null. This lets the desktop disk-rebuild tell a\n763:       // new top-level session (key present, null) apart from a legacy session\n764:       // (key absent) and from a sub-agent (key present, non-empty string).\n765:       parentSessionId: parentSessionId ?? null,\n766:       ...(continuation ? { subAgentContinuation: continuation } : {}),\n767:       ...(ephemeral || sessionId.startsWith(\"qchat-\") ? { ephemeral: true } : {}),\n768:       ...(origin ? { origin } : {}),\n769:     };"
+      },
+      {
+        "first": 792,
+        "last": 817,
+        "text": "792:     const sessionDir = join(this.sessionsDir, sessionId);\n793:     try {\n794:       mkdirSync(sessionDir, { mode: 0o700 });\n795:     } catch (err) {\n796:       if ((err as NodeJS.ErrnoException).code === \"EEXIST\") {\n797:         throw new SessionError(`Session already exists: ${sessionId}`);\n798:       }\n799:       throw err;\n800:     }\n801: \n802:     // Atomic write (tmp+rename) like saveState, so a crash during this one-time\n803:     // create can't leave a torn state.json that resume() then fails to parse.\n804:     try {\n805:       const stateTarget = join(sessionDir, \"state.json\");\n806:       this.writeStateAtomically(stateTarget, state, \"create\");\n807: \n808:       const transcript = new Transcript(join(sessionDir, \"transcript.jsonl\"));\n809:       transcript.append(\"session_meta\", {\n810:         sessionId,\n811:         cwd,\n812:         model,\n813:         provider,\n814:         startedAt: state.startedAt,\n815:         kind,\n816:       });\n817: "
+      },
+      {
+        "first": 1043,
+        "last": 1053,
+        "text": "1043:   /** Validated frozen child scope. Missing/corrupt snapshots cannot authorize resume. */\n1044:   readSubAgentContinuation(sessionId: string): SubAgentContinuation | undefined {\n1045:     try {\n1046:       const state = this.readSessionState(sessionId);\n1047:       return state\n1048:         ? parseSubAgentContinuation(state.subAgentContinuation, state.parentSessionId)\n1049:         : undefined;\n1050:     } catch {\n1051:       return undefined;\n1052:     }\n1053:   }"
+      }
+    ],
+    "pinReference": "initial-source-pins.json"
+  },
+  {
+    "path": "packages/core/src/engine/run-session-open.ts",
+    "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+    "displayAt": "2026-10-17T19:47:42.675492+00:00",
+    "displayedLineRanges": [
+      [
+        61,
+        69
+      ],
+      [
+        98,
+        115
+      ],
+      [
+        195,
+        207
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 61,
+        "last": 69,
+        "text": "61: export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {\n62:   const { options } = args;\n63:   const continuation =\n64:     options?.subAgentContinuation === undefined\n65:       ? undefined\n66:       : parseSubAgentContinuation(options.subAgentContinuation, getCurrentSid());\n67:   if (options?.subAgentContinuation !== undefined && (!args.isSubAgent || !continuation)) {\n68:     throw new SessionError(\"Invalid sub-agent continuation metadata or parent ownership\");\n69:   }"
+      },
+      {
+        "first": 98,
+        "last": 115,
+        "text": "98:   if (options?.sessionId && args.sessionManager.exists(options.sessionId)) {\n99:     resumedFromDisk = true;\n100:     session = args.sessionManager.resumeForRun(options.sessionId);\n101:     if (continuation) {\n102:       const persisted = parseSubAgentContinuation(\n103:         session.state.subAgentContinuation,\n104:         session.state.parentSessionId,\n105:       );\n106:       if (\n107:         session.state.parentSessionId !== continuation.parentSessionId ||\n108:         (session.state.subAgentContinuation !== undefined &&\n109:           (!persisted || !isDeepStrictEqual(persisted, continuation)))\n110:       ) {\n111:         throw new SessionError(\"Sub-agent continuation cannot change its parent or frozen scope\");\n112:       }\n113:       // Legacy same-process callers may hold a trusted scope without a durable\n114:       // snapshot. Do not invent or replace persisted authority on resume.\n115:     }"
+      },
+      {
+        "first": 195,
+        "last": 207,
+        "text": "195:     // Cold start: shape (2) reuses the host-supplied sid; shape (3)\n196:     // lets sessionManager generate one with nanoid.\n197:     session = args.sessionManager.create(\n198:       args.cwd,\n199:       args.llmModel,\n200:       args.llmProvider,\n201:       options?.sessionId,\n202:       args.isSubAgent ? getCurrentSid() : undefined,\n203:       args.isSubAgent ? \"subagent\" : args.origin,\n204:       args.sessionKind,\n205:       options?.ephemeral === true,\n206:       continuation,\n207:     );"
+      }
+    ],
+    "pinReference": "initial-source-pins.json"
+  }
+]

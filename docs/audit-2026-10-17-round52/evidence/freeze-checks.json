@@ -1,0 +1,111 @@
+{
+  "expectedCount": 21,
+  "checks": [
+    {
+      "path": "evidence/theme-preview/report.md",
+      "bytes": 4786,
+      "sha256": "084474f77ea5d469a1baf36ddbbd67393332672c0472b43441ff486815332537"
+    },
+    {
+      "path": "evidence/theme-preview/source-manifest.json",
+      "bytes": 11334,
+      "sha256": "6b004cbe543bb25816a084be21034e2bb26a8bc1f3003cfd29c5f5d749267533"
+    },
+    {
+      "path": "evidence/theme-preview/reviewer-receipt.json",
+      "bytes": 3498,
+      "sha256": "3d7c9df20e64f9638e13633f5965c7c307212743fad8fbe0521ec0b57976a8e8"
+    },
+    {
+      "path": "evidence/live-activity/report.md",
+      "bytes": 5960,
+      "sha256": "21b7498ec8f798f9750998ecc243bbb87109f68f68c561b807f8287f8cd6e7b1"
+    },
+    {
+      "path": "evidence/live-activity/source-manifest.json",
+      "bytes": 18760,
+      "sha256": "997d9ee97d2350c4969fdbfdd439c32356c74ac930810b1d097ab94a82f5df7e"
+    },
+    {
+      "path": "evidence/live-activity/reviewer-receipt.json",
+      "bytes": 3544,
+      "sha256": "10bf4d0f5b08eeaf4fd915a7b28f315e665bc5198b55a82dfe9f328ec064a8de"
+    },
+    {
+      "path": "evidence/character-theme-gate/report.md",
+      "bytes": 3889,
+      "sha256": "b56928771c190f5a8792c0df41831ee5f2aad0b2491cbe07ba7b5f5b954e338f"
+    },
+    {
+      "path": "evidence/character-theme-gate/source-manifest.json",
+      "bytes": 4510,
+      "sha256": "978441c2db6a51c8fd482205d4c55b7548d911d0cde4b0dd8abfbf0c969bf6e9"
+    },
+    {
+      "path": "evidence/character-theme-gate/artifact-receipt.json",
+      "bytes": 3331,
+      "sha256": "9457f7b6bbc6d5713cdf265ec89ac109255b67e04ecdf7d4b964577f342fdb47"
+    },
+    {
+      "path": "evidence/root-image-compress/report.md",
+      "bytes": 2710,
+      "sha256": "e651a8de8c4c89541f52f5babbaecd20b6e9d4185d23e983572b58cbd525c1cd"
+    },
+    {
+      "path": "evidence/root-image-compress/source-manifest.json",
+      "bytes": 5604,
+      "sha256": "02bf05ec24671b93a1b49c55f63125cdd2896802b4dacdbca71e2196befc6ef5"
+    },
+    {
+      "path": "evidence/root-image-compress/author-receipt.json",
+      "bytes": 4169,
+      "sha256": "6f65292f856b189eaf07a737d3d60ddcb827342f8f694ca4a9d7b6a454cb3e20"
+    },
+    {
+      "path": "evidence/image-sizing-review/review.md",
+      "bytes": 5680,
+      "sha256": "383d27959ad7040cbfa921d6c1a9fbee15c2baee42ad8e60b47c6be62960bc19"
+    },
+    {
+      "path": "evidence/image-sizing-review/source-manifest.json",
+      "bytes": 14285,
+      "sha256": "adf953e3d9ba903f596a1366b844054ad76d6dbaef26a0985e15573c1fd2eafe"
+    },
+    {
+      "path": "evidence/image-sizing-review/reviewer-receipt.json",
+      "bytes": 4381,
+      "sha256": "e40e943bbd3cd713118eead6d69b115c4ba89b721121643e70e77a5dbdfbc87e"
+    },
+    {
+      "path": "evidence/character-gate-self-review/report.md",
+      "bytes": 3697,
+      "sha256": "ad1e4c4ec80e3defb6793e074171e307ef0730846e06313d54a5e9c9377149c0"
+    },
+    {
+      "path": "evidence/character-gate-self-review/checks.json",
+      "bytes": 15520,
+      "sha256": "aa1ad3335b214ac00394079b1cf6211ce8c34b920bc61959cea4195d08c29dc0"
+    },
+    {
+      "path": "evidence/character-gate-self-review/reviewer-receipt.json",
+      "bytes": 2408,
+      "sha256": "58d9c8f69b90e986df116cc11dc0cb6558178dd5333a6df9a0e393fd40c2d774"
+    },
+    {
+      "path": "evidence/coverage-status/report.md",
+      "bytes": 1865,
+      "sha256": "f4d8412433fd7ba5d2f38353d1afd5d3bad3a16f8ac230fde77830def533dc3a"
+    },
+    {
+      "path": "evidence/coverage-status/source-manifest.json",
+      "bytes": 5726,
+      "sha256": "8cd254e29e9d2db379dd8a5d9517376c3269afdc8108189cf7526d3c28ecf81e"
+    },
+    {
+      "path": "evidence/coverage-status/artifact-receipt.json",
+      "bytes": 1158,
+      "sha256": "c4223d27b7b2bfb813f9f3af7ad61463741d868d368fdbf7aa016d55a8675b1a"
+    }
+  ],
+  "scope": "Seven exact frozen packets.105 has no source-manifest; checks.json is metadata-only anchor, not source reading.102/105 same author."
+}

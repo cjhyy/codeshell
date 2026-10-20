@@ -1,0 +1,15 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "lines": 487,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "firstSemanticReadSha256": null,
+      "pinBeforeIndependentRead": true,
+      "capturedUtc": "2026-10-17T12:18:00.869588+00:00",
+      "semanticReadOccurred": false
+    }
+  ]
+}

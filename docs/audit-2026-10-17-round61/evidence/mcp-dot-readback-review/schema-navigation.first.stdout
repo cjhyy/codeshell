@@ -1,0 +1,5 @@
+88:export const SettingsSchema = z
+477:    capabilityOverrides: CapabilityOverridesSchema,
+483:     * 用户手写 capabilityOverrides 之下（用户按 key 永远赢，见 overlay.ts
+727:export type ValidatedSettings = z.infer<typeof SettingsSchema>;
+730:  return SettingsSchema.parse(raw);

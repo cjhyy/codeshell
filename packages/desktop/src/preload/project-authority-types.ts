@@ -1,5 +1,7 @@
 import type { SessionWorkspace } from "@cjhyy/code-shell-core";
 import type {
+  ReviewAiPromptRequest,
+  ReviewAiPromptResult,
   ReviewGitCommit,
   ReviewGitDiffRequest,
   ReviewGitDiffResult,
@@ -8,6 +10,7 @@ import type {
 import type {
   GitBranches,
   GitStatus,
+  ProjectFileSearchHit,
   SessionWorkspaceList,
   Unsubscribe,
   WorktreeDiffSummary,
@@ -80,6 +83,12 @@ export type ProjectCwdResolution =
   | null;
 
 export interface ProjectAuthorityApi {
+  /** Fuzzy file discovery in one registered root, or all roots when omitted. */
+  searchProjectFiles(
+    projectId: string,
+    query: string,
+    rootId?: string,
+  ): Promise<ProjectFileSearchHit[]>;
   getProjectGitStatus(projectId: string): Promise<GitStatus>;
   getProjectGitBranches(projectId: string): Promise<GitBranches>;
   switchProjectGitBranch(projectId: string, branch: string): Promise<GitBranches>;
@@ -90,6 +99,10 @@ export interface ProjectAuthorityApi {
   getSessionGitBranches(sessionId: string): Promise<GitBranches>;
   getReviewStatus(sessionId: string): Promise<ReviewGitStatusResult>;
   getReviewDiff(sessionId: string, request: ReviewGitDiffRequest): Promise<ReviewGitDiffResult>;
+  prepareReviewPrompt(
+    sessionId: string,
+    request: ReviewAiPromptRequest,
+  ): Promise<ReviewAiPromptResult>;
   getReviewRecentCommits(sessionId: string, limit?: number): Promise<ReviewGitCommit[]>;
   listSessionProfiles(sessionId: string): Promise<WorkspaceProfileSummary[]>;
   listSessionWorktrees(sessionId: string, cwd: string): Promise<SessionWorkspaceList>;

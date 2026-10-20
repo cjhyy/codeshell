@@ -1,0 +1,3940 @@
+{
+  "documents": [
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+      "topLevelKeys": [
+        "root",
+        "rootReportedHead",
+        "branchReported",
+        "GitVerified",
+        "files",
+        "hashOnlyFiles",
+        "historicalMetadata",
+        "oldCoverage",
+        "sharedHistory",
+        "focusedOldCause",
+        "totals",
+        "executions"
+      ],
+      "files": [
+        {
+          "path": "packages/core/src/capability-control/overlay.ts",
+          "bytes": 7815,
+          "lines": 211,
+          "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+          "pinAt": "2026-10-17T20:08:40.404134+00:00",
+          "coverage": "selected",
+          "pinArtifact": "initial-pins.json",
+          "sourceKind": "product",
+          "selectedLineRanges": [
+            [
+              1,
+              84
+            ],
+            [
+              115,
+              211
+            ]
+          ],
+          "semanticLineCount": 181,
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              211
+            ]
+          ],
+          "bodyDisplayedLineCount": 211,
+          "displayArtifacts": [
+            "target-source-display.json"
+          ],
+          "scope": "Ordinary tri-state token fold and profile/project/local value merging. Conversation whitelist86–113 only displayed; no authority/host visibility enforcement certification. Entire same-SHA leaf overlaps original R5 whole review.",
+          "newUniqueCoverageClaim": false,
+          "endingSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+          "endingUnchanged": true
+        },
+        {
+          "path": "packages/core/src/capability-control/service.ts",
+          "bytes": 7690,
+          "lines": 197,
+          "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+          "pinAt": "2026-10-17T20:08:40.404475+00:00",
+          "coverage": "full",
+          "pinArtifact": "initial-pins.json",
+          "sourceKind": "product",
+          "selectedLineRanges": [
+            [
+              1,
+              197
+            ]
+          ],
+          "semanticLineCount": 197,
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              197
+            ]
+          ],
+          "bodyDisplayedLineCount": 197,
+          "displayArtifacts": [
+            "target-source-display.json"
+          ],
+          "scope": "Full control-layer source: projection composition and injected settings write routing only. No real loader/registry/Host/settings operation or live activation guarantee.",
+          "newUniqueCoverageClaim": false,
+          "endingSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+          "endingUnchanged": true
+        },
+        {
+          "path": "packages/core/src/capability-control/project.ts",
+          "bytes": 5930,
+          "lines": 172,
+          "sha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+          "pinAt": "2026-10-17T20:08:40.404769+00:00",
+          "coverage": "full",
+          "pinArtifact": "initial-pins.json",
+          "sourceKind": "product",
+          "selectedLineRanges": [
+            [
+              1,
+              172
+            ]
+          ],
+          "semanticLineCount": 172,
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              172
+            ]
+          ],
+          "bodyDisplayedLineCount": 172,
+          "displayArtifacts": [
+            "target-source-display.json"
+          ],
+          "scope": "Full pure descriptor projection and metadata control fields. Not actual runtime registry/permission behavior.",
+          "newUniqueCoverageClaim": false,
+          "endingSha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+          "endingUnchanged": true
+        },
+        {
+          "path": "packages/core/src/capability-control/types.ts",
+          "bytes": 2864,
+          "lines": 76,
+          "sha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+          "pinAt": "2026-10-17T20:10:53.935787+00:00",
+          "coverage": "full",
+          "pinArtifact": "caller-initial-pins.json",
+          "sourceKind": "product",
+          "selectedLineRanges": [
+            [
+              1,
+              76
+            ]
+          ],
+          "semanticLineCount": 76,
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              76
+            ]
+          ],
+          "bodyDisplayedLineCount": 76,
+          "displayArtifacts": [
+            "caller-storage-display.json"
+          ],
+          "scope": "Full static descriptor/write-scope/interface contracts and ordinary error type.",
+          "newUniqueCoverageClaim": false,
+          "endingSha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+          "endingUnchanged": true
+        },
+        {
+          "path": "packages/desktop/src/main/capabilities-service.ts",
+          "bytes": 4475,
+          "lines": 120,
+          "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+          "pinAt": "2026-10-17T20:10:53.934570+00:00",
+          "coverage": "selected",
+          "pinArtifact": "caller-initial-pins.json",
+          "sourceKind": "product",
+          "selectedLineRanges": [
+            [
+              1,
+              16
+            ],
+            [
+              51,
+              54
+            ],
+            [
+              59,
+              80
+            ],
+            [
+              105,
+              120
+            ]
+          ],
+          "semanticLineCount": 58,
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              120
+            ]
+          ],
+          "bodyDisplayedLineCount": 120,
+          "displayArtifacts": [
+            "caller-storage-display.json"
+          ],
+          "scope": "Actual configured-on-disk service wrapper and user/project forwarding. Composition imports/compilation/registry construction and profile plan machinery adjacent only, owned separately by Root and not certified.",
+          "newUniqueCoverageClaim": false,
+          "endingSha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+          "endingUnchanged": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+          "bytes": 26939,
+          "lines": 623,
+          "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+          "pinAt": "2026-10-17T20:10:53.935264+00:00",
+          "coverage": "selected",
+          "pinArtifact": "caller-initial-pins.json",
+          "sourceKind": "product",
+          "selectedLineRanges": [
+            [
+              180,
+              186
+            ],
+            [
+              193,
+              200
+            ],
+            [
+              239,
+              271
+            ],
+            [
+              481,
+              516
+            ]
+          ],
+          "semanticLineCount": 84,
+          "bodyDisplayedLineRanges": [
+            [
+              180,
+              233
+            ],
+            [
+              239,
+              313
+            ],
+            [
+              475,
+              516
+            ]
+          ],
+          "bodyDisplayedLineCount": 171,
+          "displayArtifacts": [
+            "caller-storage-display.json",
+            "normal-token-path-display.json"
+          ],
+          "scope": "Actual descriptor list consumption, user/project controls and forwarding/reload only. Cache effects/Panel App bindings/native/permission mechanisms adjacent only.",
+          "newUniqueCoverageClaim": false,
+          "endingSha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+          "endingUnchanged": true
+        },
+        {
+          "path": "packages/core/src/settings/manager.ts",
+          "bytes": 46928,
+          "lines": 1139,
+          "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+          "pinAt": "2026-10-17T20:10:53.935562+00:00",
+          "coverage": "selected",
+          "pinArtifact": "caller-initial-pins.json",
+          "sourceKind": "product",
+          "selectedLineRanges": [
+            [
+              83,
+              92
+            ],
+            [
+              145,
+              155
+            ],
+            [
+              552,
+              552
+            ],
+            [
+              563,
+              564
+            ],
+            [
+              572,
+              584
+            ],
+            [
+              650,
+              653
+            ],
+            [
+              675,
+              689
+            ]
+          ],
+          "semanticLineCount": 56,
+          "bodyDisplayedLineRanges": [
+            [
+              58,
+              98
+            ],
+            [
+              145,
+              170
+            ],
+            [
+              536,
+              605
+            ],
+            [
+              650,
+              691
+            ]
+          ],
+          "bodyDisplayedLineCount": 179,
+          "displayArtifacts": [
+            "caller-storage-display.json",
+            "normal-token-path-display.json"
+          ],
+          "scope": "Dotted path parsing/field mutation and invoked project/user settings methods only. Trust-root/locks/custody/atomicity/displayed adjacent code not certified.",
+          "newUniqueCoverageClaim": false,
+          "endingSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+          "endingUnchanged": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+          "bytes": 75595,
+          "lines": 1918,
+          "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+          "pinAt": "2026-10-17T20:11:31.753340+00:00",
+          "coverage": "selected",
+          "pinArtifact": "normal-name-producer-pins.json",
+          "sourceKind": "product",
+          "selectedLineRanges": [
+            [
+              444,
+              453
+            ],
+            [
+              1320,
+              1337
+            ],
+            [
+              1393,
+              1395
+            ],
+            [
+              1459,
+              1467
+            ]
+          ],
+          "semanticLineCount": 40,
+          "bodyDisplayedLineRanges": [
+            [
+              431,
+              464
+            ],
+            [
+              1320,
+              1340
+            ],
+            [
+              1389,
+              1425
+            ],
+            [
+              1458,
+              1468
+            ]
+          ],
+          "bodyDisplayedLineCount": 103,
+          "displayArtifacts": [
+            "normal-token-path-display.json"
+          ],
+          "scope": "Normal server-name text input, validation and literal record-key producer. Credential/OAuth/connection/probe/argument parsing fields adjacent only; no actual save or transport.",
+          "newUniqueCoverageClaim": false,
+          "endingSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+          "endingUnchanged": true
+        },
+        {
+          "path": "packages/core/src/settings/schema.ts",
+          "bytes": 29767,
+          "lines": 731,
+          "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+          "pinAt": "2026-10-17T20:11:31.755558+00:00",
+          "coverage": "selected",
+          "pinArtifact": "normal-name-producer-pins.json",
+          "sourceKind": "product",
+          "selectedLineRanges": [
+            [
+              46,
+              66
+            ],
+            [
+              349,
+              380
+            ],
+            [
+              388,
+              390
+            ]
+          ],
+          "semanticLineCount": 56,
+          "bodyDisplayedLineRanges": [
+            [
+              46,
+              79
+            ],
+            [
+              349,
+              399
+            ]
+          ],
+          "bodyDisplayedLineCount": 85,
+          "displayArtifacts": [
+            "normal-token-path-display.json"
+          ],
+          "scope": "Ordinary literal server record keys and tri-state record value shape. No SDK/auth/credential use or security schema certification.",
+          "newUniqueCoverageClaim": false,
+          "endingSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+          "endingUnchanged": true
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/session-context-store/source-manifest.json",
+      "topLevelKeys": [
+        "atUTC",
+        "rootReportedBaseline",
+        "gitCertified",
+        "files",
+        "summary"
+      ],
+      "files": [
+        {
+          "path": "CODESHELL.md",
+          "bytes": 17639,
+          "lineCount": 217,
+          "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "pinnedAtUTC": "2026-10-17T20:08:43.964119+00:00",
+          "timing": "before any own body/nav prep156",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "semanticFull": false,
+          "category": "instruction-hash-reuse",
+          "coverage": "hash-only",
+          "scopeBoundary": "Same-SHA previously fully read instructions reused; no new instruction body prep156."
+        },
+        {
+          "path": "AGENTS.md",
+          "bytes": 206,
+          "lineCount": 5,
+          "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "pinnedAtUTC": "2026-10-17T20:08:43.966313+00:00",
+          "timing": "before any own body/nav prep156",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "semanticFull": false,
+          "category": "instruction-hash-reuse",
+          "coverage": "hash-only",
+          "scopeBoundary": "Same-SHA previously fully read instructions reused; no new instruction body prep156."
+        },
+        {
+          "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+          "bytes": 6343,
+          "lineCount": 153,
+          "sha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3",
+          "pinnedAtUTC": "2026-10-17T20:08:43.967235+00:00",
+          "timing": "before any own body/nav prep156",
+          "selectedLineRanges": [
+            [
+              19,
+              58
+            ],
+            [
+              71,
+              83
+            ],
+            [
+              91,
+              123
+            ],
+            [
+              133,
+              152
+            ]
+          ],
+          "semanticLineCount": 106,
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              153
+            ]
+          ],
+          "bodyDisplayedLineCount": 153,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [
+            [
+              1,
+              153
+            ]
+          ],
+          "displayedLineCount": 153,
+          "semanticFull": false,
+          "category": "product-selected",
+          "coverage": "selected",
+          "fullBodyDisplayedButNotFullSemanticClaim": true,
+          "scopeBoundary": "Ordinary key/value mapping and option forwarding only. Source shows adjacent generation/host-dispatch/permissions or I/O, but this packet does not certify identity provenance, authorization, process lifetime, durable binding correctness or custody."
+        },
+        {
+          "path": "packages/coding/src/external-runtimes/shared/session-context-store.test.ts",
+          "bytes": 8764,
+          "lineCount": 190,
+          "sha256": "f937e91242a66a509d87d4dceafbc47d273bb8c7852d979b57452d57a5b90409",
+          "pinnedAtUTC": "2026-10-17T20:08:43.968133+00:00",
+          "timing": "before any own body/nav prep156",
+          "selectedLineRanges": [
+            [
+              160,
+              190
+            ]
+          ],
+          "semanticLineCount": 31,
+          "bodyDisplayedLineRanges": [
+            [
+              160,
+              190
+            ]
+          ],
+          "bodyDisplayedLineCount": 31,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              19,
+              20
+            ],
+            [
+              24,
+              25
+            ],
+            [
+              27,
+              28
+            ],
+            [
+              31,
+              31
+            ],
+            [
+              33,
+              34
+            ],
+            [
+              39,
+              39
+            ],
+            [
+              44,
+              45
+            ],
+            [
+              50,
+              50
+            ],
+            [
+              52,
+              54
+            ],
+            [
+              59,
+              60
+            ],
+            [
+              64,
+              66
+            ],
+            [
+              68,
+              68
+            ],
+            [
+              70,
+              70
+            ],
+            [
+              72,
+              72
+            ],
+            [
+              76,
+              77
+            ],
+            [
+              79,
+              80
+            ],
+            [
+              84,
+              85
+            ],
+            [
+              88,
+              93
+            ],
+            [
+              96,
+              97
+            ],
+            [
+              100,
+              100
+            ],
+            [
+              102,
+              104
+            ],
+            [
+              106,
+              106
+            ],
+            [
+              110,
+              110
+            ],
+            [
+              115,
+              116
+            ],
+            [
+              119,
+              119
+            ],
+            [
+              124,
+              124
+            ],
+            [
+              128,
+              129
+            ],
+            [
+              131,
+              131
+            ],
+            [
+              134,
+              134
+            ],
+            [
+              139,
+              139
+            ],
+            [
+              141,
+              142
+            ],
+            [
+              147,
+              147
+            ],
+            [
+              154,
+              155
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              19,
+              20
+            ],
+            [
+              24,
+              25
+            ],
+            [
+              27,
+              28
+            ],
+            [
+              31,
+              31
+            ],
+            [
+              33,
+              34
+            ],
+            [
+              39,
+              39
+            ],
+            [
+              44,
+              45
+            ],
+            [
+              50,
+              50
+            ],
+            [
+              52,
+              54
+            ],
+            [
+              59,
+              60
+            ],
+            [
+              64,
+              66
+            ],
+            [
+              68,
+              68
+            ],
+            [
+              70,
+              70
+            ],
+            [
+              72,
+              72
+            ],
+            [
+              76,
+              77
+            ],
+            [
+              79,
+              80
+            ],
+            [
+              84,
+              85
+            ],
+            [
+              88,
+              93
+            ],
+            [
+              96,
+              97
+            ],
+            [
+              100,
+              100
+            ],
+            [
+              102,
+              104
+            ],
+            [
+              106,
+              106
+            ],
+            [
+              110,
+              110
+            ],
+            [
+              115,
+              116
+            ],
+            [
+              119,
+              119
+            ],
+            [
+              124,
+              124
+            ],
+            [
+              128,
+              129
+            ],
+            [
+              131,
+              131
+            ],
+            [
+              134,
+              134
+            ],
+            [
+              139,
+              139
+            ],
+            [
+              141,
+              142
+            ],
+            [
+              147,
+              147
+            ],
+            [
+              154,
+              155
+            ],
+            [
+              160,
+              190
+            ]
+          ],
+          "displayedLineCount": 89,
+          "semanticFull": false,
+          "category": "test-declaration",
+          "coverage": "selected",
+          "scopeBoundary": "Ordinary key/value mapping and option forwarding only. Source shows adjacent generation/host-dispatch/permissions or I/O, but this packet does not certify identity provenance, authorization, process lifetime, durable binding correctness or custody."
+        },
+        {
+          "path": "packages/coding/src/external-runtimes/index.ts",
+          "bytes": 3131,
+          "lineCount": 69,
+          "sha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+          "pinnedAtUTC": "2026-10-17T20:08:55.848387+00:00",
+          "timing": "before own body/nav; confirmed filename-only import/reference inventory",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              24,
+              24
+            ],
+            [
+              27,
+              28
+            ],
+            [
+              30,
+              30
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              24,
+              24
+            ],
+            [
+              27,
+              28
+            ],
+            [
+              30,
+              30
+            ]
+          ],
+          "displayedLineCount": 4,
+          "semanticFull": false,
+          "category": "navigation-only",
+          "coverage": "navigation-only",
+          "scopeBoundary": "Ordinary key/value mapping and option forwarding only. Source shows adjacent generation/host-dispatch/permissions or I/O, but this packet does not certify identity provenance, authorization, process lifetime, durable binding correctness or custody."
+        },
+        {
+          "path": "packages/coding/src/external-runtimes/shared/mcp-bridge.ts",
+          "bytes": 17292,
+          "lineCount": 432,
+          "sha256": "854be8bf5965c9f8d87bd320d536236c22b8d1a139a0aaf59645b9d2bfcf0c36",
+          "pinnedAtUTC": "2026-10-17T20:08:55.849916+00:00",
+          "timing": "before own body/nav; confirmed filename-only import/reference inventory",
+          "selectedLineRanges": [
+            [
+              94,
+              105
+            ],
+            [
+              132,
+              143
+            ],
+            [
+              207,
+              213
+            ],
+            [
+              276,
+              280
+            ],
+            [
+              299,
+              330
+            ]
+          ],
+          "semanticLineCount": 68,
+          "bodyDisplayedLineRanges": [
+            [
+              94,
+              108
+            ],
+            [
+              130,
+              149
+            ],
+            [
+              199,
+              219
+            ],
+            [
+              266,
+              335
+            ]
+          ],
+          "bodyDisplayedLineCount": 126,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              12,
+              12
+            ],
+            [
+              24,
+              24
+            ],
+            [
+              39,
+              39
+            ],
+            [
+              46,
+              46
+            ],
+            [
+              110,
+              110
+            ],
+            [
+              116,
+              117
+            ],
+            [
+              341,
+              341
+            ],
+            [
+              375,
+              375
+            ],
+            [
+              385,
+              385
+            ],
+            [
+              404,
+              404
+            ],
+            [
+              410,
+              410
+            ],
+            [
+              413,
+              413
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              12,
+              12
+            ],
+            [
+              24,
+              24
+            ],
+            [
+              39,
+              39
+            ],
+            [
+              46,
+              46
+            ],
+            [
+              94,
+              108
+            ],
+            [
+              110,
+              110
+            ],
+            [
+              116,
+              117
+            ],
+            [
+              130,
+              149
+            ],
+            [
+              199,
+              219
+            ],
+            [
+              266,
+              335
+            ],
+            [
+              341,
+              341
+            ],
+            [
+              375,
+              375
+            ],
+            [
+              385,
+              385
+            ],
+            [
+              404,
+              404
+            ],
+            [
+              410,
+              410
+            ],
+            [
+              413,
+              413
+            ]
+          ],
+          "displayedLineCount": 139,
+          "semanticFull": false,
+          "category": "product-selected",
+          "coverage": "selected",
+          "scopeBoundary": "Ordinary key/value mapping and option forwarding only. Source shows adjacent generation/host-dispatch/permissions or I/O, but this packet does not certify identity provenance, authorization, process lifetime, durable binding correctness or custody."
+        },
+        {
+          "path": "packages/coding/src/external-runtimes/session-factory.ts",
+          "bytes": 11004,
+          "lineCount": 263,
+          "sha256": "1ffadf1130ee90eafdf7e71846306bf27e6a0ba16d83524a0f92364f97894e69",
+          "pinnedAtUTC": "2026-10-17T20:08:55.850395+00:00",
+          "timing": "before own body/nav; confirmed filename-only import/reference inventory",
+          "selectedLineRanges": [
+            [
+              35,
+              35
+            ],
+            [
+              48,
+              51
+            ],
+            [
+              72,
+              78
+            ],
+            [
+              97,
+              101
+            ],
+            [
+              124,
+              153
+            ],
+            [
+              157,
+              159
+            ],
+            [
+              177,
+              196
+            ],
+            [
+              209,
+              219
+            ],
+            [
+              228,
+              242
+            ]
+          ],
+          "semanticLineCount": 96,
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              263
+            ]
+          ],
+          "bodyDisplayedLineCount": 263,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [
+            [
+              1,
+              263
+            ]
+          ],
+          "displayedLineCount": 263,
+          "semanticFull": false,
+          "category": "product-selected",
+          "coverage": "selected",
+          "fullBodyDisplayedButNotFullSemanticClaim": true,
+          "scopeBoundary": "Ordinary key/value mapping and option forwarding only. Source shows adjacent generation/host-dispatch/permissions or I/O, but this packet does not certify identity provenance, authorization, process lifetime, durable binding correctness or custody."
+        },
+        {
+          "path": "packages/desktop/src/main/external-runtime-service.ts",
+          "bytes": 65714,
+          "lineCount": 1563,
+          "sha256": "1d1384b11762ccf216f6cb6447cb91c93597807a53a6757a6d43a1472ab18b37",
+          "pinnedAtUTC": "2026-10-17T20:10:34.266419+00:00",
+          "timing": "before own body/nav; filename-only factory caller inventory",
+          "selectedLineRanges": [
+            [
+              708,
+              714
+            ],
+            [
+              905,
+              911
+            ],
+            [
+              925,
+              934
+            ]
+          ],
+          "semanticLineCount": 24,
+          "bodyDisplayedLineRanges": [
+            [
+              699,
+              718
+            ],
+            [
+              900,
+              941
+            ]
+          ],
+          "bodyDisplayedLineCount": 62,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              20,
+              20
+            ],
+            [
+              96,
+              96
+            ],
+            [
+              102,
+              102
+            ],
+            [
+              133,
+              133
+            ],
+            [
+              139,
+              139
+            ],
+            [
+              143,
+              143
+            ],
+            [
+              165,
+              165
+            ],
+            [
+              181,
+              181
+            ],
+            [
+              184,
+              184
+            ],
+            [
+              217,
+              217
+            ],
+            [
+              441,
+              441
+            ],
+            [
+              1051,
+              1051
+            ],
+            [
+              1053,
+              1053
+            ],
+            [
+              1070,
+              1070
+            ],
+            [
+              1243,
+              1243
+            ],
+            [
+              1290,
+              1290
+            ],
+            [
+              1324,
+              1324
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              20,
+              20
+            ],
+            [
+              96,
+              96
+            ],
+            [
+              102,
+              102
+            ],
+            [
+              133,
+              133
+            ],
+            [
+              139,
+              139
+            ],
+            [
+              143,
+              143
+            ],
+            [
+              165,
+              165
+            ],
+            [
+              181,
+              181
+            ],
+            [
+              184,
+              184
+            ],
+            [
+              217,
+              217
+            ],
+            [
+              441,
+              441
+            ],
+            [
+              699,
+              718
+            ],
+            [
+              900,
+              941
+            ],
+            [
+              1051,
+              1051
+            ],
+            [
+              1053,
+              1053
+            ],
+            [
+              1070,
+              1070
+            ],
+            [
+              1243,
+              1243
+            ],
+            [
+              1290,
+              1290
+            ],
+            [
+              1324,
+              1324
+            ]
+          ],
+          "displayedLineCount": 79,
+          "semanticFull": false,
+          "category": "product-selected",
+          "coverage": "selected",
+          "scopeBoundary": "Ordinary key/value mapping and option forwarding only. Source shows adjacent generation/host-dispatch/permissions or I/O, but this packet does not certify identity provenance, authorization, process lifetime, durable binding correctness or custody."
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+      "topLevelKeys": [
+        "files",
+        "hashOnlyFiles",
+        "historicalReportReads",
+        "scope",
+        "productExecution"
+      ],
+      "files": [
+        {
+          "path": "packages/core/src/composition/lifetime.ts",
+          "bytes": 2868,
+          "lines": 95,
+          "sha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              95
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              95
+            ]
+          ],
+          "semanticLines": 95,
+          "bodyDisplayedLines": 95,
+          "beforeBodyOrLineNavigation": true,
+          "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+          "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+        },
+        {
+          "path": "packages/core/src/composition/activation.ts",
+          "bytes": 4413,
+          "lines": 146,
+          "sha256": "fbb9f7fe70b413a8661ccc50f98ebbb557456a43101baf95753c634cba774374",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              146
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              146
+            ]
+          ],
+          "semanticLines": 146,
+          "bodyDisplayedLines": 146,
+          "beforeBodyOrLineNavigation": true,
+          "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+          "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+        },
+        {
+          "path": "packages/core/src/engine/engine.ts",
+          "bytes": 210666,
+          "lines": 5082,
+          "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              647,
+              649
+            ],
+            [
+              818,
+              840
+            ],
+            [
+              844,
+              860
+            ],
+            [
+              863,
+              884
+            ],
+            [
+              1796,
+              1805
+            ],
+            [
+              4004,
+              4028
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              640,
+              660
+            ],
+            [
+              800,
+              890
+            ],
+            [
+              1786,
+              1815
+            ],
+            [
+              1878,
+              1898
+            ],
+            [
+              4004,
+              4050
+            ]
+          ],
+          "semanticLines": 100,
+          "bodyDisplayedLines": 210,
+          "beforeBodyOrLineNavigation": true,
+          "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+          "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+        },
+        {
+          "path": "packages/core/src/engine/runtime.ts",
+          "bytes": 6215,
+          "lines": 159,
+          "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              61,
+              64
+            ],
+            [
+              72,
+              78
+            ],
+            [
+              141,
+              158
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              60,
+              84
+            ],
+            [
+              115,
+              159
+            ]
+          ],
+          "semanticLines": 29,
+          "bodyDisplayedLines": 70,
+          "beforeBodyOrLineNavigation": true,
+          "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+          "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+        },
+        {
+          "path": "packages/core/src/composition/types.ts",
+          "bytes": 9117,
+          "lines": 221,
+          "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              44,
+              51
+            ],
+            [
+              62,
+              80
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              42,
+              84
+            ]
+          ],
+          "semanticLines": 27,
+          "bodyDisplayedLines": 43,
+          "beforeBodyOrLineNavigation": true,
+          "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+          "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+      "topLevelKeys": [
+        "atUTC",
+        "rootReportedBaseline",
+        "gitCertified",
+        "files",
+        "summary"
+      ],
+      "files": [
+        {
+          "path": "CODESHELL.md",
+          "bytes": 17639,
+          "lineCount": 217,
+          "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "pinnedAtUTC": "2026-10-17T20:13:28.267066+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "instruction-hash-reuse",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "AGENTS.md",
+          "bytes": 206,
+          "lineCount": 5,
+          "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "pinnedAtUTC": "2026-10-17T20:13:28.268621+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "instruction-hash-reuse",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "packages/core/src/capability-control/service.ts",
+          "bytes": 7690,
+          "lineCount": 197,
+          "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+          "pinnedAtUTC": "2026-10-17T20:13:28.270146+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [
+            [
+              69,
+              74
+            ],
+            [
+              89,
+              92
+            ],
+            [
+              107,
+              117
+            ],
+            [
+              133,
+              164
+            ],
+            [
+              168,
+              179
+            ]
+          ],
+          "semanticLineCount": 65,
+          "bodyDisplayedLineRanges": [
+            [
+              69,
+              74
+            ],
+            [
+              87,
+              92
+            ],
+            [
+              105,
+              120
+            ],
+            [
+              133,
+              180
+            ]
+          ],
+          "bodyDisplayedLineCount": 76,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              5,
+              6
+            ],
+            [
+              16,
+              17
+            ],
+            [
+              19,
+              19
+            ],
+            [
+              35,
+              36
+            ],
+            [
+              40,
+              40
+            ],
+            [
+              49,
+              49
+            ],
+            [
+              54,
+              54
+            ],
+            [
+              75,
+              75
+            ],
+            [
+              81,
+              81
+            ],
+            [
+              83,
+              83
+            ],
+            [
+              94,
+              94
+            ],
+            [
+              98,
+              98
+            ],
+            [
+              183,
+              183
+            ],
+            [
+              186,
+              188
+            ],
+            [
+              192,
+              192
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              5,
+              6
+            ],
+            [
+              16,
+              17
+            ],
+            [
+              19,
+              19
+            ],
+            [
+              35,
+              36
+            ],
+            [
+              40,
+              40
+            ],
+            [
+              49,
+              49
+            ],
+            [
+              54,
+              54
+            ],
+            [
+              69,
+              75
+            ],
+            [
+              81,
+              81
+            ],
+            [
+              83,
+              83
+            ],
+            [
+              87,
+              92
+            ],
+            [
+              94,
+              94
+            ],
+            [
+              98,
+              98
+            ],
+            [
+              105,
+              120
+            ],
+            [
+              133,
+              180
+            ],
+            [
+              183,
+              183
+            ],
+            [
+              186,
+              188
+            ],
+            [
+              192,
+              192
+            ]
+          ],
+          "displayedLineCount": 96,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary name/opaque key, dotted-path setter and flat-record reader only. Adjacent settings I/O, OAuth, identity, permission and host mechanisms displayed incidentally are not certified."
+        },
+        {
+          "path": "packages/core/src/capability-control/overlay.ts",
+          "bytes": 7815,
+          "lineCount": 211,
+          "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+          "pinnedAtUTC": "2026-10-17T20:13:28.270860+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [
+            [
+              18,
+              64
+            ]
+          ],
+          "semanticLineCount": 47,
+          "bodyDisplayedLineRanges": [
+            [
+              18,
+              64
+            ]
+          ],
+          "bodyDisplayedLineCount": 47,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              2,
+              2
+            ],
+            [
+              5,
+              6
+            ],
+            [
+              8,
+              8
+            ],
+            [
+              10,
+              10
+            ],
+            [
+              14,
+              15
+            ],
+            [
+              74,
+              74
+            ],
+            [
+              78,
+              80
+            ],
+            [
+              83,
+              83
+            ],
+            [
+              90,
+              90
+            ],
+            [
+              93,
+              93
+            ],
+            [
+              96,
+              96
+            ],
+            [
+              102,
+              102
+            ],
+            [
+              109,
+              109
+            ],
+            [
+              112,
+              112
+            ],
+            [
+              116,
+              116
+            ],
+            [
+              118,
+              118
+            ],
+            [
+              123,
+              125
+            ],
+            [
+              131,
+              133
+            ],
+            [
+              136,
+              136
+            ],
+            [
+              138,
+              139
+            ],
+            [
+              141,
+              142
+            ],
+            [
+              146,
+              147
+            ],
+            [
+              156,
+              156
+            ],
+            [
+              162,
+              162
+            ],
+            [
+              173,
+              173
+            ],
+            [
+              175,
+              176
+            ],
+            [
+              181,
+              182
+            ],
+            [
+              185,
+              185
+            ],
+            [
+              189,
+              189
+            ],
+            [
+              191,
+              192
+            ],
+            [
+              195,
+              196
+            ],
+            [
+              198,
+              201
+            ],
+            [
+              203,
+              204
+            ],
+            [
+              207,
+              207
+            ],
+            [
+              209,
+              209
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              2,
+              2
+            ],
+            [
+              5,
+              6
+            ],
+            [
+              8,
+              8
+            ],
+            [
+              10,
+              10
+            ],
+            [
+              14,
+              15
+            ],
+            [
+              18,
+              64
+            ],
+            [
+              74,
+              74
+            ],
+            [
+              78,
+              80
+            ],
+            [
+              83,
+              83
+            ],
+            [
+              90,
+              90
+            ],
+            [
+              93,
+              93
+            ],
+            [
+              96,
+              96
+            ],
+            [
+              102,
+              102
+            ],
+            [
+              109,
+              109
+            ],
+            [
+              112,
+              112
+            ],
+            [
+              116,
+              116
+            ],
+            [
+              118,
+              118
+            ],
+            [
+              123,
+              125
+            ],
+            [
+              131,
+              133
+            ],
+            [
+              136,
+              136
+            ],
+            [
+              138,
+              139
+            ],
+            [
+              141,
+              142
+            ],
+            [
+              146,
+              147
+            ],
+            [
+              156,
+              156
+            ],
+            [
+              162,
+              162
+            ],
+            [
+              173,
+              173
+            ],
+            [
+              175,
+              176
+            ],
+            [
+              181,
+              182
+            ],
+            [
+              185,
+              185
+            ],
+            [
+              189,
+              189
+            ],
+            [
+              191,
+              192
+            ],
+            [
+              195,
+              196
+            ],
+            [
+              198,
+              201
+            ],
+            [
+              203,
+              204
+            ],
+            [
+              207,
+              207
+            ],
+            [
+              209,
+              209
+            ]
+          ],
+          "displayedLineCount": 101,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary name/opaque key, dotted-path setter and flat-record reader only. Adjacent settings I/O, OAuth, identity, permission and host mechanisms displayed incidentally are not certified."
+        },
+        {
+          "path": "packages/core/src/settings/manager.mutate-fail-closed.test.ts",
+          "bytes": 5721,
+          "lineCount": 134,
+          "sha256": "006178a65c67c99f2e3a969e0902a433a698ee5f7454447d014bb69213e52860",
+          "pinnedAtUTC": "2026-10-17T20:13:28.271621+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "unused-test-or-fixture-hash-only",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "packages/core/src/settings/manager.test.ts",
+          "bytes": 28456,
+          "lineCount": 734,
+          "sha256": "e8cf9d80a5209413f5410404ad323d037851c74eb20cbab1bf4050a5464a281a",
+          "pinnedAtUTC": "2026-10-17T20:13:28.272435+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "unused-test-or-fixture-hash-only",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "packages/core/src/settings/manager.ts",
+          "bytes": 46928,
+          "lineCount": 1139,
+          "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+          "pinnedAtUTC": "2026-10-17T20:13:28.273147+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [
+            [
+              83,
+              92
+            ],
+            [
+              144,
+              155
+            ],
+            [
+              572,
+              584
+            ]
+          ],
+          "semanticLineCount": 35,
+          "bodyDisplayedLineRanges": [
+            [
+              58,
+              112
+            ],
+            [
+              137,
+              165
+            ],
+            [
+              568,
+              590
+            ]
+          ],
+          "bodyDisplayedLineCount": 107,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              402,
+              402
+            ],
+            [
+              552,
+              552
+            ],
+            [
+              600,
+              600
+            ],
+            [
+              650,
+              650
+            ],
+            [
+              669,
+              669
+            ],
+            [
+              859,
+              859
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              58,
+              112
+            ],
+            [
+              137,
+              165
+            ],
+            [
+              402,
+              402
+            ],
+            [
+              552,
+              552
+            ],
+            [
+              568,
+              590
+            ],
+            [
+              600,
+              600
+            ],
+            [
+              650,
+              650
+            ],
+            [
+              669,
+              669
+            ],
+            [
+              859,
+              859
+            ]
+          ],
+          "displayedLineCount": 113,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary name/opaque key, dotted-path setter and flat-record reader only. Adjacent settings I/O, OAuth, identity, permission and host mechanisms displayed incidentally are not certified."
+        },
+        {
+          "path": "packages/core/src/settings/manager-concurrency.test.ts",
+          "bytes": 4642,
+          "lineCount": 112,
+          "sha256": "7f552f8e2d83a15f6f6e1020a6a437f1f7f1487b22f99a86680f19fd34403922",
+          "pinnedAtUTC": "2026-10-17T20:13:28.273732+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "unused-test-or-fixture-hash-only",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "packages/core/src/settings/manager.custom-root.test.ts",
+          "bytes": 2736,
+          "lineCount": 65,
+          "sha256": "ff00442818a8742e6702440424a7fff5672b857894634e81d96b566b4a0a36c0",
+          "pinnedAtUTC": "2026-10-17T20:13:28.274308+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "unused-test-or-fixture-hash-only",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "packages/core/src/settings/manager.local-tombstones.test.ts",
+          "bytes": 3274,
+          "lineCount": 76,
+          "sha256": "d965d86d0d1dae7fbb7bafda5237e57a8ee118d04185ceb2989fb5fd143579fa",
+          "pinnedAtUTC": "2026-10-17T20:13:28.274871+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "unused-test-or-fixture-hash-only",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.plugin.test.ts",
+          "bytes": 5271,
+          "lineCount": 147,
+          "sha256": "af26bb90c77813989dc61ef8bd43a5866983c57be7efe13c2e962302a1f49a14",
+          "pinnedAtUTC": "2026-10-17T20:13:28.275623+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "unused-test-or-fixture-hash-only",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+          "bytes": 1519,
+          "lineCount": 54,
+          "sha256": "62a86c6e2dbb26b94739e00174eea84e5c2247b6d1e20881d88506164e07738b",
+          "pinnedAtUTC": "2026-10-17T20:13:28.276274+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "unused-test-or-fixture-hash-only",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx",
+          "bytes": 25328,
+          "lineCount": 646,
+          "sha256": "77047e6362239b7531500bdec1a07674d3b98aeaff1b39bea52fcd326ac4c2bc",
+          "pinnedAtUTC": "2026-10-17T20:13:28.276966+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "unused-test-or-fixture-hash-only",
+          "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+          "bytes": 75595,
+          "lineCount": 1918,
+          "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+          "pinnedAtUTC": "2026-10-17T20:13:28.277669+00:00",
+          "timing": "before any own prep158 body/nav",
+          "selectedLineRanges": [
+            [
+              422,
+              425
+            ],
+            [
+              443,
+              453
+            ],
+            [
+              1321,
+              1337
+            ],
+            [
+              1393,
+              1401
+            ]
+          ],
+          "semanticLineCount": 41,
+          "bodyDisplayedLineRanges": [
+            [
+              415,
+              455
+            ],
+            [
+              1256,
+              1288
+            ],
+            [
+              1315,
+              1342
+            ],
+            [
+              1371,
+              1401
+            ]
+          ],
+          "bodyDisplayedLineCount": 133,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              171,
+              171
+            ],
+            [
+              194,
+              194
+            ],
+            [
+              261,
+              261
+            ],
+            [
+              274,
+              274
+            ],
+            [
+              322,
+              322
+            ],
+            [
+              358,
+              359
+            ],
+            [
+              384,
+              384
+            ],
+            [
+              402,
+              402
+            ],
+            [
+              409,
+              409
+            ],
+            [
+              463,
+              463
+            ],
+            [
+              471,
+              471
+            ],
+            [
+              485,
+              485
+            ],
+            [
+              1781,
+              1781
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              171,
+              171
+            ],
+            [
+              194,
+              194
+            ],
+            [
+              261,
+              261
+            ],
+            [
+              274,
+              274
+            ],
+            [
+              322,
+              322
+            ],
+            [
+              358,
+              359
+            ],
+            [
+              384,
+              384
+            ],
+            [
+              402,
+              402
+            ],
+            [
+              409,
+              409
+            ],
+            [
+              415,
+              455
+            ],
+            [
+              463,
+              463
+            ],
+            [
+              471,
+              471
+            ],
+            [
+              485,
+              485
+            ],
+            [
+              1256,
+              1288
+            ],
+            [
+              1315,
+              1342
+            ],
+            [
+              1371,
+              1401
+            ],
+            [
+              1781,
+              1781
+            ]
+          ],
+          "displayedLineCount": 147,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary name/opaque key, dotted-path setter and flat-record reader only. Adjacent settings I/O, OAuth, identity, permission and host mechanisms displayed incidentally are not certified."
+        },
+        {
+          "path": "packages/core/src/capability-control/project.ts",
+          "bytes": 5930,
+          "lineCount": 172,
+          "sha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+          "pinnedAtUTC": "2026-10-17T20:13:53.602309+00:00",
+          "timing": "before own body/nav; canonical current path supplied in Root157 shared query",
+          "selectedLineRanges": [
+            [
+              52,
+              81
+            ]
+          ],
+          "semanticLineCount": 30,
+          "bodyDisplayedLineRanges": [
+            [
+              52,
+              81
+            ]
+          ],
+          "bodyDisplayedLineCount": 30,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              29,
+              29
+            ],
+            [
+              31,
+              31
+            ],
+            [
+              33,
+              33
+            ],
+            [
+              35,
+              35
+            ],
+            [
+              40,
+              40
+            ],
+            [
+              45,
+              45
+            ],
+            [
+              99,
+              99
+            ],
+            [
+              101,
+              101
+            ],
+            [
+              103,
+              103
+            ],
+            [
+              107,
+              107
+            ],
+            [
+              130,
+              130
+            ],
+            [
+              132,
+              132
+            ],
+            [
+              134,
+              134
+            ],
+            [
+              138,
+              138
+            ],
+            [
+              146,
+              146
+            ],
+            [
+              154,
+              154
+            ],
+            [
+              157,
+              157
+            ],
+            [
+              159,
+              160
+            ],
+            [
+              162,
+              162
+            ],
+            [
+              164,
+              164
+            ],
+            [
+              168,
+              168
+            ],
+            [
+              170,
+              170
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              29,
+              29
+            ],
+            [
+              31,
+              31
+            ],
+            [
+              33,
+              33
+            ],
+            [
+              35,
+              35
+            ],
+            [
+              40,
+              40
+            ],
+            [
+              45,
+              45
+            ],
+            [
+              52,
+              81
+            ],
+            [
+              99,
+              99
+            ],
+            [
+              101,
+              101
+            ],
+            [
+              103,
+              103
+            ],
+            [
+              107,
+              107
+            ],
+            [
+              130,
+              130
+            ],
+            [
+              132,
+              132
+            ],
+            [
+              134,
+              134
+            ],
+            [
+              138,
+              138
+            ],
+            [
+              146,
+              146
+            ],
+            [
+              154,
+              154
+            ],
+            [
+              157,
+              157
+            ],
+            [
+              159,
+              160
+            ],
+            [
+              162,
+              162
+            ],
+            [
+              164,
+              164
+            ],
+            [
+              168,
+              168
+            ],
+            [
+              170,
+              170
+            ]
+          ],
+          "displayedLineCount": 53,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary name/opaque key, dotted-path setter and flat-record reader only. Adjacent settings I/O, OAuth, identity, permission and host mechanisms displayed incidentally are not certified."
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+      "topLevelKeys": [
+        "baseline",
+        "files",
+        "historicalReportReads",
+        "navigationOnlyFiles",
+        "hashOnlyFiles",
+        "productExecution",
+        "fullMeaning"
+      ],
+      "files": [
+        {
+          "path": "packages/core/src/capability-control/service.ts",
+          "bytes": 7690,
+          "lines": 197,
+          "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              107,
+              109
+            ],
+            [
+              151,
+              165
+            ],
+            [
+              174,
+              179
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              60,
+              180
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 24,
+          "bodyDisplayedLineCount": 121,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        },
+        {
+          "path": "packages/core/src/capability-control/overlay.ts",
+          "bytes": 7815,
+          "lines": 211,
+          "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              48,
+              64
+            ],
+            [
+              184,
+              211
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              42,
+              80
+            ],
+            [
+              89,
+              112
+            ],
+            [
+              180,
+              211
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 45,
+          "bodyDisplayedLineCount": 95,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        },
+        {
+          "path": "packages/core/src/capability-control/project.ts",
+          "bytes": 5930,
+          "lines": 172,
+          "sha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              57,
+              81
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              55,
+              84
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 25,
+          "bodyDisplayedLineCount": 30,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        },
+        {
+          "path": "packages/core/src/settings/manager.ts",
+          "bytes": 46928,
+          "lines": 1139,
+          "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              83,
+              91
+            ],
+            [
+              144,
+              155
+            ],
+            [
+              338,
+              445
+            ],
+            [
+              501,
+              502
+            ],
+            [
+              572,
+              584
+            ],
+            [
+              701,
+              709
+            ],
+            [
+              721,
+              740
+            ],
+            [
+              872,
+              890
+            ],
+            [
+              1109,
+              1139
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              70,
+              100
+            ],
+            [
+              135,
+              185
+            ],
+            [
+              338,
+              450
+            ],
+            [
+              486,
+              508
+            ],
+            [
+              560,
+              590
+            ],
+            [
+              696,
+              741
+            ],
+            [
+              870,
+              892
+            ],
+            [
+              1109,
+              1139
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 223,
+          "bodyDisplayedLineCount": 349,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        },
+        {
+          "path": "packages/core/src/settings/schema.ts",
+          "bytes": 29767,
+          "lines": 731,
+          "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              57,
+              78
+            ],
+            [
+              345,
+              380
+            ],
+            [
+              729,
+              730
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              55,
+              81
+            ],
+            [
+              345,
+              380
+            ],
+            [
+              725,
+              731
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 60,
+          "bodyDisplayedLineCount": 70,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+          "bytes": 75595,
+          "lines": 1918,
+          "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              444,
+              453
+            ],
+            [
+              1319,
+              1337
+            ],
+            [
+              1375,
+              1375
+            ],
+            [
+              1394,
+              1394
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              435,
+              460
+            ],
+            [
+              1310,
+              1345
+            ],
+            [
+              1368,
+              1400
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 31,
+          "bodyDisplayedLineCount": 95,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+          "bytes": 26939,
+          "lines": 623,
+          "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              261,
+              279
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              245,
+              280
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 19,
+          "bodyDisplayedLineCount": 36,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        },
+        {
+          "path": "packages/desktop/src/preload/index.ts",
+          "bytes": 86436,
+          "lines": 1892,
+          "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              1119,
+              1123
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              1115,
+              1126
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 5,
+          "bodyDisplayedLineCount": 12,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        },
+        {
+          "path": "packages/desktop/src/main/capabilities-service.ts",
+          "bytes": 4475,
+          "lines": 120,
+          "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              51,
+              71
+            ],
+            [
+              114,
+              120
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              120
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 28,
+          "bodyDisplayedLineCount": 120,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        },
+        {
+          "path": "packages/desktop/src/main/index.ts",
+          "bytes": 299337,
+          "lines": 7330,
+          "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+          "beforeBodyOrLineNavigation": true,
+          "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              3840,
+              3847
+            ]
+          ],
+          "bodyDisplayedLineRanges": [
+            [
+              3834,
+              3850
+            ]
+          ],
+          "newUniqueCoverageClaim": false,
+          "semanticFull": false,
+          "semanticLineCount": 8,
+          "bodyDisplayedLineCount": 17,
+          "scope": "Ordinary accepted MCP name -> UI/IPC project override -> dotted-key mutation -> schema readback. No native/server connection, renderer target authority, locking or whole settings mechanism certification."
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+      "topLevelKeys": [
+        "atUTC",
+        "rootReportedBaseline",
+        "gitCertified",
+        "files",
+        "summary"
+      ],
+      "files": [
+        {
+          "path": "CODESHELL.md",
+          "bytes": 17639,
+          "lineCount": 217,
+          "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "pinnedAtUTC": "2026-10-17T20:19:50.812896+00:00",
+          "timing": "before any own prep161 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "instruction-hash-reuse",
+          "scopeBoundary": "Same-SHA previously fully read instructions reused; no instruction body prep161."
+        },
+        {
+          "path": "AGENTS.md",
+          "bytes": 206,
+          "lineCount": 5,
+          "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "pinnedAtUTC": "2026-10-17T20:19:50.814784+00:00",
+          "timing": "before any own prep161 body/nav",
+          "selectedLineRanges": [],
+          "semanticLineCount": 0,
+          "bodyDisplayedLineRanges": [],
+          "bodyDisplayedLineCount": 0,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [],
+          "displayedLineCount": 0,
+          "coverage": "hash-only",
+          "semanticFull": false,
+          "category": "instruction-hash-reuse",
+          "scopeBoundary": "Same-SHA previously fully read instructions reused; no instruction body prep161."
+        },
+        {
+          "path": "packages/core/src/settings/manager.ts",
+          "bytes": 46928,
+          "lineCount": 1139,
+          "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+          "pinnedAtUTC": "2026-10-17T20:19:50.815946+00:00",
+          "timing": "before any own prep161 body/nav",
+          "selectedLineRanges": [
+            [
+              21,
+              21
+            ],
+            [
+              83,
+              92
+            ],
+            [
+              94,
+              112
+            ],
+            [
+              144,
+              155
+            ],
+            [
+              186,
+              192
+            ],
+            [
+              225,
+              240
+            ],
+            [
+              261,
+              310
+            ],
+            [
+              325,
+              348
+            ],
+            [
+              375,
+              393
+            ],
+            [
+              405,
+              437
+            ],
+            [
+              442,
+              452
+            ],
+            [
+              501,
+              502
+            ],
+            [
+              524,
+              526
+            ],
+            [
+              572,
+              585
+            ],
+            [
+              701,
+              741
+            ],
+            [
+              793,
+              799
+            ],
+            [
+              807,
+              832
+            ],
+            [
+              834,
+              844
+            ],
+            [
+              872,
+              891
+            ],
+            [
+              921,
+              934
+            ],
+            [
+              979,
+              1002
+            ],
+            [
+              1017,
+              1029
+            ],
+            [
+              1109,
+              1139
+            ]
+          ],
+          "semanticLineCount": 408,
+          "bodyDisplayedLineRanges": [
+            [
+              1,
+              31
+            ],
+            [
+              83,
+              92
+            ],
+            [
+              94,
+              112
+            ],
+            [
+              144,
+              155
+            ],
+            [
+              182,
+              205
+            ],
+            [
+              218,
+              259
+            ],
+            [
+              261,
+              366
+            ],
+            [
+              375,
+              395
+            ],
+            [
+              398,
+              452
+            ],
+            [
+              488,
+              526
+            ],
+            [
+              572,
+              585
+            ],
+            [
+              690,
+              783
+            ],
+            [
+              793,
+              849
+            ],
+            [
+              866,
+              938
+            ],
+            [
+              977,
+              1037
+            ],
+            [
+              1103,
+              1139
+            ]
+          ],
+          "bodyDisplayedLineCount": 695,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              456,
+              456
+            ],
+            [
+              534,
+              534
+            ],
+            [
+              539,
+              540
+            ],
+            [
+              542,
+              542
+            ],
+            [
+              558,
+              558
+            ],
+            [
+              563,
+              563
+            ],
+            [
+              596,
+              596
+            ],
+            [
+              599,
+              599
+            ],
+            [
+              602,
+              602
+            ],
+            [
+              629,
+              629
+            ],
+            [
+              632,
+              632
+            ],
+            [
+              639,
+              639
+            ],
+            [
+              642,
+              642
+            ],
+            [
+              672,
+              672
+            ],
+            [
+              676,
+              676
+            ],
+            [
+              689,
+              689
+            ],
+            [
+              851,
+              851
+            ],
+            [
+              940,
+              940
+            ],
+            [
+              960,
+              961
+            ],
+            [
+              1046,
+              1046
+            ],
+            [
+              1060,
+              1060
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              1,
+              31
+            ],
+            [
+              83,
+              92
+            ],
+            [
+              94,
+              112
+            ],
+            [
+              144,
+              155
+            ],
+            [
+              182,
+              205
+            ],
+            [
+              218,
+              259
+            ],
+            [
+              261,
+              366
+            ],
+            [
+              375,
+              395
+            ],
+            [
+              398,
+              452
+            ],
+            [
+              456,
+              456
+            ],
+            [
+              488,
+              526
+            ],
+            [
+              534,
+              534
+            ],
+            [
+              539,
+              540
+            ],
+            [
+              542,
+              542
+            ],
+            [
+              558,
+              558
+            ],
+            [
+              563,
+              563
+            ],
+            [
+              572,
+              585
+            ],
+            [
+              596,
+              596
+            ],
+            [
+              599,
+              599
+            ],
+            [
+              602,
+              602
+            ],
+            [
+              629,
+              629
+            ],
+            [
+              632,
+              632
+            ],
+            [
+              639,
+              639
+            ],
+            [
+              642,
+              642
+            ],
+            [
+              672,
+              672
+            ],
+            [
+              676,
+              676
+            ],
+            [
+              689,
+              783
+            ],
+            [
+              793,
+              849
+            ],
+            [
+              851,
+              851
+            ],
+            [
+              866,
+              938
+            ],
+            [
+              940,
+              940
+            ],
+            [
+              960,
+              961
+            ],
+            [
+              977,
+              1037
+            ],
+            [
+              1046,
+              1046
+            ],
+            [
+              1060,
+              1060
+            ],
+            [
+              1103,
+              1139
+            ]
+          ],
+          "displayedLineCount": 718,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+        },
+        {
+          "path": "packages/core/src/settings/schema.ts",
+          "bytes": 29767,
+          "lineCount": 731,
+          "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+          "pinnedAtUTC": "2026-10-17T20:19:50.816724+00:00",
+          "timing": "before any own prep161 body/nav",
+          "selectedLineRanges": [
+            [
+              57,
+              78
+            ],
+            [
+              477,
+              477
+            ],
+            [
+              729,
+              731
+            ]
+          ],
+          "semanticLineCount": 26,
+          "bodyDisplayedLineRanges": [
+            [
+              54,
+              81
+            ],
+            [
+              470,
+              480
+            ],
+            [
+              723,
+              731
+            ]
+          ],
+          "bodyDisplayedLineCount": 48,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              88,
+              88
+            ],
+            [
+              483,
+              483
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              54,
+              81
+            ],
+            [
+              88,
+              88
+            ],
+            [
+              470,
+              480
+            ],
+            [
+              483,
+              483
+            ],
+            [
+              723,
+              731
+            ]
+          ],
+          "displayedLineCount": 50,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+        },
+        {
+          "path": "packages/desktop/src/main/index.ts",
+          "bytes": 299337,
+          "lineCount": 7330,
+          "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+          "pinnedAtUTC": "2026-10-17T20:19:50.818366+00:00",
+          "timing": "before any own prep161 body/nav",
+          "selectedLineRanges": [
+            [
+              3840,
+              3847
+            ]
+          ],
+          "semanticLineCount": 8,
+          "bodyDisplayedLineRanges": [
+            [
+              3835,
+              3852
+            ]
+          ],
+          "bodyDisplayedLineCount": 18,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [
+            [
+              3835,
+              3852
+            ]
+          ],
+          "displayedLineCount": 18,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+        },
+        {
+          "path": "packages/desktop/src/preload/index.ts",
+          "bytes": 86436,
+          "lineCount": 1892,
+          "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "pinnedAtUTC": "2026-10-17T20:19:50.819569+00:00",
+          "timing": "before any own prep161 body/nav",
+          "selectedLineRanges": [
+            [
+              1119,
+              1123
+            ]
+          ],
+          "semanticLineCount": 5,
+          "bodyDisplayedLineRanges": [
+            [
+              1116,
+              1125
+            ]
+          ],
+          "bodyDisplayedLineCount": 10,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [
+            [
+              1116,
+              1125
+            ]
+          ],
+          "displayedLineCount": 10,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+          "bytes": 26939,
+          "lineCount": 623,
+          "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+          "pinnedAtUTC": "2026-10-17T20:20:15.061130+00:00",
+          "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+          "selectedLineRanges": [
+            [
+              261,
+              279
+            ]
+          ],
+          "semanticLineCount": 19,
+          "bodyDisplayedLineRanges": [
+            [
+              253,
+              279
+            ]
+          ],
+          "bodyDisplayedLineCount": 27,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [
+            [
+              253,
+              279
+            ]
+          ],
+          "displayedLineCount": 27,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+        },
+        {
+          "path": "packages/desktop/src/main/capabilities-service.ts",
+          "bytes": 4475,
+          "lineCount": 120,
+          "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+          "pinnedAtUTC": "2026-10-17T20:20:15.062779+00:00",
+          "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+          "selectedLineRanges": [
+            [
+              51,
+              80
+            ],
+            [
+              114,
+              120
+            ]
+          ],
+          "semanticLineCount": 37,
+          "bodyDisplayedLineRanges": [
+            [
+              40,
+              124
+            ]
+          ],
+          "bodyDisplayedLineCount": 85,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [
+            [
+              40,
+              124
+            ]
+          ],
+          "displayedLineCount": 85,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+        },
+        {
+          "path": "packages/core/src/capability-control/service.ts",
+          "bytes": 7690,
+          "lineCount": 197,
+          "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+          "pinnedAtUTC": "2026-10-17T20:20:15.063617+00:00",
+          "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+          "selectedLineRanges": [
+            [
+              107,
+              117
+            ],
+            [
+              151,
+              165
+            ]
+          ],
+          "semanticLineCount": 26,
+          "bodyDisplayedLineRanges": [
+            [
+              105,
+              124
+            ],
+            [
+              151,
+              165
+            ]
+          ],
+          "bodyDisplayedLineCount": 35,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [
+            [
+              105,
+              124
+            ],
+            [
+              151,
+              165
+            ]
+          ],
+          "displayedLineCount": 35,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+        },
+        {
+          "path": "packages/core/src/capability-control/overlay.ts",
+          "bytes": 7815,
+          "lineCount": 211,
+          "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+          "pinnedAtUTC": "2026-10-17T20:20:15.064519+00:00",
+          "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+          "selectedLineRanges": [
+            [
+              184,
+              211
+            ]
+          ],
+          "semanticLineCount": 28,
+          "bodyDisplayedLineRanges": [
+            [
+              181,
+              211
+            ]
+          ],
+          "bodyDisplayedLineCount": 31,
+          "additionalNavigationSnippetLineRanges": [],
+          "displayedLineRanges": [
+            [
+              181,
+              211
+            ]
+          ],
+          "displayedLineCount": 31,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+        },
+        {
+          "path": "packages/core/src/settings/migrate-config.ts",
+          "bytes": 5819,
+          "lineCount": 149,
+          "sha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc",
+          "pinnedAtUTC": "2026-10-17T20:21:57.791266+00:00",
+          "timing": "before own prep161 body/nav; imported manager path, exact inventory confirmed",
+          "selectedLineRanges": [
+            [
+              17,
+              17
+            ],
+            [
+              91,
+              102
+            ],
+            [
+              119,
+              147
+            ]
+          ],
+          "semanticLineCount": 42,
+          "bodyDisplayedLineRanges": [
+            [
+              91,
+              147
+            ]
+          ],
+          "bodyDisplayedLineCount": 57,
+          "additionalNavigationSnippetLineRanges": [
+            [
+              7,
+              7
+            ],
+            [
+              17,
+              17
+            ],
+            [
+              49,
+              49
+            ],
+            [
+              51,
+              51
+            ],
+            [
+              53,
+              53
+            ],
+            [
+              55,
+              55
+            ],
+            [
+              59,
+              59
+            ],
+            [
+              72,
+              72
+            ],
+            [
+              81,
+              81
+            ],
+            [
+              84,
+              84
+            ],
+            [
+              88,
+              89
+            ]
+          ],
+          "displayedLineRanges": [
+            [
+              7,
+              7
+            ],
+            [
+              17,
+              17
+            ],
+            [
+              49,
+              49
+            ],
+            [
+              51,
+              51
+            ],
+            [
+              53,
+              53
+            ],
+            [
+              55,
+              55
+            ],
+            [
+              59,
+              59
+            ],
+            [
+              72,
+              72
+            ],
+            [
+              81,
+              81
+            ],
+            [
+              84,
+              84
+            ],
+            [
+              88,
+              89
+            ],
+            [
+              91,
+              147
+            ]
+          ],
+          "displayedLineCount": 69,
+          "coverage": "selected",
+          "semanticFull": false,
+          "category": "product-selected",
+          "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "frozenSource": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 17639
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "frozenSha256": "e2831337564fad6b8e996abd31c2e20f702102e83724150bfe05fe0045a05094",
+      "sha256": "e2831337564fad6b8e996abd31c2e20f702102e83724150bfe05fe0045a05094",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 5419
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.test.ts",
+      "frozenSha256": "3ae9fb7c6e1f6859ade0145343246ab3172d1e2be31cc59a1aa3bfd8a8f2f29f",
+      "sha256": "3ae9fb7c6e1f6859ade0145343246ab3172d1e2be31cc59a1aa3bfd8a8f2f29f",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 4648
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+      "frozenSha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "sha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 16988
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewScope.ts",
+      "frozenSha256": "80ae68bb3244f81dcb382f36d24448002298ca666da82119b7c39ae3119f33d7",
+      "sha256": "80ae68bb3244f81dcb382f36d24448002298ca666da82119b7c39ae3119f33d7",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 3316
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewScope.test.ts",
+      "frozenSha256": "4a3aa3f4038de8e2b14bfdcd61bc75671d3ae181bd46bf18a2440e9eac71031b",
+      "sha256": "4a3aa3f4038de8e2b14bfdcd61bc75671d3ae181bd46bf18a2440e9eac71031b",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 2739
+    },
+    {
+      "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+      "frozenSha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+      "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 337
+    },
+    {
+      "path": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+      "frozenSha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271",
+      "sha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 827
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "frozenSha256": "ffc5a2d481ca2beeae45527f0f1852035c025d927c8d184ce61ace1dbf284a3b",
+      "sha256": "ffc5a2d481ca2beeae45527f0f1852035c025d927c8d184ce61ace1dbf284a3b",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 2369
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.test.ts",
+      "frozenSha256": "4bd4196d28d0d90058358d2f4dc9be94e843a6fb80fb9b0720dacd8407d62b5b",
+      "sha256": "4bd4196d28d0d90058358d2f4dc9be94e843a6fb80fb9b0720dacd8407d62b5b",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 2574
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/FileToolCard.tsx",
+      "frozenSha256": "be1c41ebad89228f9822f9db1164395abf1d2718cd425835d860144440526f9b",
+      "sha256": "be1c41ebad89228f9822f9db1164395abf1d2718cd425835d860144440526f9b",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 4928
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/GenericToolCard.tsx",
+      "frozenSha256": "4df0ba5b484540c6340e53d4f7fae03f7d52612f479291865bb13b86e4623655",
+      "sha256": "4df0ba5b484540c6340e53d4f7fae03f7d52612f479291865bb13b86e4623655",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 4953
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/AgentToolCard.tsx",
+      "frozenSha256": "23414e102c3877e4af3f6d6d3b71f51bd2aa989650f236013ee02b8d24c66cb3",
+      "sha256": "23414e102c3877e4af3f6d6d3b71f51bd2aa989650f236013ee02b8d24c66cb3",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 3738
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/BashToolCard.tsx",
+      "frozenSha256": "cd15e0b86f623d47442e525c8ba7eb7c8c3c37406aa199d3b3439afe60b9abc5",
+      "sha256": "cd15e0b86f623d47442e525c8ba7eb7c8c3c37406aa199d3b3439afe60b9abc5",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 2703
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-services.ts",
+      "frozenSha256": "8c696314f9b1c0245244606952fa2fcb2684412bca70901e9ec97391ea5dc610",
+      "sha256": "8c696314f9b1c0245244606952fa2fcb2684412bca70901e9ec97391ea5dc610",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 30395
+    },
+    {
+      "path": "packages/desktop/src/main/review-service.ts",
+      "frozenSha256": "00f4dead58f4c25b492169cd1ab66e96b77bd1395aeee3cd80273629f7d14944",
+      "sha256": "00f4dead58f4c25b492169cd1ab66e96b77bd1395aeee3cd80273629f7d14944",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 10797
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/bash-output-style.ts",
+      "frozenSha256": "6f03200fa5529ab59f8adf2ac05c9411f4d9df733511594cd3a5968124137216",
+      "sha256": "6f03200fa5529ab59f8adf2ac05c9411f4d9df733511594cd3a5968124137216",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 1958
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/write.ts",
+      "frozenSha256": "6ba134100676a861574db5c982f7c033ce9cf9b6752880a355dc7276c3dcd859",
+      "sha256": "6ba134100676a861574db5c982f7c033ce9cf9b6752880a355dc7276c3dcd859",
+      "currentEqualsFrozen": true,
+      "frozenBytes": 2423
+    }
+  ],
+  "scope": "Inspected sources and exact baseline files; hash inclusion does not imply full-file behavioural coverage."
+}

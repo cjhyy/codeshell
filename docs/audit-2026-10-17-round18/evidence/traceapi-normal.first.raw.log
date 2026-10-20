@@ -1,0 +1,17 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts:
+(pass) omitted and explicitly undefined query values keep the four ordinary route paths [0.97ms]
+(pass) all ordinary list filters survive a URL query round trip with Unicode and punctuation [0.07ms]
+(pass) sessions preserve normal filters, standalone grouping, and an opaque next-page cursor [0.28ms]
+(pass) list preserves the requester's page items, total, and optional cursor without mutation [0.10ms]
+(pass) explicit empty ordinary string filters remain explicit while absent optionals stay absent [0.06ms]
+(pass) get passes a locally fabricated ordinary id and returns its owned detail object [0.15ms]
+(pass) getConfig uses the fixed ordinary config route and preserves owned configuration fields [0.03ms]
+(pass) concurrent ordinary list and session requests retain separate query parameters and results [0.05ms]
+
+ 8 pass
+ 0 fail
+ 23 expect() calls
+Ran 8 tests across 1 file. [52.00ms]
+Completed Bun shard: 8 tests, 0 skipped; 0 failures.

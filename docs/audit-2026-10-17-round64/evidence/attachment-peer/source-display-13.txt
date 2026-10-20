@@ -1,0 +1,6 @@
+941:   markAttachmentsSent: (payload: {
+942:     cwd: string;
+943:     sessionId: string;
+944:     attachments: InputAttachmentMeta[];
+945:     quickChatClaimId?: string;
+946:   }) => ipcRenderer.invoke("attachments:markSent", payload) as Promise<{ ok: true }>,

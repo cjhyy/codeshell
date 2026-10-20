@@ -4,6 +4,7 @@ import type { ProfileSwitchPreview } from "../../shared/profile-switch";
 import { useT } from "../i18n/I18nProvider";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
+import { createDialogFocusLease, type DialogFocusLease } from "../ui/useDialogFocus";
 import { ensureDigitalHumanRequirements } from "./profileRequirements";
 import { useDigitalHumanContext } from "./useDigitalHumansLibrary";
 
@@ -19,6 +20,7 @@ export function useProfileSwitch(
   const captureContext = useDigitalHumanContext(target);
   const key = JSON.stringify(target);
   const lock = React.useRef(false);
+  const focusLease = React.useRef<DialogFocusLease | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [adopting, setAdopting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -30,6 +32,8 @@ export function useProfileSwitch(
     name: string | null;
     preview: ProfileSwitchPreview;
     isCurrent: () => boolean;
+    opener: HTMLElement | null;
+    focusLease: DialogFocusLease;
   } | null>(null);
   React.useLayoutEffect(() => {
     lock.current = false;
@@ -38,6 +42,10 @@ export function useProfileSwitch(
     setLoading(false);
     setAdopting(false);
     setUnavailableDefault(null);
+    return () => {
+      focusLease.current?.cancel();
+      focusLease.current?.dispose();
+    };
   }, [key]);
 
   React.useEffect(() => {
@@ -61,10 +69,20 @@ export function useProfileSwitch(
     };
   }, [key, recoveryCheckReady, captureContext]);
 
-  const open = async (name: string | null) => {
+  const open = async (
+    name: string | null,
+    opener: HTMLElement | null = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null,
+  ) => {
     if (lock.current) return;
     lock.current = true;
     const isCurrent = captureContext();
+    focusLease.current?.dispose();
+    const lease = createDialogFocusLease(opener);
+    focusLease.current = lease;
+    lease.start();
+    let keepLease = false;
     setLoading(true);
     setError(null);
     try {
@@ -74,7 +92,7 @@ export function useProfileSwitch(
           name,
           configurationTarget: target,
           api: window.codeshell,
-          confirm,
+          confirm: (options) => lease.withNestedFocus(() => confirm(options)),
           toast,
           t,
           isCurrent,
@@ -85,7 +103,8 @@ export function useProfileSwitch(
       // Dependency installs can change inventory; review only their final state.
       const preview = await window.codeshell.previewProfileSwitch(target, name);
       if (!isCurrent()) return;
-      setPending({ key, target, name, preview, isCurrent });
+      keepLease = true;
+      setPending({ key, target, name, preview, isCurrent, opener, focusLease: lease });
     } catch (caught) {
       if (isCurrent())
         toast({
@@ -93,6 +112,7 @@ export function useProfileSwitch(
           variant: "error",
         });
     } finally {
+      if (!keepLease) lease.dispose();
       if (isCurrent()) {
         setLoading(false);
         lock.current = false;
@@ -146,6 +166,8 @@ export function useProfileSwitch(
     close,
     adopt,
     preview: pending?.key === key ? pending.preview : null,
+    opener: pending?.key === key ? pending.opener : null,
+    focusLease: pending?.key === key ? pending.focusLease : null,
     error,
     adopting,
     busy: loading || adopting || Boolean(pending?.key === key),

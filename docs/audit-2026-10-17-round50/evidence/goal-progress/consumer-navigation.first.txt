@@ -1,0 +1,9 @@
+packages/desktop/src/renderer/types.ts:189:export interface GoalProgressMessage {
+packages/desktop/src/renderer/types.ts:334:  | GoalProgressMessage
+packages/desktop/src/renderer/types.ts:1778:      const msg: GoalProgressMessage = {
+packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:8:import { GoalProgressView } from "./GoalProgressView";
+packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx:191:      return <GoalProgressView key={m.id} message={m} />;
+packages/desktop/src/renderer/MessageStream.tsx:9:import { GoalProgressView } from "./messages/GoalProgressView";
+packages/desktop/src/renderer/MessageStream.tsx:84:  onExtendGoal?: (opts: {
+packages/desktop/src/renderer/MessageStream.tsx:149:  onExtendGoal,
+packages/desktop/src/renderer/MessageStream.tsx:597:        return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;

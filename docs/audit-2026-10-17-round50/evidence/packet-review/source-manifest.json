@@ -1,0 +1,201 @@
+{
+  "schema": "metadata-packet-review-v1",
+  "role": "Independent packet metadata review for84/86/87/89; own-author metadata self-check for85/88; not an independent product-source or runtime review.",
+  "files": [],
+  "hashOnlyProductSourceFiles": [],
+  "newProductSemanticLines": 0,
+  "productSourceBodiesRead": 0,
+  "productSourceHashesIndependentlyRechecked": 0,
+  "metadataInputs": [
+    {
+      "packet": "84-latest-scroll-review",
+      "role": "Independent packet metadata integrity review only; no new source review",
+      "report": {
+        "path": "/tmp/codeshell-audit-round84-latest-scroll-review/report.md",
+        "bytes": 2107,
+        "sha256": "742aa4552b98b2387f74985bd7fd6fd1f34c4d08d4a9cdf33948c33a8107d5f9"
+      },
+      "sourceManifestMetadata": {
+        "path": "/tmp/codeshell-audit-round84-latest-scroll-review/source-manifest.json",
+        "bytes": 5844,
+        "sha256": "45142dec1057c87ebebfd2a9b9139a7e5fad47b0110ea2419d1c8eab1fe9f6c4"
+      },
+      "receipt": {
+        "path": "/tmp/codeshell-audit-round84-latest-scroll-review/reviewer-receipt.json",
+        "bytes": 2967,
+        "sha256": "9be0e6f26828fcd5de022c6054bc026de26313e5cd03696befb8f0e64ade1a58"
+      },
+      "actualInputArtifacts": 19,
+      "selectedSemanticMetadataFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json",
+        "history-first-exit.json",
+        "layout-navigation-first-exit.json"
+      ],
+      "allOtherInputContentHandling": "Opaque byte/SHA checking only; no author scripts executed or source excerpts decoded."
+    },
+    {
+      "packet": "85-latest-scroll",
+      "role": "Own-author metadata self-check; not independent source review",
+      "report": {
+        "path": "/tmp/codeshell-audit-round85-latest-scroll/report.md",
+        "bytes": 3842,
+        "sha256": "4a7ab0b89355da0d356c3d49c13662a9f06cc9f82954138d6052c66bd20d8407"
+      },
+      "sourceManifestMetadata": {
+        "path": "/tmp/codeshell-audit-round85-latest-scroll/source-manifest.json",
+        "bytes": 7863,
+        "sha256": "4be8fbb61d5fff2be3ba3d86631210aa9b42107de790987722e373ba39c74079"
+      },
+      "receipt": {
+        "path": "/tmp/codeshell-audit-round85-latest-scroll/reviewer-receipt.json",
+        "bytes": 2268,
+        "sha256": "e82963ae70f9571d717d4f73ea3d996832604554e1040cc498967f4b1bc7faaf"
+      },
+      "actualInputArtifacts": 14,
+      "selectedSemanticMetadataFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json"
+      ],
+      "allOtherInputContentHandling": "Opaque byte/SHA checking only; no author scripts executed or source excerpts decoded."
+    },
+    {
+      "packet": "86-trace-store-query",
+      "role": "Independent packet metadata integrity review only; no new source review",
+      "report": {
+        "path": "/tmp/codeshell-audit-round86-trace-store-query/report.md",
+        "bytes": 5891,
+        "sha256": "8850e796a40434cb3f07c76763000d25aff8ad30f9157def5e5333b51cbad0e7"
+      },
+      "sourceManifestMetadata": {
+        "path": "/tmp/codeshell-audit-round86-trace-store-query/source-manifest.json",
+        "bytes": 13074,
+        "sha256": "6bdec64ed918b057c65867a6d9a65f234a2a29f62dcb1f8ec04f4814f8177abd"
+      },
+      "receipt": {
+        "path": "/tmp/codeshell-audit-round86-trace-store-query/reviewer-receipt.json",
+        "bytes": 2845,
+        "sha256": "2c749f63475aad1bc9bfd372bc9e8046e45c48b281d14fd85ff1e9992f991f03"
+      },
+      "actualInputArtifacts": 16,
+      "selectedSemanticMetadataFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json"
+      ],
+      "allOtherInputContentHandling": "Opaque byte/SHA checking only; no author scripts executed or source excerpts decoded."
+    },
+    {
+      "packet": "87-frontier-selection",
+      "role": "Independent packet metadata integrity review only; no new source review",
+      "report": {
+        "path": "/tmp/codeshell-audit-round87-frontier-selection/report.md",
+        "bytes": 6283,
+        "sha256": "48d768e61c46481db1b5e8309f489d34abd651b3ee3633c9a844de8fa3205064"
+      },
+      "sourceManifestMetadata": {
+        "path": "/tmp/codeshell-audit-round87-frontier-selection/source-manifest.json",
+        "bytes": 17425,
+        "sha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9"
+      },
+      "receipt": {
+        "path": "/tmp/codeshell-audit-round87-frontier-selection/artifact-receipt.json",
+        "bytes": 3526,
+        "sha256": "57a08652e94bdb07deb692f5c005a6372a57e5fc67fbb618d41eadbb71872d90"
+      },
+      "actualInputArtifacts": 19,
+      "selectedSemanticMetadataFiles": [
+        "report.md",
+        "source-manifest.json",
+        "artifact-receipt.json",
+        "ending-checks.json",
+        "first-reader-diagnostic.json",
+        "first-reader-stderr.txt",
+        "checks.json",
+        "candidates.json (schema/count only; no claim bodies)"
+      ],
+      "allOtherInputContentHandling": "Opaque byte/SHA checking only; no author scripts executed or source excerpts decoded."
+    },
+    {
+      "packet": "88-plugin-presentation",
+      "role": "Own-author metadata self-check; not independent source review",
+      "report": {
+        "path": "/tmp/codeshell-audit-round88-plugin-presentation/report.md",
+        "bytes": 3814,
+        "sha256": "f9bcb806a34135620cc242957657368a312ed8c02f2961c15eb2c80ac740e03b"
+      },
+      "sourceManifestMetadata": {
+        "path": "/tmp/codeshell-audit-round88-plugin-presentation/source-manifest.json",
+        "bytes": 9527,
+        "sha256": "37ffe1273bbe469210c4ba67f201c036a01dd15652e65511d0264d399dcfe7d8"
+      },
+      "receipt": {
+        "path": "/tmp/codeshell-audit-round88-plugin-presentation/reviewer-receipt.json",
+        "bytes": 2581,
+        "sha256": "9f482676c9a75385ce234aa6cc7b9e1fcab729c529b42b386ed1e8abd32899a0"
+      },
+      "actualInputArtifacts": 16,
+      "selectedSemanticMetadataFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json"
+      ],
+      "allOtherInputContentHandling": "Opaque byte/SHA checking only; no author scripts executed or source excerpts decoded."
+    },
+    {
+      "packet": "89-composer-suggestions",
+      "role": "Independent packet metadata integrity review only; no new source review",
+      "report": {
+        "path": "/tmp/codeshell-audit-round89-composer-suggestions/report.md",
+        "bytes": 5935,
+        "sha256": "af7d651117ab616512018cc9b5bf2add41cc6af248f0646af31571f36b63e007"
+      },
+      "sourceManifestMetadata": {
+        "path": "/tmp/codeshell-audit-round89-composer-suggestions/source-manifest.json",
+        "bytes": 9869,
+        "sha256": "4fb3048fae5f0347a406826428aa397315687991cb3b4c4cb04a622b6c47daad"
+      },
+      "receipt": {
+        "path": "/tmp/codeshell-audit-round89-composer-suggestions/reviewer-receipt.json",
+        "bytes": 2768,
+        "sha256": "e68df5c5a1dc6dab2fa8bd1dca074881679bf1e1fcff59c3d8dd8e97243715e5"
+      },
+      "actualInputArtifacts": 15,
+      "selectedSemanticMetadataFiles": [
+        "report.md",
+        "source-manifest.json",
+        "reviewer-receipt.json",
+        "ending-checks.json",
+        "validation.json"
+      ],
+      "allOtherInputContentHandling": "Opaque byte/SHA checking only; no author scripts executed or source excerpts decoded."
+    }
+  ],
+  "packetInputPinsIn": "checks.json /packets/*/inputPins",
+  "readTiming": "All99 artifacts pinned before report/manifest metadata inspection; per-file timestamps retained in checks. Ending99 bytes/SHA and exact sets all unchanged.",
+  "scope": "Report/manifest/receipt/end/validation metadata and named first-diagnostic metadata only; no fresh full-history scanning, no mutable90/91/92, no source excerpt semantics.",
+  "execution": {
+    "product": 0,
+    "productSourcesRead": 0,
+    "authorMethodsExecuted": 0,
+    "Git": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "DOMReactTimersUI": 0,
+    "networkNative": 0,
+    "metadataOnly": "Own Python stdlib hashing/JSON/range accounting and report Markdown link parsing only; source excerpts/scripts hashed as opaque bytes."
+  },
+  "sourceRangeCertification": "Only internal arithmetic against declared manifest source lengths; no product source reopened or bound to current Git.",
+  "globalCoverageChanged": false,
+  "checkedUTC": "2026-10-17T17:05:47.230329+00:00"
+}

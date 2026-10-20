@@ -1,0 +1,22 @@
+{
+  "atUTC": "2026-10-17T19:10:36.998686+00:00",
+  "kind": "Own stdlib metadata checks only, not product validation",
+  "sourceRows": 27,
+  "sourcePins": 27,
+  "rangeSubsetAndEOFChecks": true,
+  "canonicalDisplayUnionChecks": true,
+  "sourceAndBoundedMetadataChecksAllSame": true,
+  "reportLinks": [
+    "classification.json",
+    "source-manifest.json",
+    "source-excerpts.txt",
+    "prior-metadata-inputs.json",
+    "author-freeze-inputs.json",
+    "diagnostics.json",
+    "ending.json",
+    "artifact-receipt.json"
+  ],
+  "reportLinkCount": 8,
+  "receiptSelfLinkWillExist": true,
+  "allClassificationCountsReferToOneExistingCandidate": true
+}

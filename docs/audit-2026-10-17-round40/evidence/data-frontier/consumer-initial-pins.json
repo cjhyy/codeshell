@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+      "bytes": 48293,
+      "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+      "totalLines": 1237,
+      "pinTimeUTC": "2026-10-17T13:37:14.776159+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+      "bytes": 3130,
+      "sha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "totalLines": 78,
+      "pinTimeUTC": "2026-10-17T13:37:14.776159+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+      "bytes": 21013,
+      "sha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+      "totalLines": 523,
+      "pinTimeUTC": "2026-10-17T13:37:14.776159+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    }
+  ]
+}

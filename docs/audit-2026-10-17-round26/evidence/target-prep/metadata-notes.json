@@ -1,0 +1,31 @@
+{
+  "allWritesUnder": "/tmp/codeshell-audit-round26-review-frontier",
+  "productTestImportFixtureVMNativePTYGitNetworkSecurityAuthCustodyExecution": 0,
+  "sourceImportsNotExecuted": [
+    "node:child_process",
+    "node:fs",
+    "node:fs/promises",
+    "node:path",
+    "node:util",
+    "@cjhyy/code-shell-core/extension",
+    "./review-prompt.js"
+  ],
+  "toolOutputLimits": [
+    {
+      "action": "Initial broad docs/bugs inventory filter returned1451 lines and tool truncation.",
+      "effect": "Navigation only; no semantic coverage claimed. Complete history is collected by bounded metadata script and relevant prior parents separately read."
+    },
+    {
+      "action": "Combined target406/test280/caller output exceeded aggregate budget; test initial lines were truncated.",
+      "effect": "Target406 displayed fully; test1-100,101-200,201-280 and prompt/caller sections separately read in bounded outputs before claiming full tests."
+    }
+  ],
+  "navigationNoMatch": [
+    {
+      "action": "Final rg query in docs/todo and docs/architecture for target names/command syntax",
+      "exitCode": 1,
+      "meaning": "No-match navigation, after preceding source reads. Not product/test failure, no retry or product fallback."
+    }
+  ],
+  "instructions": "CODESHELL full read and unchanged SHA56d9ffdd…dad5a2. Parent owns branch/freeze metadata and all Git operations. No .git reads or Git commands by this subagent."
+}

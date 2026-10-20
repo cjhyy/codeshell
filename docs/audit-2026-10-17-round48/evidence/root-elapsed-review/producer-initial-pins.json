@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-10-17T15:59:39.133558+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "lines": 445,
+      "beforeRootProducerNavigationAndBody": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "lines": 1571,
+      "beforeRootProducerNavigationAndBody": true
+    }
+  ]
+}

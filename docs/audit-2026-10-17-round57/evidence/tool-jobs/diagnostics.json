@@ -1,0 +1,32 @@
+{
+  "firstAndLaterTruncations": [
+    {
+      "toolChunk": "36b9ef",
+      "exitCode": 0,
+      "originalTokenCount": 3289,
+      "maxOutputTokens": 3200,
+      "stage": "combined old MD and product method locator",
+      "disposition": "Original transcript retained; omitted metadata not claimed read. No complete locator display total inferred."
+    },
+    {
+      "toolChunk": "941385",
+      "exitCode": 0,
+      "originalTokenCount": 4859,
+      "maxOutputTokens": 4100,
+      "stage": "target body plus broad runtime/storage/test navigation",
+      "disposition": "Target body blocks preceding omitted middle fully visible; broad locator missing middle not reconstructed as human read. Later bounded locators are separately counted."
+    },
+    {
+      "toolChunk": "699490",
+      "exitCode": 0,
+      "originalTokenCount": 2641,
+      "maxOutputTokens": 1900,
+      "stage": "runtime757–858 plus old report selections",
+      "disposition": "Runtime only known-visible757–839 counted in primary display; omitted tail/old report not claimed read. Old runtime report later dedicated1–15 actually read."
+    }
+  ],
+  "nonzeroCommands": [],
+  "lateSourcePins": [],
+  "productFailures": [],
+  "rawOutputStatus": "Original tool transcript authoritative, no pre-captured complete raw stdout file fabricated. Static bounded follow-up reads are not product retries."
+}

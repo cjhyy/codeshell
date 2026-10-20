@@ -1,0 +1,14 @@
+{
+  "observations": [
+    {
+      "toolChunk": "9eb471",
+      "exitCode": 0,
+      "kind": "metadata display truncation",
+      "note": "Wide33history windows/original scope display exceeded token budget; not claimed fully read. Follow-up bounded33selectedcause windows saved separately. Actual source reads separately specified in manifest."
+    }
+  ],
+  "productFailuresOrRetries": 0,
+  "author64PackageRead": false,
+  "isBlindReview": false,
+  "targetHypothesisProvidedByRoot": true
+}

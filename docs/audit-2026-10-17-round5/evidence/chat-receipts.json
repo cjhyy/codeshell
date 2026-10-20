@@ -1,0 +1,83 @@
+{
+  "base": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "report": "docs/audit-2026-10-17-round5/chat-text.md",
+  "findings": [
+    {
+      "id": "CHAT-R5-01",
+      "priority": "P2",
+      "source": "packages/chat/src/line.ts",
+      "line": 121,
+      "trigger": "Mimi GatewayReply button label 21–80 characters or absolute HTTP(S) URL 1001–2048 characters",
+      "actual": "Real Gateway/LINE send path constructs native action fields above documented platform bounds",
+      "expected": "LINE template action label <=20 characters and URI <=1000, or valid textual fallback",
+      "dynamicBoundary": "Production request construction only; in-memory desktop/fetch, no LINE validation or delivery"
+    }
+  ],
+  "firstTestRuns": [
+    {
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round5/evidence/chat-line-button-contract.test.ts",
+      "stdoutStderr": "evidence/chat-line-button-contract.first.log",
+      "exitFile": "evidence/chat-line-button-contract.exit",
+      "exit": 0,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "expectations": 46,
+      "completed": true,
+      "attempt": 1
+    }
+  ],
+  "testsTotal": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "expectations": 46,
+    "completedShards": 1,
+    "fixtureFailures": 0
+  },
+  "skips": [
+    "WhatsApp primary CTA docs first-open Internal Error; not retried and no platform fixture",
+    "DingTalk exact business-error response contract not obtained; no fixture",
+    "Discord failed editReply experiment explicitly excluded without import or alternate method"
+  ],
+  "sourceCount": 22,
+  "dedupCorpusCount": 855,
+  "dedupBytes": 13991735,
+  "artifactHashes": [
+    {
+      "path": "docs/audit-2026-10-17-round5/chat-text.md",
+      "bytes": 6940,
+      "sha256": "79cb7a6b34e8c517cc8ab3d385664b6b45e81e9e6293a2eb81f070af282c4ed5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+      "bytes": 186736,
+      "sha256": "008b69210b4ff3091aa512d9514f5aa91cf5a795bf09dc7ebd866071648693a5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-line-button-contract.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-line-button-contract.first.log",
+      "bytes": 1471,
+      "sha256": "61a1e83e8519ae63b822f5699030b53c6c542438812ed632a94877f82bb7d02b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-line-button-contract.test.ts",
+      "bytes": 4566,
+      "sha256": "8ff2aaaeca3da8e4c5019c9261b3b42b3851ecc65bf4f98ea19b3cf169971a54"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-primary-contracts.json",
+      "bytes": 2569,
+      "sha256": "4a755e0b7b91c6222c9e33230655ee93e205e322568f3670fac9a532dcadfe67"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-source-manifest.json",
+      "bytes": 4686,
+      "sha256": "e692ced1ae9e6fababd38dc22e4b3e2db8e59e9ae6258ef02e1870ab8ced3e35"
+    }
+  ]
+}

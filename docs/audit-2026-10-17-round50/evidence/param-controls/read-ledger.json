@@ -1,0 +1,67 @@
+{
+  "writtenUTC": "2026-10-17T17:03:37.714680+00:00",
+  "bodyCaptures": 17,
+  "bodyLineRangesIn": "source-excerpts.json",
+  "navigationSourceToolChunks": [
+    "9ea6ca",
+    "0f5ba9",
+    "9923cc",
+    "8f085e",
+    "5c7886",
+    "5c580d"
+  ],
+  "bodyToolChunks": [
+    "e605e7",
+    "b6bd80",
+    "9923cc",
+    "6bd5fd",
+    "8f085e",
+    "5c7886",
+    "b2ecb0"
+  ],
+  "historicalCanonicalGate": {
+    "manifestFilenameHintRowsRead": 7,
+    "sourceCoverageManifestRows": 6,
+    "oldTestLogArtifactLocatorRows": 1,
+    "sourceCoverageCanonicalDocuments": 2,
+    "unrestrictedSameShaFullActivated": 0,
+    "note": "The seventh manifest hint has a test-log SHA, not source SHA; never bind or promote it as current source review."
+  },
+  "historyActualRead": {
+    "basenameMarkdownBoundedExcerpts": 1,
+    "exactNamedParamRangeBoundedExcerpts": 22,
+    "exactCauseReadIndexRanges": [
+      [
+        0,
+        10
+      ],
+      [
+        11,
+        21
+      ]
+    ],
+    "exactCausePresentationToolChunks": [
+      "9eec2d",
+      "713aef"
+    ],
+    "originalHistoricalSpecParagraphsRead": [
+      59,
+      60
+    ],
+    "originalHistoricalSpecRanges": [
+      [
+        238,
+        238
+      ],
+      [
+        240,
+        244
+      ]
+    ],
+    "paragraph60ReplacesAlreadyReadExactExcerpt": true,
+    "broadQueryPartialPresentationClaimedFull": false,
+    "all4693HistorySemanticReadClaim": false
+  },
+  "historyScopeDecision": "R39 explicit hash-only does not prove historically unread; no supported current sameSHAfull found in read canonical rows.",
+  "globalCoverageCountChange": false
+}

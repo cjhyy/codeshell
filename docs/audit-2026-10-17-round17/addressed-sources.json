@@ -1,0 +1,19 @@
+{
+  "baseline": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "count": 1,
+  "runtimeRetested": false,
+  "sourceChanges": [
+    {
+      "id": "R2-10",
+      "relatedObservation": "DESKTOP-R12-R1",
+      "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "changeCommit": "9d7577249",
+      "frozenSha256": "e2831337564fad6b8e996abd31c2e20f702102e83724150bfe05fe0045a05094",
+      "mainSha256": "95d07569855d128fe9edb304a40ba5ff4d9dbe25c99b0a121eae07b38507f2b6",
+      "oldReport": "docs/audit-2026-10-17/root.md",
+      "remainderReport": "docs/audit-2026-10-17-round12/desktop.md",
+      "disposition": "Other-task header identity fallback source diff inspected; no old parser/new regression/Review UI rerun"
+    }
+  ],
+  "note": "Separate source-status observation, not new finding/candidate/related count or verified repair."
+}

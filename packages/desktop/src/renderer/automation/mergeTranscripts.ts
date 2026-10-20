@@ -20,6 +20,7 @@
  */
 import { compareOutputCursors } from "@cjhyy/code-shell-web";
 import type { Message, MessagesReducerState, UserMessage } from "../types";
+import { mergeCumulativeCacheUsage } from "../types";
 
 type TimingProjection = "disk" | "live";
 
@@ -247,6 +248,14 @@ export function mergeTranscripts(
 
   return {
     ...disk,
+    ...mergeCumulativeCacheUsage(disk, live),
+    ...(live.cacheUsageVersion === 1 && disk.cacheUsageVersion !== 1
+      ? {
+          singleTurnPromptTokens: live.singleTurnPromptTokens,
+          singleTurnCacheReadTokens: live.singleTurnCacheReadTokens,
+          singleTurnCacheCreationTokens: live.singleTurnCacheCreationTokens,
+        }
+      : {}),
     messages: deduped,
     // Session metadata: prefer the live values (they reflect the most recent
     // session_started / usage_update), falling back to disk when live is unset.

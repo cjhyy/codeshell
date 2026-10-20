@@ -1,0 +1,59 @@
+{
+  "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "confirmedFindings": [],
+  "candidateIds": [
+    "BYTES-R14-C1"
+  ],
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.test.ts"
+      ],
+      "startedUtc": "2026-10-17T07:07:59.630919+00:00",
+      "finishedUtc": "2026-10-17T07:07:59.797884+00:00",
+      "exitCode": 0,
+      "rawLog": "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.log",
+      "rawSha256": "c89f08b57d00aa09d619ab0e6a60e42f700762d7572f78026ba894da1765a0de",
+      "fixture": "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.test.ts",
+      "fixtureSha256": "4e3fb5ecaecbd66624094b4d15a3e6e74f859538c4d6a2dd3b9dfe170b4fe9cb",
+      "policy": "First combined raw output and exit saved before inspection; failure would skip this direction without repair/retry/alternate.",
+      "name": "bytes-image-probe",
+      "attempt": 1,
+      "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+      "rawBytes": 1504,
+      "exitFile": "docs/audit-2026-10-17-round14/evidence/bytes-image-probe.first.exit.json",
+      "exitFileSha256": "40fe02ebd8985a463217a5bf9d469d4a5f8d3c147fef308cae53694e257e29d7",
+      "passedTests": 11,
+      "tests": 11,
+      "expectCalls": 31,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "guardedCompletionPresent": true,
+      "clean": true,
+      "kind": "new focused ordinary-byte controls plus one candidate characterization"
+    }
+  ],
+  "totals": {
+    "cleanFirstShards": 1,
+    "tests": 11,
+    "expectCalls": 31,
+    "baselineTests": 0,
+    "newFocusedTests": 11,
+    "cleanFailures": 0,
+    "skipped": 0,
+    "failedShards": 0,
+    "retries": 0
+  },
+  "firstRunPolicy": "FIRST combined bytes and exit saved before viewing; no product retries or alternate route; metadata assembler executes no tests.",
+  "scope": "Direct probeImageBytes/sanitizeImageBytes, entirely self-owned memory. All attachment-service/relay/Codex producer/consumer checks source-only. No end-to-end claim.",
+  "sourceManifest": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+  "dedup": [
+    "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json"
+  ],
+  "skipNote": "docs/audit-2026-10-17-round14/evidence/bytes-navigation-skip.md"
+}

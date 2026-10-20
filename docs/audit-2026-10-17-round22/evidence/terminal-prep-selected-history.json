@@ -1,0 +1,56 @@
+{
+  "record": {
+    "path": "docs/archive/review-2026-05-30/findings.json",
+    "location": "$[161]",
+    "value": {
+      "file": "packages/tui/src/cli/output/terminal-ui.ts",
+      "line": "157-178",
+      "category": "simplify",
+      "severity": "low",
+      "confidence": "high",
+      "title": "Duplicate formatToolArgs function definition",
+      "detail": "terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.",
+      "fix": "Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module."
+    }
+  },
+  "selectedReadHistory": [
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "range": [
+        92,
+        111
+      ],
+      "purpose": "Old A12 child delta/empty final JSON fallback, excluded."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/tui.md",
+      "scope": "full report",
+      "purpose": "TUI Diff failed import and CJK padding candidate remain excluded."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "scope": "full report",
+      "purpose": "Old Unicode truncation/byte-label family; no current fix-status claim from old report."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "scope": "full report",
+      "purpose": "Old Core toolDisplay Unicode related, Read byte-label concern, Slice failed direction."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/streamattempt.md",
+      "scope": "full report",
+      "purpose": "Stream retry/revoke leaf baseline and old F-01 excluded."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/json-output.md",
+      "scope": "full current report",
+      "purpose": "Current partial in-progress round21 JSON scope, Text untouched, A12 excluded."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/coverage.md",
+      "scope": "full read-time working report",
+      "purpose": "Current pending integration scope; can advance before next round."
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "checkedUTC": "2026-10-17T16:59:55.710363+00:00",
+  "sourceAndUnusedTestChecks": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "bytes": 4452,
+      "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+      "bytes": 26214,
+      "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/shared/plugin-media.ts",
+      "bytes": 372,
+      "sha256": "4efa59a2b34bb0cac370d1ab4cc38b0154c620102faf4c2b4cd371f58b647de9",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.test.ts",
+      "bytes": 5754,
+      "sha256": "0f627ad0be787380498392a40c92be1b8971410a758abd607aa0a9f6639b96c6",
+      "unchanged": true
+    }
+  ],
+  "all5PinsUnchanged": true,
+  "historyOriginalMembers": 4693,
+  "historyCurrentFilteredMembers": 4693,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "newInstructionSemanticLines": 0
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "newInstructionSemanticLines": 0
+    }
+  ],
+  "newSemanticReadDuringEnding": 0
+}

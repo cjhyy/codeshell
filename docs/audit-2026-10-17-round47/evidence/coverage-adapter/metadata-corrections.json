@@ -1,0 +1,33 @@
+{
+  "observations": [
+    {
+      "tool": "0e0199",
+      "exitCode": 1,
+      "artifact": "method.first.py + method.first.exit.json",
+      "kind": "syntax before scan, no counts existed"
+    },
+    {
+      "tool": "6369fd",
+      "exitCode": 0,
+      "artifacts": "method/summary/field-adapter-delta/status-transitions/history-inventory/current-source-delta.scan1 files",
+      "kind": "first actual metadata scan logic limitation detected by required real R13 positive",
+      "facts": [
+        "All20 inspectionScope candidates were vetoed as non-source-hash-field because field_label strips digits but alias set was not normalized",
+        "R13 required positive therefore was not yet recognized; scan1 counts are not active final adaptation",
+        "Dated49 adapted unknown universe had included1new current source path; full/selected set comparison was unaffected"
+      ],
+      "correction": "Normalize the alias set with the same field_label; explicitly use dated49 path universe for dated unknown count. Re-run metadata only; no product/fixture/test operation."
+    },
+    {
+      "tool": "09399b",
+      "exitCode": 0,
+      "kind": "provenance selection refinement before freeze",
+      "facts": [
+        "Corrected scan2 counts are valid, but first lexicographic full evidence for3frozen45paths pointed to source-manifest.first.json although canonical equivalent exists",
+        "No new reading or numeric increase is inferred from retaining both records"
+      ],
+      "artifacts": "method.scan2.py / summary.scan2.json / status-transitions.scan2.json",
+      "correction": "Prefer canonical source-manifest evidence over .first/.raw/.scan metadata as the representative. Counts/coverage sets expected unchanged."
+    }
+  ]
+}

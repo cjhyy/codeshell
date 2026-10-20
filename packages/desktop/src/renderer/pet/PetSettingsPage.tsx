@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   Brain,
@@ -19,6 +19,7 @@ import { ModelPill, type ModelOption } from "../chat/ModelPill";
 import { useT } from "../i18n";
 import { writeSettings } from "../settingsBus";
 import { useTargetedDebouncedSave } from "../settings/useTargetedDebouncedSave";
+import { useToast } from "../ui/ToastProvider";
 import {
   petPersonalizationFromSettings,
   petPersonalizationSettingsPatch,
@@ -34,6 +35,10 @@ const EMPTY_PERSONALIZATION: PetPersonalizationDraft = {
   customInstructions: "",
 };
 
+// The user settings target survives page navigation. A new form must read after
+// the previous form's flushed writes, and newer drafts must keep their order.
+let personalizationWrites: Promise<void> = Promise.resolve();
+
 function personalizationDraft(value: PetPersonalization): PetPersonalizationDraft {
   return {
     responseLanguage: value.responseLanguage ?? "",
@@ -45,31 +50,65 @@ function personalizationDraft(value: PetPersonalization): PetPersonalizationDraf
 
 function PetPersonalizationForm() {
   const { t } = useT();
+  const toast = useToast();
   const [draft, setDraft] = useState<PetPersonalizationDraft>(EMPTY_PERSONALIZATION);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const draftRef = useRef(draft);
   const loadGeneration = useRef(0);
+  const alive = useRef(false);
   draftRef.current = draft;
-  const { schedule, flush } = useTargetedDebouncedSave(
-    "user:pet-personalization",
-    (value: PetPersonalizationDraft) =>
+  const persist = (value: PetPersonalizationDraft) => {
+    // A slow earlier write must finish before a newer draft is persisted.
+    const operation = personalizationWrites.then(() =>
       writeSettings("user", petPersonalizationSettingsPatch(value)),
-  );
+    );
+    personalizationWrites = operation.catch(() => {});
+    return operation.then(
+      () => {
+        if (alive.current) setSaveError("");
+      },
+      (cause) => {
+        const detail = cause instanceof Error ? cause.message : String(cause);
+        if (alive.current) setSaveError(detail);
+        else
+          toast({ message: t("pet.settings.personalizationSaveFailed"), detail, variant: "error" });
+      },
+    );
+  };
+  const { schedule, flush } = useTargetedDebouncedSave("user:pet-personalization", persist);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     const generation = ++loadGeneration.current;
-    void (async () => {
+    setLoadState("loading");
+    setLoadError("");
+    try {
+      await personalizationWrites;
       const settings = await window.codeshell.getSettings("user");
-      if (generation !== loadGeneration.current) return;
+      if (!alive.current || generation !== loadGeneration.current) return;
       const next = personalizationDraft(petPersonalizationFromSettings(settings));
       draftRef.current = next;
       setDraft(next);
-    })();
-    return () => {
-      if (generation === loadGeneration.current) loadGeneration.current += 1;
-    };
+      setLoadState("ready");
+    } catch (cause) {
+      if (!alive.current || generation !== loadGeneration.current) return;
+      setLoadError(cause instanceof Error ? cause.message : String(cause));
+      setLoadState("error");
+    }
   }, []);
 
+  useEffect(() => {
+    alive.current = true;
+    void load();
+    return () => {
+      alive.current = false;
+      loadGeneration.current += 1;
+    };
+  }, [load]);
+
   const update = (key: keyof PetPersonalizationDraft, value: string): void => {
+    if (loadState !== "ready") return;
     const next = { ...draftRef.current, [key]: value };
     draftRef.current = next;
     setDraft(next);
@@ -77,13 +116,33 @@ function PetPersonalizationForm() {
   };
 
   return (
-    <Card data-pet-personalization-fields="true" className="rounded-2xl">
+    <Card
+      data-pet-personalization-fields="true"
+      aria-busy={loadState === "loading"}
+      className="rounded-2xl"
+    >
       <CardContent className="grid gap-5 p-6">
+        {loadState === "loading" && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {t("ext.common.loading")}
+          </p>
+        )}
+        {loadState === "error" && (
+          <div className="grid gap-2">
+            <p role="alert" className="text-sm text-status-err [overflow-wrap:anywhere]">
+              {t("ext.common.loadFailed", { error: loadError })}
+            </p>
+            <Button type="button" className="justify-self-start" onClick={() => void load()}>
+              {t("ext.common.retry")}
+            </Button>
+          </div>
+        )}
         <div className="grid gap-2">
           <Label htmlFor="pet-response-language">{t("pet.settings.responseLanguageLabel")}</Label>
           <Input
             id="pet-response-language"
             value={draft.responseLanguage}
+            disabled={loadState !== "ready"}
             maxLength={120}
             onChange={(event) => update("responseLanguage", event.target.value)}
             onBlur={flush}
@@ -95,6 +154,7 @@ function PetPersonalizationForm() {
           <Textarea
             id="pet-user-profile"
             value={draft.userProfile}
+            disabled={loadState !== "ready"}
             maxLength={2_000}
             onChange={(event) => update("userProfile", event.target.value)}
             onBlur={flush}
@@ -109,6 +169,7 @@ function PetPersonalizationForm() {
           <Textarea
             id="pet-communication-style"
             value={draft.communicationStyle}
+            disabled={loadState !== "ready"}
             maxLength={2_000}
             onChange={(event) => update("communicationStyle", event.target.value)}
             onBlur={flush}
@@ -123,6 +184,7 @@ function PetPersonalizationForm() {
           <Textarea
             id="pet-custom-instructions"
             value={draft.customInstructions}
+            disabled={loadState !== "ready"}
             maxLength={6_000}
             onChange={(event) => update("customInstructions", event.target.value)}
             onBlur={flush}
@@ -130,7 +192,27 @@ function PetPersonalizationForm() {
             className="min-h-32 resize-y leading-relaxed"
           />
         </div>
-        <p className="text-xs text-muted-foreground">{t("pet.settings.personalizationSaveHint")}</p>
+        {saveError ? (
+          <div className="grid gap-2">
+            <p role="alert" className="text-sm text-status-err [overflow-wrap:anywhere]">
+              {t("pet.settings.personalizationSaveFailed")}: {saveError}
+            </p>
+            <Button
+              type="button"
+              className="justify-self-start"
+              onClick={() => {
+                schedule(draftRef.current);
+                flush();
+              }}
+            >
+              {t("ext.common.retry")}
+            </Button>
+          </div>
+        ) : loadState === "ready" ? (
+          <p className="text-xs text-muted-foreground">
+            {t("pet.settings.personalizationSaveHint")}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

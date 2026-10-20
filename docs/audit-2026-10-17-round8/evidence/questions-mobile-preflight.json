@@ -1,0 +1,37 @@
+{
+  "fixture": "docs/audit-2026-10-17-round8/evidence/questions-mobile-multiselect.test.tsx",
+  "relativeImportRoot": "../../../",
+  "imports": [
+    {
+      "specifier": "../../../packages/core/src/tool-system/builtin/ask-user.ts",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/builtin/ask-user.ts",
+      "exists": true,
+      "insideRepo": true
+    },
+    {
+      "specifier": "../../../packages/web/src/lib/messageMappers.ts",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/web/src/lib/messageMappers.ts",
+      "exists": true,
+      "insideRepo": true
+    },
+    {
+      "specifier": "../../../packages/desktop/src/mobile/components/ApprovalCard.tsx",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/mobile/components/ApprovalCard.tsx",
+      "exists": true,
+      "insideRepo": true
+    },
+    {
+      "specifier": "../../../packages/web/src/test-utils/renderHook.tsx",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/web/src/test-utils/renderHook.tsx",
+      "exists": true,
+      "insideRepo": true
+    },
+    {
+      "specifier": "../../../packages/core/src/tool-system/context.ts",
+      "resolved": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/context.ts",
+      "exists": true,
+      "insideRepo": true
+    }
+  ],
+  "scope": "actual Core tools, pure Web mapper, actual Mobile React card with maintained mini-DOM; memory callbacks only; no WebSocket/AgentServer/real UI"
+}

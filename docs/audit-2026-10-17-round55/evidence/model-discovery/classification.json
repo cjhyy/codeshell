@@ -1,0 +1,24 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "decision": "finite-negative ordinary model-list/context-metadata projection only",
+  "negativeEvidence": [
+    "Hidden=true models are excluded; duplicate model keeps first server entry, matching existing normal declaration.",
+    "Valid empty model list returns[] rather than an undocumented fallback; consumer maps it to empty codex entries, while exception retains last success or initial bundled fallback as documented.",
+    "isDefault=true comes before other rows, model identifier goes through shared codex/model key constructor and displayName→label.",
+    "Actual IPC handler/preload/hook/App chain delivers entries to normal modelOptions; no private unreachable-helper-only claim.",
+    "Fallback context1M is an explicit local metadata fallback; no source contract here establishes real external model windows or guarantees these values are actual runtime limits."
+  ],
+  "limits": [
+    "No installed CLI, model availability, SDK behavior, accounts, credentials, external config, process, network, React, DOM or clock/timer behavior exercised or certified.",
+    "No arbitrary malformed DTO/SDK reply used to manufacture a candidate.",
+    "Existing source-directed review overlap and old SDK/native failed directions remain; no failure was retried or relabeled pass.",
+    "No whole-file semantic full inferred from full text display, no whole-history semantic exhaustion."
+  ]
+}

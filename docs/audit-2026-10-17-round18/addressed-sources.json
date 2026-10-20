@@ -1,0 +1,17 @@
+{
+  "baseline": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "count": 1,
+  "runtimeRetested": false,
+  "sourceChanges": [
+    {
+      "id": "DESKTOP-R12-C1",
+      "path": "packages/desktop/src/renderer/tool-cards/FileToolCard.tsx",
+      "changeCommit": "656310a7c",
+      "frozenSha256": "be1c41ebad89228f9822f9db1164395abf1d2718cd425835d860144440526f9b",
+      "mainSha256": "24340e031a93321e00b081f3b6a4d19776be012adb9b28b73bc717b7ac2af1a8",
+      "oldReport": "docs/audit-2026-10-17-round12/desktop.md",
+      "disposition": "Other-task Write byte label source diff inspected; no tool card/Write/new regression/UI rerun"
+    }
+  ],
+  "note": "Old static candidate source change only; separate from new findings/candidates/related and not verified repair."
+}

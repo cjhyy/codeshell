@@ -1,0 +1,17 @@
+scripts/package-release-smoke.ts:22:  collectPublishEntries,
+scripts/package-release-smoke.ts:23:  validatePublishManifest,
+scripts/package-release-smoke.ts:118:      entries: collectPublishEntries(definition, manifest),
+scripts/package-release-smoke.ts:124:    validatePublishManifest(definition, manifest),
+scripts/package-release-smoke.ts:138:      const modes = !entry.typeImport
+scripts/package-release-smoke.ts:140:        : entry.runtimeImport
+scripts/package-release-smoke.ts:336:  const typedEntries = entries.filter((entry) => entry.typeImport);
+scripts/package-release-smoke.ts:392:    const typedEntries = record.entries.filter((entry) => entry.typeImport);
+scripts/package-release-smoke.ts:428:      .filter((entry) => entry.runtimeImport)
+scripts/package-release-smoke.ts:542:        (count, record) => count + record.entries.filter((entry) => entry.typeImport).length,
+scripts/publish-release-packages.ts:9:  PUBLIC_RELEASE_PACKAGES,
+scripts/publish-release-packages.ts:11:  validatePublicReleaseOrder,
+scripts/publish-release-packages.ts:390:    PUBLIC_RELEASE_PACKAGES.map((definition) => [
+scripts/publish-release-packages.ts:398:  return PUBLIC_RELEASE_PACKAGES.map((definition) => [
+scripts/publish-release-packages.ts:417:  const orderErrors = validatePublicReleaseOrder(manifests);
+scripts/publish-release-packages.ts:429:    for (const definition of PUBLIC_RELEASE_PACKAGES) {
+scripts/publish-release-packages.ts:437:    const definition = PUBLIC_RELEASE_PACKAGES[index];

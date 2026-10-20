@@ -1,0 +1,37 @@
+{
+  "capturedUTC": "2026-10-17T12:23:15.520775+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "bytes": 11605,
+      "lineCount": 361,
+      "sha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "initialSemanticReadSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "timing": "Before direct selected source read; filename inventory only"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/memoize.md",
+      "bytes": 3557,
+      "lineCount": 23,
+      "sha256": "8943edc6030ed8d0ab832601b99796b93a2bee246aacc1a3872011775c06a218",
+      "initialSemanticReadSha256": null,
+      "timing": "After history scanner excerpts/coverage rows, before direct old report/metadata read; no pre-excerpt semantic hash claimed"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/root-frontier-report.md",
+      "bytes": 2697,
+      "lineCount": 13,
+      "sha256": "6362141e446993b0e4b123eaf9eab06b8f874090701c93a362deeaf4cb448111",
+      "initialSemanticReadSha256": null,
+      "timing": "After history scanner excerpts/coverage rows, before direct old report/metadata read; no pre-excerpt semantic hash claimed"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-source-manifest.json",
+      "bytes": 4807,
+      "lineCount": 172,
+      "sha256": "b3c4ce27b371d1d0ef4f76337d352dd2141aaff04e5ffdaa725354e1b7e007bb",
+      "initialSemanticReadSha256": null,
+      "timing": "After history scanner excerpts/coverage rows, before direct old report/metadata read; no pre-excerpt semantic hash claimed"
+    }
+  ]
+}

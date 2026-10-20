@@ -1,0 +1,14 @@
+{
+  "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-excerpts.txt",
+  "bytes": 47336,
+  "sha256": "e586cc5dd7cd2fabe335c3d61156059e06c4e27f9bfb2dd6a227f596d7376f08",
+  "matchesFrozenOriginal": true,
+  "kind": "Verbatim metadata source excerpt snapshot, not a product runtime log.",
+  "firstFullCheckExit": 2,
+  "firstOrdinaryCheckExit": 2,
+  "diagnostics": 73,
+  "firstVisibleToolInspectionTruncated": true,
+  "fullDiagnosticPreserved": "evidence/stage-verification.first.json",
+  "scope": "Exact one copied artifact only; preserve original numbered blank-line trailing spaces. All other staged files must pass whitespace check.",
+  "productReruns": 0
+}

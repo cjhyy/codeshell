@@ -1,0 +1,29 @@
+{
+  "authorProductImports": 0,
+  "authorProductHelpers": 0,
+  "authorFixtures": 0,
+  "authorTestsExecuted": 0,
+  "authorUI": 0,
+  "authorClockExperiments": 0,
+  "authorNative": 0,
+  "authorModels": 0,
+  "authorNetwork": 0,
+  "authorGit": 0,
+  "productChanges": 0,
+  "oldFailedDirections": "SKIP; no own reattempt of legacy-native-history stage, SOF3 fixture, NDJSON/timer or other previous failed dynamic work",
+  "rootExternalValidationReported": {
+    "executor": "Root only, not this author",
+    "attemptsReported": 1,
+    "stateReported": "Completed",
+    "exitCodeReported": 0,
+    "passReported": 1,
+    "expectReported": 11,
+    "failReported": 0,
+    "skipReported": 0,
+    "fixturePath": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+    "rawLogReported": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log",
+    "independentlyReadOrRunByAuthor": false,
+    "scopeReported": "Actualstage same-sid existing valid PNG -> two IDs same path -> markSentB -> supported cleanup.now around24h -> shared path/recentB gone; distinct-sid sent same PNG preserved. Only Root-owned temporary FS, no Date replacement, UI, network or user resources."
+  },
+  "doNotClaimWholeRoundZeroExecution": true
+}

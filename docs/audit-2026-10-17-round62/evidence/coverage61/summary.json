@@ -1,0 +1,77 @@
+{
+  "atUTC": "2026-10-17T20:36:58.812106+00:00",
+  "baseCounts": {
+    "unknown": 3934,
+    "full": 355,
+    "selected": 354
+  },
+  "counts": {
+    "unknown": 3920,
+    "full": 360,
+    "selected": 363
+  },
+  "denominator": 4643,
+  "notFull": 4283,
+  "rowCount": 58,
+  "acceptedRows": 42,
+  "uniqueAcceptedPaths": 22,
+  "excludedRows": 15,
+  "deferredRows": 1,
+  "transitionCount": 14,
+  "retainedStatusPaths": 8,
+  "fullEvidenceRows": 5,
+  "testDeclarationRows": 1,
+  "sourceByteDrift": 0,
+  "documents": [
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+      "filesCount": 9,
+      "rowStates": {
+        "accepted": 9
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/session-context-store/source-manifest.json",
+      "filesCount": 8,
+      "rowStates": {
+        "excluded": 3,
+        "accepted": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+      "filesCount": 5,
+      "rowStates": {
+        "accepted": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+      "filesCount": 15,
+      "rowStates": {
+        "excluded": 10,
+        "accepted": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+      "filesCount": 10,
+      "rowStates": {
+        "accepted": 10
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+      "filesCount": 11,
+      "rowStates": {
+        "excluded": 2,
+        "accepted": 8,
+        "deferred": 1
+      }
+    }
+  ],
+  "productSemanticReadCount": 0,
+  "productExecutionCount": 0,
+  "GitOperations": 0,
+  "independentPeerReviewDelivered": false
+}

@@ -1,0 +1,921 @@
+{
+  "projectedUTC": "2026-10-17T18:28:42.782197+00:00",
+  "sourceBatchPath": "/tmp/codeshell-audit-round125-agent-registry/history-batch.json",
+  "sourceBatchBytes": 1299889,
+  "sourceBatchSha256": "2c09e39e6c332c5f04395af3c02d637bc3dabec28a7045c9817aa7e98ae88b27",
+  "scope": {
+    "historyFiles": 5433,
+    "excludedFormalAtOrAbove": 55,
+    "jsonValueScalarsVisited": 3997418,
+    "errors": [],
+    "capPerTarget": 100
+  },
+  "query": [
+    "packages/chat/src/media.ts",
+    "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+  ],
+  "totalMatches": 353,
+  "retainedHits": [
+    {
+      "document": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/80",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "location": "/matches/12/hits/0/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "location": "/matches/13/hits/1/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "location": "/matches/14/hits/2/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "location": "/matches/21/hits/21/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "location": "/matches/29/hits/1/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "location": "/matches/33/hits/4/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "location": "/matches/15/hits/0/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "location": "/matches/18/hits/1/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "location": "/matches/19/hits/2/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "location": "/matches/48/hits/21/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "location": "/matches/76/hits/1/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "location": "/matches/82/hits/4/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "location": "/files/6/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "location": "/files/6/frozenSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "location": "/files/6/currentSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "location": "/files/17/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "location": "/files/17/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "location": "/matches/127/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "location": "/matches/128/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "location": "/matches/197/text",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/0/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/1/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "线程/editReply 查重未找到同根因条目，日志 `chat-slack-dedup.log`（rg 1 代表无匹配）。\n\n## CHD02 — [P3，长标签触发] 附件名按 UTF-16 生切，产生破损 Unicode 元数据\n\n- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。\n- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Matter",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/2/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/3/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/4/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/5/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/6/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/7/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/8/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/9/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/10/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/12/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/13/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/14/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/15/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/16/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/17/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/18/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/19/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/20/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/21/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/22/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "location": "/hits/media_kind/25/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "    { \"id\": \"CHD02\", \"priority\": \"P3\", \"file\": \"packages/chat/src/media.ts\", \"line\": 232, \"conditional\": \"long remote or virtual SDK attachment labels crossing a surrogate boundary\", \"boundary\": \"shared production metadata functions and materialized bridge payload; no claim real platform accepts the long label\" }",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-mediakind-preflight.json",
+      "location": "/files/0/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-mediakind-preflight.json",
+      "location": "/files/0/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "location": "/files/0/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "location": "/files/0/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/media-kind.md",
+      "location": 3,
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "冻结点 `d40dd06987a2e0c20c377e243cf5c4e4b549c9ec`。本分区 **0 确认 / 0 候选 / 0 related**。实际只调用 [`mediaKind`](../../packages/chat/src/media.ts:26)，用普通 MIME/短文件名字符串检查类型标签；没有下载或发送附件、解码媒体、校验 URL 或操作文件。",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "location": "/files/14/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "location": "/files/14/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "location": "/files/14/currentSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "location": "/files/14/mainSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "location": "/workerSourceChecks/4/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "location": "/workerSourceChecks/4/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "location": "/files/7/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "location": "/files/7/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "location": "/files/16/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "location": "/files/16/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "location": "/files/16/currentSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "location": "/files/16/mainSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "location": "/workerSourceChecks/7/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "location": "/workerSourceChecks/7/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/64/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/64/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "/files/64/claims/0/sourceSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/104/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/104/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-hash-checks.json",
+      "location": "/sourceRows/11/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-hash-checks.json",
+      "location": "/sourceRows/11/prepFrozenSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-hash-checks.json",
+      "location": "/sourceRows/11/formalFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-history.json",
+      "location": "/hits/channel-contract/0/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "ions / 0 failures，原始输入 threads / 投影 / payload 落盘。\n- **边界**：证明本地 production 数据转换和参数构造；没有真实 Slack 服务端/UI、账号或网络验证。参数含义来自 web 返回的官方搜索摘要/页面摘录，本分审没有成功打开此前小写 URL。这里采用 reply 的正常会话定位预期，不宣称 ChannelCapabilities 已承诺完整 Slack threads 支持。\n- **已知与否**：旧 audit 10-16 六条 SWC 未包含此项；有限旧 review 按 thread_ts/Slack thread/Slack 线程/editReply 查重未找到同根因条目，日志 `chat-slack-dedup.log`（rg 1 代表无匹配）。\n\n## CHD02 — [P3，长标签触发] 附件名按 UTF-16 生切，产生破损 Unicode 元数据\n\n- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。\n- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。\n- **正常触发条件**：长 remote/SDK 虚拟附件标签的第",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/consumer-initial-pins.json",
+      "location": "/files/1/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/consumer-initial-pins.json",
+      "location": "/files/1/firstFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/finish-hash-checks.json",
+      "location": "/sourceRows/11/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/finish-hash-checks.json",
+      "location": "/sourceRows/11/initialFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/finish-hash-checks.json",
+      "location": "/sourceRows/11/frozenFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/history.json",
+      "location": "/hits/channel-contract/0/context",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "ions / 0 failures，原始输入 threads / 投影 / payload 落盘。\n- **边界**：证明本地 production 数据转换和参数构造；没有真实 Slack 服务端/UI、账号或网络验证。参数含义来自 web 返回的官方搜索摘要/页面摘录，本分审没有成功打开此前小写 URL。这里采用 reply 的正常会话定位预期，不宣称 ChannelCapabilities 已承诺完整 Slack threads 支持。\n- **已知与否**：旧 audit 10-16 六条 SWC 未包含此项；有限旧 review 按 thread_ts/Slack thread/Slack 线程/editReply 查重未找到同根因条目，日志 `chat-slack-dedup.log`（rg 1 代表无匹配）。\n\n## CHD02 — [P3，长标签触发] 附件名按 UTF-16 生切，产生破损 Unicode 元数据\n\n- **精确位置**：`packages/chat/src/media.ts:232` 的 `slice(0,255)`；fallback 同样位于 `:234`。`remoteAttachment` 在 `:52` 调用该 helper，`attachments.ts:61` 原样投影 name 到 bridge 元数据。\n- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。\n- **正常触发条件**：长 remote/SDK 虚拟附件标签的第",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "location": "/files/11/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "location": "/files/11/initialFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "location": "/files/11/frozenFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-review-prep/consumer-initial-pins.json",
+      "location": "/files/11/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-review-prep/consumer-initial-pins.json",
+      "location": "/files/11/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-review-prep/source-manifest.json",
+      "location": "/hashOnlyFiles/0/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-review-prep/source-manifest.json",
+      "location": "/hashOnlyFiles/0/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-review-prep/source-manifest.json",
+      "location": "/authorSourceChecks/11/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-review-prep/source-manifest.json",
+      "location": "/authorSourceChecks/11/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/firstFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/prepSourceRow/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/prepSourceRow/initialFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/prepSourceRow/frozenFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/review-data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/review-data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/review-data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/formalizationCurrentFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/review-data-source-manifest.json",
+      "location": "/hashOnlyFiles/0/formalizationFinishFilesystemSha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/review-data-source-manifest.json",
+      "location": "/formalAuthorSourceNormalizationChecks/11/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/review-data-source-manifest.json",
+      "location": "/formalAuthorSourceNormalizationChecks/11/sha256",
+      "matched": [
+        "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14"
+      ],
+      "value": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/source-manifest.json",
+      "location": "/files/9/path",
+      "matched": [
+        "packages/chat/src/media.ts"
+      ],
+      "value": "packages/chat/src/media.ts",
+      "truncatedValue": false
+    }
+  ],
+  "role": "Projection of Root shared machine scan; not own full-corpus re-run or human full reading. Actual contexts read separately declared."
+}

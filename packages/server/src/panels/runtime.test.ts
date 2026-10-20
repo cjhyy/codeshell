@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
+import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import { CredentialStore, type InstalledPanelApp } from "@cjhyy/code-shell-core";
 import {
   createPanelRuntime,
@@ -73,6 +74,7 @@ async function fixture(
       join(installPath, "app", "nested", "part.mjs"),
       'export const label = "module loaded";',
     ),
+    writeFile(join(installPath, "app", "engine.wasm"), Buffer.from([0, 97, 115, 109, 1, 0, 0, 0])),
     writeFile(join(installPath, "secret.json"), '{"outsideEntry":"do not serve"}'),
     writeFile(join(cwd, "notes.txt"), "host workspace notes"),
   ]);
@@ -125,6 +127,7 @@ async function fixture(
   const runtime = createPanelRuntime({
     cwd,
     dataDir: join(root, "data"),
+    traceStorageDir: join(root, ".model-traces"),
     host: options.sharedToolJobs ? "desktop" : "hub",
     sharedToolJobs: options.sharedToolJobs?.({ root, cwd, app }),
     publicPathPrefix: options.publicPathPrefix,
@@ -214,6 +217,60 @@ async function fixture(
 }
 
 describe("Panel HTTP runtime", () => {
+  test("authenticated Panel observations are write-only, bound to exact grant and workspace, and cancelled on revoke", async () => {
+    const f = await fixture({ permissions: [] });
+    f.state.now = Date.now();
+    const store = new ModelTraceStore({ storageDir: join(f.root, ".model-traces") });
+    const first = await f.prepare(),
+      second = await f.prepare("owner-b");
+    expect(first.context.availableMethods).toContain("modelTraces.start");
+    const call = (grant: typeof first, method: string, params: unknown, owner = "owner-a") =>
+      f.api(`${grant.instanceId}/call`, "POST", { method, params }, owner);
+    const input = {
+      provider: "fixture",
+      model: "fixture",
+      input: {
+        messages: [{ role: "user", content: "browser actual prompt" }],
+        parameters: { apiKey: "fixture-secret" },
+      },
+    };
+    const response = await call(first, "modelTraces.start", input);
+    expect(response.status).toBe(200);
+    const started = await response.json();
+    expect(typeof started.id).toBe("string");
+    const record = store.get(started.id)!;
+    expect(record).toMatchObject({
+      source: "panel:synthetic-panel",
+      workspacePath: f.cwd,
+      status: "running",
+    });
+    expect(record.sessionId).toBeUndefined();
+    expect(JSON.stringify(record)).not.toContain("fixture-secret");
+    expect(
+      (await call(second, "modelTraces.finish", { id: started.id, status: "completed" }, "owner-b"))
+        .status,
+    ).toBe(400);
+    expect(
+      (await call(first, "modelTraces.start", { ...input, workspacePath: "/foreign" })).status,
+    ).toBe(400);
+    expect((await call(first, "modelTraces.get", { id: started.id })).status).toBe(501);
+    expect(
+      (
+        await call(first, "modelTraces.finish", {
+          id: started.id,
+          status: "completed",
+          output: { text: "browser actual response" },
+        })
+      ).status,
+    ).toBe(200);
+    expect(store.get(started.id)?.output?.text).toBe("browser actual response");
+    const unfinished = await (await call(first, "modelTraces.start", input)).json();
+    f.runtime.cancelOwner("owner-a");
+    expect(store.get(unfinished.id)?.status).toBe("cancelled");
+    expect(
+      (await call(first, "modelTraces.finish", { id: unfinished.id, status: "completed" })).status,
+    ).toBe(410);
+  });
   test("each call rechecks only its selected Panel and immediately observes revocation", async () => {
     const f = await fixture({ permissions: ["context.workspace"] });
     const grant = await f.prepare();
@@ -447,7 +504,10 @@ describe("Panel HTTP runtime", () => {
     expect(csp).toContain(`script-src ${f.url}/api/v1/panel-assets/`);
     expect(csp).toContain("sandbox allow-scripts allow-downloads;");
     expect(csp).not.toContain("allow-same-origin");
-    expect(csp).toContain("connect-src 'none'");
+    const assetSource = f.url + grant.src.slice(0, grant.src.indexOf("/app/") + 1);
+    expect(csp).toContain(`connect-src ${assetSource};`);
+    expect(csp).toContain("'wasm-unsafe-eval'");
+    expect(csp).not.toContain("'unsafe-eval'");
     expect(csp).toContain(`frame-ancestors ${f.url}`);
     expect(response.headers.get("permissions-policy")).toContain("microphone=()");
     for (const name of ["main.mjs", "nested/part.mjs"]) {
@@ -467,6 +527,31 @@ describe("Panel HTTP runtime", () => {
     });
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get("access-control-allow-methods")).toBe("GET, HEAD, OPTIONS");
+  });
+
+  test("Wasm assets retain scoped CORS, content verification and grant revocation", async () => {
+    const f = await fixture();
+    const grant = await f.prepare();
+    expect(grant.context.capabilities).toMatchObject({
+      packageAssets: { wasm: true, fetch: "package" },
+    });
+    const url = f.url + grant.src.replace("index.html", "engine.wasm");
+    const response = await fetch(url, { headers: { Origin: "null" } });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/wasm");
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-credentials")).toBeNull();
+    const bytes = await response.arrayBuffer();
+    expect(WebAssembly.validate(bytes)).toBe(true);
+    const head = await fetch(url, { method: "HEAD" });
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe("");
+    await writeFile(
+      join(f.installPath, "app", "engine.wasm"),
+      Buffer.from([0, 97, 115, 109, 2, 0, 0, 0]),
+    );
+    expect((await fetch(url)).status).toBe(409);
+    expect((await fetch(url)).status).toBe(404);
   });
 
   test("injects the SDK before scripts in HTML fragments and pages without a head", async () => {
@@ -671,7 +756,13 @@ describe("Panel HTTP runtime", () => {
     const context = await own.json();
     expect(context.cwd).toBe(f.cwd);
     expect(context.sessionId).toBeUndefined();
-    expect(context.availableMethods).toEqual(["context.get", "tools.register", "tools.unregister"]);
+    expect(context.availableMethods).toEqual([
+      "context.get",
+      "modelTraces.start",
+      "modelTraces.finish",
+      "tools.register",
+      "tools.unregister",
+    ]);
     expect(
       (await f.api(call, "POST", { method: "storage.get", params: { key: "secret" } })).status,
     ).toBe(403);
@@ -787,11 +878,13 @@ describe("Panel HTTP runtime", () => {
             prompt: "Read this panel",
             displayText: "Panel request",
             sessionId: "someone-else",
+            modelTraceSource: "panel:forged",
           },
         })
       ).json(),
     ).toEqual({
       effect: "agent.submitPrompt",
+      modelTraceSource: "panel:synthetic-panel",
       prompt: "Read this panel",
       displayText: "Panel request",
       sessionId: "session-1234",

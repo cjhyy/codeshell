@@ -1,0 +1,33 @@
+{
+  "exactTrailingWhitespaceLines": {
+    "docs/audit-2026-10-17-round63/evidence/model-traces/navigate-chain.first.stdout.txt": [],
+    "docs/audit-2026-10-17-round63/evidence/model-traces/read-chain.first.stdout.txt": [
+      87,
+      100,
+      191,
+      199,
+      225,
+      242
+    ],
+    "docs/audit-2026-10-17-round63/evidence/model-traces/read-history-gate.first.stdout.txt": [
+      17,
+      19,
+      21,
+      26,
+      28,
+      30,
+      32,
+      34,
+      36
+    ],
+    "docs/audit-2026-10-17-round63/evidence/model-traces/read-leaves.first.stdout.txt": [
+      9,
+      97,
+      104
+    ],
+    "docs/audit-2026-10-17-round63/evidence/model-traces/read-supplement.first.stdout.txt": [
+      118
+    ]
+  },
+  "scope": "Frozen provenance bytes only; new nonfrozen files use ordinary whitespace check."
+}

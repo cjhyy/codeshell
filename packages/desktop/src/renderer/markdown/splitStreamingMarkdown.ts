@@ -40,7 +40,7 @@ interface OpenFence {
 
 /** Match a fence marker at line start (≤3 spaces indent). Returns null if none. */
 function fenceAt(line: string): { char: "`" | "~"; len: number; info: string } | null {
-  const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+  const m = /^ {0,3}(`{3,}|~{3,})(.*)\r?$/.exec(line);
   if (!m) return null;
   const run = m[1];
   const info = m[2];
@@ -76,6 +76,23 @@ function scanFences(lines: string[]): { openAfter: boolean[]; openFenceStart: nu
     openAfter[i] = open !== null;
   }
   return { openAfter, openFenceStart: open ? open.line : -1 };
+}
+
+/** Split an already-stable prefix only at blank lines outside code fences.
+ * Keep source indentation and blank lines inside each block untouched. */
+export function splitStreamingMarkdownChunks(prefix: string): string[] {
+  if (prefix === "") return [];
+  const lines = prefix.split("\n");
+  const { openAfter } = scanFences(lines);
+  const chunks: string[] = [];
+  let start = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() !== "" || openAfter[i]) continue;
+    if (i > start) chunks.push(lines.slice(start, i).join("\n"));
+    start = i + 1;
+  }
+  if (start < lines.length) chunks.push(lines.slice(start).join("\n"));
+  return chunks;
 }
 
 export function splitStreamingMarkdown(text: string): StreamingSplit {

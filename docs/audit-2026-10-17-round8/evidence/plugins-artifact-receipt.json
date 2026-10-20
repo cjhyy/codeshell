@@ -1,0 +1,82 @@
+{
+  "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "ownedPaths": [
+    {
+      "path": "docs/audit-2026-10-17-round8/plugins.md",
+      "bytes": 8320,
+      "sha256": "51fd6aca55331c61ab5e627e3dcf04b327e8b292ab7902373a618e3fdab62e9c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-command-metadata.first.exit.json",
+      "bytes": 476,
+      "sha256": "6c4181af8736b309c19a1396809c4ac54a5245e7ba8dc940c9c4499cbf427a0b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-command-metadata.first.log",
+      "bytes": 1715,
+      "sha256": "fe8c9182996cad6b2ff9a66492a392372841b66c60814c9dc381101bfaf630b7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-command-metadata.test.ts",
+      "bytes": 4223,
+      "sha256": "f5a00d46869728567e7bf41a3869b8a2d85ace9547437858ddb0887d152be732"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-command-preflight.json",
+      "bytes": 2442,
+      "sha256": "26332b06218acacb29335efffca6f01895074b5d70aa7cddd6a1708eda8c64a5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-dedup-corpus.json",
+      "bytes": 216115,
+      "sha256": "4e29b10964789a4497ad53ccde6c8d9ffb3f9be6739ffbfc9f58d138226ba814"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-findings.json",
+      "bytes": 5281,
+      "sha256": "b14c7eb036f82085fb3466df3cface68d40757b8f630785d2bb254b4faa9a7d1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-metadata-assembly-note.md",
+      "bytes": 686,
+      "sha256": "d57ebc04f8d54149c6588b99d84786360fe5a4daaccb7a9217a758fc6ccde3f0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.first.exit.json",
+      "bytes": 474,
+      "sha256": "a4aa8b92b324b3db457d55133fa4d3c5208d838728ba9ac91afbedfcd0d32a75"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.first.log",
+      "bytes": 1084,
+      "sha256": "9dc82a7e5a81819af793b3964b2cf2ffaf7eac12aaf4478c9f655e274a35a96f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.test.ts",
+      "bytes": 4456,
+      "sha256": "70c9af4f4d1e77f10e321a5b408cf2fc057284e3a345e34041ed3c112e809e1a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-parser-preflight.json",
+      "bytes": 777,
+      "sha256": "a628f3c29d2eaa89e1d326c22fc2aacd64075fc9b2aa3a8fc3d4c610f4216c2a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+      "bytes": 14896,
+      "sha256": "68ebbce9fab5bde88d10c8a12bcf0199deb0934752f17320f05973a13d3ca245"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-targeted-dedup.json",
+      "bytes": 1444,
+      "sha256": "ad5b817b038cf21b5d0702a449071dea11d8d53db19a1f87fe98e4a91b0fc8bb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-validation.json",
+      "bytes": 2293,
+      "sha256": "dea202473dd50dfa9138fca4f7d0cdb57d68331495c68eee03821e95b4248e94"
+    }
+  ],
+  "receiptExcludesItself": true,
+  "note": "Root final evidence index is authoritative after any report edits; no product edits or Git mutations by this agent."
+}

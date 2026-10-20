@@ -1,0 +1,857 @@
+{
+  "schema": "ordinary-value-static-selected/v1",
+  "createdAtUTC": "2026-10-17T19:22:23.472599+00:00",
+  "rootReportedBaseline": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "gitCertified": false,
+  "files": [
+    {
+      "path": "packages/web/src/lib/storage.ts",
+      "bytes": 2114,
+      "sha256": "86312680d2363fc3b69945527aeaa24130bfddbfff620404c99e189fea87237d",
+      "lineCount": 57,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          9,
+          13
+        ],
+        [
+          23,
+          55
+        ]
+      ],
+      "selectedLineCount": 38,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          57
+        ]
+      ],
+      "bodyDisplayedLineCount": 57,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          57
+        ]
+      ],
+      "displayedLineCount": 57,
+      "initialSha256": "86312680d2363fc3b69945527aeaa24130bfddbfff620404c99e189fea87237d",
+      "initialPinUTC": "2026-10-17T19:16:48.448460+00:00",
+      "initialPinTiming": "before own body/navigation; filenames confirmed by inventory.first.stdout",
+      "originalPinRow": {
+        "path": "packages/web/src/lib/storage.ts",
+        "bytes": 2114,
+        "lineCount": 57,
+        "sha256": "86312680d2363fc3b69945527aeaa24130bfddbfff620404c99e189fea87237d",
+        "pinnedAtUTC": "2026-10-17T19:16:48.448460+00:00",
+        "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+      },
+      "scope": "Targeted ordinary persisted cs.* key/value flow and optional mint/name calls. Same-SHA old R5whole-file overlap, not first/new full. Browser storage/i18n/credential custody not executed or certified."
+    },
+    {
+      "path": "packages/web/src/lib/deviceCredential.ts",
+      "bytes": 985,
+      "sha256": "c9b1bb11317bf0b11310d6731024e80c262ba684712b4240f498be0dec22ab20",
+      "lineCount": 22,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          14,
+          22
+        ]
+      ],
+      "selectedLineCount": 9,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "bodyDisplayedLineCount": 22,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "displayedLineCount": 22,
+      "initialSha256": "c9b1bb11317bf0b11310d6731024e80c262ba684712b4240f498be0dec22ab20",
+      "initialPinUTC": "2026-10-17T19:16:48.448757+00:00",
+      "initialPinTiming": "before own body/navigation; filenames confirmed by inventory.first.stdout",
+      "originalPinRow": {
+        "path": "packages/web/src/lib/deviceCredential.ts",
+        "bytes": 985,
+        "lineCount": 22,
+        "sha256": "c9b1bb11317bf0b11310d6731024e80c262ba684712b4240f498be0dec22ab20",
+        "pinnedAtUTC": "2026-10-17T19:16:48.448757+00:00",
+        "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+      },
+      "scope": "32-octet input→lowercase hex formatting and actual caller only. Comment about server secretHash is not independently certified server auth. No entropy/native security conclusion. Prior hits are inventory metadata, not proof unread."
+    },
+    {
+      "path": "packages/web/src/lib/environment.ts",
+      "bytes": 1644,
+      "sha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+      "lineCount": 43,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          2,
+          14
+        ],
+        [
+          16,
+          32
+        ],
+        [
+          34,
+          43
+        ]
+      ],
+      "selectedLineCount": 40,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "bodyDisplayedLineCount": 43,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "displayedLineCount": 43,
+      "initialSha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+      "initialPinUTC": "2026-10-17T19:16:48.448953+00:00",
+      "initialPinTiming": "before own body/navigation; filenames confirmed by inventory.first.stdout",
+      "originalPinRow": {
+        "path": "packages/web/src/lib/environment.ts",
+        "bytes": 1644,
+        "lineCount": 43,
+        "sha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+        "pinnedAtUTC": "2026-10-17T19:16:48.448953+00:00",
+        "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+      },
+      "scope": "Descriptor ordinary fields and tuple text encoding, with old R5/R18full overlap. No environment identity/auth mechanism certification. projectReferenceKey only tests/export found in this bounded scope; no user bug from arbitrary reference."
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "bytes": 12268,
+      "sha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "lineCount": 321,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          3,
+          6
+        ],
+        [
+          43,
+          56
+        ],
+        [
+          76,
+          84
+        ],
+        [
+          139,
+          143
+        ],
+        [
+          153,
+          185
+        ],
+        [
+          213,
+          239
+        ]
+      ],
+      "selectedLineCount": 92,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          90
+        ],
+        [
+          137,
+          185
+        ],
+        [
+          199,
+          239
+        ]
+      ],
+      "bodyDisplayedLineCount": 180,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          90
+        ],
+        [
+          137,
+          185
+        ],
+        [
+          199,
+          239
+        ]
+      ],
+      "displayedLineCount": 180,
+      "initialSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "initialPinUTC": "2026-10-17T19:17:09.637409+00:00",
+      "initialPinTiming": "before any own body/navigation; filename-only navigation1729b6",
+      "originalPinRow": {
+        "path": "packages/web/src/hooks/useRemoteSocket.ts",
+        "bytes": 12268,
+        "lineCount": 321,
+        "sha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+        "pinnedAtUTC": "2026-10-17T19:17:09.637409+00:00",
+        "timing": "before any own body/navigation; filename-only navigation1729b6"
+      },
+      "scope": "Actual store get/set/clear and mint order, origin/ws target, pair/auth result ordinary branches. OldW10 two-read quota cause excluded; not full reconnect/liveness/auth/cleanup validation."
+    },
+    {
+      "path": "packages/web/app/environments.ts",
+      "bytes": 3934,
+      "sha256": "788bc33467203f6c90cb78495af2e548e6b8b12602e3c5b04e3aed6fffe53563",
+      "lineCount": 110,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          3,
+          11
+        ],
+        [
+          14,
+          29
+        ],
+        [
+          31,
+          67
+        ],
+        [
+          69,
+          110
+        ]
+      ],
+      "selectedLineCount": 104,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "bodyDisplayedLineCount": 110,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "displayedLineCount": 110,
+      "initialSha256": "788bc33467203f6c90cb78495af2e548e6b8b12602e3c5b04e3aed6fffe53563",
+      "initialPinUTC": "2026-10-17T19:17:09.638530+00:00",
+      "initialPinTiming": "before any own body/navigation; filename-only navigation1729b6",
+      "originalPinRow": {
+        "path": "packages/web/app/environments.ts",
+        "bytes": 3934,
+        "lineCount": 110,
+        "sha256": "788bc33467203f6c90cb78495af2e548e6b8b12602e3c5b04e3aed6fffe53563",
+        "pinnedAtUTC": "2026-10-17T19:17:09.638530+00:00",
+        "timing": "before any own body/navigation; filename-only navigation1729b6"
+      },
+      "scope": "Ordinary address normalization, bookmark key/limits/read/save/remove/descriptor comparison. Different key from deviceStore; comparison is client data logic, not identity enforcement."
+    },
+    {
+      "path": "packages/web/app/api-context.ts",
+      "bytes": 2725,
+      "sha256": "684933352b87dd2477b9f27784435f8dd6af82e1e8728f829f40d269c8ec0037",
+      "lineCount": 74,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          17,
+          39
+        ],
+        [
+          42,
+          74
+        ]
+      ],
+      "selectedLineCount": 56,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "bodyDisplayedLineCount": 74,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "displayedLineCount": 74,
+      "initialSha256": "684933352b87dd2477b9f27784435f8dd6af82e1e8728f829f40d269c8ec0037",
+      "initialPinUTC": "2026-10-17T19:17:09.638272+00:00",
+      "initialPinTiming": "before any own body/navigation; filename-only navigation1729b6",
+      "originalPinRow": {
+        "path": "packages/web/app/api-context.ts",
+        "bytes": 2725,
+        "lineCount": 74,
+        "sha256": "684933352b87dd2477b9f27784435f8dd6af82e1e8728f829f40d269c8ec0037",
+        "pinnedAtUTC": "2026-10-17T19:17:09.638272+00:00",
+        "timing": "before any own body/navigation; filename-only navigation1729b6"
+      },
+      "scope": "Local scope setters/getters and ordinary API URL projection/control-plane path selection. Does not certify auth, project custody or server enforcement."
+    },
+    {
+      "path": "packages/web/app/EnvironmentMenu.tsx",
+      "bytes": 7042,
+      "sha256": "9948e9d1fd7863aa2f9d9984ef54d0d8d19d7b68ec275c30a9b09f8078722c61",
+      "lineCount": 207,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          14,
+          35
+        ],
+        [
+          38,
+          69
+        ],
+        [
+          79,
+          92
+        ],
+        [
+          131,
+          173
+        ]
+      ],
+      "selectedLineCount": 111,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          101
+        ],
+        [
+          124,
+          179
+        ]
+      ],
+      "bodyDisplayedLineCount": 157,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          101
+        ],
+        [
+          124,
+          179
+        ]
+      ],
+      "displayedLineCount": 157,
+      "initialSha256": "9948e9d1fd7863aa2f9d9984ef54d0d8d19d7b68ec275c30a9b09f8078722c61",
+      "initialPinUTC": "2026-10-17T19:17:09.639173+00:00",
+      "initialPinTiming": "before any own body/navigation; filename-only navigation1729b6",
+      "originalPinRow": {
+        "path": "packages/web/app/EnvironmentMenu.tsx",
+        "bytes": 7042,
+        "lineCount": 207,
+        "sha256": "9948e9d1fd7863aa2f9d9984ef54d0d8d19d7b68ec275c30a9b09f8078722c61",
+        "pinnedAtUTC": "2026-10-17T19:17:09.639173+00:00",
+        "timing": "before any own body/navigation; filename-only navigation1729b6"
+      },
+      "scope": "Actual load/edit/save-current/manual-submit/remove/go call order. Descriptor guard and errors only; no React/DOM/network/storage execution. go invokes supplied navigate or location.assign; only actual default Desktop instance selected, not every website adapter."
+    },
+    {
+      "path": "packages/web/app/WebsiteShell.tsx",
+      "bytes": 14309,
+      "sha256": "41845e6b1a22a38865286d5359401b43af14023cfd080fcb9679f60bede825b3",
+      "lineCount": 383,
+      "kind": "navigation-only",
+      "coverage": "navigation-only; semantic0",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        5,
+        113,
+        129,
+        136
+      ],
+      "displayedLineRanges": [
+        [
+          5,
+          5
+        ],
+        [
+          113,
+          113
+        ],
+        [
+          129,
+          129
+        ],
+        [
+          136,
+          136
+        ]
+      ],
+      "displayedLineCount": 4,
+      "initialSha256": "41845e6b1a22a38865286d5359401b43af14023cfd080fcb9679f60bede825b3",
+      "initialPinUTC": "2026-10-17T19:17:09.638835+00:00",
+      "initialPinTiming": "before any own body/navigation; filename-only navigation1729b6",
+      "originalPinRow": {
+        "path": "packages/web/app/WebsiteShell.tsx",
+        "bytes": 14309,
+        "lineCount": 383,
+        "sha256": "41845e6b1a22a38865286d5359401b43af14023cfd080fcb9679f60bede825b3",
+        "pinnedAtUTC": "2026-10-17T19:17:09.638835+00:00",
+        "timing": "before any own body/navigation; filename-only navigation1729b6"
+      },
+      "scope": "Navigation snippets only; no body or route/lifecycle semantics claimed."
+    },
+    {
+      "path": "packages/web/app/DesktopApp.tsx",
+      "bytes": 21945,
+      "sha256": "b20bfff8716b4a987eb1acb12db43cde66ec63e18ea41c092f8422a3a6ac43da",
+      "lineCount": 574,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          24,
+          32
+        ],
+        [
+          66,
+          73
+        ]
+      ],
+      "selectedLineCount": 17,
+      "bodyDisplayedLineRanges": [
+        [
+          24,
+          44
+        ],
+        [
+          65,
+          76
+        ]
+      ],
+      "bodyDisplayedLineCount": 33,
+      "additionalNavigationSnippetLines": [
+        1,
+        4,
+        7
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          1
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          7,
+          7
+        ],
+        [
+          24,
+          44
+        ],
+        [
+          65,
+          76
+        ]
+      ],
+      "displayedLineCount": 36,
+      "initialSha256": "b20bfff8716b4a987eb1acb12db43cde66ec63e18ea41c092f8422a3a6ac43da",
+      "initialPinUTC": "2026-10-17T19:17:09.639654+00:00",
+      "initialPinTiming": "before any own body/navigation; filename-only navigation1729b6",
+      "originalPinRow": {
+        "path": "packages/web/app/DesktopApp.tsx",
+        "bytes": 21945,
+        "lineCount": 574,
+        "sha256": "b20bfff8716b4a987eb1acb12db43cde66ec63e18ea41c092f8422a3a6ac43da",
+        "pinnedAtUTC": "2026-10-17T19:17:09.639654+00:00",
+        "timing": "before any own body/navigation; filename-only navigation1729b6"
+      },
+      "scope": "Actual useRemoteApp call and EnvironmentMenu discover=false instance without navigate. Auth effect displayed boundary only."
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "bytes": 73050,
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "lineCount": 1831,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          1371,
+          1377
+        ]
+      ],
+      "selectedLineCount": 7,
+      "bodyDisplayedLineRanges": [
+        [
+          1365,
+          1397
+        ]
+      ],
+      "bodyDisplayedLineCount": 33,
+      "additionalNavigationSnippetLines": [
+        30,
+        231
+      ],
+      "displayedLineRanges": [
+        [
+          30,
+          30
+        ],
+        [
+          231,
+          231
+        ],
+        [
+          1365,
+          1397
+        ]
+      ],
+      "displayedLineCount": 35,
+      "initialSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "initialPinUTC": "2026-10-17T19:19:21.515268+00:00",
+      "initialPinTiming": "before body/nav; filename-only a365a7",
+      "originalPinRow": {
+        "path": "packages/web/src/hooks/useRemoteApp.ts",
+        "bytes": 73050,
+        "lineCount": 1831,
+        "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+        "pinnedAtUTC": "2026-10-17T19:19:21.515268+00:00",
+        "timing": "before body/nav; filename-only a365a7"
+      },
+      "scope": "Actual hook composition only; surrounding resync/approval cleanup shown but not reviewed for correctness."
+    },
+    {
+      "path": "packages/web/src/index.ts",
+      "bytes": 2491,
+      "sha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "lineCount": 62,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          12,
+          27
+        ]
+      ],
+      "selectedLineCount": 16,
+      "bodyDisplayedLineRanges": [
+        [
+          10,
+          29
+        ]
+      ],
+      "bodyDisplayedLineCount": 20,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          10,
+          29
+        ]
+      ],
+      "displayedLineCount": 20,
+      "initialSha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "initialPinUTC": "2026-10-17T19:19:21.512264+00:00",
+      "initialPinTiming": "before body/nav; filename-only a365a7",
+      "originalPinRow": {
+        "path": "packages/web/src/index.ts",
+        "bytes": 2491,
+        "lineCount": 62,
+        "sha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+        "pinnedAtUTC": "2026-10-17T19:19:21.512264+00:00",
+        "timing": "before body/nav; filename-only a365a7"
+      },
+      "scope": "Public exports connect mobile adapter import to wrapper/socket. No other exports activated."
+    },
+    {
+      "path": "packages/desktop/src/mobile/App.tsx",
+      "bytes": 11542,
+      "sha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "lineCount": 325,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          6,
+          6
+        ],
+        [
+          19,
+          21
+        ]
+      ],
+      "selectedLineCount": 4,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          23
+        ]
+      ],
+      "bodyDisplayedLineCount": 23,
+      "additionalNavigationSnippetLines": [
+        138,
+        208,
+        275
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          23
+        ],
+        [
+          138,
+          138
+        ],
+        [
+          208,
+          208
+        ],
+        [
+          275,
+          275
+        ]
+      ],
+      "displayedLineCount": 26,
+      "initialSha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "initialPinUTC": "2026-10-17T19:19:31.570850+00:00",
+      "initialPinTiming": "before body/nav; cf5e40 filename-only ordinary useRemoteApp consumer",
+      "originalPinRow": {
+        "path": "packages/desktop/src/mobile/App.tsx",
+        "bytes": 11542,
+        "lineCount": 325,
+        "sha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+        "pinnedAtUTC": "2026-10-17T19:19:31.570850+00:00",
+        "timing": "before body/nav; cf5e40 filename-only ordinary useRemoteApp consumer"
+      },
+      "scope": "Actual Mobile App useRemoteApp caller; imports and type references only. No renderer/native/permission/UI evaluation."
+    },
+    {
+      "path": "packages/server/src/environment-identity.ts",
+      "bytes": 2584,
+      "sha256": "e15810d73ed7a91cfdc8d1416e8536036208ba087d0e98d799d95f2887127e7f",
+      "lineCount": 69,
+      "kind": "product",
+      "coverage": "selected-static-purpose; not-full semantic review",
+      "selectedLineRanges": [
+        [
+          58,
+          69
+        ]
+      ],
+      "selectedLineCount": 12,
+      "bodyDisplayedLineRanges": [
+        [
+          57,
+          69
+        ]
+      ],
+      "bodyDisplayedLineCount": 13,
+      "additionalNavigationSnippetLines": [
+        5
+      ],
+      "displayedLineRanges": [
+        [
+          5,
+          5
+        ],
+        [
+          57,
+          69
+        ]
+      ],
+      "displayedLineCount": 14,
+      "initialSha256": "e15810d73ed7a91cfdc8d1416e8536036208ba087d0e98d799d95f2887127e7f",
+      "initialPinUTC": "2026-10-17T19:18:45.856577+00:00",
+      "initialPinTiming": "before body/nav; actual filename confirmed ffe49a",
+      "originalPinRow": {
+        "path": "packages/server/src/environment-identity.ts",
+        "bytes": 2584,
+        "sha256": "e15810d73ed7a91cfdc8d1416e8536036208ba087d0e98d799d95f2887127e7f",
+        "lineCount": 69,
+        "pinnedAtUTC": "2026-10-17T19:18:45.856577+00:00",
+        "timing": "before body/nav; actual filename confirmed ffe49a",
+        "scopeIntent": "Only ordinary descriptor.name producer length; environment identity/FS authority mechanism not activated or certified."
+      },
+      "scope": "Only actual describeEnvironment ordinary name/entry fields: fixed short names. Rest of identity persistence/FS source not read. Does not prove all external hosts use this producer."
+    },
+    {
+      "path": "packages/web/src/lib/deviceCredential.test.ts",
+      "bytes": 696,
+      "sha256": "f829c4daa6a45b83f1e33c7717bb28937bbd80b82ec3f3c9a22e54ad09b6d856",
+      "lineCount": 20,
+      "kind": "test-declaration",
+      "coverage": "selected-existing-test-declarations; execution0",
+      "selectedLineRanges": [
+        [
+          4,
+          20
+        ]
+      ],
+      "selectedLineCount": 17,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          20
+        ]
+      ],
+      "bodyDisplayedLineCount": 20,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          20
+        ]
+      ],
+      "displayedLineCount": 20,
+      "initialSha256": "f829c4daa6a45b83f1e33c7717bb28937bbd80b82ec3f3c9a22e54ad09b6d856",
+      "initialPinUTC": "2026-10-17T19:17:09.639870+00:00",
+      "initialPinTiming": "before any own body/navigation; filename-only navigation1729b6",
+      "originalPinRow": {
+        "path": "packages/web/src/lib/deviceCredential.test.ts",
+        "bytes": 696,
+        "lineCount": 20,
+        "sha256": "f829c4daa6a45b83f1e33c7717bb28937bbd80b82ec3f3c9a22e54ad09b6d856",
+        "pinnedAtUTC": "2026-10-17T19:17:09.639870+00:00",
+        "timing": "before any own body/navigation; filename-only navigation1729b6"
+      },
+      "scope": "Existing deterministic byte→hex and default crypto declarations; execution0, no native entropy observation."
+    },
+    {
+      "path": "packages/web/app/environments.test.ts",
+      "bytes": 3016,
+      "sha256": "783d0c9a371790b55baaef41397926876eecbc91770c14c92b92112c3f2b1f62",
+      "lineCount": 90,
+      "kind": "test-declaration",
+      "coverage": "selected-existing-test-declarations; execution0",
+      "selectedLineRanges": [
+        [
+          11,
+          90
+        ]
+      ],
+      "selectedLineCount": 80,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          90
+        ]
+      ],
+      "bodyDisplayedLineCount": 90,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          90
+        ]
+      ],
+      "displayedLineCount": 90,
+      "initialSha256": "783d0c9a371790b55baaef41397926876eecbc91770c14c92b92112c3f2b1f62",
+      "initialPinUTC": "2026-10-17T19:17:09.640102+00:00",
+      "initialPinTiming": "before any own body/navigation; filename-only navigation1729b6",
+      "originalPinRow": {
+        "path": "packages/web/app/environments.test.ts",
+        "bytes": 3016,
+        "lineCount": 90,
+        "sha256": "783d0c9a371790b55baaef41397926876eecbc91770c14c92b92112c3f2b1f62",
+        "pinnedAtUTC": "2026-10-17T19:17:09.640102+00:00",
+        "timing": "before any own body/navigation; filename-only navigation1729b6"
+      },
+      "scope": "Existing bookmark roundtrip/address/ref/invalid-storage declarations only; fixed IDs are test DTOs, not actual identity validation evidence."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "kind": "instruction-reuse",
+      "coverage": "hash-only-this-packet; same-SHA prior instruction read reused",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinUTC": "2026-10-17T19:16:48.447935+00:00",
+      "originalPinRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "lineCount": 217,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "pinnedAtUTC": "2026-10-17T19:16:48.447935+00:00",
+        "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "kind": "instruction-reuse",
+      "coverage": "hash-only-this-packet; same-SHA prior instruction read reused",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinUTC": "2026-10-17T19:16:48.448177+00:00",
+      "originalPinRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "lineCount": 5,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "pinnedAtUTC": "2026-10-17T19:16:48.448177+00:00",
+        "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+      }
+    }
+  ],
+  "counts": {
+    "productSelectedRows": 12,
+    "productSelectedLines": 506,
+    "testDeclarationSelectedLines": 97,
+    "displayedSourceLines": 888,
+    "navigationOnlyRows": 1,
+    "instructionHashOnlyRows": 2,
+    "semanticFullRows": 0,
+    "sourceInstructionPins": 17,
+    "runtimeAttempts": 0,
+    "selectedTotalLines": 603
+  },
+  "rangeConvention": "One-based inclusive, body+navigation canonical union. Selected subset may include directly reviewed navigation. Repeated display once per file. Whole physical display does not promote semantic full/current auth review.",
+  "historyGateTiming": "Before product bodies, shared target navigation and exact R5/R18 canonical objects+bounded old MD were read. Selected current consumer rereads preserve old overlap, no no-row/unread claim or global count update."
+}

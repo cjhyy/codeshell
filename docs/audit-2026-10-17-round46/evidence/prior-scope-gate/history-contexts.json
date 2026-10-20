@@ -1,0 +1,1206 @@
+{
+  "sessionsearch": [
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "locator": "markdown-text",
+      "valueChars": 41296,
+      "offset": 14990,
+      "contextStart": 14590,
+      "contextEnd": 15890,
+      "text": "ges/desktop/src/renderer/messages/AskUserMessageView.tsx:211` | 点问题选项或审批按钮继续运行 |\n\n### 搜索与命令\n\n| 功能 | 做什么 | 入口 | 怎么用 |\n|------|--------|------|--------|\n| **命令面板（Command Palette）** | 构造可执行命令，支持跳视图、打开设置、搜索、开新窗口、面板操作等 | `packages/desktop/src/renderer/shell/CommandPalette.tsx:22`，`packages/desktop/src/renderer/shell/CommandPalette.tsx:108` | `Cmd/Ctrl+K` 后输入命令 |\n| **跨项目会话搜索** | 模态搜索所有项目会话，无输入时列最近会话 | `packages/desktop/src/renderer/shell/SessionSearchModal.tsx:41` | `Cmd/Ctrl+P` 或侧栏搜索 |\n| **当前 transcript 搜索** | 当前会话内查找文本并显示匹配数 | `packages/desktop/src/renderer/shell/SearchBar.tsx:15` | 会话里 `Cmd/Ctrl+F` |\n\n### 侧栏与项目/会话管理\n\n| 功能 | 做什么 | 入口 | 怎么用 |\n|------|--------|------|--------|\n| **侧栏容器与项目树** | 管理项目列表、会话索引、展开状态、当前 repo/session 和底部菜单 | `packages/desktop/src/renderer/Sidebar.tsx:72` | 侧栏选择项目或打开新会话 |\n| **最近项目与置顶/移除** | UI 调用 projects/recents API 添加、置顶、移除、刷新项目列表 | `packages/desktop/src/preload/index.ts:710`，`packages/desktop/src/main/index.ts:2272` | 项目菜单中置顶、移除或添加项目 |\n| **会话行状态与快捷跳转** | 会话行显示运行/待输入/未读状态，支持重命名、复制 ID、归档/删除和数字快捷键 | `packages/desktop/src/renderer/Sidebar.tsx:72`，`packages/desktop/src/renderer/App.tsx:2865` | 点击会话切换或用 `Cmd/Ctrl+1..9` |\n| **设置入口 + 语言切换** | 底部 SettingsMenu 打开设置页并切换中/英文 | `packages/desktop/src/renderer/settings/SettingsMenu.tsx:37` | 侧栏底部点设置 |\n\n### 设置页（全屏，分组左导航）\n\n|",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "locator": "/285/detail",
+      "valueChars": 199,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 199,
+      "text": "The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "locator": "/286/file",
+      "valueChars": 58,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 58,
+      "text": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/1747",
+      "valueChars": 58,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 58,
+      "text": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "locator": "/matches/21/hits/2/excerpt",
+      "valueChars": 489,
+      "offset": 420,
+      "contextStart": 20,
+      "contextEnd": 489,
+      "text": "e notice:** SessionSearchModal's content toggle/placeholder/hint say “对话内容”, “搜索对话中的内容…” and “输入至少 2 个字符搜索会话内容” (`renderer/i18n/ns/panels.ts:248–260`). Its content-result header and empty state do not say “only the most recent 500”. The title-mode “近期对话” default is a separate mode and is not displayed as a content-search scope. The only incompleteness notice is conditional on result.truncated at `SessionSearchModal.tsx:179–187`, using “结果不完整（已达搜索上限）” from i18n :262",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "locator": "/matches/23/hits/0/excerpt",
+      "valueChars": 610,
+      "offset": 371,
+      "contextStart": 0,
+      "contextEnd": 610,
+      "text": "eshell/packages/desktop/src/main/index.ts:4886) → pet disclosure search [54–57](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/pet/src/disclosure/search.ts:54) 只取 message；刚建成的 summary target 仅 meta/context_transfer，不应承诺 summary 正文可被搜索。即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "locator": "/matches/24/hits/3/excerpt",
+      "valueChars": 347,
+      "offset": 67,
+      "contextStart": 0,
+      "contextEnd": 347,
+      "text": "实际 UI 的 content toggle、placeholder、hint、header 和空结果均未说明最近 500 个候选：`SessionSearchModal.tsx:95,137–146,150–188`，中文 `i18n/ns/panels.ts:247–262`、英文 `:531–546` 均如此。空输入标题模式的 Recent conversations 是独立模式；content mode 的 header 返回 Search results。唯一覆盖不足提示由 result.truncated 控制，故收到 false 时不会显示。共享 SearchDialog 的 footer 只有键盘提示。没有找到能把本例界面解释成“用户已经被告知仅搜索最近500”的提示。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "locator": "/matches/34/hits/0/excerpt",
+      "valueChars": 90,
+      "offset": 20,
+      "contextStart": 0,
+      "contextEnd": 90,
+      "text": "esult.truncated at `SessionSearchModal.tsx:179–187`, using “结果不完整（已达搜索上限）” from i18n :262.",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "locator": "/matches/34/hits/1/excerpt",
+      "valueChars": 244,
+      "offset": 33,
+      "contextStart": 0,
+      "contextEnd": 244,
+      "text": "、hint、header 和空结果均未说明最近 500 个候选：`SessionSearchModal.tsx:95,137–146,150–188`，中文 `i18n/ns/panels.ts:247–262`、英文 `:531–546` 均如此。空输入标题模式的 Recent conversations 是独立模式；content mode 的 header 返回 Search results。唯一覆盖不足提示由 result.truncated 控制，故收到 false 时不会",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "locator": "/matches/42/hits/0/excerpt",
+      "valueChars": 610,
+      "offset": 371,
+      "contextStart": 0,
+      "contextEnd": 610,
+      "text": "eshell/packages/desktop/src/main/index.ts:4886) → pet disclosure search [54–57](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/pet/src/disclosure/search.ts:54) 只取 message；刚建成的 summary target 仅 meta/context_transfer，不应承诺 summary 正文可被搜索。即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "locator": "/files/29/path",
+      "valueChars": 58,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 58,
+      "text": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/pet.md",
+      "locator": "markdown-text",
+      "valueChars": 4506,
+      "offset": 1093,
+      "contextStart": 693,
+      "contextEnd": 1993,
+      "text": "* 真实 `searchSessionTranscripts()` 对自有临时目录得到 `{scannedSessions:21,matches.length:20,truncated:false}`；不同 transcript mtime 明确排序，最新 `work-20` 保留、最旧 `work-00` 被裁掉。20 个匹配会话的正常对照为 20/20/false。\n- **预期与影响：** 保留 20 行上限合理，但有命中被省略时应返回不完整信号。Desktop 主进程 [index.ts:5031](../../packages/desktop/src/main/index.ts#L5031) 和 Mimi [sessions-tool.ts:196](../../packages/pet/src/sessions-tool.ts#L196) 都使用默认结果上限；Desktop [SessionSearchModal.tsx:179](../../packages/desktop/src/renderer/shell/SessionSearchModal.tsx#L179) 只在该布尔值为真时显示“结果不完整（已达搜索上限）”。本例会隐藏已有的提示；Mimi 同样收到错误的完整性字段。\n- **查重：** 旧 R56/W22 是 500 候选带之外从未扫描的会话漏报；本项仅 21 个候选，全部实际扫描且全部命中，错误发生在并发命中后的结果裁切。旧 PET-01 是 JSON 编码预筛，本例内容只有普通 ASCII，未触发该根因。历史 `docs/bugs` 审查/归档 MD 和解析 JSON 共 1,054 文件逐层检索，未检出同根因记录。\n- **边界：** 动态证据是生产文件 reader/search helper；Desktop IPC、modal 和 Mimi 字段转发仅源码接线核对，未挂载 UI、执行 Sessions 工具或启动真实 Host。没有要求无限搜索、改变 500 候选设计，也没有会话数据丢失。\n\n## PET-R10-02 [P3] Unicode 小写扩长后用错原文坐标，snippet 不含命中词\n\n- **位置：** [search.ts:59](../../packages/pet/src/disclosure/search.ts#L59) 至 63 行。`text.toLowerCase()` 中的索引直接交给原文 `buildSnippet(text, index, query.length)`；大小写转换并非恒长。\n- **正常触发：** 用户正文包含多个大写土耳其字母 `İ`，之后出现 ASCII 查询词。`İ` 转为 `i` 加组合点（两个 UTF-16 code units），在匹配词之前累积的扩长会把 snippet 起点移到真实命中之后。\n- **实际证据：** 健康字符串 `\"İ\".repeat(240) + \" TARGET \" + \"z\".repeat(240)` 查询 `target`。真实",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+      "locator": "/files/53/path",
+      "valueChars": 58,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 58,
+      "text": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "locator": "/hits/transcript_projection/22/context",
+      "valueChars": 436,
+      "offset": 266,
+      "contextStart": 0,
+      "contextEnd": 436,
+      "text": "MemoryStore pin 不在本轮范围。没有网络、认证、权限或原生进程实验。\n\n## 第一轮：会话历史窗口 / 搜索\n\n- 静态阅读：`app/mergeHistoryWindows.ts`、`automation/hydrateOrder.ts`、`automation/mergeTranscripts.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。\n- 聚焦动态实验已完成：`evidence/ui-history-window.test.ts`，只调用源码相对导入的历史折叠/合并纯函数；测试持久用户意图的历史前缀、缓存中断回答、重复 legacy 文本边界。首跑完整输出见 `evidence/ui-history-window.log",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "locator": "/hits/transcript_projection/60/context",
+      "valueChars": 227,
+      "offset": 203,
+      "contextStart": 0,
+      "contextEnd": 227,
+      "text": "- 静态阅读：`app/mergeHistoryWindows.ts`、`automation/hydrateOrder.ts`、`automation/mergeTranscripts.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/5/snippet",
+      "valueChars": 360,
+      "offset": 167,
+      "contextStart": 0,
+      "contextEnd": 360,
+      "text": "`automation/hydrateOrder.ts`、`automation/mergeTranscripts.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。\n- 聚焦动态实验已完成：`evidence/ui-history-window.test.ts`，只调用源码相对导入的历史折叠/合并纯函数；测试持久用户意图的历史前缀、缓存中断回答、重复 legacy 文本边界。首跑完整输出见 `evidence/ui-history-window.log`；2 pass / 0 fail / 0 s",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/6/snippet",
+      "valueChars": 360,
+      "offset": 132,
+      "contextStart": 0,
+      "contextEnd": 360,
+      "text": "ation/mergeTranscripts.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。\n- 聚焦动态实验已完成：`evidence/ui-history-window.test.ts`，只调用源码相对导入的历史折叠/合并纯函数；测试持久用户意图的历史前缀、缓存中断回答、重复 legacy 文本边界。首跑完整输出见 `evidence/ui-history-window.log`；2 pass / 0 fail / 0 skip，guarded runner 确认完整完成。\n- 搜索模块确认",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/7/snippet",
+      "valueChars": 271,
+      "offset": 32,
+      "contextStart": 0,
+      "contextEnd": 271,
+      "text": "eview-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/8/snippet",
+      "valueChars": 242,
+      "offset": 3,
+      "contextStart": 0,
+      "contextEnd": 242,
+      "text": "ll/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/9/snippet",
+      "valueChars": 271,
+      "offset": 32,
+      "contextStart": 0,
+      "contextEnd": 271,
+      "text": "eview-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/10/snippet",
+      "valueChars": 242,
+      "offset": 3,
+      "contextStart": 0,
+      "contextEnd": 242,
+      "text": "ll/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/20/snippet",
+      "valueChars": 191,
+      "offset": 167,
+      "contextStart": 0,
+      "contextEnd": 191,
+      "text": "`automation/hydrateOrder.ts`、`automation/mergeTranscripts.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/21/snippet",
+      "valueChars": 156,
+      "offset": 132,
+      "contextStart": 0,
+      "contextEnd": 156,
+      "text": "ation/mergeTranscripts.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/22/snippet",
+      "valueChars": 359,
+      "offset": 32,
+      "contextStart": 0,
+      "contextEnd": 359,
+      "text": "eview-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionContentSearch.ts:34)）。这些恢复限制不另计缺陷。\n\nR07 是 Core worker exit 错清仍在运行的**外部 CLI** busy；本项普通 native",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/23/snippet",
+      "valueChars": 360,
+      "offset": 3,
+      "contextStart": 0,
+      "contextEnd": 360,
+      "text": "ll/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionContentSearch.ts:34)）。这些恢复限制不另计缺陷。\n\nR07 是 Core worker exit 错清仍在运行的**外部 CLI** busy；本项普通 native source 没有 worker exit。R08 是 p",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/27/snippet",
+      "valueChars": 360,
+      "offset": 48,
+      "contextStart": 0,
+      "contextEnd": 360,
+      "text": "plicitly disabled with an unavailable message (`SessionSearchModal.tsx:190–209`; resolver at `shell/sessionContentSearch.ts:50–64`). Title results use the project/session pair, so same titles do not alone imply a wrong destination.\n- SearchDialog owns focus/keyboard events and suppresses app-global shortcuts while a modal itself handles input. W21 uses a new",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/55/snippet",
+      "valueChars": 359,
+      "offset": 32,
+      "contextStart": 0,
+      "contextEnd": 359,
+      "text": "eview-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionContentSearch.ts:34)）。这些恢复限制不另计缺陷。\n\nR07 是 Core worker exit 错清仍在运行的**外部 CLI** busy；本项普通 native",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-dedup.json",
+      "locator": "/hits/target_helpers/56/snippet",
+      "valueChars": 360,
+      "offset": 3,
+      "contextStart": 0,
+      "contextEnd": 360,
+      "text": "ll/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionContentSearch.ts:34)）。这些恢复限制不另计缺陷。\n\nR07 是 Core worker exit 错清仍在运行的**外部 CLI** busy；本项普通 native source 没有 worker exit。R08 是 p",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "locator": "/files/8/path",
+      "valueChars": 58,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 58,
+      "text": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/search.md",
+      "locator": "markdown-text",
+      "valueChars": 4326,
+      "offset": 387,
+      "contextStart": 0,
+      "contextEnd": 1287,
+      "text": "# Desktop 内容搜索与模型选择纯数据审查 — round 13\n\n冻结基线 `7927a7c8b80b4aec710dee1f6d831ad1982bb466`。本分审新增正式问题 **0**，保留 **1 个候选**。唯一首次 guarded shard 通过 **18 tests / 32 expect / 0 fail / 0 skip**（13 项既有测试、5 项聚焦观察）。没有产品修复或 Git 写入。\n\n## 范围与证据边界\n\n- 实际执行 `shell/sessionContentSearch.ts` 的查询解析与 engine→local 映射、`modelSelection.ts` 的设置读写回调；使用自有内存数据，不保存真实设置。`sessionContentSearch` 的真实源码依赖保持原样，没有替换解析器或构建共享依赖。\n- `SessionSearchModal.tsx`、`useSessionContentSearch.ts`、preload `index.ts:1046–1047`、Main `index.ts:5026–5032` 仅用于确认普通调用链和校验范围；**没有挂载 UI、调用 IPC 或执行 Main/搜索磁盘服务**。\n- `shell/searchFocus.ts:1–16` 及 `SearchDialog.tsx` / `SearchBar.tsx` 的焦点移交接线只静态阅读。未创建 DOM、React、Electron、浏览器、原生焦点或键盘实验，没有确认新焦点问题。\n- `chat/modelPickerPresentation.ts` 及其既有测试只静态阅读。历史 round6 的 DD6-04 已因同一 fixture import 失败标为 SKIP，本批继续跳过该动态方向，**没有改用纯分组 fixture 或既有 React 测试恢复它**。\n- `persistDefaultTextModel` 在 Desktop 非测试源码检索中只有定义，未找到产品调用方。通过回调控制证明的行为不能扩为当前 UI 默认模型保存结论。\n\n## SEARCH-R13-C1：前端查询 readiness 与 Main 的 trim 后长度合同不一致（候选）\n\n- 位置：`packages/desktop/src/renderer/shell/sessionContentSearch.ts:29–30`。Main 校验位于 `packages/desktop/src/main/index.ts:5029–5030`。\n- 正常输入路径：内容搜索输入在 `SessionSearchModal.tsx:141` 形成 `> ${value}`；`:43–47` 把解析所得 `ready` 和原始 term 交给真实 hook。`useSessionContentSearch.ts:26–34` 静态显示 ready 后会请求 term，`:35–36` 将请求错误映射为失败状态",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "locator": "/files/47/path",
+      "valueChars": 58,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 58,
+      "text": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "locator": "/workerSourceChecks/8/path",
+      "valueChars": 58,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 58,
+      "text": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "locator": "/records/5/matches/0/match",
+      "valueChars": 146567,
+      "offset": 140061,
+      "contextStart": 139661,
+      "contextEnd": 140961,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "locator": "/records/5/matches/0/context",
+      "valueChars": 146947,
+      "offset": 140301,
+      "contextStart": 139901,
+      "contextEnd": 141201,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "locator": "/records/9/matches/0/match",
+      "valueChars": 146567,
+      "offset": 140061,
+      "contextStart": 139661,
+      "contextEnd": 140961,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "locator": "/records/9/matches/0/context",
+      "valueChars": 146947,
+      "offset": 140301,
+      "contextStart": 139901,
+      "contextEnd": 141201,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "locator": "/records/13/matches/0/match",
+      "valueChars": 146567,
+      "offset": 140061,
+      "contextStart": 139661,
+      "contextEnd": 140961,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "locator": "/records/13/matches/0/context",
+      "valueChars": 146947,
+      "offset": 140301,
+      "contextStart": 139901,
+      "contextEnd": 141201,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "locator": "/hits/identity_cache/10/context",
+      "valueChars": 502,
+      "offset": 111,
+      "contextStart": 0,
+      "contextEnd": 502,
+      "text": "s.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。\n- 聚焦动态实验已完成：`evidence/ui-history-window.test.ts`，只调用源码相对导入的历史折叠/合并纯函数；测试持久用户意图的历史前缀、缓存中断回答、重复 legacy 文本边界。首跑完整输出见 `evidence/ui-history-window.log`；2 pass / 0 fail / 0 skip，guarded runner 确认完整完成。\n- 搜索模块确认了 debounce 取消、A→B→A 请求身份与不可用磁盘结果禁用路径；此阶段未提出可确认的新问题。\n\n## 第二轮：普通编辑 / 设置状态\n\n已静态阅读 `App.tsx` 草稿与图片附件异步归属、`ChatView.tsx` 图片读取/压缩/暂存、`settings/AdvancedSections.tsx` 的自定义",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "locator": "/hits/identity_cache/14/context",
+      "valueChars": 281,
+      "offset": 111,
+      "contextStart": 0,
+      "contextEnd": 281,
+      "text": "s.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。\n- 聚焦动态实验已完成：`evidence/ui-history-window.test.ts`，只调用源码相对导入的历史折叠/合并纯函数；测试持久用户意图的历史前缀、缓存中断回答、重复 legacy 文本边界。首跑完整输出见 `evidence/ui-history-window.log",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "locator": "/hits/identity_cache/15/context",
+      "valueChars": 304,
+      "offset": 111,
+      "contextStart": 0,
+      "contextEnd": 304,
+      "text": "s.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。\n- 聚焦动态实验已完成：`evidence/ui-history-window.test.ts`，只调用源码相对导入的历史折叠/合并纯函数；测试持久用户意图的历史前缀、缓存中断回答、重复 legacy 文本边界。首跑完整输出见 `evidence/ui-history-window.log`；2 pass / 0 fail / 0 s",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "locator": "/hits/identity_cache/16/context",
+      "valueChars": 339,
+      "offset": 111,
+      "contextStart": 0,
+      "contextEnd": 339,
+      "text": "s.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。\n- 聚焦动态实验已完成：`evidence/ui-history-window.test.ts`，只调用源码相对导入的历史折叠/合并纯函数；测试持久用户意图的历史前缀、缓存中断回答、重复 legacy 文本边界。首跑完整输出见 `evidence/ui-history-window.log`；2 pass / 0 fail / 0 skip，guarded runner 确认完整完成。\n- 搜索模块确认",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+      "locator": "/matches/mechanism/6/excerpt",
+      "valueChars": 347,
+      "offset": 67,
+      "contextStart": 0,
+      "contextEnd": 347,
+      "text": "实际 UI 的 content toggle、placeholder、hint、header 和空结果均未说明最近 500 个候选：`SessionSearchModal.tsx:95,137–146,150–188`，中文 `i18n/ns/panels.ts:247–262`、英文 `:531–546` 均如此。空输入标题模式的 Recent conversations 是独立模式；content mode 的 header 返回 Search results。唯一覆盖不足提示由 result.truncated 控制，故收到 false 时不会显示。共享 SearchDialog 的 footer 只有键盘提示。没有找到能把本例界面解释成“用户已经被告知仅搜索最近500”的提示。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+      "locator": "/matches/mechanism/7/excerpt",
+      "valueChars": 244,
+      "offset": 33,
+      "contextStart": 0,
+      "contextEnd": 244,
+      "text": "、hint、header 和空结果均未说明最近 500 个候选：`SessionSearchModal.tsx:95,137–146,150–188`，中文 `i18n/ns/panels.ts:247–262`、英文 `:531–546` 均如此。空输入标题模式的 Recent conversations 是独立模式；content mode 的 header 返回 Search results。唯一覆盖不足提示由 result.truncated 控制，故收到 false 时不会",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/77/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/78/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/79/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/80/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/81/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/82/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/149/excerpt",
+      "valueChars": 220729,
+      "offset": 215330,
+      "contextStart": 214930,
+      "contextEnd": 216230,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/153/excerpt",
+      "valueChars": 220729,
+      "offset": 215330,
+      "contextStart": 214930,
+      "contextEnd": 216230,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/157/excerpt",
+      "valueChars": 220729,
+      "offset": 215330,
+      "contextStart": 214930,
+      "contextEnd": 216230,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+      "locator": "/matches/review-draft/20/excerpt",
+      "valueChars": 452,
+      "offset": 213,
+      "contextStart": 0,
+      "contextEnd": 452,
+      "text": "c/disclosure/search.ts:54) 只取 message；刚建成的 summary target 仅 meta/context_transfer，不应承诺 summary 正文可被搜索。即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+      "locator": "/matches/review-draft/21/excerpt",
+      "valueChars": 261,
+      "offset": 22,
+      "contextStart": 0,
+      "contextEnd": 261,
+      "text": "st-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+      "locator": "/matches/review-draft/22/excerpt",
+      "valueChars": 452,
+      "offset": 213,
+      "contextStart": 0,
+      "contextEnd": 452,
+      "text": "c/disclosure/search.ts:54) 只取 message；刚建成的 summary target 仅 meta/context_transfer，不应承诺 summary 正文可被搜索。即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+      "locator": "/matches/review-draft/23/excerpt",
+      "valueChars": 261,
+      "offset": 22,
+      "contextStart": 0,
+      "contextEnd": 261,
+      "text": "st-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+      "locator": "/hits/replay-proof/11/excerpt",
+      "valueChars": 269,
+      "offset": 49,
+      "contextStart": 0,
+      "contextEnd": 269,
+      "text": "- **预期与影响：** 命中片段应围绕原文中的匹配位置，保持可读的查询上下文。Desktop [SessionSearchModal.tsx:192](../../packages/desktop/src/renderer/shell/SessionSearchModal.tsx#L192) 原样展示首个 snippet；Mimi Sessions search 同样转发 snippets。用户看到会话命中，却无法从片段辨认实际命中内容。这里的重复前缀是便于确定偏移的合法 Unicode 文本压力样例，不声称所有土耳其文都受影响。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/748/path",
+      "valueChars": 58,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 58,
+      "text": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3094/path",
+      "valueChars": 58,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 58,
+      "text": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/8/context",
+      "valueChars": 350,
+      "offset": 111,
+      "contextStart": 0,
+      "contextEnd": 350,
+      "text": "即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/9/context",
+      "valueChars": 350,
+      "offset": 111,
+      "contextStart": 0,
+      "contextEnd": 350,
+      "text": "即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/11/context",
+      "valueChars": 271,
+      "offset": 32,
+      "contextStart": 0,
+      "contextEnd": 271,
+      "text": "eview-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/12/context",
+      "valueChars": 242,
+      "offset": 3,
+      "contextStart": 0,
+      "contextEnd": 242,
+      "text": "ll/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/13/context",
+      "valueChars": 271,
+      "offset": 32,
+      "contextStart": 0,
+      "contextEnd": 271,
+      "text": "eview-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/14/context",
+      "valueChars": 242,
+      "offset": 3,
+      "contextStart": 0,
+      "contextEnd": 242,
+      "text": "ll/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/15/context",
+      "valueChars": 359,
+      "offset": 32,
+      "contextStart": 0,
+      "contextEnd": 359,
+      "text": "eview-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionContentSearch.ts:34)）。这些恢复限制不另计缺陷。\n\nR07 是 Core worker exit 错清仍在运行的**外部 CLI** busy；本项普通 native",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/16/context",
+      "valueChars": 360,
+      "offset": 3,
+      "contextStart": 0,
+      "contextEnd": 360,
+      "text": "ll/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionContentSearch.ts:34)）。这些恢复限制不另计缺陷。\n\nR07 是 Core worker exit 错清仍在运行的**外部 CLI** busy；本项普通 native source 没有 worker exit。R08 是 p",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/17/context",
+      "valueChars": 360,
+      "offset": 48,
+      "contextStart": 0,
+      "contextEnd": 360,
+      "text": "plicitly disabled with an unavailable message (`SessionSearchModal.tsx:190–209`; resolver at `shell/sessionContentSearch.ts:50–64`). Title results use the project/session pair, so same titles do not alone imply a wrong destination.\n- SearchDialog owns focus/keyboard events and suppresses app-global shortcuts while a modal itself handles input. W21 uses a new",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/18/context",
+      "valueChars": 359,
+      "offset": 32,
+      "contextStart": 0,
+      "contextEnd": 359,
+      "text": "eview-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionContentSearch.ts:34)）。这些恢复限制不另计缺陷。\n\nR07 是 Core worker exit 错清仍在运行的**外部 CLI** busy；本项普通 native",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/19/context",
+      "valueChars": 360,
+      "offset": 3,
+      "contextStart": 0,
+      "contextEnd": 360,
+      "text": "ll/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionContentSearch.ts:34)）。这些恢复限制不另计缺陷。\n\nR07 是 Core worker exit 错清仍在运行的**外部 CLI** busy；本项普通 native source 没有 worker exit。R08 是 p",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/52/context",
+      "valueChars": 350,
+      "offset": 111,
+      "contextStart": 0,
+      "contextEnd": 350,
+      "text": "即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/53/context",
+      "valueChars": 261,
+      "offset": 22,
+      "contextStart": 0,
+      "contextEnd": 261,
+      "text": "st-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/54/context",
+      "valueChars": 350,
+      "offset": 111,
+      "contextStart": 0,
+      "contextEnd": 350,
+      "text": "即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "locator": "/contexts/dialog-contract/55/context",
+      "valueChars": 261,
+      "offset": 22,
+      "contextStart": 0,
+      "contextEnd": 261,
+      "text": "st-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+      "locator": "/hits/case-map/20/excerpt",
+      "valueChars": 125,
+      "offset": 40,
+      "contextStart": 0,
+      "contextEnd": 125,
+      "text": "| **跨项目会话搜索** | 模态搜索所有项目会话，无输入时列最近会话 | `packages/desktop/src/renderer/shell/SessionSearchModal.tsx:41` | `Cmd/Ctrl+P` 或侧栏搜索 |",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+      "locator": "/hits/case-map/20/excerpt",
+      "valueChars": 125,
+      "offset": 40,
+      "contextStart": 0,
+      "contextEnd": 125,
+      "text": "| **跨项目会话搜索** | 模态搜索所有项目会话，无输入时列最近会话 | `packages/desktop/src/renderer/shell/SessionSearchModal.tsx:41` | `Cmd/Ctrl+P` 或侧栏搜索 |",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "locator": "/hits/search-case-contract/14/context",
+      "valueChars": 916,
+      "offset": 731,
+      "contextStart": 331,
+      "contextEnd": 916,
+      "text": "恒长。\n- **正常触发：** 用户正文包含多个大写土耳其字母 `İ`，之后出现 ASCII 查询词。`İ` 转为 `i` 加组合点（两个 UTF-16 code units），在匹配词之前累积的扩长会把 snippet 起点移到真实命中之后。\n- **实际证据：** 健康字符串 `\"İ\".repeat(240) + \" TARGET \" + \"z\".repeat(240)` 查询 `target`。真实 helper 找到该会话，但返回 snippet 为省略号加一段 `z`，完全没有 `TARGET`。仅把前缀换成等长 ASCII `A` 的对照，snippet 正常包含 `TARGET`。两条都被扫描并命中，`truncated:false`；没有依赖 JSON 引号/反斜杠预筛缺陷。\n- **预期与影响：** 命中片段应围绕原文中的匹配位置，保持可读的查询上下文。Desktop [SessionSearchModal.tsx:192](../../packages/desktop/src/renderer/shell/SessionSearchModal.tsx#L192) 原样展示首个 snippet；Mimi Sessions search 同样转发 snippets。用户看到会话命中，却无法从片段辨认实际命中内容。这里的重复前缀是便于确定",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "locator": "/hits/search-case-contract/15/context",
+      "valueChars": 900,
+      "offset": 52,
+      "contextStart": 0,
+      "contextEnd": 900,
+      "text": "陷。\n- **预期与影响：** 命中片段应围绕原文中的匹配位置，保持可读的查询上下文。Desktop [SessionSearchModal.tsx:192](../../packages/desktop/src/renderer/shell/SessionSearchModal.tsx#L192) 原样展示首个 snippet；Mimi Sessions search 同样转发 snippets。用户看到会话命中，却无法从片段辨认实际命中内容。这里的重复前缀是便于确定偏移的合法 Unicode 文本压力样例，不声称所有土耳其文都受影响。\n- **正常内容契约：** Core [transcript.ts:537](../../packages/core/src/session/transcript.ts#L537) 的 `appendMessage()` 接受字符串并原样放入 `data.content`，987 行 JSON.stringify 持久化。fixture 手写该受支持的 message/state JSON 形状，未通过 Core producer 生成；此处 producer 内容接线为静态验证，动态运行的是真实 Pet reader/search，不是重写实现。\n- **查重：** 旧审查只有 TUI 搜索对 `İ` 的既有覆盖记录，未检出 Pet snippet 的大小写坐标问题。旧 PET-01 查询预筛及 R56 候选截断均为不同阶段与根因。\n- **边界：** 仅确认检索摘要展示偏移；会话命中和正文均仍存在。没有真实 UI 输入、模型、账号、网络或外发行为。\n\n## 已读范围与未新增发现\n\n完整读取普通纯函数 `topic-segment`、`segment-closure`、`migration-summary`、`context-recall`、`session-visit-receipt`、`im-session-list`，以及 `session-index`、`projection-extension`、`types`、discl",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+      "locator": "/hits/search-case-contract/24/context",
+      "valueChars": 269,
+      "offset": 49,
+      "contextStart": 0,
+      "contextEnd": 269,
+      "text": "- **预期与影响：** 命中片段应围绕原文中的匹配位置，保持可读的查询上下文。Desktop [SessionSearchModal.tsx:192](../../packages/desktop/src/renderer/shell/SessionSearchModal.tsx#L192) 原样展示首个 snippet；Mimi Sessions search 同样转发 snippets。用户看到会话命中，却无法从片段辨认实际命中内容。这里的重复前缀是便于确定偏移的合法 Unicode 文本压力样例，不声称所有土耳其文都受影响。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/6/object/match",
+      "valueChars": 146567,
+      "offset": 140061,
+      "contextStart": 139661,
+      "contextEnd": 140961,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/6/object/context",
+      "valueChars": 146947,
+      "offset": 140301,
+      "contextStart": 139901,
+      "contextEnd": 141201,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/7/object/match",
+      "valueChars": 146567,
+      "offset": 140061,
+      "contextStart": 139661,
+      "contextEnd": 140961,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/7/object/context",
+      "valueChars": 146947,
+      "offset": 140301,
+      "contextStart": 139901,
+      "contextEnd": 141201,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/8/object/match",
+      "valueChars": 146567,
+      "offset": 140061,
+      "contextStart": 139661,
+      "contextEnd": 140961,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/8/object/context",
+      "valueChars": 146947,
+      "offset": 140301,
+      "contextStart": 139901,
+      "contextEnd": 141201,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/9/object/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/10/object/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/11/object/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/12/object/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/13/object/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/14/object/excerpt",
+      "valueChars": 145360,
+      "offset": 139961,
+      "contextStart": 139561,
+      "contextEnd": 140861,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/17/object/excerpt",
+      "valueChars": 220729,
+      "offset": 215330,
+      "contextStart": 214930,
+      "contextEnd": 216230,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/21/object/excerpt",
+      "valueChars": 220729,
+      "offset": 215330,
+      "contextStart": 214930,
+      "contextEnd": 216230,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/25/object/excerpt",
+      "valueChars": 220729,
+      "offset": 215330,
+      "contextStart": 214930,
+      "contextEnd": 216230,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/50/object/text",
+      "valueChars": 222261,
+      "offset": 215615,
+      "contextStart": 215215,
+      "contextEnd": 216515,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/54/object/text",
+      "valueChars": 222261,
+      "offset": 215615,
+      "contextStart": 215215,
+      "contextEnd": 216515,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/58/object/text",
+      "valueChars": 222261,
+      "offset": 215615,
+      "contextStart": 215215,
+      "contextEnd": 216515,
+      "text": "when filtered.length > 0, or clamp the result: `setCursor((c) => filtered.length > 0 ? Math.min(c + 1, filtered.length - 1) : 0)`\"}, {\"file\": \"packages/desktop/src/renderer/Sidebar.tsx\", \"line\": \"561-575\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 561-575) is identical to the one in SessionSearchModal.tsx (lines 162-176). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/shell/SessionSearchModal.tsx\", \"line\": \"162-176\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicated formatRelative function\", \"detail\": \"The formatRelative function (lines 162-176) is identical to the one in Sidebar.tsx (lines 561-575). Both files define the same time formatting logic independently, violating DRY principle.\", \"fix\": \"Extract formatRelative into a shared utility module (e.g., packages/desktop/src/renderer/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attach",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/third-selection-history.json",
+      "locator": "/hits/mergeHistoryWindows.ts/1/excerpt",
+      "valueChars": 227,
+      "offset": 203,
+      "contextStart": 0,
+      "contextEnd": 227,
+      "text": "- 静态阅读：`app/mergeHistoryWindows.ts`、`automation/hydrateOrder.ts`、`automation/mergeTranscripts.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/third-selection-history.json",
+      "locator": "/hits/mergeHistoryWindows.ts/4/excerpt",
+      "valueChars": 436,
+      "offset": 266,
+      "contextStart": 0,
+      "contextEnd": 436,
+      "text": "MemoryStore pin 不在本轮范围。没有网络、认证、权限或原生进程实验。\n\n## 第一轮：会话历史窗口 / 搜索\n\n- 静态阅读：`app/mergeHistoryWindows.ts`、`automation/hydrateOrder.ts`、`automation/mergeTranscripts.ts`、`app/useSessionHistorySync.ts`、`shell/sessionContentSearch.ts`、`shell/useSessionContentSearch.ts`、`shell/SessionSearchModal.tsx`。\n- 聚焦动态实验已完成：`evidence/ui-history-window.test.ts`，只调用源码相对导入的历史折叠/合并纯函数；测试持久用户意图的历史前缀、缓存中断回答、重复 legacy 文本边界。首跑完整输出见 `evidence/ui-history-window.log",
+      "wholeValueIncluded": true
+    }
+  ],
+  "sessionsearch-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "locator": "/files/29/frozenSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "locator": "/files/29/currentSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+      "locator": "/files/53/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "locator": "/files/8/frozenSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+      "locator": "/files/8/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "locator": "/files/47/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "locator": "/workerSourceChecks/8/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/748/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/748/claims/0/sourceSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3094/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+      "locator": "/files/9/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/12510/sourceHashFields/frozenSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/12510/sourceHashFields/currentSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/12511/sourceHashFields/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/12512/sourceHashFields/frozenSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/12512/sourceHashFields/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/3415/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "locator": "/rankChecks/9/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/3415/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/3416/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "wholeValueIncluded": true
+    }
+  ]
+}

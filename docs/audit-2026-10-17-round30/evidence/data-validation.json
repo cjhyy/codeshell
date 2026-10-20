@@ -1,0 +1,29 @@
+{
+  "baselineReportedByRoot": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "frozenUtc": "2026-10-17T11:51:19.733022+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "helperInvocations": 0,
+  "moduleImports": 0,
+  "fixtureRuns": 0,
+  "gitCommands": 0,
+  "networkRequests": 0,
+  "browserOrNativeActions": 0,
+  "modelActions": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "newProductSemanticReadLines": 0,
+  "reusedSemanticReadLines": 678,
+  "metadataWork": [
+    "Exact prep byte copy and SHA checks",
+    "Normalize preserved prep source rows and current filesystem SHA",
+    "Full formal docs/bugs Markdown + recursively parsed JSON value-scalar history scan including frozen Round29, excluding current Round30"
+  ],
+  "limits": [
+    "Metadata script completion is not product validation. No build/typecheck/lint/suite claim.",
+    "Existing test declarations remain static reads; all earlier historical runtime evidence stays historical.",
+    "Historical Discord editReply/import/chunk failed direction remains skipped, with no alternate import/entry/runtime attempt.",
+    "No product Git producer/query, native/auth/permission/identity/journal/lock or real-task experiment."
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "exactArtifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round63/evidence/model-traces/navigate-chain.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round168-model-traces/navigate-chain.first.stdout.txt",
+      "bytes": 2740,
+      "sha256": "22d019e112eda6a6ccf91cc5bc5006f1cf98537116804068b5b0c4e5162f26e8",
+      "trailingLineNumbers": [],
+      "newBlankLineAtEof": true,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round63/evidence/model-traces/read-chain.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round168-model-traces/read-chain.first.stdout.txt",
+      "bytes": 10226,
+      "sha256": "aba32ef7141f7c22946a430d3a721766be33180c79d9187fd84591f02c2a47b8",
+      "trailingLineNumbers": [
+        87,
+        100,
+        191,
+        199,
+        225,
+        242
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round63/evidence/model-traces/read-history-gate.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round168-model-traces/read-history-gate.first.stdout.txt",
+      "bytes": 10128,
+      "sha256": "2e4298af22d9ee4155561fd234bd55da5aeba4050f9bfcf9ab33e8d49c82b4bb",
+      "trailingLineNumbers": [
+        17,
+        19,
+        21,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round63/evidence/model-traces/read-leaves.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round168-model-traces/read-leaves.first.stdout.txt",
+      "bytes": 9641,
+      "sha256": "804610eae659eacb358e2fcdc45e044d15600f80993c9e77cf3e4eeaa6bf55fa",
+      "trailingLineNumbers": [
+        9,
+        97,
+        104
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round63/evidence/model-traces/read-supplement.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round168-model-traces/read-supplement.first.stdout.txt",
+      "bytes": 5326,
+      "sha256": "9e6472cc24186c3eb6200699dcd57aa11e1dee6298c96b826496e772df128f93",
+      "trailingLineNumbers": [
+        118
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    }
+  ],
+  "productRuns": 0,
+  "scope": "Only frozen copied provenance. All other files must pass ordinary whitespace check; full check actual exit retained."
+}

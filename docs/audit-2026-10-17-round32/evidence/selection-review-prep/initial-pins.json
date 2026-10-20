@@ -1,0 +1,52 @@
+{
+  "parentReportedRound31CompleteCommit": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "peerPreparationParentContext": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "futureFormalBaseline": null,
+  "capturedUTC": "2026-10-17T12:06:01.647001+00:00",
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "timing": "Before direct semantic source read; filename inventory only",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "timing": "Before direct semantic source read; filename inventory only",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/desktop/src/renderer/contextSelection.ts",
+      "bytes": 7644,
+      "lineCount": 218,
+      "sha256": "beec4ed049204e5e1ced2146f7a1bd341ed2233049269caf0b1a97239342af79",
+      "timing": "Before direct semantic source read; filename inventory only",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/desktop/src/renderer/modelSelection.ts",
+      "bytes": 714,
+      "lineCount": 21,
+      "sha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+      "timing": "Before direct semantic source read; filename inventory only",
+      "coverage": "hash-only at capture"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lineCount": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "timing": "Before direct semantic source read; filename inventory only",
+      "coverage": "hash-only at capture"
+    }
+  ],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0
+}

@@ -1,0 +1,34 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "productFirstRunFailures": 0,
+  "metadataFailures": [
+    {
+      "id": "OUTPUT-META-01",
+      "kind": "static source navigation only",
+      "action": "rg query against inventory-resolved ring-file.ts included an interpreted literal LF in its regex",
+      "exitCode": 2,
+      "firstResponse": "output-metadata-first-responses.json",
+      "responseStatus": "Tool response copied verbatim after it was displayed; not original process raw and not claimed saved before inspection.",
+      "correction": "Did not repeat the rg command. Read the existing ring-file.ts as text with nl -ba; no product import/invocation.",
+      "productRuntimeAffected": false,
+      "productRerun": false
+    }
+  ],
+  "prepMetadata": "Copied data-prep metadata-notes.json and metadata-first-responses.txt remain unchanged. Their earlier helper SyntaxError/missing-path navigation are proposal-stage metadata only, not product failures or current validation.",
+  "preflightChronology": "output-preflight.json retains initial focusedFixtureWrittenYet=false and runtimeAttempts=0 as pre-run snapshot; appended focusedFixtureWritten=true/import/hash/count records fixture creation before first run. Final runtime counts live in output-validation.json.",
+  "rawIntegrity": "output-first.raw.log and output-first.exit.json preserved without modification after first inspection.",
+  "frozenCurrent": "Source equality is checked at this audit point. Parent owns later Git writes/integration; frozen identity remains 8b9677c78d150abe9681a2f65ab8e55b1288be4b.",
+  "metadataCorrections": [
+    {
+      "kind": "Author ownership metadata only, not an assertion/product failure",
+      "initialReceiptSha256": "d87b8d0588870a9c9665941ef1183237970b3fe173d99841d48647d8679d111b",
+      "initialMetadataCheckSha256": "f722b1a6225bf0b3875fa175e51d4a16cc7606d3307dcf09cb47da1af19f9e5e",
+      "initialArtifactCount": 20,
+      "correction": "Concurrent reviewer wrote two output-static-* files during receipt glob. Exclude foreign reviewer files explicitly; author artifact count is18 plus self-excluded receipt. No reviewer bytes modified, no test/fixture/raw/exit changes.",
+      "excludedForeignFiles": [
+        "output-static-crosscheck.md",
+        "output-static-source-manifest.json"
+      ]
+    }
+  ]
+}

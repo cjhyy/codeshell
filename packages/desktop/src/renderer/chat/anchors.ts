@@ -72,8 +72,7 @@ function sanitize(v: string): string {
   return v.replace(/<\/?codeshell-annotations>/gi, "");
 }
 
-const ANNOTATIONS_BLOCK_RE =
-  /<codeshell-annotations>\n([\s\S]*?)\n<\/codeshell-annotations>/;
+const ANNOTATIONS_BLOCK_RE = /<codeshell-annotations>\n([\s\S]*?)\n<\/codeshell-annotations>/;
 
 /** One pinned location as parsed back out of the wire block for display. */
 export interface ParsedAnnotationEntry {
@@ -101,6 +100,11 @@ export interface ExtractedAnnotations {
 }
 
 const COMMENT_PREFIX = "评论:";
+// Unframed legacy lines cannot distinguish comment text from locators or the
+// next entry. New multiline comments use an explicit block version and a line
+// count, keeping their text readable on the wire without guessing boundaries.
+const COUNTED_COMMENTS_FORMAT = "评论格式: codeshell-annotations/2（评论按行数读取）";
+const COUNTED_COMMENT_RE = /^ {2}评论（([1-9]\d*)行）:$/;
 
 /**
  * Inverse of {@link encodeAnchorsForWire} for display: pull the
@@ -126,23 +130,54 @@ export function extractAnnotations(wire: string): ExtractedAnnotations {
 
   const lines = inner.split("\n");
   const header = lines.length > 0 ? lines[0] : "";
+  const countedComments = lines[1] === COUNTED_COMMENTS_FORMAT;
+  const unparsed = (): ExtractedAnnotations => ({ block: null, text: wire });
+  if (!countedComments && lines[1]?.startsWith("评论格式: codeshell-annotations/")) {
+    return unparsed();
+  }
   const entries: ParsedAnnotationEntry[] = [];
   let current: ParsedAnnotationEntry | null = null;
+  let commentRead = false;
 
   // Entry header lines look like "[1] 文件 · engine.ts:42"; locator lines are
   // indented "  key: value"; the comment is the indented "  评论: …" line.
   const ENTRY_HEAD_RE = /^\[\d+\]\s+(.+?)\s+·\s+([\s\S]+)$/;
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = countedComments ? 2 : 1; i < lines.length; i++) {
     const line = lines[i];
     const head = ENTRY_HEAD_RE.exec(line.trim());
     if (head) {
+      if (countedComments && current && !commentRead) return unparsed();
       if (current) entries.push(current);
       current = { kindLabel: head[1], label: head[2], locator: [], comment: "" };
+      commentRead = false;
       continue;
     }
-    if (!current) continue;
     const body = line.trim();
     if (body === "") continue;
+    if (!current) {
+      if (countedComments) return unparsed();
+      continue;
+    }
+    if (countedComments) {
+      // Consume raw lines before looking for headers/colons within them. The
+      // declared count is bounded by this already-present input, never used to
+      // allocate or to recover a malformed/truncated frame heuristically.
+      if (commentRead) return unparsed();
+      const framed = COUNTED_COMMENT_RE.exec(line);
+      if (framed) {
+        const count = Number(framed[1]);
+        if (!Number.isSafeInteger(count) || count > lines.length - i - 1) return unparsed();
+        current.comment = lines.slice(i + 1, i + 1 + count).join("\n");
+        commentRead = true;
+        i += count;
+        continue;
+      }
+      // Only a counted comment is valid in a versioned block. A malformed
+      // count must not silently reappear as a locator or a legacy comment.
+      if (body.startsWith("评论（") || body.startsWith(COMMENT_PREFIX)) {
+        return unparsed();
+      }
+    }
     if (body.startsWith(COMMENT_PREFIX)) {
       current.comment = body.slice(COMMENT_PREFIX.length).trim();
       continue;
@@ -155,26 +190,39 @@ export function extractAnnotations(wire: string): ExtractedAnnotations {
       });
     }
   }
+  if (countedComments && current && !commentRead) return unparsed();
   if (current) entries.push(current);
 
-  if (entries.length === 0) return { block: null, text: wire.trim() };
+  if (entries.length === 0)
+    return countedComments ? unparsed() : { block: null, text: wire.trim() };
   return { block: { header, entries }, text };
 }
 
 export function encodeAnchorsForWire(text: string, anchors: Anchor[]): string {
   if (anchors.length === 0) return text;
+  const comments = anchors.map((a) => sanitize(a.comment));
+  // Ordinary single-line payloads stay byte-compatible with older renderers.
+  const countedComments = comments.some((comment) => /[\r\n]/.test(comment));
   const blocks = anchors.map((a, i) => {
     const loc = Object.entries(a.locator)
       .map(([k, v]) => `  ${k}: ${sanitize(v)}`)
       .join("\n");
+    const comment = comments[i];
+    const commentLines = comment.split("\n");
     return [
       `[${i + 1}] ${KIND_LABEL[a.kind]} · ${sanitize(a.label)}`,
       loc,
-      `  评论: ${sanitize(a.comment)}`,
+      countedComments ? `  评论（${commentLines.length}行）:\n${comment}` : `  评论: ${comment}`,
     ].join("\n");
   });
-  const header =
-    "以下是我在界面上标注的位置和评论(请精准定位到这些位置处理):";
-  const annotations = "<codeshell-annotations>\n" + header + "\n" + blocks.join("\n\n") + "\n</codeshell-annotations>";
+  const header = "以下是我在界面上标注的位置和评论(请精准定位到这些位置处理):";
+  const format = countedComments ? COUNTED_COMMENTS_FORMAT + "\n" : "";
+  const annotations =
+    "<codeshell-annotations>\n" +
+    header +
+    "\n" +
+    format +
+    blocks.join("\n\n") +
+    "\n</codeshell-annotations>";
   return text ? `${annotations}\n\n${text}` : annotations;
 }

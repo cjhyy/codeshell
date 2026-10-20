@@ -10,6 +10,8 @@ export function toMobileProjectMeta(project: LocalProject): MobileProjectMeta {
     name: project.displayName ?? project.name,
     addedAt: project.createdAt,
     pinned: project.pinned,
+    // Keep the Host canonicalKey policy; the paired browser may run on another OS.
+    pathCaseSensitive: process.platform !== "darwin" && process.platform !== "win32",
     primaryRootId: project.primaryRootId,
     roots: project.roots.map((root) => ({
       id: root.id,

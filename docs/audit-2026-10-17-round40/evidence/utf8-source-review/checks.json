@@ -1,0 +1,446 @@
+{
+  "timeUTC": "2026-10-17T13:52:31.010125+00:00",
+  "scope": "Independent selected source review + author artifact metadata; no new full history scan",
+  "existingItemId": "UTF8-R34-C1",
+  "newFindingIds": [],
+  "newFormalFindings": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "suggestedDisposition": "source-addressed at037 / runtime not revalidated",
+  "runtimeConfirmedFixed": false,
+  "authorArtifactCount": 16,
+  "authorReceiptRows": 15,
+  "authorReceiptChecks": [
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/classification.json",
+      "bytes": 544,
+      "sha256": "6abe0e869143c07b4f3324b6a5e9363863439dc4478e71b4091569c5b5f64f0e",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/consumer-initial-pins.json",
+      "bytes": 999,
+      "sha256": "36d393712b0339cf6e50891a2a036f101e939c1029388e25620cdd915305d7b3",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/final-source-check.json",
+      "bytes": 2311,
+      "sha256": "32ef255e8e526f24832f4123ac9acd5660cc3147661898a30a5a63892f3b7c67",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/git-read-receipt.json",
+      "bytes": 3116,
+      "sha256": "650ce71ae31b7d8c02d5716984263f074dac40b2dc072425dff2008700b3573c",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-decisions.json",
+      "bytes": 869,
+      "sha256": "8e5a4e6f07d89e1094c3e50680d85b91e0385a3a653a076f83da5f740330ff75",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-delta.json",
+      "bytes": 738,
+      "sha256": "c1b309fd50835ae3ae368c9cbe09e5798ad3716dbe26dfaf83305313b004ac3e",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-method.py",
+      "bytes": 3342,
+      "sha256": "d5dfa4e841e5f56debecf117a1d4f8dc9903a921eceeca40303e9e7cbf9bd1fc",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history.json",
+      "bytes": 712864,
+      "sha256": "23998c34e21a76313c4d277a4b0f55ad58824493d3693bbf2690a1f5fbc34672",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/initial-pins.json",
+      "bytes": 1467,
+      "sha256": "52e002c48118a6110e38e118b4e839e82af618e5e974529a4ea860eca473e22a",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/links-check.json",
+      "bytes": 3339,
+      "sha256": "a779e983e01cd219a7b7423ebdaf18a3efe09c5c2fef2cb166d320528583866c",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/report.md",
+      "bytes": 7820,
+      "sha256": "d68ef5299f3af898b48f38338db1b36a20e33c3eb84e3d8a44b0964446a1f82c",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/scope.json",
+      "bytes": 502,
+      "sha256": "52a5fa2eca070c07977b7d3ff636adf3246a1d2982e72492213e6c806a7705c5",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/source-manifest.json",
+      "bytes": 11280,
+      "sha256": "1243f317f5e08d843305b591a450aa0b1d8de09e46b287a98795a5cc4ea5677f",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/static-cause-comparison.json",
+      "bytes": 2345,
+      "sha256": "95046aac627f9697e53864e15a213aa18dfb28ad447ae6fc4d2f4e266dc64c65",
+      "matchesFrozenAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/validation.json",
+      "bytes": 821,
+      "sha256": "b7d3c6ce4236f8e01c4c5337c913ec328d12cd54b6990c0782f8922fb16f5709",
+      "matchesFrozenAuthorReceipt": true
+    }
+  ],
+  "initialFinishChecks": [
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/artifact-receipt.json",
+      "bytes": 3194,
+      "sha256": "32f6380f3110d88cbc473e3cf23763978ffd7791b22d04e13afafbedcdd3fcb5",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/classification.json",
+      "bytes": 544,
+      "sha256": "6abe0e869143c07b4f3324b6a5e9363863439dc4478e71b4091569c5b5f64f0e",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/consumer-initial-pins.json",
+      "bytes": 999,
+      "sha256": "36d393712b0339cf6e50891a2a036f101e939c1029388e25620cdd915305d7b3",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/final-source-check.json",
+      "bytes": 2311,
+      "sha256": "32ef255e8e526f24832f4123ac9acd5660cc3147661898a30a5a63892f3b7c67",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/git-read-receipt.json",
+      "bytes": 3116,
+      "sha256": "650ce71ae31b7d8c02d5716984263f074dac40b2dc072425dff2008700b3573c",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-decisions.json",
+      "bytes": 869,
+      "sha256": "8e5a4e6f07d89e1094c3e50680d85b91e0385a3a653a076f83da5f740330ff75",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-delta.json",
+      "bytes": 738,
+      "sha256": "c1b309fd50835ae3ae368c9cbe09e5798ad3716dbe26dfaf83305313b004ac3e",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-method.py",
+      "bytes": 3342,
+      "sha256": "d5dfa4e841e5f56debecf117a1d4f8dc9903a921eceeca40303e9e7cbf9bd1fc",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history.json",
+      "bytes": 712864,
+      "sha256": "23998c34e21a76313c4d277a4b0f55ad58824493d3693bbf2690a1f5fbc34672",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/initial-pins.json",
+      "bytes": 1467,
+      "sha256": "52e002c48118a6110e38e118b4e839e82af618e5e974529a4ea860eca473e22a",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/links-check.json",
+      "bytes": 3339,
+      "sha256": "a779e983e01cd219a7b7423ebdaf18a3efe09c5c2fef2cb166d320528583866c",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/report.md",
+      "bytes": 7820,
+      "sha256": "d68ef5299f3af898b48f38338db1b36a20e33c3eb84e3d8a44b0964446a1f82c",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/scope.json",
+      "bytes": 502,
+      "sha256": "52a5fa2eca070c07977b7d3ff636adf3246a1d2982e72492213e6c806a7705c5",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/source-manifest.json",
+      "bytes": 11280,
+      "sha256": "1243f317f5e08d843305b591a450aa0b1d8de09e46b287a98795a5cc4ea5677f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/static-cause-comparison.json",
+      "bytes": 2345,
+      "sha256": "95046aac627f9697e53864e15a213aa18dfb28ad447ae6fc4d2f4e266dc64c65",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/validation.json",
+      "bytes": 821,
+      "sha256": "b7d3c6ce4236f8e01c4c5337c913ec328d12cd54b6990c0782f8922fb16f5709",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-frontier/source-manifest.json",
+      "bytes": 3551,
+      "sha256": "034e393e24e10e759c6d3319f9c3c7842073ce99f7b1e110c322dcabf690a464",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.ts",
+      "bytes": 26558,
+      "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/utf8-cut.ts",
+      "bytes": 927,
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/ring-file.ts",
+      "bytes": 5956,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "unchanged": true
+    }
+  ],
+  "fourSourceVersionBindings": [
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "authorRecordedGitBlobCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+      "matchesOwnBeforeReadFilesystemPin": true,
+      "independentGitCommandByThisReviewer": false
+    },
+    {
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "authorRecordedGitBlobCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+      "matchesOwnBeforeReadFilesystemPin": true,
+      "independentGitCommandByThisReviewer": false
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "authorRecordedGitBlobCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+      "matchesOwnBeforeReadFilesystemPin": true,
+      "independentGitCommandByThisReviewer": false
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "authorRecordedGitBlobCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+      "matchesOwnBeforeReadFilesystemPin": true,
+      "independentGitCommandByThisReviewer": false
+    }
+  ],
+  "ownSourceCounts": {
+    "currentProductFiles": 4,
+    "currentProductFull": 1,
+    "currentProductSelected": 3,
+    "currentProductSemanticLines": 256,
+    "currentProductDisplayedLines": 435,
+    "currentTestSemanticLines": 0,
+    "historicalReportFiles": 2,
+    "historicalReportSemanticLines": 28,
+    "oldManifestHashOnlyFiles": 1
+  },
+  "oldBoundaryReportsRead": [
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "lineCount": 15,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "semanticLineCount": 15,
+      "sourceKind": "Frozen old report, not product source",
+      "initialSemanticReadSha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "beforeCurrentReviewSemanticRead": true,
+      "firstEverSemanticReadClaim": false,
+      "pinUTC": "2026-10-17T13:50:40.593247+00:00",
+      "finishUTC": "2026-10-17T13:52:31.010125+00:00",
+      "finishSha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "unchanged": true,
+      "readToolChunks": [
+        "c02525"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "lineCount": 13,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "semanticLineCount": 13,
+      "sourceKind": "Frozen old report, not product source",
+      "initialSemanticReadSha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "beforeCurrentReviewSemanticRead": true,
+      "firstEverSemanticReadClaim": false,
+      "pinUTC": "2026-10-17T13:50:40.593645+00:00",
+      "finishUTC": "2026-10-17T13:52:31.010125+00:00",
+      "finishSha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "unchanged": true,
+      "readToolChunks": [
+        "c02525"
+      ]
+    }
+  ],
+  "algorithmReasoning": {
+    "premise": "A logically valid UTF8 stream starting at a character boundary; withheld bytes retained without ring eviction; live starting/running read",
+    "incompleteTail": "A valid unfinished character has at most3 available bytes; bounded backward scan reaches its lead and returns its start, so no incomplete bytes enter rawBuf or consumedBytes",
+    "completeTail": "ASCII returns full length; a completed multibyte suffix reaches its lead with available >= required and returns full length",
+    "continuedRead": "Unconsumed suffix remains in ring memory, later raw writes concatenate, and unchanged absolute cursor reads suffix plus continuation",
+    "cap": "A complete prefix >16384 is cut by existing utf8SafeCutLength, backtracking at most3 bytes for the valid boundary premise; consumes exactly that safe positive cut",
+    "terminalAndSnapshot": "Terminal/orphan reads deliberately consume EOF, while all snapshot leaves incremental cursor untouched",
+    "remainingSameConditionOrdinaryGapEstablished": false,
+    "kind": "Manual static reasoning, no evaluated byte/Buffer fixture"
+  },
+  "limits": [
+    "No host chunk/peek timing observed or simulated",
+    "No test source read by this reviewer and no test execution",
+    "No invalid-buffer, fractional cap or arbitrary DTO fixture",
+    "No claim about old already-consumed cursor state, eviction/wrap, stdout/stderr interleaving, snapshot surrogate slicing or cleanOutput old causes",
+    "No shell/native/permission/identity/whole lifecycle audit",
+    "Author history3509/35contexts and Git7reads are attributed metadata, not own semantic contexts or Git commands",
+    "Formal40 incorporation and baseline/history delta remain Root-owned; no prior snapshot rewritten"
+  ],
+  "historyAttribution": {
+    "files": 3509,
+    "markdown": 1361,
+    "json": 2148,
+    "stringLeaves": 975542,
+    "scalarLeaves": 1464542,
+    "exactArchivePaths": 169,
+    "parseErrors": 0,
+    "excludedMutableFuture": [
+      "docs/audit-2026-10-17-round39/**",
+      "docs/audit-2026-10-17-round40/**",
+      "docs/audit-2026-10-17-round41/**"
+    ],
+    "includesFrozen38": true,
+    "queries": {
+      "exact-candidate": 15,
+      "peek-boundary": 20,
+      "old-failed": 0
+    },
+    "cap": 80,
+    "retained": {
+      "exact-candidate": 15,
+      "peek-boundary": 20,
+      "old-failed": 0
+    },
+    "all35ContextsRead": true,
+    "sameCause": "Existing UTF8-R34-C1, not new issue/ID. Round25 CRLF cleanup and D03 JSON-lines decoder are separate known causes, not reopened.",
+    "worktreeNamesNotRuntimeEvidence": true,
+    "runtimePassesBorrowed": false,
+    "datedDelta": {
+      "added": 0,
+      "removed": 0,
+      "sharedChanged": 1
+    }
+  },
+  "historyDatedDeltaAttribution": {
+    "earlierScope": "future40 frozen38/exclude39/40",
+    "currentScope": "future41 frozen38/exclude39/40/41",
+    "earlierFiles": 3509,
+    "currentFiles": 3509,
+    "added": [],
+    "removed": [],
+    "sharedChanged": [
+      {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "earlier": {
+          "path": "docs/todo/release-real-operations-2026-10-16.md",
+          "bytes": 189803,
+          "sha256": "c8cdef20f7d9fcf62b330ef6167fea725d6738e511ac65bb6384c3a6d37842ba"
+        },
+        "current": {
+          "path": "docs/todo/release-real-operations-2026-10-16.md",
+          "bytes": 199956,
+          "sha256": "8c1b9ca1624268007d7c7c6b92af69c58b619e20cc8cc991b4de1676a12c2db3"
+        }
+      }
+    ],
+    "priorSnapshotsUnmodified": true
+  },
+  "authorGitReadCount": 7,
+  "ownGitReadCount": 0,
+  "ownGitWriteCount": 0,
+  "metadataDiagnostics": [
+    {
+      "kind": "Metadata-only final link-check failure, no product attempt",
+      "toolChunk": "63bfe6",
+      "observedExitCode": 1,
+      "rawDiagnostic": "Traceback (most recent call last):\n  File \"<stdin>\", line 30, in <module>\nAssertionError: /Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.ts:57\n",
+      "cause": "A valid editor link line suffix :57 was passed to Path.is_file as a literal filename; normalize only line suffix for local-link metadata verification",
+      "reportWasWrittenBeforeFailure": true,
+      "receiptWasNotYetCreated": true,
+      "productImportsOrCalls": 0,
+      "testsOrFixtures": 0,
+      "git": 0,
+      "correction": "Only local markdown link metadata bookkeeping; no source read expansion or product retry"
+    }
+  ],
+  "runtime": {
+    "productImports": 0,
+    "productFunctionOrHelperCalls": 0,
+    "bufferOrLanguageFixtures": 0,
+    "streamsOrOutputFiles": 0,
+    "tests": 0,
+    "BashOrProductSubprocesses": 0,
+    "networkNativeModelReactAuthorityExperiments": 0,
+    "passesOrExpectations": 0,
+    "otherAgentRuntimeResultsBorrowed": false,
+    "oldFailedDirectionsReopened": false
+  }
+}

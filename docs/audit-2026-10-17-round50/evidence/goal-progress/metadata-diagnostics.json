@@ -1,0 +1,21 @@
+{
+  "productFailures": 0,
+  "diagnostics": [
+    {
+      "toolChunk": "514bdd",
+      "kind": "own metadata presentation truncated",
+      "exitCode": 0,
+      "observedOriginalTokens": 15487,
+      "maxOutputTokens": 6500,
+      "scope": "6 exact coverage objects printed before broad962-cause windows; only visible windows/selected later6 counted, no claim all contexts read."
+    },
+    {
+      "toolChunk": "31fdc2",
+      "kind": "incorrect guessed navigation path",
+      "exitCode": 2,
+      "missingPath": "packages/desktop/src/renderer/messages/groupMessages.ts",
+      "stderr": "rg: packages/desktop/src/renderer/messages/groupMessages.ts: No such file or directory (os error 2)",
+      "scope": "No product operation; subsequent filename inventory found actual streamGroups.ts. Existing output was not treated as a complete successful three-file search."
+    }
+  ]
+}

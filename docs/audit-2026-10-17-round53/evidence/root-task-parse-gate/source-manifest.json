@@ -1,0 +1,45 @@
+{
+  "rootReportedReadBaseline": "524c0827a480132119b637aa87e16f0eab9895f3",
+  "files": [],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "bytes": 7206,
+      "lines": 190,
+      "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverReadClaim": null,
+      "coverage": "hash-only; excluded before current body by same-SHA explicit old full",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "endingSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a"
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-source-manifest.json",
+      "bytes": 9560,
+      "sha256": "d55b22ce661ddbf88ad6110c58d7baa77483ae27c484711e4f1090aa304b1e7d",
+      "coverage": "selected metadata only",
+      "selectedLineRanges": [],
+      "scope": "Canonical full-row qualifier and original MD3/5/9/15 only; not product source."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/taskparse-report.md",
+      "bytes": 4305,
+      "sha256": "b93c60e4b038c843e79f91c397c154eecdfcc3b223b065fbece56aa453c371dc",
+      "coverage": "selected metadata only",
+      "selectedLineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "scope": "Canonical full-row qualifier and original MD3/5/9/15 only; not product source."
+    }
+  ],
+  "targetOldFullSourceExclusionOnly": true,
+  "consumerFullSeparatelyActivated": false,
+  "productRuns": 0,
+  "globalCoverageUpdated": false
+}

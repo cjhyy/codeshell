@@ -1,0 +1,30 @@
+{
+  "capturedUTC": "2026-10-17T17:30:31.412762+00:00",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "bytes": 6976,
+      "lines": 183,
+      "sha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "rootReportedBaselineOnly": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "ownGitOperations": 0,
+  "targetBodyReadAtPin": false,
+  "instructionStatus": "Prior actual CODESHELL217/AGENTS5 reading carried under same SHA; hash is not repeated semantic reading."
+}

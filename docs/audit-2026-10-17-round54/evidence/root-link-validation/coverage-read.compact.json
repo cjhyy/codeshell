@@ -1,0 +1,126 @@
+[
+  {
+    "index": 0,
+    "historyPath": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+    "at": "$[\"records\"][1][\"value\"][6]",
+    "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+    "qualifiers": {}
+  },
+  {
+    "index": 1,
+    "historyPath": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+    "at": "$[\"paths\"][21]",
+    "sha256": null,
+    "qualifiers": {
+      "scope": "inventory-only until explicitly listed in proposal.readScope"
+    }
+  },
+  {
+    "index": 2,
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][790]",
+    "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+    "qualifiers": {
+      "currentSelectedUnionRanges": []
+    }
+  },
+  {
+    "index": 3,
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][3286]",
+    "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+    "qualifiers": {}
+  },
+  {
+    "index": 4,
+    "historyPath": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+    "at": "$[\"sources\"][6]",
+    "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+    "qualifiers": {}
+  },
+  {
+    "index": 5,
+    "historyPath": "docs/audit-2026-10-17-round3/source-manifest.json",
+    "at": "$[\"files\"][66]",
+    "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+    "qualifiers": {}
+  },
+  {
+    "index": 6,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][13228]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "explicit-nonsemantic-or-hash-only",
+      "scopeFields": {
+        "scope": "inventory-only until explicitly listed in proposal.readScope"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 7,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][13229]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 8,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][13230]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 9,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][13231]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 10,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][3608]",
+    "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+    "qualifiers": {
+      "claimKindCounts": {
+        "explicit-nonsemantic-or-hash-only": 1,
+        "incidental-path-or-pin-object": 3
+      }
+    }
+  },
+  {
+    "index": 11,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][3608]",
+    "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+    "qualifiers": {}
+  },
+  {
+    "index": 12,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][3609]",
+    "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+    "qualifiers": {
+      "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+    }
+  }
+]

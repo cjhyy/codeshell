@@ -1,0 +1,58 @@
+{
+  "createdUTC": "2026-10-17T16:18:22.326268+00:00",
+  "scope": "Original canonical source metadata, not derived claims; current product body0",
+  "rows": [
+    {
+      "target": "packages/core/src/engine/session-title.ts",
+      "currentFilesystemSHA": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "metadataDocument": "docs/audit-2026-10-17-round22/evidence/root-source-manifest.json",
+      "metadataFirstPinFromFreshHistory": {
+        "path": "docs/audit-2026-10-17-round22/evidence/root-source-manifest.json",
+        "bytes": 5582,
+        "sha256": "4d830c3ac5d4d7ba00666b00f74de80fe71f33effc7ce46b07e4a308fa996930",
+        "kind": "json"
+      },
+      "metadataEndingSHA": "4d830c3ac5d4d7ba00666b00f74de80fe71f33effc7ce46b07e4a308fa996930",
+      "jsonPointer": "/files/11",
+      "rawOriginalObject": {
+        "path": "packages/core/src/engine/session-title.ts",
+        "bytes": 1798,
+        "sha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+        "scope": "Full initial static source by Root; separate worker owns fake callback runtime scope.",
+        "lineCount": 54,
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true
+      },
+      "uniqueDirectPath": true,
+      "uniqueSameObjectSHAEqualsCurrent": true,
+      "explicitFullStaticLabel": "Full initial static source by Root; separate worker owns fake callback runtime scope.",
+      "decision": "Stop before product body; preserve original scope/purpose/runtime boundaries. Not a current bug-free/runtime certification."
+    },
+    {
+      "target": "packages/core/src/sources/context-summary.ts",
+      "currentFilesystemSHA": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "metadataDocument": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "metadataFirstPinFromFreshHistory": {
+        "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+        "bytes": 6963,
+        "sha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+        "kind": "json"
+      },
+      "metadataEndingSHA": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+      "jsonPointer": "/files/11",
+      "rawOriginalObject": {
+        "path": "packages/core/src/sources/context-summary.ts",
+        "bytes": 1622,
+        "sha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+        "scope": "Full static leaf; authority/credential resolver not imported or exercised.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 36
+      },
+      "uniqueDirectPath": true,
+      "uniqueSameObjectSHAEqualsCurrent": true,
+      "explicitFullStaticLabel": "Full static leaf; authority/credential resolver not imported or exercised.",
+      "decision": "Stop before product body; preserve original scope/purpose/runtime boundaries. Not a current bug-free/runtime certification."
+    }
+  ]
+}

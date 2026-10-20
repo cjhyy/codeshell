@@ -1,0 +1,15 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round9/evidence/root-usage-contracts.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "rawCombinedStdoutStderrSavedBeforeInspection": true,
+  "elapsedSeconds": 0.28229188919067383,
+  "limits": "Pure exported CostTracker, committed bundled JSON, in-memory UsageLedger, token budget; no real provider/model/network, pricing update, shared dist, user data or native host."
+}

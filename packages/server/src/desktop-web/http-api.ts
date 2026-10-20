@@ -2,6 +2,9 @@ import { describeEnvironment, environmentIdentity } from "../environment-identit
 import { randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { isAbsolute } from "node:path";
+import { join } from "node:path";
+import { createModelTraceHttp } from "../model-trace-http.js";
+import type { ModelTraceListQuery } from "@cjhyy/code-shell-core/internal";
 import { createHubConfiguration, HubConfigurationError } from "../hub/configuration.js";
 import { createHubFiles } from "../hub/files.js";
 import { createHubMcpConfiguration } from "../hub/mcp-configuration.js";
@@ -34,6 +37,11 @@ export interface DesktopWebApiOptions {
     input: string | undefined,
     deviceId: string,
   ) => string | undefined | Promise<string | undefined>;
+  /** Related diagnostic scopes are resolved by Desktop's project authority, per device. */
+  resolveModelTraceScopes?: (
+    cwd: string,
+    deviceId: string,
+  ) => ModelTraceListQuery["workspaceScopes"] | Promise<ModelTraceListQuery["workspaceScopes"]>;
   /**
    * The existing Desktop AgentBridge owns this run/configuration admission lock.
    * Reject active runs with status 409, hold the lock through write + hot reload,
@@ -258,6 +266,8 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
   function createServices(cwd: string) {
     const shared = {
       cwd,
+      traceStorageDir: join(options.sessionRootDir, ".model-traces"),
+      traceSource: "desktop-web",
       isAuthorized: authorized,
       ownerId: owner,
       withMutation: async <T>(write: () => Promise<T>): Promise<T> => {
@@ -292,12 +302,22 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
       isRunning: options.isRunning,
       onChanged: (id) => options.onSessionsChanged?.(cwd, id),
     });
+    const traces = createModelTraceHttp({
+      storageDir: join(options.sessionRootDir, ".model-traces"),
+      workspacePath: cwd,
+      isAuthorized: authorized,
+      resolveWorkspaceScopes: async (request) => {
+        const identity = identities.get(request);
+        if (!identity || !(await authorized(request))) return undefined;
+        return options.resolveModelTraceScopes?.(cwd, identity.session.deviceId);
+      },
+    });
     return {
       configuration,
       mcp,
       active: 0,
       async handle(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
-        for (const service of [configuration, skills, mcp, files, history])
+        for (const service of [configuration, skills, mcp, files, history, traces])
           if (await service.handle(request, response)) return true;
         return false;
       },

@@ -1,0 +1,248 @@
+{
+  "checkedUTC": "2026-10-17T13:48:33.563747+00:00",
+  "authorArtifactReceiptRows": [
+    {
+      "path": "classification.json",
+      "bytes": 511,
+      "sha256": "eff7807cdd9ee9b1c6704cb25670137ed2c4e3fb85f34e067b9dfb7a8ffee813",
+      "matches": true
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1028,
+      "sha256": "6bcf7150ac00f43a40a583f61c48a74083d3489a55f2c64d4171e5812b5afee4",
+      "matches": true
+    },
+    {
+      "path": "final-source-check.json",
+      "bytes": 1936,
+      "sha256": "81193f9b0b329df56fa8b6c27f1daeb116c32b0a919ead37d11c0b9cc20d3334",
+      "matches": true
+    },
+    {
+      "path": "history-decisions.json",
+      "bytes": 1604,
+      "sha256": "67163e55eee35acfc82e641d37f487f1fd5dc5bed09583789a162733306b7652",
+      "matches": true
+    },
+    {
+      "path": "history-delta.json",
+      "bytes": 20127,
+      "sha256": "ac4006705bc082817392391e1f89d5e57a265b9bc2395516e43e2422f99a20b7",
+      "matches": true
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3240,
+      "sha256": "cf5debef3b32ba455c497dab4dd5dd3fbe13a7853b5ab2bcc729c3d8c9c9b87a",
+      "matches": true
+    },
+    {
+      "path": "history.json",
+      "bytes": 731510,
+      "sha256": "077496d9a202373a8bdc697aa378c3c27bca6ff5b67dc54caaf64dfedaabf8bf",
+      "matches": true
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 443,
+      "sha256": "496bf6d0c3da0377a2bacce156899dbbe34f78647f62e47dee0b7ba63ca9653e",
+      "matches": true
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 2655,
+      "sha256": "56b3c8594d37bf72e9703bd7ae4c1f5610a6923ba3e0c3c66f918efa7edc2e55",
+      "matches": true
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 718,
+      "sha256": "1d4e33eda854daf607314ecad89d9c82a0166db91862edfa0c1f0806d97d4884",
+      "matches": true
+    },
+    {
+      "path": "replacement-history.json",
+      "bytes": 9507,
+      "sha256": "7c29ca937e1180a5a6253db4a12d8868a0282e681f499df381d2229459e6dd3f",
+      "matches": true
+    },
+    {
+      "path": "replacement-initial-pins.json",
+      "bytes": 818,
+      "sha256": "6425fbf07090541381282d77c963c11d2c92c077083028d737d256e44ddb2821",
+      "matches": true
+    },
+    {
+      "path": "report.md",
+      "bytes": 6575,
+      "sha256": "65785be4275ba82dc19a5bbf2783e88351a81bb32ef988b7122284dc9b4c91ed",
+      "matches": true
+    },
+    {
+      "path": "scope.json",
+      "bytes": 873,
+      "sha256": "55a74e809187417df8ca60200edc6b8c2b9ac34ca98e83efa0629aa841fda6f1",
+      "matches": true
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 8266,
+      "sha256": "2544149b833ae157b62f2bbf1958a3ab7c4ece99b3c8885228b4dc45feae19a0",
+      "matches": true
+    },
+    {
+      "path": "validation.json",
+      "bytes": 967,
+      "sha256": "fe41831ec195f3d535d364bd128ce5d0ce93a48129eb57203b1927381e7a9866",
+      "matches": true
+    }
+  ],
+  "authorArtifactSetMatches": true,
+  "authorArtifactsIncludingReceipt": 17,
+  "frozenInputPins": [
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/artifact-receipt.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/classification.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/consumer-initial-pins.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/final-source-check.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/history-decisions.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/history-delta.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/history-method.py",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/history.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/initial-pins.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/links-check.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/metadata-diagnostics.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/replacement-history.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/replacement-initial-pins.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/report.md",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/scope.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/source-manifest.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round40-data-frontier/validation.json",
+      "matches": true
+    }
+  ],
+  "allArtifactsMatch": true,
+  "activeSemanticSourceByteChecks": [
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+      "bytes": 3885,
+      "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "bytes": 4376,
+      "sha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+      "bytes": 48293,
+      "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+      "bytes": 3130,
+      "sha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+      "bytes": 21013,
+      "sha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+      "matches": true,
+      "semanticReadingAdopted": false
+    }
+  ],
+  "all5ActiveSourcesMatch": true,
+  "excludedStripMarkdown": "Author known R2-05 exclusion reviewed as metadata only. No original leaf body or separate current leaf bytes read by this reviewer.",
+  "authorSourceDeclaredCounts": {
+    "semanticProductTestPins": 5,
+    "fullPins": 2,
+    "selectedPins": 3,
+    "sourceReadLinesIncludingNavigation": 385,
+    "hashOnlyExcludedLeafPins": 1,
+    "existingTestDeclarationsRead": 13,
+    "testsExecuted": 0,
+    "newInstructionSemanticLines": 0
+  },
+  "authorHistoryToReviewHistory": {
+    "authorFileCount": 3509,
+    "reviewFileCount": 3509,
+    "added": [],
+    "removed": [],
+    "sharedByteChanged": [
+      {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "authorInitialRow": {
+          "path": "docs/todo/release-real-operations-2026-10-16.md",
+          "bytes": 189803,
+          "sha256": "c8cdef20f7d9fcf62b330ef6167fea725d6738e511ac65bb6384c3a6d37842ba"
+        },
+        "reviewInitialRow": {
+          "path": "docs/todo/release-real-operations-2026-10-16.md",
+          "bytes": 199956,
+          "sha256": "8c1b9ca1624268007d7c7c6b92af69c58b619e20cc8cc991b4de1676a12c2db3",
+          "kind": "md"
+        }
+      }
+    ]
+  },
+  "authorReportRead": true,
+  "authorAllStoredHistoryContextsRead": false,
+  "author385LinesAddedToOwnSemanticCount": false
+}

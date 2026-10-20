@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T19:19:10.272527+00:00",
+  "files": [
+    {
+      "path": "tests/fixtures/device-relay/byte-stream.mjs",
+      "bytes": 2678,
+      "lines": 69,
+      "sha256": "508b00d7d44ae5acdfb72e46e047571d1465f01eab8fbe4e5a7be9c745eea82e",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

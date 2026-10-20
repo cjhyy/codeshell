@@ -1,0 +1,446 @@
+{
+  "exactGoalExtend": [
+    {
+      "path": "docs/architecture/04-protocol-and-sessions.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 5504,
+      "context": "e/src/protocol/tcp-transport.ts:14`, `packages/core/src/protocol/tcp-transport.ts:73`).\n\n`RunParams` is now richer than the old \"task + cwd\" surface: it requires a client-minted `sessionId`, supports `clientMessageId` idempotency, per-run `cwd`, `permissionMode`, `model`, `projectTrusted`, `planMode`, `requireExisting`, and `goal` (`packages/core/src/protocol/types.ts:76`). The method table includes `Run`, `Approve`, `Cancel`, `Configure`, `Query`, `Inject`, `Steer`, `Unsteer`, `CloseSession`, `GoalExtend`, `GoalClear`, `GoalGet`, `BackgroundShells`, and `BackgroundWork` (`packages/core/src/protocol/types.ts:333`). Stream events are always wrapped for multi-session routing as `{ sessionId, event }` (`packages/core/src/protocol/types.ts:311`).\n\n`AgentClient.run()` accepts either the legacy string form or the object form needed by multi-session servers, stamps the logger with the caller/resolved session id, and sends `Methods.Run` (`packages/core/src/protocol/client.ts:107`, `packages/core/src/protocol/client.ts:129`, `packages/core/src/protocol/client.ts:135`). Its private `request()` stores a resolver by JSON-RPC id before transport send, and `handleResponse()` resolves or rejects with the protocol error code attached (`packages/core/src/protocol/client.ts:349`, `packages/core/src/protocol/client.ts:357`). Notifications become emitter events: `agent/streamEvent` re-emits the session enve",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 21640,
+      "context": "oal` call short-circuits to `completed` without running the judge,\nand clears the persisted goal; a confirmed `cancel_goal` does the same for user\nor model-directed cancellation (`packages/core/src/tool-system/builtin/complete-goal.ts:1`,\n`packages/core/src/engine/turn-loop.ts:1071`,\n`packages/core/src/tool-system/builtin/cancel-goal.ts:1`,\n`packages/core/src/engine/turn-loop.ts:1090`). This is intentionally not a\n\"judge and tool must both agree\" protocol.\n\nGoal control also has protocol RPCs: `GoalExtend` updates the active turn loop\nbudget through `applyGoalExtension`, `GoalClear` clears active or persisted\nstate, and `GoalGet` returns live or stored goal state\n(`packages/core/src/protocol/server.ts:747`,\n`packages/core/src/engine/engine.ts:3028`,\n`packages/core/src/engine/turn-loop.ts:233`,\n`packages/core/src/engine/goal.ts:237`,\n`packages/core/src/protocol/server.ts:801`,\n`packages/core/src/protocol/server.ts:830`).\n\n## 6. Where to read next\n\n- Engine turn-loop control flow and goal ceilings: [01 · Engine & turn loop](01-engine-and-turn-loop.md)\n- Tool execution, approval, and background-capable tools: [02 · Tool system](02-tool-system.md)\n- Protocol sessions, injected wakeup turns, and session lifecycle: [04 · Protocol & sessions](04-protocol-and-sessions.md)\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/persistent-goal-design-2026-06-15.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1822,
+      "context": "\n\n## 三、core 改造（持久化 goal）\n\n### 3.1 goal 存进 session state\n`session state` 加字段 `activeGoal?: GoalConfig`（连同设置时间/起始 turn 基线）。\n- `engine.run` 取 goal 优先级改为：`options?.goal ?? session.state.activeGoal ?? this.config.goal`。\n- 当 `options.goal` 传入且与 session.activeGoal 不同 → **覆盖**写入 `session.state.activeGoal` 并 saveState（新 goal 覆盖旧，发事件 `goal_set`/`goal_replaced`）。\n- goal 达成（judge met）→ 清 `session.state.activeGoal` + saveState + 事件 `goal_progress(met)`（已有）。\n\n### 3.2 清除接口\n新增协议方法 `agent/goalClear`（类比已有 `agent/goalExtend`）：\n- 清 `session.state.activeGoal` + saveState + 事件 `goal_cleared`。\n- desktop 经 `window.codeshell.goalClear(sessionId)` 调。\n\n### 3.3 打断不清 goal\n确认现有 abort 路径**不**碰 `session.state.activeGoal`（abort 只停 turn-loop）。下条消息 `engine.run` 仍从 `session.state.activeGoal` 取到 → 自动续 goal。需测试覆盖：set goal → abort → 再 send（不带 goal）→ 断言仍在 goal 下跑。\n\n### 3.4 hook 注册改为「session 有 activeGoal 就挂」\n`engine.ts:1802` 的条件从 `if (normalizedGoal && ...)` 改为 `if (resolvedGoal && ...)`，其中 `resolvedGoal = options?.goal ?? session.state.activeGoal ?? config.goal`。`finally` 仍 unregister（per-run 注册不变，只是来源变持久）。\n\n### 3.5 resume 恢复\nsession 加载时 `activeGoal` 自然随 state 恢复（已落盘）。对齐 CC：恢复条件，但 turn/token 基线重置（设 goal 时记的基线在 resume 时刷新）。\n\n### 测试（TDD）\n- session state 序列化/反序列化带 activeGoal。\n- `run` 不传 goal 但 session 有 activeGoal → judge 被调、续跑。\n- 传新 goal → 覆盖 session.activeGoal + 发 goal_replaced。\n- judge met → 清 activeGoal。\n- goalClear → 清 + 事件。",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 20422,
+      "context": "1`、`packages/core/src/protocol/types.ts:22`、`packages/core/src/protocol/types.ts:335`。StreamEvent 类型本身来自 `packages/core/src/types.ts:429`，protocol 用 `AgentStreamEventNotification` 给多会话事件加 `sessionId` envelope，见 `packages/core/src/protocol/types.ts:11`、`packages/core/src/protocol/types.ts:313`。\n\n**How**\n\nClient -> Server 方法包括 `agent/run`、`agent/approve`、`agent/cancel`、`agent/configure`、`agent/query`、`agent/inject`、`agent/steer`、`agent/unsteer`、`agent/closeSession`、`agent/releaseWorkspace`、`agent/goalExtend`、`agent/goalClear`、`agent/goalGet`、`agent/backgroundShells`、`agent/backgroundWork`，见 `packages/core/src/protocol/types.ts:335`。Server -> Client notification 包括 `agent/streamEvent`、`agent/approvalRequest`、`agent/approvalResolved`、`agent/status`，见 `packages/core/src/protocol/types.ts:365`。`RunParams` 要求 client-minted `sessionId`，并携带 cwd、permissionMode、model、projectTrusted、planMode、requireExisting、goal 等 per-run 控制，见 `packages/core/src/protocol/types.ts:72`。\n\nStreamEvent 当前全部形状为：`session_started`、`session_title`、`stream_request_start`、`steer_injected`、`text_delta`、`tool_use_start`、`tool_use_args_delta`、`tool_result`、`assistant_message`、`turn_complete`、`goal_progress`、`goal_set`、`goal_cleared`、`error`、`tombstone`、`task_update`、`memory_recalled`、`thinking_delta`、`agent_start`、`agent_backgrounded`、`agent_end`、`agent_heartbeat`、`tool_summary`、`context_compact`、`usage_update`、`background_agent_",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 23128,
+      "context": "、`packages/core/src/protocol/server.ts:440`、`packages/core/src/protocol/server.ts:463`、`packages/core/src/protocol/server.ts:490`。legacy path 用单个 abortController 和 running flag 保护重入，见 `packages/core/src/protocol/server.ts:528`。\n\nApproval 在多会话路径按 `(sessionId, requestId)` 查 `ChatSession.pendingApprovals`，不回退到 legacy 全局 map，见 `packages/core/src/protocol/server.ts:652`。Cancel 会 abort session、drain queued turns，并主动 resolve pending approval/ask 为 cancelled，见 `packages/core/src/protocol/server.ts:713`。GoalExtend/Clear/Get、BackgroundShells/BackgroundWork、CloseSession/ReleaseWorkspace、Configure/Query/Inject/Steer/Unsteer 都在 server 内显式处理，见 `packages/core/src/protocol/server.ts:771`、`packages/core/src/protocol/server.ts:895`、`packages/core/src/protocol/server.ts:966`、`packages/core/src/protocol/server.ts:1030`、`packages/core/src/protocol/server.ts:1227`、`packages/core/src/protocol/server.ts:1788`、`packages/core/src/protocol/server.ts:1834`。\n\n**Why**\n\n多会话审批不能回退到 legacy map，是 fail-closed 的隔离要求：错 session 的 UI response 不能解开另一个 session 的 pending prompt，见 `packages/core/src/protocol/server.ts:655`。`requireExisting` 是为 cron “继续这个会话” 场景设计：目标 session 被用户删除时必须显式失败，避免在空白上下文里静默执行，见 `packages/core/src/protocol/server.ts:424`。Background work 的 auto-wakeup 是为了 interactive session 不再由 Engine 长时间 park，而是在后台完成事件到达时唤醒 idle session 继续总结/判断 goal，见 `packages/core/src/protocol/server.ts:220`、`packages/core/src/protocol/s",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6184,
+      "context": "Client closed\" packages/core/src/protocol -g '*test.ts'` 未命中 client 相关断言。 | 若回归，调用方 promise 可能悬挂、错误 code 丢失、流事件/approval/status handler 不触发，或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6324,
+      "context": "或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 M",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6335,
+      "context": "g run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6352,
+      "context": "entClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6612,
+      "context": " handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long executor with per-call timeo",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6680,
+      "context": "ndleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long executor with per-call timeoutMs`；`ToolRegistry cascades parent abort while executor is pending`",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6753,
+      "context": "d`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long executor with per-call timeoutMs`；`ToolRegistry cascades parent abort while executor is pending`；`ToolRegistry normalizes thrown executor error into ToolResult`。 | 中 |\n|",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12302,
+      "context": "ol_result`、子代理隔离、终态映射和 determinism。\n- `transcriptsReducer.ts` 的 hydrate/steer/clientMessageId 去重保护覆盖充分，尤其覆盖了 lagging snapshot 不擦掉 confirmed steer 的场景。\n\n## 建议补测顺序\n\n1. 先补权限硬化：`ToolExecutor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+      "pointer": "/hits/all_429/5/context",
+      "kind": "json-value-scalar",
+      "offset": 527,
+      "context": "1`、`packages/core/src/protocol/types.ts:22`、`packages/core/src/protocol/types.ts:335`。StreamEvent 类型本身来自 `packages/core/src/types.ts:429`，protocol 用 `AgentStreamEventNotification` 给多会话事件加 `sessionId` envelope，见 `packages/core/src/protocol/types.ts:11`、`packages/core/src/protocol/types.ts:313`。\n\n**How**\n\nClient -> Server 方法包括 `agent/run`、`agent/approve`、`agent/cancel`、`agent/configure`、`agent/query`、`agent/inject`、`agent/steer`、`agent/unsteer`、`agent/closeSession`、`agent/releaseWorkspace`、`agent/goalExtend`、`agent/goalClear`、`agent",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "pointer": "/hits/local-await/47/context",
+      "kind": "json-value-scalar",
+      "offset": 599,
+      "context": "Client closed\" packages/core/src/protocol -g '*test.ts'` 未命中 client 相关断言。 | 若回归，调用方 promise 可能悬挂、错误 code 丢失、流事件/approval/status handler 不触发，或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "pointer": "/hits/local-await/47/context",
+      "kind": "json-value-scalar",
+      "offset": 739,
+      "context": "或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/cause-history.json",
+      "pointer": "/contexts/fallback-partial/7/text",
+      "kind": "json-value-scalar",
+      "offset": 337,
+      "context": "1. 先补权限硬化：`ToolExecutor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused-selected.json",
+      "pointer": "/rows/19/context",
+      "kind": "json-value-scalar",
+      "offset": 322,
+      "context": "Executor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused.json",
+      "pointer": "/hits/tui_revoke/2/context",
+      "kind": "json-value-scalar",
+      "offset": 322,
+      "context": "Executor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1800,
+      "context": "lush 不卡)\n\n## D. 权限审批(核心:手机弹窗允许,等同桌面)\n- [ ] D1 审批卡:toolName + description + 摘要(command/file_path/…)+ 风险 badge(high 红醒目)\n- [ ] D2 approve / deny(approval.respond,已有)\n- [ ] D3 deny 带理由(可选输入)\n- [ ] D4 approve 作用域:once / session / project(对齐 desktop approve 的 scope)\n- [ ] D5 路径作用域:file / dir / tool(对齐 pathScope;仅路径类工具显示)\n- [ ] D6 AskUser 型审批:选项按钮 / 自由输入(answer);optionsOnly 时禁自由输入\n- [ ] D7 等待审批时运行状态条转 waiting + 顶部提示\n\n## E. 目标 / 子代理 / 后台(桌面有,手机补)\n- [ ] E1 goal_progress 状态行(轮次/状态;display-only)\n- [ ] E2 goalExtend(延长目标:加轮次/预算)——按钮(agent/goalExtend)\n- [ ] E3 子代理状态行(agent_start/end + task_update,按 agentId 隔离;只读)\n- [ ] E4 后台 shell 列表 + 输出查看 + kill(agent/backgroundShells)——P1,评估\n\n## F. 能力控制\n- [ ] F1 权限模式查看 + 切换:default/acceptEdits/bypassPermissions(新协议 permission.setMode;bypass 醒目确认)\n- [ ] F2 模型查看 + 切换(agent/configure model;新协议 model.set)——P2\n- [ ] F3 planMode 开关(run 带 planMode)——P2,评估\n\n## G. 房间(手机专属,UI 重做)\n- [x] G1 协议全(list/projects/create/open/close/send/history)\n- [ ] G2 房间列表 UI:名 + cwd + 权限 badge(bypass 红)+ 在线/状态\n- [ ] G3 新建房间(选 project:room.projects)\n- [ ] G4 进出房间 + 历史回放(room.history)+ 实时(room.message)\n- [ ] G5 房间内发消息(room.send)\n- [ ] G6 关房间(room.close)\n\n## H. 布局 / 成熟度(平板兼容)\n- [ ] H1 单列手机布局 + 安全区(env(safe-area-inset-*))\n- [ ] H2 平板两栏(≥820px:左 会话/房间 栏 + 右 聊天)\n- [ ] H3 顶栏:品牌 + 在线状态 + 会话/房间切换入口 + 设备/退出\n- [ ] H4 抽屉:窄屏会话/房间列表走抽屉,宽屏常驻左栏\n- [ ] H5 暗色(沿用 renderer token);触摸目标 ≥44px;tap-highlight 去除\n- [ ] ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1834,
+      "context": "面)\n- [ ] D1 审批卡:toolName + description + 摘要(command/file_path/…)+ 风险 badge(high 红醒目)\n- [ ] D2 approve / deny(approval.respond,已有)\n- [ ] D3 deny 带理由(可选输入)\n- [ ] D4 approve 作用域:once / session / project(对齐 desktop approve 的 scope)\n- [ ] D5 路径作用域:file / dir / tool(对齐 pathScope;仅路径类工具显示)\n- [ ] D6 AskUser 型审批:选项按钮 / 自由输入(answer);optionsOnly 时禁自由输入\n- [ ] D7 等待审批时运行状态条转 waiting + 顶部提示\n\n## E. 目标 / 子代理 / 后台(桌面有,手机补)\n- [ ] E1 goal_progress 状态行(轮次/状态;display-only)\n- [ ] E2 goalExtend(延长目标:加轮次/预算)——按钮(agent/goalExtend)\n- [ ] E3 子代理状态行(agent_start/end + task_update,按 agentId 隔离;只读)\n- [ ] E4 后台 shell 列表 + 输出查看 + kill(agent/backgroundShells)——P1,评估\n\n## F. 能力控制\n- [ ] F1 权限模式查看 + 切换:default/acceptEdits/bypassPermissions(新协议 permission.setMode;bypass 醒目确认)\n- [ ] F2 模型查看 + 切换(agent/configure model;新协议 model.set)——P2\n- [ ] F3 planMode 开关(run 带 planMode)——P2,评估\n\n## G. 房间(手机专属,UI 重做)\n- [x] G1 协议全(list/projects/create/open/close/send/history)\n- [ ] G2 房间列表 UI:名 + cwd + 权限 badge(bypass 红)+ 在线/状态\n- [ ] G3 新建房间(选 project:room.projects)\n- [ ] G4 进出房间 + 历史回放(room.history)+ 实时(room.message)\n- [ ] G5 房间内发消息(room.send)\n- [ ] G6 关房间(room.close)\n\n## H. 布局 / 成熟度(平板兼容)\n- [ ] H1 单列手机布局 + 安全区(env(safe-area-inset-*))\n- [ ] H2 平板两栏(≥820px:左 会话/房间 栏 + 右 聊天)\n- [ ] H3 顶栏:品牌 + 在线状态 + 会话/房间切换入口 + 设备/退出\n- [ ] H4 抽屉:窄屏会话/房间列表走抽屉,宽屏常驻左栏\n- [ ] H5 暗色(沿用 renderer token);触摸目标 ≥44px;tap-highlight 去除\n- [ ] H6 空态 / 加载态 / 错误态(各页)\n- [ ] H7 滚动:",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/platform-s0-protocol-inventory.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 8102,
+      "context": "esktop main → worker）            | `session/*`，宿主内部迁移，不对外暴露给 Web/移动端客户端                                                  |\n| `agent/completeSessionMainRootMigration`                                                                                                                                                                                   | 请求（Desktop main → worker）            | 同上                                                                                                      |\n| `agent/goalExtend`                                                                                                                                                                                                         | 请求（client → worker）                  | `session/*`（goal 的 Item 与 `backgroundRun/updated` 通知承载状态变化）                                   |\n| `agent/goalUpdate`                                                                                                                                                                                                         | 请求（client → worker）                  | 同上                                                                                                      |\n| `agent/goalDelete`                                                                                                                                                                             ",
+      "completeScalar": false
+    }
+  ],
+  "goalUIFalseSuccess": [
+    {
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 37783,
+      "context": "退时投影；delete 仅清理自己捕获的版本。                                                                       |\n| GCTRL-F13 | TUI 的 local run、server-driven run、迟到 response/error/text 与旧 `finally` 会互相释放 guard 或清理新流。              | `QueryGuard` 用 generation/token 区分 owner；AgentClient 在具体 Run request 的同步 transport response seam 执行 token-fenced handoff/finalize；external turn 有独立终态收尾与取消代际。 |\n| GCTRL-F14 | Desktop/TUI 乐观 Goal 投影会被旧 terminal/update 事件倒退，失败操作没有负向对账。                                       | reducer/镜像强制 Goal identity+revision freshness；失败 update/delete 读取权威快照并仅回滚本次乐观投影。                                                                                |\n| GCTRL-F15 | 暂停/删除 dormant persisted Goal 时可错误停止当前无关普通 run；judge 用量也可因编辑竞态漏记。                           | 只有当运行时 Goal version 与被控制版本一致时停止/拆 hook；judge 账单与采纳 verdict 解耦。                                                                                               |\n\n### 当前仍存在的 Goal / 控制问题\n\n#### GCTRL-O01 TCP Goal 所有权仍非持久安全边界（P0，对应 P0-02/P0-03）\n\n- 本轮已拒绝“当前活跃 owner”之外的 update/delete/resume，但 owner 仅是进程内 connection route。\n- 断线、idle 或重启后，知道 sessionId 的另一客户端仍可 `GoalGet`、认领、编辑、删除或恢复 Goal；只向 requester 发事件也会让其他镜像过期。\n- 需要持久 capability/owner，并将 GoalGet、控制、read/fork 与事件订阅纳入同一授权边界。\n\n#### GCTRL-O02 重复工具调用仍可长时间空转（P1，对应 P1-01）\n\n- pause/delete 现在能在安全边界停止，但系统不会自动识别“相同工具+参数+结果”的跨 turn 无进展循环。\n- 建议增加 canonical fingerprint 与阈值策略，达阈值后换策略、询问用户或强制停止。\n\n#### GCTRL-O03 terminal CAS 后的非 Goal metadata 仍可被旧 state 覆盖（P1，对应 P1-04）\n\n- `",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12135,
+      "context": " 到 `packages/core/src/protocol/server.require-existing.test.ts:124`；新增断言 `chatManager.get(\"gone-sid\") === undefined`，并覆盖 `maxSessions` 不被空 session 占用。F-05 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:5` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:12`。\n2. 实现 `AgentServer.handleRunMulti()` preflight：在 `cm.getOrCreate()` 前检查 live map / disk probe；不存在则直接 `SessionNotFound` return；磁盘存在保留 `getOrCreate()` 路径。\n3. 为 N-05 新增 `packages/core/src/protocol/server.goalclear.test.ts` 或扩展相邻 goal server 测试文件（具体文件名实现时确认）：成功 clear 且有 `sessionId` 时，server 发送 `Methods.StreamEvent`，payload 为 `{ sessionId, event: { type: \"goal_cleared\" } }`。已有 goal 相关 server 测试可参考 `packages/core/src/protocol/server.goalget.test.ts:43` 到 `packages/core/src/protocol/server.goalget.test.ts:110`。\n4. 实现 `AgentServer.handleGoalClear()` notify；desktop 本地 optimistic dispatch 先保留，依赖 reducer 幂等。N-05 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:50` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:57`。\n5. 跑 protocol 相关回归。\n\n验收标准：\n\n- `bun test packages/core/src/protocol/server.require-existing.test.ts` 绿，且新增“未创建 live empty session / 不占 maxSessions”断言通过。\n- `bun test packages/core/src/protocol/server.goalclear.test.ts` 绿；若选择扩展既有文件，则对应新增用例必须绿。\n- `bun test packages/core/src/protocol/server.*.test.ts` 至少覆盖 run/goal/askuser 相关文件绿；特别关注 B2 后的 session lifecycle 不被 F-05 preflight 破坏。\n\n预计改动半径：小。主要在 `server.ts`，但同文件处理多 RPC，代码审查时要确认",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6554,
+      "context": "参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`To",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1553",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2341,
+      "context": "消费实现的旧同项；这是有界关键词上下文查重，不声称语义穷尽证明。\n- 修复方向：按 code point 或在边界退让一个高代理项，保留现有省略号与正上限语义。\n\n## DESKTOP-R12-C1：Write 工具卡把字符串长度标为字节\n\n- 位置：[FileToolCard.tsx:55](../../packages/desktop/src/renderer/tool-cards/FileToolCard.tsx#L55) 只要 variant 为 write，就将 `content.length` 后附 `B`。\n- 普通 Unicode 内容下，JS code-unit 长度和 UTF-8 字节数不同，例如 `中文` 是 2 个 code units、UTF-8 6 bytes。纯 ASCII 两者一致。\n- 证据等级：只读源码和标准字符串语义推导；未挂载工具卡，也未执行 Write 或文件写入生产链。因此留为静态候选，未计确认，也没有单独动态测试。\n- 查重：扩展全历史 `FileToolCard` / 写入字节数关键词，仅见库存或相关计划/验证记录，没有找到同项。脚本正则扩展时的首次 metadata 错误另存，未隐瞒为首次成功。\n\n## DESKTOP-R12-R1：旧 R2-10 缺陷族的 header-only 剩余边界\n\n这不是独立新 finding。旧 [R2-10](../audit-2026-10-17/root.md) 指出 parser 忽略 `diff --git` 文件身份，纯 rename 因缺少 `---/+++` 返回双 null。当前源码已补 `rename from/to` 分支，纯 rename 的旧触发已修；但 [parseUnifiedDiff.ts:48](../../packages/desktop/src/renderer/diff/parseUnifiedDiff.ts#L48) 仍只初始化双 null，没有读 header。\n\n- 实际纯函数观测：mode-only (`old mode 100644` → `new mode 100755`)、空文件 added/deleted、普通 binary notice 都没有文本 `---/+++` 或 rename header，真实 parser 保留 status，却返回 `oldPath=null,newPath=null,hunks=[]`。普通文本 hunk 对照路径和行号完整。\n- 正常格式依据：[Git diff-format](https://git-scm.com/docs/diff-format) 规定 patch 的 `diff --git` header 自带路径，扩展 header 包含 mode 与增删标记。只读核对 [Git 上游 diff.c](https://raw.githubusercontent.com/git/git/master/diff.c) 中 header/must_show_header/binary 输出分支，说明这些是普通 producer 可产生的无文本 hunk 形态。外部来源与边界见 [receipt](evidence/desktop-external-sources.json)。未运行安装的 Git，也不把字符串 fixture 称作",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "pointer": "/matches/136/text",
+      "kind": "json-value-scalar",
+      "offset": 63,
+      "context": "- 查重：扩展全历史 `FileToolCard` / 写入字节数关键词，仅见库存或相关计划/验证记录，没有找到同项。脚本正则扩展时的首次 metadata 错误另存，未隐瞒为首次成功。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/output-clean.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3331,
+      "context": " ASCII CRLF、LF、裸 CR。\n\n反证收窄影响：[源码合同](../../packages/core/src/runtime/output-clean.ts:12) 与 [设计](../superpowers/specs/2026-06-05-background-shell-design.md:125) 区分 raw retained output 与 agent-facing cleanup；[disk mirror](../../packages/core/src/runtime/ring-file.ts:170) 写的是原 Buffer，且为 best effort。因此本项不是磁盘正文损坏，也不声称落盘总会成功。没有 import、构造或运行 RingFile／BackgroundShellManager／BashOutput／Engine；没有真实后台进程、PTY、Windows、网络、模型、会话／权限／身份／custody 或实际日志文件实验。guarded Node/Bun 支撑进程是唯一测试运行；没有 VM／AST／eval、压力测试、cap／wrap／分片扩展或恢复旧失败方向。\n\n[去重脚本](evidence/output-dedup.py) 更新扫描全部递归 docs/bugs MD 与 JSON 标量，包含 archives，排除 round25：2453 文件（1234 MD + 1219 JSON）、405166 string leaves / 575356 scalar leaves、0 JSON parse error；177 exact / 16 newline-mechanism matches，全部上下文保存在 [去重证据](evidence/output-dedup.json)。[逐项历史判断](evidence/output-history-decisions.json) 保留旧 frontmatter、LF patch、simplediff、NDJSON、largeburst pagination、ANSI、memory-sort、format 边界；它们是不同原因或已记录／失败方向，不新增 related，也未重跑。关键词命中和选段审查不是语义穷尽证明。\n\n[来源清单](evidence/output-source-manifest.json) 固定 7 pins：6 个产品／合同来源共实际阅读 550 行（leaf 45、既有 test 34、ring-file 188 全文；manager 172、tool 79、设计 32 选段），另 CODESHELL 指令全文。每项列出 full/selected、行界、current/frozen SHA256 与 Git frozen blob。复制的 [prep](evidence/data-prep/proposal.json) 9 文件保持原样；其中 11 pins 本轮仅 hash 重核，不算 11 次新全文阅读。\n\n唯一额外失败是静态导航 `rg` 的 literal LF regex exit 2，首响应的人工转录／退出码单独保留在 [metadata first responses](evidence/output-metadata-first-r",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2776/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/root-report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1976,
+      "context": "root-source-manifest.json) 9pins：普通产品/测试/消费者812声明读行，instruction217行；full与selected分列。envelope与parseStreamLine及preload的首次耐久hash晚于对应读取，initial保持null；另5个产品/测试入口先pin后读。whole-file SHA不代表大文件通读。\n\n[历史元数据](evidence/root-dedup.json) 共2765文件（1275MD+1490JSON）、562917字符串/833428标量、169 exact archive/_archive路径、0解析错误，排除当前29。exact/recovery/envelope命中267/381/53，分别保留100/100/53上下文；关键词不是历史语义穷尽，也不声称首次审查。[历史判断](evidence/root-history-decisions.json) 保留旧因果边界。\n\n[metadata notes](evidence/root-metadata-notes.json) 记录Root误将导航扩展到整个/tmp和一次猜错旧脚本路径；未将其当产品失败或覆盖证据。没有打开无关内容，没有任何产品重跑。[validation](evidence/root-validation.json) 与 [作者材料收据](evidence/root-artifact-receipt.json) 可复核。本轮negative仅表示所列范围未确认新问题，不代表全仓无bug。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-review-prep/review.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1575,
+      "context": "现的 capability DTO、内建矩阵与兼容 helpers。显式 adapter.capabilities 优先；旧 supportsOutgoingAttachments=true 时返回全种类兼容能力，否则返回默认值；kind predicate 对 outbound.attachments 做 membership。webhook predicate按声明的 webhookPath 形状收集 adapter。普通 chat-gateway 只对 collected webhook 配置 ingress；gateway 会把能力交给 reply builder，catalog 按 channel 收集并以当前准确 adapter 的能力覆盖同名项。\n\n所读普通调用链没有建立能力对象被意外修改或字段/消费合同相反的具体反例。这里没有声称导出的对象运行时不可变、所有平台限额准确、transport 已实测或完整 threads 受支持。随意修改共享对象、构造违反接口的 adapter，均不自动成为普通调用方证据；实际 adapter、平台 send、配对与身份机制没有实验，也未扩展审查。旧 Slack/附件证据及 Discord 首次 import/editReply/chunk 失败保持既有分类，未恢复其动态方向。\n\n## 实际阅读与历史边界\n\n独立完整阅读两个 leaf222行和两个既有测试声明126行，另选读 getGitLog producer、coding/TUI消费者、chat-gateway/gateway 共252行，合计 **9个产品/测试路径600行**。旧 root1–45与R13全文33合计78行，11条实际语义 source rows 的精确范围与 tool chunk 在 [source manifest](source-manifest.json)。media.ts 仅 hash，没有阅读；两项指令沿用此前全文读且SHA相同的内容，本轮只是核hash，新增语义行数0。\n\n作者先前的两个旧报告 dedicated pins 晚于 scanner excerpt 阅读，所以其 initialSemanticReadSha256=null应继续保留；reviewer 独立 source pins 先于本次直接读取这两个报告。双方均没有逐片段精确读取时间，manifest以真实 pin UTC、执行片段和最终检查界定先后，不倒填未知时点。全文SHA不扩大selected范围。\n\n本次读了作者保存的全部16个 channel 上下文；许多是旧查重JSON、threads边界说明或设计草案，不能把草案能力当当前实现合同。作者旧历史库存2765项（1275MD/1490JSON）逐项核当前字节全部匹配，未重做历史全文语义阅读。562917字符串/833428标量与127/175/16 occurrences、100/100/16保存上下文是该次 dated scanner 的口径，关键词不证明语义穷尽。\n\n此 prep 明确排除当时仍 mutable 的 Round29 与 future Round30。因此这份复核认可其 dated snapshot，不宣称已完成未来正式 Round30 全历史去重；正式化时 Root 仍需把已冻结 Round29 纳入新时点历史，并绑定正式 baseline，保留原 parent b348。\n\n#",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/root-history.json",
+      "pointer": "/hits/utf8-source/51/context",
+      "kind": "json-value-scalar",
+      "offset": 292,
+      "context": "sk mirror](../../packages/core/src/runtime/ring-file.ts:170) 写的是原 Buffer，且为 best effort。因此本项不是磁盘正文损坏，也不声称落盘总会成功。没有 import、构造或运行 RingFile／BackgroundShellManager／BashOutput／Engine；没有真实后台进程、PTY、Windows、网络、模型、会话／权限／身份／custody 或实际日志文件实验。guarded Node/Bun 支撑进程是唯一测试运行；没有 VM／AST／eval、压力测试、cap／wrap／分片扩展或恢复旧失败方向。\n\n[去重脚本](evidence/output-dedup.py) 更新扫描全部递归 docs/bugs MD 与 JSON 标量，包含 archives，排除 round25：2453 文件（1234 MD + 1219 JSON）、405166 string leaves / 575356 scalar leaves、0 JSON parse error；177 exact / 16 newline-mechanism matches，全部上下文保存在 [去重证据](evidence/output-dedup.json)。[逐项历史判断](evidence/output-history-decisions.json) 保留旧 frontmatter、LF patch、simplediff、NDJSON、largeburst pagination、ANSI、memory-sort、format 边界；它们是不同原因或已记录／失败方向，不新",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11105/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11105/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11106/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11106/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3096/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3096/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/2835",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3097/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/cost-review/history-contexts.json",
+      "pointer": "/oldCause/1/context",
+      "kind": "json-value-scalar",
+      "offset": 890,
+      "context": "退时投影；delete 仅清理自己捕获的版本。                                                                       |\n| GCTRL-F13 | TUI 的 local run、server-driven run、迟到 response/error/text 与旧 `finally` 会互相释放 guard 或清理新流。              | `QueryGuard` 用 generation/token 区分 owner；AgentClient 在具体 Run request 的同步 transport response seam 执行 token-fenced handoff/finalize；external turn 有独立终态收尾与取消代际。 |\n| GCTRL-F14 | Desktop/TUI 乐观 Goal 投影会被旧 terminal/update 事件倒退，失败操作没有负向对账。                                       | reducer/镜像强制 Goal identity+revision freshness；失败 update/delete 读取权威快照并仅回滚本次乐观投影。                                                                                |\n| GCTRL-F15 | 暂停/删除 dormant persisted Goal 时可错误停止当前无关普通 run；judge 用量也可因编辑竞态漏记。                           | 只有当运行时 Goal version 与被控制版本一致时停止/拆 hook；judge 账单与采纳 verdict 解耦。                                                                                               |\n\n### 当前仍存在的 Goal / 控制问题\n\n#### GCTRL-O01 TCP Goal 所有权仍非持久安全边界（P0，对应 P0-02/P0-03）\n\n- 本轮已拒绝“当前活跃 owner”之外的 update/delete",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/chat-media-playback.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 290,
+      "context": "# 聊天中的音视频播放\n\nDesktop 聊天会将当前任务工作区中的音视频文件显示为播放器。支持 Markdown 媒体嵌入、普通文件链接，以及工具结果中识别到的媒体附件。例如：\n\n```markdown\n![配音](./output/voice.mp3)\n[视频预览](./output/clip.mp4)\n![带空格的录音](<./output/我的录音 01.wav>)\n```\n\n支持识别 MP3、M4A、AAC、WAV、OGG、Opus、FLAC、MP4、M4V、MOV、WebM 和 OGV。实际播放取决于 Electron/Chromium 对文件内编码的支持；文件扩展名不能保证可以解码。播放失败后可以重试，或用播放器右上角的菜单交给其他应用打开。\n\n播放器不自动播放，也不预下载整个文件。接近可见区域时才准备播放入口，点击播放后通过分段请求读取媒体，支持进度拖动。开始播放另一段聊天媒体时暂停上一段；关闭工具卡、切换任务或关闭窗口会停止播放并释放入口。\n\n本地访问由 Main 依据持久化的任务和项目根目录授权，前端不能通过传入任意工作目录扩大权限。路径失效、越界、符号链接或工作区身份变化时拒绝读取。媒体网址是临时的不透明令牌，不暴露磁盘路径。浏览器取消一次缓冲或拖动进度不会撤销仍有效的播放入口。\n\n本功能当前接入 Desktop 聊天。远程媒体网址仍显示为普通链接；独立 Web/手机端尚未接入该播放器。转码、生成和编辑继续属于相应 Panel，不由聊天播放器处理。\n\n## 验证\n\n关键回归测试覆盖消息解析、任务权限传递、延迟加载、资源释放、文件变动、HTTP Range 和请求取消。运行桌面端到端测试前先构建 Desktop，并确保 `ffmpeg` 位于 PATH（也可设置 `FFMPEG_PATH`）：\n\n```sh\nbun run --cwd packages/desktop build\nbun run --cwd packages/desktop test:e2e:media-playback\n```\n\n该测试使用临时用户目录、生成的 WAV/MP4 和持久化对话夹具，验证实际解码、进度拖动、任务切换、错误提示及窄窗口布局，不使用模型服务或现有用户会话。截图与结果保存在 `packages/desktop/out/media-playback-qa/`。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/nightly-2026-07-10/session-fork-and-context-transfer-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 9828,
+      "context": "1` | 消息流与各类消息渲染 | 阶段 2 增加完整回合范围选择、选中态和“总结并新建”；禁选 live 尾回合。 |\n| `packages/desktop/src/main/transcript-reader.ts:245`、`packages/desktop/src/renderer/types.ts:130`、`packages/desktop/src/renderer/messages/ContextBoundaryView.tsx:7` | summary 回放、context UI | transfer summary 回放成可折叠背景包并携带来源，而不是只显示 before/after 为 0 的 compact 分隔线。 |\n| `tests/session.test.ts:45`、`packages/core/src/protocol/server.compact.test.ts:35`、`packages/desktop/src/renderer/quickChatSession.test.ts:11` | 现有 fork/compact/qchat 测试 | 扩展为状态继承、事件隔离、busy/失败原子性、summary 重启恢复、UI pending/cleanup 与共享 worktree 回归测试。 |\n\n### 4. 风险与取舍\n\n- **Token 与磁盘放大**：full fork 会复制大 transcript（尤其历史图片）；阶段 1 应显示估算大小并依赖首轮 context management，超过硬上限时建议用户改用阶段 2。不能用 hard-link transcript，后续 append 会污染两边。\n- **`/compact` 持久化错觉**：当前 anchored summary 只在 Engine 内存消息中，注释所称“resume 可恢复”与实际写盘不一致；本方案的 transfer summary 必须显式 `appendSummary()`，并补“杀 worker 后恢复”测试。\n- **隔离边界**：不得复制 source `session_meta`、activeGoal、pending approval/steer、background job、cost/file-history 控制状态；subagent anchor 可作为只读历史显示，但 target 不能取得 source 子任务的控制权。\n- **Lineage 兼容**：`parentSessionId` 已被 desktop 当作“是否 sub-agent”的过滤条件；继续复用会让普通 fork 从 sidebar 消失。新增字段比修改其既有语义更安全，旧 fork 数据无需迁移。\n- **共享 worktree 冲突**：复用 workspace 满足需求，也意味着两个 session 可同时改同一文件；UI 应显示“共享工作区”警告，现有 owner guard 只防删除，不防并发写。需要真正隔离时由用户显式切换/创建另一 worktree。\n- **选择边界**：renderer 折叠后的卡片不是权威数据；必须用 raw event id，限定连续、已完成范围，并由 core 再校验。否则 tool pair、图片或被折叠结果容易丢失。\n- **",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6869,
+      "context": "gine/turn-loop.ts:183-193`、`packages/core/src/llm/providers/openai.ts:851-940` | 属于 provider 协议适配，不是功能错误；但链路更长，需保持 capability/detail/size 元数据一致。 |\n| 真实格式处理 | handler 先用 octet-stream data URL 承载原字节；统一准备路径再从字节猜格式、解码、按需缩放/重编码。`codex-rs/core/src/tools/handlers/view_image.rs:188-201`、`codex-rs/utils/image/src/lib.rs:103-185`。[handler][codex-detail-apply] [解码][codex-sniff] | 仅按扩展名映射 MIME，随后原样 base64；不 sniff、不解码、不检查像素尺寸。`packages/core/src/tool-system/builtin/view-image.ts:24-32,106-137` | CodeShell 的错误扩展名/动画/损坏文件会更晚在 provider 失败；是缺失。 |\n| 大小策略 | 当前 Codex 的数据 URL 准备有 1 GiB 高位 sanity cap，但 handler 在此之前已经读完整文件并 base64；正常 high 路径还会按 2048/patch budget 缩放。`codex-rs/core/src/tools/handlers/view_image.rs:156-200`、`codex-rs/utils/image/src/lib.rs:27-32,215-261`、`codex-rs/core/src/image_preparation.rs:19-26,127-134`。[读入][codex-read] [cap][codex-data-url] [上限][codex-prep-limits] [缩放][codex-prep-flow] | 在读全文件前用 `stat` 做 5 MiB 单图上限，但不缩放、不做累计预算。`packages/core/src/tool-system/builtin/view-image.ts:24,113-137` | 5 MiB pre-read cap 是 CodeShell 的额外防护；实现方式仍有竞态，且与仓库统一 2/6/6 策略不一致。 |\n| 历史图引用 | 原生 `view_image` schema 没有历史编号，只接受磁盘路径；已经在对话中的图片由普通 input/history image item 承载。`codex-rs/core/src/tools/handlers/view_image_spec.rs:15-49`。[源码][codex-spec] | `imageNumber` 可从当前 session transcript 中重新取回原 base64。`packages/core/src/tool-system/builtin/view-image.ts:37-53,81-90,146-185` | CodeShell 特有增强，不是 Codex parity 要求；目前的动态序号设计不稳定。 |\n| vision ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/file-navigation-round14.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 8301,
+      "context": "s：Desktop 仅允许未使用的 `http://127.0.0.1:9`，Hub 仅自有 ephemeral origin。守卫是进程级入口保护，不宣称 OS sandbox/network confinement。Git 只操作 owned 临时目录并隔离全局/系统配置；后续 root 明确授权复用真实 Git 会话 fixture。除自有 Git 命令外未启动 Electron/PTY/worker 或第三方任务进程，没有真实模型、凭据、他人文件或外部代码下载。\n\n原始日志保留 plain-folder ProjectStore 探测 Git 的 `not a git repository` 诊断及 MiniDOM 异步 act 提醒；均非产品失败，本轮正式计数仅以最后两个完整零失败 guarded 结果为准。开发中修正了 addRoot 返回对象解析、真实中文权限提示断言和 primary 对照必须等待独有新目录行（避免把仍可见旧树行当 primary 图像入口）。没有修改产品来通过复现。\n\n## 主审收束与便携复跑\n\n正式新增 **R65 / W25 / P3**；图片表现扩展既有 **R58 / P2**，没有另加编号。两个便携文件在84740d56和a66f4ef2分别guarded通过，均4测试70断言、0失败/跳过；主审复跑日志见[Desktop](reproductions/file-navigation-round14/desktop-files.test.tsx.log)、[Web](reproductions/file-navigation-round14/hub-files-recovery.test.tsx.log)及[新快照Desktop](validation/latest-a66f4ef2/repro__file-navigation-round14__desktop-files.test.tsx.log)、[新快照Web](validation/latest-a66f4ef2/repro__file-navigation-round14__hub-files-recovery.test.tsx.log)。上述“仅a66f动态重跑”描述的是代理原始执行范围；本节补上主审的两基线证据，不重复累加。\n\n[独立只读质量复核](file-navigation-quality-round14.md)保留R65/P3与R58合并归因，未新增执行计数；目录折叠后再展开也会重新挂载并读取，属于源码可见的额外重试入口，本轮动态恢复仍仅权限修复+刷新。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1953,
+      "context": "只证明一种允许时序，不代表发生频率。** `/tmp/codeshell-review-20261012-desktop-round3/worktree-duplicate-create.test.tsx` 的 wrapper 在 `worktree add` 进程入口 gate 两个调用，因此 gate 之前的全部生产前置检查已经结束。实际工作由真实 Git 完成；第二个 add 只延后启动，真实失败后延后退出/输出，未伪造成功、错误、文件、branch 或 cleanup 调用。生产异步进程没有规定这两个完成回调的先后，因此这是合法的竞争调度。测试随后在成功 IPC 已返回时写入一个非提交文件；既有日志确认删除前 path/file/branch 均存在，失败回滚后均不存在，Session.workspace 仍指向删除路径，且只有一次成功 workspace:changed 广播。\n\n限定条件应保留：需要两次创建前置检查重叠；若第二次在第一次 branch 创建后才到达，前置拒绝可能避免错误回滚。非提交内容损失还要求其在成功创建之后、失败回滚之前写入；测试为确定性地观察这个条件而延长了失败回包窗口，没有证明普通双 Enter 一定给用户留下同样长的编辑时间。P1 的依据是可达的破坏性错误回滚，而非已测得的高发生率。\n\n既有日志：`worktree-duplicate-create.test.tsx.log`，2 pass / 0 fail / 15 assertions。测试分开验证 UI 双请求与真实 Main/Git 后果，没有把二者宣称为同一 Electron 端到端操作。\n\n## D1/R06：原生 run 错误回包\n\n**核心结论成立。** `preload/index.ts:263–267` 用完整 JSON-RPC envelope resolve pending RPC；`:548` 的 run 直接返回 `rpc(...)`。`renderer/modelSwitchRun.ts` 原样返回 run 结果，无隐式 unwrap。普通 send 的 `useRunController.ts:486–497` 和 Quick Chat 的 `:639–644` 却从顶层读 `reason/text`，既看不到 envelope 内的 `result.reason`，也不处理根 `error.message`。\n\n实际 Main configuration/root-migration gate 在 `agent-bridge.ts:804–824` 回错误 envelope 后直接 return，不向 worker 转发，因此没有错误 stream 可兜底。Core `engine.ts:1590–1598` 的附件准备失败直接返回 image_error；ProtocolServer `handleRunMulti` 在返回 EngineResult 后发送 `createResponse`，并未统一补发 error/turn_complete；另有 runAccepted/user-message 通知不等于可见错误解释。`ChatView.tsx:1094–1109` 调用 onSend 后立即清空草稿和附件，因而报告所述“用户消息保",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round19.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3975,
+      "context": "留，不加38；主审JSON的退出收据与源码清理契约一致，未由本审计重新执行ps或文件存在实验。\n\n## 分级、去重与整合\n\nP2范围合理：需要已初始化Hub、有效请求、dataDir失写而hub本身仍可操作的明确存储故障；正常权限与短真实争用均正常。局部非争用错误放大成整个Headless Host约30秒可用性停顿，高于局部无反馈P3；但有界恢复、无破坏/越权，不支持P1。Node22/Electron/Linux/Windows、其他errno、锁前mkdir/chmod已立即失败、整盘EROFS均未动态验证。修复只应为真正可重试争用保留退避，对明确权限/存储错误及时失败；保留跨进程RMW/CAS、认证、symlink及失败不写盘保护。\n\n第十八轮Bun EACCES只是未列正式发现的线索，本轮补真实Node/auth前置/事件循环收据，不能改写成Bun已证明Node或title锁。第十八轮通过的500控制是非普通文件registry、取得锁后strict read拒绝，与此次auth acquisition不同；R74的30秒preload RPC timer也不是同步mutex预算。R70/R71/R60/R65分别是autosave、乐观项目名、删除墓碑、目录读错投影，UI修复不能修共享mutex非争用重试，故不重复编号。\n\n最终正式77=1P1/50P2/26P3；common Bun仍每基线79文件236测试，R19 Bun增量0。本轮standalone原生38另列，没有新Bun wrapper，不能塞入默认30秒collector冒称完成或与Bun expect混算。第十八轮3/8/165和第十七轮helper91仍为各自既有计数；latest-only3/8也独立。QC记录897本地Markdown链接、590源码行号、两产品tracked diff空、errors空及source SHA一致，是主审已有机械收据；本审计没有重跑链接/哈希/产品diff检查。\n\nprogress当前状态沿用“本轮3/8/165、无本轮native”的小口径歧义已由root修正，我已读新句：明确第十八轮增量，第十九轮各38 standalone/Bun0。其余作者latest一次、root双基线、独立质量审计0执行口径分层准确。两项小措辞已修，无待决语义问题，不需要重新执行。\n\n**Completed：保留R77/FM19-1/P2；本整合审计新发现0，新增测试/原生/网络实验执行0。**\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/resource-quality-round8.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 98,
+      "context": "# 资源与进程发现的独立范围复核\n\n结论：保留 R09、R17、R20、R30、R31、R36；没有推翻现有发现，没有新增条目。建议收紧 R17 的“新登录可恢复”和 R36 的 Desktop 扩展影响。此次只读审查真实代码、原始 fixture 与最新 a66f4ef2 成功日志，没有重复执行已通过的 fixture，没有构建或更改产品。\n\n固定源码 `/Users/admin/.codex/worktrees/review-latest-20261012/codeshell`，HEAD `a66f4ef291f304ee4df9da8095a90671d9a8f140`。报告及原始最新验证日志读取自 `/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/`。已核对 `git diff 84740d56..HEAD`：hub/uploads、attachment-service、useHubController、tool-jobs、process-service、worker-bridge-core、spawn-common、serve/cli 八个根因文件均未改变；Panel runtime / headless 文件仅需更新行号。\n\n## R09 — 保留 P2，重复启动前清理确实破坏活实例附件\n\n可达性：serve CLI 默认 auth=hub、runtime=local、port=8790；[cli.ts:135](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/serve/cli.ts:135) 不提供 --data-dir 时使用同一 `<CodeShell home>/serve`。重复运行同一命令无需任何非正常输入。\n\n根因 [uploads.ts:61](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/hub/uploads.ts:61) ready 无条件删除符合命名的现存 spool；[headless-server.ts:205](/Users/ad",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/session-actions-quality-round13.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6541,
+      "context": "ree 释放失败，随后归档；project 恢复后处理旧 owner 可恢复。W23 是单会话文件删除失败仍提前提交目录/cache 墓碑，不需要项目移除、worktree 或 cold/resident 差异。 |\n| R57 | Core closeSession / killAll 过滤恢复 orphaned shell，成功 ACK 后仍下载。W23 原 fixture 无 worker 或下载，backend 明确拒绝；错误没有反馈才是假完成体验。 |\n| R39 / R55 | 分别是恢复归档后的 busy 误判、迟到打开覆盖新选择；都不涉及失败删除的永久目录提交。 |\n\n建议 P3：文件权限拒绝属于受限故障，UI 原位置丢重试且错误不可见，但 canonical 历史保留，正式管理页可继续删除。不要升为永久数据丢失或后台资源泄漏问题。推荐标题“侧栏删除后端失败仍提交目录墓碑，原位置不再提供错误或重试”，将永久性放入同键限定描述。\n\n最小修复是等待 Main 成功再提交 catalog/cache tombstone，期间以可撤销 pending 状态显示；失败保留行并显示目标错误，允许同 ID 重试。沿用 SessionsView 的成功后通知约定，不应移除墓碑或允许任意迟到 upsert 复活删除。若保留乐观隐藏，仍必须保留独立待删记录与失败恢复，不以 permanent tombstone 代替临时状态。\n\n原证据可选择复制：\n\n- [session-delete-recovery.test.tsx](/tmp/codeshell-review-20261012-session-actions-round13/session-delete-recovery.test.tsx)\n- [session-delete-recovery.log](/tmp/codeshell-review-20261012-session-actions-round13/session-delete-recovery.log)\n- [专项报告](/tmp/codeshell-review-20261012-session-actions-round13.md)\n\n原脚本 guard 在所有 Core / 业务动态导入前阻断 fetch/http(s)/net/tls，并要求 guarded HOME，真实 EACCES 只来自自有临时目录；测试需非 root UID。本文只核对该证据，不重跑。原脚本未走真实 Electron transport 或 Main 前置 cleanup 的限制必须随证据保存。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/README.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 10598,
+      "context": "on 生命周期](core-lifecycle.md)\n- [Coding、真实TUI、Chat 12 adapter与Link独立包](coding-tui-chat.md)\n- [Server/Desktop/Web与新账号差异](hosts.md)\n- [Pet、Optimization Lab、Arena、CDP、打包与Video Download](root-and-video-download.md)\n- [Video Studio及204文件审查深度台账](video-studio.md)\n- [Quant Lab / Job Hunt HQ](quant-job.md)\n- [Design Studio](design.md)\n- [独立证据/级别/去重复核](evidence-audit.md)\n\n主要正常控制包括：Pet 330通过；Video Download 147通过；Panel build 66通过；shared select 5通过；Quant/Job 300通过及16脚本；Design 30唯一用例通过。Video Studio默认1146通过、4跳过，扩展原生67通过、**6项画面渲染超时失败**。Core provider/auth为3通过7filtered及另5通过；Core生命周期90通过、237expect、0失败/跳过。Coding等自定义Bun7通过、native9观察、3次PTY运行。不同shard存在重复测试，不相加成唯一总数。\n\n清洁安装后打包门禁验证9tarball、47类型入口、45runtime入口，packed auth/uploads合同通过。原始证据按字节归档，来源/大小/SHA-256见 [evidence-index.json](validation/evidence-index.json)；报告引用路径映射至本目录副本，原始作者报告另存 `validation/source-reports/`。首轮harness错误、修正和未采用候选保留，未把它们计作产品缺陷。通过测试表示稳定观察到当前缺陷与正常控制，**不表示问题已修复**。\n\n## 仍有的验证边界\n\n真实付费模型、外部账号/消息、Docker/公网relay/tunnel、移动设备、Windows/Linux/OS原生事件、真实自动更新/回滚没有启动。Video Studio超时的实际画面导出未验收。完整Core工具/所有UI与大型文件的全部分支仍需后续专项，具体列在覆盖矩阵；不宣称找到了所有可能问题。\n\n部分命令/权限复现被平台内容检查中止，提示可能涉及网络安全风险；已停止相关动态实验，未换工具重试。相关已完成静态/seam证据及未覆盖边界保留在报告，不将其写成完整动态审计。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coverage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4135,
+      "context": " HQ | 账本/保存/导入/scope与任务主链、岗位/简历/面试/备份恢复；300 Node tests与16 standalone脚本。见 [Quant/Job](quant-job.md)。 | 全浏览器UI、真实行情/招聘/个人资料/账户、PDF/native音频/转写模型、全部状态组合。 |\n| 独立 Design Studio | 真实app.js + DOM的索引文档打开/编辑/保存/回滚，模型/导出和布局控制，30唯一用例通过。见 [Design Studio](design.md)。 | 真实Host文件系统、多设备、系统字体/远程字体与完整绘图/触摸路径；具体fixture限制见专项。 |\n| Panel共享SDK/打包 | shared select全文、5项真实headless UI控制，builder/discovery关键链与66项合同。Core/Host接口的媒体/资源/task审查分别见Host与业务报告。 | 实际安装升级/回滚、所有Host API组合、系统辅助功能与跨版本客户端。 |\n\n## 不能算作已通过的项目\n\n- Video Studio 扩展原生套件 **6 项画面渲染测试失败（30 秒超时）**，没有环境正常对照支持将其定为产品缺陷；同样不能称全套通过。\n- 部分命令/权限方向的复现被平台内容检查中止，提示“可能涉及网络安全风险”。停止后没有改换工具重试；仅保留已经完成的静态/seam证据与未验证附录。这些方向没有获得完整动态审计覆盖。\n- 开发依赖安装成功、清洁构建成功、单元控制通过，与真正外部账号/设备/部署验收是不同证据。没有为填覆盖表而启动真实付费模型或联系他人。\n- 所有报告只记录问题和验收建议，未修复产品。不宣称找到所有可能缺陷。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 55482,
+      "context": "，不是待办         |\n| [packages/desktop/src/renderer/markdown/remarkPathLinks.ts](../../packages/desktop/src/renderer/markdown/remarkPathLinks.ts)                               | 151                          | TODO.md 文件名/测试样例，不是待办         |\n| [packages/desktop/src/renderer/messages/FilesChangedCard.tsx](../../packages/desktop/src/renderer/messages/FilesChangedCard.tsx)                           | 170                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/GoalProgressView.tsx](../../packages/desktop/src/renderer/messages/GoalProgressView.tsx)                           | 37                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/TurnEndMessageView.tsx](../../packages/desktop/src/renderer/messages/TurnEndMessageView.tsx)                       | 7                            | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/fileChangeAggregator.ts](../../packages/desktop/src/renderer/messages/fileChangeAggregator.ts)                     | 315                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx](../../packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx)                       | 71                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/FilesPanel.tsx](../../packages/desktop",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 55549,
+      "context": "hLinks.ts](../../packages/desktop/src/renderer/markdown/remarkPathLinks.ts)                               | 151                          | TODO.md 文件名/测试样例，不是待办         |\n| [packages/desktop/src/renderer/messages/FilesChangedCard.tsx](../../packages/desktop/src/renderer/messages/FilesChangedCard.tsx)                           | 170                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/GoalProgressView.tsx](../../packages/desktop/src/renderer/messages/GoalProgressView.tsx)                           | 37                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/TurnEndMessageView.tsx](../../packages/desktop/src/renderer/messages/TurnEndMessageView.tsx)                       | 7                            | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/fileChangeAggregator.ts](../../packages/desktop/src/renderer/messages/fileChangeAggregator.ts)                     | 315                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx](../../packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx)                       | 71                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/FilesPanel.tsx](../../packages/desktop/src/renderer/panels/FilesPanel.tsx)                               ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/browser-automation-library-reuse.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 7909,
+      "context": "ransport.ts)\n\n旧 `CdpBrowserDriver`／`CdpActionsDriver` 仍保留为兼容导出与回归对照，未作为 Electron、Chrome 或 Playwright 生产动作失败后的 fallback。`packages/cdp` 中环境无关的观察函数、类型、键盘映射等仍可复用；迁移没有宣称整个包已删除。\n\n`scripts/build-chrome-extension.ts` 生成扩展 `service-worker.js` 及许可证，桌面构建已接入该步骤。Chrome 扩展 bundle 使用浏览器入口，不引入 Node 运行时；Electron 主进程构建包含其所需库代码。\n\n仓库构建不会自动替换 `/Applications/code-shell.app` 或正在运行的进程。正常更新并重启新桌面构建后，还需让 Chrome 重新加载新版扩展并重新配对。本轮没有对运行中的用户应用做安装覆盖、强制重启或扩展重载。\n\n## 已执行的验证与复现\n\n2026-09-09 最终回归记录（以下测试计数互不重复）：\n\n- 浏览器驱动、Runtime、共享库和扩展：28 个文件，**222 项通过、0 失败、0 跳过**，858 个断言；真实浏览器测试显式使用 Chromium 141.0.7390.37。\n- Core 浏览器工具、独立检查权限、后台 Agent 生命周期及 Pet Session：6 个文件，**72 项通过**，281 个断言。\n- 侧边栏、Session 公告、Pet 消息顺序与浏览器 UI：6 个文件，**66 项通过**，152 个断言。\n- 合计 **360 项相关测试、1,291 个断言**。另外，移除 Server 一处未使用的多余参数以恢复全仓类型检查，其目录访问回归单独 7 项通过，不计入浏览器总数。\n- Core 构建、桌面完整构建（main／preload／renderer／mobile／Chrome 扩展）、所有工作区类型检查均通过；修改范围的 lint、格式和 `git diff --check` 通过。\n- 最终生产 Electron 与真实 Chrome 扩展 smoke 均通过，覆盖范围如下。没有运行安装器或覆盖正在使用的应用。\n\n### Chrome 扩展真实端到端\n\n从仓库根目录运行；以下为本机实际使用的完整命令，其他机器把路径改为支持扩展加载的 Chromium：\n\n```sh\nCODESHELL_TEST_CHROMIUM='/Users/admin/Library/Caches/ms-playwright/chromium-1194/chrome-mac/Chromium.app/Contents/MacOS/Chromium' bun run packages/desktop/scripts/smoke-chrome-extension.ts\n```\n\n脚本先重建当前扩展，创建临时 profile 与该 profile 内的 Native Messaging host 注册，加载实际生产扩展 bundle，并通过真实 native host／宿主授权服务操作本地页面。验证包括两个授权标签隔离、跨源 OOPIF 点击、授权不匹配、截图、人工接管／恢复、旧 ref 拒绝、DOM 检查、撤销后队列不执行、禁止隐式重",
+      "completeScalar": false
+    }
+  ]
+}

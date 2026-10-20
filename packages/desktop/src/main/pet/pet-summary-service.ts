@@ -25,6 +25,7 @@ import { join } from "node:path";
 import { readLatestAssistantText, LATEST_RESULT_MAX_CHARS } from "@cjhyy/code-shell-pet/disclosure";
 import type { PetSummaryStore } from "./pet-summary-store.js";
 import { dlog } from "../desktop-logger.js";
+import { withDesktopSessionModelTrace } from "../auxiliary-model-tracing.js";
 
 export interface PetSessionSummary {
   /** Non-empty. An empty summary is never returned — the session is skipped. */
@@ -147,7 +148,12 @@ export function createPetSummaryService(deps: {
 
     let raw: string;
     try {
-      raw = await generate(closure);
+      raw = await withDesktopSessionModelTrace(
+        deps.sessionsRootDir,
+        sessionId,
+        "session_follow_up",
+        () => generate(closure),
+      );
     } catch (error) {
       // Do not persist on failure: a transient aux error should be retryable
       // on the next workbench request for the same terminalAt.

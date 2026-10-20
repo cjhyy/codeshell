@@ -1,0 +1,14 @@
+{
+  "productExecution": 0,
+  "helperExecution": 0,
+  "imports": 0,
+  "fixturesRun": 0,
+  "testsRun": 0,
+  "modelClockTimerNetworkNativeGit": 0,
+  "existingDeclarationScope": "run-state-persistence.test.ts two test declarations selected; two additional primary-cache test titles were navigation only. Old test results are not current execution. No old pass borrowed.",
+  "mechanismBoundary": "updateSessionRunState success/throw boundary and provided latest/captured fields read, not full manager lock/CAS/authority implementation or disk behavior.",
+  "metadataOnlyFinalization": {
+    "checks.files": [],
+    "method": "Python standard-library range, byte/hash, JSON, excerpt reproduction, link and self-excluded receipt processing."
+  }
+}

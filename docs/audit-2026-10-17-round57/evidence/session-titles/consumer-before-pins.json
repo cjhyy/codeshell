@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/index.storage.ts",
+      "bytes": 499,
+      "lines": 13,
+      "sha256": "8ababaae09596d1877ef047b6b8d33fc673f66ebe2ee200e8929b0f5ca827a2a",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:55:13.148908+00:00"
+    },
+    {
+      "path": "packages/server/src/hub/session-management.ts",
+      "bytes": 18447,
+      "lines": 443,
+      "sha256": "a9af1264f7afd374da8e13a955999cfb78b4c5a892fec8bbfb058dfa62a5dacf",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:55:13.150991+00:00"
+    },
+    {
+      "path": "packages/desktop/src/main/session-titles-store.ts",
+      "bytes": 680,
+      "lines": 14,
+      "sha256": "5c7ea7233f145105a79886d570d0735e8d66c1a90ab9495f9ed054d85bc374d7",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:55:13.151721+00:00"
+    },
+    {
+      "path": "packages/desktop/src/main/activity-history-ipc.ts",
+      "bytes": 2795,
+      "lines": 59,
+      "sha256": "227d2a55d5194ff30233b3c0fa08e31ea9212a1228327b07a2bfc4ca453f0060",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:55:13.152631+00:00"
+    }
+  ]
+}

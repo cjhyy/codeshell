@@ -23,9 +23,11 @@ export const WebviewHost = React.forwardRef<
     bucket?: string;
     engineSessionId?: string | null;
     onDomReady?: () => void;
+    /** Only the selected tab may become the bucket's automation target. */
+    active?: boolean;
   }
 >(function WebviewHost(
-  { initialUrl, partition = "persist:browser", bucket, engineSessionId, onDomReady },
+  { initialUrl, partition = "persist:browser", bucket, engineSessionId, onDomReady, active = true },
   ref,
 ) {
   const viewRef = useRef<WebviewElement | null>(null);
@@ -36,9 +38,10 @@ export const WebviewHost = React.forwardRef<
   // in. Per-session partitions keep one chat session's browsing (cookies, logged-
   // in state, and the live page) from bleeding into another's.
   const frozenPartition = useRef(partition).current;
+  const ready = useRef(false);
 
   useEffect(() => {
-    if (bucket && engineSessionId) {
+    if (active && bucket && engineSessionId) {
       window.codeshell.registerBrowserSessionBucket({
         sessionId: engineSessionId,
         bucket,
@@ -48,7 +51,7 @@ export const WebviewHost = React.forwardRef<
     const view = viewRef.current;
     if (!view) return;
     const registerGuest = () => {
-      if (!bucket) return;
+      if (!active || !bucket) return;
       try {
         const guestId = view.getWebContentsId?.();
         if (typeof guestId !== "number" || !Number.isFinite(guestId)) return;
@@ -63,14 +66,20 @@ export const WebviewHost = React.forwardRef<
       }
     };
     const handleDomReady = () => {
-      onDomReady?.();
-      registerGuest();
+      ready.current = true;
+      if (active) {
+        onDomReady?.();
+        registerGuest();
+      }
     };
     view.addEventListener("dom-ready", handleDomReady);
+    // Switching back selects an already loaded guest. It emits no new
+    // dom-ready event, so promote it explicitly after the real initial event.
+    if (active && ready.current) handleDomReady();
     return () => {
       view.removeEventListener("dom-ready", handleDomReady);
     };
-  }, [bucket, engineSessionId, frozenPartition, onDomReady]);
+  }, [active, bucket, engineSessionId, frozenPartition, onDomReady]);
 
   return (
     <webview

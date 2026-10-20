@@ -1,0 +1,15 @@
+1240:   * Whether this engine runs unattended (no interactive human). Used by the
+1241:   * in-process AgentServer to decide whether to wire an interactive askUser.
+1243:  isHeadless(): boolean {
+1244:    return this.config.headless === true;
+1249:   * woken by the completion later (server refuses headless; sub-agent sessions
+1258:      reason === "background_notification" && (this.isHeadless() || this.config.isSubAgent === true)
+2230:   * headless run only — drain background sub-agents before resolving. Extracted
+2263:    // exits → would hang headless forever) and NOT video (a long render the
+2265:    // (s-mpvf4rsj-bb6e4639 invariant) for the headless case only.
+2268:    if (isTopLevel && this.isHeadless()) {
+2553:      headless: this.config.headless === true,
+2889:    //   3. config.goal — engine-level default (rare; e.g. headless).
+3518:        // boundary, so it must remain visible in headless and sub-agent runs.
+3534:        // interactive default would silently truncate a long objective. The
+4843:   * elapses first. Used only by the headless abort-drain cleanup, where we want

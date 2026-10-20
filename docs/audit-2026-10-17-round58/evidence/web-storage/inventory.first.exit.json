@@ -1,0 +1,15 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "packages/web/src",
+    "-g",
+    "storage.ts",
+    "-g",
+    "deviceCredential.ts",
+    "-g",
+    "environment.ts"
+  ],
+  "exitCode": 0,
+  "atUTC": "2026-10-17T19:16:48.446613+00:00"
+}

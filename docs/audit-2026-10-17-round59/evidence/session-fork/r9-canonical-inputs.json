@@ -1,0 +1,41 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-source-manifest.json",
+      "bytes": 5801,
+      "sha256": "3e36236c0ddfdff19328c866b7209bcf26dad552cb87c4491ae1cdac77ed54f0",
+      "selectedJsonPointers": [
+        "/files/3",
+        "/files/4"
+      ],
+      "objects": [
+        {
+          "pointer": "/files/3",
+          "row": {
+            "path": "packages/core/src/session/transcript.ts",
+            "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+            "bytes": 51303,
+            "currentWorkingTreeMatchesFrozenBlob": true
+          }
+        },
+        {
+          "pointer": "/files/4",
+          "row": {
+            "path": "packages/core/src/session/session-manager.ts",
+            "sha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+            "bytes": 109011,
+            "currentWorkingTreeMatchesFrozenBlob": true
+          }
+        }
+      ],
+      "atUTC": "2026-10-17T19:40:34.512809+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-candidates.json",
+      "bytes": 1361,
+      "sha256": "c07d8217cb50454321013c208a27cc6d53f9c9adefe8138400aa9a5e356fcf6d",
+      "readScope": "whole metadata file text",
+      "atUTC": "2026-10-17T19:40:34.513634+00:00"
+    }
+  ]
+}

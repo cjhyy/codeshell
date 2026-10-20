@@ -1,0 +1,27 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "oldCauseScopeExclusions": [
+    {
+      "id": "COST-R9-01",
+      "actualCanonicalRead": "round9/usage.md5–13",
+      "cause": "Unbound standalone CostTracker canonicalizes away full model pricing ID, not current normal session ledger/counter merge; no revalidation or cleared status claimed."
+    },
+    {
+      "label": "OM3/OM4",
+      "source": "Root assigned permanent scope exclusions; original OM metadata not newly semantically reviewed here",
+      "disposition": "Timing helper body skipped, no timezone-history ordering or parallel-tool-start issue investigated/reported."
+    },
+    {
+      "label": "Old pricing/cached-token accounting and failed clock/token-capacity directions",
+      "disposition": "No new issue proposed from these old families; no pricing refresh, billing computation test, fake NaN/time/capacity or failed dynamic experiment resumed."
+    }
+  ],
+  "boundedConclusion": "No new normal field-drop/duplicate-accumulation counterexample established in selected producer/session checkpoint contract. Not whole accounting or concurrent storage certification."
+}

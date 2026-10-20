@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CredentialStore, PlaintextCipher } from "@cjhyy/code-shell-core";
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createDesktopLinkConnections } from "./link-connections.js";
 
 const directories: string[] = [];
@@ -48,7 +49,7 @@ describe("Desktop shared Link transaction adapter", () => {
     try {
       expect(await adapter.connectLocal(input)).toEqual(validation);
       const saved = store.list()[0]!;
-      expect(saved.id).toBe("link-github-fine-grained-pat");
+      expect(saved.id).toStartWith("link-");
       expect(saved.secret).toBe(input.token);
       expect(saved.meta?.agentExposable).toBe(false);
       expect(notifications).toBe(1);
@@ -60,6 +61,7 @@ describe("Desktop shared Link transaction adapter", () => {
     const store = storeFixture();
     const first = createDesktopLinkConnections({ store, validateToken: async () => validation });
     await first.connectLocal(input);
+    const existingId = store.list()[0]!.id;
     first.close();
     let entered = false;
     let finish!: () => void;
@@ -77,7 +79,7 @@ describe("Desktop shared Link transaction adapter", () => {
     try {
       const pending = adapter.connectLocal({
         ...input,
-        existingId: "link-github-fine-grained-pat",
+        existingId,
         token: "replacement",
       });
       expect(entered).toBe(true);
@@ -113,7 +115,7 @@ describe("Desktop shared Link transaction adapter", () => {
       const saved = store.list()[0]!;
       expect(saved.label).toBe("GitHub · fixture-user");
       expect(saved.secret).toStartWith("cli-binding:");
-      expect(saved.meta?.linkExecutionBackend).toBe("cli");
+      expect(linkConnectionMetadata(saved.meta).linkExecutionBackend).toBe("cli");
     } finally {
       adapter.close();
     }
@@ -138,7 +140,7 @@ describe("Desktop shared Link transaction adapter", () => {
       const secret = JSON.parse(store.list()[0]!.secret!);
       expect(secret.refreshToken).toBe("synthetic-refresh");
       expect(Date.parse(secret.expiresAt)).toBeGreaterThan(Date.now());
-      expect(store.list()[0]?.meta?.linkAuthSource).toBe("browser-oauth");
+      expect(linkConnectionMetadata(store.list()[0]?.meta).linkAuthSource).toBe("browser-oauth");
     } finally {
       adapter.close();
     }

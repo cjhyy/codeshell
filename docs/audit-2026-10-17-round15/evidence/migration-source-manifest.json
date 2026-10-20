@@ -1,0 +1,222 @@
+{
+  "base": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "scope": "full instruction read",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/settings/migrate-config.ts",
+      "sha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc",
+      "bytes": 5819,
+      "scope": "full source read; actual pure function with ordinary data only; no sandbox config field",
+      "currentSha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/settings/migrate-config.test.ts",
+      "sha256": "dcaea89c45ba71a2b15d2cc3d41bb66b37f448f969804330bd6a2afcae6e2d54",
+      "bytes": 7097,
+      "scope": "full static read; existing test file not executed",
+      "currentSha256": "dcaea89c45ba71a2b15d2cc3d41bb66b37f448f969804330bd6a2afcae6e2d54",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "sha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "bytes": 6234,
+      "scope": "full source read; actual pure source metadata function",
+      "currentSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.test.ts",
+      "sha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "bytes": 5287,
+      "scope": "full static read; existing test file not executed",
+      "currentSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "sha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "bytes": 14597,
+      "scope": "full static read only; no disk-backed normalization or asset validation executed",
+      "currentSha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/types.ts",
+      "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "bytes": 5106,
+      "scope": "full static schema read; no separate schema validation run",
+      "currentSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/gitOps.ts",
+      "sha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "bytes": 9285,
+      "scope": "static source read, including pure githubRepoToCloneUrl; no Git/process wrapper called",
+      "currentSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/installFromSource.ts",
+      "sha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "bytes": 2888,
+      "scope": "static consumer read only; no installer called",
+      "currentSha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/preview.ts",
+      "sha256": "c088862a358605e3d73a250b1787e991c593d7f4fedf5b40757908159c4dee28",
+      "bytes": 17456,
+      "scope": "static selected lines 1-185 only; no preview called",
+      "currentSha256": "c088862a358605e3d73a250b1787e991c593d7f4fedf5b40757908159c4dee28",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/installFromNpm.ts",
+      "sha256": "93ff865c77221c5b0f9381cfed02ff298dfd3b844fa17a11a3f35a4df8f4411f",
+      "bytes": 13139,
+      "scope": "rg-selected selector/resolution references only; no npm registry or installation execution",
+      "currentSha256": "93ff865c77221c5b0f9381cfed02ff298dfd3b844fa17a11a3f35a4df8f4411f",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "bytes": 46928,
+      "scope": "rg-selected migration references and lines 395-446 only; no SettingsManager constructed",
+      "currentSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "bytes": 29767,
+      "scope": "rg-selected migration references and lines 150-225 only; no validateSettings run",
+      "currentSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/builtin.ts",
+      "sha256": "ee8205a9970758c7ac1eef0f762f0d382d13e69ea33a0157a985271033e72d35",
+      "bytes": 23756,
+      "scope": "static lines 1-250 and 360-439 plus three id references; imported catalog data used by migration, no model request",
+      "currentSha256": "ee8205a9970758c7ac1eef0f762f0d382d13e69ea33a0157a985271033e72d35",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/llm/capabilities/index.ts",
+      "sha256": "69bbee0353ce283246d7c1f07f3de69c02c5157f3e344d061e5b8c9535822dbf",
+      "bytes": 2507,
+      "scope": "static selected lines 1-110 dependency review; transitively imported as pure catalog dependency",
+      "currentSha256": "69bbee0353ce283246d7c1f07f3de69c02c5157f3e344d061e5b8c9535822dbf",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/llm/capabilities/param-specs.ts",
+      "sha256": "555de8853c4dfe8fffc5e268927cfb77d2974bbb8efd6dfa45294c116fbdaf0d",
+      "bytes": 2387,
+      "scope": "static selected lines 1-90 dependency review; transitively imported as pure catalog dependency",
+      "currentSha256": "555de8853c4dfe8fffc5e268927cfb77d2974bbb8efd6dfa45294c116fbdaf0d",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/runtime/safe-spawn.ts",
+      "sha256": "90de2509f1ac7235a5e567e8a8c6b0fdde93e690d1d28aff065c8bdd72e77e18",
+      "bytes": 17537,
+      "scope": "static selected lines 1-70 import review; not executed",
+      "currentSha256": "90de2509f1ac7235a5e567e8a8c6b0fdde93e690d1d28aff065c8bdd72e77e18",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/runtime/spawn-common.ts",
+      "sha256": "d7ca0eca978a8b4752fe25364faf3f90491099b08b8a769a3a27883026ac4e60",
+      "bytes": 20389,
+      "scope": "static selected lines 1-90 import review; not executed",
+      "currentSha256": "d7ca0eca978a8b4752fe25364faf3f90491099b08b8a769a3a27883026ac4e60",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/core/src/utils/exec.ts",
+      "sha256": "a0c4cd54ed257c4bdd84ee36e987bb5e20787a13633ea3cbaaa5943532b3a2d9",
+      "bytes": 6132,
+      "scope": "static selected lines 1-70 import review; no executable resolution called",
+      "currentSha256": "a0c4cd54ed257c4bdd84ee36e987bb5e20787a13633ea3cbaaa5943532b3a2d9",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/plugin.ts",
+      "sha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "bytes": 3576,
+      "scope": "static lines 1-105 and 15-49 producer/consumer review; no CLI action executed",
+      "currentSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "bytes": 233,
+      "scope": "static lines 1-90 wrapper read; two actual guarded executions separately captured",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "bytes": 6518,
+      "scope": "rg-selected guard/environment references only; runner executed via prescribed wrapper",
+      "currentSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-29-plugin-remote-install-design.md",
+      "sha256": "b02f3220137e46d1a4047183690d86ba1649996dd7d7395a49bb7d0c3e204746",
+      "bytes": 9382,
+      "scope": "selected historical grammar lines 70-103 and dedup matching lines; not proof of unsupported edge input contract",
+      "currentSha256": "b02f3220137e46d1a4047183690d86ba1649996dd7d7395a49bb7d0c3e204746",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+      "sha256": "5cb448416a137bd5384f478c397a05bae5c70ab5875a4b51bb17aa42e71e272b",
+      "bytes": 27448,
+      "scope": "rg-selected npm/source references and historical dedup matches only",
+      "currentSha256": "5cb448416a137bd5384f478c397a05bae5c70ab5875a4b51bb17aa42e71e272b",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/settings.md",
+      "sha256": "8a4ab7ddf090f8bf811aba57139210b0f8e7477c3d2cf8fae85bad64a252f044",
+      "bytes": 11043,
+      "scope": "full prior candidate/dedup read; no old tests rerun",
+      "currentSha256": "8a4ab7ddf090f8bf811aba57139210b0f8e7477c3d2cf8fae85bad64a252f044",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/plugins.md",
+      "sha256": "51fd6aca55331c61ab5e627e3dcf04b327e8b292ab7902373a618e3fdab62e9c",
+      "bytes": 8320,
+      "scope": "dedup selected related report lines only; no old tests rerun",
+      "currentSha256": "51fd6aca55331c61ab5e627e3dcf04b327e8b292ab7902373a618e3fdab62e9c",
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/root-composition-controls.test.ts",
+      "sha256": "7595dd466680983b946811e909ca99859a006fd0af9d5bc915e3b589c351fa0e",
+      "bytes": 3677,
+      "scope": "static historical fixture lines 1-90 only, no execution or reuse",
+      "currentSha256": "7595dd466680983b946811e909ca99859a006fd0af9d5bc915e3b589c351fa0e",
+      "currentEqualsFrozen": true
+    }
+  ],
+  "limits": "Selected dependencies/callers are not full-module coverage. Installed semver metadata lookup failed and was skipped; its exact installed version/path is unpinned."
+}

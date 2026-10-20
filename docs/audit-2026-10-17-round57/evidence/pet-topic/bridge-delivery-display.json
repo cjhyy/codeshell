@@ -1,0 +1,12 @@
+{
+  "path": "packages/desktop/src/main/pet/session-conversation-bridge.ts",
+  "sha256": "0832345e9ac09824f5f20abcec6f1309e63329288191e0c3a06b4d71129dad7f",
+  "displayedLineRanges": [
+    [
+      96,
+      187
+    ]
+  ],
+  "pinReference": "entry-initial-pins.json",
+  "displayAt": "2026-10-17T18:56:24.761261+00:00"
+}

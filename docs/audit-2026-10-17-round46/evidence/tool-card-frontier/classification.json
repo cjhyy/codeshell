@@ -1,0 +1,38 @@
+{
+  "createdUTC": "2026-10-17T15:24:30.521167+00:00",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "primary": "ToolCardShell.tsx",
+  "fallbackUsed": false,
+  "gate": "No explicit sameSHA full receipt established; inventories/hash/incidental claims not semantic read proof and not historical unreadness proof.",
+  "ordinaryNegative": [
+    "ToolStatus6variant DTO maps running/failed+denied/succeeded/cancelled/queued to running/err/ok/warn/idle and retains original status title.",
+    "Shell head title and argument-derived summary remain distinct from message.summary result details; Generic passes same message and a details JSX node, result summary condition independently enables details.",
+    "preview is rendered independently from open/hasDetails; rich details render only when open, shared header action is separate from button.",
+    "Observed-running activity is latched until epoch change; current producer bumps epoch only on completed and consumers pass it. No React scheduling, coalesced events or all historical-collapse correctness certification.",
+    "Ordinary reducer duration is nonnegative guarded data; no arbitrary NaN/invalid DTO counterexample used."
+  ],
+  "oldCounterevidence": [
+    {
+      "context": "R21 browser-lifecycle finite history windows",
+      "meaning": "Old review already refused to classify isolated past-tense Browser summary because Shell has failed badge and expanded error/result. Used only as prior counterevidence, no new related ID and no Browser/native source mechanism re-opened."
+    }
+  ],
+  "runtime": {
+    "productImports": 0,
+    "helperFunctions": 0,
+    "tools": 0,
+    "fixtures": 0,
+    "testsSemanticRead": 0,
+    "testsExecuted": 0,
+    "reactDOMUI": 0,
+    "networkNativeProcesses": 0,
+    "git": 0
+  },
+  "limitations": [
+    "No source bug established under the ordinary DTO consumer chain; not all card behavior certified.",
+    "Does not assume oldest design force-collapse-all language supersedes current narrower activity-latch comments.",
+    "No arbitrary Unicode/empty DTO/timing/selection hypothesis promoted; no test passes claimed."
+  ]
+}

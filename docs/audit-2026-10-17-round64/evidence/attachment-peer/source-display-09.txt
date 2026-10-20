@@ -1,0 +1,38 @@
+375:     // to undefined only if the one-time fetch hasn't resolved yet, in which case
+376:     // the core-side stdio worker still defaults to noRepoDir() (defense #2).
+377:     if (targetProject) {
+378:       opts.cwd = targetProject.path;
+379:       opts.projectId = targetProject.id;
+380:     } else if (noRepoCwdRef.current) opts.cwd = noRepoCwdRef.current;
+381:     // Goal mode: this send's prompt IS the goal — the engine runs
+382:     // loop-until-done. Goal text == prompt text (reuses the composer input).
+383:     // Persistent goal (CC /goal): the toggle means "make THIS message a goal".
+384:     // Once sent, core persists it on the session and later bare sends inherit it
+385:     // — so we auto-disable the toggle after establishing the goal. Otherwise a
+386:     // toggle left on would make every follow-up REPLACE the goal with its own
+387:     // text (one active goal per session), which is never what the user wants.
+388:     // The active goal stays visible in the TopBar popover; clear it there.
+389:     if (!sendOpts.suppressGoal && sendGoalEnabled && text.trim()) {
+390:       opts.goal = text;
+391:       setGoalOverrides((prev) => ({ ...prev, [bucket]: false }));
+392:     }
+393:     if (sendOpts.suppressGoal) opts.disableGoal = true;
+394:     if (opts.cwd && opts.attachments && opts.attachments.length > 0) {
+395:       void window.codeshell
+396:         .markAttachmentsSent({
+397:           cwd: opts.cwd,
+398:           sessionId: engineSessionId,
+399:           attachments: opts.attachments,
+400:         })
+401:         .catch((err) => {
+402:           window.codeshell.log("attachments.mark_sent_failed", {
+403:             bucket,
+404:             error: String((err as Error)?.message ?? err),
+405:           });
+406:         });
+407:     }
+408: 
+409:     // Pin this session's engine to its per-bucket model before the turn. The
+410:     // engine session may have just been created fresh (resume / first send /
+411:     // draft where the user picked a non-default model) on the worker's current
+412:     // model — without this, a session pinned to model A would silently run on

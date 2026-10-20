@@ -127,7 +127,7 @@ export function ProfilePluginExportReview({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 [overflow-wrap:anywhere]">
       {error ? (
         <p role="alert" className="text-sm text-status-err">
           {error}
@@ -140,7 +140,7 @@ export function ProfilePluginExportReview({
       ) : null}
       {preview ? (
         <>
-          <fieldset disabled={busy} className="space-y-3">
+          <fieldset disabled={busy} className="min-w-0 space-y-3">
             <legend className="text-sm font-medium">{t(`${key}.components`)}</legend>
             {preview.components.length === 0 ? (
               <p className="text-sm">{t(`${key}.empty`)}</p>
@@ -150,11 +150,12 @@ export function ProfilePluginExportReview({
                 <label className="flex items-start gap-2">
                   <input
                     type="checkbox"
+                    className="mt-0.5 shrink-0"
                     checked={selection.componentIds.includes(component.id)}
                     disabled={Boolean(component.blocked) && !component.selected}
                     onChange={(event) => toggle("componentIds", component.id, event.target.checked)}
                   />
-                  <span>
+                  <span className="min-w-0 flex-1">
                     {component.kind}: {component.name} → {component.exportName} (
                     {component.source ?? "unavailable"})
                   </span>
@@ -171,6 +172,7 @@ export function ProfilePluginExportReview({
                       <label key={file.id} className="flex gap-2">
                         <input
                           type="checkbox"
+                          className="mt-0.5 shrink-0"
                           checked={selection.textFileIds.includes(file.id)}
                           onChange={(event) => toggle("textFileIds", file.id, event.target.checked)}
                         />
@@ -184,6 +186,7 @@ export function ProfilePluginExportReview({
             <label className="flex gap-2 text-sm">
               <input
                 type="checkbox"
+                className="mt-0.5 shrink-0"
                 checked={selection.includeInstruction}
                 onChange={(event) =>
                   void load({ ...selection, includeInstruction: event.target.checked })
@@ -218,6 +221,7 @@ export function ProfilePluginExportReview({
           <label className="flex gap-2 text-sm">
             <input
               type="checkbox"
+              className="mt-0.5 shrink-0"
               checked={accepted}
               disabled={busy || !preview.canExport || Boolean(error)}
               onChange={(event) => setAccepted(event.target.checked)}
@@ -226,14 +230,24 @@ export function ProfilePluginExportReview({
           </label>
         </>
       ) : null}
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
+      <DialogFooter className="min-w-0 gap-2 sm:flex-wrap sm:space-x-0">
+        <Button
+          className="h-auto min-h-9 min-w-0 whitespace-normal"
+          variant="outline"
+          onClick={onClose}
+        >
           {t(`${key}.cancel`)}
         </Button>
-        <Button variant="outline" disabled={busy} onClick={() => void load(selection)}>
+        <Button
+          className="h-auto min-h-9 min-w-0 whitespace-normal"
+          variant="outline"
+          disabled={busy}
+          onClick={() => void load(selection)}
+        >
           {t(`${key}.refresh`)}
         </Button>
         <Button
+          className="h-auto min-h-9 min-w-0 whitespace-normal"
           disabled={
             busy ||
             !preview?.canExport ||
@@ -260,8 +274,8 @@ export function ProfilePluginExportDialog(props: Parameters<typeof ProfilePlugin
       }}
     >
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+        <DialogHeader className="min-w-0 pr-6">
+          <DialogTitle className="[overflow-wrap:anywhere]">
             {t("settingsX.digitalHumans.pluginExport.title", { name: props.name })}
           </DialogTitle>
           <DialogDescription>

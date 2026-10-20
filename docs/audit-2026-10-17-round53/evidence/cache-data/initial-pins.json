@@ -1,0 +1,40 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedContextOnly": "524c0827a480132119b637aa87e16f0eab9895f3",
+  "GitVerified": false,
+  "pins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:48:28.392558+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:48:28.394650+00:00"
+    },
+    {
+      "path": "packages/core/src/prompt/section-cache.ts",
+      "bytes": 970,
+      "lines": 43,
+      "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:48:28.395301+00:00"
+    }
+  ],
+  "filenameInventory": {
+    "command": [
+      "rg",
+      "--files",
+      "packages/core/src/prompt"
+    ],
+    "exitCode": 0,
+    "stderr": "",
+    "matches": [
+      "packages/core/src/prompt/section-cache.ts"
+    ]
+  }
+}

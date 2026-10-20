@@ -1,0 +1,4881 @@
+[
+  {
+    "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+    "sha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import React, { memo, useState } from \"react\";"
+      },
+      {
+        "line": 2,
+        "text": "import { CircleDot, CheckCircle2, AlertTriangle, Clock } from \"lucide-react\";"
+      },
+      {
+        "line": 3,
+        "text": "import { Button } from \"@/components/ui/button\";"
+      },
+      {
+        "line": 4,
+        "text": "import type { GoalProgressMessage } from \"../types\";"
+      },
+      {
+        "line": 5,
+        "text": "import { useT } from \"../i18n/I18nProvider\";"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "/** Options the \"再续\" button passes up — mirrors core's GoalExtension. */"
+      },
+      {
+        "line": 8,
+        "text": "export interface GoalExtendOpts {"
+      },
+      {
+        "line": 9,
+        "text": "  addTurns?: number;"
+      },
+      {
+        "line": 10,
+        "text": "  addStopBlocks?: number;"
+      },
+      {
+        "line": 11,
+        "text": "  addTokenBudget?: number;"
+      },
+      {
+        "line": 12,
+        "text": "  addTimeBudgetMs?: number;"
+      },
+      {
+        "line": 13,
+        "text": "}"
+      },
+      {
+        "line": 14,
+        "text": ""
+      },
+      {
+        "line": 15,
+        "text": "/** Default bumps offered by the \"再续\" button, per limit dimension. */"
+      },
+      {
+        "line": 16,
+        "text": "const EXTEND_TURNS = 50;"
+      },
+      {
+        "line": 17,
+        "text": "const EXTEND_STOP_BLOCKS = 15;"
+      },
+      {
+        "line": 18,
+        "text": ""
+      },
+      {
+        "line": 19,
+        "text": "/**"
+      },
+      {
+        "line": 20,
+        "text": " * Goal-mode progress marker bar — one per judge verdict."
+      },
+      {
+        "line": 21,
+        "text": " *"
+      },
+      {
+        "line": 22,
+        "text": " *   ◎ 目标未达成 · 第 N 轮 — 还差:{gaps}      (status \"not_met\")"
+      },
+      {
+        "line": 23,
+        "text": " *   ✓ 目标已达成 · 共 N 轮                     (status \"met\")"
+      },
+      {
+        "line": 24,
+        "text": " *   ⚠ 目标续跑已达上限(N 轮) · 已停下          (status \"exhausted\")"
+      },
+      {
+        "line": 25,
+        "text": " *   ⏲ 目标接近续跑上限 · 还剩 N 次   [再续 N 次] (status \"approaching_limit\")"
+      },
+      {
+        "line": 26,
+        "text": " *"
+      },
+      {
+        "line": 27,
+        "text": " * Counting the \"目标未达成\" bars tells the user how many rounds the goal ran;"
+      },
+      {
+        "line": 28,
+        "text": " * the trailing \"目标已达成 · 共 N 轮\" repeats the total. Copy is the judge's"
+      },
+      {
+        "line": 29,
+        "text": " * voice (mirrors goal-stop-hook's 「目标尚未达成 / 还差」). `gaps` is whatever"
+      },
+      {
+        "line": 30,
+        "text": " * the judge already produced — no extra LLM call."
+      },
+      {
+        "line": 31,
+        "text": " */"
+      },
+      {
+        "line": 32,
+        "text": "function GoalProgressViewImpl({"
+      },
+      {
+        "line": 33,
+        "text": "  message,"
+      },
+      {
+        "line": 34,
+        "text": "  onExtend,"
+      },
+      {
+        "line": 35,
+        "text": "}: {"
+      },
+      {
+        "line": 36,
+        "text": "  message: GoalProgressMessage;"
+      },
+      {
+        "line": 37,
+        "text": "  /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */"
+      },
+      {
+        "line": 38,
+        "text": "  onExtend?: (opts: GoalExtendOpts) => void;"
+      },
+      {
+        "line": 39,
+        "text": "}) {"
+      },
+      {
+        "line": 40,
+        "text": "  const { t } = useT();"
+      },
+      {
+        "line": 41,
+        "text": "  const { status, round, gaps } = message;"
+      },
+      {
+        "line": 42,
+        "text": "  // One-shot disable after clicking. Each marker is a fresh component (fresh"
+      },
+      {
+        "line": 43,
+        "text": "  // id), and the reducer replaces/prunes this marker once the run advances, so"
+      },
+      {
+        "line": 44,
+        "text": "  // no persistent \"already extended\" state is needed."
+      },
+      {
+        "line": 45,
+        "text": "  const [clicked, setClicked] = useState(false);"
+      },
+      {
+        "line": 46,
+        "text": ""
+      },
+      {
+        "line": 47,
+        "text": "  // Approaching a stop ceiling while still running — offer a one-click extend so"
+      },
+      {
+        "line": 48,
+        "text": "  // an unattended goal isn't truncated. The button targets whichever limit is"
+      },
+      {
+        "line": 49,
+        "text": "  // closest (`nearest`): the stop-block cap (the common case) or maxTurns."
+      },
+      {
+        "line": 50,
+        "text": "  if (status === \"approaching_limit\") {"
+      },
+      {
+        "line": 51,
+        "text": "    const byStopBlocks = message.nearest === \"stopBlocks\";"
+      },
+      {
+        "line": 52,
+        "text": "    const label = byStopBlocks"
+      },
+      {
+        "line": 53,
+        "text": "      ? t(\"msg.goal.extendTimes\", { count: EXTEND_STOP_BLOCKS })"
+      },
+      {
+        "line": 54,
+        "text": "      : t(\"msg.goal.extendTurns\", { count: EXTEND_TURNS });"
+      },
+      {
+        "line": 55,
+        "text": "    const remaining = byStopBlocks ? message.stopBlocksRemaining : message.turnsRemaining;"
+      },
+      {
+        "line": 56,
+        "text": "    const headline = byStopBlocks"
+      },
+      {
+        "line": 57,
+        "text": "      ? t(\"msg.goal.approachingStopLimit\")"
+      },
+      {
+        "line": 58,
+        "text": "      : t(\"msg.goal.approachingTurnLimit\");"
+      },
+      {
+        "line": 59,
+        "text": "    const remainingText ="
+      },
+      {
+        "line": 60,
+        "text": "      remaining != null"
+      },
+      {
+        "line": 61,
+        "text": "        ? byStopBlocks"
+      },
+      {
+        "line": 62,
+        "text": "          ? t(\"msg.goal.remainingTimes\", { count: remaining })"
+      },
+      {
+        "line": 63,
+        "text": "          : t(\"msg.goal.remainingTurns\", { count: remaining })"
+      },
+      {
+        "line": 64,
+        "text": "        : \"\";"
+      },
+      {
+        "line": 65,
+        "text": "    // Always bump turns a little too, so a stop-block extend doesn't later hit"
+      },
+      {
+        "line": 66,
+        "text": "    // maxTurns; the streak reset makes the extra harmless."
+      },
+      {
+        "line": 67,
+        "text": "    const opts: GoalExtendOpts = byStopBlocks"
+      },
+      {
+        "line": 68,
+        "text": "      ? { addStopBlocks: EXTEND_STOP_BLOCKS, addTurns: EXTEND_TURNS }"
+      },
+      {
+        "line": 69,
+        "text": "      : { addTurns: EXTEND_TURNS };"
+      },
+      {
+        "line": 70,
+        "text": "    return ("
+      },
+      {
+        "line": 71,
+        "text": "      <div className=\"flex items-center gap-1.5 px-4 py-1 text-xs text-status-warn\">"
+      },
+      {
+        "line": 72,
+        "text": "        <Clock size={12} className=\"shrink-0\" />"
+      },
+      {
+        "line": 73,
+        "text": "        <span className=\"shrink-0\">"
+      },
+      {
+        "line": 74,
+        "text": "          {headline}"
+      },
+      {
+        "line": 75,
+        "text": "          {remainingText}"
+      },
+      {
+        "line": 76,
+        "text": "        </span>"
+      },
+      {
+        "line": 77,
+        "text": "        {onExtend &&"
+      },
+      {
+        "line": 78,
+        "text": "          (clicked ? ("
+      },
+      {
+        "line": 79,
+        "text": "            <span className=\"text-muted-foreground\">{t(\"msg.goal.extended\", { label })}</span>"
+      },
+      {
+        "line": 80,
+        "text": "          ) : ("
+      },
+      {
+        "line": 81,
+        "text": "            <Button"
+      },
+      {
+        "line": 82,
+        "text": "              variant=\"outline\""
+      },
+      {
+        "line": 83,
+        "text": "              size=\"sm\""
+      },
+      {
+        "line": 84,
+        "text": "              className=\"h-5 px-1.5 py-0 text-[11px]\""
+      },
+      {
+        "line": 85,
+        "text": "              onClick={() => {"
+      },
+      {
+        "line": 86,
+        "text": "                setClicked(true);"
+      },
+      {
+        "line": 87,
+        "text": "                onExtend(opts);"
+      },
+      {
+        "line": 88,
+        "text": "              }}"
+      },
+      {
+        "line": 89,
+        "text": "            >"
+      },
+      {
+        "line": 90,
+        "text": "              {label}"
+      },
+      {
+        "line": 91,
+        "text": "            </Button>"
+      },
+      {
+        "line": 92,
+        "text": "          ))}"
+      },
+      {
+        "line": 93,
+        "text": "      </div>"
+      },
+      {
+        "line": 94,
+        "text": "    );"
+      },
+      {
+        "line": 95,
+        "text": "  }"
+      },
+      {
+        "line": 96,
+        "text": ""
+      },
+      {
+        "line": 97,
+        "text": "  if (status === \"met\") {"
+      },
+      {
+        "line": 98,
+        "text": "    return ("
+      },
+      {
+        "line": 99,
+        "text": "      <div className=\"flex items-center gap-1.5 px-4 py-1 text-xs text-status-ok\">"
+      },
+      {
+        "line": 100,
+        "text": "        <CheckCircle2 size={12} />"
+      },
+      {
+        "line": 101,
+        "text": "        <span>{t(\"msg.goal.metRounds\", { count: round })}</span>"
+      },
+      {
+        "line": 102,
+        "text": "      </div>"
+      },
+      {
+        "line": 103,
+        "text": "    );"
+      },
+      {
+        "line": 104,
+        "text": "  }"
+      },
+      {
+        "line": 105,
+        "text": ""
+      },
+      {
+        "line": 106,
+        "text": "  if (status === \"exhausted\") {"
+      },
+      {
+        "line": 107,
+        "text": "    return ("
+      },
+      {
+        "line": 108,
+        "text": "      <div className=\"flex items-center gap-1.5 px-4 py-1 text-xs text-status-warn\">"
+      },
+      {
+        "line": 109,
+        "text": "        <AlertTriangle size={12} />"
+      },
+      {
+        "line": 110,
+        "text": "        <span>{t(\"msg.goal.exhausted\", { count: round })}</span>"
+      },
+      {
+        "line": 111,
+        "text": "      </div>"
+      },
+      {
+        "line": 112,
+        "text": "    );"
+      },
+      {
+        "line": 113,
+        "text": "  }"
+      },
+      {
+        "line": 114,
+        "text": ""
+      },
+      {
+        "line": 115,
+        "text": "  // not_met — one re-prompt round."
+      },
+      {
+        "line": 116,
+        "text": "  return ("
+      },
+      {
+        "line": 117,
+        "text": "    <div className=\"flex items-center gap-1.5 px-4 py-1 text-xs text-muted-foreground\">"
+      },
+      {
+        "line": 118,
+        "text": "      <CircleDot size={12} className=\"shrink-0\" />"
+      },
+      {
+        "line": 119,
+        "text": "      <span className=\"shrink-0\">{t(\"msg.goal.notMetRound\", { count: round })}</span>"
+      },
+      {
+        "line": 120,
+        "text": "      {gaps ? ("
+      },
+      {
+        "line": 121,
+        "text": "        <span className=\"truncate text-muted-foreground/80\">{t(\"msg.goal.gap\", { gaps })}</span>"
+      },
+      {
+        "line": 122,
+        "text": "      ) : ("
+      },
+      {
+        "line": 123,
+        "text": "        <span className=\"text-muted-foreground/80\">{t(\"msg.goal.keepGoing\")}</span>"
+      },
+      {
+        "line": 124,
+        "text": "      )}"
+      },
+      {
+        "line": 125,
+        "text": "    </div>"
+      },
+      {
+        "line": 126,
+        "text": "  );"
+      },
+      {
+        "line": 127,
+        "text": "}"
+      },
+      {
+        "line": 128,
+        "text": ""
+      },
+      {
+        "line": 129,
+        "text": "// Memoized — see Markdown / ToolCard for the rationale."
+      },
+      {
+        "line": 130,
+        "text": "export const GoalProgressView = memo(GoalProgressViewImpl);"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/MessageStream.tsx",
+    "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 13,
+        "text": "import { ToolGroupCard } from \"./messages/ToolGroupCard\";"
+      },
+      {
+        "line": 15,
+        "text": "import { TurnProcessGroupCard } from \"./messages/TurnProcessGroupCard\";"
+      },
+      {
+        "line": 18,
+        "text": "import { buildStreamItems, reconcileStreamItems, type StreamItem } from \"./messages/streamGroups\";"
+      },
+      {
+        "line": 19,
+        "text": "import { foldAgentGroups, type RenderedStreamItem } from \"./messages/agentGroup\";"
+      },
+      {
+        "line": 20,
+        "text": "import { AgentGroupCard } from \"./messages/AgentGroupCard\";"
+      },
+      {
+        "line": 84,
+        "text": "  onExtendGoal?: (opts: {"
+      },
+      {
+        "line": 116,
+        "text": "  liveTurnActive?: boolean;"
+      },
+      {
+        "line": 120,
+        "text": "   * this cwd. Null when the session was created without a repo."
+      },
+      {
+        "line": 121,
+        "text": "   */"
+      },
+      {
+        "line": 122,
+        "text": "  cwd?: string | null;"
+      },
+      {
+        "line": 123,
+        "text": "  /** Main-resolved Session root authority for completed relative Markdown links. */"
+      },
+      {
+        "line": 124,
+        "text": "  rootId?: string | null;"
+      },
+      {
+        "line": 125,
+        "text": "  rootStatus?: MarkdownRootStatus;"
+      },
+      {
+        "line": 126,
+        "text": "  /**"
+      },
+      {
+        "line": 127,
+        "text": "   * Monotonic counter bumped by ChatView on each user send. Forces the"
+      },
+      {
+        "line": 128,
+        "text": "   * stream to snap to the bottom + re-arm follow so the user always sees"
+      },
+      {
+        "line": 129,
+        "text": "   * their own message, even if they had scrolled up. Kept separate from"
+      },
+      {
+        "line": 130,
+        "text": "   * the session id so a send never reads as a session switch."
+      },
+      {
+        "line": 131,
+        "text": "   */"
+      },
+      {
+        "line": 132,
+        "text": "  sendEpoch?: number;"
+      },
+      {
+        "line": 149,
+        "text": "  onExtendGoal,"
+      },
+      {
+        "line": 154,
+        "text": "  liveTurnActive,"
+      },
+      {
+        "line": 221,
+        "text": "      trigger: buildScrollTrigger(messages, liveTurnActive, trailingKey),"
+      },
+      {
+        "line": 289,
+        "text": "      liveTurnActive ||"
+      },
+      {
+        "line": 309,
+        "text": "  }, [engineSessionId, liveTurnActive, onContextPackageCreated, selectionOpen, localRuntime]);"
+      },
+      {
+        "line": 412,
+        "text": "      ? 0"
+      },
+      {
+        "line": 413,
+        "text": "      : Math.abs(selectionEnd - selectionAnchor) + 1;"
+      },
+      {
+        "line": 414,
+        "text": ""
+      },
+      {
+        "line": 415,
+        "text": "  // Two-level fold (see messages/streamGroups.ts):"
+      },
+      {
+        "line": 416,
+        "text": "  //   - level 1: adjacent tool calls → ToolGroup"
+      },
+      {
+        "line": 417,
+        "text": "  //   - level 2: per turn, first-tool..last-tool span → TurnProcessGroup."
+      },
+      {
+        "line": 418,
+        "text": "  //     The most recent turn is \"live\" iff the engine is currently"
+      },
+      {
+        "line": 419,
+        "text": "  //     streaming; that's the only one whose header ticker keeps"
+      },
+      {
+        "line": 420,
+        "text": "  //     advancing, and the only one that defaults to open."
+      },
+      {
+        "line": 421,
+        "text": "  // Build the folded list, then reconcile group objects against the previous"
+      },
+      {
+        "line": 422,
+        "text": "  // render so unchanged ToolGroup/TurnProcessGroup wrappers keep a stable"
+      },
+      {
+        "line": 423,
+        "text": "  // reference — that's what lets their React.memo actually skip work on the"
+      },
+      {
+        "line": 424,
+        "text": "  // 50ms stream batches. prevItemsRef survives renders; the useMemo only"
+      },
+      {
+        "line": 425,
+        "text": "  // recomputes when messages/liveTurnActive change."
+      },
+      {
+        "line": 426,
+        "text": "  const prevItemsRef = useRef<StreamItem[]>([]);"
+      },
+      {
+        "line": 427,
+        "text": "  const items = useMemo("
+      },
+      {
+        "line": 428,
+        "text": "    () =>"
+      },
+      {
+        "line": 429,
+        "text": "      timePhase("
+      },
+      {
+        "line": 430,
+        "text": "        \"stream.build\","
+      },
+      {
+        "line": 431,
+        "text": "        () => {"
+      },
+      {
+        "line": 432,
+        "text": "          const built = buildStreamItems(messages, { liveTurnActive });"
+      },
+      {
+        "line": 433,
+        "text": "          const reconciled = reconcileStreamItems(prevItemsRef.current, built);"
+      },
+      {
+        "line": 434,
+        "text": "          prevItemsRef.current = reconciled;"
+      },
+      {
+        "line": 435,
+        "text": "          // Post-pass: collapse runs of ≥2 sibling sub-agents into a summary"
+      },
+      {
+        "line": 436,
+        "text": "          // card. Runs after reconcile so it reads the latest AgentMessage"
+      },
+      {
+        "line": 437,
+        "text": "          // refs and a live agent's rollup stats stay fresh each rebuild."
+      },
+      {
+        "line": 438,
+        "text": "          return foldAgentGroups(reconciled);"
+      },
+      {
+        "line": 439,
+        "text": "        },"
+      },
+      {
+        "line": 440,
+        "text": "        () => ({ msgs: messages.length }),"
+      },
+      {
+        "line": 441,
+        "text": "      ),"
+      },
+      {
+        "line": 442,
+        "text": "    [messages, liveTurnActive],"
+      },
+      {
+        "line": 443,
+        "text": "  );"
+      },
+      {
+        "line": 444,
+        "text": "  const displayGroups = useMemo("
+      },
+      {
+        "line": 445,
+        "text": "    () => alignContextSelectionGroups(groupStreamItemsIntoContextTurns(items), selectionTurns),"
+      },
+      {
+        "line": 446,
+        "text": "    [items, selectionTurns],"
+      },
+      {
+        "line": 447,
+        "text": "  );"
+      },
+      {
+        "line": 448,
+        "text": "  const selectionAligned = displayGroups !== null;"
+      },
+      {
+        "line": 449,
+        "text": ""
+      },
+      {
+        "line": 450,
+        "text": "  const renderStreamItem = (m: RenderedStreamItem): React.ReactNode => {"
+      },
+      {
+        "line": 451,
+        "text": "    if (m.kind === \"turn_process_group\") {"
+      },
+      {
+        "line": 452,
+        "text": "      return ("
+      },
+      {
+        "line": 453,
+        "text": "        <TurnProcessGroupCard"
+      },
+      {
+        "line": 454,
+        "text": "          key={m.id}"
+      },
+      {
+        "line": 455,
+        "text": "          group={m}"
+      },
+      {
+        "line": 456,
+        "text": "          turnEpoch={turnEpoch}"
+      },
+      {
+        "line": 457,
+        "text": "          cwd={cwd}"
+      },
+      {
+        "line": 458,
+        "text": "          sessionId={localRuntime ? engineSessionId : undefined}"
+      },
+      {
+        "line": 459,
+        "text": "          sessionMainRootId={rootId}"
+      },
+      {
+        "line": 460,
+        "text": "          rootStatus={rootStatus}"
+      },
+      {
+        "line": 461,
+        "text": "        />"
+      },
+      {
+        "line": 462,
+        "text": "      );"
+      },
+      {
+        "line": 463,
+        "text": "    }"
+      },
+      {
+        "line": 464,
+        "text": "    if (m.kind === \"tool_group\") {"
+      },
+      {
+        "line": 465,
+        "text": "      return ("
+      },
+      {
+        "line": 466,
+        "text": "        <ToolGroupCard"
+      },
+      {
+        "line": 467,
+        "text": "          key={m.id}"
+      },
+      {
+        "line": 468,
+        "text": "          group={m}"
+      },
+      {
+        "line": 469,
+        "text": "          turnEpoch={turnEpoch}"
+      },
+      {
+        "line": 470,
+        "text": "          cwd={cwd}"
+      },
+      {
+        "line": 471,
+        "text": "          sessionId={localRuntime ? engineSessionId : undefined}"
+      },
+      {
+        "line": 472,
+        "text": "          sessionMainRootId={rootId}"
+      },
+      {
+        "line": 473,
+        "text": "          rootStatus={rootStatus}"
+      },
+      {
+        "line": 474,
+        "text": "        />"
+      },
+      {
+        "line": 579,
+        "text": "          <AssistantMessageView"
+      },
+      {
+        "line": 580,
+        "text": "            key={m.id}"
+      },
+      {
+        "line": 581,
+        "text": "            message={m}"
+      },
+      {
+        "line": 582,
+        "text": "            cwd={cwd ?? null}"
+      },
+      {
+        "line": 583,
+        "text": "            sessionId={localRuntime ? engineSessionId : undefined}"
+      },
+      {
+        "line": 584,
+        "text": "            sessionMainRootId={rootId}"
+      },
+      {
+        "line": 585,
+        "text": "            rootStatus={rootStatus}"
+      },
+      {
+        "line": 586,
+        "text": "          />"
+      },
+      {
+        "line": 587,
+        "text": "        );"
+      },
+      {
+        "line": 588,
+        "text": "      case \"thinking\":"
+      },
+      {
+        "line": 589,
+        "text": "        return <ThinkingMessageView key={m.id} message={m} />;"
+      },
+      {
+        "line": 590,
+        "text": "      case \"agent\":"
+      },
+      {
+        "line": 591,
+        "text": "        return <AgentMessageView key={m.id} message={m} />;"
+      },
+      {
+        "line": 592,
+        "text": "      case \"task_list\":"
+      },
+      {
+        "line": 593,
+        "text": "        return null;"
+      },
+      {
+        "line": 594,
+        "text": "      case \"context_boundary\":"
+      },
+      {
+        "line": 595,
+        "text": "        return <ContextBoundaryView key={m.id} message={m} />;"
+      },
+      {
+        "line": 596,
+        "text": "      case \"goal_progress\":"
+      },
+      {
+        "line": 597,
+        "text": "        return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;"
+      },
+      {
+        "line": 598,
+        "text": "      case \"ask_user\":"
+      },
+      {
+        "line": 599,
+        "text": "        return m.answer !== undefined || m.asynchronous ? ("
+      },
+      {
+        "line": 600,
+        "text": "          <AskUserMessageView key={m.id} message={m} onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER} />"
+      },
+      {
+        "line": 601,
+        "text": "        ) : null;"
+      },
+      {
+        "line": 602,
+        "text": "      case \"system\":"
+      },
+      {
+        "line": 603,
+        "text": "        if (m.text.trim() === \"\") return null;"
+      },
+      {
+        "line": 604,
+        "text": "        return ("
+      },
+      {
+        "line": 605,
+        "text": "          <div key={m.id} className=\"px-4 py-1 text-center text-xs text-muted-foreground\">"
+      },
+      {
+        "line": 606,
+        "text": "            {m.text}"
+      },
+      {
+        "line": 820,
+        "text": "            {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/app/useRunController.ts",
+    "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 1107,
+        "text": "          }),"
+      },
+      {
+        "line": 1108,
+        "text": "          variant: \"error\","
+      },
+      {
+        "line": 1109,
+        "text": "        });"
+      },
+      {
+        "line": 1110,
+        "text": "      })"
+      },
+      {
+        "line": 1111,
+        "text": "      .finally(() => setCompactingForKey(bucket, false));"
+      },
+      {
+        "line": 1112,
+        "text": "  };"
+      },
+      {
+        "line": 1113,
+        "text": ""
+      },
+      {
+        "line": 1114,
+        "text": "  // Extend the running goal (TODO 3.1). Fired by the \"approaching limit\" extend"
+      },
+      {
+        "line": 1115,
+        "text": "  // button; opts target whichever ceiling is closest (turns or stop-blocks)."
+      },
+      {
+        "line": 1116,
+        "text": "  const extendGoal = (opts: {"
+      },
+      {
+        "line": 1117,
+        "text": "    addTurns?: number;"
+      },
+      {
+        "line": 1118,
+        "text": "    addStopBlocks?: number;"
+      },
+      {
+        "line": 1119,
+        "text": "    addTokenBudget?: number;"
+      },
+      {
+        "line": 1120,
+        "text": "    addTimeBudgetMs?: number;"
+      },
+      {
+        "line": 1121,
+        "text": "  }): void => {"
+      },
+      {
+        "line": 1122,
+        "text": "    const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);"
+      },
+      {
+        "line": 1123,
+        "text": "    if (!engineSessionId) return;"
+      },
+      {
+        "line": 1124,
+        "text": "    void window.codeshell"
+      },
+      {
+        "line": 1125,
+        "text": "      .goalExtend(engineSessionId, opts)"
+      },
+      {
+        "line": 1126,
+        "text": "      .catch((e) => window.codeshell.log(\"goal.extend.failed\", { error: String(e) }));"
+      },
+      {
+        "line": 1127,
+        "text": "  };"
+      },
+      {
+        "line": 1128,
+        "text": ""
+      },
+      {
+        "line": 1129,
+        "text": "  const decideEnvelope = ("
+      },
+      {
+        "line": 1130,
+        "text": "    env: ApprovalRequestEnvelope,"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/App.tsx",
+    "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 899,
+        "text": "  // The \"正在思考…\" live line shows whenever a turn is busy. Normally"
+      },
+      {
+        "line": 900,
+        "text": "  // streamingAssistantId flips it on once stream_request_start arrives; but on"
+      },
+      {
+        "line": 901,
+        "text": "  // the \"打断接力\" path (stop → re-send queued input) the new turn is busy with"
+      },
+      {
+        "line": 902,
+        "text": "  // its user bubble appended BEFORE stream_request_start, and the killed turn's"
+      },
+      {
+        "line": 903,
+        "text": "  // streaming id was cleared by turn_end. So also light up while busy with the"
+      },
+      {
+        "line": 904,
+        "text": "  // last message being the just-sent user message — closing the gap that left"
+      },
+      {
+        "line": 905,
+        "text": "  // the relayed turn with no thinking indicator. (interrupt-relay fix)"
+      },
+      {
+        "line": 906,
+        "text": "  const lastMessage = state.messages[state.messages.length - 1];"
+      },
+      {
+        "line": 907,
+        "text": "  const liveTurnActive ="
+      },
+      {
+        "line": 908,
+        "text": "    (busy && (state.streamingAssistantId !== null || lastMessage?.kind === \"user\")) ||"
+      },
+      {
+        "line": 909,
+        "text": "    // 引导打断 gap: turn cancelled, merged re-send pending on the next tick."
+      },
+      {
+        "line": 910,
+        "text": "    // Keep the indicator lit so the user sees work is still happening. (#3)"
+      },
+      {
+        "line": 911,
+        "text": "    relayingBuckets.has(activeBucket);"
+      },
+      {
+        "line": 912,
+        "text": ""
+      },
+      {
+        "line": 913,
+        "text": "  const markViewedPetCompletions = useCallback("
+      },
+      {
+        "line": 914,
+        "text": "    (sessionId?: string): void => {"
+      },
+      {
+        "line": 915,
+        "text": "      const projection = petState.projection;"
+      },
+      {
+        "line": 916,
+        "text": "      if (!projection) return;"
+      },
+      {
+        "line": 2573,
+        "text": "                    historyHasMore={historyHasMore}"
+      },
+      {
+        "line": 2574,
+        "text": "                    historyLoading={historyLoading}"
+      },
+      {
+        "line": 2575,
+        "text": "                    historyFailed={historyFailed}"
+      },
+      {
+        "line": 2576,
+        "text": "                    historyLimitReached={historyLimitReached}"
+      },
+      {
+        "line": 2577,
+        "text": "                    onLoadEarlierHistory={loadEarlierHistory}"
+      },
+      {
+        "line": 2578,
+        "text": "                    turnEpoch={state.turnEpoch}"
+      },
+      {
+        "line": 2579,
+        "text": "                    engineSessionId={state.sessionId ?? engineSessionIdForActive()}"
+      },
+      {
+        "line": 2580,
+        "text": "                    liveTurnActive={liveTurnActive}"
+      },
+      {
+        "line": 2581,
+        "text": "                    onContextPackageCreated={(result, options) =>"
+      },
+      {
+        "line": 2582,
+        "text": "                      handleContextPackageCreated(result, activeBucket, options)"
+      },
+      {
+        "line": 2583,
+        "text": "                    }"
+      },
+      {
+        "line": 2584,
+        "text": "                    contextSelectionRequest={contextSelectionRequest}"
+      },
+      {
+        "line": 2648,
+        "text": "                    onComposerSeedConsumed={onComposerSeedConsumed}"
+      },
+      {
+        "line": 2649,
+        "text": "                    draft={composerDraft.text}"
+      },
+      {
+        "line": 2650,
+        "text": "                    onDraftChange={setComposerDraftText}"
+      },
+      {
+        "line": 2651,
+        "text": "                    attachments={composerDraft.attachments}"
+      },
+      {
+        "line": 2652,
+        "text": "                    onAttachmentsChange={setComposerDraftAttachments}"
+      },
+      {
+        "line": 2653,
+        "text": "                    anchors={anchors}"
+      },
+      {
+        "line": 2654,
+        "text": "                    onRemoveAnchor={removeAnchor}"
+      },
+      {
+        "line": 2655,
+        "text": "                    onClearAnchors={clearAnchors}"
+      },
+      {
+        "line": 2656,
+        "text": "                    onAskUserAnswer={handleAskUserAnswer}"
+      },
+      {
+        "line": 2657,
+        "text": "                    onExtendGoal={extendGoal}"
+      },
+      {
+        "line": 2658,
+        "text": "                    onAttachImagePath={(p) => void attachImageByPath(p)}"
+      },
+      {
+        "line": 2659,
+        "text": "                    onPrepareAttachmentSession={prepareAttachmentSession}"
+      },
+      {
+        "line": 2660,
+        "text": "                    imageDetail={imageDetail}"
+      },
+      {
+        "line": 2661,
+        "text": "                    pendingApproval={visibleApproval}"
+      },
+      {
+        "line": 2662,
+        "text": "                    onApprovalDecide={"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/preload/index.ts",
+    "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 609,
+        "text": "  goalExtend: ("
+      },
+      {
+        "line": 610,
+        "text": "    sessionId: string,"
+      },
+      {
+        "line": 611,
+        "text": "    opts: {"
+      },
+      {
+        "line": 612,
+        "text": "      addTurns?: number;"
+      },
+      {
+        "line": 613,
+        "text": "      addTokenBudget?: number;"
+      },
+      {
+        "line": 614,
+        "text": "      addTimeBudgetMs?: number;"
+      },
+      {
+        "line": 615,
+        "text": "      addStopBlocks?: number;"
+      },
+      {
+        "line": 616,
+        "text": "    },"
+      },
+      {
+        "line": 617,
+        "text": "  ) =>"
+      },
+      {
+        "line": 618,
+        "text": "    rpc(\"agent/goalExtend\", { sessionId, ...opts }).then(rpcResult) as Promise<{"
+      },
+      {
+        "line": 619,
+        "text": "      ok: boolean;"
+      },
+      {
+        "line": 620,
+        "text": "      limits: {"
+      },
+      {
+        "line": 621,
+        "text": "        maxTurns: number;"
+      },
+      {
+        "line": 622,
+        "text": "        tokenBudget?: number;"
+      },
+      {
+        "line": 623,
+        "text": "        timeBudgetMs?: number;"
+      },
+      {
+        "line": 624,
+        "text": "        maxStopBlocks: number;"
+      },
+      {
+        "line": 625,
+        "text": "      };"
+      },
+      {
+        "line": 626,
+        "text": "    }>,"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/preload/types.d.ts",
+    "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 1120,
+        "text": "  /**"
+      },
+      {
+        "line": 1121,
+        "text": "   * Extend a running goal's turn / budget ceilings mid-run (TODO 3.1). Returns"
+      },
+      {
+        "line": 1122,
+        "text": "   * the resulting effective limits; rejects if there's no active run."
+      },
+      {
+        "line": 1123,
+        "text": "   */"
+      },
+      {
+        "line": 1124,
+        "text": "  goalExtend("
+      },
+      {
+        "line": 1125,
+        "text": "    sessionId: string,"
+      },
+      {
+        "line": 1126,
+        "text": "    opts: {"
+      },
+      {
+        "line": 1127,
+        "text": "      addTurns?: number;"
+      },
+      {
+        "line": 1128,
+        "text": "      addTokenBudget?: number;"
+      },
+      {
+        "line": 1129,
+        "text": "      addTimeBudgetMs?: number;"
+      },
+      {
+        "line": 1130,
+        "text": "      addStopBlocks?: number;"
+      },
+      {
+        "line": 1131,
+        "text": "    },"
+      },
+      {
+        "line": 1132,
+        "text": "  ): Promise<{"
+      },
+      {
+        "line": 1133,
+        "text": "    ok: boolean;"
+      },
+      {
+        "line": 1134,
+        "text": "    limits: {"
+      },
+      {
+        "line": 1135,
+        "text": "      maxTurns: number;"
+      },
+      {
+        "line": 1136,
+        "text": "      tokenBudget?: number;"
+      },
+      {
+        "line": 1137,
+        "text": "      timeBudgetMs?: number;"
+      },
+      {
+        "line": 1138,
+        "text": "      maxStopBlocks: number;"
+      },
+      {
+        "line": 1139,
+        "text": "    };"
+      },
+      {
+        "line": 1140,
+        "text": "  }>;"
+      },
+      {
+        "line": 1141,
+        "text": "  /** Clear a session's persisted active goal (CC /goal clear). */"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/protocol/server.ts",
+    "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 633,
+        "text": "        [Methods.GoalExtend]: (req) => this.handleGoalExtend(req),"
+      },
+      {
+        "line": 2231,
+        "text": "  /**"
+      },
+      {
+        "line": 2232,
+        "text": "   * Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). Routed to"
+      },
+      {
+        "line": 2233,
+        "text": "   * a specific session (multi-session path). Returns the resulting effective"
+      },
+      {
+        "line": 2234,
+        "text": "   * limits, or an error if no session / no active run."
+      },
+      {
+        "line": 2235,
+        "text": "   */"
+      },
+      {
+        "line": 2236,
+        "text": "  private handleGoalExtend(req: RpcRequest): void {"
+      },
+      {
+        "line": 2237,
+        "text": "    const rawParams = req.params;"
+      },
+      {
+        "line": 2238,
+        "text": "    if (!rawParams || typeof rawParams !== \"object\" || Array.isArray(rawParams)) {"
+      },
+      {
+        "line": 2239,
+        "text": "      this.transport.send("
+      },
+      {
+        "line": 2240,
+        "text": "        createErrorResponse(req.id, ErrorCodes.InvalidParams, \"goal extension params are required\"),"
+      },
+      {
+        "line": 2241,
+        "text": "      );"
+      },
+      {
+        "line": 2242,
+        "text": "      return;"
+      },
+      {
+        "line": 2243,
+        "text": "    }"
+      },
+      {
+        "line": 2244,
+        "text": "    const inputError = goalExtensionInputError(rawParams as Record<string, unknown>);"
+      },
+      {
+        "line": 2245,
+        "text": "    if (inputError) {"
+      },
+      {
+        "line": 2246,
+        "text": "      this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, inputError));"
+      },
+      {
+        "line": 2247,
+        "text": "      return;"
+      },
+      {
+        "line": 2248,
+        "text": "    }"
+      },
+      {
+        "line": 2249,
+        "text": "    const params = rawParams as {"
+      },
+      {
+        "line": 2250,
+        "text": "      sessionId?: string;"
+      },
+      {
+        "line": 2251,
+        "text": "      addTurns?: number;"
+      },
+      {
+        "line": 2252,
+        "text": "      addTokenBudget?: number;"
+      },
+      {
+        "line": 2253,
+        "text": "      addTimeBudgetMs?: number;"
+      },
+      {
+        "line": 2254,
+        "text": "      addStopBlocks?: number;"
+      },
+      {
+        "line": 2255,
+        "text": "    };"
+      },
+      {
+        "line": 2256,
+        "text": "    const ext = {"
+      },
+      {
+        "line": 2257,
+        "text": "      addTurns: params.addTurns,"
+      },
+      {
+        "line": 2258,
+        "text": "      addTokenBudget: params.addTokenBudget,"
+      },
+      {
+        "line": 2259,
+        "text": "      addTimeBudgetMs: params.addTimeBudgetMs,"
+      },
+      {
+        "line": 2260,
+        "text": "      addStopBlocks: params.addStopBlocks,"
+      },
+      {
+        "line": 2261,
+        "text": "    };"
+      },
+      {
+        "line": 2262,
+        "text": "    // Multi-session path: route to the named session."
+      },
+      {
+        "line": 2263,
+        "text": "    const session ="
+      },
+      {
+        "line": 2264,
+        "text": "      this.chatManager && typeof params.sessionId === \"string\""
+      },
+      {
+        "line": 2265,
+        "text": "        ? this.chatManager.get(params.sessionId)"
+      },
+      {
+        "line": 2266,
+        "text": "        : undefined;"
+      },
+      {
+        "line": 2267,
+        "text": "    // Legacy single-engine path (no chatManager): extend the one engine's run,"
+      },
+      {
+        "line": 2268,
+        "text": "    // mirroring handleCancel which also supports both paths. Without this a"
+      },
+      {
+        "line": 2269,
+        "text": "    // legacy host can cancel but never extend a goal."
+      },
+      {
+        "line": 2270,
+        "text": "    const result = session"
+      },
+      {
+        "line": 2271,
+        "text": "      ? session.extendGoalRun(ext)"
+      },
+      {
+        "line": 2272,
+        "text": "      : this.legacyEngine"
+      },
+      {
+        "line": 2273,
+        "text": "        ? this.legacyEngine.extendGoalRun(ext)"
+      },
+      {
+        "line": 2274,
+        "text": "        : undefined;"
+      },
+      {
+        "line": 2275,
+        "text": "    if (result === undefined) {"
+      },
+      {
+        "line": 2276,
+        "text": "      // Couldn't even resolve a target (no session and no legacy engine)."
+      },
+      {
+        "line": 2277,
+        "text": "      if (!session && !this.legacyEngine) {"
+      },
+      {
+        "line": 2278,
+        "text": "        this.transport.send("
+      },
+      {
+        "line": 2279,
+        "text": "          createErrorResponse("
+      },
+      {
+        "line": 2280,
+        "text": "            req.id,"
+      },
+      {
+        "line": 2281,
+        "text": "            ErrorCodes.SessionClosed,"
+      },
+      {
+        "line": 2282,
+        "text": "            params.sessionId ? `No such session: ${params.sessionId}` : \"sessionId is required\","
+      },
+      {
+        "line": 2283,
+        "text": "          ),"
+      },
+      {
+        "line": 2284,
+        "text": "        );"
+      },
+      {
+        "line": 2285,
+        "text": "        return;"
+      },
+      {
+        "line": 2286,
+        "text": "      }"
+      },
+      {
+        "line": 2287,
+        "text": "    }"
+      },
+      {
+        "line": 2288,
+        "text": "    if (!result) {"
+      },
+      {
+        "line": 2289,
+        "text": "      this.transport.send("
+      },
+      {
+        "line": 2290,
+        "text": "        createErrorResponse(req.id, ErrorCodes.InvalidParams, \"No active run to extend\"),"
+      },
+      {
+        "line": 2291,
+        "text": "      );"
+      },
+      {
+        "line": 2292,
+        "text": "      return;"
+      },
+      {
+        "line": 2293,
+        "text": "    }"
+      },
+      {
+        "line": 2294,
+        "text": "    this.transport.send(createResponse(req.id, { ok: true, limits: result }));"
+      },
+      {
+        "line": 2295,
+        "text": "  }"
+      },
+      {
+        "line": 2561,
+        "text": "   * handleGoalExtend / handleCancel's dual path). Returns { ok, cleared }."
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/types.ts",
+    "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 59,
+        "text": "  done: boolean;"
+      },
+      {
+        "line": 70,
+        "text": "  done: boolean;"
+      },
+      {
+        "line": 125,
+        "text": "  done: boolean;"
+      },
+      {
+        "line": 128,
+        "text": "   *  the parent turn — so turn_complete's done-sweep must skip it, and the card"
+      },
+      {
+        "line": 140,
+        "text": "  /** Accumulating text_delta payload; flushed to `text` on turn_complete / agent_end. */"
+      },
+      {
+        "line": 190,
+        "text": "  kind: \"goal_progress\";"
+      },
+      {
+        "line": 193,
+        "text": "  status: \"not_met\" | \"met\" | \"exhausted\" | \"approaching_limit\";"
+      },
+      {
+        "line": 196,
+        "text": "  /** For \"approaching_limit\": turns left before the maxTurns cap (TODO 3.1). */"
+      },
+      {
+        "line": 198,
+        "text": "  /** For \"approaching_limit\": consecutive blocks left before maxStopBlocks (TODO 3.1). */"
+      },
+      {
+        "line": 200,
+        "text": "  /** For \"approaching_limit\": which ceiling is closest — drives UI copy + extend default. */"
+      },
+      {
+        "line": 219,
+        "text": "  kind: \"turn_end\";"
+      },
+      {
+        "line": 308,
+        "text": " * execution updates and turn_complete. New runs use authoritative turn_diff"
+      },
+      {
+        "line": 355,
+        "text": "   * cleared on `turn_complete`."
+      },
+      {
+        "line": 393,
+        "text": "   * Monotonic counter incremented on each turn_complete. ToolCard /"
+      },
+      {
+        "line": 400,
+        "text": "   * The session's active persistent goal (CC /goal). Set on `goal_set`,"
+      },
+      {
+        "line": 401,
+        "text": "   * round/progress updated by `goal_progress`, cleared on `goal_cleared` or"
+      },
+      {
+        "line": 402,
+        "text": "   * `goal_progress(met)`. Null when no goal is active. Drives the TopBar"
+      },
+      {
+        "line": 424,
+        "text": "  streamingAssistantId: null,"
+      },
+      {
+        "line": 534,
+        "text": "    ? Math.max(0, endedAt - startedAt)"
+      },
+      {
+        "line": 535,
+        "text": "    : undefined;"
+      },
+      {
+        "line": 536,
+        "text": "}"
+      },
+      {
+        "line": 537,
+        "text": ""
+      },
+      {
+        "line": 538,
+        "text": "function withTurnTiming("
+      },
+      {
+        "line": 539,
+        "text": "  messages: Message[],"
+      },
+      {
+        "line": 540,
+        "text": "  event: Extract<"
+      },
+      {
+        "line": 541,
+        "text": "    StreamEvent,"
+      },
+      {
+        "line": 542,
+        "text": "    { type: \"session_started\" | \"stream_request_start\" | \"turn_complete\" }"
+      },
+      {
+        "line": 543,
+        "text": "  >,"
+      },
+      {
+        "line": 544,
+        "text": "  timestamp: number | undefined,"
+      },
+      {
+        "line": 545,
+        "text": "): Message[] {"
+      },
+      {
+        "line": 546,
+        "text": "  // Keep the same boundaries as the process fold: a steer (including legacy"
+      },
+      {
+        "line": 547,
+        "text": "  // id-less steers) cannot take timing away from an unfinished run. A wakeup"
+      },
+      {
+        "line": 548,
+        "text": "  // after a terminal run opens a new segment."
+      },
+      {
+        "line": 549,
+        "text": "  let index = -1;"
+      },
+      {
+        "line": 550,
+        "text": "  let legacyAssistantDone = false;"
+      },
+      {
+        "line": 551,
+        "text": "  let runningTool = false;"
+      },
+      {
+        "line": 552,
+        "text": "  let ended = false;"
+      },
+      {
+        "line": 553,
+        "text": "  for (let i = 0; i < messages.length; i++) {"
+      },
+      {
+        "line": 554,
+        "text": "    const message = messages[i]!;"
+      },
+      {
+        "line": 555,
+        "text": "    if (message.kind === \"user\" && !message.pending && !message.steerId) {"
+      },
+      {
+        "line": 556,
+        "text": "      const anchor = messages[index];"
+      },
+      {
+        "line": 557,
+        "text": "      const timing = anchor?.kind === \"user\" ? anchor.turnTiming : undefined;"
+      },
+      {
+        "line": 558,
+        "text": "      const completed ="
+      },
+      {
+        "line": 559,
+        "text": "        ended ||"
+      },
+      {
+        "line": 560,
+        "text": "        (timing"
+      },
+      {
+        "line": 561,
+        "text": "          ? timing.completed === true || timing.completedAt !== undefined"
+      },
+      {
+        "line": 562,
+        "text": "          : legacyAssistantDone && !runningTool);"
+      },
+      {
+        "line": 563,
+        "text": "      const injected = message.injected === true || isSystemReminderText(message.text);"
+      },
+      {
+        "line": 564,
+        "text": "      if (!injected || index < 0 || completed) {"
+      },
+      {
+        "line": 565,
+        "text": "        index = i;"
+      },
+      {
+        "line": 566,
+        "text": "        legacyAssistantDone = false;"
+      },
+      {
+        "line": 567,
+        "text": "        runningTool = false;"
+      },
+      {
+        "line": 568,
+        "text": "        ended = false;"
+      },
+      {
+        "line": 569,
+        "text": "      }"
+      },
+      {
+        "line": 570,
+        "text": "    } else if (message.kind === \"assistant\") legacyAssistantDone = message.done;"
+      },
+      {
+        "line": 571,
+        "text": "    else if ("
+      },
+      {
+        "line": 572,
+        "text": "      message.kind === \"tool\" &&"
+      },
+      {
+        "line": 573,
+        "text": "      (message.status === \"running\" || message.status === \"queued\")"
+      },
+      {
+        "line": 574,
+        "text": "    )"
+      },
+      {
+        "line": 575,
+        "text": "      runningTool = true;"
+      },
+      {
+        "line": 576,
+        "text": "    else if (message.kind === \"turn_end\") ended = true;"
+      },
+      {
+        "line": 577,
+        "text": "  }"
+      },
+      {
+        "line": 578,
+        "text": "  const user = messages[index];"
+      },
+      {
+        "line": 579,
+        "text": "  if (!user || user.kind !== \"user\") return messages;"
+      },
+      {
+        "line": 580,
+        "text": "  const previous = user.turnTiming;"
+      },
+      {
+        "line": 581,
+        "text": "  let timing: NonNullable<UserMessage[\"turnTiming\"]>;"
+      },
+      {
+        "line": 582,
+        "text": "  if (event.type === \"session_started\") {"
+      },
+      {
+        "line": 583,
+        "text": "    timing = { startedAt: validTimestamp(event.startedAt) ?? validTimestamp(timestamp) };"
+      },
+      {
+        "line": 584,
+        "text": "  } else if (event.type === \"stream_request_start\") {"
+      },
+      {
+        "line": 585,
+        "text": "    if (previous) return messages;"
+      },
+      {
+        "line": 586,
+        "text": "    timing = { startedAt: validTimestamp(user.createdAt) ?? validTimestamp(timestamp) };"
+      },
+      {
+        "line": 587,
+        "text": "  } else {"
+      },
+      {
+        "line": 588,
+        "text": "    const startedAt ="
+      },
+      {
+        "line": 589,
+        "text": "      validTimestamp(event.startedAt) ??"
+      },
+      {
+        "line": 590,
+        "text": "      validTimestamp(previous?.startedAt) ??"
+      },
+      {
+        "line": 591,
+        "text": "      validTimestamp(user.createdAt);"
+      },
+      {
+        "line": 592,
+        "text": "    const completedAt ="
+      },
+      {
+        "line": 593,
+        "text": "      validTimestamp(event.completedAt) ??"
+      },
+      {
+        "line": 594,
+        "text": "      validTimestamp(previous?.completedAt) ??"
+      },
+      {
+        "line": 595,
+        "text": "      validTimestamp(timestamp);"
+      },
+      {
+        "line": 596,
+        "text": "    timing = {"
+      },
+      {
+        "line": 597,
+        "text": "      startedAt,"
+      },
+      {
+        "line": 598,
+        "text": "      completedAt,"
+      },
+      {
+        "line": 599,
+        "text": "      durationMs:"
+      },
+      {
+        "line": 600,
+        "text": "        validTime(event.durationMs) ??"
+      },
+      {
+        "line": 601,
+        "text": "        previous?.durationMs ??"
+      },
+      {
+        "line": 602,
+        "text": "        (startedAt !== undefined && completedAt !== undefined"
+      },
+      {
+        "line": 603,
+        "text": "          ? Math.max(0, completedAt - startedAt)"
+      },
+      {
+        "line": 604,
+        "text": "          : undefined),"
+      },
+      {
+        "line": 605,
+        "text": "      completed: true,"
+      },
+      {
+        "line": 606,
+        "text": "      completedCleanly: event.reason === \"completed\","
+      },
+      {
+        "line": 607,
+        "text": "    };"
+      },
+      {
+        "line": 608,
+        "text": "  }"
+      },
+      {
+        "line": 609,
+        "text": "  const next = messages.slice();"
+      },
+      {
+        "line": 610,
+        "text": "  next[index] = {"
+      },
+      {
+        "line": 1080,
+        "text": "      : applyStreamEventToTurn(scoped, event, now);"
+      },
+      {
+        "line": 1081,
+        "text": "  if (event.type === \"usage_update\" && (previous?.completed || previous?.stopped)) {"
+      },
+      {
+        "line": 1082,
+        "text": "    next = { ...next, messages: withTurnUsage(next.messages, next) };"
+      },
+      {
+        "line": 1083,
+        "text": "  }"
+      },
+      {
+        "line": 1084,
+        "text": "  const projection: StreamRunProjection = {"
+      },
+      {
+        "line": 1085,
+        "text": "    runId: event.runId ?? previous?.runId,"
+      },
+      {
+        "line": 1086,
+        "text": "    clientMessageId: event.clientMessageId ?? previous?.clientMessageId,"
+      },
+      {
+        "line": 1087,
+        "text": "    userMessageId: ownerId,"
+      },
+      {
+        "line": 1088,
+        "text": "    streamingAssistantId:"
+      },
+      {
+        "line": 1089,
+        "text": "      previous?.stopped && event.type !== \"turn_complete\""
+      },
+      {
+        "line": 1090,
+        "text": "        ? previous.streamingAssistantId"
+      },
+      {
+        "line": 1091,
+        "text": "        : next.streamingAssistantId,"
+      },
+      {
+        "line": 1092,
+        "text": "    streamingThinkingId: next.streamingThinkingId,"
+      },
+      {
+        "line": 1093,
+        "text": "    promptTokens: next.promptTokens,"
+      },
+      {
+        "line": 1094,
+        "text": "    singleTurnPromptTokens: next.singleTurnPromptTokens,"
+      },
+      {
+        "line": 1095,
+        "text": "    singleTurnCacheReadTokens: next.singleTurnCacheReadTokens,"
+      },
+      {
+        "line": 1096,
+        "text": "    singleTurnCacheCreationTokens: next.singleTurnCacheCreationTokens,"
+      },
+      {
+        "line": 1097,
+        "text": "    completed: previous?.completed || event.type === \"turn_complete\","
+      },
+      {
+        "line": 1098,
+        "text": "    stopped: previous?.stopped,"
+      },
+      {
+        "line": 1099,
+        "text": "  };"
+      },
+      {
+        "line": 1100,
+        "text": "  const presentIds = new Set(state.messages.map((message) => message.id));"
+      },
+      {
+        "line": 1101,
+        "text": "  const streamRuns = {"
+      },
+      {
+        "line": 1102,
+        "text": "    ...Object.fromEntries("
+      },
+      {
+        "line": 1103,
+        "text": "      Object.entries(runs).filter(([, run]) => presentIds.has(run.userMessageId)),"
+      },
+      {
+        "line": 1104,
+        "text": "    ),"
+      },
+      {
+        "line": 1105,
+        "text": "    [key]: projection,"
+      },
+      {
+        "line": 1106,
+        "text": "  };"
+      },
+      {
+        "line": 1107,
+        "text": "  if (!historical) return { ...next, streamRuns, activeStreamRunKey: key };"
+      },
+      {
+        "line": 1108,
+        "text": "  // Late output is folded into its original turn, before a newer user bubble."
+      },
+      {
+        "line": 1109,
+        "text": "  // Never adopt the old run's streaming pointers, usage gauge or completion epoch."
+      },
+      {
+        "line": 1110,
+        "text": "  const messages = ["
+      },
+      {
+        "line": 1111,
+        "text": "    ...state.messages.slice(0, start),"
+      },
+      {
+        "line": 1112,
+        "text": "    ...next.messages,"
+      },
+      {
+        "line": 1235,
+        "text": "      // Sub-agent request starts carry agentId via the engine wrapper and do"
+      },
+      {
+        "line": 1236,
+        "text": "      // not open a main assistant slot. Top-level starts have no agentId and"
+      },
+      {
+        "line": 1237,
+        "text": "      // must not be routed based on the activeAgents table, which can contain"
+      },
+      {
+        "line": 1238,
+        "text": "      // stale/orphan cleanup state during replay and background handoffs."
+      },
+      {
+        "line": 1239,
+        "text": "      if (event.agentId) {"
+      },
+      {
+        "line": 1240,
+        "text": "        const index = state.agentMessageIndex[event.agentId];"
+      },
+      {
+        "line": 1241,
+        "text": "        const agent = index === undefined ? undefined : state.messages[index];"
+      },
+      {
+        "line": 1242,
+        "text": "        if (agent?.kind !== \"agent\" || agent.done) return state;"
+      },
+      {
+        "line": 1243,
+        "text": "        if (event.messageId === agent.streamingTextRequest?.messageId) return state;"
+      },
+      {
+        "line": 1244,
+        "text": "        // Legacy starts without an id still leave displayed text untouched,"
+      },
+      {
+        "line": 1245,
+        "text": "        // but cannot let an older request claim later uncorrelated deltas."
+      },
+      {
+        "line": 1246,
+        "text": "        const messages = [...state.messages];"
+      },
+      {
+        "line": 1247,
+        "text": "        messages[index!] = {"
+      },
+      {
+        "line": 1248,
+        "text": "          ...agent,"
+      },
+      {
+        "line": 1249,
+        "text": "          streamingTextRequest: event.messageId"
+      },
+      {
+        "line": 1250,
+        "text": "            ? {"
+      },
+      {
+        "line": 1251,
+        "text": "                messageId: event.messageId,"
+      },
+      {
+        "line": 1252,
+        "text": "                startOffset: (agent.text?.length ?? 0) + agent.textBuffer.length,"
+      },
+      {
+        "line": 1253,
+        "text": "              }"
+      },
+      {
+        "line": 1254,
+        "text": "            : undefined,"
+      },
+      {
+        "line": 1255,
+        "text": "        };"
+      },
+      {
+        "line": 1256,
+        "text": "        return { ...state, messages };"
+      },
+      {
+        "line": 1257,
+        "text": "      }"
+      },
+      {
+        "line": 1258,
+        "text": "      const id = event.messageId ?? freshId(\"assistant\");"
+      },
+      {
+        "line": 1259,
+        "text": "      const startedAt = now();"
+      },
+      {
+        "line": 1260,
+        "text": "      const previousId = state.streamingAssistantId;"
+      },
+      {
+        "line": 1261,
+        "text": "      const messages = previousId"
+      },
+      {
+        "line": 1262,
+        "text": "        ? state.messages.map((m) =>"
+      },
+      {
+        "line": 1263,
+        "text": "            m.kind === \"assistant\" && m.id === previousId && !m.done"
+      },
+      {
+        "line": 1264,
+        "text": "              ? { ...m, done: true, doneAt: m.doneAt ?? startedAt }"
+      },
+      {
+        "line": 1265,
+        "text": "              : m,"
+      },
+      {
+        "line": 1266,
+        "text": "          )"
+      },
+      {
+        "line": 1267,
+        "text": "        : state.messages;"
+      },
+      {
+        "line": 1268,
+        "text": "      return {"
+      },
+      {
+        "line": 1269,
+        "text": "        ...state,"
+      },
+      {
+        "line": 1270,
+        "text": "        messages: ["
+      },
+      {
+        "line": 1271,
+        "text": "          ...withTurnTiming(messages, event, startedAt),"
+      },
+      {
+        "line": 1272,
+        "text": "          { kind: \"assistant\", id, text: \"\", done: false, createdAt: startedAt },"
+      },
+      {
+        "line": 1273,
+        "text": "        ],"
+      },
+      {
+        "line": 1274,
+        "text": "        streamingAssistantId: id,"
+      },
+      {
+        "line": 1275,
+        "text": "        streamingThinkingId: null,"
+      },
+      {
+        "line": 1276,
+        "text": "      };"
+      },
+      {
+        "line": 1277,
+        "text": "    }"
+      },
+      {
+        "line": 1278,
+        "text": ""
+      },
+      {
+        "line": 1330,
+        "text": "      // turn_complete / agent_end. This is the hot path that froze the"
+      },
+      {
+        "line": 1350,
+        "text": "      // AssistantMessage here. Native Engine streams still open their next"
+      },
+      {
+        "line": 1351,
+        "text": "      // segment explicitly with stream_request_start, so both paths converge."
+      },
+      {
+        "line": 1352,
+        "text": "      if (!streamingAssistant || streamingAssistant.done) {"
+      },
+      {
+        "line": 1353,
+        "text": "        const id = freshId(\"assistant\");"
+      },
+      {
+        "line": 1354,
+        "text": "        return {"
+      },
+      {
+        "line": 1355,
+        "text": "          ...state,"
+      },
+      {
+        "line": 1356,
+        "text": "          messages: ["
+      },
+      {
+        "line": 1357,
+        "text": "            ...state.messages,"
+      },
+      {
+        "line": 1358,
+        "text": "            { kind: \"assistant\", id, text: event.text, done: false, createdAt: now() },"
+      },
+      {
+        "line": 1359,
+        "text": "          ],"
+      },
+      {
+        "line": 1360,
+        "text": "          streamingAssistantId: id,"
+      },
+      {
+        "line": 1361,
+        "text": "        };"
+      },
+      {
+        "line": 1362,
+        "text": "      }"
+      },
+      {
+        "line": 1363,
+        "text": "      return {"
+      },
+      {
+        "line": 1364,
+        "text": "        ...state,"
+      },
+      {
+        "line": 1365,
+        "text": "        messages: state.messages.map((m) =>"
+      },
+      {
+        "line": 1366,
+        "text": "          m.kind === \"assistant\" && m.id === state.streamingAssistantId"
+      },
+      {
+        "line": 1367,
+        "text": "            ? { ...m, text: m.text + event.text }"
+      },
+      {
+        "line": 1368,
+        "text": "            : m,"
+      },
+      {
+        "line": 1369,
+        "text": "        ),"
+      },
+      {
+        "line": 1370,
+        "text": "      };"
+      },
+      {
+        "line": 1371,
+        "text": "    }"
+      },
+      {
+        "line": 1372,
+        "text": ""
+      },
+      {
+        "line": 1373,
+        "text": "    case \"thinking_delta\": {"
+      },
+      {
+        "line": 1374,
+        "text": "      // Subagent thinking is dropped — same as TUI. No user value in the"
+      },
+      {
+        "line": 1384,
+        "text": "            { kind: \"thinking\", id, text: event.text, done: false, agentId: event.agentId },"
+      },
+      {
+        "line": 1452,
+        "text": "              : [{ ...message, done: true, doneAt: message.doneAt ?? startedAt }];"
+      },
+      {
+        "line": 1603,
+        "text": "          done: true,"
+      },
+      {
+        "line": 1616,
+        "text": "              done: true,"
+      },
+      {
+        "line": 1674,
+        "text": "            done: false,"
+      },
+      {
+        "line": 1691,
+        "text": "      // \"转后台 · 运行中\" and turn_complete's done-sweep skips it. No-op if the"
+      },
+      {
+        "line": 1738,
+        "text": "              done: true,"
+      },
+      {
+        "line": 1774,
+        "text": "    case \"goal_progress\": {"
+      },
+      {
+        "line": 1775,
+        "text": "      if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event)) {"
+      },
+      {
+        "line": 1776,
+        "text": "        return state;"
+      },
+      {
+        "line": 1777,
+        "text": "      }"
+      },
+      {
+        "line": 1778,
+        "text": "      const msg: GoalProgressMessage = {"
+      },
+      {
+        "line": 1779,
+        "text": "        kind: \"goal_progress\","
+      },
+      {
+        "line": 1780,
+        "text": "        id: freshId(\"goal\"),"
+      },
+      {
+        "line": 1781,
+        "text": "        goalId: event.goalId,"
+      },
+      {
+        "line": 1782,
+        "text": "        status: event.status,"
+      },
+      {
+        "line": 1783,
+        "text": "        round: event.round,"
+      },
+      {
+        "line": 1784,
+        "text": "        gaps: event.gaps,"
+      },
+      {
+        "line": 1785,
+        "text": "        turnsRemaining: event.turnsRemaining,"
+      },
+      {
+        "line": 1786,
+        "text": "        stopBlocksRemaining: event.stopBlocksRemaining,"
+      },
+      {
+        "line": 1787,
+        "text": "        nearest: event.nearest,"
+      },
+      {
+        "line": 1788,
+        "text": "      };"
+      },
+      {
+        "line": 1789,
+        "text": "      // The \"approaching_limit\" marker carries the \"再续\" button. Only prune it"
+      },
+      {
+        "line": 1790,
+        "text": "      // when the moment has TRULY passed:"
+      },
+      {
+        "line": 1791,
+        "text": "      //  - met/exhausted → the limit dimension settled / the run stopped."
+      },
+      {
+        "line": 1792,
+        "text": "      //  - a NEW approaching_limit → never stack two (re-announced after extend)."
+      },
+      {
+        "line": 1793,
+        "text": "      // A \"not_met\" event means the goal is still advancing and may still be"
+      },
+      {
+        "line": 1794,
+        "text": "      // nearing the cap, so the button must stay (fixes B2: previously not_met"
+      },
+      {
+        "line": 1795,
+        "text": "      // pruned the button within the same turn it appeared)."
+      },
+      {
+        "line": 1796,
+        "text": "      const dropApproaching ="
+      },
+      {
+        "line": 1797,
+        "text": "        event.status === \"met\" ||"
+      },
+      {
+        "line": 1798,
+        "text": "        event.status === \"exhausted\" ||"
+      },
+      {
+        "line": 1799,
+        "text": "        event.status === \"approaching_limit\";"
+      },
+      {
+        "line": 1800,
+        "text": "      const base = dropApproaching"
+      },
+      {
+        "line": 1801,
+        "text": "        ? state.messages.filter("
+      },
+      {
+        "line": 1802,
+        "text": "            (m) => !(m.kind === \"goal_progress\" && m.status === \"approaching_limit\"),"
+      },
+      {
+        "line": 1803,
+        "text": "          )"
+      },
+      {
+        "line": 1804,
+        "text": "        : state.messages;"
+      },
+      {
+        "line": 1805,
+        "text": "      // Track the active goal's round; clear it when the goal settles"
+      },
+      {
+        "line": 1806,
+        "text": "      // (met = achieved, exhausted = gave up). not_met/approaching_limit keep"
+      },
+      {
+        "line": 1807,
+        "text": "      // it active and bump the round so the popover shows \"第 N 轮\"."
+      },
+      {
+        "line": 1808,
+        "text": "      const activeGoal ="
+      },
+      {
+        "line": 1809,
+        "text": "        event.status === \"met\" || event.status === \"exhausted\""
+      },
+      {
+        "line": 1810,
+        "text": "          ? null"
+      },
+      {
+        "line": 1811,
+        "text": "          : state.activeGoal"
+      },
+      {
+        "line": 1812,
+        "text": "            ? {"
+      },
+      {
+        "line": 1813,
+        "text": "                ...state.activeGoal,"
+      },
+      {
+        "line": 1814,
+        "text": "                round: event.round,"
+      },
+      {
+        "line": 1815,
+        "text": "                revision: event.revision ?? state.activeGoal.revision,"
+      },
+      {
+        "line": 1816,
+        "text": "              }"
+      },
+      {
+        "line": 1817,
+        "text": "            : state.activeGoal;"
+      },
+      {
+        "line": 1818,
+        "text": "      return { ...state, messages: [...base, msg], activeGoal };"
+      },
+      {
+        "line": 1821,
+        "text": "    case \"goal_set\": {"
+      },
+      {
+        "line": 1822,
+        "text": "      // A send established or replaced the session's persistent goal."
+      },
+      {
+        "line": 1823,
+        "text": "      if ("
+      },
+      {
+        "line": 1824,
+        "text": "        state.activeGoal &&"
+      },
+      {
+        "line": 1825,
+        "text": "        state.activeGoal.goalId === event.goalId &&"
+      },
+      {
+        "line": 1826,
+        "text": "        isStaleGoalEvent(state.activeGoal, event)"
+      },
+      {
+        "line": 1827,
+        "text": "      ) {"
+      },
+      {
+        "line": 1828,
+        "text": "        return state;"
+      },
+      {
+        "line": 1829,
+        "text": "      }"
+      },
+      {
+        "line": 1830,
+        "text": "      return {"
+      },
+      {
+        "line": 1831,
+        "text": "        ...state,"
+      },
+      {
+        "line": 1832,
+        "text": "        activeGoal: {"
+      },
+      {
+        "line": 1833,
+        "text": "          objective: event.objective,"
+      },
+      {
+        "line": 1834,
+        "text": "          goalId: event.goalId,"
+      },
+      {
+        "line": 1835,
+        "text": "          revision: event.revision,"
+      },
+      {
+        "line": 1836,
+        "text": "          round: 0,"
+      },
+      {
+        "line": 1837,
+        "text": "          paused: event.paused ?? false,"
+      },
+      {
+        "line": 1838,
+        "text": "        },"
+      },
+      {
+        "line": 1839,
+        "text": "      };"
+      },
+      {
+        "line": 1840,
+        "text": "    }"
+      },
+      {
+        "line": 1841,
+        "text": ""
+      },
+      {
+        "line": 1842,
+        "text": "    case \"goal_updated\": {"
+      },
+      {
+        "line": 1843,
+        "text": "      // An edit or pause/resume can be the first Goal event observed after a"
+      },
+      {
+        "line": 1844,
+        "text": "      // reconnect, so establish the projection when goal_set was not replayed."
+      },
+      {
+        "line": 1845,
+        "text": "      // A concrete mismatched id is stale and must not overwrite a replacement"
+      },
+      {
+        "line": 1846,
+        "text": "      // goal; an absent id remains compatible with older servers."
+      },
+      {
+        "line": 1847,
+        "text": "      if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event, true)) {"
+      },
+      {
+        "line": 1848,
+        "text": "        return state;"
+      },
+      {
+        "line": 1849,
+        "text": "      }"
+      },
+      {
+        "line": 1850,
+        "text": "      return {"
+      },
+      {
+        "line": 1851,
+        "text": "        ...state,"
+      },
+      {
+        "line": 1852,
+        "text": "        activeGoal: {"
+      },
+      {
+        "line": 1853,
+        "text": "          objective: event.objective,"
+      },
+      {
+        "line": 1854,
+        "text": "          goalId: event.goalId ?? state.activeGoal?.goalId,"
+      },
+      {
+        "line": 1855,
+        "text": "          revision: event.revision ?? state.activeGoal?.revision,"
+      },
+      {
+        "line": 1856,
+        "text": "          round: state.activeGoal?.round ?? 0,"
+      },
+      {
+        "line": 1857,
+        "text": "          paused: event.paused,"
+      },
+      {
+        "line": 1858,
+        "text": "        },"
+      },
+      {
+        "line": 1859,
+        "text": "      };"
+      },
+      {
+        "line": 1860,
+        "text": "    }"
+      },
+      {
+        "line": 1861,
+        "text": ""
+      },
+      {
+        "line": 1862,
+        "text": "    case \"goal_cleared\": {"
+      },
+      {
+        "line": 1863,
+        "text": "      if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event)) {"
+      },
+      {
+        "line": 1864,
+        "text": "        return state;"
+      },
+      {
+        "line": 1865,
+        "text": "      }"
+      },
+      {
+        "line": 1866,
+        "text": "      return { ...state, activeGoal: null };"
+      },
+      {
+        "line": 1867,
+        "text": "    }"
+      },
+      {
+        "line": 1997,
+        "text": "    case \"turn_complete\": {"
+      },
+      {
+        "line": 2002,
+        "text": "      //    still running — a leftover done:false agent is an orphan whose"
+      },
+      {
+        "line": 2034,
+        "text": "            done: true,"
+      },
+      {
+        "line": 2050,
+        "text": "        if (m.kind === \"assistant\" && !m.done) {"
+      },
+      {
+        "line": 2051,
+        "text": "          return { ...m, done: true, doneAt: m.doneAt ?? turnDoneAt };"
+      },
+      {
+        "line": 2054,
+        "text": "          return { ...m, done: true };"
+      },
+      {
+        "line": 2068,
+        "text": "      //    files_changed from this logical task first so multiple turn_complete"
+      },
+      {
+        "line": 2102,
+        "text": "      //    prior summary for this task first so repeated turn_complete events"
+      },
+      {
+        "line": 2116,
+        "text": "        streamingAssistantId: null,"
+      },
+      {
+        "line": 2133,
+        "text": "      // paths may not). The \"你停止了本轮\" turn_end line already covers a stop,"
+      },
+      {
+        "line": 2142,
+        "text": "        streamingAssistantId: null,"
+      },
+      {
+        "line": 2150,
+        "text": "      // done:false}, and once heartbeats stop (it's finished) the card wrongly"
+      },
+      {
+        "line": 2167,
+        "text": "              done: true,"
+      },
+      {
+        "line": 2381,
+        "text": " * message is already a turn_end, replace it rather than stacking duplicates"
+      },
+      {
+        "line": 2392,
+        "text": "    kind: \"turn_end\","
+      },
+      {
+        "line": 2411,
+        "text": "      type: \"turn_complete\","
+      },
+      {
+        "line": 2418,
+        "text": "    if (message.kind === \"assistant\" && !message.done) {"
+      },
+      {
+        "line": 2419,
+        "text": "      return { ...message, done: true, doneAt: message.doneAt ?? stoppedAt };"
+      },
+      {
+        "line": 2421,
+        "text": "    if (message.kind === \"thinking\" && !message.done) return { ...message, done: true };"
+      },
+      {
+        "line": 2431,
+        "text": "        done: true,"
+      },
+      {
+        "line": 2446,
+        "text": "  if (last && last.kind === \"turn_end\") {"
+      },
+      {
+        "line": 2455,
+        "text": "  // turn_complete/error would otherwise race to clear it after the new turn"
+      },
+      {
+        "line": 2474,
+        "text": "    streamingAssistantId: null,"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+    "sha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 6,
+        "text": " * message (user / assistant / agent / system / context_boundary /"
+      },
+      {
+        "line": 7,
+        "text": " * task_list / ask_user / files_changed). Thinking messages emitted"
+      },
+      {
+        "line": 13,
+        "text": " * Level 2 — a whole user-turn that contains any tool collapses into ONE"
+      },
+      {
+        "line": 14,
+        "text": " * \"已处理 X m Y s ⌄\" process card spanning from just after the user"
+      },
+      {
+        "line": 16,
+        "text": " * narration ride INSIDE the card (default-open); only the user bubble"
+      },
+      {
+        "line": 18,
+        "text": " * recent live turn extends to the turn end so the user watches progress."
+      },
+      {
+        "line": 45,
+        "text": " * tools. Assistant text is intentionally excluded: it is user-visible"
+      },
+      {
+        "line": 63,
+        "text": " * group so the user sees a live \"已处理 5s ⌄\" header tick up; the"
+      },
+      {
+        "line": 81,
+        "text": "  /** True when this turn was interrupted (a trailing turn_end reason=\"stopped\""
+      },
+      {
+        "line": 166,
+        "text": "  // Navigation and visual evidence are useful user-facing milestones. Routine"
+      },
+      {
+        "line": 199,
+        "text": " * \"Transparent\" message kinds — non-user-visible model output that can"
+      },
+      {
+        "line": 215,
+        "text": " *   2. Run level-2 folding: wrap each tool-bearing user-turn into one"
+      },
+      {
+        "line": 219,
+        "text": "export function buildStreamItems("
+      },
+      {
+        "line": 220,
+        "text": "  messages: Message[],"
+      },
+      {
+        "line": 221,
+        "text": "  opts: { liveTurnActive?: boolean } = {},"
+      },
+      {
+        "line": 222,
+        "text": "): StreamItem[] {"
+      },
+      {
+        "line": 223,
+        "text": "  const filtered = messages.filter((m) => !isHiddenTool(m));"
+      },
+      {
+        "line": 224,
+        "text": "  const level1 = foldAdjacentTools(filtered);"
+      },
+      {
+        "line": 225,
+        "text": "  return foldTurnProcess(level1, opts.liveTurnActive ?? false);"
+      },
+      {
+        "line": 226,
+        "text": "}"
+      },
+      {
+        "line": 230,
+        "text": " * group is structurally identical to the previous render's. buildStreamItems"
+      },
+      {
+        "line": 317,
+        "text": " * sees anything else (user, system, agent, etc.) it answers \"no,"
+      },
+      {
+        "line": 318,
+        "text": " * flush the run\". This keeps the heuristic O(n) overall: each message"
+      },
+      {
+        "line": 352,
+        "text": "  const flushRun = (): void => {"
+      },
+      {
+        "line": 384,
+        "text": "    flushRun();"
+      },
+      {
+        "line": 387,
+        "text": "  flushRun();"
+      },
+      {
+        "line": 394,
+        "text": " * Walk items from each `user` message forward. A turn that contains at"
+      },
+      {
+        "line": 396,
+        "text": " * item right after the `user` message through the LAST tool of the turn."
+      },
+      {
+        "line": 402,
+        "text": " *   - the `user` bubble itself (it anchors the turn);"
+      },
+      {
+        "line": 404,
+        "text": " *     to the user, which should remain plainly visible)."
+      },
+      {
+        "line": 411,
+        "text": " * trailing text stays inside the card until the next user message lands."
+      },
+      {
+        "line": 413,
+        "text": "function foldTurnProcess(items: Array<Message | ToolGroup>, liveTurnActive: boolean): StreamItem[] {"
+      },
+      {
+        "line": 414,
+        "text": "  // Turn boundaries are USER messages — but NOT engine-injected ones. A steer /"
+      },
+      {
+        "line": 415,
+        "text": "  // goal wakeup / cron续接 splices in a user message with injected:true; that is"
+      },
+      {
+        "line": 416,
+        "text": "  // a continuation of the CURRENT turn, not a new user-initiated turn. Counting"
+      },
+      {
+        "line": 417,
+        "text": "  // it as a boundary would move `lastTurnStart` forward and demote the prior"
+      },
+      {
+        "line": 418,
+        "text": "  // (still-streaming) turn from isLive→false, folding it mid-flight. So injected"
+      },
+      {
+        "line": 419,
+        "text": "  // user messages are NOT boundaries: they fall inside the preceding turn's slice"
+      },
+      {
+        "line": 420,
+        "text": "  // and render inline as a user bubble there."
+      },
+      {
+        "line": 421,
+        "text": "  // A non-injected user message is always a turn boundary. An injected one"
+      },
+      {
+        "line": 422,
+        "text": "  // (steer / goal wakeup / cron续接) usually is NOT — it continues the current"
+      },
+      {
+        "line": 423,
+        "text": "  // turn (see the comment above). EXCEPTION: a wakeup that arrives AFTER the"
+      },
+      {
+        "line": 424,
+        "text": "  // prior turn already finished (a done assistant sits before it) is really the"
+      },
+      {
+        "line": 425,
+        "text": "  // start of NEW work; treating it as a boundary keeps that new streaming work"
+      },
+      {
+        "line": 426,
+        "text": "  // live instead of folding it into the completed prior turn's card."
+      },
+      {
+        "line": 427,
+        "text": "  const userIdxs: number[] = [];"
+      },
+      {
+        "line": 428,
+        "text": "  for (let i = 0; i < items.length; i++) {"
+      },
+      {
+        "line": 429,
+        "text": "    const it = items[i]!;"
+      },
+      {
+        "line": 430,
+        "text": "    if (it.kind !== \"user\") continue;"
+      },
+      {
+        "line": 431,
+        "text": "    const injected = it.injected === true || isSystemReminderText(it.text);"
+      },
+      {
+        "line": 432,
+        "text": "    if (!injected) {"
+      },
+      {
+        "line": 433,
+        "text": "      userIdxs.push(i);"
+      },
+      {
+        "line": 434,
+        "text": "      continue;"
+      },
+      {
+        "line": 435,
+        "text": "    }"
+      },
+      {
+        "line": 436,
+        "text": "    if (it.steerId) continue;"
+      },
+      {
+        "line": 437,
+        "text": "    // Injected: only a boundary if a done assistant precedes it since the last"
+      },
+      {
+        "line": 438,
+        "text": "    // real boundary (i.e. the prior turn completed before this wakeup)."
+      },
+      {
+        "line": 439,
+        "text": "    const priorStart = userIdxs.length ? userIdxs[userIdxs.length - 1]! : -1;"
+      },
+      {
+        "line": 440,
+        "text": "    if (turnHasCompleted(items, priorStart, i)) userIdxs.push(i);"
+      },
+      {
+        "line": 441,
+        "text": "  }"
+      },
+      {
+        "line": 442,
+        "text": "  if (userIdxs.length === 0) return items.slice();"
+      },
+      {
+        "line": 443,
+        "text": ""
+      },
+      {
+        "line": 444,
+        "text": "  // Only the most recent turn can be \"live\", AND only while the"
+      },
+      {
+        "line": 445,
+        "text": "  // engine is actively streaming. Once turn_complete fires the"
+      },
+      {
+        "line": 446,
+        "text": "  // ticker should stop and the card becomes a normal closed group."
+      },
+      {
+        "line": 447,
+        "text": "  const lastTurnStart = userIdxs[userIdxs.length - 1]!;"
+      },
+      {
+        "line": 448,
+        "text": ""
+      },
+      {
+        "line": 449,
+        "text": "  const out: StreamItem[] = [];"
+      },
+      {
+        "line": 450,
+        "text": "  // Keep durable session-preface items before the first user turn. Summary"
+      },
+      {
+        "line": 451,
+        "text": "  // forks begin with a context_transfer card; dropping this prefix made the"
+      },
+      {
+        "line": 452,
+        "text": "  // forwarded context disappear as soon as the user sent the first message."
+      },
+      {
+        "line": 453,
+        "text": "  for (let i = 0; i < userIdxs[0]!; i++) out.push(items[i]!);"
+      },
+      {
+        "line": 454,
+        "text": "  for (let k = 0; k < userIdxs.length; k++) {"
+      },
+      {
+        "line": 455,
+        "text": "    const start = userIdxs[k]!;"
+      },
+      {
+        "line": 456,
+        "text": "    const end = k + 1 < userIdxs.length ? userIdxs[k + 1]! : items.length;"
+      },
+      {
+        "line": 457,
+        "text": "    const isLive ="
+      },
+      {
+        "line": 458,
+        "text": "      liveTurnActive && start === lastTurnStart && !turnHasCompleted(items, start, end);"
+      },
+      {
+        "line": 459,
+        "text": "    // A turn the user interrupted carries a trailing turn_end reason=\"stopped\""
+      },
+      {
+        "line": 460,
+        "text": "    // (a flat sibling after the last tool). Such a turn must render flat, not"
+      },
+      {
+        "line": 461,
+        "text": "    // behind the elapsed-time fold header."
+      },
+      {
+        "line": 462,
+        "text": "    const stopped = turnWasStopped(items, start, end);"
+      },
+      {
+        "line": 463,
+        "text": ""
+      },
+      {
+        "line": 464,
+        "text": "    // user bubble stays outside the card."
+      },
+      {
+        "line": 465,
+        "text": "    out.push(items[start]!);"
+      },
+      {
+        "line": 466,
+        "text": ""
+      },
+      {
+        "line": 467,
+        "text": "    // Find the last tool-bearing item within (start, end). Bookkeeping-only"
+      },
+      {
+        "line": 468,
+        "text": "    // toolish items (e.g. a trailing UpdateAutomationMemory) are skipped so"
+      },
+      {
+        "line": 469,
+        "text": "    // they don't anchor the card's tail and swallow the report text that"
+      },
+      {
+        "line": 470,
+        "text": "    // precedes them — that text then stays inline after the real last tool."
+      },
+      {
+        "line": 471,
+        "text": "    let lastTool = -1;"
+      },
+      {
+        "line": 472,
+        "text": "    for (let i = start + 1; i < end; i++) {"
+      },
+      {
+        "line": 473,
+        "text": "      if (isToolish(items[i]!) && !isBookkeepingToolish(items[i]!)) lastTool = i;"
+      },
+      {
+        "line": 474,
+        "text": "    }"
+      },
+      {
+        "line": 475,
+        "text": ""
+      },
+      {
+        "line": 476,
+        "text": "    if (lastTool < 0) {"
+      },
+      {
+        "line": 477,
+        "text": "      // No tools in this turn → render everything inline (live turn"
+      },
+      {
+        "line": 478,
+        "text": "      // before any tool fires, or a purely conversational turn)."
+      },
+      {
+        "line": 479,
+        "text": "      for (let i = start + 1; i < end; i++) out.push(items[i]!);"
+      },
+      {
+        "line": 480,
+        "text": "      continue;"
+      },
+      {
+        "line": 481,
+        "text": "    }"
+      },
+      {
+        "line": 482,
+        "text": ""
+      },
+      {
+        "line": 483,
+        "text": "    // Card spans [start+1 .. lastTool] for closed turns. For the live"
+      },
+      {
+        "line": 484,
+        "text": "    // turn we extend to `end` so in-flight trailing chatter stays inside"
+      },
+      {
+        "line": 485,
+        "text": "    // the card until the next user message solidifies the summary."
+      },
+      {
+        "line": 486,
+        "text": "    const innerEnd = isLive ? end : lastTool + 1;"
+      },
+      {
+        "line": 487,
+        "text": "    const innerItems = items.slice(start + 1, innerEnd);"
+      },
+      {
+        "line": 488,
+        "text": "    const turnItems = items.slice(start, end);"
+      },
+      {
+        "line": 489,
+        "text": "    const user = items[start]!;"
+      },
+      {
+        "line": 490,
+        "text": "    const timing = user.kind === \"user\" ? user.turnTiming : undefined;"
+      },
+      {
+        "line": 491,
+        "text": "    // Closed-turn duration is the WHOLE turn's wall time, not just the tool"
+      },
+      {
+        "line": 492,
+        "text": "    // span: a turn whose tools each return instantly (a 0ms Skill, fast local"
+      },
+      {
+        "line": 493,
+        "text": "    // reads) still spent real time in the model. Prefer the user→assistant"
+      },
+      {
+        "line": 494,
+        "text": "    // stamp span over the slice [start..end) (which includes the trailing"
+      },
+      {
+        "line": 495,
+        "text": "    // summary that lives outside innerItems), and never report less than the"
+      },
+      {
+        "line": 496,
+        "text": "    // actual tool span. Replayed transcripts carry no stamps → tool span only."
+      },
+      {
+        "line": 497,
+        "text": "    out.push({"
+      },
+      {
+        "line": 498,
+        "text": "      kind: \"turn_process_group\","
+      },
+      {
+        "line": 499,
+        "text": "      id: `process-${anchorId(innerItems[0]!)}`,"
+      },
+      {
+        "line": 500,
+        "text": "      durationMs: isLive ? 0 : (validStamp(timing?.durationMs) ?? turnSpanMs(turnItems)),"
+      },
+      {
+        "line": 501,
+        "text": "      startedAt: validToolStamp(timing?.startedAt) ?? turnStartMs(turnItems),"
+      },
+      {
+        "line": 502,
+        "text": "      firstToolStartedAt: firstToolStart(innerItems),"
+      },
+      {
+        "line": 503,
+        "text": "      isLive,"
+      },
+      {
+        "line": 504,
+        "text": "      completedCleanly:"
+      },
+      {
+        "line": 505,
+        "text": "        timing?.completedCleanly ?? !turnItems.some((item) => item.kind === \"turn_end\"),"
+      },
+      {
+        "line": 506,
+        "text": "      toolCount: countToolsRecursive(innerItems),"
+      },
+      {
+        "line": 507,
+        "text": "      stopped,"
+      },
+      {
+        "line": 508,
+        "text": "      items: innerItems,"
+      },
+      {
+        "line": 509,
+        "text": "    });"
+      },
+      {
+        "line": 510,
+        "text": ""
+      },
+      {
+        "line": 511,
+        "text": "    // Closed turn: the final summary after the last tool stays inline."
+      },
+      {
+        "line": 512,
+        "text": "    if (!isLive) {"
+      },
+      {
+        "line": 513,
+        "text": "      for (let i = lastTool + 1; i < end; i++) out.push(items[i]!);"
+      },
+      {
+        "line": 514,
+        "text": "    }"
+      },
+      {
+        "line": 515,
+        "text": "  }"
+      },
+      {
+        "line": 516,
+        "text": "  return out;"
+      },
+      {
+        "line": 517,
+        "text": "}"
+      },
+      {
+        "line": 519,
+        "text": "function latestAssistantIsDone("
+      },
+      {
+        "line": 520,
+        "text": "  items: Array<Message | ToolGroup>,"
+      },
+      {
+        "line": 521,
+        "text": "  start: number,"
+      },
+      {
+        "line": 522,
+        "text": "  end: number,"
+      },
+      {
+        "line": 523,
+        "text": "): boolean {"
+      },
+      {
+        "line": 524,
+        "text": "  for (let i = end - 1; i > start; i--) {"
+      },
+      {
+        "line": 525,
+        "text": "    const item = items[i]!;"
+      },
+      {
+        "line": 526,
+        "text": "    if (item.kind === \"assistant\") return item.done;"
+      },
+      {
+        "line": 527,
+        "text": "  }"
+      },
+      {
+        "line": 528,
+        "text": "  return false;"
+      },
+      {
+        "line": 529,
+        "text": "}"
+      },
+      {
+        "line": 530,
+        "text": ""
+      },
+      {
+        "line": 531,
+        "text": "function turnHasCompleted(items: Array<Message | ToolGroup>, start: number, end: number): boolean {"
+      },
+      {
+        "line": 532,
+        "text": "  for (let i = start + 1; i < end; i++) {"
+      },
+      {
+        "line": 533,
+        "text": "    if (items[i]!.kind === \"turn_end\") return true;"
+      },
+      {
+        "line": 534,
+        "text": "  }"
+      },
+      {
+        "line": 535,
+        "text": "  const anchor = items[start];"
+      },
+      {
+        "line": 536,
+        "text": "  if (anchor?.kind === \"user\" && anchor.turnTiming) {"
+      },
+      {
+        "line": 537,
+        "text": "    return anchor.turnTiming.completed === true || anchor.turnTiming.completedAt !== undefined;"
+      },
+      {
+        "line": 538,
+        "text": "  }"
+      },
+      {
+        "line": 539,
+        "text": "  // Compatibility for old snapshots without lifecycle metadata. A completed"
+      },
+      {
+        "line": 540,
+        "text": "  // commentary segment before an in-flight tool cannot finish the whole run."
+      },
+      {
+        "line": 541,
+        "text": "  let runningTool = false;"
+      },
+      {
+        "line": 542,
+        "text": "  forEachTool(items.slice(start + 1, end), (tool) => {"
+      },
+      {
+        "line": 543,
+        "text": "    if (tool.status === \"running\" || tool.status === \"queued\") runningTool = true;"
+      },
+      {
+        "line": 544,
+        "text": "  });"
+      },
+      {
+        "line": 545,
+        "text": "  return !runningTool && latestAssistantIsDone(items, start, end);"
+      },
+      {
+        "line": 546,
+        "text": "}"
+      },
+      {
+        "line": 547,
+        "text": ""
+      },
+      {
+        "line": 548,
+        "text": "/** True when the turn slice [start+1, end) contains a turn_end reason=\"stopped\""
+      },
+      {
+        "line": 549,
+        "text": " *  — i.e. the user interrupted this turn. */"
+      },
+      {
+        "line": 553,
+        "text": "    if (item.kind === \"turn_end\" && item.reason === \"stopped\") return true;"
+      },
+      {
+        "line": 609,
+        "text": "    if (it.kind === \"user\") {"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+    "sha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import React, { memo, useState, useEffect, useId } from \"react\";"
+      },
+      {
+        "line": 2,
+        "text": "import { ChevronRight, ChevronDown, LoaderCircle } from \"lucide-react\";"
+      },
+      {
+        "line": 3,
+        "text": "import { ToolCard } from \"../tool-cards\";"
+      },
+      {
+        "line": 4,
+        "text": "import { ToolGroupCard } from \"./ToolGroupCard\";"
+      },
+      {
+        "line": 5,
+        "text": "import { ThinkingMessageView } from \"./ThinkingMessageView\";"
+      },
+      {
+        "line": 6,
+        "text": "import { AgentMessageView } from \"./AgentMessageView\";"
+      },
+      {
+        "line": 7,
+        "text": "import { ContextBoundaryView } from \"./ContextBoundaryView\";"
+      },
+      {
+        "line": 8,
+        "text": "import { GoalProgressView } from \"./GoalProgressView\";"
+      },
+      {
+        "line": 9,
+        "text": "import { StreamingMarkdown } from \"./StreamingMarkdown\";"
+      },
+      {
+        "line": 10,
+        "text": "import { processGroupDuration, type RenderedTurnProcessGroup } from \"./streamGroups\";"
+      },
+      {
+        "line": 11,
+        "text": "import { AgentGroupCard } from \"./AgentGroupCard\";"
+      },
+      {
+        "line": 12,
+        "text": "import { isSystemReminderText } from \"../contextSelection\";"
+      },
+      {
+        "line": 13,
+        "text": "import { SystemReminderTask } from \"./SystemReminderTask\";"
+      },
+      {
+        "line": 14,
+        "text": "import type { MarkdownRootStatus } from \"../Markdown\";"
+      },
+      {
+        "line": 15,
+        "text": "import type { UserMessage } from \"../types\";"
+      },
+      {
+        "line": 16,
+        "text": "import { useT } from \"../i18n/I18nProvider\";"
+      },
+      {
+        "line": 17,
+        "text": "import { useAnchoredLayoutChange } from \"../chat/TranscriptScrollContext\";"
+      },
+      {
+        "line": 18,
+        "text": ""
+      },
+      {
+        "line": 19,
+        "text": "interface Props {"
+      },
+      {
+        "line": 20,
+        "text": "  /** Rendered shape: inner items may include an AgentGroup (foldAgentGroups). */"
+      },
+      {
+        "line": 21,
+        "text": "  group: RenderedTurnProcessGroup;"
+      },
+      {
+        "line": 22,
+        "text": "  turnEpoch?: number;"
+      },
+      {
+        "line": 23,
+        "text": "  /** Session cwd, forwarded to member tool cards for attachment resolution. */"
+      },
+      {
+        "line": 24,
+        "text": "  cwd?: string | null;"
+      },
+      {
+        "line": 25,
+        "text": "  sessionId?: string | null;"
+      },
+      {
+        "line": 26,
+        "text": "  sessionMainRootId?: string | null;"
+      },
+      {
+        "line": 27,
+        "text": "  rootStatus?: MarkdownRootStatus;"
+      },
+      {
+        "line": 28,
+        "text": "}"
+      },
+      {
+        "line": 29,
+        "text": ""
+      },
+      {
+        "line": 30,
+        "text": "/**"
+      },
+      {
+        "line": 31,
+        "text": " * Defense-in-depth against duplicate React keys (#1/#92): the merge/fold"
+      },
+      {
+        "line": 32,
+        "text": " * pipeline is meant to keep ids unique (see mergeTranscripts' id-dedup pass),"
+      },
+      {
+        "line": 33,
+        "text": " * but if a duplicate id ever slips through, mapping with key={m.id} throws"
+      },
+      {
+        "line": 34,
+        "text": " * \"Encountered two children with the same key\" and the card never reconciles —"
+      },
+      {
+        "line": 35,
+        "text": " * it sticks forever (the \"update memory\" card stuck across 5+ hours). Drop any"
+      },
+      {
+        "line": 36,
+        "text": " * later item whose id already appeared so the keys are guaranteed unique."
+      },
+      {
+        "line": 37,
+        "text": " */"
+      },
+      {
+        "line": 38,
+        "text": "function dedupeById<T extends { id: string }>(items: T[]): T[] {"
+      },
+      {
+        "line": 39,
+        "text": "  const seen = new Set<string>();"
+      },
+      {
+        "line": 40,
+        "text": "  return items.filter((it) => {"
+      },
+      {
+        "line": 41,
+        "text": "    if (seen.has(it.id)) return false;"
+      },
+      {
+        "line": 42,
+        "text": "    seen.add(it.id);"
+      },
+      {
+        "line": 43,
+        "text": "    return true;"
+      },
+      {
+        "line": 44,
+        "text": "  });"
+      },
+      {
+        "line": 45,
+        "text": "}"
+      },
+      {
+        "line": 46,
+        "text": ""
+      },
+      {
+        "line": 47,
+        "text": "/**"
+      },
+      {
+        "line": 48,
+        "text": " * A turn's activity disclosure, from just after"
+      },
+      {
+        "line": 49,
+        "text": " * the user message through its last tool call (lead-in + mid-run"
+      },
+      {
+        "line": 50,
+        "text": " * narration ride inside). Consumed user follow-ups separate those activity"
+      },
+      {
+        "line": 51,
+        "text": " * surfaces; the initial user bubble and final summary are rendered by the caller."
+      },
+      {
+        "line": 52,
+        "text": " *"
+      },
+      {
+        "line": 53,
+        "text": " * A newly mounted live turn opens; history starts closed. Completion freezes"
+      },
+      {
+        "line": 54,
+        "text": " * its clock while retaining the current disclosure and reading position."
+      },
+      {
+        "line": 55,
+        "text": " */"
+      },
+      {
+        "line": 56,
+        "text": "function TurnProcessGroupCardImpl({"
+      },
+      {
+        "line": 57,
+        "text": "  group,"
+      },
+      {
+        "line": 58,
+        "text": "  turnEpoch,"
+      },
+      {
+        "line": 59,
+        "text": "  cwd,"
+      },
+      {
+        "line": 60,
+        "text": "  sessionId,"
+      },
+      {
+        "line": 61,
+        "text": "  sessionMainRootId,"
+      },
+      {
+        "line": 62,
+        "text": "  rootStatus,"
+      },
+      {
+        "line": 63,
+        "text": "}: Props) {"
+      },
+      {
+        "line": 64,
+        "text": "  const [open, setOpen] = useState(group.isLive);"
+      },
+      {
+        "line": 173,
+        "text": "      );"
+      },
+      {
+        "line": 174,
+        "text": "    }"
+      },
+      {
+        "line": 175,
+        "text": "    if (m.kind === \"user\") {"
+      },
+      {
+        "line": 176,
+        "text": "      return isSystemReminderText(m.text) ? <SystemReminderTask key={m.id} text={m.text} /> : null;"
+      },
+      {
+        "line": 177,
+        "text": "    }"
+      },
+      {
+        "line": 178,
+        "text": "    if (m.kind === \"thinking\") {"
+      },
+      {
+        "line": 179,
+        "text": "      return <ThinkingMessageView key={m.id} message={m} />;"
+      },
+      {
+        "line": 180,
+        "text": "    }"
+      },
+      {
+        "line": 181,
+        "text": "    if (m.kind === \"agent\") {"
+      },
+      {
+        "line": 182,
+        "text": "      return <AgentMessageView key={m.id} message={m} />;"
+      },
+      {
+        "line": 183,
+        "text": "    }"
+      },
+      {
+        "line": 184,
+        "text": "    if (m.kind === \"agent_group\") {"
+      },
+      {
+        "line": 185,
+        "text": "      return <AgentGroupCard key={m.id} group={m} />;"
+      },
+      {
+        "line": 186,
+        "text": "    }"
+      },
+      {
+        "line": 187,
+        "text": "    if (m.kind === \"context_boundary\") {"
+      },
+      {
+        "line": 188,
+        "text": "      return <ContextBoundaryView key={m.id} message={m} />;"
+      },
+      {
+        "line": 189,
+        "text": "    }"
+      },
+      {
+        "line": 190,
+        "text": "    if (m.kind === \"goal_progress\") {"
+      },
+      {
+        "line": 191,
+        "text": "      return <GoalProgressView key={m.id} message={m} />;"
+      },
+      {
+        "line": 192,
+        "text": "    }"
+      },
+      {
+        "line": 193,
+        "text": "    return null;"
+      },
+      {
+        "line": 194,
+        "text": "  };"
+      },
+      {
+        "line": 195,
+        "text": "  const activityNodes = parts.map((part) =>"
+      },
+      {
+        "line": 196,
+        "text": "    part.kind === \"activity\" && itemsVisible ? part.items.map(renderActivity).filter(Boolean) : [],"
+      },
+      {
+        "line": 197,
+        "text": "  );"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/ChatView.tsx",
+    "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 23,
+        "text": "import { MessageStream, type ContextPackageCreatedHandler } from \"./MessageStream\";"
+      },
+      {
+        "line": 125,
+        "text": "  liveTurnActive?: boolean;"
+      },
+      {
+        "line": 183,
+        "text": "  onExtendGoal?: (opts: {"
+      },
+      {
+        "line": 397,
+        "text": "  liveTurnActive,"
+      },
+      {
+        "line": 419,
+        "text": "  onExtendGoal,"
+      },
+      {
+        "line": 481,
+        "text": "  // MessageStream's gallery zoom."
+      },
+      {
+        "line": 1484,
+        "text": "  // Bumped on each user send so the MessageStream unconditionally snaps to the"
+      },
+      {
+        "line": 1760,
+        "text": "          <span className=\"text-sm\">{t(\"chat.loadingSession\")}</span>"
+      },
+      {
+        "line": 1761,
+        "text": "        </div>"
+      },
+      {
+        "line": 1762,
+        "text": "      ) : ("
+      },
+      {
+        "line": 1763,
+        "text": "        !isNewChat && ("
+      },
+      {
+        "line": 1764,
+        "text": "          <MessageStream"
+      },
+      {
+        "line": 1765,
+        "text": "            messages={messages}"
+      },
+      {
+        "line": 1766,
+        "text": "            leading={"
+      },
+      {
+        "line": 1767,
+        "text": "              (historyHasMore || historyFailed) && onLoadEarlierHistory ? ("
+      },
+      {
+        "line": 1768,
+        "text": "                <div"
+      },
+      {
+        "line": 1789,
+        "text": "                          ? \"chat.loadingEarlierHistory\""
+      },
+      {
+        "line": 1790,
+        "text": "                          : historyFailed"
+      },
+      {
+        "line": 1791,
+        "text": "                            ? \"chat.retryHistory\""
+      },
+      {
+        "line": 1792,
+        "text": "                            : \"chat.loadEarlierHistory\","
+      },
+      {
+        "line": 1793,
+        "text": "                    )}"
+      },
+      {
+        "line": 1794,
+        "text": "                  </Button>"
+      },
+      {
+        "line": 1795,
+        "text": "                </div>"
+      },
+      {
+        "line": 1796,
+        "text": "              ) : undefined"
+      },
+      {
+        "line": 1797,
+        "text": "            }"
+      },
+      {
+        "line": 1798,
+        "text": "            turnEpoch={turnEpoch}"
+      },
+      {
+        "line": 1799,
+        "text": "            localRuntime={localRuntime}"
+      },
+      {
+        "line": 1800,
+        "text": "            engineSessionId={engineSessionId}"
+      },
+      {
+        "line": 1801,
+        "text": "            liveTurnActive={liveTurnActive}"
+      },
+      {
+        "line": 1802,
+        "text": "            onAskUserAnswer={onAskUserAnswer}"
+      },
+      {
+        "line": 1803,
+        "text": "            onExtendGoal={onExtendGoal}"
+      },
+      {
+        "line": 1804,
+        "text": "            trailing={"
+      },
+      {
+        "line": 1805,
+        "text": "              <>"
+      },
+      {
+        "line": 1806,
+        "text": "                {inlineApproval}"
+      },
+      {
+        "line": 1807,
+        "text": "                {chatLinkResources}"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/engine/turn-loop.ts",
+    "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 315,
+        "text": "   * Whether an approaching_limit marker was already emitted for the current"
+      },
+      {
+        "line": 449,
+        "text": "      recordGoalUsage(this.goalTracker, (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0));"
+      },
+      {
+        "line": 450,
+        "text": "    }"
+      },
+      {
+        "line": 451,
+        "text": "    return goalBudgetTerminationReason(this.goalTracker, Date.now());"
+      },
+      {
+        "line": 452,
+        "text": "  }"
+      },
+      {
+        "line": 453,
+        "text": ""
+      },
+      {
+        "line": 454,
+        "text": "  /**"
+      },
+      {
+        "line": 455,
+        "text": "   * Goal mode only: if the run is nearing EITHER stop ceiling (maxTurns or"
+      },
+      {
+        "line": 456,
+        "text": "   * maxStopBlocks) and we haven't announced it yet, emit one approaching_limit"
+      },
+      {
+        "line": 457,
+        "text": "   * marker so the UI can offer a \"再续\" button while the run is still live."
+      },
+      {
+        "line": 458,
+        "text": "   * Watches both limits because a re-blocked goal hits the stop-block cap long"
+      },
+      {
+        "line": 459,
+        "text": "   * before maxTurns. Idempotent within an approach window via approachAnnounced."
+      },
+      {
+        "line": 460,
+        "text": "   */"
+      },
+      {
+        "line": 461,
+        "text": "  private maybeAnnounceApproachingLimit(): void {"
+      },
+      {
+        "line": 462,
+        "text": "    if (!this.config.goal || this.approachAnnounced) return;"
+      },
+      {
+        "line": 463,
+        "text": "    const cap = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;"
+      },
+      {
+        "line": 464,
+        "text": "    const prox = limitProximity(this.turnCount, this.config.maxTurns, this.stopBlockCount, cap);"
+      },
+      {
+        "line": 465,
+        "text": "    if (!prox.approaching) return;"
+      },
+      {
+        "line": 466,
+        "text": "    this.approachAnnounced = true;"
+      },
+      {
+        "line": 467,
+        "text": "    this.config.onStream?.({"
+      },
+      {
+        "line": 468,
+        "text": "      type: \"goal_progress\","
+      },
+      {
+        "line": 469,
+        "text": "      goalId: this.config.goal.goalId,"
+      },
+      {
+        "line": 470,
+        "text": "      revision: this.config.goal.revision,"
+      },
+      {
+        "line": 471,
+        "text": "      status: \"approaching_limit\","
+      },
+      {
+        "line": 472,
+        "text": "      round: this.stopBlockCount,"
+      },
+      {
+        "line": 473,
+        "text": "      turnsRemaining: prox.turnsRemaining,"
+      },
+      {
+        "line": 474,
+        "text": "      stopBlocksRemaining: prox.stopBlocksRemaining,"
+      },
+      {
+        "line": 475,
+        "text": "      nearest: prox.nearest,"
+      },
+      {
+        "line": 476,
+        "text": "    });"
+      },
+      {
+        "line": 477,
+        "text": "  }"
+      },
+      {
+        "line": 478,
+        "text": ""
+      },
+      {
+        "line": 479,
+        "text": "  constructor("
+      },
+      {
+        "line": 480,
+        "text": "    private readonly deps: TurnLoopDeps,"
+      },
+      {
+        "line": 1019,
+        "text": "          this.appendContextReminder(messages, turnStartInjection, true);"
+      },
+      {
+        "line": 1020,
+        "text": "        }"
+      },
+      {
+        "line": 1021,
+        "text": "        if (this.goalControlStopRequested) {"
+      },
+      {
+        "line": 1022,
+        "text": "          messages = this.redactConsumedSensitiveToolResults(messages);"
+      },
+      {
+        "line": 1023,
+        "text": "          return { text: finalText, reason: \"completed\", messages };"
+      },
+      {
+        "line": 1024,
+        "text": "        }"
+      },
+      {
+        "line": 1025,
+        "text": ""
+      },
+      {
+        "line": 1026,
+        "text": "        // Approaching max turns: inject a warning so the model can wrap up."
+      },
+      {
+        "line": 1027,
+        "text": "        // (Model-facing only — the user-facing \"再续\" marker is handled by"
+      },
+      {
+        "line": 1028,
+        "text": "        // maybeAnnounceApproachingLimit below, which also watches the stop-block"
+      },
+      {
+        "line": 1029,
+        "text": "        // cap, the limit a re-blocked goal actually hits first.)"
+      },
+      {
+        "line": 1030,
+        "text": "        const turnsRemaining = this.config.maxTurns - this.turnCount;"
+      },
+      {
+        "line": 1031,
+        "text": "        if (turnsRemaining === 2) {"
+      },
+      {
+        "line": 1032,
+        "text": "          this.appendContextReminder(messages, {"
+      },
+      {
+        "line": 1033,
+        "text": "            role: \"user\","
+      },
+      {
+        "line": 1034,
+        "text": "            content:"
+      },
+      {
+        "line": 1035,
+        "text": "              \"<system-reminder>Warning: you have only 2 turns remaining before the turn limit is reached. \" +"
+      },
+      {
+        "line": 1036,
+        "text": "              \"Start wrapping up your work and prepare a summary of what you've accomplished and what remains to be done.</system-reminder>\","
+      },
+      {
+        "line": 1037,
+        "text": "          });"
+      },
+      {
+        "line": 1038,
+        "text": "        } else if (turnsRemaining === 1) {"
+      },
+      {
+        "line": 1039,
+        "text": "          this.appendContextReminder(messages, {"
+      },
+      {
+        "line": 1040,
+        "text": "            role: \"user\","
+      },
+      {
+        "line": 1041,
+        "text": "            content:"
+      },
+      {
+        "line": 1042,
+        "text": "              \"<system-reminder>Warning: you have only 1 turn remaining before the turn limit is reached. \" +"
+      },
+      {
+        "line": 1043,
+        "text": "              \"Wrap up your work now — your next turn will be your last.</system-reminder>\","
+      },
+      {
+        "line": 1044,
+        "text": "          });"
+      },
+      {
+        "line": 1045,
+        "text": "        } else if (turnsRemaining === 0) {"
+      },
+      {
+        "line": 1046,
+        "text": "          this.appendContextReminder(messages, {"
+      },
+      {
+        "line": 1047,
+        "text": "            role: \"user\","
+      },
+      {
+        "line": 1048,
+        "text": "            content:"
+      },
+      {
+        "line": 1049,
+        "text": "              \"<system-reminder>This is your LAST turn. You MUST respond with a final text summary now. \" +"
+      },
+      {
+        "line": 1050,
+        "text": "              \"Do NOT call any tools. Summarize what you have accomplished and list any remaining work.</system-reminder>\","
+      },
+      {
+        "line": 1051,
+        "text": "          });"
+      },
+      {
+        "line": 1052,
+        "text": "        }"
+      },
+      {
+        "line": 1053,
+        "text": ""
+      },
+      {
+        "line": 1054,
+        "text": "        // Goal mode: announce once when nearing EITHER stop ceiling (turns or"
+      },
+      {
+        "line": 1055,
+        "text": "        // stop-blocks) so the UI can offer a \"再续\" button while still live."
+      },
+      {
+        "line": 1056,
+        "text": "        this.maybeAnnounceApproachingLimit();"
+      },
+      {
+        "line": 1057,
+        "text": ""
+      },
+      {
+        "line": 1058,
+        "text": "        // Keep recent pixel evidence within the bounded history window before"
+      },
+      {
+        "line": 1059,
+        "text": "        // context management. Fresh input always gets its first model request."
+      },
+      {
+        "line": 1060,
+        "text": "        const hasPendingSensitiveToolResults = this.sensitiveToolResultRedactions.size > 0;"
+      },
+      {
+        "line": 1454,
+        "text": "          if (turnsRemaining === 0) {"
+      },
+      {
+        "line": 1546,
+        "text": "            | undefined;"
+      },
+      {
+        "line": 1547,
+        "text": "          if (stopHook.continueSession && this.stopBlockCount < maxStopBlocks) {"
+      },
+      {
+        "line": 1548,
+        "text": "            this.stopBlockCount++;"
+      },
+      {
+        "line": 1549,
+        "text": "            // Goal visibility: one not_met marker per re-prompt. round counts"
+      },
+      {
+        "line": 1550,
+        "text": "            // up with stopBlockCount so the UI can show \"第 N 轮\"."
+      },
+      {
+        "line": 1551,
+        "text": "            this.config.onStream?.({"
+      },
+      {
+        "line": 1552,
+        "text": "              type: \"goal_progress\","
+      },
+      {
+        "line": 1553,
+        "text": "              goalId: this.config.goal?.goalId,"
+      },
+      {
+        "line": 1554,
+        "text": "              revision: this.config.goal?.revision,"
+      },
+      {
+        "line": 1555,
+        "text": "              status: \"not_met\","
+      },
+      {
+        "line": 1556,
+        "text": "              round: this.stopBlockCount,"
+      },
+      {
+        "line": 1557,
+        "text": "              gaps: goalVerdict?.gaps || undefined,"
+      },
+      {
+        "line": 1558,
+        "text": "            });"
+      },
+      {
+        "line": 1559,
+        "text": "            // The streak just grew — we may now be nearing the stop-block cap."
+      },
+      {
+        "line": 1560,
+        "text": "            // Announce here (before the next turn's top check) so the \"再续\""
+      },
+      {
+        "line": 1561,
+        "text": "            // button shows up against the limit that's actually about to bite."
+      },
+      {
+        "line": 1562,
+        "text": "            this.maybeAnnounceApproachingLimit();"
+      },
+      {
+        "line": 1563,
+        "text": "            const injection = wrapHookMessages(stopHook.messages);"
+      },
+      {
+        "line": 1564,
+        "text": "            if (injection) {"
+      },
+      {
+        "line": 1565,
+        "text": "              this.appendContextReminder(messages, injection, true);"
+      },
+      {
+        "line": 1566,
+        "text": "            } else {"
+      },
+      {
+        "line": 1567,
+        "text": "              // No guidance from the handler — inject a generic nudge so the"
+      },
+      {
+        "line": 1568,
+        "text": "              // model knows it must keep going rather than re-emitting the"
+      },
+      {
+        "line": 1569,
+        "text": "              // same final answer."
+      },
+      {
+        "line": 1570,
+        "text": "              this.appendContextReminder(messages, {"
+      },
+      {
+        "line": 1571,
+        "text": "                role: \"user\","
+      },
+      {
+        "line": 1572,
+        "text": "                content:"
+      },
+      {
+        "line": 1573,
+        "text": "                  \"<system-reminder>The goal is not yet complete. Continue working toward it.</system-reminder>\","
+      },
+      {
+        "line": 1574,
+        "text": "              });"
+      },
+      {
+        "line": 1575,
+        "text": "            }"
+      },
+      {
+        "line": 1606,
+        "text": "              type: \"goal_progress\","
+      },
+      {
+        "line": 1825,
+        "text": "              type: \"goal_progress\","
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+    "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+    "captureTiming": "After actual source displays91b17f/9368ec/8b1133/03fe83/7eb489/82d5f2/53dc7b/c77232/783624/c3eb47/ad675b; not first-read/pre-read pin. Only already displayed lines.",
+    "displayedLines": [
+      {
+        "line": 14,
+        "text": " * a `turn_process_group.items` (the turn card spans to its last tool, absorbing"
+      },
+      {
+        "line": 15,
+        "text": " * agents that ran before it). So foldAgentGroups recurses into"
+      },
+      {
+        "line": 16,
+        "text": " * turn_process_group.items. tool_group never contains agents → no recursion."
+      },
+      {
+        "line": 36,
+        "text": " * turn_process_group's inner items may now contain AgentGroups"
+      },
+      {
+        "line": 40,
+        "text": "  | Exclude<StreamItem, { kind: \"turn_process_group\" }>"
+      },
+      {
+        "line": 85,
+        "text": "/** Is this item a sub-agent card? */"
+      },
+      {
+        "line": 86,
+        "text": "function isAgent(item: { kind: string }): item is AgentMessage {"
+      },
+      {
+        "line": 87,
+        "text": "  return item.kind === \"agent\";"
+      },
+      {
+        "line": 88,
+        "text": "}"
+      },
+      {
+        "line": 89,
+        "text": ""
+      },
+      {
+        "line": 90,
+        "text": "/**"
+      },
+      {
+        "line": 91,
+        "text": " * Wrap runs of ≥2 adjacent `agent` items into AgentGroups; recurse into"
+      },
+      {
+        "line": 92,
+        "text": " * turn_process_group.items so agents nested in a turn card group too. Anything"
+      },
+      {
+        "line": 93,
+        "text": " * else passes through untouched. A lone agent stays a plain `agent` item."
+      },
+      {
+        "line": 94,
+        "text": " *"
+      },
+      {
+        "line": 95,
+        "text": " * Accepts both the canonical StreamItem[] (top-level) and the narrower inner"
+      },
+      {
+        "line": 96,
+        "text": " * item arrays of a turn group; returns RenderedStreamItem[] (turn groups may"
+      },
+      {
+        "line": 97,
+        "text": " * now carry AgentGroups in their items)."
+      },
+      {
+        "line": 98,
+        "text": " */"
+      },
+      {
+        "line": 99,
+        "text": "export function foldAgentGroups("
+      },
+      {
+        "line": 100,
+        "text": "  items: ReadonlyArray<StreamItem | RenderedStreamItem>,"
+      },
+      {
+        "line": 101,
+        "text": "): RenderedStreamItem[] {"
+      },
+      {
+        "line": 102,
+        "text": "  const out: RenderedStreamItem[] = [];"
+      },
+      {
+        "line": 103,
+        "text": "  let run: AgentMessage[] = [];"
+      },
+      {
+        "line": 104,
+        "text": ""
+      },
+      {
+        "line": 105,
+        "text": "  const flush = (): void => {"
+      },
+      {
+        "line": 106,
+        "text": "    if (run.length >= 2) {"
+      },
+      {
+        "line": 107,
+        "text": "      out.push({ kind: \"agent_group\", id: `ag-${run[0]!.id}`, agents: run });"
+      },
+      {
+        "line": 108,
+        "text": "    } else {"
+      },
+      {
+        "line": 109,
+        "text": "      // 0 or 1 — emit as-is (a single agent is not summarized)."
+      },
+      {
+        "line": 110,
+        "text": "      for (const a of run) out.push(a);"
+      },
+      {
+        "line": 111,
+        "text": "    }"
+      },
+      {
+        "line": 112,
+        "text": "    run = [];"
+      },
+      {
+        "line": 113,
+        "text": "  };"
+      },
+      {
+        "line": 114,
+        "text": ""
+      },
+      {
+        "line": 115,
+        "text": "  for (const item of items) {"
+      },
+      {
+        "line": 116,
+        "text": "    if (isAgent(item)) {"
+      },
+      {
+        "line": 117,
+        "text": "      run.push(item);"
+      },
+      {
+        "line": 118,
+        "text": "      continue;"
+      },
+      {
+        "line": 119,
+        "text": "    }"
+      },
+      {
+        "line": 120,
+        "text": "    flush();"
+      },
+      {
+        "line": 121,
+        "text": "    if (item.kind === \"turn_process_group\") {"
+      },
+      {
+        "line": 122,
+        "text": "      // Recurse: the turn card may hold its own agent fan-out."
+      },
+      {
+        "line": 123,
+        "text": "      out.push({"
+      },
+      {
+        "line": 124,
+        "text": "        ...item,"
+      },
+      {
+        "line": 125,
+        "text": "        items: foldAgentGroups(item.items) as Array<Message | ToolGroup | AgentGroup>,"
+      },
+      {
+        "line": 126,
+        "text": "      });"
+      },
+      {
+        "line": 127,
+        "text": "    } else {"
+      },
+      {
+        "line": 128,
+        "text": "      out.push(item as RenderedStreamItem);"
+      },
+      {
+        "line": 129,
+        "text": "    }"
+      },
+      {
+        "line": 130,
+        "text": "  }"
+      },
+      {
+        "line": 131,
+        "text": "  flush();"
+      },
+      {
+        "line": 132,
+        "text": "  return out;"
+      }
+    ]
+  }
+]

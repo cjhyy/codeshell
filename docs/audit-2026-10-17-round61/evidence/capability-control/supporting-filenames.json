@@ -1,0 +1,29 @@
+[
+  {
+    "command": [
+      "rg",
+      "--files",
+      "packages/core/src/capability-control"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/core/src/capability-control/overlay.ts\npackages/core/src/capability-control/project.test.ts\npackages/core/src/capability-control/service.ts\npackages/core/src/capability-control/index.ts\npackages/core/src/capability-control/profile-overlay.test.ts\npackages/core/src/capability-control/types.ts\npackages/core/src/capability-control/disabled-lists.test.ts\npackages/core/src/capability-control/disabled-lists.ts\npackages/core/src/capability-control/service.test.ts\npackages/core/src/capability-control/overlay.test.ts\npackages/core/src/capability-control/project.ts\n",
+    "stderr": "",
+    "scope": "Filename-only supporting declaration/test/caller inventory, not source body or line navigation."
+  },
+  {
+    "command": [
+      "rg",
+      "-l",
+      "capability-control/",
+      "packages",
+      "-g",
+      "*.ts",
+      "-g",
+      "*.tsx"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/core/src/cli/agent-server-tcp.ts\npackages/core/src/cli/agent-server-stdio.ts\npackages/core/src/protocol/server.ts\npackages/core/src/index.internal.ts\npackages/core/src/index.ts\npackages/core/src/engine/engine.ts\npackages/core/src/links/operation-reader.ts\npackages/core/src/tool-system/builtin/install-capability.ts\npackages/core/src/links/github-issue-batch.ts\npackages/core/src/profile/switch-plan.ts\n",
+    "stderr": "",
+    "scope": "Filename-only supporting declaration/test/caller inventory, not source body or line navigation."
+  }
+]

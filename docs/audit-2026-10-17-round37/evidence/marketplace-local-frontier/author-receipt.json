@@ -1,0 +1,188 @@
+{
+  "createdUTC": "2026-10-17T12:58:52.546818+00:00",
+  "scope": "Future Round37 ordinary marketplace registry-name local admission -> DTO -> uninstall wrong-route static prep. Only this exact temp directory. Includes immutable delegated history-peer artifacts. Self-excludes root author-receipt.json.",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "parentContextSupplied": "Root frozen Round34 abbreviation99e9 (not Git-verified here)",
+  "files": [
+    {
+      "path": "adjacent-pins.json",
+      "bytes": 1623,
+      "sha256": "4763f422751d983f07314e36d1b0b1e45258676d49db1659bf28c486b3229d10"
+    },
+    {
+      "path": "bridge-pins.json",
+      "bytes": 1217,
+      "sha256": "76636eb3710fbe2422a69503f79246acb10393df4442ffaf29a1e6e9abf7f071"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 3611,
+      "sha256": "b27b0472878b590fd4ec7d787869ee60dd83d60c1da7ddd7862f5c14186185ec"
+    },
+    {
+      "path": "finish-checks.json",
+      "bytes": 806839,
+      "sha256": "19ca3626ba16af133e40b3e8b333bae17f39a4b2773590d5a9d74db45eb06a83"
+    },
+    {
+      "path": "history-corrected-contexts.json",
+      "bytes": 256585,
+      "sha256": "6e3a54ed850341dd0fe71bbb80a6894bbc444085eec710e59443ab3f346dff68"
+    },
+    {
+      "path": "history-corrected-initial-pins.json",
+      "bytes": 708024,
+      "sha256": "85f89fedaa4b1bb10564f1daab7021bf6dc21ddc315fe7bb44b3f495f4e303ea"
+    },
+    {
+      "path": "history-corrected-scan.py",
+      "bytes": 5713,
+      "sha256": "9311ed8176058852c2189a3795f5f80d7e07d96a3f5b3a69574989a22a08a0b9"
+    },
+    {
+      "path": "history-corrected-selection.json",
+      "bytes": 12945,
+      "sha256": "880e6ba6dcbf65c3d88394d819c8f5d298eb9464a8af28462180baed648da64f"
+    },
+    {
+      "path": "history-corrected.json",
+      "bytes": 2807,
+      "sha256": "71c8fda1b2eeb6c8cfb649753536eb2c26e14672e8139bfccf90c4db5eb23615"
+    },
+    {
+      "path": "history-peer/author-receipt.json",
+      "bytes": 2218,
+      "sha256": "1a16808467fd91f28dcad362af53e43bf1236a025fa7e9b0ed187ce99c60fa0e"
+    },
+    {
+      "path": "history-peer/contexts.json",
+      "bytes": 120837,
+      "sha256": "9c70ddc181da2a32abda5e9d35b37d2f3700cf92edce2188c8565ed6c8e57d22"
+    },
+    {
+      "path": "history-peer/finish-check.first.stderr.txt",
+      "bytes": 138,
+      "sha256": "3382fe5e2ab5ccd334864f1b32dcc6ef5158277809a1cd440c4b5e29da7c353f"
+    },
+    {
+      "path": "history-peer/finish-checks.json",
+      "bytes": 1141439,
+      "sha256": "9b6dabece36b3eceae66fee8a606fd7b6f302272e4c458d730d6560ce32fa53f"
+    },
+    {
+      "path": "history-peer/history.json",
+      "bytes": 814642,
+      "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d"
+    },
+    {
+      "path": "history-peer/initial-pins.json",
+      "bytes": 816583,
+      "sha256": "e25e32e0ab2662a9a7de52b1b16a81174ddfc7bb7994f3386b1eeff55fef0637"
+    },
+    {
+      "path": "history-peer/inventory.raw.txt",
+      "bytes": 203999,
+      "sha256": "95a5abe5da4489d5dbf1dfe7238f8f958debf1efb66b51fc7e2ee5e573112a26"
+    },
+    {
+      "path": "history-peer/metadata-notes.json",
+      "bytes": 2288,
+      "sha256": "015b2a16f19f26200edf4be756a1b7531fcd35d43b75b25c9fd7e017fed8571e"
+    },
+    {
+      "path": "history-peer/review.md",
+      "bytes": 2662,
+      "sha256": "04d4dee31a4edfe4754e831ad1721f8ec9f892780213702fa05a567156bc8ed0"
+    },
+    {
+      "path": "history-peer/scan-history.py",
+      "bytes": 4835,
+      "sha256": "a364b18be227b175125d47ff258051fc5b7b971cebfebcb382248f17a5958c5b"
+    },
+    {
+      "path": "history-peer/selected-contexts.first.stderr.txt",
+      "bytes": 89,
+      "sha256": "d8be94676158da5a77c6c57dfd3bc1368758ffea8a6d5a1dc5f4e5ba0c11fe0d"
+    },
+    {
+      "path": "history-peer/selected-contexts.json",
+      "bytes": 15167,
+      "sha256": "e73769e4920b0f0f7e6f32076754fe66b8962552182c10ad218fc50b31e718d8"
+    },
+    {
+      "path": "history-peer/supplement.json",
+      "bytes": 153184,
+      "sha256": "fb3c809e67c913c20ff04599c275760d4dc3266934d8ac8bfbf4a588c237e4fa"
+    },
+    {
+      "path": "history-peer/validation.json",
+      "bytes": 498,
+      "sha256": "357bf8e19f7b63da5772a0268907b21a248f41292b193ff7131a9ac467e8fd7e"
+    },
+    {
+      "path": "history.json",
+      "bytes": 5395,
+      "sha256": "8536fc80fbf484978b29d19d6b0fe0e1c2a5e0fef085eb56525fccca09702c6a"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 4345,
+      "sha256": "935d493ea3c81ce2266f5f039874b0ad6507b95a29b5a578992cc37bbcac8325"
+    },
+    {
+      "path": "locator-first.stderr.txt",
+      "bytes": 105,
+      "sha256": "f304d43b628c7606541ff82fd17cc7983ae089534168747f064574f986719e5b"
+    },
+    {
+      "path": "market-list-pin.json",
+      "bytes": 444,
+      "sha256": "7e9e8db8972ba6266fb798350eda96ba0f01221138ec90429f414214541540ca"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 2342,
+      "sha256": "1b795dec5322cab936e789ac356dae95db3fb3f5f97c6d384d783a81cf17d99d"
+    },
+    {
+      "path": "packaging-first.stderr.txt",
+      "bytes": 88,
+      "sha256": "2ced987dad4029cab6df102c7a5a71733968fec1c359f021f083bd28c6bbfd02"
+    },
+    {
+      "path": "proposal.md",
+      "bytes": 4560,
+      "sha256": "7bb614ac0a8b623b976027e287a4dce1487ccf97cc9d2f5b3e72e0ed121c79cf"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 23256,
+      "sha256": "26e0bc26af6c24c52b29f515877e6e69357b73bce2d64e3dd88e1397f81d6d2d"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1307,
+      "sha256": "d69703c382d38a5148010a142efc3735ec2f15c4e28356fc17a76bce7d917620"
+    }
+  ],
+  "artifactCount": 32,
+  "childFrozenFilesIncluded": 14,
+  "reportLocalLinks": 10,
+  "classification": {
+    "formal": 0,
+    "candidate": 1,
+    "related": 0
+  },
+  "proposedCandidateId": "MARKETPLACE-LOCAL-R37-C1",
+  "sourceRows": 24,
+  "semanticSourceRows": 20,
+  "semanticSourceLines": 1238,
+  "productSourceLines": 1199,
+  "testDeclarationLines": 39,
+  "historicalSelectedDocLinesSeparately": 238,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "httpWebRequests": 0,
+  "frozen": true
+}

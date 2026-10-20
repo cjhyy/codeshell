@@ -1,0 +1,296 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/llm/model-pool.ts",
+      "bytes": 13195,
+      "sha256": "a49da3b3018aaaf92e80e488a4e9d338eb9f2b0f107919f9d521156a6c4137d3",
+      "lines": 325,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          325
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          325
+        ]
+      ],
+      "semanticLines": 325,
+      "bodyDisplayedLines": 325,
+      "role": "ordinary source contract static",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    },
+    {
+      "path": "packages/core/src/engine/model-connections-pool.ts",
+      "bytes": 3655,
+      "sha256": "e5ee2a984a6d2f57eac155140873facca04d296d495af55f5f7f4edee52ce467",
+      "lines": 80,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          80
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          80
+        ]
+      ],
+      "semanticLines": 80,
+      "bodyDisplayedLines": 80,
+      "role": "ordinary source contract static",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    },
+    {
+      "path": "packages/core/src/llm/provider-catalog.ts",
+      "bytes": 2314,
+      "sha256": "ec80becdb369165c233e38f60bd242aee86170232d8209b20dd9422a6499c642",
+      "lines": 75,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          75
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          75
+        ]
+      ],
+      "semanticLines": 75,
+      "bodyDisplayedLines": 75,
+      "role": "ordinary source contract static",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.ts",
+      "bytes": 3687,
+      "sha256": "864b45aa4a8e41398d5191a974be7b9fb172137147109b1d2d0b05ae3335da8f",
+      "lines": 74,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "semanticLines": 74,
+      "bodyDisplayedLines": 74,
+      "role": "ordinary source contract static",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    },
+    {
+      "path": "packages/core/src/llm/reasoning-setting.ts",
+      "bytes": 2304,
+      "sha256": "a00d2dee0e430bafb8b89a50a0a71f54cff8a6ab6766221d1dcccad3d551b11f",
+      "lines": 46,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          46
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          46
+        ]
+      ],
+      "semanticLines": 46,
+      "bodyDisplayedLines": 46,
+      "role": "ordinary source contract static",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "lines": 159,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          80,
+          101
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          72,
+          108
+        ]
+      ],
+      "semanticLines": 22,
+      "bodyDisplayedLines": 37,
+      "role": "ordinary source contract static",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lines": 5082,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          904,
+          952
+        ],
+        [
+          1028,
+          1031
+        ],
+        [
+          1040,
+          1056
+        ],
+        [
+          3642,
+          3668
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          904,
+          957
+        ],
+        [
+          1024,
+          1061
+        ],
+        [
+          1426,
+          1447
+        ],
+        [
+          3638,
+          3679
+        ]
+      ],
+      "semanticLines": 97,
+      "bodyDisplayedLines": 156,
+      "role": "ordinary source contract static",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    },
+    {
+      "path": "packages/core/src/llm/model-pool.test.ts",
+      "bytes": 1558,
+      "sha256": "19b494027ea63d1ca55ea489951e984f305f6d65128d537f868c37ee2ea953a7",
+      "lines": 43,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "semanticLines": 43,
+      "bodyDisplayedLines": 43,
+      "role": "existing test declarations only, never executed",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    },
+    {
+      "path": "packages/core/src/engine/model-connections-pool.test.ts",
+      "bytes": 11429,
+      "sha256": "89f6432dbf5a32dccc996d4f5b7344d6e8dcc24b2ea4d6527482faa606e2fa87",
+      "lines": 321,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          160,
+          229
+        ],
+        [
+          297,
+          321
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          160,
+          229
+        ],
+        [
+          297,
+          321
+        ]
+      ],
+      "semanticLines": 95,
+      "bodyDisplayedLines": 95,
+      "role": "existing test declarations only, never executed",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.test.ts",
+      "bytes": 2668,
+      "sha256": "892f5c259e4553d8508220bef233459f81f1d8106567c2e85bc5ee311de59f28",
+      "lines": 65,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          50,
+          65
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          50,
+          65
+        ]
+      ],
+      "semanticLines": 16,
+      "bodyDisplayedLines": 16,
+      "role": "existing test declarations only, never executed",
+      "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "beforeBodyOrLineNavigation": true,
+      "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+    }
+  ],
+  "totals": {
+    "fullFiles": 6,
+    "selectedFiles": 4,
+    "productSemanticLines": 719,
+    "testDeclarationLines": 154,
+    "bodyDisplayedLines": 947
+  },
+  "navigationNote": "Filename-only rg found support/test paths. Subsequent rg-n title/import/call locators were navigation, not additional whole-source semantic coverage; adjacent cold restoration and provider-dispatch prose not promoted.",
+  "rootReportedBaselineOnly": "00c046367769349c1f5413e74c993b2c19ce8337",
+  "productExecution": 0
+}

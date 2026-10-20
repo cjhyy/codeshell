@@ -1,0 +1,21 @@
+{
+  "scope": "static bin/UI import reachability only; 0CLI/native/render operation",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lineCount": 265,
+      "pinUTC": "2026-10-17T14:21:38.592870+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "bytes": 4514,
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "lineCount": 122,
+      "pinUTC": "2026-10-17T14:21:38.593716+00:00",
+      "semanticRead": false
+    }
+  ]
+}

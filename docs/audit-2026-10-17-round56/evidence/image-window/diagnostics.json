@@ -1,0 +1,10 @@
+{
+  "createdAt": "2026-10-17T18:48:49.471675+00:00",
+  "metadataCommandFailures": 0,
+  "metadataOutputTruncations": 0,
+  "productExecutionFailures": 0,
+  "productRetries": 0,
+  "oldFailedDynamicDirectionsRestored": false,
+  "historyContextCap": "Shared target381 hits, first100 only; path/SHA navigation not exact cause semantic exhaustion",
+  "metadataPinTiming": "Three report rg snippets own hashes recorded late; earlier shared inventory rows retained. No initial source pin was backfilled."
+}

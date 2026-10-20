@@ -1,0 +1,11 @@
+{
+  "kind": "metadata-locator-output-truncation",
+  "toolChunkId": "f25360",
+  "commandExitCode": 0,
+  "originalTokenCount": 3456,
+  "maxOutputTokens": 3300,
+  "toolReportedOutputLines": 35,
+  "observation": "First compact shared-history locator display was tool-truncated. Its exact full stdout was not separately captured; do not substitute a later print as raw first stdout. All34 target hits had already been saved in shared-history-projection.json.",
+  "productExecuted": false,
+  "followup": "Read only explicit original canonical MD ranges, not replay all large derived contexts."
+}

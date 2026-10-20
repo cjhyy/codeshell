@@ -1,0 +1,22 @@
+{
+  "prepParentContextBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "frozenUtc": "2026-10-17T11:46:36.098427+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "helperInvocations": 0,
+  "moduleImports": 0,
+  "fixtureRuns": 0,
+  "gitCommands": 0,
+  "networkRequests": 0,
+  "browserOrNativeActions": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataOnly": "Python stdlib filesystem read/hash/JSON/regex and shell source locators/readers were used for audit artifacts. Their successful exit is not product validation. One navigation rg returned no match (exit1) and was corrected to an actual symbol locator; this is not a product failure.",
+  "skippedDirections": [
+    "Historical Discord editReply/import/chunk runtime remains skipped; this prep does not reopen it.",
+    "No product Git producer/query, model/context provider, TUI command, gateway/native/auth/permission/identity/journal/lock experiment.",
+    "No full build, lint, typecheck or suite."
+  ],
+  "sourceReads": "Existing tests inspected as declarations only; full/selected/hash-only coverage in source-manifest.json."
+}

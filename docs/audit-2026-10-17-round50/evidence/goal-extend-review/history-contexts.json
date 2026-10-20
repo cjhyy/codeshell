@@ -1,0 +1,1042 @@
+{
+  "targetPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1553",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2776/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11105/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11105/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11106/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11106/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3096/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3096/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/2835",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3097/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 55443,
+      "context": "                     | TODO.md 文件名/测试样例，不是待办         |\n| [packages/desktop/src/renderer/markdown/remarkPathLinks.ts](../../packages/desktop/src/renderer/markdown/remarkPathLinks.ts)                               | 151                          | TODO.md 文件名/测试样例，不是待办         |\n| [packages/desktop/src/renderer/messages/FilesChangedCard.tsx](../../packages/desktop/src/renderer/messages/FilesChangedCard.tsx)                           | 170                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/GoalProgressView.tsx](../../packages/desktop/src/renderer/messages/GoalProgressView.tsx)                           | 37                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/TurnEndMessageView.tsx](../../packages/desktop/src/renderer/messages/TurnEndMessageView.tsx)                       | 7                            | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/fileChangeAggregator.ts](../../packages/desktop/src/renderer/messages/fileChangeAggregator.ts)                     | 315                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx](../../packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx)                       | 71                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/FilesPanel.tsx](../../packages/desktop/src",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 55510,
+      "context": "desktop/src/renderer/markdown/remarkPathLinks.ts](../../packages/desktop/src/renderer/markdown/remarkPathLinks.ts)                               | 151                          | TODO.md 文件名/测试样例，不是待办         |\n| [packages/desktop/src/renderer/messages/FilesChangedCard.tsx](../../packages/desktop/src/renderer/messages/FilesChangedCard.tsx)                           | 170                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/GoalProgressView.tsx](../../packages/desktop/src/renderer/messages/GoalProgressView.tsx)                           | 37                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/TurnEndMessageView.tsx](../../packages/desktop/src/renderer/messages/TurnEndMessageView.tsx)                       | 7                            | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/fileChangeAggregator.ts](../../packages/desktop/src/renderer/messages/fileChangeAggregator.ts)                     | 315                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx](../../packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx)                       | 71                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/FilesPanel.tsx](../../packages/desktop/src/renderer/panels/FilesPanel.tsx)                                   ",
+      "completeScalar": false
+    }
+  ],
+  "targetSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2776/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11106/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3096/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3096/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3097/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "completeScalar": true
+    }
+  ],
+  "targetFilename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1553",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2776/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11105/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11105/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11106/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/11106/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3096/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3096/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/2835",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3097/path",
+      "kind": "json-value-scalar",
+      "offset": 39,
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 55482,
+      "context": "，不是待办         |\n| [packages/desktop/src/renderer/markdown/remarkPathLinks.ts](../../packages/desktop/src/renderer/markdown/remarkPathLinks.ts)                               | 151                          | TODO.md 文件名/测试样例，不是待办         |\n| [packages/desktop/src/renderer/messages/FilesChangedCard.tsx](../../packages/desktop/src/renderer/messages/FilesChangedCard.tsx)                           | 170                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/GoalProgressView.tsx](../../packages/desktop/src/renderer/messages/GoalProgressView.tsx)                           | 37                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/TurnEndMessageView.tsx](../../packages/desktop/src/renderer/messages/TurnEndMessageView.tsx)                       | 7                            | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/fileChangeAggregator.ts](../../packages/desktop/src/renderer/messages/fileChangeAggregator.ts)                     | 315                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx](../../packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx)                       | 71                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/FilesPanel.tsx](../../packages/desktop/src",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 55549,
+      "context": "hLinks.ts](../../packages/desktop/src/renderer/markdown/remarkPathLinks.ts)                               | 151                          | TODO.md 文件名/测试样例，不是待办         |\n| [packages/desktop/src/renderer/messages/FilesChangedCard.tsx](../../packages/desktop/src/renderer/messages/FilesChangedCard.tsx)                           | 170                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/GoalProgressView.tsx](../../packages/desktop/src/renderer/messages/GoalProgressView.tsx)                           | 37                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/TurnEndMessageView.tsx](../../packages/desktop/src/renderer/messages/TurnEndMessageView.tsx)                       | 7                            | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/fileChangeAggregator.ts](../../packages/desktop/src/renderer/messages/fileChangeAggregator.ts)                     | 315                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx](../../packages/desktop/src/renderer/panels/BackgroundShellPanel.tsx)                       | 71                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/panels/FilesPanel.tsx](../../packages/desktop/src/renderer/panels/FilesPanel.tsx)                                   ",
+      "completeScalar": false
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 38751,
+      "context": "非持久安全边界（P0，对应 P0-02/P0-03）\n\n- 本轮已拒绝“当前活跃 owner”之外的 update/delete/resume，但 owner 仅是进程内 connection route。\n- 断线、idle 或重启后，知道 sessionId 的另一客户端仍可 `GoalGet`、认领、编辑、删除或恢复 Goal；只向 requester 发事件也会让其他镜像过期。\n- 需要持久 capability/owner，并将 GoalGet、控制、read/fork 与事件订阅纳入同一授权边界。\n\n#### GCTRL-O02 重复工具调用仍可长时间空转（P1，对应 P1-01）\n\n- pause/delete 现在能在安全边界停止，但系统不会自动识别“相同工具+参数+结果”的跨 turn 无进展循环。\n- 建议增加 canonical fingerprint 与阈值策略，达阈值后换策略、询问用户或强制停止。\n\n#### GCTRL-O03 terminal CAS 后的非 Goal metadata 仍可被旧 state 覆盖（P1，对应 P1-04）\n\n- `saveGoalTerminal` 的失败不再污染 live bundle，但成功冲突后的 `rebaseLiveGoalState` 只回基部分字段。\n- 后续 whole-state heartbeat/save 仍可把新 summary 等并发 metadata 写回旧值；需要完数回基或字段所有权 merge。\n\n#### GCTRL-O04 TUI approval/question 仍未按 session 分桶（P1 残余，对应 P1-06）\n\n- stream 与 Goal 镜像已按 session envelope 过滤，但 pending approval/question 仍是 App 级全局单槽。\n- 并发 session 的询问/审批仍需分桶存储与 owner 核验。\n\n#### GCTRL-O05 UI 未暴露 Goal 运行态，Desktop 无 idle-unpaused 显式 kick（P2）\n\n- `GoalGet` 只返回 persisted `paused`，不区分 `running / queued / idle`。TUI 已用“已激活”文案并允许对 unpaused Goal 执行 `/goal resume`。\n- Desktop 对 unpaused Goal 仍主要显示“暂停”，无法判断是正在运行还是需要 kick。长期应由 protocol 返回 runtime run-state。\n\n#### GCTRL-O06 旧 Desktop server 的 GoalDelete 兼容回退不完整（P2）\n\n- Core `AgentClient.goalDelete` 仅在 `MethodNotFound` 时回退 `GoalClear`；Desktop preload 直接调用 `agent/goalDelete`，renderer 只在 API 方法缺失时回退。\n- 新 renderer/preload 连接旧 worker 时，delete 可报不支持；这是热更或混合版本兼容问题。\n\n#### GCTRL-O07 legacy single-engine host 不支持 Goal resume con",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/04-protocol-and-sessions.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 5504,
+      "context": "e/src/protocol/tcp-transport.ts:14`, `packages/core/src/protocol/tcp-transport.ts:73`).\n\n`RunParams` is now richer than the old \"task + cwd\" surface: it requires a client-minted `sessionId`, supports `clientMessageId` idempotency, per-run `cwd`, `permissionMode`, `model`, `projectTrusted`, `planMode`, `requireExisting`, and `goal` (`packages/core/src/protocol/types.ts:76`). The method table includes `Run`, `Approve`, `Cancel`, `Configure`, `Query`, `Inject`, `Steer`, `Unsteer`, `CloseSession`, `GoalExtend`, `GoalClear`, `GoalGet`, `BackgroundShells`, and `BackgroundWork` (`packages/core/src/protocol/types.ts:333`). Stream events are always wrapped for multi-session routing as `{ sessionId, event }` (`packages/core/src/protocol/types.ts:311`).\n\n`AgentClient.run()` accepts either the legacy string form or the object form needed by multi-session servers, stamps the logger with the caller/resolved session id, and sends `Methods.Run` (`packages/core/src/protocol/client.ts:107`, `packages/core/src/protocol/client.ts:129`, `packages/core/src/protocol/client.ts:135`). Its private `request()` stores a resolver by JSON-RPC id before transport send, and `handleResponse()` resolves or rejects with the protocol error code attached (`packages/core/src/protocol/client.ts:349`, `packages/core/src/protocol/client.ts:357`). Notifications become emitter events: `agent/streamEvent` re-emits the session enve",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 21640,
+      "context": "oal` call short-circuits to `completed` without running the judge,\nand clears the persisted goal; a confirmed `cancel_goal` does the same for user\nor model-directed cancellation (`packages/core/src/tool-system/builtin/complete-goal.ts:1`,\n`packages/core/src/engine/turn-loop.ts:1071`,\n`packages/core/src/tool-system/builtin/cancel-goal.ts:1`,\n`packages/core/src/engine/turn-loop.ts:1090`). This is intentionally not a\n\"judge and tool must both agree\" protocol.\n\nGoal control also has protocol RPCs: `GoalExtend` updates the active turn loop\nbudget through `applyGoalExtension`, `GoalClear` clears active or persisted\nstate, and `GoalGet` returns live or stored goal state\n(`packages/core/src/protocol/server.ts:747`,\n`packages/core/src/engine/engine.ts:3028`,\n`packages/core/src/engine/turn-loop.ts:233`,\n`packages/core/src/engine/goal.ts:237`,\n`packages/core/src/protocol/server.ts:801`,\n`packages/core/src/protocol/server.ts:830`).\n\n## 6. Where to read next\n\n- Engine turn-loop control flow and goal ceilings: [01 · Engine & turn loop](01-engine-and-turn-loop.md)\n- Tool execution, approval, and background-capable tools: [02 · Tool system](02-tool-system.md)\n- Protocol sessions, injected wakeup turns, and session lifecycle: [04 · Protocol & sessions](04-protocol-and-sessions.md)\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 13672,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/ChatView.tsx:939`，`packages/desktop/src/renderer/ChatView.tsx:1356` | agent 正在跑时输入后回车或点 guide/stop |\n| **AskUser 内联提问 / 工具审批** | 未回答 AskUser 固定在 composer 上方；工具审批卡可内联展示并提交决定 | `packages/desktop/src/renderer/ChatView.tsx:731`，`packages/desktop/src/renderer/ChatView.tsx:897`",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/articles/harness-agent-series/01-what-is-harness-agent.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3137,
+      "context": "ompt 里，模型只需要基于已有信息生成答案，那么一次 LLM call 就很合适。比如总结一段文本、改写一封邮件、翻译一段内容、做一个简单分类，本质上都是“输入已经足够，模型负责生成”。\n\n但只要任务开始依赖外部世界，一次 LLM call 就会露出边界。它不能自己决定去哪里找资料，不能真的读取你的代码仓库，不能安全地运行命令，也不能在工具失败后自动调整路线。更重要的是，它没有任务状态：不知道自己已经做了哪些步骤，也不知道下一步应该基于什么结果继续。\n\n所以 LLM call 的边界不是“模型聪不聪明”，而是它缺少运行时。\n\n它没有自己的工具系统，没有会话状态，没有任务循环，没有上下文治理，也没有权限边界。它只是一个输入输出函数。\n\n如果把模型看成“大脑”，LLM call 只是让大脑说一句话。它还没有手、眼睛、记忆、工作台，也没有安全规则。\n\n---\n\n## 2. 第二阶段：Deep Research，开始出现循环\n\nDeep Research 值得单独拿出来讲，是因为它处在 LLM call 和通用 agent harness 中间。\n\n它的典型模式不是一次回答，而是围绕一个研究目标不断扩展信息边界。\n\n模型先理解问题，把大问题拆成几个可以搜索的子问题；系统再根据子问题去搜索资料、读取网页、抽取证据；如果证据不够，模型继续提出新的搜索方向；如果资料之间互相矛盾，模型需要比较来源、记录不确定性；直到材料足够支撑一个结论，再汇总成报告。\n\n这时候系统已经不再是“问模型一次”。模型在循环里反复决定下一步：现在缺什么信息，应该查哪里，哪些资料可信，什么时候可以停止。\n\n从这个角度看，Deep Research 已经有了 Agent 的雏形：\n\n| 能力 | 在 Deep Research 里的表现 |\n|------|-----------------------------|\n| 循环 | 不是一次调用，而是搜索、阅读、判断、再搜索 |\n| 工具 | 搜索、网页读取、资料抽取变成模型可调用的外部能力 |\n| 中间状态 | 子问题、证据、缺口、不确定性会被持续记录 |\n| 停止判断 | 系统需要判断资料是否足够支撑最终报告 |\n| 结果综合 | 最终答案来自多轮材料，而不是单次 prompt |\n\n它解决的核心问题，是“模型单次上下文不够时，如何通过外部资料和多轮整理扩展信息量”。搜索轮次越多，读到的材料越多，模型能综合的 context 就越多，最终结果也越接近一个研究员反复查证后的报告。\n\n但 Deep Research 仍然是一个专项 harness：它主要服务于研究任务，工具通常集中在搜索和网页读取，状态结构也围绕 research report 设计。\n\n当模型上下文进入 1M 级别后，基础 session 对话已经能承载更多材料。此时系统真正需要解决的，不只是“如何获得更多 context”，而是“如何把更多 context、更多工具、更长任务、更复杂宿主，放进一个统一、可控、可恢复的运行壳里”。\n\n如果你想做一个通用 coding agent、桌面 agent、自动化 agent、远程控制 agent，仅有 Deep Research 的循环还不够。\n\n你需要把“研究循环”抽象成更通用的运行壳：Harness Agent。\n\n---\n\n## 3. 第",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/persistent-goal-design-2026-06-15.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1822,
+      "context": "\n\n## 三、core 改造（持久化 goal）\n\n### 3.1 goal 存进 session state\n`session state` 加字段 `activeGoal?: GoalConfig`（连同设置时间/起始 turn 基线）。\n- `engine.run` 取 goal 优先级改为：`options?.goal ?? session.state.activeGoal ?? this.config.goal`。\n- 当 `options.goal` 传入且与 session.activeGoal 不同 → **覆盖**写入 `session.state.activeGoal` 并 saveState（新 goal 覆盖旧，发事件 `goal_set`/`goal_replaced`）。\n- goal 达成（judge met）→ 清 `session.state.activeGoal` + saveState + 事件 `goal_progress(met)`（已有）。\n\n### 3.2 清除接口\n新增协议方法 `agent/goalClear`（类比已有 `agent/goalExtend`）：\n- 清 `session.state.activeGoal` + saveState + 事件 `goal_cleared`。\n- desktop 经 `window.codeshell.goalClear(sessionId)` 调。\n\n### 3.3 打断不清 goal\n确认现有 abort 路径**不**碰 `session.state.activeGoal`（abort 只停 turn-loop）。下条消息 `engine.run` 仍从 `session.state.activeGoal` 取到 → 自动续 goal。需测试覆盖：set goal → abort → 再 send（不带 goal）→ 断言仍在 goal 下跑。\n\n### 3.4 hook 注册改为「session 有 activeGoal 就挂」\n`engine.ts:1802` 的条件从 `if (normalizedGoal && ...)` 改为 `if (resolvedGoal && ...)`，其中 `resolvedGoal = options?.goal ?? session.state.activeGoal ?? config.goal`。`finally` 仍 unregister（per-run 注册不变，只是来源变持久）。\n\n### 3.5 resume 恢复\nsession 加载时 `activeGoal` 自然随 state 恢复（已落盘）。对齐 CC：恢复条件，但 turn/token 基线重置（设 goal 时记的基线在 resume 时刷新）。\n\n### 测试（TDD）\n- session state 序列化/反序列化带 activeGoal。\n- `run` 不传 goal 但 session 有 activeGoal → judge 被调、续跑。\n- 传新 goal → 覆盖 session.activeGoal + 发 goal_replaced。\n- judge met → 清 activeGoal。\n- goalClear → 清 + 事件。",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 20422,
+      "context": "1`、`packages/core/src/protocol/types.ts:22`、`packages/core/src/protocol/types.ts:335`。StreamEvent 类型本身来自 `packages/core/src/types.ts:429`，protocol 用 `AgentStreamEventNotification` 给多会话事件加 `sessionId` envelope，见 `packages/core/src/protocol/types.ts:11`、`packages/core/src/protocol/types.ts:313`。\n\n**How**\n\nClient -> Server 方法包括 `agent/run`、`agent/approve`、`agent/cancel`、`agent/configure`、`agent/query`、`agent/inject`、`agent/steer`、`agent/unsteer`、`agent/closeSession`、`agent/releaseWorkspace`、`agent/goalExtend`、`agent/goalClear`、`agent/goalGet`、`agent/backgroundShells`、`agent/backgroundWork`，见 `packages/core/src/protocol/types.ts:335`。Server -> Client notification 包括 `agent/streamEvent`、`agent/approvalRequest`、`agent/approvalResolved`、`agent/status`，见 `packages/core/src/protocol/types.ts:365`。`RunParams` 要求 client-minted `sessionId`，并携带 cwd、permissionMode、model、projectTrusted、planMode、requireExisting、goal 等 per-run 控制，见 `packages/core/src/protocol/types.ts:72`。\n\nStreamEvent 当前全部形状为：`session_started`、`session_title`、`stream_request_start`、`steer_injected`、`text_delta`、`tool_use_start`、`tool_use_args_delta`、`tool_result`、`assistant_message`、`turn_complete`、`goal_progress`、`goal_set`、`goal_cleared`、`error`、`tombstone`、`task_update`、`memory_recalled`、`thinking_delta`、`agent_start`、`agent_backgrounded`、`agent_end`、`agent_heartbeat`、`tool_summary`、`context_compact`、`usage_update`、`background_agent_",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 23128,
+      "context": "、`packages/core/src/protocol/server.ts:440`、`packages/core/src/protocol/server.ts:463`、`packages/core/src/protocol/server.ts:490`。legacy path 用单个 abortController 和 running flag 保护重入，见 `packages/core/src/protocol/server.ts:528`。\n\nApproval 在多会话路径按 `(sessionId, requestId)` 查 `ChatSession.pendingApprovals`，不回退到 legacy 全局 map，见 `packages/core/src/protocol/server.ts:652`。Cancel 会 abort session、drain queued turns，并主动 resolve pending approval/ask 为 cancelled，见 `packages/core/src/protocol/server.ts:713`。GoalExtend/Clear/Get、BackgroundShells/BackgroundWork、CloseSession/ReleaseWorkspace、Configure/Query/Inject/Steer/Unsteer 都在 server 内显式处理，见 `packages/core/src/protocol/server.ts:771`、`packages/core/src/protocol/server.ts:895`、`packages/core/src/protocol/server.ts:966`、`packages/core/src/protocol/server.ts:1030`、`packages/core/src/protocol/server.ts:1227`、`packages/core/src/protocol/server.ts:1788`、`packages/core/src/protocol/server.ts:1834`。\n\n**Why**\n\n多会话审批不能回退到 legacy map，是 fail-closed 的隔离要求：错 session 的 UI response 不能解开另一个 session 的 pending prompt，见 `packages/core/src/protocol/server.ts:655`。`requireExisting` 是为 cron “继续这个会话” 场景设计：目标 session 被用户删除时必须显式失败，避免在空白上下文里静默执行，见 `packages/core/src/protocol/server.ts:424`。Background work 的 auto-wakeup 是为了 interactive session 不再由 Engine 长时间 park，而是在后台完成事件到达时唤醒 idle session 继续总结/判断 goal，见 `packages/core/src/protocol/server.ts:220`、`packages/core/src/protocol/s",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 29534,
+      "context": "为源码证据；未跑测试。\n\n### N-05：`goal_cleared` StreamEvent 类型注释与 protocol/server 实际行为不一致\n\n**位置**\n\n- `packages/core/src/types.ts:482` 到 `488`：注释写明 `goal_cleared` fires on explicit clear (`agent/goalClear`)。\n- `packages/core/src/protocol/server.ts:825` 到 `846`：`handleGoalClear()` 只返回 `{ ok:true, cleared }`，未 notify `agent/streamEvent`。\n- `packages/desktop/src/renderer/App.tsx:3334` 到 `3355`：desktop 清 goal 后本地 dispatch `{ type:\"goal_cleared\" }` 弥补“没有 live worker/stream”的场景。\n\n**现状**\n\ncore/protocol 没有在 `agent/goalClear` 成功后发 `goal_cleared` StreamEvent。desktop 依赖本地 optimistic dispatch 让当前 bucket 的 goal block 立即消失；SDK 或其它 client 若只监听 stream，不会收到类型注释承诺的 clear event。\n\n**为何可疑**\n\n类型注释是 StreamEvent 契约的一部分，且主 reducer/mobile reducer 都支持 `goal_cleared`。如果 server 不发，事件清单里的 producer 与 consumer 断开，外部 protocol consumer 会误以为 explicit clear 可通过 stream 观察到。\n\n**严重度**\n\nP2。不会造成 core 状态未清（server 调 `session.clearGoal()` / legacy clear），但会造成非 desktop-local-injection consumer 的 UI 状态不同步。\n\n**证据**\n\n上述 file:line 均为源码证据；未跑测试。\n\n## 7. 对 N-03 / 方案 A 的交叉结论\n\n问题：protocol 侧是否另有独立发射/转发 `turn_complete` 的源？如果有，方案 A 是否仍完备？\n\n结论：\n\n1. `server.ts` / `chat-session.ts` 未见任何 `{ type:\"turn_complete\" }` 合成点。`server.ts` 只在 comments 中提到 terminal 清 busy，实际合成的是 `{ type:\"error\" }`，见 `packages/core/src/protocol/server.ts:301` 到 `313`。\n2. protocol live run path 只把 Engine/TurnLoop 的 stream callback 包成 `agent/streamEvent`：多会话见 `packages/core/src/protocol/server.ts:498` 到 `499`，legacy 见 `packages/core/src/protocol",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/15-p2-fix-checklist.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 5055,
+      "context": " `{ ok, cleared }`；desktop 通过本地 dispatch 弥补。\n- 位置：`packages/core/src/types.ts:482`、`packages/core/src/types.ts:484`、`packages/core/src/types.ts:488`、`packages/core/src/protocol/server.ts:825`、`packages/core/src/protocol/server.ts:846`、`packages/desktop/src/renderer/App.tsx:3334`、`packages/desktop/src/renderer/App.tsx:3354`、`packages/desktop/src/renderer/types.ts:862`\n- 修复方向：推荐让 `AgentServer.handleGoalClear()` 在 clear 成功且有 `sessionId` 时统一 `notify(Methods.StreamEvent, { sessionId, event: { type: \"goal_cleared\" } })`，使 SDK/其它 client 也能观察到注释承诺的事件。desktop 的本地 optimistic dispatch 可先保留，因为 reducer 对 `activeGoal = null` 是幂等；如果后续发现 UI 重复 marker，再按 `sessionId`/bucket 去重。\n- 落地半径：小\n- 是否值得现在做：值得\n- 依赖/协同：与 F-05 同在 `packages/core/src/protocol/server.ts`，可同一 protocol 小批次处理；与 N-03/N-06 无直接冲突。\n\n## N-07（P2）`RegisteredTool.permissionDefault` 是声明性元数据，不参与 classifier 判定\n\n- 问题：工具定义要求填写 `permissionDefault`，但 `PermissionClassifier` 只看 explicit rules、Bash 特判和 mode fallback，不读取 tool definition。\n- 位置：`packages/core/src/types.ts:111`、`packages/core/src/types.ts:117`、`packages/core/src/tool-system/builtin/index.ts:159`、`packages/core/src/tool-system/builtin/index.ts:175`、`packages/core/src/tool-system/builtin/index.ts:661`、`packages/core/src/tool-system/permission.ts:901`、`packages/core/src/tool-system/permission.ts:926`、`packages/core/src/engine/engine.ts:3037`\n- 修复方向：先做产品/安全决策：`permissionDefault` 到底是 UI hint 还是执行语义。若是执行语义，让 classifier 或 executor 权限路径能拿到 tool definition，在 expli",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12115,
+      "context": "existing.test.ts:60` 到 `packages/core/src/protocol/server.require-existing.test.ts:124`；新增断言 `chatManager.get(\"gone-sid\") === undefined`，并覆盖 `maxSessions` 不被空 session 占用。F-05 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:5` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:12`。\n2. 实现 `AgentServer.handleRunMulti()` preflight：在 `cm.getOrCreate()` 前检查 live map / disk probe；不存在则直接 `SessionNotFound` return；磁盘存在保留 `getOrCreate()` 路径。\n3. 为 N-05 新增 `packages/core/src/protocol/server.goalclear.test.ts` 或扩展相邻 goal server 测试文件（具体文件名实现时确认）：成功 clear 且有 `sessionId` 时，server 发送 `Methods.StreamEvent`，payload 为 `{ sessionId, event: { type: \"goal_cleared\" } }`。已有 goal 相关 server 测试可参考 `packages/core/src/protocol/server.goalget.test.ts:43` 到 `packages/core/src/protocol/server.goalget.test.ts:110`。\n4. 实现 `AgentServer.handleGoalClear()` notify；desktop 本地 optimistic dispatch 先保留，依赖 reducer 幂等。N-05 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:50` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:57`。\n5. 跑 protocol 相关回归。\n\n验收标准：\n\n- `bun test packages/core/src/protocol/server.require-existing.test.ts` 绿，且新增“未创建 live empty session / 不占 maxSessions”断言通过。\n- `bun test packages/core/src/protocol/server.goalclear.test.ts` 绿；若选择扩展既有文件，则对应新增用例必须绿。\n- `bun test packages/core/src/protocol/server.*.test.ts` 至少覆盖 run/goal/askuser 相关文件绿；特别关注 B2 后的 session lifecycle 不被 F-05 preflight 破坏。\n\n预计改动半径：小。主要",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12449,
+      "context": "` preflight：在 `cm.getOrCreate()` 前检查 live map / disk probe；不存在则直接 `SessionNotFound` return；磁盘存在保留 `getOrCreate()` 路径。\n3. 为 N-05 新增 `packages/core/src/protocol/server.goalclear.test.ts` 或扩展相邻 goal server 测试文件（具体文件名实现时确认）：成功 clear 且有 `sessionId` 时，server 发送 `Methods.StreamEvent`，payload 为 `{ sessionId, event: { type: \"goal_cleared\" } }`。已有 goal 相关 server 测试可参考 `packages/core/src/protocol/server.goalget.test.ts:43` 到 `packages/core/src/protocol/server.goalget.test.ts:110`。\n4. 实现 `AgentServer.handleGoalClear()` notify；desktop 本地 optimistic dispatch 先保留，依赖 reducer 幂等。N-05 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:50` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:57`。\n5. 跑 protocol 相关回归。\n\n验收标准：\n\n- `bun test packages/core/src/protocol/server.require-existing.test.ts` 绿，且新增“未创建 live empty session / 不占 maxSessions”断言通过。\n- `bun test packages/core/src/protocol/server.goalclear.test.ts` 绿；若选择扩展既有文件，则对应新增用例必须绿。\n- `bun test packages/core/src/protocol/server.*.test.ts` 至少覆盖 run/goal/askuser 相关文件绿；特别关注 B2 后的 session lifecycle 不被 F-05 preflight 破坏。\n\n预计改动半径：小。主要在 `server.ts`，但同文件处理多 RPC，代码审查时要确认没有把 notify 发给无 `sessionId` 的 legacy path。\n\n### B4：N-04 SDK approval notification surface\n\n目标：public `AgentClient` 不再丢 approval envelope 的 `sessionId`，并补 `approvalResolved` 事件 surface；保持旧 API 兼容。\n\nTDD 顺序：\n\n1. 新增 `packages/core/src/protocol/client.approval-events.test.ts`：用 in-process transport 模拟 `Methods.ApprovalReque",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12846,
+      "context": "oalget.test.ts:43` 到 `packages/core/src/protocol/server.goalget.test.ts:110`。\n4. 实现 `AgentServer.handleGoalClear()` notify；desktop 本地 optimistic dispatch 先保留，依赖 reducer 幂等。N-05 方向见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:50` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:57`。\n5. 跑 protocol 相关回归。\n\n验收标准：\n\n- `bun test packages/core/src/protocol/server.require-existing.test.ts` 绿，且新增“未创建 live empty session / 不占 maxSessions”断言通过。\n- `bun test packages/core/src/protocol/server.goalclear.test.ts` 绿；若选择扩展既有文件，则对应新增用例必须绿。\n- `bun test packages/core/src/protocol/server.*.test.ts` 至少覆盖 run/goal/askuser 相关文件绿；特别关注 B2 后的 session lifecycle 不被 F-05 preflight 破坏。\n\n预计改动半径：小。主要在 `server.ts`，但同文件处理多 RPC，代码审查时要确认没有把 notify 发给无 `sessionId` 的 legacy path。\n\n### B4：N-04 SDK approval notification surface\n\n目标：public `AgentClient` 不再丢 approval envelope 的 `sessionId`，并补 `approvalResolved` 事件 surface；保持旧 API 兼容。\n\nTDD 顺序：\n\n1. 新增 `packages/core/src/protocol/client.approval-events.test.ts`：用 in-process transport 模拟 `Methods.ApprovalRequest` notification，断言 SDK listener 能拿到 `sessionId`。`AgentClient` 现有协议测试模式可参考 `packages/core/src/protocol/client.steer.test.ts:13` 到 `packages/core/src/protocol/client.steer.test.ts:55`。\n2. 同文件新增 `approvalResolved` 测试：收到 `Methods.ApprovalResolved` 时 emit `{ sessionId?, requestId }`。\n3. 实现 `AgentClientEvents` 和 `handleNotification()`：可给 `approvalRequest` 增加第三个可选 meta 参数，或新增 envelope ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 21241,
+      "context": "ges/core/src/credentials/inject-credential-tool.test.ts` | 回归护栏 | B2 | credential inject session bucket 范式 |\n| `packages/core/src/tool-system/builtin/agent.send-input.llm.test.ts` | 回归护栏 | B2 | subagent input/permission sessionId 传播 |\n| `packages/core/src/automation/runner.permission.test.ts` | 回归护栏 | B2/B6 | automation permission/sandbox policy |\n| `packages/core/src/protocol/server.require-existing.test.ts` | 既有扩展 | B3 | F-05 requireExisting 不创建空 session |\n| `packages/core/src/protocol/server.goalclear.test.ts` | 新增或扩展，需确认文件名 | B3 | N-05 `goal_cleared` notify |\n| `packages/core/src/protocol/client.approval-events.test.ts` | 新增 | B4 | N-04 SDK approvalRequest meta 与 approvalResolved |\n| `packages/core/src/engine/turn-loop-tool-summary.test.ts` | 新增，文件名可确认 | B5 | F-08 tool_summary payload 带 target ids |\n| `packages/core/src/tool-system/builtin/bash.shell-env.test.ts` | 回归护栏 | B6 | Bash sandbox mark 对照 |\n| `packages/core/src/tool-system/builtin/powershell.sandbox-status.test.ts` | 新增或扩展，需确认文件名 | B6 | PowerShell 未隔离标记 |\n| `packages/core/src/tool-system/sandbox/sandbox.test.ts` | 回归护栏 | B6 | sandbox backend 基础行为 |\n| `packages/core/src/tool-system/sandbox/sandbox-win32.test.ts` | 回归护栏 | B6 | Windows sandbox fallback 语义 |\n| `packages/core/src/engine/sandbox-config.test.ts` | 回归护栏 | B6 | run sandbox config 解析 |\n| `packages/core/src/runtime/spawn-common.test.ts` | 回归护栏 | B6 | shell invocation / PowerShell `-Co",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 24132,
+      "context": "新增 Engine 单 terminal 测试；TurnLoop 内部不发 terminal 测试；跑 `turn-loop*.test.ts` 和 protocol/desktop stream 护栏；运行时验证 headless drain | 独立 commit/PR；回滚只恢复 `turn-loop.ts` emit 与相关测试，不能连带回滚其它批次 |\n| B2 | N-06 涉安全与多 session 生命周期：无 sessionId 记忆、project seed、late approval、per-session promptTurn 都可能影响真实审批 | 先失败测试覆盖 allow/deny/no-session/close/late approval；跑 askuser/path-policy/credential/automation 回归 | 独立 commit/PR；若线上发现审批异常，可回滚 B2，并临时建议用户不用 session-scope remember |\n| B3 | `requireExisting` preflight 可能误判磁盘存在；`goal_cleared` notify 可能和 desktop optimistic dispatch 形成重复 UI marker | server require-existing 测试加 `chatManager.get` 与 maxSessions；goal clear notify 测试；desktop reducer 幂等检查 | 独立 commit/PR；可分别 revert F-05 或 N-05 小 commit |\n| B4 | SDK public event surface 兼容性；旧 listener 可能只接收两个参数 | 新增 client event tests；保留旧 API 或新增 envelope event；PR 描述写兼容策略 | 独立 commit/PR；必要时只回滚 client surface，不影响 B2 backend 隔离 |\n| B5 | core/desktop event contract 跨层；旧 snapshot 缺 `toolCallIds`；子代理 summary 错挂 | optional 字段兼容；desktop reducer 对找不到 agent/tool 不 fallback；跑 streamGroups/messageMappers/transcript 护栏 | 独立 commit/PR；若错挂严重，回滚 B5 不影响 B1/B2 |\n| B6 | 用户可能误解“未隔离”标记；若误接 wrapper 会扩大平台差异 | 只做 status/UI/文案；跑 sandbox/shell invocation 回归；Windows fallback 测试必须绿 | 独立 commit/PR；可回滚 PowerShell result 字段/UI 展示，不影响权限审批 |\n\n回滚策略：每个批次使用独立分支和独立 commit/PR，禁止把 B1+B2+B5 混成一个大提交。若同分支连续做 B1 后 B5，也应两个 commit，便于只回滚 `tool_summary` 契约而保留 N-03 terminal 修复。\n\n## 6. 建议推进方式\n\n推荐“一次推一个批次”：实现者会话",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6184,
+      "context": "Client closed\" packages/core/src/protocol -g '*test.ts'` 未命中 client 相关断言。 | 若回归，调用方 promise 可能悬挂、错误 code 丢失、流事件/approval/status handler 不触发，或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6324,
+      "context": "或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 M",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6335,
+      "context": "g run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6352,
+      "context": "entClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6463,
+      "context": "；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6557,
+      "context": "`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long execut",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6612,
+      "context": " handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long executor with per-call timeo",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6680,
+      "context": "ndleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long executor with per-call timeoutMs`；`ToolRegistry cascades parent abort while executor is pending`",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 6753,
+      "context": "d`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|goalExtend|agent/goalExtend|extendGoalRun|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后一道防卡死/错误归一化边界。 | `rg \"Tool timed out|DEFAULT_TOOL_TIMEOUT|Tool aborted|No executor registered|ToolNotFoundError|executeTool\\\\(\" packages/core/src -g '*test.ts'` 只看到 MCP signal 透传和 provider tool_result 文本测试；无 registry timeout/abort/error-normalization 直接测试。 | 若回归，长工具可能卡住 run，父级取消不生效，或工具异常从 registry 抛出导致 TurnLoop 进入非预期 `model_error`。 | `ToolRegistry returns aborted result before executor starts`；`ToolRegistry times out long executor with per-call timeoutMs`；`ToolRegistry cascades parent abort while executor is pending`；`ToolRegistry normalizes thrown executor error into ToolResult`。 | 中 |\n|",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12302,
+      "context": "ol_result`、子代理隔离、终态映射和 determinism。\n- `transcriptsReducer.ts` 的 hydrate/steer/clientMessageId 去重保护覆盖充分，尤其覆盖了 lagging snapshot 不擦掉 confirmed steer 的场景。\n\n## 建议补测顺序\n\n1. 先补权限硬化：`ToolExecutor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/hooks-dedup.json",
+      "pointer": "/hits/118/text",
+      "kind": "json-value-scalar",
+      "offset": 45,
+      "context": "| 确定性 hook/provider | 数值条件准确、便宜、可审计 | 只覆盖可程序化目标 | 最高优先级，逐类扩展 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/hooks-dedup.json",
+      "pointer": "/hits/273/text",
+      "kind": "json-value-scalar",
+      "offset": 230,
+      "context": "公共 hooks 包括插件 hook、shell hook 和 SDK 注册的 handler。若把完整对话放进 `ctx.data`，所有 `on_stop` handler 都能读取工具结果、用户输入和潜在凭证，改变了公开安全面。现有 `TurnLoop.emitHook()` 会把传入 data 原样交给 HookRegistry（`packages/core/src/engine/turn-loop.ts:483-495`），所以本项必须使用内置 Goal hook 与 TurnLoop 之间的私有闭包通道，而不是扩展 `HookContext`。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "pointer": "/hits/pipe_subject/53/context",
+      "kind": "json-value-scalar",
+      "offset": 111,
+      "context": " 误记为旧产品基线。\n\n## 判断摘要\n\n| 条目 | 建议 | 保留依据 | 必须保留的范围 |\n| --- | --- | --- | --- |\n| R35 | 保留 P1 | 正常 Desktop 输入能发起两个同目标请求；失败者未证明创建归属便强制删除成功者资源，真实 Git 证据包含已成功返回后的未提交文件损失 | 两个创建预检重叠；未提交文件损失还要求文件在成功与失败回滚之间写入。恢复会话工作区不恢复这些内容 |\n| R36 | 保留 P2 | 真实编译 Core 在原生 Node 中写后异步 EPIPE，Socket 无 listener，Host exit 1；生产 local Hub/serve 直接使用相同 Core | 写与 worker 关闭重叠；实测 Node v25.8.1，不扩成全部 Node/OS、Docker 外层 Host 或 Electron Main 已证实退出 |\n\nR35 是 Git 创建/回滚资源所有权缺失，R36 是进程 stdin 流错误没有被隔离。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "pointer": "/hits/steering_queue/147/context",
+      "kind": "json-value-scalar",
+      "offset": 33,
+      "context": "max-turns.test.ts`：通用 profile 上限、Goal 修改/扩展、普通 Work 隔离及无工具收尾。\n- `packages/core/src/engine/engine.profile-input-change.test.ts` 与 `turn-loop-steer-backfill.test.ts`：仅已持久化的新输入使草稿失效，排队/撤回/重复输入不触发，保持注入顺序。\n\n## 验证结果\n\n- 统一命令：**983 pass / 0 fail / 3,202 assertions，108 个测试文件**。\n- 另跑 Core 注入、Goal lifecycle、reply/background yield 组合回归：73 pass / 0 fail。\n- `bun run typecheck` 完成构建与全部 11 个 workspace 类型检查。\n- 本次变更的 ESLint、Prettier、Engine 架构边界检查与 `git diff --check` 均通过。\n- 100 条持续",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/tool-budget.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2863,
+      "context": "f，没有手工镜像 Manager 配方。\n\n普通控制检查文本 slots 提取/顺序、空 slot、inclusive 字符/heuristic token 上限、小正预算不添加超大 notice、ASCII head/tail 确定性、短 slot 保留与长 slot 分配、非文本块顺序和对象身份、输入不变、under-budget 原块身份和错误 replacement slot 数拒绝。媒体仅是 `{type:\"image\"}` 标记对象，不含真实图像 bytes。Existing suite 自带固定默认 30k-cap 附近的 CJK 样本及 Unicode 回归，只作为已有控制运行，没有另开 Unicode、性能或大输入压力方向。字符长度与 heuristic tokens 都明确不是 provider 精确 tokenizer 合同。\n\n[Focused fixture](evidence/toolbudget-focused.test.ts)、[首跑合并原文](evidence/toolbudget-first.raw.log)、[退出收据](evidence/toolbudget-first.exit.json) 可核对。Raw stdout/stderr 与退出 JSON 在首次查看日志前保存，从未覆盖；没有失败 shard、产品修复、重试或替代验证。只读导航误猜目录/旧报告拼写、辅助静态输出截断和 preflight range 标签修正已单独 [转录](evidence/toolbudget-metadata-notes.json)，不是产品失败；产品 fixture 在 preflight 后保持原 hash。\n\n## 范围与查重\n\n[源码清单](evidence/toolbudget-source-manifest.json) pin **11 个实际文件**，区分全读/执行、全读但不执行和选段静态。只有两个纯 runtime 文件的相关函数执行；没有 broad build、typecheck、lint、完整 suite、实际模型/工具、用户文件、网络、权限、security 或 custody 实验。\n\n[全历史查重](evidence/toolbudget-dedup.json) 读取 `docs/`、`bugs/` 全部 Markdown 与递归 JSON scalar 值，含 archive / _archive，排除本批：**2,169 文件（1,189 MD / 980 JSON），288,528 string leaves / 404,370 scalar leaves，0 parse error**。Exact budget 39、separator/floor 39、aggregate 41、Unicode 179、structured 92 次总命中；每类上下文最多 25，全部命中定位及只读时文件 hash 保留。关键词命中不是全仓语义穷尽证明。[人工去重判断](evidence/toolbudget-dedup-decisions.json) 保留旧 source concern、旧记账问题及排除路线的定位。\n\n[Preflight](evidence/toolbudget-preflight.json)、[验证范围](evidence/toolbudget-validation.json)、[正式项](evidence/toolbudget-findings.json)、",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "pointer": "/matches/budgetMechanism/99/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 165,
+      "context": "上文为 SG07:08 的 prelaunch 记录，保留当时状态。root/web预审最终guard/module图后，先root审 prepare-only生成物，再root明确授权native。最终作者第7次独立运行 Completed66 Nodeassert/exit0；前6次支架加载/模型schema发现/回包断言/预算失败均保留、未算产品问题或成功；源和完整账本见 `/tmp/codeshell-review-20261012-browser-stop-round22.md` 与 `.../browser-stop-round22/final-author/`。最终launcher SHA11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d，Main SHA1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "pointer": "/matches/budgetMechanism/101/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 165,
+      "context": "上文为 SG07:08 的 prelaunch 记录，保留当时状态。root/web预审最终guard/module图后，先root审 prepare-only生成物，再root明确授权native。最终作者第7次独立运行 Completed66 Nodeassert/exit0；前6次支架加载/模型schema发现/回包断言/预算失败均保留、未算产品问题或成功；源和完整账本见 `/tmp/codeshell-review-20261012-browser-stop-round22.md` 与 `.../browser-stop-round22/final-author/`。最终launcher SHA11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d，Main SHA1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-history-selected.json",
+      "pointer": "/selected/90/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 165,
+      "context": "上文为 SG07:08 的 prelaunch 记录，保留当时状态。root/web预审最终guard/module图后，先root审 prepare-only生成物，再root明确授权native。最终作者第7次独立运行 Completed66 Nodeassert/exit0；前6次支架加载/模型schema发现/回包断言/预算失败均保留、未算产品问题或成功；源和完整账本见 `/tmp/codeshell-review-20261012-browser-stop-round22.md` 与 `.../browser-stop-round22/final-author/`。最终launcher SHA11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d，Main SHA1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-history-selected.json",
+      "pointer": "/selected/92/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 165,
+      "context": "上文为 SG07:08 的 prelaunch 记录，保留当时状态。root/web预审最终guard/module图后，先root审 prepare-only生成物，再root明确授权native。最终作者第7次独立运行 Completed66 Nodeassert/exit0；前6次支架加载/模型schema发现/回包断言/预算失败均保留、未算产品问题或成功；源和完整账本见 `/tmp/codeshell-review-20261012-browser-stop-round22.md` 与 `.../browser-stop-round22/final-author/`。最终launcher SHA11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d，Main SHA1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+      "pointer": "/hits/all_429/5/context",
+      "kind": "json-value-scalar",
+      "offset": 527,
+      "context": "1`、`packages/core/src/protocol/types.ts:22`、`packages/core/src/protocol/types.ts:335`。StreamEvent 类型本身来自 `packages/core/src/types.ts:429`，protocol 用 `AgentStreamEventNotification` 给多会话事件加 `sessionId` envelope，见 `packages/core/src/protocol/types.ts:11`、`packages/core/src/protocol/types.ts:313`。\n\n**How**\n\nClient -> Server 方法包括 `agent/run`、`agent/approve`、`agent/cancel`、`agent/configure`、`agent/query`、`agent/inject`、`agent/steer`、`agent/unsteer`、`agent/closeSession`、`agent/releaseWorkspace`、`agent/goalExtend`、`agent/goalClear`、`agent",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup.json",
+      "pointer": "/hits/prior_browser_boundaries/90/context",
+      "kind": "json-value-scalar",
+      "offset": 83,
+      "context": "stSeq 可能回退当前 cursor，但尚未证明普通生产时序与用户影响；CC 历史 tool starts 未显式封口，需要区分正在观察的外部会话与静态历史；清空 Goal 后 late update 的状态残留缺少当前有序 stream 的正常时序证据。认证、权限、安全、真实浏览器/平台、任何已失败 CLI/recorder/Discord/summary 方向均未开展或重试。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+      "pointer": "/hits/retention_context/57/context",
+      "kind": "json-value-scalar",
+      "offset": 111,
+      "context": " 误记为旧产品基线。\n\n## 判断摘要\n\n| 条目 | 建议 | 保留依据 | 必须保留的范围 |\n| --- | --- | --- | --- |\n| R35 | 保留 P1 | 正常 Desktop 输入能发起两个同目标请求；失败者未证明创建归属便强制删除成功者资源，真实 Git 证据包含已成功返回后的未提交文件损失 | 两个创建预检重叠；未提交文件损失还要求文件在成功与失败回滚之间写入。恢复会话工作区不恢复这些内容 |\n| R36 | 保留 P2 | 真实编译 Core 在原生 Node 中写后异步 EPIPE，Socket 无 listener，Host exit 1；生产 local Hub/serve 直接使用相同 Core | 写与 worker 关闭重叠；实测 Node v25.8.1，不扩成全部 Node/OS、Docker 外层 Host 或 Electron Main 已证实退出 |\n\nR35 是 Git 创建/回滚资源所有权缺失，R36 是进程 stdin 流错误没有被隔离。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "pointer": "/hits/local-await/47/context",
+      "kind": "json-value-scalar",
+      "offset": 599,
+      "context": "Client closed\" packages/core/src/protocol -g '*test.ts'` 未命中 client 相关断言。 | 若回归，调用方 promise 可能悬挂、错误 code 丢失、流事件/approval/status handler 不触发，或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "pointer": "/hits/local-await/47/context",
+      "kind": "json-value-scalar",
+      "offset": 739,
+      "context": "或关闭时 pending run 不被拒绝。 | `AgentClient resolves and rejects requests from RpcResponse`：fake transport 回 success/error，断言 result 和 `err.code`；`AgentClient dispatches stream approval status notifications`：发三类 notification，断言 handler 参数；`AgentClient close rejects pending requests and removes handlers`。 | 中 |\n| `packages/core/src/protocol/server.ts:771` | `handleGoalExtend` 按 session/legacy engine 路由，无法定位 session 时返回 `SessionClosed`，无 active run 时返回 `InvalidParams`。 | UI/协议层“继续 goal / 扩预算”入口。 | `rg \"GoalExtend|",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/renderer-status-frontier/history.json",
+      "pointer": "/hits/old-failed/69/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 166,
+      "context": "*Main writer不因一次失败永久卡住**：[settings-service.ts:141](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/settings-service.ts:141) 按目标路径串行，前次失败后 catch 链继续；写锁内同步 read/merge/原子 temp→rename，finally 释放与清理tail。fixture 真实失败后重新编辑成功。不是当前 writer 丢并发互不相干 patch 的证据。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/renderer-status-frontier/history.json",
+      "pointer": "/hits/old-failed/88/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 166,
+      "context": "*Main writer不因一次失败永久卡住**：[settings-service.ts:141](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/settings-service.ts:141) 按目标路径串行，前次失败后 catch 链继续；写锁内同步 read/merge/原子 temp→rename，finally 释放与清理tail。fixture 真实失败后重新编辑成功。不是当前 writer 丢并发互不相干 patch 的证据。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "pointer": "/hits/chat-view/50/context",
+      "kind": "json-value-scalar",
+      "offset": 436,
+      "context": "essionPanelDock` | 中；巨大 props 面，但逻辑应已先移出 |\n\n现有可复用地基已经不少：`transcriptsReducer.ts`、`streamRouting.ts`、`snapshotReplay.ts`、\n`queuedInput.ts`、`stopRouting.ts`、`chat/anchorBuckets.ts`、`panels/PanelArea.tsx` 都已有纯逻辑和测试。\n因此拆分应围绕这些模块建立 hook，不重写第二套 reducer。\n\n为什么是债：任何无关 UI 改动都重新创建数十个 handler/effect 的闭包环境；stream/approval/panel/session\n状态互相可见，所有权不清。影响面包括多 session 并发、automation backfill、mobile remote、quick chat、\npanel webview/PTY 生命周期和 persistent goal 的 optimistic UI。\n\n### 4.2 PR 序列\n\n| PR | 一句话目标 | 主要影响文件 | 可独立合并 | 回归风险 | 必需测试/验证 |\n|---|---|---|---|---|---|\n| D1（已完成） | 先搬顶层纯 helpers 与 `QuickChatPanelHost`，建立无行为变化的拆分模板。 | `App.tsx:176-357`、新 app/quick-chat 文件 | 是 | 低 | `AppQuickChat.test.tsx`、renderer typecheck/build |\n| D2（已完成） | 抽 `useBu",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+      "pointer": "/hits/rect_clip_terms/117/context",
+      "kind": "json-value-scalar",
+      "offset": 771,
+      "context": " CSS 像素按页面 zoom 转换一次；显示密度交给 Electron，避免重复应用 Retina 倍率。默认截图覆盖当前完整视口，不把物理像素尺寸再次当作裁剪尺寸。输出受最大图片尺寸限制，隐藏窗口继续隐藏。[Electron capturePage](https://www.electronjs.org/docs/latest/api/web-contents#contentscapturepagerect-opts)\n\n## Chrome：扩展内执行，宿主只传高层动作\n\n扩展以浏览器 bundle 加载 Puppeteer，直接调用官方 `ExtensionTransport.connectTab(tabId)`。命令补全、debugger 事件与 iframe 子 session 的协议路由由官方 transport 处理；Native Messaging 不再承载 `cdp.command` 或自行重建完整 CDP 事件代理。[官方扩展运行方式](https://pptr.dev/guides/running-puppeteer-in-extensions)\n\n宿主发往扩展的目标命令是 `browser.action`、`tab.get` 和 `tab.detach`。每条命令绑定 `tabId + grantId`，宿主及扩展都验证授权；宿主获取标签信息时还检查返回的标签 ID。常规动作、开发者检查与导航保留原有域名权限检查。单个授权不能切换到其他标签，新弹窗不会自动加入授权。\n\n配对码有效期为 2 分钟，标签授权为 30 分钟。同一授权内的动作串行；撤销同步使授权失活，已排队动作在执行前再次检查。正在执行的调用会被断开，晚到结果不能恢复授权。扩展重启、Native Messaging 断线、标签关闭和用户分离 debugg",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/history.json",
+      "pointer": "/hits/mcp-rename/7/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 10,
+      "context": "- MCP 设置页在目标项目或编辑对象改变时隔离草稿和旧读结果；凭证加载、探测和保存失败显示错误，失败保留草稿并可重试。同步重复点击只提交一次，旧保存不能关闭新编辑器，保存仅更新当前条目与原子重命名的旧键。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/root-history.json",
+      "pointer": "/hits/rename-field/24/context",
+      "kind": "json-value-scalar",
+      "offset": 47,
+      "context": "特殊值；以官方发布的 CLI 纯参数解析器验证选择范围，未执行真实安装。\n- MCP 设置页在目标项目或编辑对象改变时隔离草稿和旧读结果；凭证加载、探测和保存失败显示错误，失败保留草稿并可重试。同步重复点击只提交一次，旧保存不能关闭新编辑器，保存仅更新当前条目与原子重命名的旧键。\n- MCP 的启停只写启停字段，编辑或重命名保留停用状态；递归设置合并使用明确的删除标记，清除已删除的环境变量、鉴权字段以及更换传输方式后的旧连接字段。经过 JSON 传输与实际配置文件写入的回归通过。最终真实 Electron 界面另外完成两次保存，直接核对临时配置文件：删除单个环境变量、重命名并清空可选字段、停用状态与相邻条目均正确；没有触发 probe/OAuth。\n- preload 不再依赖某些 Electron 上下文缺失的 `crypto.randomUUID()`，以 `getRandomValues()` 生成标准 UUID；真实导航回归通过。\n- TTS 准备结束时，锁文件关闭失败仍继续清理其他自有资源；保留原始失败或取消对象，并记录附带的清理错误。没有取得锁的尝试不能删除其他尝试的锁，已成功的准备仍会报告清理失败。第四轮偶发的 EBADF 未在 100 次真实前提失败/GC 探针中复现，不宣称已找到它的底层来源；清理异常覆盖主错误、跳过释放这一缺陷则有稳定故障注入回归。\n\n### Core、TUI 与验证工具\n\n- TaskGuard 在新的 TodoWrite 快照到达时重新计算任务年龄，避免复用位置 ID 导致误判卡住。\n- 记忆提取校验 description 类型；严格相同的完整候选结构先去重再应用数量限制，避免同一记忆写两份并挤掉有效候选。文本大小写、空白、否定和词序差异继续保留。\n- 记忆编排的显式/注入存储根贯穿查询、增改删、全局待确认、晋升、TTL、会话摘要、dream 计数及实际 Memory 工具。无显式根时保留原 HOME/env 规则；portable profi",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/candidates-and-skips.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 663,
+      "context": "态候选；首次共享夹具在产品动态导入前因 ESM namespace readonly 赋值失败；0 pass/1 fail/1 error、无 Completed，无业务断言执行；保存原始文件/日志后跳过，不修复或重试 | [root.md](root.md)，root-cli-data.first.log |\n| dev recorder 跨 UTC 午夜仍用旧日期缓存路径 | 首次独立夹具比较 `/var` 与 `/private/var` 路径字符串控制失败；0 pass/1 fail/2 expect，无 Completed；尚未记录事件。保留临时 LOG-R4-02 编号但仅候选，未修支架/重试 | [root.md](root.md)，root-recorder-day.first.log |\n| Image compaction/reload 编号漂移 | 旧 refactor review 已确认，同根因重复排除，没有新增实验 | [context.md](context.md) |\n| Sync cached summary 范围、批量短 tool outputs 超预算、失败浏览器 snapshot 覆盖成功观察 | 静态线索，当前合同/可达影响未充分确认，没有测试 | [context.md](context.md) |\n| Legacy migrateModels 混合格式重算 providerKey | 当前 Engine 已消费 modelConnections，没有证实正常模型请求影响；仅候选 | [settings.md](settings.md) |\n| Generic migrateConfig gap/future stamp | 生产迁移连续，stamp-only 差异不持久化；未确证正常入口 bug | [settings.md](settings.md) |\n| LSP hierarchical symbols / LocationLink selection range | 当前 client 未广告对应能力；未把非当前协商形状当作缺陷 | [coding.md](coding.md) |\n| LSP per-extension languageId | 静态候选，没有特定 server 行为证据 | [coding.md](coding.md) |\n| LSP startup/failed initialize/dead child/旧 failed fixtures | 历史已记录或已失败方向排除，没有重跑、安装真实语言服务器或绕过 | [coding.md](coding.md) |\n| earlyInput escape parser、simple-diff O(n*m) | 前者未找到当前启动调用；后者仅静态成本，无压力证据，不计 bug | [root.md](root.md) |\n\n失败收据是审查夹具/环境现象，不是已确认产品 bug。独立 logger retention 验证与跳过的 CLI log 命令/dev recorder 日期实验属于不同函数和行为，没有以另一种方法重试后两者。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/root-history.json",
+      "pointer": "/hits/tombstone-transcript/30/context",
+      "kind": "json-value-scalar",
+      "offset": 614,
+      "context": "**用户确认的是删除；实际删除失败，界面却表现为已删除，并失去该侧栏行的可见重试入口。持久 tombstone 使同键的普通 disk 重建也不能稳定恢复它。Core 权威 state/transcript 在这个可复现故障里保留，**不是历史文件丢失**。实际 SessionsView 仍能从 Core 目录列出 A；修复目录权限后，到该历史管理页再次删除可完成原操作。本轮已实际验证该恢复。没有声称 SessionsView 提供打开原会话或撤销 catalog tombstone 的入口。\n\n**正常对照：**从实际 `SessionsView` 发起同一真实文件系统故障，`SessionsView.tsx:158–175,451–469` 保留行，展示真实 EACCES，并提供原 ID 重试按钮；在 success 之前不调用 `onSessionDeleted`，实际 catalog 行和 renderer snapshot 均保留。恢复 owned 权限后点击实际重试，删除完成、成功回调只报 A 一次。\n\n**修复建议：**侧栏可沿用 SessionsView 的顺序：先显示目标的 pending-delete 状态，Main 删除成功后才提交 catalog/snapshot tombstone 和清理 renderer 状态；失败保留行、展示错误并允许同 ID 重试。永久 tombstone 不能在后端接受删除前作为乐观 UI 标记使用。\n\n**信心与限制：**高。生产 UI、确认框、hoo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/root-transcript-review/history-selected-contexts.json",
+      "pointer": "/contexts/25/context",
+      "kind": "json-value-scalar",
+      "offset": 614,
+      "context": "**用户确认的是删除；实际删除失败，界面却表现为已删除，并失去该侧栏行的可见重试入口。持久 tombstone 使同键的普通 disk 重建也不能稳定恢复它。Core 权威 state/transcript 在这个可复现故障里保留，**不是历史文件丢失**。实际 SessionsView 仍能从 Core 目录列出 A；修复目录权限后，到该历史管理页再次删除可完成原操作。本轮已实际验证该恢复。没有声称 SessionsView 提供打开原会话或撤销 catalog tombstone 的入口。\n\n**正常对照：**从实际 `SessionsView` 发起同一真实文件系统故障，`SessionsView.tsx:158–175,451–469` 保留行，展示真实 EACCES，并提供原 ID 重试按钮；在 success 之前不调用 `onSessionDeleted`，实际 catalog 行和 renderer snapshot 均保留。恢复 owned 权限后点击实际重试，删除完成、成功回调只报 A 一次。\n\n**修复建议：**侧栏可沿用 SessionsView 的顺序：先显示目标的 pending-delete 状态，Main 删除成功后才提交 catalog/snapshot tombstone 和清理 renderer 状态；失败保留行、展示错误并允许同 ID 重试。永久 tombstone 不能在后端接受删除前作为乐观 UI 标记使用。\n\n**信心与限制：**高。生产 UI、确认框、hoo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/root-transcript-review/history.json",
+      "pointer": "/hits/tombstone-transcript/25/context",
+      "kind": "json-value-scalar",
+      "offset": 614,
+      "context": "**用户确认的是删除；实际删除失败，界面却表现为已删除，并失去该侧栏行的可见重试入口。持久 tombstone 使同键的普通 disk 重建也不能稳定恢复它。Core 权威 state/transcript 在这个可复现故障里保留，**不是历史文件丢失**。实际 SessionsView 仍能从 Core 目录列出 A；修复目录权限后，到该历史管理页再次删除可完成原操作。本轮已实际验证该恢复。没有声称 SessionsView 提供打开原会话或撤销 catalog tombstone 的入口。\n\n**正常对照：**从实际 `SessionsView` 发起同一真实文件系统故障，`SessionsView.tsx:158–175,451–469` 保留行，展示真实 EACCES，并提供原 ID 重试按钮；在 success 之前不调用 `onSessionDeleted`，实际 catalog 行和 renderer snapshot 均保留。恢复 owned 权限后点击实际重试，删除完成、成功回调只报 A 一次。\n\n**修复建议：**侧栏可沿用 SessionsView 的顺序：先显示目标的 pending-delete 状态，Main 删除成功后才提交 catalog/snapshot tombstone 和清理 renderer 状态；失败保留行、展示错误并允许同 ID 重试。永久 tombstone 不能在后端接受删除前作为乐观 UI 标记使用。\n\n**信心与限制：**高。生产 UI、确认框、hoo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/cause-history.json",
+      "pointer": "/contexts/fallback-partial/7/text",
+      "kind": "json-value-scalar",
+      "offset": 337,
+      "context": "1. 先补权限硬化：`ToolExecutor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused-selected.json",
+      "pointer": "/rows/19/context",
+      "kind": "json-value-scalar",
+      "offset": 322,
+      "context": "Executor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-focused.json",
+      "pointer": "/hits/tui_revoke/2/context",
+      "kind": "json-value-scalar",
+      "offset": 322,
+      "context": "Executor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/third-selection-history.json",
+      "pointer": "/hits/index.ts/81/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 210,
+      "context": "| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/cause-history.json",
+      "pointer": "/contexts/draft-plugin-race/98/text",
+      "kind": "json-value-scalar",
+      "offset": 992,
+      "context": "。保留独立 engine session authority、每窗口 owner、trust、symlink 和越界拒读门禁；终端句柄不能充当 Core session ID，也不能通过放宽通用路径门禁修复 R58/R86。 |\n| 6 | 连接有发送上限，存储故障不扩大为整个 Host 无响应；后台状态与失败反馈能让用户继续操作 | R68、R77/P2：[连接发送](connection-recovery-round15.md)、[认证锁](file-mutex-round19.md)；其余 P2 按正式影响排入，P3 按使用频率处理：[全部编号与级别](README.md) | R68：已认证、仍 OPEN 的慢 peer 通过直播/设备发送时，单 socket 及聚合 backlog 有界；保留健康 peer、合法历史分页、重新认证和撤权控制。不把 24 MiB 内的队列增长说成已测 OOM/崩溃。R77：已初始化 dataDir 失去当前非 root 进程写权限且 hub 子目录仍可读/遍历/修权限时，认证锁应立即分类真实 EACCES 并给出上下文，避免同步耗尽约 30 秒预算拖住同进程健康路由和 timer；保留认证、互斥写、短跨进程争用和失败不写保护，修权限后同稿重试。其余失败重试保稿、恢复步骤可见，展示范围与持久状态一致；不能用静默吞错作为恢复。 |",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/source-excerpts.json",
+      "pointer": "/snapshots/18/text",
+      "kind": "json-value-scalar",
+      "offset": 1079,
+      "context": "  onComposerSeedConsumed={onComposerSeedConsumed}\n                    draft={composerDraft.text}\n                    onDraftChange={setComposerDraftText}\n                    attachments={composerDraft.attachments}\n                    onAttachmentsChange={setComposerDraftAttachments}\n                    anchors={anchors}\n                    onRemoveAnchor={removeAnchor}\n                    onClearAnchors={clearAnchors}\n                    onAskUserAnswer={handleAskUserAnswer}\n                    onExtendGoal={extendGoal}\n                    onAttachImagePath={(p) => void attachImageByPath(p)}\n                    onPrepareAttachmentSession={prepareAttachmentSession}\n                    imageDetail={imageDetail}\n                    pendingApproval={visibleApproval}\n                    onApprovalDecide={\n                      visibleApproval\n                        ? (decision, reason, scope, pathScope) =>\n                            decideEnvelope(visibleApproval, decision, reason, scope, pathScope)\n                        : undefined\n                    }\n                    permissionMode={permissionMode}\n                    onPermissionChange={onPermissionChange}\n                    goalEnabled={goalEnabled}\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/6/context",
+      "kind": "json-value-scalar",
+      "offset": 1075,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/7/context",
+      "kind": "json-value-scalar",
+      "offset": 839,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/8/context",
+      "kind": "json-value-scalar",
+      "offset": 655,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/9/context",
+      "kind": "json-value-scalar",
+      "offset": 451,
+      "context": ".tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/Ch",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_path/10/context",
+      "kind": "json-value-scalar",
+      "offset": 168,
+      "context": " 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/ChatView.tsx:939`，`packages/desktop/src/renderer/ChatView.tsx:1356` | agent 正在跑时输入后回车或点 guide/stop |\n| **AskUser 内联提问 / 工具审批** | 未回答 AskUser 固定在 composer 上方；工具审批卡可内联展示并提交决定 | `packages/desktop/src/renderer/ChatView.tsx:731`，`packages/desktop/src/renderer/ChatView.tsx:897`",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/6/context",
+      "kind": "json-value-scalar",
+      "offset": 1045,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/7/context",
+      "kind": "json-value-scalar",
+      "offset": 809,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 ",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/8/context",
+      "kind": "json-value-scalar",
+      "offset": 625,
+      "context": "r.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/9/context",
+      "kind": "json-value-scalar",
+      "offset": 421,
+      "context": "\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/Ch",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "pointer": "/hits/source_filename/10/context",
+      "kind": "json-value-scalar",
+      "offset": 138,
+      "context": "rc/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/ChatView.tsx:939`，`packages/desktop/src/renderer/ChatView.tsx:1356` | agent 正在跑时输入后回车或点 guide/stop |\n| **AskUser 内联提问 / 工具审批** | 未回答 AskUser 固定在 composer 上方；工具审批卡可内联展示并提交决定 | `packages/desktop/src/renderer/ChatView.tsx:731`，`packages/desktop/src/renderer/ChatView.tsx:897`",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2162,
+      "context": "截断后从保存JSON补读7–11窗口，无重扫。\n\n[focused method](cause-history-method.py) 的shell-epoch33/cap30、shell-summary29/cap30、activity-latch0；[结果](cause-history.json) 保存30/29/0窗口，实际只读13个指定窗口，未声称所有命中、旧巨scalar或完整历史文档语义穷尽。 [结束检查](ending-checks.json) 保留4088集合无增删，但release TODO由212262 B/f654cd5e…变为219241 B/1ae146ac…；原history SHA未改写。Root随后通知main从c466推进至0b17496707e0f4d679a86a9d8b4c22477093e8a6，仅该文档和一个smoke脚本incoming。这里记录Root提供的上下文，没有读/跑脚本，没有独立Git认证；所有本轮产品pin仍相同。\n\n[诊断](metadata-diagnostics.json) 保留首次7712-token元数据打印在6500预算下截断的原提示、猜streamReducer.ts未命中及head导航界限。真实reducer定位为已pin的types.ts；不是产品失败或重试。测试文件仅rg导航命中，测试语义阅读/执行为0；product import、工具/helper、fixture、UI、native/network/process和Git全0。范围有限，不宣称所有卡片/全仓无bug。冻结文件见[receipt](reviewer-receipt.json)。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/root-web.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3714,
+      "context": "显示清理的残留差异，原结果不丢失，根因/改动位置不同。July9 protocol review 描述的是主 terminal 与子事件隔离合同及转发，不是当前 Web 同根因已确认 bug。\n\n相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 legacy history 附件、ACK重发、配对/上传故障再登记。只读邻接不是动态全功能覆盖。\n\n候选未测试/不计确认：maxRoomSeq 对较旧 latestSeq 可能回退当前 cursor，但尚未证明普通生产时序与用户影响；CC 历史 tool starts 未显式封口，需要区分正在观察的外部会话与静态历史；清空 Goal 后 late update 的状态残留缺少当前有序 stream 的正常时序证据。认证、权限、安全、真实浏览器/平台、任何已失败 CLI/recorder/Discord/summary 方向均未开展或重试。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-error-flag-dedup.json",
+      "pointer": "/hits/42/text",
+      "kind": "json-value-scalar",
+      "offset": 261,
+      "context": "06:33第二十轮Goal/Sleep实质审查与两个独立只读审计完成：新增R78/G20-1/P2无worker Main Resume只CAS磁盘并回updated:true，不ensure/派发；第1动态为legacy/unbound，bound同码为源码。R79/G20-2/P2有worker但bound非resident，cold重建漏Host WorkspaceContext，真实Engine模型前安全返回model_error/turnCount0，resume resolver忽略resolved失败，Goal仍active且无error；不称queued:true/提供方失败或越权。正常resident bound/cold legacy恢复实际一次complete_goal、普通authorized run服务恢复、edit/pause/delete/CAS均正常。两层独立修复，未运行完整App/Electron/真实worker。root同源两基线各guarded1文件4测试72expect/Completed，新增1文件4测试，通用80/240，当前79=1P1/51P2/27P3。前三harness失败与4/68早成功版本单列，作者重复不累加，所有network/subprocess调用0，内存provider。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/core-deep-dive/REWRITE-PLAN.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 20485,
+      "context": "型。\n- 必须讲故障模式：per-model switch 蔓延、4xx 重试浪费、maxTokens 默认截断、context 爆炸、大工具结果、memory 污染未来任务、Dream 越权写 user scope。\n- 红线：不要说 Gemini 支持 Vertex OAuth token；不要说 cookie/memory secret 已加密；不要说 memory 是 transcript 替代品；不要把 context compaction 写成简单截断；不要把 core 写成 coding agent。\n\n### 05 · `05-protocol-hosts-orchestration-deep-dive.md`\n\n**建议标题**：《协议、宿主与长任务编排：同一个 Core 如何服务 TUI、桌面、手机、SDK 与自动化》\n\n**文章任务**：收束前四篇，把 core/host 解耦与长任务平台化讲透。主线是：protocol/session 如何让不同宿主共享 core 语义；TUI/desktop/mobile/SDK 如何各自接入；RunManager/cron/goal 如何处理无人值守；plugins/arena/DriveAgent/DriveClaudeCode 如何把 core 变成可扩展平台。\n\n**应吸收现有 12 篇内容**：\n- `05-protocol-and-sessions.md`：JSON-RPC 接缝、transport、ChatSession queue、approval、background wakeup、config hot reload、session disk。\n- `10-tui-host.md`：TUI in-process protocol、外部 store、50ms buffer、自绘 renderer、headless 输出。\n- `11-desktop-mobile-host.md`：三进程模型、main broker、worker、renderer、mobile remote、CDP。\n- `07-run-automation-goal.md`：RunManager、Automation/Cron、read-only contract、persistent goal、durable 边界。\n- `09-arena-and-integrations.md`：Arena、IterativeArena、cc-orchestrator、DriveAgent/DriveClaudeCode、STT/review。\n- `08-plugins-capabilities-credentials-memory.md`：plugins/capabilities 作为平台扩展。\n- `12-module-map-and-recap.md`：磁盘布局与跨切面回顾。\n\n**应借鉴 harness-agent-series**：\n- `05-protocol-and-hosts.md`：Core 不应该知道自己跑在哪里；StreamEvent 和 Approval 是 UI 解耦关键；Desktop worker 的动机；Automation 可以有不同宿主策略。\n- `06-harness-agent-checklist.md`：Advanced 层：Automation、Background Agents、Plugin/Skill、M",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/core-deep-dive/v2-00-feature-tour.juejin.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3497,
+      "context": "现象 | 💡 真实原因 | 🔧 CodeShell 的思路 |\n|--------|-----------|-------------------|\n| 额度窗口快结束还剩一大半 | 人不可能守着订阅窗口一直发活 | 让工头在后台持续推进，把本来浪费的额度变成产出 |\n| 普通 agent 跑一半就断片 | 聊天框只管当前回合，不管长期目标 | Goal / Cron / background job 把任务变成可续跑的运行 |\n| Codex / CC 慢或者抽风 | 外部 CLI 是好工人，但不会自己管理自己 | DriveAgent / DriveClaudeCode 记录结果、续会话、必要时再派 |\n| 新场景总要改代码 | agent 能力写死后扩展成本高 | 扫描、安装、热加载 skill，让工头自己学新手艺 |\n\n🎯 **本篇结论先行**：CodeShell 不是一个“手机遥控器”，也不是一个“只会抽 Codex / Claude Code 的外壳”。它更像一个**全能工头**：\n\n- 第一条腿：**自己下场干活**。文件、Bash、浏览器、生图、子代理、Cron、持久 Goal、skill 扩展，CodeShell 自己就是一个能独立跑任务的 agent。\n- 第二条腿：**带队抽外部工人**。需要 Codex / Claude Code 这类 CLI 时，它把外部 CLI 当后台工人调度起来，完成后看 diff、看测试、继续下一轮。\n\n所以它既可以单独用，也可以和 Codex / CC 一起用。抽鞭子只是其中一种玩法，不是全部。\n\n---\n\n## 二、CodeShell 的解法：自己能干，也能带队\n\n先把手机放到一边。一个合格包工头，不能只会打电话叫人；它自己也得能看图纸、查现场、写清单、催测试、收尾归档。CodeShell 的 core 就是按这个方向做的：**先有一个能自己 work 的 agent，再把外部 CLI 接成可调度的工人**。\n\n### 2.1 自己下场：CodeShell 不是遥控器\n\nCodeShell Core 管的是一次 agent run 的完整生命周期：装配上下文、跑工具、问权限、写 transcript、发事件、在目标没结束时继续推进。只要 host 把它接起来，它自己就能干一大批活。\n\n| 能力 | CodeShell 自己能做什么 | 为什么这不是“只会遥控外部 CLI” |\n|------|------------------------|-------------------------------|\n| 文件 / Bash | 改文件、跑测试、扫仓库、整理 diff | 直接在本地工程里 work，不需要外部 agent 才能动手 |\n| 浏览器 / CDP | 打开页面、查状态、做交互验证 | 前端和文档类任务可以自己闭环 |\n| 生图 / 素材能力 | 给文章、页面、说明生成位图资产 | 不只是写代码，也能补齐内容生产链路 |\n| 子代理 / background job | 把长活拆出去跑，当前回合不陪它干等 | 自己也能做长任务编排 |\n| Cron / 持久 Goal | 到点唤醒，围绕目标持续推进 | 人睡觉后，目标还在账本里 |\n| skill 生态 | 扫描、下载、安装项目级 skill，并按需热加载",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/core-deep-dive/v2-00-feature-tour.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3164,
+      "context": "现象 | 💡 真实原因 | 🔧 CodeShell 的思路 |\n|--------|-----------|-------------------|\n| 额度窗口快结束还剩一大半 | 人不可能守着订阅窗口一直发活 | 让工头在后台持续推进，把本来浪费的额度变成产出 |\n| 普通 agent 跑一半就断片 | 聊天框只管当前回合，不管长期目标 | Goal / Cron / background job 把任务变成可续跑的运行 |\n| Codex / CC 慢或者抽风 | 外部 CLI 是好工人，但不会自己管理自己 | DriveAgent / DriveClaudeCode 记录结果、续会话、必要时再派 |\n| 新场景总要改代码 | agent 能力写死后扩展成本高 | 扫描、安装、热加载 skill，让工头自己学新手艺 |\n\n🎯 **本篇结论先行**：CodeShell 不是一个“手机遥控器”，也不是一个“只会抽 Codex / Claude Code 的外壳”。它更像一个**全能工头**：\n\n- 第一条腿：**自己下场干活**。文件、Bash、浏览器、生图、子代理、Cron、持久 Goal、skill 扩展，CodeShell 自己就是一个能独立跑任务的 agent。\n- 第二条腿：**带队抽外部工人**。需要 Codex / Claude Code 这类 CLI 时，它把外部 CLI 当后台工人调度起来，完成后看 diff、看测试、继续下一轮。\n\n所以它既可以单独用，也可以和 Codex / CC 一起用。抽鞭子只是其中一种玩法，不是全部。\n\n---\n\n## 二、CodeShell 的解法：自己能干，也能带队\n\n先把手机放到一边。一个合格包工头，不能只会打电话叫人；它自己也得能看图纸、查现场、写清单、催测试、收尾归档。CodeShell 的 core 就是按这个方向做的：**先有一个能自己 work 的 agent，再把外部 CLI 接成可调度的工人**。\n\n### 2.1 自己下场：CodeShell 不是遥控器\n\nCodeShell Core 管的是一次 agent run 的完整生命周期：装配上下文、跑工具、问权限、写 transcript、发事件、在目标没结束时继续推进。只要 host 把它接起来，它自己就能干一大批活。\n\n| 能力 | CodeShell 自己能做什么 | 为什么这不是“只会遥控外部 CLI” |\n|------|------------------------|-------------------------------|\n| 文件 / Bash | 改文件、跑测试、扫仓库、整理 diff | 直接在本地工程里 work，不需要外部 agent 才能动手 |\n| 浏览器 / CDP | 打开页面、查状态、做交互验证 | 前端和文档类任务可以自己闭环 |\n| 生图 / 素材能力 | 给文章、页面、说明生成位图资产 | 不只是写代码，也能补齐内容生产链路 |\n| 子代理 / background job | 把长活拆出去跑，当前回合不陪它干等 | 自己也能做长任务编排 |\n| Cron / 持久 Goal | 到点唤醒，围绕目标持续推进 | 人睡觉后，目标还在账本里 |\n| skill 生态 | 扫描、下载、安装项目级 skill，并按需热加载",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/core-deep-dive/v2-04-model-context-memory-deep-dive.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 18612,
+      "context": "ent 的「脑容量」不是 prompt 长度。真正决定一个 agent 能不能跨多轮、多会话、多模型持续工作的，是它在四层之间建立的边界：\n\n- **模型适配层**决定「请求怎么发对」——差异是数据，不是代码，所以能力漂移时改一行而不是追 `if`。\n- **Context Window**决定「这一轮能想什么」——它是工作台，靠分层 compaction 控制预算、保护 API 配对不变量。\n- **Transcript / State**决定「过去发生过什么、能不能恢复」——它是账本，`toMessages()` 把账本塑形成模型输入。\n- **Memory / Dream**决定「跨任务能沉淀什么」——它是受治理的长期知识，靠 scope、pending 审批门、离线 Dream 防污染。\n\n这四层都跟「记住」有关，但职责、生命周期、权限边界完全不同。把它们分开、再让它们配合，才是「长期上下文」的真实形状。\n\n下一篇（第 05 篇）收束整个系列：同一个 core 语义如何被 TUI、桌面、手机、SDK 与自动化这些不同宿主消费，以及 RunManager / cron / 持久 goal 如何支撑长任务编排与平台扩展。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 34774,
+      "context": "rfacing（可选，只有 event 可证明时启用）。\n\n**复用：** Phase 0 direction envelope、NotificationQueue、agentNotificationBus、runtime generation、safe point、AbortController、permission provenance。\n\n**新建：** host-side Pet route resolver、top-level session direct edge、LiveSessionControl adapter；后续 user 改造时再迁入 server 并叠加 ownership。\n\n**明确不含：** sibling route、broadcast、Team、跨用户、target-not-running 自动 resume。\n\n**主要风险：** 第二个 Engine 写 transcript、interrupt 被误解为回滚、Pet 文本被误当用户 consent。三项都必须 fail closed。\n\n### Pet Phase 3：可选主动性与新渠道\n\n**目标：**在用户拍板后扩展，而不是默认放大自治。\n\n**候选交付物：**\n\n- opt-in L2 auto-open、quiet hours、per-session notification preference；\n- future IM gateway 接 `dispatchToAssistant`，支持全局问答与安全 deep link；\n- 基于 cron 的 Pet check-in / daily digest；\n- 有边界的长期人格/记忆；\n- 若用户明确批准，再设计低危 policy automation。\n\n**明确不自动包含：** Team/多数字人。Team 仍是独立后续 Phase，需要成员目录与 ACL。\n\n---\n\n## 8. 与账号体系 / server roadmap 的分期关系\n\n### 8.1 Phase 1 本地前置：不包含账号体系\n\nPet Phase 1 与 server/account roadmap 解耦，可以在当前 Desktop 单用户本地形态独立交付。它只依赖：\n\n1. 现有本地 durable session catalog，用来列出“我的 session”；\n2. 当前 core worker 的 `ChatSessionManager`、session-tagged stream、pending route 和 notification bus，用来叠加 live 状态；\n3. 一个固定的隐式身份 `local-user/local-pet` 和本地 `PetSessionBinding`，用来表达唯一 Pet 与 direct-child tree；\n4. 本地 durable pet chat session 与少量 preference/receipt metadata。\n\nPhase 1 **不新建** `User/AuthSession`，不要求 login，不做 `Principal.userId` 校验，不做 tenant ownership，也不要求 per-user worker。这里的“我的 Pet”就是“当前机器上当",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 991,
+      "context": " finalText”不准确 | prompt 只拼 objective/setAt/now/final/background：`packages/core/src/hooks/goal-stop-hook.ts:254-287`；完整工作 messages 和工具结果明明仍在 TurnLoop：`packages/core/src/engine/turn-loop.ts:1124-1186` |\n| 使用 aux、小模型能力不足 | **路由事实成立；能力不足未证实，故为部分成立** | Engine 把 `auxSummaryClient` 传给 judge：`packages/core/src/engine/engine.ts:1937-1942`；但 aux 未配置、缺失、同身份或构建失败会回退主模型：`packages/core/src/engine/engine.ts:2376-2430` |\n| prompt/解析/降级脆弱 | **部分成立** | 自由文本 JSON + 首 `{`/末 `}` 解析、无 schema：`packages/core/src/hooks/goal-stop-hook.ts:103-146`；失败 fail-closed 是正确保护，但会继续重试到 stop cap：`packages/core/src/hooks/goal-stop-hook.ts:291-325`、`packages/core/src/engine/turn-loop.ts:1017-1066` |\n\n推荐方案不是单独做 A、B 或 C，而是以下混合优先级：\n\n```text\n硬预算/取消\n  → 可程序化 criterion（权威数值/状态）\n  → 主模型成功、单独调用 complete_goal\n  → 私有 GoalJudgeEvidenceV1 + contextual judge 兜底\n  → 公共 on_stop hook 只可额外阻止\n  → maxTurns/maxStopBlocks/token/time 最终兜底\n```\n\n模型策略为：**V1 上线初期 primary-first；同信任域、上下文窗口已知且离线评测达标的 aux 才进入 allowlist，aux 失败再回 primary。**这把“换强模型”从拍脑袋开关改成受测路由，同时保留小模型的成本优势。\n\n## 1. 文档沿革与本次边界\n\n### 1.1 与 memory 的关系\n\n本地 memory `codeshell-goal-judge-aux-model-blind-context` 给出的 A/B/C 是正确的问题分解：A 增加上下文，B 换主模型，C 让主模型显式完成。但其“only finalText”是早期缩写，不是当前精确事实；当前 prompt 还包含 objective、时钟和运行中后台任务，见 §2.2。\n\n### 1.2 与既有重构文档的关系\n\n请求中提到的 `docs/refactor/goal-judge-context-refactor-codex.md` 当前工作树不存在。现有最近基线是 `docs/refactor/goal-judge-context-refactor-FINAL.md`；它已经把 A+C 收敛为“安全 `complete_goal` 优先 + 私有 contextual judge 兜底”，并补充了私",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 18608,
+      "context": "再按兼容 shape 发公共 `on_stop(goal, finalText, turnCount, sessionId, isSubAgent, signal)`。\n\n原因：公共 registry 会把同一 ctx 交给 shell/plugin/user hooks（`packages/core/src/hooks/registry.ts:78-90`）。把 transcript/tool evidence 放进去会无意扩大数据暴露面，也允许低优先级 handler 篡改内部 DTO。\n\n#### token 与数据控制\n\n不把“全历史”理解为无界 stringify。投影规则如下：\n\n1. 复用 ContextManager 已治理的 working messages/rolling summary，不回读原始大结果文件，不第二次做 LLM summary。\n2. 固定保留 objective、structured criteria、最新真实 user constraints、deterministic signals 和 final provenance。\n3. 工具证据按 goal generation 过滤；优先保留最新失败、最新成功验收、仍未完成项；普通成功读操作只保留 name/status/digest。\n4. `ToolResult.sensitive` 只给 redacted marker/status/digest，绝不传 raw result；shell stdout、源码、URL query、MCP/web 任意文本默认不开放 preview。\n5. 图片/二进制只保留 placeholder、mime/size/digest，不传 bytes。\n6. 所有文本 section 做 head+tail 截断并标原长度；先按 route 的已知 context window 计算上限，再扣 output reserve 和 safety margin。\n7. provider 报 context length error 时最多一次 shrink：去掉所有 preview，只留 status/digest；仍失败进入明确 fallback，不无限 retry。\n8. 日志只记 schema/prompt version、section size、route、latency、parse code 和 per-run keyed digest；不记 objective/final/tool preview/raw judge reply/gaps 原文。\n\n初版不复用当前 verdict cache。V1 evidence 每次自然 stop 都可能变化，旧 cache 的价值很低；先用 per-run request/token/time ledger 限额。若未来重新引入 cache，key 必须含 goal generation + canonical evidence digest + clock bucket，且不缓存 `met` 或 `unavailable`。\n\n### 5.4 B：用什么模型\n\n推荐内部 `auto` 路由，而不是立刻暴露一个新的用户设置矩阵。\n\n| 条件 | V1 route | fallback |\n|---|---|---|\n| deterministic criterion ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/refactor/goal-judge-context-redesign.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 22921,
+      "context": "化时不反复付费调用同一路由；等待新 evidence 或进入 cap；\n4. judge ledger 或 Goal budget 耗尽属于 hard terminal，不再包装成 unavailable 继续烧主模型；\n5. 保留用户 abort signal，并使用较短的 judge 专用 timeout（建议 30 秒，具体值由 latency baseline 冻结）。\n\n#### 5. 纯 LLM / explicit-only / 双模型的定位\n\n| 方案 | 优点 | 缺点 | 决策 |\n|---|---|---|---|\n| 纯 contextual LLM judge | 兼容弱 tool-calling 模型 | 仍是概率判断，高频且有成本 | 只作 fallback |\n| explicit-only | 最接近 Codex，主模型有完整上下文 | 工具隐藏、弱 tool calling、模型遗忘会卡到 cap | 不直接全量启用；按 capability canary |\n| 确定性 hook/provider | 数值条件准确、便宜、可审计 | 只覆盖可程序化目标 | 最高优先级，逐类扩展 |\n| explicit + contextual hybrid | 兼容与准确性平衡 | 实现需处理 capability/finalize | **推荐主路径** |\n| aux + primary 双模型串行投票 | 可降低单模型偶发误判 | 成本、延迟、冲突语义显著增加 | 后置，数据证明必要再立项 |\n\n## 6. TDD 落地计划\n\n### Phase 0：先冻结现状与评测集，不改行为\n\n先写 characterization tests，使当前行为可审计：\n\n1. judge 当前 request 精确等于 objective/setAt/now/final/running background；断言不含 history/tool results/round/budget。\n2. aux configured/distinct、aux unset、missing、same identity、build failure 的 route matrix。\n3. valid/met/not_met/waiting、缺 waiting、矛盾 boolean、multiple JSON、truncated、throw/abort/timeout。\n4. empty current response 复用 stale finalText 的 fixture。\n5. `maxStopBlocks=N` 最多进入 N+1 次 judge seam，且 `recordUsage:false` 不计入现 tracker。\n\n建立 40 条左右的 seed fixture，至少覆盖：中文/英文、met/not_met/waiting、测试/benchmark、绿灯后修改、空 final、previous gaps、context compact、finite/service background、额度阈值、工具拒绝、resume/wakeup。所有候选 `met` 需人工复核，不能把“最终停止了”当 gold。\n\n### Phase 1：先红——private seam、状态与",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/refactor/goal-persistence-final-design.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4653,
+      "context": "盖 | 并发控制 | 崩溃/恢复 | 生命周期表达 | 依据 |\n|---|---|---|---|---|---|---|\n| OpenAI Codex | canonical history 是 `~/.codex/sessions/YYYY/MM/DD/rollout-<time>-<thread-id>.jsonl`；另有 `state_5.sqlite` 作为可查询 thread metadata index、`session_index.jsonl` 兼容名称索引，当前 goal 在 `goals_1.sqlite` 的 `thread_goals` 单行中 | rollout 和名称索引追加；SQLite row 更新；名称索引删除时 temp + rename 重写 | 同进程每 thread 只允许一个 live recorder，单后台 writer task 经有界 channel 串行写；rollout 源码未见跨进程 file lock 或 revision。SQLite 使用 WAL/5 秒 busy timeout；goal 更新可用 `expected_goal_id` 作为 identity 条件，但没有单调 revision/watermark | rollout item 写成功后才从 pending 队列移除；flush 失败会丢句柄、重开并重试一次；读取逐行，坏 JSON 行被跳过。调用 `flush`，未见文件/目录 fsync，掉电 durability 未承诺。SQLite 依赖 WAL/事务恢复 | rollout item 重放会恢复会话；thread metadata 在 SQLite；goal row 有 `goal_id` 与 `active/paused/blocked/usage_limited/budget_limited/complete` 状态 | [rollout 路径与 append writer](https://github.com/openai/codex/blob/1f0566d3f59298d1bb88820a0d35294f1eeb07ea/codex-rs/rollout/src/recorder.rs#L1498-L1549)、[pending/flush/retry](https://github.com/openai/codex/blob/1f0566d3f59298d1bb88820a0d35294f1eeb07ea/codex-rs/rollout/src/recorder.rs#L1545-L1715)、[JSONL + SQLite 双层说明](https://github.com/openai/codex/blob/1f0566d3f59298d1bb88820a0d35294f1eeb07ea/codex-rs/thread-store/src/local/mod.rs#L45-L62)、[SQLite WAL](https://github.com/openai/codex/blob/1f0566d3f59298d1bb88820a0d35294f1eeb07ea/codex-rs/state/src/runtime.rs#L362-L370)、[goal schema](https://github.com/openai/codex/blob/1f0566d3f59298d1bb88820a0d35294f1eeb07ea/codex-rs/s",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-plan-round22.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 7559,
+      "context": "wned-worker file不是动态spawn负向探针；无worker的依据是本ownedMain显式child/utility deny、ensureWorker throw、只构造in-process Core transport，且没有产品Main/WorkerBridgeCore构造。\n\n当前尚未execute/prepare/launch，正式新增finding0、测试计数0。支持进一步核对的只是自然await可行性，未依optional AbortSignal本身认定产品Stop合同；与架构Stop signal→tool handler合同、Core pending清理、lease保留设计分开解释。\n\n## SG07:28 执行后的状态补记\n\n上文为 SG07:08 的 prelaunch 记录，保留当时状态。root/web预审最终guard/module图后，先root审 prepare-only生成物，再root明确授权native。最终作者第7次独立运行 Completed66 Nodeassert/exit0；前6次支架加载/模型schema发现/回包断言/预算失败均保留、未算产品问题或成功；源和完整账本见 `/tmp/codeshell-review-20261012-browser-stop-round22.md` 与 `.../browser-stop-round22/final-author/`。最终launcher SHA11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d，Main SHA1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b。\n\n保持上述guard/模块加载/运输边界；修正的业务支架前提为正式desktop Host、provider按requestBoundaryId区分main/aux、真实ToolSearch select加载deferredBrowser schemas、合法maxTurns8。所有修正先归档失败，Host/ToolSearch/预算均经root审核授权；没有修改availability/生产handler。Main源码仍冻结，最终prepare资产privateHOME已随app.close(code0)精确回收。prepare-only HOME亦在root核完后精确移除并保存独立removed收据。产品build/clean/源码写入0、真实worker/model/CLI/operatorChrome/外站0。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/goal-bound-quality-round20.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 7502,
+      "context": "ol/chat-session.ts:405) 忽略结果并 resolve(true)。Server [2769](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2769) 只有 reject 才调用回滚/error 分支。故真正未启动的 continuation 既未暂停回来也未通知失败；App [1929](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/App.tsx:1929) 接受返回投影后没有异常可触发 reconcile。\n\n## 正常、恢复与安全范围\n\n最终 fixture 的 cold legacy 与 resident bound 两项控制均在 actual Core/Engine 下运行一次 owned 内存 LLMClientBase，通过 actual `complete_goal` 持久 terminal/completed；说明失败限定 bound+nonresident，不是所有 Goal 或所有 cold Session。`projectTrusted:false` 的 resident bound 对照同样成功，失败不是“未受信任项目本来就不许 Resume”。fixture 的 bypass permission mode 用于消除工具批准交互，workspace guard 在模型/tool 阶段前独立生效，不据此宣称任何真实用户 bypass 权限问题。\n\n失败后，同一 Session 的普通 `agent/run` 携 actual Main resolver 已取得的 context，实际 Engine 成功一轮并完成 Goal。这是**服务级恢复**；报告已标 `actualMainSend:false`，并未实际点击 normal-send/启动完整 worker。Main ordinary-run context 注入和 ensure 接线为源码支持。可以建议用户发送继续消息作为有根据的 workaround，但不能写“完整 Desktop 恢复点击已验证”。没有历史删除、目标丢失、永久不可恢复、错项目执行、权限绕过、真实 provider 请求或费用证据。\n\n现有 fence 仍应保留：Goal ID/revision CAS、严格 TCP 连接归属 [server.ts:2518](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2518)、同 Goal pending resume 合并及 queue-head pause/delete guard [chat-session.ts:386](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/chat-session.ts:386)、manager close/migration 生命周期门禁和 workspace binding 匹配。建议修复先经 Host 得到最新合法 authority，在 await 后复核 Sessi",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/high-risk-quality-round17.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 697,
+      "context": ".md，以及主报告 README、quality-audit、runtime-round3、resource-quality-round8、workspace-quality-round11、flow-coverage，和两份便携 fixture / 四份既有成功日志。产品比较使用 Git 对象 `84740d56e55517b004948a0a0e07649ad6fbf998` 与 `a66f4ef291f304ee4df9da8095a90671d9a8f140`；latest HEAD 是后者。主报告资料所在 checkout 当前 HEAD 为 `2ea4832a`（docs(review): record project repair and autosave failure recovery），其下列产品文件对 84740d56 无差异，未将文档 HEAD 误记为旧产品基线。\n\n## 判断摘要\n\n| 条目 | 建议 | 保留依据 | 必须保留的范围 |\n| --- | --- | --- | --- |\n| R35 | 保留 P1 | 正常 Desktop 输入能发起两个同目标请求；失败者未证明创建归属便强制删除成功者资源，真实 Git 证据包含已成功返回后的未提交文件损失 | 两个创建预检重叠；未提交文件损失还要求文件在成功与失败回滚之间写入。恢复会话工作区不恢复这些内容 |\n| R36 | 保留 P2 | 真实编译 Core 在原生 Node 中写后异步 EPIPE，Socket 无 listener，Host exit 1；生产 local Hub/serve 直接使用相同 Core | 写与 worker 关闭重叠；实测 Node v25.8.1，不扩成全部 Node/OS、Docker 外层 Host 或 Electron Main 已证实退出 |\n\nR35 是 Git 创建/回滚资源所有权缺失，R36 是进程 stdin 流错误没有被隔离。修复边界与恢复机制不同，不应合并；也没有理由把 R36 提升为已验证的数据删除或所有客户端永久不可恢复。\n\n## R35：入口、时序、保护与恢复\n\n1. **正式 UI 入口仍可达。** [WorkspaceIndicator.tsx:604](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/topbar/WorkspaceIndicator.tsx:604) 的 switchTo 在 605–608 检查 session/project、sessionBusy、当前 authority；629–636 的 createNew 只再检查 sessionBusy / 非空 slug。838–846 的输入未 disabled，842 直接调用 createNew。854 确实禁用 Create 按钮，却没有在函数或输入事件处拒绝 busyAction。因此不是按下 disabled 按钮的虚构入口，也不要求跨项目或恶意 renderer。\n2. **preload 与 Main 没有去重。** [project-authority-api.ts:40](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/progress.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 16185,
+      "context": "18明确服务级close/改mode恢复，当前可见UI未动态验证。Goal/Sleep候选仅/tmp隔离调查，未先计新发现/测试。\n\n06:23提前fetch origin/main仍a66f4ef2；原工作区main另有其他任务6034df8a sidebar-account提交且clean，读取后完全保留、不纳入两个冻结产品快照。下一次宜07:10–07:20，不在06:40重复fetch。11:00未到，heartbeat继续ACTIVE、不提前complete。\n\n06:33第二十轮Goal/Sleep实质审查与两个独立只读审计完成：新增R78/G20-1/P2无worker Main Resume只CAS磁盘并回updated:true，不ensure/派发；第1动态为legacy/unbound，bound同码为源码。R79/G20-2/P2有worker但bound非resident，cold重建漏Host WorkspaceContext，真实Engine模型前安全返回model_error/turnCount0，resume resolver忽略resolved失败，Goal仍active且无error；不称queued:true/提供方失败或越权。正常resident bound/cold legacy恢复实际一次complete_goal、普通authorized run服务恢复、edit/pause/delete/CAS均正常。两层独立修复，未运行完整App/Electron/真实worker。root同源两基线各guarded1文件4测试72expect/Completed，新增1文件4测试，通用80/240，当前79=1P1/51P2/27P3。前三harness失败与4/68早成功版本单列，作者重复不累加，所有network/subprocess调用0，内存provider。\n\nR53优先级抽查已收束，保留P2的持续Update契约失效理由及审计边缘P3意见；R29交叉降级P3。R75原生storage contract作者/主审各31独立assert，Bun不增，未加载产品hook。报告待机械/最终独立整合语义核验，全部仅本任务docs；最近origin核对06:23仍a66f，下一次07:10–07:20。11:00未到，继续heartbeat，不提前complete/停用。\n\n06:35机械核验79编号连续唯一、1/51/27一致，1067个顶层Markdown本地链接/705源码行号有效、0error；两份80/240metadata与guarded完成日志一致，新1/4/72、native storage31分别核对，产品tracked diff均空。staged diff --check通过、69文件均为本任务docs。get_goal仍返回blocked（主审未请求、实际审查无阻塞），按授权继续；automation工具view已调用、TOML确认ACTIVE/整点半点，11:00交付后才complete/停用。第21轮BrowserPanel任务取消/撤权/owner关闭只读预审已委派goal_sleep_review，仅/tmp、无预计新发现；下一heartbeat接续。\n\n06:40第二十轮最终独立整合语义核验通过，新增执行0；79=1/51/27、通用80/240、新Goal1/4/72及native storage作者/root各31分账无实质矛盾。已修正native补证阶段79/236与同轮Goal后80/240的历史语境，以及README后续段。准备保存本任务docs-only检查点；第21轮BrowserPanel idle连接/撤权显示正在/tmp预审，尚无正式新项。原工作区和两个冻结产品快照不改，06:23 origin仍a66f、下次07:10–07:20；继续11:00，heartbeat ACTIVE、不提",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/project-recovery-quality-round16.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3177,
+      "context": "拒绝。\n\n第三用例证明**不恢复旧路径也有服务级workaround**：实际Core归档owner→Main remove坏secondary→Core恢复→Main迁移到A，旧路径仍缺失，authority从root_removed回ok。源文件仍在parked，由fixturefinally删除；没有模拟用户文件损失。Core归档本身会让removeRoot的动态readSessionArchivedAt排除该owner，路径与源码一致。\n\n两基线日志各是 **3 tests /27 expect/0fail/skip +Completed**，本次仅阅读收据，不累计为自己执行。原始latest `/tmp`日志也一致。无实际preload/IPC transport、完整Electron Main、native picker/TrustGate、worker/model、网络卷或Windows；getBridge=undefined，仅cold durable迁移动态。报告对此区分正确。\n\n## P2与P3、恢复边界\n\nP2成立的理由是主要功能“从缺失目录修复到可用目录”在合法目标下确定失败，不能通过同按钮直接重试、刷新、重开自然解除。恢复原路径对临时挂载/可回滚rename可行，但对于需要永久放弃旧路径的场景不是修复的普遍前提；另一个workaround需归档/移除登记/恢复/再次迁移多个不同入口，当前UI也未说明此组合。它超过一个额外确认或一次重挂的P3摩擦。\n\n同时，应继续明确：错误可见、没有部分commit/数据删除；恢复原目录后按钮可用。service workaround不是已完整点击归档→目录管理→历史恢复UI；`workspaceArchiveRelease.ts:36–41`确认release失败后仍继续归档，但完整UI触达和历史状态同步只读核对，未被这个test覆盖。不能说所有用户必须手改配置、重启应用或永远无法恢复。若主审按“已有不明显的多步workaround”降低级别，P3也有可讨论余地；本复核按正式修复目标直接失效建议P2。\n\n不扩大到primary缺失、无其他root、目录replaced、活跃工具/dirty worktree或未知目标；本例旧secondary缺失、健康primary、普通session。workspaceContextFor在其他run解析也使用全roots校验，本次没有该分支的独立动态输出，不再拆新项或声称所有健康新会话都已验证不能运行。\n\n## 与R23/R24去重\n\nR23在Panel discover批量预检或65项目IPC上限失败后，将空列表发布到当前renderer PanelRegistry，导致健康Panel App entries消失；不删除项目/包/绑定。这里没有Panel discovery、65项目、空注册列表，实际失败发生在session migration的workspaceContext构造，且state和registry保持原样。修Panel批量容错不会改变ProjectStore367/886；修迁移也不会修R23的清空。**两项应独立；同一workspaceContext的其它漏可用性情况本轮合为一项。**\n\nR24是移除项目先tombstone后，cold owner的worktree re",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/repair-handoff.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2460,
+      "context": "。保留独立 engine session authority、每窗口 owner、trust、symlink 和越界拒读门禁；终端句柄不能充当 Core session ID，也不能通过放宽通用路径门禁修复 R58/R86。 |\n| 6 | 连接有发送上限，存储故障不扩大为整个 Host 无响应；后台状态与失败反馈能让用户继续操作 | R68、R77/P2：[连接发送](connection-recovery-round15.md)、[认证锁](file-mutex-round19.md)；其余 P2 按正式影响排入，P3 按使用频率处理：[全部编号与级别](README.md) | R68：已认证、仍 OPEN 的慢 peer 通过直播/设备发送时，单 socket 及聚合 backlog 有界；保留健康 peer、合法历史分页、重新认证和撤权控制。不把 24 MiB 内的队列增长说成已测 OOM/崩溃。R77：已初始化 dataDir 失去当前非 root 进程写权限且 hub 子目录仍可读/遍历/修权限时，认证锁应立即分类真实 EACCES 并给出上下文，避免同步耗尽约 30 秒预算拖住同进程健康路由和 timer；保留认证、互斥写、短跨进程争用和失败不写保护，修权限后同稿重试。其余失败重试保稿、恢复步骤可见，展示范围与持久状态一致；不能用静默吞错作为恢复。 |\n\n上表是基于当前证据的工程排序建议，并非实施方案或已通过的修复验收。现有表征测试通过只证明问题复现；修复时应把对应缺陷断言改为正确行为，并保留正常路径、去重和资源归属控制。平台只在报告已验证的范围内成立，各附录中未动态执行的完整 App、产品 worker、提供方等边界不能据此当成端到端验收完成。\n\n[独立排序复核](validation/original-repair-handoff-round28/independent-quality.raw.md)与[源快照收据](validation/original-repair-handoff-round28/independent-quality.receipts.json)新增发现/执行0。主审采用建议并收窄上述Host/上传文件措辞；原稿、建议diff原字节与质量稿均保存。其余P2应按主报告逐项安排：CLI实际权限模式R02/R66、录音资源R50、可选问答/首次恢复/配对R14/R21/R32等不应因未在本表展开而排到低频P3之后。\n\n用户追加的全报告复核已整理[全部86项优先队列与覆盖缺口](priority-and-coverage.md)，补齐本交接分组未逐项展开的P2/P3；本文件的六组验收建议及非已修复边界保持。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/session-actions-round13.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2962,
+      "context": "**用户确认的是删除；实际删除失败，界面却表现为已删除，并失去该侧栏行的可见重试入口。持久 tombstone 使同键的普通 disk 重建也不能稳定恢复它。Core 权威 state/transcript 在这个可复现故障里保留，**不是历史文件丢失**。实际 SessionsView 仍能从 Core 目录列出 A；修复目录权限后，到该历史管理页再次删除可完成原操作。本轮已实际验证该恢复。没有声称 SessionsView 提供打开原会话或撤销 catalog tombstone 的入口。\n\n**正常对照：**从实际 `SessionsView` 发起同一真实文件系统故障，`SessionsView.tsx:158–175,451–469` 保留行，展示真实 EACCES，并提供原 ID 重试按钮；在 success 之前不调用 `onSessionDeleted`，实际 catalog 行和 renderer snapshot 均保留。恢复 owned 权限后点击实际重试，删除完成、成功回调只报 A 一次。\n\n**修复建议：**侧栏可沿用 SessionsView 的顺序：先显示目标的 pending-delete 状态，Main 删除成功后才提交 catalog/snapshot tombstone 和清理 renderer 状态；失败保留行、展示错误并允许同 ID 重试。永久 tombstone 不能在后端接受删除前作为乐观 UI 标记使用。\n\n**信心与限制：**高。生产 UI、确认框、hook、catalog/cache 与真实 fs 拒绝均验证；Main IPC/close/cleanup 的完整 Electron 原生生命周期只静态追踪。fixture 无活动运行，不依赖 worker/模型。此根因不同于 R57 的 Core orphaned 下载过滤、R24 的项目 tombstone/worktree 时序、R39 的恢复导航 busy，以及 R55 的迟到打开覆盖新选择。建议 P3 是因为有历史管理页继续删除入口，且没有在该故障中损坏 Core 历史。\n\n## 正常保护：新增 0 的路径\n\n1. **SessionsView 删除失败保留并重试。** 如 W23 对照所述，失败不发布删除成功，也不先写永久 tombstone。\n2. **历史页迟到重命名保持原身份。** 实际 SessionsView 对 A 提交标题，真实 `createSessionTitlesStore` 完成写入后控制 IPC 回包等待；随后离开历史页并通过真实 `handleSelectSession` 选择 B。释放旧回包后，实际 `useSessionHistorySync.onSessionRenamed` 用最新 indices 更新 A，B 的选择、标题及未发草稿保留，Main catalog 的 active 也为 B。`SessionsView.tsx:123–138` 冻结 id/draft；成功通知在 mounted 检查之前发送；`useSessionHistorySync.ts:41–64` 通过 latest ref 更新目标。没有把卸载后成功同步误报为错误。\n3. **归档 A 的等待不会改成 B，也不覆盖较新 B 修改。** 真实 `handleArchiveSession(A,true)` 控制 workspace-release await；期间选择 B 并重命名 B。释放等待后，真实 `archiveDisk",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/settings-recovery-round16.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4036,
+      "context": "\n建议 P3：限定真实拒写后的自动保存/恢复摩擦与离开失稿，不把假设的满盘或所有字段扩成 P2。与 R43 Token 拒写无反馈同属失败呈现家族，但修复位置和恢复契约不同：R43 的 Token 草稿留在原表单，可按同一个 Save 重试；这里公用 debounce hook 已清掉失败队列，没有同值重试入口，临时存储恢复后正常离开仍丢组件稿。仅修 TokenTab.catch 不会修本 hook。主审若按家族合并，也应保留 hook 的待保存值/离开契约修复点，不以多记编号为目标。\n\n与 R25 全表单旧字段回滚不同，本例是单 `appendSystemPrompt` patch，正常对照保留 responseLanguage/userProfile；与 R26 revision 刷新、R27 probe 过期回包、R28 初次加载未完成操作、R67 另一窗口 LAN 状态均不同。受影响的 ResponsePrefs、GitPath、PetPersonalization 也用此 hook，但本轮只静态确认复用，未逐项宣称独立动态失稿。\n\n建议让 flush 跟踪保存结果，失败保留原目标与值、显示持久错误并提供同值重试；离开时需要使失败稿仍可恢复或明确拦截/提示，不能只在 await 前清空唯一队列。重试必须保留捕获的原 scope/project，仍防跨项目错写。取消应明确丢弃尚未提交的当前值，不能取消已提交到 Main 的事实。\n\n## 正常保护与排除\n\n- **原目标 callback 捕获正确**：hook schedule 保存 targetKey/value/persist；target 切换和 unmount 旧 effect cleanup flush 原 callback。新便携 fixture 用实际 hook +真实项目 settings-service：A 连续两稿只写 latest，切 B 后先写回 A，B 文件不存在；B schedule 后 cancel/unmount 不写。这里是 hook/store 控制，项目 identity IPC 门禁未在这条 hook 控制中动态执行。\n- **正常离开确实保存**：实际 SettingsPage 自定义指令输入后立刻按返回，真实 Main writer 只接一次 patch，成功事件一次；重开读回最新指令，其他 agent 字段保留。不能把 cleanup flush 设计本身写成 bug。\n- **Main writer不因一次失败永久卡住**：[settings-service.ts:141](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/settings-service.ts:141) 按目标路径串行，前次失败后 catch 链继续；写锁内同步 read/merge/原子 temp→rename，finally 释放与清理tail。fixture 真实失败后重新编辑成功。不是当前 writer 丢并发互不相干 patch 的证据。\n- **设置导航限定目标**：SettingsPage [447](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/settings-recovery-round16.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4760,
+      "context": " 旧 effect cleanup flush 原 callback。新便携 fixture 用实际 hook +真实项目 settings-service：A 连续两稿只写 latest，切 B 后先写回 A，B 文件不存在；B schedule 后 cancel/unmount 不写。这里是 hook/store 控制，项目 identity IPC 门禁未在这条 hook 控制中动态执行。\n- **正常离开确实保存**：实际 SettingsPage 自定义指令输入后立刻按返回，真实 Main writer 只接一次 patch，成功事件一次；重开读回最新指令，其他 agent 字段保留。不能把 cleanup flush 设计本身写成 bug。\n- **Main writer不因一次失败永久卡住**：[settings-service.ts:141](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/settings-service.ts:141) 按目标路径串行，前次失败后 catch 链继续；写锁内同步 read/merge/原子 temp→rename，finally 释放与清理tail。fixture 真实失败后重新编辑成功。不是当前 writer 丢并发互不相干 patch 的证据。\n- **设置导航限定目标**：SettingsPage [447](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/settings/SettingsPage.tsx:447) contentTargetKey 包含 scope/project/module，[694](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/settings/SettingsPage.tsx:694) key 重挂；主 scope picker更新 scope/module，项目消失时511–518回退 global。不能仅在子组件 rerender 时观察旧局部state就声称正式导航会跨项目污染。\n- **配置权威不是 renderer任意cwd**：settingsAuthority 将项目路径投影为稳定 projectId；Main settings:get/setConfiguration先 [rendererConfigurationCwd:3618](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts:3618)→实际 resolveRendererConfigurationTarget，后者66–101精确单身份、project resolve primary、session requireUsable等门禁。路径/混合identity失败是保护，不列故障。本轮此门禁仅源码反证，不重跑既有 authority tests。\n- **模型配置已有错误与取消保护**：ModelCatalogPanel188",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/browser-stop-plan-round22.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 7381,
+      "context": "wned-worker file不是动态spawn负向探针；无worker的依据是本ownedMain显式child/utility deny、ensureWorker throw、只构造in-process Core transport，且没有产品Main/WorkerBridgeCore构造。\n\n当前尚未execute/prepare/launch，正式新增finding0、测试计数0。支持进一步核对的只是自然await可行性，未依optional AbortSignal本身认定产品Stop合同；与架构Stop signal→tool handler合同、Core pending清理、lease保留设计分开解释。\n\n## SG07:28 执行后的状态补记\n\n上文为 SG07:08 的 prelaunch 记录，保留当时状态。root/web预审最终guard/module图后，先root审 prepare-only生成物，再root明确授权native。最终作者第7次独立运行 Completed66 Nodeassert/exit0；前6次支架加载/模型schema发现/回包断言/预算失败均保留、未算产品问题或成功；源和完整账本见 `/tmp/codeshell-review-20261012-browser-stop-round22.md` 与 `.../browser-stop-round22/final-author/`。最终launcher SHA11bc7a9cf31d53a69c55191b89fe08d621e4857621175841bb13a446d97c320d，Main SHA1f9213c591383ae16b4ac41adaabcce8be298fcf143503909eb067cc7dbaf26b。\n\n保持上述guard/模块加载/运输边界；修正的业务支架前提为正式desktop Host、provider按requestBoundaryId区分main/aux、真实ToolSearch select加载deferredBrowser schemas、合法maxTurns8。所有修正先归档失败，Host/ToolSearch/预算均经root审核授权；没有修改availability/生产handler。Main源码仍冻结，最终prepare资产privateHOME已随app.close(code0)精确回收。prepare-only HOME亦在root核完后精确移除并保存独立removed收据。产品build/clean/源码写入0、真实worker/model/CLI/operatorChrome/外站0。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-goal-sleep-round20/goal-bound-quality-round20.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 7577,
+      "context": "ol/chat-session.ts:405) 忽略结果并 resolve(true)。Server [2769](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2769) 只有 reject 才调用回滚/error 分支。故真正未启动的 continuation 既未暂停回来也未通知失败；App [1929](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/App.tsx:1929) 接受返回投影后没有异常可触发 reconcile。\n\n## 正常、恢复与安全范围\n\n最终 fixture 的 cold legacy 与 resident bound 两项控制均在 actual Core/Engine 下运行一次 owned 内存 LLMClientBase，通过 actual `complete_goal` 持久 terminal/completed；说明失败限定 bound+nonresident，不是所有 Goal 或所有 cold Session。`projectTrusted:false` 的 resident bound 对照同样成功，失败不是“未受信任项目本来就不许 Resume”。fixture 的 bypass permission mode 用于消除工具批准交互，workspace guard 在模型/tool 阶段前独立生效，不据此宣称任何真实用户 bypass 权限问题。\n\n失败后，同一 Session 的普通 `agent/run` 携 actual Main resolver 已取得的 context，实际 Engine 成功一轮并完成 Goal。这是**服务级恢复**；报告已标 `actualMainSend:false`，并未实际点击 normal-send/启动完整 worker。Main ordinary-run context 注入和 ensure 接线为源码支持。可以建议用户发送继续消息作为有根据的 workaround，但不能写“完整 Desktop 恢复点击已验证”。没有历史删除、目标丢失、永久不可恢复、错项目执行、权限绕过、真实 provider 请求或费用证据。\n\n现有 fence 仍应保留：Goal ID/revision CAS、严格 TCP 连接归属 [server.ts:2518](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2518)、同 Goal pending resume 合并及 queue-head pause/delete guard [chat-session.ts:386](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/chat-session.ts:386)、manager close/migration 生命周期门禁和 workspace binding 匹配。建议修复先经 Host 得到最新合法 authority，在 await 后复核 Sessi",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-project-recovery-round16/quality-audit.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3208,
+      "context": "拒绝。\n\n第三用例证明**不恢复旧路径也有服务级workaround**：实际Core归档owner→Main remove坏secondary→Core恢复→Main迁移到A，旧路径仍缺失，authority从root_removed回ok。源文件仍在parked，由fixturefinally删除；没有模拟用户文件损失。Core归档本身会让removeRoot的动态readSessionArchivedAt排除该owner，路径与源码一致。\n\n两基线日志各是 **3 tests /27 expect/0fail/skip +Completed**，本次仅阅读收据，不累计为自己执行。原始latest `/tmp`日志也一致。无实际preload/IPC transport、完整Electron Main、native picker/TrustGate、worker/model、网络卷或Windows；getBridge=undefined，仅cold durable迁移动态。报告对此区分正确。\n\n## P2与P3、恢复边界\n\nP2成立的理由是主要功能“从缺失目录修复到可用目录”在合法目标下确定失败，不能通过同按钮直接重试、刷新、重开自然解除。恢复原路径对临时挂载/可回滚rename可行，但对于需要永久放弃旧路径的场景不是修复的普遍前提；另一个workaround需归档/移除登记/恢复/再次迁移多个不同入口，当前UI也未说明此组合。它超过一个额外确认或一次重挂的P3摩擦。\n\n同时，应继续明确：错误可见、没有部分commit/数据删除；恢复原目录后按钮可用。service workaround不是已完整点击归档→目录管理→历史恢复UI；`workspaceArchiveRelease.ts:36–41`确认release失败后仍继续归档，但完整UI触达和历史状态同步只读核对，未被这个test覆盖。不能说所有用户必须手改配置、重启应用或永远无法恢复。若主审按“已有不明显的多步workaround”降低级别，P3也有可讨论余地；本复核按正式修复目标直接失效建议P2。\n\n不扩大到primary缺失、无其他root、目录replaced、活跃工具/dirty worktree或未知目标；本例旧secondary缺失、健康primary、普通session。workspaceContextFor在其他run解析也使用全roots校验，本次没有该分支的独立动态输出，不再拆新项或声称所有健康新会话都已验证不能运行。\n\n## 与R23/R24去重\n\nR23在Panel discover批量预检或65项目IPC上限失败后，将空列表发布到当前renderer PanelRegistry，导致健康Panel App entries消失；不删除项目/包/绑定。这里没有Panel discovery、65项目、空注册列表，实际失败发生在session migration的workspaceContext构造，且state和registry保持原样。修Panel批量容错不会改变ProjectStore367/886；修迁移也不会修R23的清空。**两项应独立；同一workspaceContext的其它漏可用性情况本轮合为一项。**\n\nR24是移除项目先tombstone后，cold owner的worktree re",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-settings-round16/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4095,
+      "context": "\n建议 P3：限定真实拒写后的自动保存/恢复摩擦与离开失稿，不把假设的满盘或所有字段扩成 P2。与 R43 Token 拒写无反馈同属失败呈现家族，但修复位置和恢复契约不同：R43 的 Token 草稿留在原表单，可按同一个 Save 重试；这里公用 debounce hook 已清掉失败队列，没有同值重试入口，临时存储恢复后正常离开仍丢组件稿。仅修 TokenTab.catch 不会修本 hook。主审若按家族合并，也应保留 hook 的待保存值/离开契约修复点，不以多记编号为目标。\n\n与 R25 全表单旧字段回滚不同，本例是单 `appendSystemPrompt` patch，正常对照保留 responseLanguage/userProfile；与 R26 revision 刷新、R27 probe 过期回包、R28 初次加载未完成操作、R67 另一窗口 LAN 状态均不同。受影响的 ResponsePrefs、GitPath、PetPersonalization 也用此 hook，但本轮只静态确认复用，未逐项宣称独立动态失稿。\n\n建议让 flush 跟踪保存结果，失败保留原目标与值、显示持久错误并提供同值重试；离开时需要使失败稿仍可恢复或明确拦截/提示，不能只在 await 前清空唯一队列。重试必须保留捕获的原 scope/project，仍防跨项目错写。取消应明确丢弃尚未提交的当前值，不能取消已提交到 Main 的事实。\n\n## 正常保护与排除\n\n- **原目标 callback 捕获正确**：hook schedule 保存 targetKey/value/persist；target 切换和 unmount 旧 effect cleanup flush 原 callback。新便携 fixture 用实际 hook +真实项目 settings-service：A 连续两稿只写 latest，切 B 后先写回 A，B 文件不存在；B schedule 后 cancel/unmount 不写。这里是 hook/store 控制，项目 identity IPC 门禁未在这条 hook 控制中动态执行。\n- **正常离开确实保存**：实际 SettingsPage 自定义指令输入后立刻按返回，真实 Main writer 只接一次 patch，成功事件一次；重开读回最新指令，其他 agent 字段保留。不能把 cleanup flush 设计本身写成 bug。\n- **Main writer不因一次失败永久卡住**：[settings-service.ts:141](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/settings-service.ts:141) 按目标路径串行，前次失败后 catch 链继续；写锁内同步 read/merge/原子 temp→rename，finally 释放与清理tail。fixture 真实失败后重新编辑成功。不是当前 writer 丢并发互不相干 patch 的证据。\n- **设置导航限定目标**：SettingsPage [447](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-settings-round16/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4819,
+      "context": " 旧 effect cleanup flush 原 callback。新便携 fixture 用实际 hook +真实项目 settings-service：A 连续两稿只写 latest，切 B 后先写回 A，B 文件不存在；B schedule 后 cancel/unmount 不写。这里是 hook/store 控制，项目 identity IPC 门禁未在这条 hook 控制中动态执行。\n- **正常离开确实保存**：实际 SettingsPage 自定义指令输入后立刻按返回，真实 Main writer 只接一次 patch，成功事件一次；重开读回最新指令，其他 agent 字段保留。不能把 cleanup flush 设计本身写成 bug。\n- **Main writer不因一次失败永久卡住**：[settings-service.ts:141](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/settings-service.ts:141) 按目标路径串行，前次失败后 catch 链继续；写锁内同步 read/merge/原子 temp→rename，finally 释放与清理tail。fixture 真实失败后重新编辑成功。不是当前 writer 丢并发互不相干 patch 的证据。\n- **设置导航限定目标**：SettingsPage [447](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/settings/SettingsPage.tsx:447) contentTargetKey 包含 scope/project/module，[694](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/settings/SettingsPage.tsx:694) key 重挂；主 scope picker更新 scope/module，项目消失时511–518回退 global。不能仅在子组件 rerender 时观察旧局部state就声称正式导航会跨项目污染。\n- **配置权威不是 renderer任意cwd**：settingsAuthority 将项目路径投影为稳定 projectId；Main settings:get/setConfiguration先 [rendererConfigurationCwd:3618](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/index.ts:3618)→实际 resolveRendererConfigurationTarget，后者66–101精确单身份、project resolve primary、session requireUsable等门禁。路径/混合identity失败是保护，不列故障。本轮此门禁仅源码反证，不重跑既有 authority tests。\n- **模型配置已有错误与取消保护**：ModelCatalogPanel188",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-29-capability-control.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 254,
+      "context": "# Capability Control Implementation Plan\n\n> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.\n\n**Goal:** Give the \"扩展能力\" UI group a real backend — a control-layer projection (`list()`) over builtin/MCP/skill/plugin, plus a single switch router (`setEnabled()`), without touching the execution path.\n\n**Architecture:** New `packages/core/src/capability-control/` module. Pure projection functions turn each loader's output + current settings into a uniform `CapabilityDescriptor[]`. `CapabilityService` composes them for `list()` and reads each descriptor's inlined `control` to route `setEnabled()` writes through the existing `SettingsManager.saveUserSetting` (dotted-path aware, atomic). Desktop adds two thin `ipcMain.handle` forwarders.\n\n**Tech Stack:** TypeScript (ESM, `.js` import suffixes), Vitest, existing `ToolRegistry` / `SettingsManager` / `scanSkills` / `readInstalledPlugins`.\n\nSpec: `docs/superpowers/specs/2026-05-29-capability-control-design.md`\n\n## File Structure\n\n- Create `packages/core/src/capab",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-16-settings-center-ia.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 266,
+      "context": "# 设置中心信息架构统一(工作流 A)Implementation Plan\n\n> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.\n\n**Goal:** 设置中心成为所有配置的单一信息架构:支持「全局 / 按项目」scope 切换,收编数字人、数据源、项目指令模块;项目配置页变为预选项目 scope 的同一套页面;侧边栏升设置为一级入口、移除「扩展」双门;删除死代码。\n\n**Architecture:** `SettingsPage` 已有分组左导航,且各 section 组件已接受 `scope: \"user\" | \"project\"` + `activeProjectPath` props(现被硬编码为 `\"user\"`,见 `SettingsPage.tsx:202-205`)。本计划把 scope 变成页面级状态 + 顶部切换器,模块声明自己支持的 scope;新增三个模块(数字人/数据源/项目指令)复用现有组件;`ProjectConfigPage` 删除,`project_config` 路由改渲染预选项目 scope 的 `SettingsPage`。\n\n**Tech Stack:** React 19 + shadcn/ui + Tailwind v4(见 `packages/desktop/CLAUDE.md`:必须用 `@/components/ui` 组件,语义 token,不写原生控件);测试是 bun test 的文件内容契约测试(仓库既有风格);i18n 词条在 `packages/desktop/src/renderer/i18n/ns/*.ts`。\n\n**验证命令**(每个任务完成时跑):\n\n```bash\ncd packages/desktop && bun test src/renderer && bun run typecheck\n```\n\n所有路径相对 `packages/desktop/src/renderer/`,除非另有说明。\n\n---\n\n### Task 1: SettingsPage scope 模型 + 顶部切换器\n\n**Files:**\n- Modify: `settings/SettingsPage.tsx`\n- Modify: `i18n/ns/settings.ts`(新增词条,zh + en 两处)\n- Test: `settings/SettingsPage.scope.contract.test.ts`(新建)\n\n- [ ] **Step 1: 写",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1800,
+      "context": "lush 不卡)\n\n## D. 权限审批(核心:手机弹窗允许,等同桌面)\n- [ ] D1 审批卡:toolName + description + 摘要(command/file_path/…)+ 风险 badge(high 红醒目)\n- [ ] D2 approve / deny(approval.respond,已有)\n- [ ] D3 deny 带理由(可选输入)\n- [ ] D4 approve 作用域:once / session / project(对齐 desktop approve 的 scope)\n- [ ] D5 路径作用域:file / dir / tool(对齐 pathScope;仅路径类工具显示)\n- [ ] D6 AskUser 型审批:选项按钮 / 自由输入(answer);optionsOnly 时禁自由输入\n- [ ] D7 等待审批时运行状态条转 waiting + 顶部提示\n\n## E. 目标 / 子代理 / 后台(桌面有,手机补)\n- [ ] E1 goal_progress 状态行(轮次/状态;display-only)\n- [ ] E2 goalExtend(延长目标:加轮次/预算)——按钮(agent/goalExtend)\n- [ ] E3 子代理状态行(agent_start/end + task_update,按 agentId 隔离;只读)\n- [ ] E4 后台 shell 列表 + 输出查看 + kill(agent/backgroundShells)——P1,评估\n\n## F. 能力控制\n- [ ] F1 权限模式查看 + 切换:default/acceptEdits/bypassPermissions(新协议 permission.setMode;bypass 醒目确认)\n- [ ] F2 模型查看 + 切换(agent/configure model;新协议 model.set)——P2\n- [ ] F3 planMode 开关(run 带 planMode)——P2,评估\n\n## G. 房间(手机专属,UI 重做)\n- [x] G1 协议全(list/projects/create/open/close/send/history)\n- [ ] G2 房间列表 UI:名 + cwd + 权限 badge(bypass 红)+ 在线/状态\n- [ ] G3 新建房间(选 project:room.projects)\n- [ ] G4 进出房间 + 历史回放(room.history)+ 实时(room.message)\n- [ ] G5 房间内发消息(room.send)\n- [ ] G6 关房间(room.close)\n\n## H. 布局 / 成熟度(平板兼容)\n- [ ] H1 单列手机布局 + 安全区(env(safe-area-inset-*))\n- [ ] H2 平板两栏(≥820px:左 会话/房间 栏 + 右 聊天)\n- [ ] H3 顶栏:品牌 + 在线状态 + 会话/房间切换入口 + 设备/退出\n- [ ] H4 抽屉:窄屏会话/房间列表走抽屉,宽屏常驻左栏\n- [ ] H5 暗色(沿用 renderer token);触摸目标 ≥44px;tap-highlight 去除\n- [ ] ",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1834,
+      "context": "面)\n- [ ] D1 审批卡:toolName + description + 摘要(command/file_path/…)+ 风险 badge(high 红醒目)\n- [ ] D2 approve / deny(approval.respond,已有)\n- [ ] D3 deny 带理由(可选输入)\n- [ ] D4 approve 作用域:once / session / project(对齐 desktop approve 的 scope)\n- [ ] D5 路径作用域:file / dir / tool(对齐 pathScope;仅路径类工具显示)\n- [ ] D6 AskUser 型审批:选项按钮 / 自由输入(answer);optionsOnly 时禁自由输入\n- [ ] D7 等待审批时运行状态条转 waiting + 顶部提示\n\n## E. 目标 / 子代理 / 后台(桌面有,手机补)\n- [ ] E1 goal_progress 状态行(轮次/状态;display-only)\n- [ ] E2 goalExtend(延长目标:加轮次/预算)——按钮(agent/goalExtend)\n- [ ] E3 子代理状态行(agent_start/end + task_update,按 agentId 隔离;只读)\n- [ ] E4 后台 shell 列表 + 输出查看 + kill(agent/backgroundShells)——P1,评估\n\n## F. 能力控制\n- [ ] F1 权限模式查看 + 切换:default/acceptEdits/bypassPermissions(新协议 permission.setMode;bypass 醒目确认)\n- [ ] F2 模型查看 + 切换(agent/configure model;新协议 model.set)——P2\n- [ ] F3 planMode 开关(run 带 planMode)——P2,评估\n\n## G. 房间(手机专属,UI 重做)\n- [x] G1 协议全(list/projects/create/open/close/send/history)\n- [ ] G2 房间列表 UI:名 + cwd + 权限 badge(bypass 红)+ 在线/状态\n- [ ] G3 新建房间(选 project:room.projects)\n- [ ] G4 进出房间 + 历史回放(room.history)+ 实时(room.message)\n- [ ] G5 房间内发消息(room.send)\n- [ ] G6 关房间(room.close)\n\n## H. 布局 / 成熟度(平板兼容)\n- [ ] H1 单列手机布局 + 安全区(env(safe-area-inset-*))\n- [ ] H2 平板两栏(≥820px:左 会话/房间 栏 + 右 聊天)\n- [ ] H3 顶栏:品牌 + 在线状态 + 会话/房间切换入口 + 设备/退出\n- [ ] H4 抽屉:窄屏会话/房间列表走抽屉,宽屏常驻左栏\n- [ ] H5 暗色(沿用 renderer token);触摸目标 ≥44px;tap-highlight 去除\n- [ ] H6 空态 / 加载态 / 错误态(各页)\n- [ ] H7 滚动:",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3574,
+      "context": "(markdown 包体)、F3、原生 push。\n\n---\n\n## 完成状态(2026-06-10 本轮)\n\n**已做并验证(tsc + 45 mobile 单测 + renderToStaticMarkup 渲染冒烟 + 浏览器 boot 冒烟 phone/tablet 零错误 + 642 全仓测试绿):**\n- A1-A5 连接/身份(useRemoteSocket 态机 + 退出登录 + 设备名)\n- B1-B6 会话(session.list/history 协议+main+UI;进桌面会话回放;新建;当前指示)\n- C1-C2、C4-C6 聊天(user/assistant/reasoning/工具卡/子代理/错误流;运行态;停止;composer)\n- D1-D6 审批(工具/描述/摘要/风险红;允许拒绝;deny 理由;scope once/session/project;\n  pathScope file/dir/tool;AskUser 选项+自由输入+optionsOnly)— 端到端协议对齐核实\n- D7 等待态(StatusBar waiting)\n- E1 goal 横幅;E2 延长目标(按钮,默认 +100 轮);E3 子代理行(按 agentId)\n- F1 权限模式切换(default/acceptEdits/bypass + bypass 二次确认);F2 model.set 协议+main(无 UI)\n- G2-G6 房间 UI(列表/权限 badge 危险红/从项目新建/进出/历史回放/发消息/关)\n- H1-H7 布局(单列+安全区/平板 820px 两栏/顶栏/抽屉/暗色 token/空加载错误态/自动贴底)\n- I1-I4 工程(lib 单测/协议 @protocol 共享/双 tsc+build 绿/删 mobile-ui.ts 690 行)\n\n**未做(留给后续/需用户):**\n- C3 Markdown 渲染(评估包体后;现为纯文本+等宽 pre,代码可读)\n- C7 流批量(React key 稳定已是主要护栏;未测出卡顿,YAGNI)\n- E4 后台 shell 查看/kill(协议未接,P1)\n- F2 model UI / F3 planMode(P2)\n- I5 真机/平板冒烟:需用户手机+桌面 Electron 跑起来扫码实测(浏览器 boot 已冒烟,\n  WS 链路需真 main)。清单见 2026-06-06 §10.3。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-polish-results.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2731,
+      "context": " Link 操作在异步凭据读取、认证和动作返回后重新核查连接有效性，断开或取消后不再接受旧结果。\n- RemoteHostManager 修复启动/关闭竞态、同一连接重新认证的旧订阅，以及关闭失败后的资源清理；原生 Node WebSocket 超大帧错误也有独立进程回归。\n- RoomManager 用精确进程实例判断回调所有权，旧进程迟到的文本、审批或退出事件不能影响重开的房间。\n\n### 桌面交互\n\n- cc-room 的历史加载、失败重试、切房间、发送确认、输入法和审批操作补齐异步所有权检查。\n- 重复审批编号按房间隔离，连续冲突只产生一次有效拒绝，不遗留卡片或重复控制回复。\n- 后台 Shell 面板暂停隐藏时的轮询并隔离旧请求；Review/Files 面板正确清理过期筛选和错误。\n- 数字人编辑器修复特殊 Skill 名称触发的原型键问题，并对依赖预览、确认、安装、保存和项目切换加上生命周期检查。\n- 多 Skill 安装改为逐项参数，具名依赖拒绝会被安装器解释为开关或全部选择的特殊值；以官方发布的 CLI 纯参数解析器验证选择范围，未执行真实安装。\n- MCP 设置页在目标项目或编辑对象改变时隔离草稿和旧读结果；凭证加载、探测和保存失败显示错误，失败保留草稿并可重试。同步重复点击只提交一次，旧保存不能关闭新编辑器，保存仅更新当前条目与原子重命名的旧键。\n- MCP 的启停只写启停字段，编辑或重命名保留停用状态；递归设置合并使用明确的删除标记，清除已删除的环境变量、鉴权字段以及更换传输方式后的旧连接字段。经过 JSON 传输与实际配置文件写入的回归通过。最终真实 Electron 界面另外完成两次保存，直接核对临时配置文件：删除单个环境变量、重命名并清空可选字段、停用状态与相邻条目均正确；没有触发 probe/OAuth。\n- preload 不再依赖某些 Electron 上下文缺失的 `crypto.randomUUID()`，以 `getRandomValues()` 生成标准 UUID；真实导航回归通过。\n- TTS 准备结束时，锁文件关闭失败仍继续清理其他自有资源；保留原始失败或取消对象，并记录附带的清理错误。没有取得锁的尝试不能删除其他尝试的锁，已成功的准备仍会报告清理失败。第四轮偶发的 EBADF 未在 100 次真实前提失败/GC 探针中复现，不宣称已找到它的底层来源；清理异常覆盖主错误、跳过释放这一缺陷则有稳定故障注入回归。\n\n### Core、TUI 与验证工具\n\n- TaskGuard 在新的 TodoWrite 快照到达时重新计算任务年龄，避免复用位置 ID 导致误判卡住。\n- 记忆提取校验 description 类型；严格相同的完整候选结构先去重再应用数量限制，避免同一记忆写两份并挤掉有效候选。文本大小写、空白、否定和词序差异继续保留。\n- 记忆编排的显式/注入存储根贯穿查询、增改删、全局待确认、晋升、TTL、会话摘要、dream 计数及实际 Memory 工具。无显式根时保留原 HOME/env 规则；portable profile 继续独立，dream 不因此取得写入权限。\n- 词袋相似度只用于寻找相关记忆，不再把 ADD 或失败响应自动改成 UPDATE。对 auto/dream-owned 记忆的确定性回退，完整字段严格相同才跳过，其余保守新增；manual 相近主题仍保守跳过，模型明确的 NO",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/agent-evals-platforms-and-adapters.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 7203,
+      "context": "复次数相乘。离线契约检查继续使用 Bun 测试。\n\n同一契约提供两种接法：\n\n1. **平台发起**：平台/评测框架的 task/provider 调用 `runCase`，结果和评分回到该平台。\n2. **本地发起**：本地执行同一个 `runCase`，先保存结果包，再通过 backend 上传；不依赖远端可用性完成离线验收。\n\n后端切换时仍使用同一份固定的数据集、fixture 和 grader 版本。平台中可编辑的数据集应导出或拉取为本次运行的不可变快照，记录内容摘要与样本 ID 映射；不要只记一个数据集名称。\n\n合成 fixture 可以跨后端重用。生产日志转任务时，需要单独确认可重现输入和预期结果，不能直接把一条成功结束的 trace 当作正确答案。\n\n## 建议的首期选择\n\n**Langfuse 作为首个分析后端，通用单例执行与 grader 留在本地。** 原因是它已有 TS 实验接口、Agent task、追踪和自托管路径，能够复用已有能力。Promptfoo 可以在需要 CI 配置化测试时调用同一个 adapter；它不必成为第一阶段的第二个调度系统。\n\n第二个验证目标选择 Phoenix，用来检验数据契约是否真正可迁移。先验证同一份小型合成结果包能正确关联样本、trace 和评分，再扩展平台数量。以上是工程取舍建议，尚未做真实接入基准测试。\n\n首期任务仍用三题：列出挂载根、列出主根子目录、读取副根标记。随后增加一个通用 HTTP 假 Agent，证明执行接口没有依赖 CodeShell 私有类型；白盒检查按能力声明跳过并显示覆盖率。\n\n第一阶段验收：\n\n1. 同一任务可以交给 CodeShell adapter 和通用 HTTP adapter，且结果格式一致。\n2. 本地结果包能独立判分；平台不可用时仍能保留完整执行证据。\n3. Langfuse 能将每次执行关联到正确样本与评分；没有重复模型调用计数。\n4. 多目录错误能区分为宿主上下文、模型请求、工具执行、模型回答四类。\n5. 用相同结果包验证 Phoenix 映射，明确报告不支持的字段或能力。\n\n## 代码布局建议\n\n先放在评测开发目录验证抽象，确认第二种 Agent 和第二种后端可复用后再考虑拆成独立包。不要为了通用化立即新增多个生产 package。\n\n```text\nevals/\n  shared/             # task、execution、evidence、score 契约\n  adapters/\n    codeshell/        # Engine/协议与请求采集\n    http/             # 通用 HTTP 被测对象\n  environments/       # 临时目录、浏览器、假服务\n  graders/            # 通用评分器\n  backends/           # local、langfuse，随后 phoenix\n  suites/\n    codeshell-harness/ # 多目录、会话、工具参数等专项任务\n```\n\n原方案中的 `evals/harness/runner.ts` 应收敛为单例执行与必要的环境控制，批量实验优先复用平台或 Promptfoo。模型可切换、Agent 可切换、评分器可切换、平台可切换，是四个独立的扩展方向。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 12939,
+      "context": "lStorage/disk 双投影 |\n| stream、approval、mobile、automation IPC 路由 | `:1672-2242` | `useStreamRouter` + `useHostSubscriptions` | **高**；多 session 路由、coalescer seq、late event、cleanup |\n| send/quick chat/queued steer/stop/compact | `:2255-3045` | `useRunController`、`useQueuedSteering`、`useApprovals` | **高**；cancel/relay/steer 竞态 |\n| panel/quick-chat/anchor/dock | `:3057-3805` | `usePanelBuckets`、`useAnchors`、`useAppShortcuts` | 中；必须保持 hidden-but-mounted webview/PTY 语义 |\n| settings、TopBar derived state、goal clear | `:3807-4099` | `useRuntimeSettings`、selectors | 中；worker hot reload、optimistic goal clear |\n| 根 JSX shell | `:4101-4507` | `AppShell`、`AppMainView`、`SessionPanelDock` | 中；巨大 props 面，但逻辑应已先移出 |\n\n现有可复用地基已经不少：`transcriptsReducer.ts`、`streamRouting.ts`、`snapshotReplay.ts`、\n`queuedInput.ts`、`stopRouting.ts`、`chat/anchorBuckets.ts`、`panels/PanelArea.tsx` 都已有纯逻辑和测试。\n因此拆分应围绕这些模块建立 hook，不重写第二套 reducer。\n\n为什么是债：任何无关 UI 改动都重新创建数十个 handler/effect 的闭包环境；stream/approval/panel/session\n状态互相可见，所有权不清。影响面包括多 session 并发、automation backfill、mobile remote、quick chat、\npanel webview/PTY 生命周期和 persistent goal 的 optimistic UI。\n\n### 4.2 PR 序列\n\n| PR | 一句话目标 | 主要影响文件 | 可独立合并 | 回归风险 | 必需测试/验证 |\n|---|---|---|---|---|---|\n| D1（已完成） | 先搬顶层纯 helpers 与 `QuickChatPanelHost`，建立无行为变化的拆分模板。 | `App.tsx:176-357`、新 app/quick-chat 文件 | 是 | 低 | `AppQuickChat.test.tsx`、renderer typecheck/build |\n| D2（已完成） | 抽 `useBucketOverrides` 与 `useTranscriptBuckets`，保持现有 reducer 和 storage keys。 | `App.tsx:403-425,730-112",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 13538,
+      "context": "ear |\n| 根 JSX shell | `:4101-4507` | `AppShell`、`AppMainView`、`SessionPanelDock` | 中；巨大 props 面，但逻辑应已先移出 |\n\n现有可复用地基已经不少：`transcriptsReducer.ts`、`streamRouting.ts`、`snapshotReplay.ts`、\n`queuedInput.ts`、`stopRouting.ts`、`chat/anchorBuckets.ts`、`panels/PanelArea.tsx` 都已有纯逻辑和测试。\n因此拆分应围绕这些模块建立 hook，不重写第二套 reducer。\n\n为什么是债：任何无关 UI 改动都重新创建数十个 handler/effect 的闭包环境；stream/approval/panel/session\n状态互相可见，所有权不清。影响面包括多 session 并发、automation backfill、mobile remote、quick chat、\npanel webview/PTY 生命周期和 persistent goal 的 optimistic UI。\n\n### 4.2 PR 序列\n\n| PR | 一句话目标 | 主要影响文件 | 可独立合并 | 回归风险 | 必需测试/验证 |\n|---|---|---|---|---|---|\n| D1（已完成） | 先搬顶层纯 helpers 与 `QuickChatPanelHost`，建立无行为变化的拆分模板。 | `App.tsx:176-357`、新 app/quick-chat 文件 | 是 | 低 | `AppQuickChat.test.tsx`、renderer typecheck/build |\n| D2（已完成） | 抽 `useBucketOverrides` 与 `useTranscriptBuckets`，保持现有 reducer 和 storage keys。 | `App.tsx:403-425,730-1124`、新 hooks | 是 | 中 | `overridePersistence`、`snapshotReplay`、`transcriptsReducer`、App draft/compact tests |\n| D3（已完成） | 抽 `useSessionNavigation` / automation disk import，收口 repo/session 双投影。 | `App.tsx:1140-1671`、automation/transcript helpers | 是，依赖 D2 更稳妥 | 中 | repo/session deletion/archive tests、automation import/rebuild tests、startup smoke |\n| D4（已完成） | 抽 host stream/approval/mobile/automation subscription 与路由装配，不改 event reducer。 | `App.tsx`、`useHostSubscriptions.ts` | 是 | 高；本块最敏感 | `streamRouting`、`streamCoalescer`、`",
+      "completeScalar": false
+    }
+  ]
+}

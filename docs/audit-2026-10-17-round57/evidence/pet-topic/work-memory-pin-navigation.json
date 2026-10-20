@@ -1,0 +1,36 @@
+{
+  "filenameLocator": {
+    "command": [
+      "rg",
+      "-l",
+      "export class PetWorkMemoryStore",
+      "packages/desktop/src/main"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/desktop/src/main/pet/pet-work-memory-store.ts\n",
+    "stderr": ""
+  },
+  "pins": [
+    {
+      "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+      "bytes": 6984,
+      "lines": 207,
+      "sha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "pinAt": "2026-10-17T19:01:27.526690+00:00",
+      "coverage": "hash-only before boundary persistence navigation/body"
+    }
+  ],
+  "navigation": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "openSegment|activeSegment|boundaryBeforeMessageId|allSegments|lastInteractionAt|setLastInteractionAt",
+        "packages/desktop/src/main/pet/pet-work-memory-store.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "11:  lastInteractionAt: number;\n13:  activeSegment?: PetTopicSegment;\n21:  boundaryBeforeMessageId: string;\n75:      if (typeof parsed.lastInteractionAt === \"number\") {\n76:        this.last = parsed.lastInteractionAt;\n80:      } else if (isSegment(parsed.activeSegment)) {\n82:        this.segments = [parsed.activeSegment];\n93:  activeSegment(): PetTopicSegment | undefined {\n98:  allSegments(): PetTopicSegment[] {\n105:   * legacy/time-only segment (no `boundaryBeforeMessageId`) renders no boundary.\n109:      .filter((segment) => typeof segment.boundaryBeforeMessageId === \"string\")\n111:        boundaryBeforeMessageId: segment.boundaryBeforeMessageId!,\n116:  lastInteractionAt(): number {\n143:  async openSegment(segment: PetTopicSegment): Promise<void> {\n156:  async setLastInteractionAt(at: number): Promise<void> {\n182:      lastInteractionAt: this.last,\n",
+      "stderr": ""
+    }
+  ]
+}

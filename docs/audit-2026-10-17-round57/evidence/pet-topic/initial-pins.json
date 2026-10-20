@@ -1,0 +1,31 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedBaseline": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T18:53:59.116679+00:00",
+      "coverage": "hash-only before body/navigation"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T18:53:59.118305+00:00",
+      "coverage": "hash-only before body/navigation"
+    },
+    {
+      "path": "packages/pet/src/topic-segment.ts",
+      "bytes": 2719,
+      "lines": 75,
+      "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "pinAt": "2026-10-17T18:53:59.119275+00:00",
+      "coverage": "hash-only before body/navigation"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "baseline": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "main": "8e366d97c92c614f00df989006f5b8208185246f",
+  "paths": [
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/build/nsis-uninstaller-init.nsh",
+    "packages/desktop/package.json",
+    "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+    "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+    "packages/desktop/scripts/windows-nsis-acceptance.test.mjs"
+  ],
+  "productRuns": 0
+}

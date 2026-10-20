@@ -3,12 +3,12 @@ import type { ExtensionQueryHandler } from "../tool-system/capability-module.js"
 import type { Transport } from "./transport.js";
 import { initializeResult } from "./initialize.js";
 import { handleBackgroundWork, handleBackgroundWorkCancel } from "./background-work-rpc.js";
+import { runDiagnosticInputError, isValidRunAttachment } from "./run-input.js";
 import {
   ErrorCodes,
   Methods,
   createErrorResponse,
   createResponse,
-  type InputAttachmentMeta,
   type RpcRequest,
   type RunParams,
 } from "./types.js";
@@ -81,24 +81,6 @@ async function dispatchExtensionRequest(
   } catch (err) {
     transport.send(createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message));
   }
-}
-
-function isValidRunAttachment(value: unknown): value is InputAttachmentMeta {
-  if (!value || typeof value !== "object") return false;
-  const attachment = value as Partial<InputAttachmentMeta>;
-  const hasPath = [attachment.path, attachment.relPath, attachment.absPath].some(
-    (path) => typeof path === "string" && path.trim().length > 0,
-  );
-  return (
-    typeof attachment.id === "string" &&
-    attachment.id.length > 0 &&
-    typeof attachment.sessionId === "string" &&
-    attachment.sessionId.length > 0 &&
-    (attachment.kind === "image" ||
-      attachment.kind === "file" ||
-      attachment.kind === "directory") &&
-    hasPath
-  );
 }
 
 export function runInputError(params: RunParams): string | null {
@@ -228,7 +210,7 @@ export function runInputError(params: RunParams): string | null {
   }
   // Domain-specific run-param validation (e.g. behavior-mode vocabularies and
   // extension-owned param shapes) lives in AgentModule protocol.validateRunParams.
-  return null;
+  return runDiagnosticInputError(params);
 }
 
 export function goalExtensionInputError(params: Record<string, unknown>): string | null {

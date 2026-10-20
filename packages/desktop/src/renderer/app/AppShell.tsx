@@ -3,20 +3,32 @@ import type { ReactNode } from "react";
 export function AppShell({
   platformClass,
   sidebarCollapsed,
+  isFullscreen = false,
+  sidebarIsDialog = false,
   children,
 }: {
   platformClass: string;
   sidebarCollapsed: boolean;
+  isFullscreen?: boolean;
+  sidebarIsDialog?: boolean;
   children: ReactNode;
 }) {
   return (
     <div
       className={`relative flex h-screen flex-col overflow-hidden text-foreground ${platformClass}`.trim()}
       data-theme-surface="window"
+      data-app-shell
+      data-window-state={isFullscreen ? "fullscreen" : "windowed"}
+      data-sidebar-mode={sidebarIsDialog ? "drawer" : "inline"}
       data-sidebar={sidebarCollapsed ? "collapsed" : "open"}
       data-inspector="hidden"
     >
-      {children}
+      <div
+        data-app-shell-content
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -25,10 +37,12 @@ export function AppMainView({
   lifecycle,
   children,
   searchLayer,
+  navigation,
 }: {
   lifecycle: string | null;
   children: ReactNode;
   searchLayer: ReactNode;
+  navigation?: ReactNode;
 }) {
   return (
     <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -37,7 +51,14 @@ export function AppMainView({
           {lifecycle}
         </div>
       )}
-      {children}
+      {navigation ? (
+        <>
+          {navigation}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+        </>
+      ) : (
+        children
+      )}
       {searchLayer}
     </main>
   );

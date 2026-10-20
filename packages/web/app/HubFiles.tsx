@@ -47,33 +47,52 @@ export function HubFiles({
   onAuthLost: () => void;
 }) {
   const [folder, setFolder] = React.useState("");
-  const [directory, setDirectory] = React.useState<DirectoryView | null>(null);
+  const [directory, setDirectory] = React.useState<{
+    target: string;
+    value: DirectoryView;
+  } | null>(null);
   const [preview, setPreview] = React.useState<FileView | null>(null);
+  const [previewPath, setPreviewPath] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [previewLoading, setPreviewLoading] = React.useState(false);
-  const [error, setError] = React.useState("");
+  const [directoryError, setDirectoryError] = React.useState("");
+  const [previewError, setPreviewError] = React.useState("");
   const [reload, setReload] = React.useState(0);
   const [query, setQuery] = React.useState("");
+  const directoryRequest = React.useRef<AbortController | null>(null);
   const previewRequest = React.useRef<AbortController | null>(null);
+  const libraryRef = React.useRef<HTMLElement>(null);
+  const directoryRef = React.useRef<HTMLDivElement>(null);
+  const previewRef = React.useRef<HTMLElement>(null);
+  const returnFocus = React.useRef<HTMLElement | null>(null);
+  const directoryScroll = React.useRef(0);
+  const focusDirectory = React.useRef(false);
+  const focusPreview = React.useRef(false);
+  const restoreDirectory = React.useRef(false);
   const callback = React.useRef(onAuthLost);
   callback.current = onAuthLost;
   const report = React.useCallback((cause: unknown) => {
-    if (cause instanceof ApiError && cause.status === 401) callback.current();
-    else setError(cause instanceof Error ? cause.message : "文件读取失败，请重试。");
+    if (cause instanceof ApiError && cause.status === 401) {
+      callback.current();
+      return "登录已失效，请重新登录。";
+    }
+    return cause instanceof Error ? cause.message : "文件读取失败，请重试。";
   }, []);
 
   React.useEffect(() => {
     const controller = new AbortController();
+    directoryRequest.current = controller;
     setLoading(true);
-    setError("");
+    setDirectory(null);
+    setDirectoryError("");
     void api<DirectoryView>(`/api/v1/files?path=${encodeURIComponent(folder)}`, {
       signal: controller.signal,
     })
       .then((value) => {
-        if (!controller.signal.aborted) setDirectory(value);
+        if (!controller.signal.aborted) setDirectory({ target: folder, value });
       })
       .catch((cause) => {
-        if (!controller.signal.aborted) report(cause);
+        if (!controller.signal.aborted) setDirectoryError(report(cause));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -81,47 +100,114 @@ export function HubFiles({
     return () => controller.abort();
   }, [folder, reload, report]);
 
+  const changeDirectory = React.useCallback((path: string) => {
+    directoryRequest.current?.abort();
+    setDirectory(null);
+    setDirectoryError("");
+    setLoading(true);
+    setFolder(path);
+    returnFocus.current = null;
+    directoryScroll.current = 0;
+    // Clicking the current breadcrumb is also a retry of that exact directory.
+    setReload((value) => value + 1);
+    setQuery("");
+    focusDirectory.current = true;
+  }, []);
+  const changeFolder = React.useCallback(
+    (path: string) => {
+      previewRequest.current?.abort();
+      setPreviewLoading(false);
+      setPreview(null);
+      setPreviewPath(null);
+      setPreviewError("");
+      restoreDirectory.current = false;
+      focusPreview.current = false;
+      changeDirectory(path);
+    },
+    [changeDirectory],
+  );
+
   const openFile = React.useCallback(
-    (path: string, reveal = false) => {
+    (path: string, reveal = false, trigger?: HTMLElement) => {
+      if (reveal) {
+        returnFocus.current = null;
+        directoryScroll.current = 0;
+      }
+      if (trigger) {
+        returnFocus.current = trigger;
+        directoryScroll.current = libraryRef.current?.scrollTop ?? 0;
+      }
+      focusDirectory.current = false;
+      focusPreview.current = true;
+      restoreDirectory.current = false;
       previewRequest.current?.abort();
       const controller = new AbortController();
       previewRequest.current = controller;
       setPreview(null);
+      setPreviewPath(path);
       setPreviewLoading(true);
-      setError("");
+      setPreviewError("");
       void api<FileView>(`${workspaceFileUrl(path)}&preview=true`, { signal: controller.signal })
         .then((value) => {
           if (controller.signal.aborted) return;
-          if (reveal) setFolder(value.path.split("/").slice(0, -1).join("/"));
+          // The host accepts absolute workspace links and returns a canonical
+          // relative path. Breadcrumbs and selection must use that saved target.
+          if (reveal) {
+            changeDirectory(value.path.split("/").slice(0, -1).join("/"));
+            focusDirectory.current = false;
+          }
+          setPreviewPath(value.path);
           setPreview(value);
         })
         .catch((cause) => {
-          if (!controller.signal.aborted) report(cause);
+          if (!controller.signal.aborted) setPreviewError(report(cause));
         })
         .finally(() => {
           if (!controller.signal.aborted) setPreviewLoading(false);
         });
     },
-    [report],
+    [changeDirectory, report],
   );
   React.useEffect(() => {
     if (initialPath) openFile(initialPath, true);
   }, [initialPath, openVersion, openFile]);
   React.useEffect(() => () => previewRequest.current?.abort(), []);
 
-  const changeFolder = (path: string) => {
+  const closePreview = () => {
     previewRequest.current?.abort();
     setPreviewLoading(false);
     setPreview(null);
-    setFolder(path);
-    setQuery("");
+    setPreviewPath(null);
+    setPreviewError("");
+    restoreDirectory.current = true;
   };
+  React.useLayoutEffect(() => {
+    if (previewPath !== null && focusPreview.current) {
+      focusPreview.current = false;
+      previewRef.current?.focus({ preventScroll: true });
+      previewRef.current?.scrollIntoView({ block: "start" });
+    } else if (previewPath === null && restoreDirectory.current) {
+      restoreDirectory.current = false;
+      if (libraryRef.current) libraryRef.current.scrollTop = directoryScroll.current;
+      const trigger = returnFocus.current;
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+      else directoryRef.current?.focus({ preventScroll: true });
+    }
+  }, [previewPath, previewLoading]);
+  React.useLayoutEffect(() => {
+    if (!loading && focusDirectory.current && previewPath === null) {
+      focusDirectory.current = false;
+      directoryRef.current?.focus({ preventScroll: true });
+    }
+  }, [loading, previewPath]);
+
+  const currentDirectory = directory?.target === folder ? directory.value : null;
   const files =
-    directory?.files.filter((entry) =>
+    currentDirectory?.files.filter((entry) =>
       entry.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
     ) ?? [];
   return (
-    <section className="hub-library hub-files" aria-labelledby="hub-files-heading">
+    <section ref={libraryRef} className="hub-library hub-files" aria-labelledby="hub-files-heading">
       <header className="library-heading">
         <div>
           <h1 id="hub-files-heading">工作区文件</h1>
@@ -130,40 +216,48 @@ export function HubFiles({
         <button
           className="library-button"
           onClick={() => {
+            directoryRequest.current?.abort();
             setReload((value) => value + 1);
-            if (preview) openFile(preview.path);
+            if (previewPath !== null) openFile(previewPath);
           }}
         >
           刷新
         </button>
       </header>
-      {error ? (
-        <div className="library-error" role="alert">
-          {error}
-        </div>
-      ) : null}
       <nav className="file-breadcrumbs" aria-label="文件位置">
-        <button onClick={() => changeFolder("")}>工作区</button>
-        {(directory?.path ?? folder)
+        <button aria-current={!folder ? "location" : undefined} onClick={() => changeFolder("")}>
+          工作区
+        </button>
+        {folder
           .split("/")
           .filter(Boolean)
           .map((name, index, segments) => (
             <React.Fragment key={index}>
               <span aria-hidden="true">/</span>
-              <button onClick={() => changeFolder(segments.slice(0, index + 1).join("/"))}>
+              <button
+                aria-current={index === segments.length - 1 ? "location" : undefined}
+                onClick={() => changeFolder(segments.slice(0, index + 1).join("/"))}
+              >
                 {name}
               </button>
             </React.Fragment>
           ))}
       </nav>
-      <div className={`file-columns${preview || previewLoading ? " has-preview" : ""}`}>
-        <div className="file-directory">
+      <div className={`file-columns${previewPath !== null ? " has-preview" : ""}`}>
+        <div
+          ref={directoryRef}
+          className="file-directory"
+          tabIndex={-1}
+          role="region"
+          aria-label={`文件夹：${folder || "工作区"}`}
+        >
           <label className="library-search">
             <span className="sr-only">筛选当前文件夹</span>
             <input
               type="search"
               placeholder="筛选当前文件夹…"
               value={query}
+              disabled={!currentDirectory}
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
@@ -172,6 +266,20 @@ export function HubFiles({
               <p className="library-empty" role="status">
                 正在读取文件…
               </p>
+            ) : directoryError ? (
+              <div className="library-error file-read-error" role="alert">
+                <strong>无法读取“{folder || "工作区"}”</strong>
+                <p>{directoryError}</p>
+                <button
+                  className="library-button"
+                  onClick={() => {
+                    focusDirectory.current = true;
+                    setReload((value) => value + 1);
+                  }}
+                >
+                  重新读取文件夹
+                </button>
+              </div>
             ) : files.length === 0 ? (
               <p className="library-empty">
                 {query ? "没有匹配的文件。" : "这个文件夹还没有文件。"}
@@ -180,9 +288,12 @@ export function HubFiles({
               files.map((entry) => (
                 <button
                   key={entry.path}
-                  className={`file-entry${preview?.path === entry.path ? " selected" : ""}`}
-                  onClick={() =>
-                    entry.kind === "directory" ? changeFolder(entry.path) : openFile(entry.path)
+                  className={`file-entry${previewPath === entry.path ? " selected" : ""}`}
+                  aria-current={previewPath === entry.path ? "true" : undefined}
+                  onClick={(event) =>
+                    entry.kind === "directory"
+                      ? changeFolder(entry.path)
+                      : openFile(entry.path, false, event.currentTarget)
                   }
                 >
                   <span className="file-glyph" aria-hidden="true">
@@ -196,15 +307,28 @@ export function HubFiles({
               ))
             )}
           </div>
-          {directory?.truncated ? (
+          {currentDirectory?.truncated ? (
             <p className="library-hint">这里只显示前 500 项。可以进入子文件夹继续查看。</p>
           ) : null}
         </div>
-        {previewLoading || preview ? (
-          <article className="file-preview" aria-label="文件预览">
+        {previewPath !== null ? (
+          <article
+            ref={previewRef}
+            className="file-preview"
+            aria-label={`文件预览：${previewPath}`}
+            aria-busy={previewLoading}
+            tabIndex={-1}
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                event.stopPropagation();
+                closePreview();
+              }
+            }}
+          >
             <header>
               <div>
-                <strong>{preview?.name ?? "正在打开…"}</strong>
+                <strong>{preview?.name ?? previewPath.split("/").at(-1)}</strong>
                 {preview ? <span>{fileSize(preview.size)}</span> : null}
               </div>
               <div className="library-actions">
@@ -213,15 +337,9 @@ export function HubFiles({
                     下载
                   </a>
                 ) : null}
-                <button
-                  className="library-button"
-                  onClick={() => {
-                    previewRequest.current?.abort();
-                    setPreviewLoading(false);
-                    setPreview(null);
-                  }}
-                >
-                  关闭预览
+                <button className="library-button" onClick={closePreview}>
+                  <span className="file-back-label">返回文件列表</span>
+                  <span className="file-close-label">关闭预览</span>
                 </button>
               </div>
             </header>
@@ -229,6 +347,14 @@ export function HubFiles({
               <p className="library-empty" role="status">
                 正在读取内容…
               </p>
+            ) : previewError ? (
+              <div className="library-error file-read-error" role="alert">
+                <strong>无法预览“{previewPath}”</strong>
+                <p>{previewError}</p>
+                <button className="library-button" onClick={() => openFile(previewPath)}>
+                  重新读取文件
+                </button>
+              </div>
             ) : preview?.kind === "text" ? (
               <>
                 <pre tabIndex={0}>{preview.content}</pre>
@@ -240,7 +366,7 @@ export function HubFiles({
               <img
                 src={workspaceFileUrl(preview.path, true)}
                 alt={preview.name}
-                onError={() => setError("图片无法预览，可以下载后打开。")}
+                onError={() => setPreviewError("图片无法预览，可以下载后打开。")}
               />
             ) : (
               <div className="library-empty">这个文件暂不支持直接预览，可以下载后打开。</div>

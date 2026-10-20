@@ -1,0 +1,116 @@
+{
+  "capturedAtUTC": "2026-10-17T14:40:33.172969+00:00",
+  "boundedSelectionDecisions": [
+    {
+      "paths": [
+        "packages/core/src/utils/toolDisplay.ts"
+      ],
+      "decision": "Excluded before product body read",
+      "evidence": "R14 utils.md:29 names old family; currentSHA original source manifest binds209-line file. Prior first fixture never attempted toolDisplay and two other import failures remain SKIP."
+    },
+    {
+      "paths": [
+        "packages/core/src/automation/cron-expr.ts"
+      ],
+      "decision": "Excluded before product body read",
+      "evidence": "R23 cron-source-manifest coverage full207; Root source scope says full initial static; old TIME1."
+    },
+    {
+      "paths": [
+        "packages/core/src/context/tool-output-budget.ts"
+      ],
+      "decision": "Excluded before product body read",
+      "evidence": "R21 existing BUDGET-R21-R1 related direction and full initial up-to220 print covers173-line file."
+    },
+    {
+      "paths": [
+        "packages/core/src/context/notes.ts",
+        "packages/core/src/engine/patch-orphaned-tools.ts"
+      ],
+      "decision": "Excluded before product body read",
+      "evidence": "R4 context-source-manifest sources[6]/[9] explicitly review:full and current SHA. R28 pin-only alias inference does not override original review label."
+    },
+    {
+      "paths": [
+        "packages/desktop/src/renderer/messages/agentGroup.ts"
+      ],
+      "decision": "Excluded before product body read",
+      "evidence": "R13 groups.md:7 explicitly complete reading. Old existing tests are not new validation."
+    },
+    {
+      "paths": [
+        "packages/browser-devtools/src/inspector.ts",
+        "packages/browser-devtools/src/contracts.ts"
+      ],
+      "decision": "Excluded before product body read",
+      "evidence": "R33 original frontier/review source manifests explicitfull with currentSHA. Target/browser/transport not examined anew."
+    },
+    {
+      "paths": [
+        "packages/chat/src/notification-progress.ts",
+        "packages/chat/src/protocol.ts",
+        "packages/chat/src/media.ts",
+        "packages/chat/src/attachments.ts"
+      ],
+      "decision": "Excluded before product body read",
+      "evidence": "R11 original chat source scopes explicitfull; media/attachments have further R20/R23 full or complete displays."
+    },
+    {
+      "paths": [
+        "packages/core/src/services/session-memory-sort.ts",
+        "packages/desktop/src/renderer/optimization-lab/dataset-drafts.ts",
+        "packages/pet/src/migration-summary.ts",
+        "packages/desktop/src/shared/source-collections.ts"
+      ],
+      "decision": "Parked: below requested100-line frontier",
+      "evidence": "Current byte/line inventory only, no product semantic read."
+    },
+    {
+      "paths": [
+        "packages/desktop/src/renderer/app/mergeHistoryWindows.ts",
+        "packages/core/src/utils/theme.ts",
+        "packages/arena/src/iterate/formats/index.ts",
+        "packages/arena/src/iterate/parse.ts",
+        "packages/web/src/lib/format.ts"
+      ],
+      "decision": "Parked before product body reading, not claimed unread or explicitfull",
+      "evidence": "Earlier ordinary selection was abandoned after Root steered toward package data. mergeHistory has prior static scope, theme old related+selected scope, Arena oldLab manifests, web generic format query is broad. No new semantic coverage credited."
+    },
+    {
+      "paths": [
+        "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts"
+      ],
+      "decision": "Selected",
+      "evidence": "Path/currentSHA4 exact prior hits are path/hash inventory or inventory excerpt. This supports selecting a new bounded read; absence of full evidence is not proof no earlier author ever read it."
+    }
+  ],
+  "outputDiagnostics": [
+    {
+      "toolChunk": "39bb0b",
+      "kind": "truncated metadata output",
+      "meaning": "161 retained toolDisplay hits were not all semantically read. Exact R14 originals decide exclusion."
+    },
+    {
+      "toolChunk": "2a9ca0",
+      "kind": "truncated metadata output",
+      "meaning": "259 retained cron hits were not all read; explicit original full objects decide exclusion."
+    },
+    {
+      "artifact": "third-selection-history.json",
+      "kind": "overbroad basename query",
+      "meaning": "index.ts query4696 hits, cap100; parse.ts161 and theme157 also capped100. These broad results do not prove complete semantic history coverage for Arena. No Arena body read."
+    },
+    {
+      "toolChunk": "00e640",
+      "kind": "truncated product navigation output",
+      "meaning": "Line-match navigation only; do not count all123 matching output lines as semantic coverage. Explicit selected displays supply active1025 semantic lines."
+    }
+  ],
+  "activeHistoryReadPolicy": {
+    "exactLeafAndPreservationContexts": 16,
+    "fullyDisplayedAndRead": true,
+    "oldLabBoundaryContexts": 21,
+    "readPolicy": "Compact identity/scope prefixes at most240characters displayed for all21; full retained raw not all semantically read. Preserve old cause and failure skip."
+  },
+  "noFirstEverReadClaim": true
+}

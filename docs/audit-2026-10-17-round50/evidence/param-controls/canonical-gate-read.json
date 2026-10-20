@@ -1,0 +1,130 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "pointer": "/hashOnlyFiles/117",
+      "metadata": {
+        "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+        "bytes": 2402,
+        "sha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+        "totalLines": 62,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorQualifiers": []
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "pointer": "/hashOnlyFiles/161",
+      "metadata": {
+        "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+        "bytes": 3183,
+        "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+        "totalLines": 103,
+        "pinTimeUTC": "2026-10-17T13:24:31.782787+00:00",
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "ancestorQualifiers": []
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "pointer": "/files/156",
+      "metadata": {
+        "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+        "bytes": 2402,
+        "sha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+        "currentBytes": 2402,
+        "currentSha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+        "mainBytes": 2402,
+        "mainSha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "pointer": "/files/157",
+      "metadata": {
+        "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+        "bytes": 3183,
+        "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+        "currentBytes": 3183,
+        "currentSha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+        "mainBytes": 3183,
+        "mainSha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "pointer": "/hashOnlyChecks/119",
+      "metadata": {
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+        "sha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "pointer": "/hashOnlyChecks/163",
+      "metadata": {
+        "manifest": "mcp-rename-fields-frontier/source-manifest.json",
+        "collection": "hashOnlyFiles",
+        "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+        "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "ancestorQualifiers": [
+        {
+          "note": "Original full/selected/navigation/hash distinctions and timing retained. Discovery-only hash pins do not become semantic coverage through current Git binding. No product execution or source reread added."
+        }
+      ]
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "documentSha256": "16f4dac9f9f13073662fcc299b72efd7add8ff28ab8868f3b9cb7d1a7c45d763",
+      "pointer": "/logs/362",
+      "metadata": {
+        "group": "desktop-renderer",
+        "file": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+        "originalLog": "/tmp/codeshell-review-20261012/desktop-baseline/221-ParamControls.test.tsx.log",
+        "tarMember": "desktop-renderer/221-ParamControls.test.tsx.log",
+        "bytes": 727,
+        "sha256": "421a9e871ffa3d14db33a3e81e3d4d3c7b4d17765406104a3503ed49ebb61f66",
+        "tests": 7,
+        "skipped": 0,
+        "code": 0,
+        "signal": null,
+        "completed": true
+      },
+      "ancestorQualifiers": []
+    }
+  ],
+  "decision": "7 original manifest hint metadata rows read; current ParamControls has only hash-only explicit row, no sameSHAfull activated. Other MD/context gate below not exhaustive proof of neverread."
+}

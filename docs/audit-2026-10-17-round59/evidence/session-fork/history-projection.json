@@ -1,0 +1,1830 @@
+{
+  "atUTC": "2026-10-17T19:40:10.533242+00:00",
+  "excludedFormalAtOrAbove": 59,
+  "historyFiles": 6010,
+  "jsonValueScalarsVisited": 4291442,
+  "capPerTarget": 100,
+  "errors": [],
+  "note": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading.",
+  "productExecution": 0,
+  "queries": {
+    "packages/core/src/session/session-manager.ts": [
+      "packages/core/src/session/session-manager.ts",
+      "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af"
+    ],
+    "packages/core/src/session/transcript.ts": [
+      "packages/core/src/session/transcript.ts",
+      "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+    ]
+  },
+  "counts": {
+    "packages/core/src/session/session-manager.ts": 609,
+    "packages/core/src/session/transcript.ts": 548
+  },
+  "hits": {
+    "packages/core/src/session/session-manager.ts": [
+      {
+        "document": "bugs/2026-07-13-repo-audit.md",
+        "location": 76,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **证据**：`packages/core/src/session/session-manager.ts:823-875` 仍允许 whole-state 保存；终态 read-merge-retry 后存在回到 whole-state 快路径的窗口；代码债也记录在 `TODO.md:33`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "bugs/2026-07-13-repo-audit.md",
+        "location": 286,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **证据**：`packages/core/src/session/transcript.ts:364-390,520-542` 的 load repair 会写共享 JSONL；generation fencing 仅进程内：`packages/core/src/session/session-manager.ts:52-55`；resume 走该路径：`session-manager.ts:667-697`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "bugs/2026-07-13-repo-audit.md",
+        "location": 307,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **证据**：fork 继承 workspace：`packages/core/src/session/session-manager.ts:1251-1266`；标 ephemeral：`packages/core/src/protocol/server.ts:839-843`；list 过滤：`session-manager.ts:1188-1195,1233-1241`；cleanup 依赖过滤后 list：`packages/desktop/src/main/session-workspace-service.ts:83-87`、`packages/core/src/tool-system/builtin/worktree.ts:353-369`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/00-overview.md",
+        "location": 90,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **Long-running work is explicit state plus notifications.** Runs and cron have durable stores, persistent goals live in session state, background shells keep bounded output and orphan cleanup, and `AgentServer` forwards completion notifications so idle sessions can be woken when needed (`packages/core/src/run/RunManager.ts:1`, `packages/core/src/run/FileRunStore.ts:1`, `packages/core/src/automation/store.ts:1`, `packages/core/src/session/session-manager.ts:193`, `packages/core/src/runtime/background-shell.ts:1`, `packages/core/src/protocol/server.ts:195`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/00-overview.md",
+        "location": 135,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "The important anchors are: sessions resolve `CODE_SHELL_HOME || ~/.code-shell` and write `state.json` plus `transcript.jsonl` atomically (`packages/core/src/session/session-manager.ts:68`, `packages/core/src/session/session-manager.ts:94`, `packages/core/src/session/session-manager.ts:288`); transcripts are JSONL event logs (`packages/core/src/session/transcript.ts:1`); file-history snapshots live under a session (`packages/core/src/session/file-history.ts:1`); credentials store token/link secrets with disk-boundary encryption and owner-only writes (`packages/core/src/credentials/store.ts:29`, `packages/core/src/credentials/store.ts:92`); memory resolves `CODE_SHELL_HOME` before `~/.code-shell` and separates `user`, `dream`, and `pending` scopes (`packages/core/src/session/memory.ts:1`, `packages/core/src/session/memory.ts:112`); cron and runs have their own filesystem stores (`packages/core/src/automation/store.ts:1`, `packages/core/src/run/FileRunStore.ts:1`); plugins root at `~/.code-shell/plugins` (`packages/core/src/plugins/installer/paths.ts:19`); auto-dream state uses the memory base dir (`packages/core/src/services/auto-dream.ts:36`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/01-engine-and-turn-loop.md",
+        "location": 38,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **Resolve cwd** by precedence: `options.cwd > resumed session state.cwd > config.cwd > process.cwd()`. The cheap session-cwd probe is `SessionManager.readCwd()` (`packages/core/src/session/session-manager.ts:177`), and `Engine.run()` applies the precedence at `packages/core/src/engine/engine.ts:961`.",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/01-engine-and-turn-loop.md",
+        "location": 54,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **Create or resume session.** Existing `options.sessionId` resumes from disk; a fresh caller-supplied id is materialized; otherwise `SessionManager.create()` generates one (`packages/core/src/engine/engine.ts:1370`, `packages/core/src/session/session-manager.ts:94`). `SessionManager.resume()` reads `state.json`, loads the transcript JSONL, marks the state active in memory, and normalizes cumulative usage counters (`packages/core/src/session/session-manager.ts:256`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/04-protocol-and-sessions.md",
+        "location": 92,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "`SessionManager` stores durable sessions under `${CODE_SHELL_HOME:-~/.code-shell}/sessions` (`packages/core/src/session/session-manager.ts:68`, `packages/core/src/session/session-manager.ts:82`). Every public session id is validated before it is joined into a path: empty ids, separators, `..`, unexpected characters, and ids longer than 128 chars are rejected (`packages/core/src/session/session-manager.ts:43`). A current session directory contains:",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+        "location": 254,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "Transcript 已经使用 append-mode descriptor 避免并发写覆盖，在崩溃造成末行撕裂时修复记录边界，并在非 Windows 平台将文件权限设为 `0600`（`packages/core/src/session/transcript.ts:29`）。SessionManager 具备 process-local ephemeral session、原子 rename、generation/revision 冲突控制、full/summary/side fork、父子谱系和 archive（`packages/core/src/session/session-manager.ts:1260`、`:1611`、`:1698`）。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+        "location": 404,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "| `packages/core/src/session/session-manager.ts` |      2,291 | 存储、并发控制、Goal、fork 和谱系集中               |",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+        "location": 582,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- `packages/core/src/session/session-manager.ts`",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": 112,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- `codeShellHome()` 默认是 `~/.code-shell`，可由 `CODE_SHELL_HOME` 覆盖，见 `packages/core/src/session/session-manager.ts:86` 到 `packages/core/src/session/session-manager.ts:95`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": 614,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- sessionId 使用与 core `assertSafeSessionId` 等价的 allowlist：字母、数字、`-_.`，拒绝 `/`、`\\`、`..` 和过长 id。core 已有 sessionId 防路径逃逸实现，见 `packages/core/src/session/session-manager.ts:48` 到 `packages/core/src/session/session-manager.ts:84`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "/54/file",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "/56/file",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "/54/file",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/findings.json",
+        "location": "/107/file",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/findings.json",
+        "location": "/108/file",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "location": "/25/file",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/arch-plans-and-verification-2026-07-08.md",
+        "location": 284,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- `SessionState` initialization at `packages/core/src/session/session-manager.ts:175` stores cumulative token usage, but there is no persisted context-estimation anchor with message count and estimator baseline.",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/plan-group-a-core.md",
+        "location": 23,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- `packages/core/src/session/session-manager.ts:467`：`resume()` 从 `transcript.jsonl` 加载事件。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/plan-group-c-worktree-panels.md",
+        "location": 626,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- `packages/core/src/session/session-manager.ts`（可选：轻量 session label helper）",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/plan-todo-batch-2026-07.md",
+        "location": 16,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- session state 持久化的是累计/窗口 usage，不是“某个 messageCount 的 promptTokens anchor”：初始 `tokenUsage` 在 `packages/core/src/session/session-manager.ts:175`，cumulative normalize/update 在 `packages/core/src/engine/engine.ts:1881`、`packages/core/src/engine/engine.ts:1885`，返回 usage 也是 run 总量 `packages/core/src/engine/engine.ts:2345`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/plan-todo-batch-2026-07.md",
+        "location": 53,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "  - 如做 anchor 持久化：`packages/core/src/session/session-manager.ts`、`packages/core/src/types.ts` 或 session state 类型、`packages/core/src/engine/turn-loop.ts`",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/review-core-2026-07-08.md",
+        "location": 77,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "Problem: `spillMcpImage` resolves its default directory as `join(CODE_SHELL_HOME ?? HOME, \".code-shell\", \"mcp_images\")` (`packages/core/src/tool-system/mcp-manager.ts:168-171`). Other core home resolvers treat `CODE_SHELL_HOME` itself as the CodeShell home (`packages/core/src/session/session-manager.ts:93-95`, `packages/core/src/session/memory.ts:112-123`). With `CODE_SHELL_HOME=/tmp/csh`, MCP images go to `/tmp/csh/.code-shell/mcp_images` while sessions and memory go to `/tmp/csh/...`.",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/review-core-2026-07-08.md",
+        "location": 95,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "Problem: `bgShellsRoot()` computes `join(CODE_SHELL_HOME ?? HOME, \".code-shell\", \"bg-shells\")` (`packages/core/src/runtime/background-shell.ts:139-142`). Session and memory managers treat `CODE_SHELL_HOME` as the final CodeShell home directory, not the parent of `.code-shell` (`packages/core/src/session/session-manager.ts:93-95`, `packages/core/src/session/memory.ts:112-123`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/review-core-2026-07-08.md",
+        "location": 103,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- Session id path traversal appears fixed in the current tree: public session entry points validate ids with `assertSafeSessionId` before joining paths (`packages/core/src/session/session-manager.ts:61-84`, `packages/core/src/session/session-manager.ts:156`, `packages/core/src/session/session-manager.ts:465-500`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/review-core-v2.md",
+        "location": 18,
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- `packages/core/src/session/session-manager.ts:350-351` treats any existing path as a valid worktree resume cwd. A file, symlink, or non-git directory at the old worktree path will be accepted and fail later in engine/tool setup. Check `statSync(...).isDirectory()` and ideally verify it is still the expected git worktree/branch.",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/567",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "location": "/hits/run_store/0/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "orwards completion notifications so idle sessions can be woken when needed (`packages/core/src/run/RunManager.ts:1`, `packages/core/src/run/FileRunStore.ts:1`, `packages/core/src/automation/store.ts:1`, `packages/core/src/session/session-manager.ts:193`, `packages/core/src/runtime/background-shell.ts:1`, `packages/core/src/protocol/server.ts:195`).\n- **Shared worker resources are separated from per-session mutation.** `EngineRun",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "location": "/hits/history_identity/59/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "P3 限定为活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "location": "/hits/history_identity/63/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "P3 限定为活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "/hits/header_only/23/snippet",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": " save/raw overwrite` 回归，并把当前\n`BUG` 测试改成不可复活断言。\n\n### 4. `[blocker]` 新旧 binary 仅 shape 兼容，不是双向行为兼容\n\n新 binary 读取一份从未见过新机制的旧 state 时，正常路径是正确的：checkpoint 为 0，legacy\ngoal 不会在 resume 阶段被压制，Engine 随后能迁移它。SHA-256 bridge 也能压制迁移前 snapshot。\n\n反方向不成立：\n\n- 一旦 checkpoint 有任意 modern revision，`goalIsSuppressed` 会无条件拒绝所有 revisionless goal\n  （`packages/core/src/session/session-manager.ts:977-980`）。\n- `d97f95f4`",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "location": "/hits/pipe_subject/48/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "/core/src/session/session-manager.ts:284`；resume 解析在 `packages/core/src/session/session-manager.ts:442` | `cwd`/workspace root 是主机绝对路径；协议可直接提交 `cwd`；worktree 指针存在 disk | 内部继续用绝对路径；browser 只提交 opaque `workspaceId`，server 解析 canonical path 并鉴权 |\n| mobile React web UI | 入口 `packages/desktop/src/mobile/main.tsx:1`；独立 Vite root `packages/desktop/vite.mobile.config.ts:6`；UI `packages/desktop/src/mobile/App.tsx:19` | 已是纯 browser bundle、不依赖 preload；但 alias 指向 desktop rendere",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "/hits/linebreak_phonetic/0/text",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **Long-running work is explicit state plus notifications.** Runs and cron have durable stores, persistent goals live in session state, background shells keep bounded output and orphan cleanup, and `AgentServer` forwards completion notifications so idle sessions can be woken when needed (`packages/core/src/run/RunManager.ts:1`, `packages/core/src/run/FileRunStore.ts:1`, `packages/core/src/automation/store.ts:1`, `packages/core/src/session/session-manager.ts:193`, `packages/core/src/runtime/background-shell.ts:1`, `packages/core/src/protocol/server.ts:195`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "/records/5/matches/0/match",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and ba",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "/records/5/matches/0/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "maxBytes: number, truncated: boolean): [string, boolean]` to reduce duplication.\"}, {\"file\": \"packages/core/src/runtime/safe-spawn.ts\", \"line\": \"286-301\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"titl",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "/records/9/matches/0/match",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and ba",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "/records/9/matches/0/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "maxBytes: number, truncated: boolean): [string, boolean]` to reduce duplication.\"}, {\"file\": \"packages/core/src/runtime/safe-spawn.ts\", \"line\": \"286-301\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"titl",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "/records/13/matches/0/match",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and ba",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "/records/13/matches/0/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "maxBytes: number, truncated: boolean): [string, boolean]` to reduce duplication.\"}, {\"file\": \"packages/core/src/runtime/safe-spawn.ts\", \"line\": \"286-301\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate UTF-8 flush logic for stdout and stderr\", \"detail\": \"Lines 286-293 (stdout tail flush) and 294-301 (stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"titl",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "/hits/steering_queue/51/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "min/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:2287)原子发布。既有server.fork.test.ts另有摘要期间新run排队及busy/queued拒绝，本轮仅只读，不重复计执行。target只含transfer而不复制原始选中正文是正常设计。cancel的实际入口为[server.ts:2433](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2433)，经server-run-controls到ChatSession.cancel:277。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "/hits/steering_queue/52/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "min/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:2287)原子发布。既有server.fork.test.ts另有摘要期间新run排队及busy/queued拒绝，本轮仅只读，不重复计执行。target只含transfer而不复制原始选中正文是正常设计。cancel的实际入口为[server.ts:2433](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2433)，经server-run-controls到ChatSession.cancel:277。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "/hits/steering_queue/89/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "min/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:2287)原子发布。既有server.fork.test.ts另有摘要期间新run排队及busy/queued拒绝，本轮仅只读，不重复计执行。target只含transfer而不复制原始选中正文是正常设计。cancel的实际入口为[server.ts:2433](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2433)，经server-run-controls到ChatSession.cancel:277。\n\n## 排除与去重\n\n没有把同tick人工直接连调两次onClick当重复打包缺陷。实际merge是disabled butto",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "/hits/steering_queue/97/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "min/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:2287)原子发布。既有server.fork.test.ts另有摘要期间新run排队及busy/queued拒绝，本轮仅只读，不重复计执行。target只含transfer而不复制原始选中正文是正常设计。cancel的实际入口为[server.ts:2433](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/protocol/server.ts:2433)，经server-run-controls到ChatSession.cancel:277。\n\n## 排除与去重\n\n没有把同tick人工直接连调两次onClick当重复打包缺陷。实际merge是disabled butto",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round19/evidence/timing-dedup.json",
+        "location": "/contexts/timing_contract/1/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "| 原生会话创建 | `packages/core/src/session/session-manager.ts:724,764–781` | state.startedAt 使用 Date.now；另行 mkdir、原子写 state、创建 transcript。没有把 startedAt 赋给目录时间，没有跨会话共同时间值。 |",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round19/evidence/timing-dedup.json",
+        "location": "/contexts/timing_contract/3/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "| 原生会话创建 | `packages/core/src/session/session-manager.ts:724,764–781` | state.startedAt 使用 Date.now；另行 mkdir、原子写 state、创建 transcript。没有把 startedAt 赋给目录时间，没有跨会话共同时间值。 |",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/root-quota-dedup.json",
+        "location": "/hits/all_429/60/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": " 边界给 legacy active goal\n  生成新 ID；随后 `packages/core/src/engine/engine.ts:2272-2286` 只记录带这个新 ID 的\n  terminal。\n- `packages/core/src/session/session-manager.ts:427-429,560-565` 用同一 strict identity\n  读取 journal 并做 suppress。\n\n由此存在如下升级窗口：\n\n1. 旧 writer 持有迁移前的 `{ objective: \"legacy\", setAtMs: 200 }`；\n2. 新 Engine resume，懒迁移为 `goalId=migrated-A`；\n3. 该 run 终结，journal 只记录带 `migrated-A` 的 terminal；\n4. 旧 writer 整体覆盖 `state.json`，恢复无 ID 的 active goal 并擦掉 state 内 markers；\n5. journal terminal 有 ID、stale active goal 无 ID，strict identity 必然返回 false；Engine\n   随后会再生成一个新 ID，把同一个已",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/terminal-banner-history.json",
+        "location": "/hits/0/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "Transcript 已经使用 append-mode descriptor 避免并发写覆盖，在崩溃造成末行撕裂时修复记录边界，并在非 Windows 平台将文件权限设为 `0600`（`packages/core/src/session/transcript.ts:29`）。SessionManager 具备 process-local ephemeral session、原子 rename、generation/revision 冲突控制、full/summary/side fork、父子谱系和 archive（`packages/core/src/session/session-manager.ts:1260`、`:1611`、`:1698`）。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "/matches/mechanism/26/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "sessionIds encode timestamps in a lexicographically comparable format (e.g., ISO 8601 strings, Unix timestamps).\"}, {\"file\": \"packages/core/src/session/session-manager.ts\", \"line\": \"169\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Race condition in atomic write with process.pid-based temp file naming\", \"detail\": \"The temporary file name uses `process.pid` and `Date.now()` for uniqueness: `${target}.${process.pid}.${Date.now()}.tmp`. If two processes attempt concurrent saveState() calls on the same session with millisecond-level timing, or if a PID is recycled and reused, this could cause collisions where the rename() operation succeeds but silently overwrites another process's write. In a single-user CLI this is low-risk, but it's a potential lost-update bug.\", \"fix\": \"Use a cryptographically unique suffix like `nanoid()` instead of `process.pid.Date.now()`, or use a more robust atomic write library. Alternatively, document that concurrent writes to the same session are unsupported.\"}, {\"file\": \"pack",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "/matches/mechanism/34/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "sessionIds encode timestamps in a lexicographically comparable format (e.g., ISO 8601 strings, Unix timestamps).\"}, {\"file\": \"packages/core/src/session/session-manager.ts\", \"line\": \"169\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Race condition in atomic write with process.pid-based temp file naming\", \"detail\": \"The temporary file name uses `process.pid` and `Date.now()` for uniqueness: `${target}.${process.pid}.${Date.now()}.tmp`. If two processes attempt concurrent saveState() calls on the same session with millisecond-level timing, or if a PID is recycled and reused, this could cause collisions where the rename() operation succeeds but silently overwrites another process's write. In a single-user CLI this is low-risk, but it's a potential lost-update bug.\", \"fix\": \"Use a cryptographically unique suffix like `nanoid()` instead of `process.pid.Date.now()`, or use a more robust atomic write library. Alternatively, document that concurrent writes to the same session are unsupported.\"}, {\"file\": \"pack",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "/matches/mechanism/50/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "sessionIds encode timestamps in a lexicographically comparable format (e.g., ISO 8601 strings, Unix timestamps).\"}, {\"file\": \"packages/core/src/session/session-manager.ts\", \"line\": \"169\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Race condition in atomic write with process.pid-based temp file naming\", \"detail\": \"The temporary file name uses `process.pid` and `Date.now()` for uniqueness: `${target}.${process.pid}.${Date.now()}.tmp`. If two processes attempt concurrent saveState() calls on the same session with millisecond-level timing, or if a PID is recycled and reused, this could cause collisions where the rename() operation succeeds but silently overwrites another process's write. In a single-user CLI this is low-risk, but it's a potential lost-update bug.\", \"fix\": \"Use a cryptographically unique suffix like `nanoid()` instead of `process.pid.Date.now()`, or use a more robust atomic write library. Alternatively, document that concurrent writes to the same session are unsupported.\"}, {\"file\": \"pack",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "/matches/mechanism/58/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "sessionIds encode timestamps in a lexicographically comparable format (e.g., ISO 8601 strings, Unix timestamps).\"}, {\"file\": \"packages/core/src/session/session-manager.ts\", \"line\": \"169\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Race condition in atomic write with process.pid-based temp file naming\", \"detail\": \"The temporary file name uses `process.pid` and `Date.now()` for uniqueness: `${target}.${process.pid}.${Date.now()}.tmp`. If two processes attempt concurrent saveState() calls on the same session with millisecond-level timing, or if a PID is recycled and reused, this could cause collisions where the rename() operation succeeds but silently overwrites another process's write. In a single-user CLI this is low-risk, but it's a potential lost-update bug.\", \"fix\": \"Use a cryptographically unique suffix like `nanoid()` instead of `process.pid.Date.now()`, or use a more robust atomic write library. Alternatively, document that concurrent writes to the same session are unsupported.\"}, {\"file\": \"pack",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "/matches/mechanism/74/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "sessionIds encode timestamps in a lexicographically comparable format (e.g., ISO 8601 strings, Unix timestamps).\"}, {\"file\": \"packages/core/src/session/session-manager.ts\", \"line\": \"169\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Race condition in atomic write with process.pid-based temp file naming\", \"detail\": \"The temporary file name uses `process.pid` and `Date.now()` for uniqueness: `${target}.${process.pid}.${Date.now()}.tmp`. If two processes attempt concurrent saveState() calls on the same session with millisecond-level timing, or if a PID is recycled and reused, this could cause collisions where the rename() operation succeeds but silently overwrites another process's write. In a single-user CLI this is low-risk, but it's a potential lost-update bug.\", \"fix\": \"Use a cryptographically unique suffix like `nanoid()` instead of `process.pid.Date.now()`, or use a more robust atomic write library. Alternatively, document that concurrent writes to the same session are unsupported.\"}, {\"file\": \"pack",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+        "location": "/matches/mechanism/82/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "sessionIds encode timestamps in a lexicographically comparable format (e.g., ISO 8601 strings, Unix timestamps).\"}, {\"file\": \"packages/core/src/session/session-manager.ts\", \"line\": \"169\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Race condition in atomic write with process.pid-based temp file naming\", \"detail\": \"The temporary file name uses `process.pid` and `Date.now()` for uniqueness: `${target}.${process.pid}.${Date.now()}.tmp`. If two processes attempt concurrent saveState() calls on the same session with millisecond-level timing, or if a PID is recycled and reused, this could cause collisions where the rename() operation succeeds but silently overwrites another process's write. In a single-user CLI this is low-risk, but it's a potential lost-update bug.\", \"fix\": \"Use a cryptographically unique suffix like `nanoid()` instead of `process.pid.Date.now()`, or use a more robust atomic write library. Alternatively, document that concurrent writes to the same session are unsupported.\"}, {\"file\": \"pack",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+        "location": "/matches/cronMechanism/1/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **Long-running work is explicit state plus notifications.** Runs and cron have durable stores, persistent goals live in session state, background shells keep bounded output and orphan cleanup, and `AgentServer` forwards completion notifications so idle sessions can be woken when needed (`packages/core/src/run/RunManager.ts:1`, `packages/core/src/run/FileRunStore.ts:1`, `packages/core/src/automation/store.ts:1`, `packages/core/src/session/session-manager.ts:193`, `packages/core/src/runtime/background-shell.ts:1`, `packages/core/src/protocol/server.ts:195`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+        "location": "/matches/cronMechanism/223/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **Long-running work is explicit state plus notifications.** Runs and cron have durable stores, persistent goals live in session state, background shells keep bounded output and orphan cleanup, and `AgentServer` forwards completion notifications so idle sessions can be woken when needed (`packages/core/src/run/RunManager.ts:1`, `packages/core/src/run/FileRunStore.ts:1`, `packages/core/src/automation/store.ts:1`, `packages/core/src/session/session-manager.ts:193`, `packages/core/src/runtime/background-shell.ts:1`, `packages/core/src/protocol/server.ts:195`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/cron-history-selected.json",
+        "location": "/selected/34/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "- **Long-running work is explicit state plus notifications.** Runs and cron have durable stores, persistent goals live in session state, background shells keep bounded output and orphan cleanup, and `AgentServer` forwards completion notifications so idle sessions can be woken when needed (`packages/core/src/run/RunManager.ts:1`, `packages/core/src/run/FileRunStore.ts:1`, `packages/core/src/automation/store.ts:1`, `packages/core/src/session/session-manager.ts:193`, `packages/core/src/runtime/background-shell.ts:1`, `packages/core/src/protocol/server.ts:195`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/root-dedup.json",
+        "location": "/hits/stdin_source/12/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "适合与 doctor 同期设计，但自动清理应晚于 dry-run/report。\n\n## 主要取证锚点\n\n- CLI/输出：`packages/tui/src/cli/main.ts`、`packages/tui/src/cli/commands/run.ts`、`packages/tui/src/cli/input/read-stdin.ts`、`packages/tui/src/cli/output/renderer.ts`\n- Session/协议：`packages/core/src/session/session-manager.ts`、`packages/core/src/session/transcript.ts`、`packages/core/src/protocol/server.ts`、`packages/core/src/protocol/client.ts`\n- 权限/沙箱：`packages/core/src/tool-system/permission.ts`、`packages/core/src/tool-system/path-policy.ts`、`packages/core/src/tool-system/sandbox/`\n- MCP/扩展：`packages/core/src/too",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+        "location": "/hits/retention_context/5/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ments root 外文件，即使 manifest 被篡改。\n- TTL 未到不删，TTL 到且 manifest 记录存在才删。\n- session delete 只删目标 sessionId。\n\n回归风险面：\n\n- 清理代码必须 realpath 校验，避免 manifest path traversal。\n- 删除 session 与正在发送中的 staging 有竞态，失败应 best-effort，不影响主流程。\n\n## 5. 权限与路径安全\n\n- 附件落盘必须由 desktop main 完成，renderer 只传 bytes/data URL 和 metadata。main 侧校验 cwd 是绝对路径且存在。\n- stage 目标路径必须 realpath/safe-join 到 `<cwd>/.code-shell/attachments/<sessionId>/` 下。\n- sessionId 使用与 core `assertSafeSessionId` 等价的 allowlist：字母、数字、`-_.`，拒绝 `/`、`\\`、`..` 和过长 id。core 已有 sessionId 防路径逃逸实现，见 `packages/core/src/session/session-manager.ts:48` 到 `packages/core/src/",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/86",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/77/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and backslashes, but when placed inside a double-quoted string in the shell command, malicious input like ",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/78/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and backslashes, but when placed inside a double-quoted string in the shell command, malicious input like ",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/79/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and backslashes, but when placed inside a double-quoted string in the shell command, malicious input like ",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/80/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and backslashes, but when placed inside a double-quoted string in the shell command, malicious input like ",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/81/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and backslashes, but when placed inside a double-quoted string in the shell command, malicious input like ",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/82/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "stderr tail flush) repeat identical logic: check truncation state, slice if needed, append. This pattern appears twice with different variable names.\", \"fix\": \"Extract into a helper: `function appendTail(current: string, tail: string, maxBytes: number, truncated: boolean): [string, boolean]` to handle both cases.\"}, {\"file\": \"packages/core/src/services/memory-orchestrator.ts\", \"line\": \"75-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memory extraction only checks user scope for duplication, ignoring dream scope\", \"detail\": \"Line 75 creates a MemoryManager with default 'user' scope, then line 76 calls buildExtractionPrompt with only user-scope existing memories. However, the extraction prompt (extract-memories.ts line 48) instructs the model to 'Do not duplicate existing memories' without qualification. This could result in memories extracted to user scope that duplicate entries already in dream scope. The model has no visibility into dream-scope entries when making deduplication decisions.\", \"fix\": \"Load both user and dream scopes before extraction: change line 75 to load both scopes and pass them to buildExtractionPrompt, or clarify in the extraction prompt that deduplication only applies to user-scope memories since extraction always writes to user scope.\"}, {\"file\": \"packages/core/src/services/notifier.ts\", \"line\": \"28-31\", \"category\": \"security\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Command injection vulnerability in macOS notification\", \"detail\": \"The URL constructed with escape(message) and escape(title) is passed directly to osascript via execSync with double quotes. The escape() function replaces quotes and backslashes, but when placed inside a double-quoted string in the shell command, malicious input like ",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/147/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more memory-efficient line-limiting approach.\", \"pkg\": \"core",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/148/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\", \"_id\": 1}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more memory-efficient line-limiting appr",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/149/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more memory-efficient line-limiting approach.\"}, {\"file\": \"packages/core/src/arena/context",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/150/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more memory-efficient line-limiting approach.\", \"pkg\": \"core",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/151/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "he actual error.\", \"fix\": \"Use `const msg = err instanceof Error ? err.message : String(err);` or `const msg = (err as any)?.message ?? String(err);` to safely extract the error message.\", \"verify_note\": \"Real defect that masks error information when non-Error values are thrown, but low likelihood in practice since most library throws are Error objects. The fix should follow the pattern used elsewhere in the codebase: `const msg = (err as Error).message || String(err);` or equivalent.\", \"verify_reason\": \"The catch block at line 498 uses `(err as Error).message` without verification. In TypeScript strict mode, `err` has type `unknown`. If a non-Error value is thrown (e.g., a string, plain object, or null), accessing `.message` returns `undefined`, resulting in \\\"Arena error: undefined\\\". The codebase demonstrates awareness of this issue at model-fetcher.ts:126 using the safer pattern `(err as Error).message || String(err)`. While Error objects are the norm, JavaScript allows throwing any value, and edge cases exist in async code where non-Error rejections can occur.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/tool-system/builtin/lsp.ts\", \"line\": \"103\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Hardcoded 2-second timeout for LSP diagnostics is a race condition\", \"detail\": \"The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending didOpen notification. This is an arbitrary timeout that may be too short for some language servers or too long for others, causing intermittent failures or unnecessary delays. Diagnostics are typically delivered via LSP notifications, not request-response.\", \"fix\": \"Either: (1) Subscribe to LSP diagnostic notifications and collect results until no",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/152/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\", \"_id\": 1}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more memory-efficient line-limiting appr",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/153/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more memory-efficient line-limiting approach.\"}, {\"file\": \"packages/core/src/arena/context",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/154/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more memory-efficient line-limiting approach.\", \"pkg\": \"core",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/155/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "he actual error.\", \"fix\": \"Use `const msg = err instanceof Error ? err.message : String(err);` or `const msg = (err as any)?.message ?? String(err);` to safely extract the error message.\", \"verify_note\": \"Real defect that masks error information when non-Error values are thrown, but low likelihood in practice since most library throws are Error objects. The fix should follow the pattern used elsewhere in the codebase: `const msg = (err as Error).message || String(err);` or equivalent.\", \"verify_reason\": \"The catch block at line 498 uses `(err as Error).message` without verification. In TypeScript strict mode, `err` has type `unknown`. If a non-Error value is thrown (e.g., a string, plain object, or null), accessing `.message` returns `undefined`, resulting in \\\"Arena error: undefined\\\". The codebase demonstrates awareness of this issue at model-fetcher.ts:126 using the safer pattern `(err as Error).message || String(err)`. While Error objects are the norm, JavaScript allows throwing any value, and edge cases exist in async code where non-Error rejections can occur.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/tool-system/builtin/lsp.ts\", \"line\": \"103\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Hardcoded 2-second timeout for LSP diagnostics is a race condition\", \"detail\": \"The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending didOpen notification. This is an arbitrary timeout that may be too short for some language servers or too long for others, causing intermittent failures or unnecessary delays. Diagnostics are typically delivered via LSP notifications, not request-response.\", \"fix\": \"Either: (1) Subscribe to LSP diagnostic notifications and collect results until no",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/156/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\", \"pkg\": \"core\", \"_id\": 1}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more memory-efficient line-limiting appr",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/157/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Path traversal vulnerability on Windows systems\", \"detail\": \"The validatePath function uses forward slash in the boundary check: `resolved.startsWith(REPO_ROOT + \\\"/\\\")`. On Windows, resolved paths use backslashes (\\\\\\\\), so this check fails and allows paths outside REPO_ROOT to pass validation. Relative paths like \\\"..\\\\\\\\..\\\\\\\\secret.txt\\\" could escape the boundary.\", \"fix\": \"Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + path.sep)`. Import path.sep from 'node:path'.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"225-237\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"medium\", \"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more memory-efficient line-limiting approach.\"}, {\"file\": \"packages/core/src/arena/context",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/user-display/158/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ed verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"verify_note\": \"This is a code quality/maintainability finding, not a functional bug. Both implementations are correct and work as intended. The fix would improve maintainability by extracting the logic into a shared helper function (e.g., `buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary`), reducing duplication and creating a single source of truth.\", \"verify_reason\": \"The code contains genuine verbatim duplication of claim summary construction logic in lines 242-247 and 356-361. Both blocks filter `allClaims` into 4 identical status buckets (verified, contested, unresolved, rejected) and construct identical `ClaimStatusSummary` objects. This is confirmed by direct code inspection showing identical filter predicates and object structure. The duplication violates DRY principle and creates maintenance risk if the summarization logic needs modification in the future.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/arena/phases/participant-research.ts\", \"line\": \"202-216\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Missing abort signal in force-conclude message\", \"detail\": \"The force-conclude call to client.createMessage() on line 202 does not pass the `signal` parameter, unlike earlier calls on lines 97 and 90. If an AbortSignal was provided to runParticipantResearchWithDossiers, the force-conclude message will not respect cancellation requests.\", \"fix\": \"Add `signal,` parameter to the force-conclude client.createM",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+        "location": "/matches/review-draft/27/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+        "location": "/matches/review-draft/28/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "location": "/contexts/worktreeFileOpen/35/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "k at `:51-52`, old `{slug:\"...\"}` callers now fail. Make the schema accept either `target` or `slug`, or remove the claimed compatibility.\n- `packages/core/src/tool-system/builtin/worktree.ts:272-293` allows a session to attach to an existing worktree by branch/path, and tests cover shared attachment, but `ExitWorktree` removes it at `:198-205` without checking other session owners. The owner metadata exists in `packages/core/src/git/worktree.ts:403-423`; use it before `detach`/`discard` or one session can strand another with a missing workspace root.\n- `packages/core/src/session/session-manager.ts:350-351` treats any existing path as a valid worktree resume cwd. A file, symlink, or non-git directory at the old worktree path will be accepted and fail later in engine/tool setup. Check `statSync(...).isDirectory()` and ideally verify it is still the expect",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "location": "/contexts/worktreeFileOpen/36/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "re `detach`/`discard` or one session can strand another with a missing workspace root.\n- `packages/core/src/session/session-manager.ts:350-351` treats any existing path as a valid worktree resume cwd. A file, symlink, or non-git directory at the old worktree path will be accepted and fail later in engine/tool setup. Check `statSync(...).isDirectory()` and ideally verify it is still the expected git worktree/branch.\n- `packages/core/src/run/RunApprovalBackend.ts:74-96` exposes a waiting approval through `onApprovalNeeded()` before `pendingApproval` is installed, while `packages/core/src/run/RunManager.ts:229-234` ignores `handle.resolveApproval()`'s boolean. A fast subscriber/automation resume can transition the run back to running before the backend has a resolver, after which the backend installs a pending approval that can hang until timeout. Instal",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "location": "/contexts/worktreeFileOpen/54/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "P3 限定为活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "location": "/contexts/worktreeFileOpen/55/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "P3 限定为活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/412/path",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/1182/path",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/review-selection-source-manifest.json",
+        "location": "/files/5/path",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/review-selection-source-manifest.json",
+        "location": "/files/5/prepSourceRow/path",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/consumer-initial-pins.json",
+        "location": "/files/2/path",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/source-manifest.json",
+        "location": "/files/5/path",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "location": "/hits/image-text-order/11/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ifest 记录存在才删。\n- session delete 只删目标 sessionId。\n\n回归风险面：\n\n- 清理代码必须 realpath 校验，避免 manifest path traversal。\n- 删除 session 与正在发送中的 staging 有竞态，失败应 best-effort，不影响主流程。\n\n## 5. 权限与路径安全\n\n- 附件落盘必须由 desktop main 完成，renderer 只传 bytes/data URL 和 metadata。main 侧校验 cwd 是绝对路径且存在。\n- stage 目标路径必须 realpath/safe-join 到 `<cwd>/.code-shell/attachments/<sessionId>/` 下。\n- sessionId 使用与 core `assertSafeSessionId` 等价的 allowlist：字母、数字、`-_.`，拒绝 `/`、`\\`、`..` 和过长 id。core 已有 sessionId 防路径逃逸实现，见 `packages/core/src/session/session-manager.ts:48` 到 `packages/core/src/session/session-manager.ts:84`。\n- 对 paste/os-drop bytes，不使用用户提供的文件名决定最终路径，只作为 safeSlug；真实扩展由 MIME 白名单决定。\n- 对 file-panel/picker 的已有文件，默认不复制时必须保留原 path，并让后续工具 pathPolicy 决定是否可读。\n- 对复制到 `<cwd>/.code-shell/attachments` 的图片，项目 workspace 内读取应走现有 pathPolicy allow。\n- no-repo 例外：desktop no-repo cwd 在 `~/.code-shell/no-repo`，而 pathPolicy 把 `~/.code-shell` 视为敏",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "location": "/hits/image-text-order/11/context",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "ifest 记录存在才删。\n- session delete 只删目标 sessionId。\n\n回归风险面：\n\n- 清理代码必须 realpath 校验，避免 manifest path traversal。\n- 删除 session 与正在发送中的 staging 有竞态，失败应 best-effort，不影响主流程。\n\n## 5. 权限与路径安全\n\n- 附件落盘必须由 desktop main 完成，renderer 只传 bytes/data URL 和 metadata。main 侧校验 cwd 是绝对路径且存在。\n- stage 目标路径必须 realpath/safe-join 到 `<cwd>/.code-shell/attachments/<sessionId>/` 下。\n- sessionId 使用与 core `assertSafeSessionId` 等价的 allowlist：字母、数字、`-_.`，拒绝 `/`、`\\`、`..` 和过长 id。core 已有 sessionId 防路径逃逸实现，见 `packages/core/src/session/session-manager.ts:48` 到 `packages/core/src/session/session-manager.ts:84`。\n- 对 paste/os-drop bytes，不使用用户提供的文件名决定最终路径，只作为 safeSlug；真实扩展由 MIME 白名单决定。\n- 对 file-panel/picker 的已有文件，默认不复制时必须保留原 path，并让后续工具 pathPolicy 决定是否可读。\n- 对复制到 `<cwd>/.code-shell/attachments` 的图片，项目 workspace 内读取应走现有 pathPolicy allow。\n- no-repo 例外：desktop no-repo cwd 在 `~/.code-shell/no-repo`，而 pathPolicy 把 `~/.code-shell` 视为敏",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/source-manifest.json",
+        "location": "/files/17/path",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round32/source-manifest.json",
+        "location": "/workerSourceChecks/19/path",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round33/evidence/incoming-main-delta.json",
+        "location": "/changedPaths/12",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "packages/core/src/session/session-manager.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/history.json",
+        "location": "/hits/ordinary-contract/31/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "P3 限定为活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/history.json",
+        "location": "/hits/ordinary-contract/32/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "P3 限定为活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/history.json",
+        "location": "/hits/ordinary-contract/54/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/history.json",
+        "location": "/hits/ordinary-contract/55/excerpt",
+        "matched": [
+          "packages/core/src/session/session-manager.ts"
+        ],
+        "value": "活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202",
+        "truncatedValue": false
+      }
+    ],
+    "packages/core/src/session/transcript.ts": [
+      {
+        "document": "bugs/2026-07-13-repo-audit.md",
+        "location": 286,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- **证据**：`packages/core/src/session/transcript.ts:364-390,520-542` 的 load repair 会写共享 JSONL；generation fencing 仅进程内：`packages/core/src/session/session-manager.ts:52-55`；resume 走该路径：`session-manager.ts:667-697`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/00-overview.md",
+        "location": 135,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "The important anchors are: sessions resolve `CODE_SHELL_HOME || ~/.code-shell` and write `state.json` plus `transcript.jsonl` atomically (`packages/core/src/session/session-manager.ts:68`, `packages/core/src/session/session-manager.ts:94`, `packages/core/src/session/session-manager.ts:288`); transcripts are JSONL event logs (`packages/core/src/session/transcript.ts:1`); file-history snapshots live under a session (`packages/core/src/session/file-history.ts:1`); credentials store token/link secrets with disk-boundary encryption and owner-only writes (`packages/core/src/credentials/store.ts:29`, `packages/core/src/credentials/store.ts:92`); memory resolves `CODE_SHELL_HOME` before `~/.code-shell` and separates `user`, `dream`, and `pending` scopes (`packages/core/src/session/memory.ts:1`, `packages/core/src/session/memory.ts:112`); cron and runs have their own filesystem stores (`packages/core/src/automation/store.ts:1`, `packages/core/src/run/FileRunStore.ts:1`); plugins root at `~/.code-shell/plugins` (`packages/core/src/plugins/installer/paths.ts:19`); auto-dream state uses the memory base dir (`packages/core/src/services/auto-dream.ts:36`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/01-engine-and-turn-loop.md",
+        "location": 110,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "2. **Abort is terminal, not retryable.** User Stop flows as an `AbortSignal` through ChatSession, Engine, TurnLoop, ModelFacade, ToolExecutor, and tool handlers (`packages/core/src/protocol/chat-session.ts:118`, `packages/core/src/engine/engine.ts:1613`, `packages/core/src/engine/model-facade.ts:73`, `packages/core/src/tool-system/executor.ts:90`). TurnLoop returns `aborted_streaming` without emitting a red error event and persists a `turn_stopped` marker (`packages/core/src/engine/turn-loop.ts:707`, `packages/core/src/engine/turn-loop.ts:359`, `packages/core/src/session/transcript.ts:99`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/04-protocol-and-sessions.md",
+        "location": 102,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`transcript.jsonl` is append-only event history, not chat history. `Transcript.append()` adds an id, timestamp, turn number, data, and flushes one JSON object per line (`packages/core/src/session/transcript.ts:27`, `packages/core/src/session/transcript.ts:209`). `appendMessage()` makes duplicate `clientMessageId` submits idempotent and can mark synthetic background-wakeup messages as `injected` (`packages/core/src/session/transcript.ts:50`). Dedicated event writers cover tool use/results, sub-agent anchors, turn boundaries, stop markers, summaries, and errors (`packages/core/src/session/transcript.ts:79`, `packages/core/src/session/transcript.ts:87`, `packages/core/src/session/transcript.ts:94`, `packages/core/src/session/transcript.ts:99`, `packages/core/src/session/transcript.ts:112`, `packages/core/src/session/transcript.ts:127`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/04-protocol-and-sessions.md",
+        "location": 106,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`Transcript.toMessages()` maps only LLM-relevant events: `message` becomes a message, `tool_result` becomes a `tool_result` block in a user message, `summary` becomes a system-reminder-style user message, and `turn_boundary` / `session_meta` / `file_history` / `plan_operation` / `error` are omitted (`packages/core/src/session/transcript.ts:135`, `packages/core/src/session/transcript.ts:140`, `packages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/core/src/session/transcript.ts:256`, `packages/core/src/session/transcript.ts:263`, `packages/core/src/session/transcript.ts:275`). The resume-side message repair is stricter for provider wire validity: `patchOrphanedToolUses()` scans the loaded message array and splices synthetic error `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+        "location": 254,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "Transcript 已经使用 append-mode descriptor 避免并发写覆盖，在崩溃造成末行撕裂时修复记录边界，并在非 Windows 平台将文件权限设为 `0600`（`packages/core/src/session/transcript.ts:29`）。SessionManager 具备 process-local ephemeral session、原子 rename、generation/revision 冲突控制、full/summary/side fork、父子谱系和 archive（`packages/core/src/session/session-manager.ts:1260`、`:1611`、`:1698`）。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+        "location": 583,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- `packages/core/src/session/transcript.ts`",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": 82,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- transcript 也会持久化 tool result 的 `contentBlocks` 并在 replay 时还原进 message，见 `packages/core/src/session/transcript.ts:89` 到 `packages/core/src/session/transcript.ts:102`、`packages/core/src/session/transcript.ts:171` 到 `packages/core/src/session/transcript.ts:188`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "location": 195,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- `packages/core/src/session/transcript.ts:112` 到 `packages/core/src/session/transcript.ts:114`：`appendTurnBoundary()` 写 `turn_boundary` transcript event。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/plan-group-a-core.md",
+        "location": 21,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- `packages/core/src/session/transcript.ts:81`：测试可用 `appendToolUse(\"TodoWrite\", id, args)` 构造 transcript。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/plan-group-a-core.md",
+        "location": 22,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- `packages/core/src/session/transcript.ts:214`：`getEvents()` 返回 `readLastTodoSnapshot()` 扫描的事件流。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/archive/todo/review-core-2026-07-08.md",
+        "location": 19,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "Problem: `UseCredential` returns token/link secrets directly to the model as JSON (`packages/core/src/credentials/use-credential-tool.ts:191-194`). The turn loop persists every tool result unchanged (`packages/core/src/engine/turn-loop.ts:1015-1021`), and `Transcript.appendToolResult` writes that `result` into `transcript.jsonl` (`packages/core/src/session/transcript.ts:89-102`, `packages/core/src/session/transcript.ts:235-238`). Verbose LLM request logging also records subsequent prompts after only image sanitization (`packages/core/src/engine/model-facade.ts:55-65`, `packages/core/src/engine/model-facade.ts:150-159`), and the session recorder records tool outputs (`packages/core/src/logging/session-recorder.ts:303-324`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/572",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+        "location": "/files/31/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+        "location": "/files/31/frozenSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+        "location": "/files/31/currentSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/pet.md",
+        "location": 20,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- **正常内容契约：** Core [transcript.ts:537](../../packages/core/src/session/transcript.ts#L537) 的 `appendMessage()` 接受字符串并原样放入 `data.content`，987 行 JSON.stringify 持久化。fixture 手写该受支持的 message/state JSON 形状，未通过 Core producer 生成；此处 producer 内容接线为静态验证，动态运行的是真实 Pet reader/search，不是重写实现。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/source-manifest.json",
+        "location": "/files/42/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round10/source-manifest.json",
+        "location": "/files/42/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+        "location": "/files/14/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+        "location": "/files/14/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/files/16/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/files/16/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/workerSourceChecks/14/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/workerSourceChecks/14/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+        "location": "/hits/linebreak_phonetic/4/text",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`Transcript.toMessages()` maps only LLM-relevant events: `message` becomes a message, `tool_result` becomes a `tool_result` block in a user message, `summary` becomes a system-reminder-style user message, and `turn_boundary` / `session_meta` / `file_history` / `plan_operation` / `error` are omitted (`packages/core/src/session/transcript.ts:135`, `packages/core/src/session/transcript.ts:140`, `packages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/core/src/session/transcript.ts:256`, `packages/core/src/session/transcript.ts:263`, `packages/core/src/session/transcript.ts:275`). The resume-side message repair is stricter for provider wire validity: `patchOrphanedToolUses()` scans the loaded message array and splices synthetic error `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "/hits/steering_queue/49/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "工作 `Message` 只有 role/content（`packages/core/src/types.ts:29`—`packages/core/src/types.ts:34`）；transcript event 保留 `injected/steerId/clientMessageId`（`packages/core/src/session/transcript.ts:42`—`packages/core/src/session/transcript.ts:74`），而 `toMessages()` 会丢掉它们（`packages/core/src/session/transcript.ts:149`—`packages/core/src/session/transcript.ts:164`）。V1 选择 transcript metadata 作为用户条件 provenance：",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "/hits/steering_queue/74/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "来源与 provenance\n\n工作 `Message` 只有 role/content（`packages/core/src/types.ts:29`—`packages/core/src/types.ts:34`）；transcript event 保留 `injected/steerId/clientMessageId`（`packages/core/src/session/transcript.ts:42`—`packages/core/src/session/transcript.ts:74`），而 `toMessages()` 会丢掉它们（`packages/core/src/session/transcript.ts:149`—`packages/core/src/session/transcript.ts:164`）。V1 选择 transcript metadata 作为用户条件 provenance：\n\n- 从 `Transcript.getEvents",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "location": "/hits/steering_queue/124/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "| 2 | `packages/core/src/protocol/server.ts` | `agent/steer` 响应带 `{ accepted, id }` |\n| 2 | `packages/desktop/src/preload/*` + `App.tsx` | `steer()` 收 `accepted:false` → 自动降级 `agent/run`；降级消息**清除 steerId、保留 clientMessageId**；多条降级 run **串行** |\n| 3 | `packages/desktop/src/renderer/App.tsx` + reducer/hydrate | 生成 `clientMessageId`；同一 id 只追加/持久化一次；降级 run 沿用原 id |\n| 3 | `packages/core/src/session/transcript.ts` | `appendMessage` 落盘保留 `clientMessageId`；同 id 重复 append 幂等 |\n| 诊断 | core/desktop log | 记录 ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round16/evidence/root-dedup.json",
+        "location": "/hits/scan_invalidation/45/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "s`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup.json",
+        "location": "/contexts/child and fallback aggregation/4/text",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`transcript.jsonl` is append-only event history, not chat history. `Transcript.append()` adds an id, timestamp, turn number, data, and flushes one JSON object per line (`packages/core/src/session/transcript.ts:27`, `packages/core/src/session/transcript.ts:209`). `appendMessage()` makes duplicate `clientMessageId` submits idempotent and can mark synthetic background-wakeup messages as `injected` (`packages/core/src/session/transcript.ts:50`). Dedicated event writers cover tool use/results, sub-agent anchors, turn boundaries, stop markers, summaries, and errors (`packages/core/src/session/transcript.ts:79`, `packages/core/src/session/transcript.ts:87`, `packages/core/src/session/transcript.ts:94`, `packages/core/src/session/transcript.ts:99`, `packages/core/src/session/transcript.ts:112`, `packages/core/src/session/transcript.ts:127`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup.json",
+        "location": "/contexts/child and fallback aggregation/78/text",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "Problem: `UseCredential` returns token/link secrets directly to the model as JSON (`packages/core/src/credentials/use-credential-tool.ts:191-194`). The turn loop persists every tool result unchanged (`packages/core/src/engine/turn-loop.ts:1015-1021`), and `Transcript.appendToolResult` writes that `result` into `transcript.jsonl` (`packages/core/src/session/transcript.ts:89-102`, `packages/core/src/session/transcript.ts:235-238`). Verbose LLM request logging also records subsequent prompts after only image sanitization (`packages/core/src/engine/model-facade.ts:55-65`, `packages/core/src/engine/model-facade.ts:150-159`), and the session recorder records tool outputs (`packages/core/src/logging/session-recorder.ts:303-324`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round22/evidence/terminal-banner-history.json",
+        "location": "/hits/0/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "Transcript 已经使用 append-mode descriptor 避免并发写覆盖，在崩溃造成末行撕裂时修复记录边界，并在非 Windows 平台将文件权限设为 `0600`（`packages/core/src/session/transcript.ts:29`）。SessionManager 具备 process-local ephemeral session、原子 rename、generation/revision 冲突控制、full/summary/side fork、父子谱系和 archive（`packages/core/src/session/session-manager.ts:1260`、`:1611`、`:1698`）。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "/hits/history_projection/1/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`transcript.jsonl` is append-only event history, not chat history. `Transcript.append()` adds an id, timestamp, turn number, data, and flushes one JSON object per line (`packages/core/src/session/transcript.ts:27`, `packages/core/src/session/transcript.ts:209`). `appendMessage()` makes duplicate `clientMessageId` submits idempotent and can mark syn",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "/hits/history_projection/2/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "t history. `Transcript.append()` adds an id, timestamp, turn number, data, and flushes one JSON object per line (`packages/core/src/session/transcript.ts:27`, `packages/core/src/session/transcript.ts:209`). `appendMessage()` makes duplicate `clientMessageId` submits idempotent and can mark synthetic background-wakeup messages as `injected` (`packages/core/src/session/transcript.ts:50`). Dedicated event writers cover tool use/results, sub-agent anchors, turn boundaries, stop markers, summaries",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "/hits/history_projection/66/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "工作 `Message` 只有 role/content（`packages/core/src/types.ts:29`—`packages/core/src/types.ts:34`）；transcript event 保留 `injected/steerId/clientMessageId`（`packages/core/src/session/transcript.ts:42`—`packages/core/src/session/transcript.ts:74`），而 `toMessages()` 会丢掉它们（`packages/core/src/session/transcript.ts:149`—`packages/core/src/session/transcript.ts:164`）。V1 选择 transcript metadata 作为用户条",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "/hits/history_projection/68/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "来源与 provenance\n\n工作 `Message` 只有 role/content（`packages/core/src/types.ts:29`—`packages/core/src/types.ts:34`）；transcript event 保留 `injected/steerId/clientMessageId`（`packages/core/src/session/transcript.ts:42`—`packages/core/src/session/transcript.ts:74`），而 `toMessages()` 会丢掉它们（`packages/core/src/session/transcript.ts:149`—`packages/core/src/session/transcript.ts:164`）。V1 选择 transcript metadata 作为用户条",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "/hits/history_projection/73/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "ges/desktop/src/renderer/App.tsx` + reducer/hydrate | 生成 `clientMessageId`；同一 id 只追加/持久化一次；降级 run 沿用原 id |\n| 3 | `packages/core/src/session/transcript.ts` | `appendMessage` 落盘保留 `clientMessageId`；同 id 重复 append 幂等 |\n| 诊断 | core/desktop log | 记录 ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "/hits/history_projection/105/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`transcript.jsonl` is append-only event history, not chat history. `Transcript.append()` adds an id, timestamp, turn number, data, and flushes one JSON object per line (`packages/core/src/session/transcript.ts:27`, `packages/core/src/session/transcript.ts:209`). `appendMessage()` makes duplicate `clientMessageId` submits idempotent and can mark syn",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "/hits/history_projection/106/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "t history. `Transcript.append()` adds an id, timestamp, turn number, data, and flushes one JSON object per line (`packages/core/src/session/transcript.ts:27`, `packages/core/src/session/transcript.ts:209`). `appendMessage()` makes duplicate `clientMessageId` submits idempotent and can mark synthetic background-wakeup messages as `injected` (`packages/core/src/session/transcript.ts:50`). Dedicated event writers cover tool use/results, sub-agent anchors, turn boundaries, stop markers, summaries",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+        "location": "/hits/history_projection/143/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "工作 `Message` 只有 role/content（`packages/core/src/types.ts:29`—`packages/core/src/types.ts:34`）；transcript event 保留 `injected/steerId/clientMessageId`（`packages/core/src/session/transcript.ts:42`—`packages/core/src/session/transcript.ts:74`），而 `toMessages()` 会丢掉它们（`packages/core/src/session/transcript.ts:149`—`packages/core/src/session/transcript.ts:164`）。V1 选择 transcript metadata 作为用户条",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/root-dedup.json",
+        "location": "/hits/stdin_source/12/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "适合与 doctor 同期设计，但自动清理应晚于 dry-run/report。\n\n## 主要取证锚点\n\n- CLI/输出：`packages/tui/src/cli/main.ts`、`packages/tui/src/cli/commands/run.ts`、`packages/tui/src/cli/input/read-stdin.ts`、`packages/tui/src/cli/output/renderer.ts`\n- Session/协议：`packages/core/src/session/session-manager.ts`、`packages/core/src/session/transcript.ts`、`packages/core/src/protocol/server.ts`、`packages/core/src/protocol/client.ts`\n- 权限/沙箱：`packages/core/src/tool-system/permission.ts`、`packages/core/src/tool-system/path-policy.ts`、`packages/core/src/tool-system/sandbox/`\n- MCP/扩展：`packages/core/src/too",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/71",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/prompt/125/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "s`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "/matches/prompt/126/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "s`：capabilities 数据表。\n- `packages/core/src/model-catalog/types.ts`：`ParamSpec`。\n- `packages/core/src/prompt/composer.ts`、`prompt/instruction-scanner.ts`、`prompt/section-cache.ts`：prompt 组装。\n- `packages/core/src/preset/index.ts`、`skills/scanner.ts`：preset 与 skills。\n- `packages/core/src/session/transcript.ts`、`session/session-manager.ts`：transcript → messages。\n- `packages/core/src/context/{manager,compaction,tool-result-storage}.ts`：context window 治理。\n",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/421/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/421/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/421/claims/0/sourceSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/1196/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/1196/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "location": "/files/10/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "location": "/files/10/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "location": "/files/10/currentSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "location": "/files/10/mainSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "location": "/workerSourceChecks/16/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "location": "/workerSourceChecks/16/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "location": "/workerSourceChecks/58/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/aggregate-source-manifest.first.json",
+        "location": "/workerSourceChecks/58/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "location": "/sourcePins/14/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "location": "/sourcePins/14/initialSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "location": "/sourcePins/14/finishSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "location": "/authorManifestChecks/1/sourceRows/7/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "location": "/authorManifestChecks/1/sourceRows/7/currentSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/review-root-runtime-source-manifest.json",
+        "location": "/authorReportLinkChecks/1/links/10/target",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "../../packages/core/src/session/transcript.ts:537",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-author-checks.json",
+        "location": "/sourceFinishChecks/7/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-author-checks.json",
+        "location": "/sourceFinishChecks/7/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "/hits/ordinary-projection/2/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`Transcript.toMessages()` maps only LLM-relevant events: `message` becomes a message, `tool_result` becomes a `tool_result` block in a user message, `summary` becomes a system-reminder-style user message, and `turn_boundary` / `session_meta` / `file_history` / `plan_operation` / `error` are omitted (`packages/core/src/session/transcript.ts:135`, `packages/core/src/session/transcript.ts:140`, `packages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "/hits/ordinary-projection/3/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "ckages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/core/src/session/transcript.ts:256`, `packages/core/src/session/transcript.ts:263`, `packages/core/src/session/transcript.ts:275`). The resume-side message repair is stricter for provider wire validity: `patchOrphanedToolUses()` scans the loaded message array and splices synthetic error `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "/hits/ordinary-projection/17/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- transcript 也会持久化 tool result 的 `contentBlocks` 并在 replay 时还原进 message，见 `packages/core/src/session/transcript.ts:89` 到 `packages/core/src/session/transcript.ts:102`、`packages/core/src/session/transcript.ts:171` 到 `packages/core/src/session/transcript.ts:188`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "/hits/ordinary-projection/43/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`Transcript.toMessages()` maps only LLM-relevant events: `message` becomes a message, `tool_result` becomes a `tool_result` block in a user message, `summary` becomes a system-reminder-style user message, and `turn_boundary` / `session_meta` / `file_history` / `plan_operation` / `error` are omitted (`packages/core/src/session/transcript.ts:135`, `packages/core/src/session/transcript.ts:140`, `packages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "/hits/ordinary-projection/44/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "ckages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/core/src/session/transcript.ts:256`, `packages/core/src/session/transcript.ts:263`, `packages/core/src/session/transcript.ts:275`). The resume-side message repair is stricter for provider wire validity: `patchOrphanedToolUses()` scans the loaded message array and splices synthetic error `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+        "location": "/hits/ordinary-projection/72/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- transcript 也会持久化 tool result 的 `contentBlocks` 并在 replay 时还原进 message，见 `packages/core/src/session/transcript.ts:89` 到 `packages/core/src/session/transcript.ts:102`、`packages/core/src/session/transcript.ts:171` 到 `packages/core/src/session/transcript.ts:188`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/extra-initial-pins.json",
+        "location": "/files/4/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/extra-initial-pins.json",
+        "location": "/files/4/firstFilesystemSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/finish-hash-checks.json",
+        "location": "/files/7/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/finish-hash-checks.json",
+        "location": "/files/7/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "/hits/ordinary-projection/2/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`Transcript.toMessages()` maps only LLM-relevant events: `message` becomes a message, `tool_result` becomes a `tool_result` block in a user message, `summary` becomes a system-reminder-style user message, and `turn_boundary` / `session_meta` / `file_history` / `plan_operation` / `error` are omitted (`packages/core/src/session/transcript.ts:135`, `packages/core/src/session/transcript.ts:140`, `packages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "/hits/ordinary-projection/3/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "ckages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/core/src/session/transcript.ts:256`, `packages/core/src/session/transcript.ts:263`, `packages/core/src/session/transcript.ts:275`). The resume-side message repair is stricter for provider wire validity: `patchOrphanedToolUses()` scans the loaded message array and splices synthetic error `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "/hits/ordinary-projection/17/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- transcript 也会持久化 tool result 的 `contentBlocks` 并在 replay 时还原进 message，见 `packages/core/src/session/transcript.ts:89` 到 `packages/core/src/session/transcript.ts:102`、`packages/core/src/session/transcript.ts:171` 到 `packages/core/src/session/transcript.ts:188`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "/hits/ordinary-projection/43/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "`Transcript.toMessages()` maps only LLM-relevant events: `message` becomes a message, `tool_result` becomes a `tool_result` block in a user message, `summary` becomes a system-reminder-style user message, and `turn_boundary` / `session_meta` / `file_history` / `plan_operation` / `error` are omitted (`packages/core/src/session/transcript.ts:135`, `packages/core/src/session/transcript.ts:140`, `packages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "/hits/ordinary-projection/44/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "ckages/core/src/session/transcript.ts:150`, `packages/core/src/session/transcript.ts:171`, `packages/core/src/session/transcript.ts:180`). `Transcript.loadFromFile()` skips malformed lines, restores the turn counter from boundaries, and repairs tool-result pairs (`packages/core/src/session/transcript.ts:256`, `packages/core/src/session/transcript.ts:263`, `packages/core/src/session/transcript.ts:275`). The resume-side message repair is stricter for provider wire validity: `patchOrphanedToolUses()` scans the loaded message array and splices synthetic error `tool_result` blocks immediately after offending assistant messages (`packages/core/src/engine/patch-orphaned-tools.ts:59`, `packages/core/src/engine/patch-orphaned-tools.ts:91`).",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+        "location": "/hits/ordinary-projection/68/excerpt",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "- transcript 也会持久化 tool result 的 `contentBlocks` 并在 replay 时还原进 message，见 `packages/core/src/session/transcript.ts:89` 到 `packages/core/src/session/transcript.ts:102`、`packages/core/src/session/transcript.ts:171` 到 `packages/core/src/session/transcript.ts:188`。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/source-manifest.json",
+        "location": "/files/7/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/source-manifest.json",
+        "location": "/files/7/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/source-manifest.json",
+        "location": "/files/7/firstFilesystemSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-prep/source-manifest.json",
+        "location": "/files/7/finishFilesystemSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-source-manifest.json",
+        "location": "/files/7/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-source-manifest.json",
+        "location": "/files/7/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-source-manifest.json",
+        "location": "/files/7/firstFilesystemSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/evidence/runtime-source-manifest.json",
+        "location": "/files/7/finishFilesystemSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/runtime-report.md",
+        "location": 13,
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "Web的 [transcriptToStreamEvents](../../packages/web/src/lib/transcriptReplay.ts:44) 预索引tool名称/参数，对专用tool_use和assistant内容中的tool_use做幂等start；先出现result时可补start。[Core Transcript append方法](../../packages/core/src/session/transcript.ts:537) 和已有replay测试只作普通记录格式合同。replay [201–207](../../packages/web/src/lib/transcriptReplay.ts:201) 明确durable log不能证明当前liveness，保留不完整内容但将run归idle（旧error例外），subagent anchor是recorded而非running。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "location": "/files/10/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "location": "/files/10/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "location": "/files/10/currentSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "location": "/files/10/mainSha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "location": "/workerSourceChecks/16/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "location": "/workerSourceChecks/16/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "location": "/workerSourceChecks/58/path",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "packages/core/src/session/transcript.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round29/source-manifest.json",
+        "location": "/workerSourceChecks/58/sha256",
+        "matched": [
+          "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+        ],
+        "value": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+        "location": "/hits/search-case-contract/15/context",
+        "matched": [
+          "packages/core/src/session/transcript.ts"
+        ],
+        "value": "陷。\n- **预期与影响：** 命中片段应围绕原文中的匹配位置，保持可读的查询上下文。Desktop [SessionSearchModal.tsx:192](../../packages/desktop/src/renderer/shell/SessionSearchModal.tsx#L192) 原样展示首个 snippet；Mimi Sessions search 同样转发 snippets。用户看到会话命中，却无法从片段辨认实际命中内容。这里的重复前缀是便于确定偏移的合法 Unicode 文本压力样例，不声称所有土耳其文都受影响。\n- **正常内容契约：** Core [transcript.ts:537](../../packages/core/src/session/transcript.ts#L537) 的 `appendMessage()` 接受字符串并原样放入 `data.content`，987 行 JSON.stringify 持久化。fixture 手写该受支持的 message/state JSON 形状，未通过 Core producer 生成；此处 producer 内容接线为静态验证，动态运行的是真实 Pet reader/search，不是重写实现。\n- **查重：** 旧审查只有 TUI 搜索对 `İ` 的既有覆盖记录，未检出 Pet snippet 的大小写坐标问题。旧 PET-01 查询预筛及 R56 候选截断均为不同阶段与根因。\n- **边界：** 仅确认检索摘要展示偏移；会话命中和正文均仍存在。没有真实 UI 输入、模型、账号、网络或外发行为。\n\n## 已读范围与未新增发现\n\n完整读取普通纯函数 `topic-segment`、`segment-closure`、`migration-summary`、`context-recall`、`session-visit-receipt`、`im-session-list`，以及 `session-index`、`projection-extension`、`types`、discl",
+        "truncatedValue": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "scope": "before selected ordinary save/fraction-schema-consumer text; prior rg matches navigation only",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "bytes": 1037,
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "lineCount": 29,
+      "pinUTC": "2026-10-17T15:14:27.059076+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "lineCount": 275,
+      "pinUTC": "2026-10-17T15:14:27.060144+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "lineCount": 1139,
+      "pinUTC": "2026-10-17T15:14:27.060673+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "lineCount": 731,
+      "pinUTC": "2026-10-17T15:14:27.061063+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "bytes": 43905,
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "lineCount": 1184,
+      "pinUTC": "2026-10-17T15:14:27.061544+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "lineCount": 867,
+      "pinUTC": "2026-10-17T15:14:27.061847+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "pinUTC": "2026-10-17T15:14:27.062673+00:00",
+      "semanticRead": false
+    }
+  ]
+}

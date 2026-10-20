@@ -1,0 +1,45 @@
+{
+  "role": "Independent bounded ordinary static source/data reviewer, not runtime verifier.",
+  "checks": {
+    "productFunctions": 0,
+    "productHelpers": 0,
+    "productImports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "DOM": 0,
+    "UI": 0,
+    "timers": 0,
+    "native": 0,
+    "network": 0,
+    "model": 0,
+    "Git": 0,
+    "realConfigSessionOrUserDataReads": 0
+  },
+  "metadataProcessing": "Own standard-library metadata/scalar search/hash/range/receipt processing only.",
+  "allSourcePinsBeforeBodyAndLineNavigation": true,
+  "lateInitialPins": [],
+  "metadataDiagnostics": [
+    {
+      "toolChunk": "5d5ced",
+      "exitCode": 1,
+      "kind": "Own optional line-number reader parse error after successful source sed display",
+      "preserved": "first-diagnostic.json stderr excerpt plus original complete tool transcript",
+      "optionalReaderRerun": false
+    }
+  ],
+  "productFailures": [],
+  "truncations": [],
+  "existingTestTitlesNavigated": 6,
+  "testDeclarationsSelected": 2,
+  "testDeclarationsAreNotExecution": true,
+  "actualSourceDisplayToolChunks": [
+    "dcd3ac",
+    "c00c6e",
+    "94e804",
+    "d19d8b",
+    "5d5ced"
+  ],
+  "sourceExcerptCapture": "51a764 after actual reading, not a pre-read pin",
+  "capturedUTC": "2026-10-17T17:21:26.515245+00:00"
+}

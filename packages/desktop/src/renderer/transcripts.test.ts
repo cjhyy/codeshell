@@ -68,6 +68,20 @@ describe("transcript snapshot cursor persistence", () => {
     expect(loadTranscript(null, "s1").snapshotSeq).toBe(42);
   });
 
+  it("round-trips the main-call cache scope with its counters", () => {
+    saveTranscript(null, "cache-scope", {
+      ...INITIAL_STATE,
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 1000,
+      cumulativeCacheReadTokens: 800,
+    });
+    expect(loadTranscript(null, "cache-scope")).toMatchObject({
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 1000,
+      cumulativeCacheReadTokens: 800,
+    });
+  });
+
   it("round-trips the Main epoch together with its snapshot sequence", () => {
     saveTranscript(null, "epoch", { ...INITIAL_STATE, snapshotSeq: 2, snapshotEpoch: "new-main" });
     expect(loadTranscript(null, "epoch")).toMatchObject({

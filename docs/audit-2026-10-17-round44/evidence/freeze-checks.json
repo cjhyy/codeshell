@@ -1,0 +1,156 @@
+{
+  "expectedCount": 30,
+  "checks": [
+    {
+      "path": "evidence/market-frontier/report.md",
+      "bytes": 5245,
+      "sha256": "836f1ad8962892b5c32dad72003338fafc08c9382a1b4f37e3696dc8a3952643"
+    },
+    {
+      "path": "evidence/market-frontier/source-manifest.json",
+      "bytes": 18315,
+      "sha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72"
+    },
+    {
+      "path": "evidence/market-frontier/artifact-receipt.json",
+      "bytes": 4229,
+      "sha256": "a6ffc05d173821bd26cc1226102365bbd579430e429afdb94d97014d1b933198"
+    },
+    {
+      "path": "evidence/market-review/review.md",
+      "bytes": 4477,
+      "sha256": "90bc33f8265e7c6026f63ffd66ba97556aa46bf7d42849d028887c83e6fceafe"
+    },
+    {
+      "path": "evidence/market-review/source-manifest.json",
+      "bytes": 10723,
+      "sha256": "85bcddb4af3e95f19b61810a1f1adbabea103ac569f31be32a0ea0579c658cd8"
+    },
+    {
+      "path": "evidence/market-review/reviewer-receipt.json",
+      "bytes": 3935,
+      "sha256": "0366c918a1dc034183c3d8b9479adf24b564781e0f8e0a773ebc78a7c4ac5eec"
+    },
+    {
+      "path": "evidence/market-aggregate/review.md",
+      "bytes": 3233,
+      "sha256": "7e8fb8da9628c1cb3042754e801af836e6085e835d5decd5b4efb35915cf1051"
+    },
+    {
+      "path": "evidence/market-aggregate/checks.json",
+      "bytes": 41131,
+      "sha256": "b47cfa9775a6f871285d4c2e60c1930ff1b97997e2f988b01858bdfd4448963a"
+    },
+    {
+      "path": "evidence/market-aggregate/artifact-receipt.json",
+      "bytes": 667,
+      "sha256": "b94df1050503a8a2627e59ccdec924504eff390d237f487b4ecf190a288cb67a"
+    },
+    {
+      "path": "evidence/coverage-frontier/report.md",
+      "bytes": 4436,
+      "sha256": "980123513213a2538d592475628fea9710dfe166c60bae0d0e83cc01dad23c3f"
+    },
+    {
+      "path": "evidence/coverage-frontier/method.md",
+      "bytes": 5264,
+      "sha256": "5a8e69908a7c73636bb2c754d69edc91c7bf9c6cc98a97ee72af406daac868df"
+    },
+    {
+      "path": "evidence/coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+    },
+    {
+      "path": "evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+    },
+    {
+      "path": "evidence/coverage-frontier/source-manifest.json",
+      "bytes": 1049,
+      "sha256": "065c7b406ac41cdfcde467c26f2f6fe0a63e7214c255855d12f34254476e05cf"
+    },
+    {
+      "path": "evidence/coverage-frontier/artifact-receipt.json",
+      "bytes": 3858,
+      "sha256": "7f341f4e0b15d8d56988042816d0d105f340e641ae6447cf929769704db225fe"
+    },
+    {
+      "path": "evidence/coverage-status/report.md",
+      "bytes": 2319,
+      "sha256": "562a87715fe35b0e0f7bf4c1a0ae0a3f4b02b1e9b48f237e383cb54feefb3e33"
+    },
+    {
+      "path": "evidence/coverage-status/summary.json",
+      "bytes": 1195,
+      "sha256": "4ff599f06db3c6889fe81987bddc03af1d5b2fe3e71474bdbdbb6c5453c17551"
+    },
+    {
+      "path": "evidence/coverage-status/source-manifest.json",
+      "bytes": 589,
+      "sha256": "bf3de53a345ff66d39900cd1625947a20ec0cdf29aeff5bb40074425a757efc4"
+    },
+    {
+      "path": "evidence/coverage-status/artifact-receipt.json",
+      "bytes": 1588,
+      "sha256": "8e6b791d8152583034078f269566202b362afea834d637f60964194200994bd9"
+    },
+    {
+      "path": "evidence/source-status-root/report.md",
+      "bytes": 1668,
+      "sha256": "7c5943798f57e6f19847fc7f85913a539df97226e5f6093e53c5ed0bd8e41518"
+    },
+    {
+      "path": "evidence/source-status-root/source-manifest.json",
+      "bytes": 5794,
+      "sha256": "82d2b23034d4aabba3c253db405a234969a230f0c27497f0bb6ada84f8357a2e"
+    },
+    {
+      "path": "evidence/source-status-root/source-status-updates.json",
+      "bytes": 1852,
+      "sha256": "0fc21a4d63bdff7d9ffe139e7d6749171730b05ad138e50f455c3ca81efe7f65"
+    },
+    {
+      "path": "evidence/source-status-root/source-diff-preserved.json",
+      "bytes": 22576,
+      "sha256": "69a190ae41aa0ca3ef40eab1ff494a39bd08176f152278c479f004fa5b4c4682"
+    },
+    {
+      "path": "evidence/source-status-root/artifact-receipt.json",
+      "bytes": 1319,
+      "sha256": "1353b01bfab1e98eff57ca3b2ccbf186b2c372e812a38300783d5d5456d13f18"
+    },
+    {
+      "path": "evidence/source-status-review/review.md",
+      "bytes": 3266,
+      "sha256": "2a3776d504fd37f3235f48a4d7b844b8d2153b59f9e34594aa363bf80518d40c"
+    },
+    {
+      "path": "evidence/source-status-review/source-manifest.json",
+      "bytes": 13696,
+      "sha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179"
+    },
+    {
+      "path": "evidence/source-status-review/reviewer-receipt.json",
+      "bytes": 2229,
+      "sha256": "13d7889094c1f5dae24f38e72d1666bc10783e1a015b5e637711fab6cb02b879"
+    },
+    {
+      "path": "evidence/source-status-aggregate/review.md",
+      "bytes": 1503,
+      "sha256": "1835dbf329ea67e66f76a0de4b5358118a196e17ab1fa8d74f13f4312ce1afe8"
+    },
+    {
+      "path": "evidence/source-status-aggregate/checks.json",
+      "bytes": 15595,
+      "sha256": "eacce273b2452065b7529822708bb79c092831a005e81ef019783e7c6d21ca85"
+    },
+    {
+      "path": "evidence/source-status-aggregate/artifact-receipt.json",
+      "bytes": 642,
+      "sha256": "f7cadf63122d8398243f12a58d8b4b2e949f313ea46de020f74476bc4c17c3a0"
+    }
+  ],
+  "largeCoverageArtifacts": "Opaque byte/hash preservation only, not a claim of semantic reading of the 12MB claims file."
+}

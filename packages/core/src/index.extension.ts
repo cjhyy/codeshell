@@ -32,6 +32,8 @@ export { SettingsManager, userHome } from "./settings/manager.js";
 export { createEphemeralModelRequestSigner } from "./model-request-boundary/access.js";
 export { currentModelRequestCall } from "./model-request-boundary/context.js";
 export { currentUsageAttempt } from "./cost-ledger/context.js";
+export { recordExternalModelCall } from "./model-traces/context.js";
+export type { ExternalModelCallInput } from "./model-traces/types.js";
 export type { ModelRequestSigner } from "./model-request-boundary/types.js";
 // Feature flags: a host needs to READ them to decide whether an experimental
 // backend is permitted. Read-only surface — the flag registry itself stays in core.
@@ -169,3 +171,42 @@ export type { PermissionRule, PermissionMode } from "./types.js";
 export { ApprovalRouter } from "./tool-system/permission.js";
 
 export { runIsolatedInstruction } from "./skills/isolated-instruction-run.js";
+
+// Transitional Link provider extension seam. HTTP implementations live in Server;
+// pure provider helpers remain here until their remaining Core consumers migrate.
+export { registerLocalLinkProviders, getLocalLinkProvider } from "./links/providers.js";
+export type {
+  LocalLinkProviderSpec,
+  LocalLinkProviderSummary,
+  LocalLinkActionSpec,
+  LocalLinkActionContext,
+  LocalLinkIdentity,
+} from "./links/types.js";
+export {
+  asArray,
+  asRecord,
+  firstString,
+  intParam,
+  linkRequestJson,
+  linkRequestStatus,
+  pathParam,
+  pathSegmentParam,
+  pick,
+  stringParam,
+} from "./links/http.js";
+export {
+  GITHUB_SOURCE_ACTIONS,
+  githubSourceEndpoint,
+  normalizeGithubSourceResult,
+  slackSourceParams,
+  normalizeSlackSourceResult,
+} from "./links/source-reads.js";
+export { githubIssueStateParameters } from "./links/github-issue-state.js";
+export { githubRepositoryParameters, githubSetStarredParameters } from "./links/github-star.js";
+export {
+  FIGMA_RESPONSE_BYTES,
+  FIGMA_RESPONSE_TOO_LARGE,
+  figmaActionEndpoint,
+  figmaActionParameters,
+  normalizeFigmaActionResult,
+} from "./links/figma.js";

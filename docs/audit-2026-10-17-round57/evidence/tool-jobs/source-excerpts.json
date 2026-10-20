@@ -1,0 +1,7475 @@
+[
+  {
+    "path": "packages/server/src/panels/tool-jobs.ts",
+    "sha256": "6588b4f61611b9cc09a88642b162e00de8c4e3b29f79a7d856cc73c112f622b2",
+    "captureTiming": "After source displays. Only fully visible body intervals and later untruncated locator matches are captured. Earlier truncated or omitted locator/tail output not reconstructed as human read; not first-read/pre-read snapshot.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import { panelExecutionGate } from \"./execution-gate.js\";"
+      },
+      {
+        "line": 2,
+        "text": "import { createHash, randomUUID } from \"node:crypto\";"
+      },
+      {
+        "line": 3,
+        "text": "import { opendir } from \"node:fs/promises\";"
+      },
+      {
+        "line": 4,
+        "text": "import { isAbsolute, join, resolve } from \"node:path\";"
+      },
+      {
+        "line": 5,
+        "text": "import { ToolJobStorage, toolJobJson } from \"./tool-jobs-storage.js\";"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "export const toolJobLimits = Object.freeze({"
+      },
+      {
+        "line": 8,
+        "text": "  maxJobs: 2000,"
+      },
+      {
+        "line": 9,
+        "text": "  maxQueuedPerScope: 128,"
+      },
+      {
+        "line": 10,
+        "text": "  maxQueues: 512,"
+      },
+      {
+        "line": 11,
+        "text": "  maxQueueCatalogBytes: 4 * 1024 * 1024,"
+      },
+      {
+        "line": 12,
+        "text": "  maxConcurrent: 2,"
+      },
+      {
+        "line": 13,
+        "text": "  maxInputBytes: 2 * 1024 * 1024 + 8 * 1024,"
+      },
+      {
+        "line": 14,
+        "text": "  maxResultBytes: 2 * 1024 * 1024,"
+      },
+      {
+        "line": 15,
+        "text": "  maxRecordBytes: 4 * 1024 * 1024 + 32 * 1024,"
+      },
+      {
+        "line": 16,
+        "text": "  maxProgressBytes: 4 * 1024,"
+      },
+      {
+        "line": 17,
+        "text": "  maxExaminedEntries: 4096,"
+      },
+      {
+        "line": 18,
+        "text": "});"
+      },
+      {
+        "line": 19,
+        "text": "export interface ToolJobScope {"
+      },
+      {
+        "line": 20,
+        "text": "  appId: string;"
+      },
+      {
+        "line": 21,
+        "text": "  projectPath: string;"
+      },
+      {
+        "line": 22,
+        "text": "  revision: string;"
+      },
+      {
+        "line": 23,
+        "text": "}"
+      },
+      {
+        "line": 24,
+        "text": "/** Scope-owned scheduling; pausing stops admission to execution, not active processes. */"
+      },
+      {
+        "line": 25,
+        "text": "export interface ToolQueueState {"
+      },
+      {
+        "line": 26,
+        "text": "  revision: number;"
+      },
+      {
+        "line": 27,
+        "text": "  paused: boolean;"
+      },
+      {
+        "line": 28,
+        "text": "  maxConcurrent: number;"
+      },
+      {
+        "line": 29,
+        "text": "}"
+      },
+      {
+        "line": 30,
+        "text": "export interface ToolQueueWriteResult {"
+      },
+      {
+        "line": 31,
+        "text": "  saved: boolean;"
+      },
+      {
+        "line": 32,
+        "text": "  queue: ToolQueueState;"
+      },
+      {
+        "line": 33,
+        "text": "}"
+      },
+      {
+        "line": 34,
+        "text": "export interface ToolQueueUpdate {"
+      },
+      {
+        "line": 35,
+        "text": "  expectedRevision: number;"
+      },
+      {
+        "line": 36,
+        "text": "  paused: boolean;"
+      },
+      {
+        "line": 37,
+        "text": "  maxConcurrent: number;"
+      },
+      {
+        "line": 38,
+        "text": "}"
+      },
+      {
+        "line": 39,
+        "text": "interface StoredQueue extends ToolQueueState {"
+      },
+      {
+        "line": 40,
+        "text": "  scope: ToolJobScope;"
+      },
+      {
+        "line": 41,
+        "text": "}"
+      },
+      {
+        "line": 42,
+        "text": "const queueKey = (scope: ToolJobScope) => JSON.stringify(scopeValue(scope));"
+      },
+      {
+        "line": 43,
+        "text": "function queueState(value: ToolQueueState): ToolQueueState {"
+      },
+      {
+        "line": 44,
+        "text": "  if ("
+      },
+      {
+        "line": 45,
+        "text": "    !value ||"
+      },
+      {
+        "line": 46,
+        "text": "    typeof value.paused !== \"boolean\" ||"
+      },
+      {
+        "line": 47,
+        "text": "    !Number.isSafeInteger(value.revision) ||"
+      },
+      {
+        "line": 48,
+        "text": "    value.revision < 0 ||"
+      },
+      {
+        "line": 49,
+        "text": "    !Number.isSafeInteger(value.maxConcurrent) ||"
+      },
+      {
+        "line": 50,
+        "text": "    value.maxConcurrent < 1 ||"
+      },
+      {
+        "line": 51,
+        "text": "    value.maxConcurrent > toolJobLimits.maxConcurrent"
+      },
+      {
+        "line": 52,
+        "text": "  )"
+      },
+      {
+        "line": 53,
+        "text": "    throw new Error(\"Invalid tool queue state\");"
+      },
+      {
+        "line": 54,
+        "text": "  return { revision: value.revision, paused: value.paused, maxConcurrent: value.maxConcurrent };"
+      },
+      {
+        "line": 55,
+        "text": "}"
+      },
+      {
+        "line": 56,
+        "text": "export interface ToolJobEntry {"
+      },
+      {
+        "line": 57,
+        "text": "  name: string;"
+      },
+      {
+        "line": 58,
+        "text": "  sha256: string;"
+      },
+      {
+        "line": 59,
+        "text": "}"
+      },
+      {
+        "line": 60,
+        "text": "/** Host-selected package identity, never supplied by the task request. */"
+      },
+      {
+        "line": 61,
+        "text": "export interface ToolJobPackage {"
+      },
+      {
+        "line": 62,
+        "text": "  version: string;"
+      },
+      {
+        "line": 63,
+        "text": "  packageDigest: string;"
+      },
+      {
+        "line": 64,
+        "text": "}"
+      },
+      {
+        "line": 65,
+        "text": "export interface ToolJobProgress {"
+      },
+      {
+        "line": 66,
+        "text": "  fraction?: number;"
+      },
+      {
+        "line": 67,
+        "text": "  stage?: string;"
+      },
+      {
+        "line": 68,
+        "text": "  message?: string;"
+      },
+      {
+        "line": 69,
+        "text": "}"
+      },
+      {
+        "line": 70,
+        "text": "export type ToolJobStatus ="
+      },
+      {
+        "line": 71,
+        "text": "  | \"queued\""
+      },
+      {
+        "line": 72,
+        "text": "  | \"running\""
+      },
+      {
+        "line": 73,
+        "text": "  | \"cancelling\""
+      },
+      {
+        "line": 74,
+        "text": "  | \"succeeded\""
+      },
+      {
+        "line": 75,
+        "text": "  | \"failed\""
+      },
+      {
+        "line": 76,
+        "text": "  | \"cancelled\""
+      },
+      {
+        "line": 77,
+        "text": "  | \"interrupted\";"
+      },
+      {
+        "line": 78,
+        "text": "export interface ToolJob {"
+      },
+      {
+        "line": 79,
+        "text": "  id: string;"
+      },
+      {
+        "line": 80,
+        "text": "  scope: ToolJobScope;"
+      },
+      {
+        "line": 81,
+        "text": "  entry: ToolJobEntry;"
+      },
+      {
+        "line": 82,
+        "text": "  package?: ToolJobPackage;"
+      },
+      {
+        "line": 83,
+        "text": "  input: unknown;"
+      },
+      {
+        "line": 84,
+        "text": "  recovery: \"manual\" | \"retry\";"
+      },
+      {
+        "line": 85,
+        "text": "  status: ToolJobStatus;"
+      },
+      {
+        "line": 86,
+        "text": "  attempt: number;"
+      },
+      {
+        "line": 87,
+        "text": "  createdAt: number;"
+      },
+      {
+        "line": 88,
+        "text": "  updatedAt: number;"
+      },
+      {
+        "line": 89,
+        "text": "  startedAt?: number;"
+      },
+      {
+        "line": 90,
+        "text": "  completedAt?: number;"
+      },
+      {
+        "line": 91,
+        "text": "  sequence: number;"
+      },
+      {
+        "line": 92,
+        "text": "  progress?: ToolJobProgress;"
+      },
+      {
+        "line": 93,
+        "text": "  error?: { code: string; message: string; retryable: boolean };"
+      },
+      {
+        "line": 94,
+        "text": "  result?: unknown;"
+      },
+      {
+        "line": 95,
+        "text": "}"
+      },
+      {
+        "line": 96,
+        "text": "export type ToolJobEvent = Omit<ToolJob, \"input\" | \"result\">;"
+      },
+      {
+        "line": 97,
+        "text": ""
+      },
+      {
+        "line": 98,
+        "text": "export interface ToolJobRequest {"
+      },
+      {
+        "line": 99,
+        "text": "  entry: ToolJobEntry;"
+      },
+      {
+        "line": 100,
+        "text": "  input: unknown;"
+      },
+      {
+        "line": 101,
+        "text": "  recovery: \"manual\" | \"retry\";"
+      },
+      {
+        "line": 102,
+        "text": "  requestKey?: string;"
+      },
+      {
+        "line": 103,
+        "text": "}"
+      },
+      {
+        "line": 104,
+        "text": "export interface ToolJobContext {"
+      },
+      {
+        "line": 105,
+        "text": "  workDir: string;"
+      },
+      {
+        "line": 106,
+        "text": "  signal: AbortSignal;"
+      },
+      {
+        "line": 107,
+        "text": "  reportProgress(progress: ToolJobProgress): Promise<void>;"
+      },
+      {
+        "line": 108,
+        "text": "}"
+      },
+      {
+        "line": 109,
+        "text": "export interface PanelToolJobServiceOptions {"
+      },
+      {
+        "line": 110,
+        "text": "  rootDir: string;"
+      },
+      {
+        "line": 111,
+        "text": "  /** Must settle only after the actual native process exits, including on abort. */"
+      },
+      {
+        "line": 112,
+        "text": "  execute(job: ToolJob, context: ToolJobContext): Promise<unknown>;"
+      },
+      {
+        "line": 113,
+        "text": "  /** Freeze authorized inputs into workDir; persist only relative names and safe JSON. */"
+      },
+      {
+        "line": 114,
+        "text": "  prepareInput?("
+      },
+      {
+        "line": 115,
+        "text": "    scope: ToolJobScope,"
+      },
+      {
+        "line": 116,
+        "text": "    input: unknown,"
+      },
+      {
+        "line": 117,
+        "text": "    workDir: string,"
+      },
+      {
+        "line": 118,
+        "text": "    signal: AbortSignal,"
+      },
+      {
+        "line": 119,
+        "text": "  ): Promise<unknown>;"
+      },
+      {
+        "line": 120,
+        "text": "  isAuthorized?(scope: ToolJobScope): boolean | Promise<boolean>;"
+      },
+      {
+        "line": 121,
+        "text": "  /** Resolve and inspect the authorized project package, including its full content digest. */"
+      },
+      {
+        "line": 122,
+        "text": "  describePackage?(scope: ToolJobScope): Promise<ToolJobPackage>;"
+      },
+      {
+        "line": 123,
+        "text": "  onEvent?(job: ToolJob): void;"
+      },
+      {
+        "line": 124,
+        "text": "  now?: () => number;"
+      },
+      {
+        "line": 125,
+        "text": "}"
+      },
+      {
+        "line": 126,
+        "text": "interface StoredJob extends ToolJob {"
+      },
+      {
+        "line": 127,
+        "text": "  version: 1;"
+      },
+      {
+        "line": 128,
+        "text": "  requestKey?: string;"
+      },
+      {
+        "line": 129,
+        "text": "  requestDigest: string;"
+      },
+      {
+        "line": 130,
+        "text": "}"
+      },
+      {
+        "line": 131,
+        "text": "type PreparationOutcome = { job: ToolJob } | { error: unknown };"
+      },
+      {
+        "line": 132,
+        "text": ""
+      },
+      {
+        "line": 133,
+        "text": "async function waitPreparation(result: Promise<PreparationOutcome>, signal?: AbortSignal) {"
+      },
+      {
+        "line": 134,
+        "text": "  signal?.throwIfAborted();"
+      },
+      {
+        "line": 135,
+        "text": "  let abort: (() => void) | undefined;"
+      },
+      {
+        "line": 136,
+        "text": "  try {"
+      },
+      {
+        "line": 137,
+        "text": "    const outcome = signal"
+      },
+      {
+        "line": 138,
+        "text": "      ? await Promise.race(["
+      },
+      {
+        "line": 139,
+        "text": "          result,"
+      },
+      {
+        "line": 140,
+        "text": "          new Promise<never>((_resolve, reject) => {"
+      },
+      {
+        "line": 141,
+        "text": "            abort = () => reject(signal.reason ?? new Error(\"Tool request cancelled\"));"
+      },
+      {
+        "line": 142,
+        "text": "            signal.addEventListener(\"abort\", abort, { once: true });"
+      },
+      {
+        "line": 143,
+        "text": "            if (signal.aborted) abort();"
+      },
+      {
+        "line": 144,
+        "text": "          }),"
+      },
+      {
+        "line": 145,
+        "text": "        ])"
+      },
+      {
+        "line": 146,
+        "text": "      : await result;"
+      },
+      {
+        "line": 147,
+        "text": "    signal?.throwIfAborted();"
+      },
+      {
+        "line": 148,
+        "text": "    if (\"error\" in outcome) throw outcome.error;"
+      },
+      {
+        "line": 149,
+        "text": "    return outcome.job;"
+      },
+      {
+        "line": 150,
+        "text": "  } finally {"
+      },
+      {
+        "line": 151,
+        "text": "    if (abort) signal?.removeEventListener(\"abort\", abort);"
+      },
+      {
+        "line": 152,
+        "text": "  }"
+      },
+      {
+        "line": 153,
+        "text": "}"
+      },
+      {
+        "line": 154,
+        "text": ""
+      },
+      {
+        "line": 155,
+        "text": "interface ActiveJob {"
+      },
+      {
+        "line": 156,
+        "text": "  controller: AbortController;"
+      },
+      {
+        "line": 157,
+        "text": "  done: Promise<void>;"
+      },
+      {
+        "line": 158,
+        "text": "}"
+      },
+      {
+        "line": 159,
+        "text": "const TERMINAL = new Set<ToolJobStatus>([\"succeeded\", \"failed\", \"cancelled\", \"interrupted\"]);"
+      },
+      {
+        "line": 281,
+        "text": "export class PanelToolJobService {"
+      },
+      {
+        "line": 282,
+        "text": "  private readonly storage: ToolJobStorage;"
+      },
+      {
+        "line": 283,
+        "text": "  private readonly jobs = new Map<string, StoredJob>();"
+      },
+      {
+        "line": 284,
+        "text": "  private readonly queues = new Map<string, StoredQueue>();"
+      },
+      {
+        "line": 285,
+        "text": "  private readonly active = new Map<string, ActiveJob>();"
+      },
+      {
+        "line": 286,
+        "text": "  private readonly preparing = new Map<"
+      },
+      {
+        "line": 287,
+        "text": "    string,"
+      },
+      {
+        "line": 288,
+        "text": "    {"
+      },
+      {
+        "line": 289,
+        "text": "      scope: ToolJobScope;"
+      },
+      {
+        "line": 290,
+        "text": "      controller: AbortController;"
+      },
+      {
+        "line": 291,
+        "text": "      done: Promise<void>;"
+      },
+      {
+        "line": 292,
+        "text": "      requestKey?: string;"
+      },
+      {
+        "line": 293,
+        "text": "      requestDigest: string;"
+      },
+      {
+        "line": 294,
+        "text": "      result: Promise<PreparationOutcome>;"
+      },
+      {
+        "line": 295,
+        "text": "    }"
+      },
+      {
+        "line": 296,
+        "text": "  >();"
+      },
+      {
+        "line": 297,
+        "text": "  private ready?: Promise<void>;"
+      },
+      {
+        "line": 298,
+        "text": "  private serial: Promise<unknown> = Promise.resolve();"
+      },
+      {
+        "line": 299,
+        "text": "  private stopping = false;"
+      },
+      {
+        "line": 300,
+        "text": "  private pumping = false;"
+      },
+      {
+        "line": 301,
+        "text": "  private shutdownPromise?: Promise<void>;"
+      },
+      {
+        "line": 302,
+        "text": ""
+      },
+      {
+        "line": 303,
+        "text": "  private readonly unregisterExecution: () => void;"
+      },
+      {
+        "line": 304,
+        "text": ""
+      },
+      {
+        "line": 305,
+        "text": "  constructor(private readonly options: PanelToolJobServiceOptions) {"
+      },
+      {
+        "line": 306,
+        "text": "    this.storage = new ToolJobStorage(options.rootDir);"
+      },
+      {
+        "line": 307,
+        "text": "    this.unregisterExecution = panelExecutionGate.register(() => this.executionScopes());"
+      },
+      {
+        "line": 308,
+        "text": "  }"
+      },
+      {
+        "line": 309,
+        "text": "  private readonly listeners = new Set<{"
+      },
+      {
+        "line": 310,
+        "text": "    scope: ToolJobScope;"
+      },
+      {
+        "line": 311,
+        "text": "    send: (job: ToolJobEvent) => void;"
+      },
+      {
+        "line": 312,
+        "text": "  }>();"
+      },
+      {
+        "line": 313,
+        "text": ""
+      },
+      {
+        "line": 314,
+        "text": "  /** Trusted Host subscription. Transports must recheck their viewer's authorization. */"
+      },
+      {
+        "line": 315,
+        "text": "  subscribe(rawScope: ToolJobScope, send: (job: ToolJobEvent) => void): () => void {"
+      },
+      {
+        "line": 316,
+        "text": "    const listener = { scope: scopeValue(rawScope), send };"
+      },
+      {
+        "line": 317,
+        "text": "    this.listeners.add(listener);"
+      },
+      {
+        "line": 318,
+        "text": "    return () => {"
+      },
+      {
+        "line": 319,
+        "text": "      this.listeners.delete(listener);"
+      },
+      {
+        "line": 320,
+        "text": "    };"
+      },
+      {
+        "line": 321,
+        "text": "  }"
+      },
+      {
+        "line": 322,
+        "text": "  private executionScopes(): ToolJobScope[] {"
+      },
+      {
+        "line": 323,
+        "text": "    return ["
+      },
+      {
+        "line": 324,
+        "text": "      ...[...this.preparing.values()].map((item) => item.scope),"
+      },
+      {
+        "line": 325,
+        "text": "      ...[...this.jobs.values()]"
+      },
+      {
+        "line": 326,
+        "text": "        .filter((job) => !TERMINAL.has(job.status) || this.active.has(job.id))"
+      },
+      {
+        "line": 327,
+        "text": "        .map((job) => job.scope),"
+      },
+      {
+        "line": 328,
+        "text": "    ];"
+      },
+      {
+        "line": 329,
+        "text": "  }"
+      },
+      {
+        "line": 330,
+        "text": "  activeCount(projectPath?: string): number {"
+      },
+      {
+        "line": 331,
+        "text": "    return this.executionScopes().filter("
+      },
+      {
+        "line": 332,
+        "text": "      (scope) => !projectPath || scope.projectPath === resolve(projectPath),"
+      },
+      {
+        "line": 333,
+        "text": "    ).length;"
+      },
+      {
+        "line": 334,
+        "text": "  }"
+      },
+      {
+        "line": 335,
+        "text": "  private now() {"
+      },
+      {
+        "line": 336,
+        "text": "    return this.options.now?.() ?? Date.now();"
+      },
+      {
+        "line": 337,
+        "text": "  }"
+      },
+      {
+        "line": 338,
+        "text": "  private exclusive<T>(operation: () => Promise<T>): Promise<T> {"
+      },
+      {
+        "line": 339,
+        "text": "    const pending = this.serial.then(operation);"
+      },
+      {
+        "line": 340,
+        "text": "    this.serial = pending.catch(() => {});"
+      },
+      {
+        "line": 341,
+        "text": "    return pending;"
+      },
+      {
+        "line": 342,
+        "text": "  }"
+      },
+      {
+        "line": 343,
+        "text": "  private async authorize(scope: ToolJobScope): Promise<void> {"
+      },
+      {
+        "line": 344,
+        "text": "    if (this.options.isAuthorized && !(await this.options.isAuthorized(scope)))"
+      },
+      {
+        "line": 345,
+        "text": "      throw new Error(\"tool job owner is no longer authorized\");"
+      },
+      {
+        "line": 346,
+        "text": "  }"
+      },
+      {
+        "line": 347,
+        "text": "  private async describePackage(scope: ToolJobScope): Promise<ToolJobPackage | undefined> {"
+      },
+      {
+        "line": 348,
+        "text": "    if (!this.options.describePackage) return undefined;"
+      },
+      {
+        "line": 349,
+        "text": "    try {"
+      },
+      {
+        "line": 350,
+        "text": "      return packageValue(await this.options.describePackage(scope));"
+      },
+      {
+        "line": 351,
+        "text": "    } catch {"
+      },
+      {
+        "line": 352,
+        "text": "      throw packageError(\"PACKAGE_UNAVAILABLE\", \"任务的项目安装包无法校验，请恢复原包后重试。\");"
+      },
+      {
+        "line": 353,
+        "text": "    }"
+      },
+      {
+        "line": 354,
+        "text": "  }"
+      },
+      {
+        "line": 355,
+        "text": "  private async verifyPackage(job: ToolJob): Promise<void> {"
+      },
+      {
+        "line": 356,
+        "text": "    if (!job.package && !this.options.describePackage) return; // Legacy standalone embedders."
+      },
+      {
+        "line": 357,
+        "text": "    if (!job.package)"
+      },
+      {
+        "line": 358,
+        "text": "      throw packageError("
+      },
+      {
+        "line": 359,
+        "text": "        \"PACKAGE_UNKNOWN\","
+      },
+      {
+        "line": 360,
+        "text": "        \"旧任务未记录安装包版本，请检查输入并重新提交任务。\","
+      },
+      {
+        "line": 361,
+        "text": "        false,"
+      },
+      {
+        "line": 362,
+        "text": "      );"
+      },
+      {
+        "line": 363,
+        "text": "    const current = await this.describePackage(job.scope);"
+      },
+      {
+        "line": 364,
+        "text": "    if (!current) throw packageError(\"PACKAGE_UNAVAILABLE\", \"当前 Host 无法校验此任务的原安装包。\");"
+      },
+      {
+        "line": 365,
+        "text": "    if ("
+      },
+      {
+        "line": 366,
+        "text": "      current.version !== job.package.version ||"
+      },
+      {
+        "line": 367,
+        "text": "      current.packageDigest !== job.package.packageDigest"
+      },
+      {
+        "line": 368,
+        "text": "    )"
+      },
+      {
+        "line": 369,
+        "text": "      throw packageError("
+      },
+      {
+        "line": 370,
+        "text": "        \"PACKAGE_CHANGED\","
+      },
+      {
+        "line": 371,
+        "text": "        \"项目安装包与任务启动时不一致，请恢复原版本，或检查输入并创建新任务。\","
+      },
+      {
+        "line": 372,
+        "text": "      );"
+      },
+      {
+        "line": 373,
+        "text": "  }"
+      },
+      {
+        "line": 374,
+        "text": "  private readOnly(job: ToolJob, scope: ToolJobScope): boolean {"
+      },
+      {
+        "line": 375,
+        "text": "    return ("
+      },
+      {
+        "line": 376,
+        "text": "      job.scope.revision !== scope.revision || (!!this.options.describePackage && !job.package)"
+      },
+      {
+        "line": 377,
+        "text": "    );"
+      },
+      {
+        "line": 378,
+        "text": "  }"
+      },
+      {
+        "line": 379,
+        "text": "  initialize(): Promise<void> {"
+      },
+      {
+        "line": 380,
+        "text": "    return (this.ready ??= this.load());"
+      },
+      {
+        "line": 381,
+        "text": "  }"
+      },
+      {
+        "line": 382,
+        "text": "  private async load(): Promise<void> {"
+      },
+      {
+        "line": 383,
+        "text": "    await this.storage.initialize();"
+      },
+      {
+        "line": 384,
+        "text": "    try {"
+      },
+      {
+        "line": 385,
+        "text": "      const queues = await this.storage.readQueueCatalog(toolJobLimits.maxQueueCatalogBytes);"
+      },
+      {
+        "line": 386,
+        "text": "      if (!Array.isArray(queues) || queues.length > toolJobLimits.maxQueues)"
+      },
+      {
+        "line": 387,
+        "text": "        throw new Error(\"Invalid tool queue catalog\");"
+      },
+      {
+        "line": 388,
+        "text": "      for (const raw of queues) {"
+      },
+      {
+        "line": 389,
+        "text": "        const scope = scopeValue(raw?.scope),"
+      },
+      {
+        "line": 390,
+        "text": "          key = queueKey(scope);"
+      },
+      {
+        "line": 391,
+        "text": "        if (this.queues.has(key)) throw new Error(\"Duplicate tool queue scope\");"
+      },
+      {
+        "line": 392,
+        "text": "        this.queues.set(key, { scope, ...queueState(raw) });"
+      },
+      {
+        "line": 393,
+        "text": "      }"
+      },
+      {
+        "line": 394,
+        "text": "      const listing = await opendir(await this.storage.directory());"
+      },
+      {
+        "line": 395,
+        "text": "      let examined = 0;"
+      },
+      {
+        "line": 396,
+        "text": "      for await (const item of listing) {"
+      },
+      {
+        "line": 397,
+        "text": "        if (++examined > toolJobLimits.maxExaminedEntries)"
+      },
+      {
+        "line": 398,
+        "text": "          throw new Error(\"tool job storage entry limit exceeded\");"
+      },
+      {
+        "line": 399,
+        "text": "        if (!item.isDirectory() || !/^[a-f0-9-]{36}$/.test(item.name)) continue;"
+      },
+      {
+        "line": 400,
+        "text": "        let job: StoredJob;"
+      },
+      {
+        "line": 401,
+        "text": "        try {"
+      },
+      {
+        "line": 402,
+        "text": "          const directory = await this.storage.directory(item.name);"
+      },
+      {
+        "line": 403,
+        "text": "          job = storedValue("
+      },
+      {
+        "line": 404,
+        "text": "            await this.storage.read(join(directory, \"job.json\"), toolJobLimits.maxRecordBytes),"
+      },
+      {
+        "line": 405,
+        "text": "          );"
+      },
+      {
+        "line": 406,
+        "text": "          if (job.id !== item.name) continue;"
+      },
+      {
+        "line": 407,
+        "text": "        } catch {"
+      },
+      {
+        "line": 408,
+        "text": "          continue; /* One partial or invalid record cannot prevent other recovery. */"
+      },
+      {
+        "line": 409,
+        "text": "        }"
+      },
+      {
+        "line": 410,
+        "text": "        if (this.jobs.size >= toolJobLimits.maxJobs)"
+      },
+      {
+        "line": 411,
+        "text": "          throw new Error(\"tool job record limit exceeded\");"
+      },
+      {
+        "line": 412,
+        "text": "        if (!TERMINAL.has(job.status)) {"
+      },
+      {
+        "line": 413,
+        "text": "          job.status = \"interrupted\";"
+      },
+      {
+        "line": 414,
+        "text": "          job.updatedAt = job.completedAt = this.now();"
+      },
+      {
+        "line": 415,
+        "text": "          job.sequence++;"
+      },
+      {
+        "line": 416,
+        "text": "          job.error = {"
+      },
+      {
+        "line": 417,
+        "text": "            code: \"HOST_INTERRUPTED\","
+      },
+      {
+        "line": 418,
+        "text": "            message: \"The previous Host stopped before this task completed.\","
+      },
+      {
+        "line": 419,
+        "text": "            retryable: job.recovery === \"retry\","
+      },
+      {
+        "line": 420,
+        "text": "          };"
+      },
+      {
+        "line": 421,
+        "text": "          await this.storage.write(job.id, job, toolJobLimits.maxRecordBytes);"
+      },
+      {
+        "line": 422,
+        "text": "        }"
+      },
+      {
+        "line": 423,
+        "text": "        this.jobs.set(job.id, job);"
+      },
+      {
+        "line": 424,
+        "text": "      }"
+      },
+      {
+        "line": 425,
+        "text": "    } catch (error) {"
+      },
+      {
+        "line": 426,
+        "text": "      await this.storage.close();"
+      },
+      {
+        "line": 427,
+        "text": "      throw error;"
+      },
+      {
+        "line": 428,
+        "text": "    }"
+      },
+      {
+        "line": 429,
+        "text": "  }"
+      },
+      {
+        "line": 430,
+        "text": "  private async commit(job: StoredJob): Promise<void> {"
+      },
+      {
+        "line": 431,
+        "text": "    job.updatedAt = this.now();"
+      },
+      {
+        "line": 432,
+        "text": "    job.sequence++;"
+      },
+      {
+        "line": 433,
+        "text": "    await this.storage.write(job.id, job, toolJobLimits.maxRecordBytes);"
+      },
+      {
+        "line": 434,
+        "text": "    this.jobs.set(job.id, job);"
+      },
+      {
+        "line": 435,
+        "text": "    try {"
+      },
+      {
+        "line": 436,
+        "text": "      this.options.onEvent?.(publicJob(job));"
+      },
+      {
+        "line": 437,
+        "text": "    } catch {"
+      },
+      {
+        "line": 438,
+        "text": "      /* A caller may reconnect via list/get. */"
+      },
+      {
+        "line": 439,
+        "text": "    }"
+      },
+      {
+        "line": 440,
+        "text": "    for (const listener of this.listeners) {"
+      },
+      {
+        "line": 441,
+        "text": "      if (!sameScope(listener.scope, job.scope)) continue;"
+      },
+      {
+        "line": 442,
+        "text": "      try {"
+      },
+      {
+        "line": 443,
+        "text": "        const { input: _input, result: _result, ...event } = publicJob(job);"
+      },
+      {
+        "line": 444,
+        "text": "        listener.send(event);"
+      },
+      {
+        "line": 445,
+        "text": "      } catch {"
+      },
+      {
+        "line": 446,
+        "text": "        /* One viewer must not interrupt persistence. */"
+      },
+      {
+        "line": 447,
+        "text": "      }"
+      },
+      {
+        "line": 448,
+        "text": "    }"
+      },
+      {
+        "line": 449,
+        "text": "  }"
+      },
+      {
+        "line": 450,
+        "text": "  private lookup(scope: ToolJobScope, id: string, mutate = false): StoredJob {"
+      },
+      {
+        "line": 451,
+        "text": "    if (typeof id !== \"string\") throw new Error(\"tool job ID is required\");"
+      },
+      {
+        "line": 452,
+        "text": "    const job = this.jobs.get(id);"
+      },
+      {
+        "line": 453,
+        "text": "    if (!job || !sameScope(job.scope, scope, false))"
+      },
+      {
+        "line": 454,
+        "text": "      throw new Error(\"tool job does not belong to this app and workspace\");"
+      },
+      {
+        "line": 455,
+        "text": "    if (mutate && !sameScope(job.scope, scope))"
+      },
+      {
+        "line": 456,
+        "text": "      throw new Error(\"old-revision tool jobs are read-only; create a new compatible task\");"
+      },
+      {
+        "line": 457,
+        "text": "    return job;"
+      },
+      {
+        "line": 458,
+        "text": "  }"
+      },
+      {
+        "line": 459,
+        "text": "  /** Scoped existence check for transports merging read-only legacy history. */"
+      },
+      {
+        "line": 460,
+        "text": "  async has(rawScope: ToolJobScope, id: string): Promise<boolean> {"
+      },
+      {
+        "line": 461,
+        "text": "    const scope = scopeValue(rawScope);"
+      },
+      {
+        "line": 462,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 463,
+        "text": "    await this.authorize(scope);"
+      },
+      {
+        "line": 464,
+        "text": "    if (typeof id !== \"string\") throw new Error(\"tool job ID is required\");"
+      },
+      {
+        "line": 465,
+        "text": "    const job = this.jobs.get(id);"
+      },
+      {
+        "line": 466,
+        "text": "    return !!job && sameScope(job.scope, scope, false);"
+      },
+      {
+        "line": 467,
+        "text": "  }"
+      },
+      {
+        "line": 468,
+        "text": "  async list(rawScope: ToolJobScope): Promise<Array<ToolJob & { readOnly: boolean }>> {"
+      },
+      {
+        "line": 469,
+        "text": "    const scope = scopeValue(rawScope);"
+      },
+      {
+        "line": 470,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 471,
+        "text": "    await this.authorize(scope);"
+      },
+      {
+        "line": 472,
+        "text": "    return [...this.jobs.values()]"
+      },
+      {
+        "line": 473,
+        "text": "      .filter((job) => sameScope(job.scope, scope, false))"
+      },
+      {
+        "line": 474,
+        "text": "      .sort((a, b) => b.createdAt - a.createdAt)"
+      },
+      {
+        "line": 475,
+        "text": "      .map((job) => ({ ...publicJob(job), readOnly: this.readOnly(job, scope) }));"
+      },
+      {
+        "line": 476,
+        "text": "  }"
+      },
+      {
+        "line": 477,
+        "text": "  async get(rawScope: ToolJobScope, id: string): Promise<ToolJob & { readOnly: boolean }> {"
+      },
+      {
+        "line": 478,
+        "text": "    const scope = scopeValue(rawScope);"
+      },
+      {
+        "line": 479,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 480,
+        "text": "    await this.authorize(scope);"
+      },
+      {
+        "line": 481,
+        "text": "    const job = this.lookup(scope, id);"
+      },
+      {
+        "line": 482,
+        "text": "    return { ...publicJob(job), readOnly: this.readOnly(job, scope) };"
+      },
+      {
+        "line": 483,
+        "text": "  }"
+      },
+      {
+        "line": 484,
+        "text": "  async find(rawScope: ToolJobScope, requestKey: string): Promise<ToolJob | null> {"
+      },
+      {
+        "line": 485,
+        "text": "    const scope = scopeValue(rawScope);"
+      },
+      {
+        "line": 486,
+        "text": "    if (typeof requestKey !== \"string\" || !requestKey || requestKey.length > 160)"
+      },
+      {
+        "line": 487,
+        "text": "      throw new Error(\"invalid tool job request key\");"
+      },
+      {
+        "line": 488,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 489,
+        "text": "    await this.authorize(scope);"
+      },
+      {
+        "line": 490,
+        "text": "    const job = [...this.jobs.values()].find("
+      },
+      {
+        "line": 491,
+        "text": "      (item) => sameScope(item.scope, scope) && item.requestKey === requestKey,"
+      },
+      {
+        "line": 492,
+        "text": "    );"
+      },
+      {
+        "line": 493,
+        "text": "    return job ? publicJob(job) : null;"
+      },
+      {
+        "line": 494,
+        "text": "  }"
+      },
+      {
+        "line": 495,
+        "text": "  private queueFor(scope: ToolJobScope): ToolQueueState {"
+      },
+      {
+        "line": 496,
+        "text": "    return queueState("
+      },
+      {
+        "line": 497,
+        "text": "      this.queues.get(queueKey(scope)) ?? {"
+      },
+      {
+        "line": 498,
+        "text": "        revision: 0,"
+      },
+      {
+        "line": 499,
+        "text": "        paused: false,"
+      },
+      {
+        "line": 500,
+        "text": "        maxConcurrent: toolJobLimits.maxConcurrent,"
+      },
+      {
+        "line": 501,
+        "text": "      },"
+      },
+      {
+        "line": 502,
+        "text": "    );"
+      },
+      {
+        "line": 503,
+        "text": "  }"
+      },
+      {
+        "line": 504,
+        "text": "  async getQueue(rawScope: ToolJobScope): Promise<ToolQueueState> {"
+      },
+      {
+        "line": 505,
+        "text": "    const scope = scopeValue(rawScope);"
+      },
+      {
+        "line": 506,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 507,
+        "text": "    await this.authorize(scope);"
+      },
+      {
+        "line": 508,
+        "text": "    return this.queueFor(scope);"
+      },
+      {
+        "line": 509,
+        "text": "  }"
+      },
+      {
+        "line": 510,
+        "text": "  async setQueue(rawScope: ToolJobScope, update: ToolQueueUpdate): Promise<ToolQueueWriteResult> {"
+      },
+      {
+        "line": 511,
+        "text": "    const scope = scopeValue(rawScope);"
+      },
+      {
+        "line": 512,
+        "text": "    const desired = queueState({"
+      },
+      {
+        "line": 513,
+        "text": "      revision: update?.expectedRevision,"
+      },
+      {
+        "line": 514,
+        "text": "      paused: update?.paused,"
+      },
+      {
+        "line": 515,
+        "text": "      maxConcurrent: update?.maxConcurrent,"
+      },
+      {
+        "line": 516,
+        "text": "    });"
+      },
+      {
+        "line": 517,
+        "text": "    if (desired.revision >= Number.MAX_SAFE_INTEGER)"
+      },
+      {
+        "line": 518,
+        "text": "      throw new Error(\"Tool queue revision exhausted\");"
+      },
+      {
+        "line": 519,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 520,
+        "text": "    await this.authorize(scope);"
+      },
+      {
+        "line": 521,
+        "text": "    const result = await this.exclusive(async () => {"
+      },
+      {
+        "line": 522,
+        "text": "      if (this.stopping) throw new Error(\"tool job service is shutting down\");"
+      },
+      {
+        "line": 523,
+        "text": "      await this.authorize(scope);"
+      },
+      {
+        "line": 524,
+        "text": "      const current = this.queueFor(scope);"
+      },
+      {
+        "line": 525,
+        "text": "      if (current.revision !== desired.revision) return { saved: false, queue: current };"
+      },
+      {
+        "line": 526,
+        "text": "      const key = queueKey(scope);"
+      },
+      {
+        "line": 527,
+        "text": "      if (!this.queues.has(key) && this.queues.size >= toolJobLimits.maxQueues)"
+      },
+      {
+        "line": 528,
+        "text": "        throw new Error(\"Tool queue catalog is full\");"
+      },
+      {
+        "line": 529,
+        "text": "      const next = { scope, ...desired, revision: current.revision + 1 };"
+      },
+      {
+        "line": 530,
+        "text": "      const catalog = new Map(this.queues);"
+      },
+      {
+        "line": 531,
+        "text": "      catalog.set(key, next);"
+      },
+      {
+        "line": 532,
+        "text": "      await this.storage.writeQueueCatalog("
+      },
+      {
+        "line": 533,
+        "text": "        [...catalog.values()],"
+      },
+      {
+        "line": 534,
+        "text": "        toolJobLimits.maxQueueCatalogBytes,"
+      },
+      {
+        "line": 535,
+        "text": "      );"
+      },
+      {
+        "line": 536,
+        "text": "      this.queues.set(key, next);"
+      },
+      {
+        "line": 537,
+        "text": "      return { saved: true, queue: queueState(next) };"
+      },
+      {
+        "line": 538,
+        "text": "    });"
+      },
+      {
+        "line": 539,
+        "text": "    this.schedule();"
+      },
+      {
+        "line": 540,
+        "text": "    return result;"
+      },
+      {
+        "line": 541,
+        "text": "  }"
+      },
+      {
+        "line": 542,
+        "text": "  private runnable(job: StoredJob): boolean {"
+      },
+      {
+        "line": 543,
+        "text": "    if (job.status !== \"queued\") return false;"
+      },
+      {
+        "line": 544,
+        "text": "    const queue = this.queueFor(job.scope);"
+      },
+      {
+        "line": 545,
+        "text": "    if (queue.paused) return false;"
+      },
+      {
+        "line": 546,
+        "text": "    let active = 0;"
+      },
+      {
+        "line": 547,
+        "text": "    for (const id of this.active.keys()) {"
+      },
+      {
+        "line": 548,
+        "text": "      const running = this.jobs.get(id);"
+      },
+      {
+        "line": 549,
+        "text": "      if (running && sameScope(running.scope, job.scope)) active++;"
+      },
+      {
+        "line": 550,
+        "text": "    }"
+      },
+      {
+        "line": 551,
+        "text": "    return active < queue.maxConcurrent;"
+      },
+      {
+        "line": 552,
+        "text": "  }"
+      },
+      {
+        "line": 553,
+        "text": "  private pendingCount(scope: ToolJobScope): number {"
+      },
+      {
+        "line": 554,
+        "text": "    return ("
+      },
+      {
+        "line": 555,
+        "text": "      [...this.jobs.values()].filter("
+      },
+      {
+        "line": 556,
+        "text": "        (job) => sameScope(job.scope, scope) && !TERMINAL.has(job.status),"
+      },
+      {
+        "line": 557,
+        "text": "      ).length + [...this.preparing.values()].filter((job) => sameScope(job.scope, scope)).length"
+      },
+      {
+        "line": 558,
+        "text": "    );"
+      },
+      {
+        "line": 559,
+        "text": "  }"
+      },
+      {
+        "line": 560,
+        "text": "  async start("
+      },
+      {
+        "line": 561,
+        "text": "    rawScope: ToolJobScope,"
+      },
+      {
+        "line": 562,
+        "text": "    request: ToolJobRequest,"
+      },
+      {
+        "line": 563,
+        "text": "    signal?: AbortSignal,"
+      },
+      {
+        "line": 564,
+        "text": "  ): Promise<ToolJob> {"
+      },
+      {
+        "line": 565,
+        "text": "    const scope = scopeValue(rawScope);"
+      },
+      {
+        "line": 566,
+        "text": "    return panelExecutionGate.run(scope, () => this.startAdmitted(scope, request, signal));"
+      },
+      {
+        "line": 567,
+        "text": "  }"
+      },
+      {
+        "line": 568,
+        "text": "  private async startAdmitted("
+      },
+      {
+        "line": 569,
+        "text": "    scope: ToolJobScope,"
+      },
+      {
+        "line": 570,
+        "text": "    request: ToolJobRequest,"
+      },
+      {
+        "line": 571,
+        "text": "    signal?: AbortSignal,"
+      },
+      {
+        "line": 572,
+        "text": "  ): Promise<ToolJob> {"
+      },
+      {
+        "line": 573,
+        "text": "    signal?.throwIfAborted();"
+      },
+      {
+        "line": 574,
+        "text": "    const entry = entryValue(request?.entry);"
+      },
+      {
+        "line": 575,
+        "text": "    if (![\"manual\", \"retry\"].includes(request.recovery))"
+      },
+      {
+        "line": 576,
+        "text": "      throw new Error(\"tool job recovery must be manual or retry\");"
+      },
+      {
+        "line": 577,
+        "text": "    if ("
+      },
+      {
+        "line": 578,
+        "text": "      request.requestKey !== undefined &&"
+      },
+      {
+        "line": 579,
+        "text": "      (typeof request.requestKey !== \"string\" ||"
+      },
+      {
+        "line": 580,
+        "text": "        !request.requestKey ||"
+      },
+      {
+        "line": 581,
+        "text": "        request.requestKey.length > 160)"
+      },
+      {
+        "line": 582,
+        "text": "    )"
+      },
+      {
+        "line": 583,
+        "text": "      throw new Error(\"invalid tool job request key\");"
+      },
+      {
+        "line": 584,
+        "text": "    const input = toolJobJson(request.input, toolJobLimits.maxInputBytes);"
+      },
+      {
+        "line": 585,
+        "text": "    request = {"
+      },
+      {
+        "line": 586,
+        "text": "      entry,"
+      },
+      {
+        "line": 587,
+        "text": "      input,"
+      },
+      {
+        "line": 588,
+        "text": "      recovery: request.recovery,"
+      },
+      {
+        "line": 589,
+        "text": "      ...(request.requestKey === undefined ? {} : { requestKey: request.requestKey }),"
+      },
+      {
+        "line": 590,
+        "text": "    };"
+      },
+      {
+        "line": 591,
+        "text": "    const requestDigest = createHash(\"sha256\")"
+      },
+      {
+        "line": 592,
+        "text": "      .update(JSON.stringify({ entry, input, recovery: request.recovery }))"
+      },
+      {
+        "line": 593,
+        "text": "      .digest(\"hex\");"
+      },
+      {
+        "line": 594,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 595,
+        "text": "    await this.authorize(scope);"
+      },
+      {
+        "line": 596,
+        "text": "    let done!: () => void;"
+      },
+      {
+        "line": 597,
+        "text": "    let settle!: (value: PreparationOutcome) => void;"
+      },
+      {
+        "line": 598,
+        "text": "    let outcome!: PreparationOutcome;"
+      },
+      {
+        "line": 599,
+        "text": "    const reservation = await this.exclusive(async () => {"
+      },
+      {
+        "line": 600,
+        "text": "      signal?.throwIfAborted();"
+      },
+      {
+        "line": 601,
+        "text": "      if (this.stopping) throw new Error(\"tool job service is shutting down\");"
+      },
+      {
+        "line": 602,
+        "text": "      if (request.requestKey) {"
+      },
+      {
+        "line": 603,
+        "text": "        const existing = [...this.jobs.values()].find("
+      },
+      {
+        "line": 604,
+        "text": "          (job) => sameScope(job.scope, scope) && job.requestKey === request.requestKey,"
+      },
+      {
+        "line": 605,
+        "text": "        );"
+      },
+      {
+        "line": 606,
+        "text": "        if (existing) {"
+      },
+      {
+        "line": 607,
+        "text": "          if (existing.requestDigest !== requestDigest)"
+      },
+      {
+        "line": 608,
+        "text": "            throw new Error(\"tool job request key was already used for different input\");"
+      },
+      {
+        "line": 609,
+        "text": "          return { existing };"
+      },
+      {
+        "line": 610,
+        "text": "        }"
+      },
+      {
+        "line": 611,
+        "text": "        const pending = [...this.preparing.values()].find("
+      },
+      {
+        "line": 612,
+        "text": "          (item) => sameScope(item.scope, scope) && item.requestKey === request.requestKey,"
+      },
+      {
+        "line": 613,
+        "text": "        );"
+      },
+      {
+        "line": 614,
+        "text": "        if (pending) {"
+      },
+      {
+        "line": 615,
+        "text": "          if (pending.requestDigest !== requestDigest)"
+      },
+      {
+        "line": 616,
+        "text": "            throw new Error(\"tool job request key was already used for different input\");"
+      },
+      {
+        "line": 617,
+        "text": "          return { following: pending.result };"
+      },
+      {
+        "line": 618,
+        "text": "        }"
+      },
+      {
+        "line": 619,
+        "text": "      }"
+      },
+      {
+        "line": 620,
+        "text": "      while (this.jobs.size + this.preparing.size >= toolJobLimits.maxJobs) {"
+      },
+      {
+        "line": 621,
+        "text": "        const oldest = [...this.jobs.values()]"
+      },
+      {
+        "line": 622,
+        "text": "          .filter((job) => TERMINAL.has(job.status) && !this.active.has(job.id))"
+      },
+      {
+        "line": 623,
+        "text": "          .sort((a, b) => (a.completedAt ?? a.updatedAt) - (b.completedAt ?? b.updatedAt))[0];"
+      },
+      {
+        "line": 624,
+        "text": "        if (!oldest) throw new Error(\"tool job capacity reached with unfinished tasks\");"
+      },
+      {
+        "line": 625,
+        "text": "        await this.storage.remove(oldest.id);"
+      },
+      {
+        "line": 626,
+        "text": "        this.jobs.delete(oldest.id);"
+      },
+      {
+        "line": 627,
+        "text": "      }"
+      },
+      {
+        "line": 628,
+        "text": "      if (this.pendingCount(scope) >= toolJobLimits.maxQueuedPerScope)"
+      },
+      {
+        "line": 629,
+        "text": "        throw new Error(\"too many queued tool jobs for this workspace\");"
+      },
+      {
+        "line": 630,
+        "text": "      const id = randomUUID();"
+      },
+      {
+        "line": 631,
+        "text": "      const controller = new AbortController();"
+      },
+      {
+        "line": 632,
+        "text": "      this.preparing.set(id, {"
+      },
+      {
+        "line": 633,
+        "text": "        scope,"
+      },
+      {
+        "line": 634,
+        "text": "        controller,"
+      },
+      {
+        "line": 635,
+        "text": "        requestKey: request.requestKey,"
+      },
+      {
+        "line": 636,
+        "text": "        requestDigest,"
+      },
+      {
+        "line": 637,
+        "text": "        result: new Promise<PreparationOutcome>((resolveResult) => {"
+      },
+      {
+        "line": 638,
+        "text": "          settle = resolveResult;"
+      },
+      {
+        "line": 639,
+        "text": "        }),"
+      },
+      {
+        "line": 640,
+        "text": "        done: new Promise<void>((resolve) => {"
+      },
+      {
+        "line": 641,
+        "text": "          done = resolve;"
+      },
+      {
+        "line": 642,
+        "text": "        }),"
+      },
+      {
+        "line": 643,
+        "text": "      });"
+      },
+      {
+        "line": 644,
+        "text": "      return { id, controller };"
+      },
+      {
+        "line": 645,
+        "text": "    });"
+      },
+      {
+        "line": 646,
+        "text": "    if (reservation.existing) return publicJob(reservation.existing);"
+      },
+      {
+        "line": 647,
+        "text": "    if (reservation.following) {"
+      },
+      {
+        "line": 648,
+        "text": "      const job = await waitPreparation(reservation.following, signal);"
+      },
+      {
+        "line": 649,
+        "text": "      await this.authorize(scope);"
+      },
+      {
+        "line": 650,
+        "text": "      signal?.throwIfAborted();"
+      },
+      {
+        "line": 651,
+        "text": "      return toolJobJson(job, toolJobLimits.maxRecordBytes);"
+      },
+      {
+        "line": 652,
+        "text": "    }"
+      },
+      {
+        "line": 653,
+        "text": "    const { id, controller } = reservation;"
+      },
+      {
+        "line": 654,
+        "text": "    const abort = () => controller!.abort(signal?.reason);"
+      },
+      {
+        "line": 655,
+        "text": "    signal?.addEventListener(\"abort\", abort, { once: true });"
+      },
+      {
+        "line": 656,
+        "text": "    if (signal?.aborted) abort();"
+      },
+      {
+        "line": 657,
+        "text": "    try {"
+      },
+      {
+        "line": 658,
+        "text": "      controller!.signal.throwIfAborted();"
+      },
+      {
+        "line": 659,
+        "text": "      const selectedPackage = await this.describePackage(scope);"
+      },
+      {
+        "line": 660,
+        "text": "      const workDir = await this.storage.directory(id!, true, true);"
+      },
+      {
+        "line": 661,
+        "text": "      controller!.signal.throwIfAborted();"
+      },
+      {
+        "line": 662,
+        "text": "      const prepared = this.options.prepareInput"
+      },
+      {
+        "line": 663,
+        "text": "        ? await this.options.prepareInput(scope, input, workDir, controller!.signal)"
+      },
+      {
+        "line": 664,
+        "text": "        : input;"
+      },
+      {
+        "line": 665,
+        "text": "      const job: StoredJob = {"
+      },
+      {
+        "line": 666,
+        "text": "        version: 1,"
+      },
+      {
+        "line": 667,
+        "text": "        id: id!,"
+      },
+      {
+        "line": 668,
+        "text": "        scope,"
+      },
+      {
+        "line": 669,
+        "text": "        entry,"
+      },
+      {
+        "line": 670,
+        "text": "        ...(selectedPackage ? { package: selectedPackage } : {}),"
+      },
+      {
+        "line": 671,
+        "text": "        input: toolJobJson(prepared, toolJobLimits.maxInputBytes),"
+      },
+      {
+        "line": 672,
+        "text": "        recovery: request.recovery,"
+      },
+      {
+        "line": 673,
+        "text": "        status: \"queued\","
+      },
+      {
+        "line": 674,
+        "text": "        attempt: 0,"
+      },
+      {
+        "line": 675,
+        "text": "        createdAt: this.now(),"
+      },
+      {
+        "line": 676,
+        "text": "        updatedAt: this.now(),"
+      },
+      {
+        "line": 677,
+        "text": "        sequence: 0,"
+      },
+      {
+        "line": 678,
+        "text": "        ...(request.requestKey === undefined ? {} : { requestKey: request.requestKey }),"
+      },
+      {
+        "line": 679,
+        "text": "        requestDigest,"
+      },
+      {
+        "line": 680,
+        "text": "      };"
+      },
+      {
+        "line": 681,
+        "text": "      await this.authorize(scope);"
+      },
+      {
+        "line": 682,
+        "text": "      await this.verifyPackage(job);"
+      },
+      {
+        "line": 683,
+        "text": "      await this.exclusive(async () => {"
+      },
+      {
+        "line": 684,
+        "text": "        if (this.stopping || controller!.signal.aborted)"
+      },
+      {
+        "line": 685,
+        "text": "          throw new Error(\"tool job input preparation was interrupted\");"
+      },
+      {
+        "line": 686,
+        "text": "        if ("
+      },
+      {
+        "line": 687,
+        "text": "          request.requestKey &&"
+      },
+      {
+        "line": 688,
+        "text": "          [...this.jobs.values()].some("
+      },
+      {
+        "line": 689,
+        "text": "            (other) => sameScope(other.scope, scope) && other.requestKey === request.requestKey,"
+      },
+      {
+        "line": 690,
+        "text": "          )"
+      },
+      {
+        "line": 691,
+        "text": "        )"
+      },
+      {
+        "line": 692,
+        "text": "          throw new Error(\"tool job request key is already being prepared\");"
+      },
+      {
+        "line": 693,
+        "text": "        await this.commit(job);"
+      },
+      {
+        "line": 694,
+        "text": "        // Cancellation can arrive during the durable write. The serial fence"
+      },
+      {
+        "line": 695,
+        "text": "        // prevents the scheduler from selecting this job before cancellation."
+      },
+      {
+        "line": 696,
+        "text": "        if (controller!.signal.aborted) {"
+      },
+      {
+        "line": 697,
+        "text": "          job.status = \"cancelled\";"
+      },
+      {
+        "line": 698,
+        "text": "          job.completedAt = this.now();"
+      },
+      {
+        "line": 699,
+        "text": "          job.error = {"
+      },
+      {
+        "line": 700,
+        "text": "            code: \"CANCELLED\","
+      },
+      {
+        "line": 701,
+        "text": "            message: \"Task was cancelled before execution.\","
+      },
+      {
+        "line": 702,
+        "text": "            retryable: job.recovery === \"retry\","
+      },
+      {
+        "line": 703,
+        "text": "          };"
+      },
+      {
+        "line": 704,
+        "text": "          await this.commit(job);"
+      },
+      {
+        "line": 705,
+        "text": "          controller!.signal.throwIfAborted();"
+      },
+      {
+        "line": 706,
+        "text": "        }"
+      },
+      {
+        "line": 707,
+        "text": "      });"
+      },
+      {
+        "line": 708,
+        "text": "      this.schedule();"
+      },
+      {
+        "line": 709,
+        "text": "      const result = publicJob(job);"
+      },
+      {
+        "line": 710,
+        "text": "      outcome = { job: publicJob(job) };"
+      },
+      {
+        "line": 711,
+        "text": "      return result;"
+      },
+      {
+        "line": 712,
+        "text": "    } catch (error) {"
+      },
+      {
+        "line": 713,
+        "text": "      outcome = { error };"
+      },
+      {
+        "line": 714,
+        "text": "      const path = await this.storage.directory(id!).catch(() => undefined);"
+      },
+      {
+        "line": 715,
+        "text": "      if (path && !this.jobs.has(id!)) await this.storage.remove(id!);"
+      },
+      {
+        "line": 716,
+        "text": "      throw error;"
+      },
+      {
+        "line": 717,
+        "text": "    } finally {"
+      },
+      {
+        "line": 718,
+        "text": "      signal?.removeEventListener(\"abort\", abort);"
+      },
+      {
+        "line": 719,
+        "text": "      this.preparing.delete(id!);"
+      },
+      {
+        "line": 720,
+        "text": "      settle(outcome);"
+      },
+      {
+        "line": 721,
+        "text": "      done();"
+      },
+      {
+        "line": 722,
+        "text": "    }"
+      },
+      {
+        "line": 723,
+        "text": "  }"
+      },
+      {
+        "line": 724,
+        "text": "  private schedule(): void {"
+      },
+      {
+        "line": 725,
+        "text": "    if (this.pumping || this.stopping) return;"
+      },
+      {
+        "line": 726,
+        "text": "    this.pumping = true;"
+      },
+      {
+        "line": 727,
+        "text": "    queueMicrotask(() => {"
+      },
+      {
+        "line": 728,
+        "text": "      void this.pump().then("
+      },
+      {
+        "line": 729,
+        "text": "        () => {"
+      },
+      {
+        "line": 730,
+        "text": "          this.pumping = false;"
+      },
+      {
+        "line": 731,
+        "text": "          if ("
+      },
+      {
+        "line": 732,
+        "text": "            !this.stopping &&"
+      },
+      {
+        "line": 733,
+        "text": "            this.active.size < toolJobLimits.maxConcurrent &&"
+      },
+      {
+        "line": 734,
+        "text": "            [...this.jobs.values()].some((job) => this.runnable(job))"
+      },
+      {
+        "line": 735,
+        "text": "          )"
+      },
+      {
+        "line": 736,
+        "text": "            this.schedule();"
+      },
+      {
+        "line": 737,
+        "text": "        },"
+      },
+      {
+        "line": 738,
+        "text": "        () => {"
+      },
+      {
+        "line": 739,
+        "text": "          this.pumping = false;"
+      },
+      {
+        "line": 740,
+        "text": "        },"
+      },
+      {
+        "line": 741,
+        "text": "      );"
+      },
+      {
+        "line": 742,
+        "text": "    });"
+      },
+      {
+        "line": 743,
+        "text": "  }"
+      },
+      {
+        "line": 744,
+        "text": "  private async pump(): Promise<void> {"
+      },
+      {
+        "line": 745,
+        "text": "    while (!this.stopping && this.active.size < toolJobLimits.maxConcurrent) {"
+      },
+      {
+        "line": 746,
+        "text": "      const selected = await this.exclusive(async () => {"
+      },
+      {
+        "line": 747,
+        "text": "        if (this.stopping) return;"
+      },
+      {
+        "line": 748,
+        "text": "        const current = [...this.jobs.values()].find((job) => this.runnable(job));"
+      },
+      {
+        "line": 749,
+        "text": "        if (!current) return;"
+      },
+      {
+        "line": 750,
+        "text": "        const job = structuredClone(current);"
+      },
+      {
+        "line": 751,
+        "text": "        job.status = \"running\";"
+      },
+      {
+        "line": 752,
+        "text": "        job.attempt++;"
+      },
+      {
+        "line": 753,
+        "text": "        job.startedAt = this.now();"
+      },
+      {
+        "line": 754,
+        "text": "        delete job.completedAt;"
+      },
+      {
+        "line": 755,
+        "text": "        delete job.error;"
+      },
+      {
+        "line": 756,
+        "text": "        delete job.result;"
+      },
+      {
+        "line": 757,
+        "text": "        delete job.progress;"
+      },
+      {
+        "line": 758,
+        "text": "        const controller = new AbortController();"
+      },
+      {
+        "line": 759,
+        "text": "        let finish!: () => void;"
+      },
+      {
+        "line": 760,
+        "text": "        const done = new Promise<void>((resolve) => {"
+      },
+      {
+        "line": 761,
+        "text": "          finish = resolve;"
+      },
+      {
+        "line": 762,
+        "text": "        });"
+      },
+      {
+        "line": 763,
+        "text": "        await this.commit(job);"
+      },
+      {
+        "line": 764,
+        "text": "        this.active.set(job.id, { controller, done });"
+      },
+      {
+        "line": 765,
+        "text": "        return { job, controller, finish };"
+      },
+      {
+        "line": 766,
+        "text": "      });"
+      },
+      {
+        "line": 767,
+        "text": "      if (!selected) return;"
+      },
+      {
+        "line": 768,
+        "text": "      void this.run(selected.job, selected.controller)"
+      },
+      {
+        "line": 769,
+        "text": "        .finally(() => {"
+      },
+      {
+        "line": 770,
+        "text": "          this.active.delete(selected.job.id);"
+      },
+      {
+        "line": 771,
+        "text": "          selected.finish();"
+      },
+      {
+        "line": 772,
+        "text": "          this.schedule();"
+      },
+      {
+        "line": 773,
+        "text": "        })"
+      },
+      {
+        "line": 774,
+        "text": "        .catch(() => {});"
+      },
+      {
+        "line": 775,
+        "text": "    }"
+      },
+      {
+        "line": 776,
+        "text": "  }"
+      },
+      {
+        "line": 777,
+        "text": "  private async run(job: StoredJob, controller: AbortController): Promise<void> {"
+      },
+      {
+        "line": 778,
+        "text": "    let result: unknown;"
+      },
+      {
+        "line": 779,
+        "text": "    let failure: unknown;"
+      },
+      {
+        "line": 780,
+        "text": "    try {"
+      },
+      {
+        "line": 781,
+        "text": "      await this.authorize(job.scope);"
+      },
+      {
+        "line": 782,
+        "text": "      await this.verifyPackage(job);"
+      },
+      {
+        "line": 783,
+        "text": "      if (this.stopping) controller.abort();"
+      },
+      {
+        "line": 784,
+        "text": "      if (controller.signal.aborted) throw new Error(\"tool job cancelled before execution\");"
+      },
+      {
+        "line": 785,
+        "text": "      result = toolJobJson("
+      },
+      {
+        "line": 786,
+        "text": "        (await this.options.execute(publicJob(job), {"
+      },
+      {
+        "line": 787,
+        "text": "          workDir: await this.storage.directory(job.id, true),"
+      },
+      {
+        "line": 788,
+        "text": "          signal: controller.signal,"
+      },
+      {
+        "line": 789,
+        "text": "          reportProgress: async (progress) => {"
+      },
+      {
+        "line": 790,
+        "text": "            const value = progressValue(progress);"
+      },
+      {
+        "line": 791,
+        "text": "            if (controller.signal.aborted) return;"
+      },
+      {
+        "line": 792,
+        "text": "            await this.exclusive(async () => {"
+      },
+      {
+        "line": 793,
+        "text": "              const current = this.jobs.get(job.id)!;"
+      },
+      {
+        "line": 794,
+        "text": "              if (current.status !== \"running\" || controller.signal.aborted) return;"
+      },
+      {
+        "line": 795,
+        "text": "              const next = structuredClone(current);"
+      },
+      {
+        "line": 796,
+        "text": "              next.progress = { ...next.progress, ...value };"
+      },
+      {
+        "line": 797,
+        "text": "              await this.commit(next);"
+      },
+      {
+        "line": 798,
+        "text": "            });"
+      },
+      {
+        "line": 799,
+        "text": "          },"
+      },
+      {
+        "line": 800,
+        "text": "        })) ?? null,"
+      },
+      {
+        "line": 801,
+        "text": "        toolJobLimits.maxResultBytes,"
+      },
+      {
+        "line": 802,
+        "text": "      );"
+      },
+      {
+        "line": 803,
+        "text": "    } catch (error) {"
+      },
+      {
+        "line": 804,
+        "text": "      failure = error;"
+      },
+      {
+        "line": 805,
+        "text": "    }"
+      },
+      {
+        "line": 806,
+        "text": "    await this.exclusive(async () => {"
+      },
+      {
+        "line": 807,
+        "text": "      const next = structuredClone(this.jobs.get(job.id)!);"
+      },
+      {
+        "line": 808,
+        "text": "      next.completedAt = this.now();"
+      },
+      {
+        "line": 809,
+        "text": "      if (this.stopping || controller.signal.aborted) {"
+      },
+      {
+        "line": 810,
+        "text": "        next.status = this.stopping ? \"interrupted\" : \"cancelled\";"
+      },
+      {
+        "line": 811,
+        "text": "        if (next.error?.code !== \"APP_REVOKED\")"
+      },
+      {
+        "line": 812,
+        "text": "          next.error = {"
+      },
+      {
+        "line": 813,
+        "text": "            code: this.stopping ? \"HOST_INTERRUPTED\" : \"CANCELLED\","
+      },
+      {
+        "line": 814,
+        "text": "            message: this.stopping ? \"Host stopped this task.\" : \"Task was cancelled.\","
+      },
+      {
+        "line": 815,
+        "text": "            retryable: next.recovery === \"retry\","
+      },
+      {
+        "line": 816,
+        "text": "          };"
+      },
+      {
+        "line": 817,
+        "text": "      } else if (failure !== undefined) {"
+      },
+      {
+        "line": 818,
+        "text": "        const details = failure as { code?: unknown; retryable?: unknown };"
+      },
+      {
+        "line": 819,
+        "text": "        next.status = \"failed\";"
+      },
+      {
+        "line": 820,
+        "text": "        next.error = {"
+      },
+      {
+        "line": 821,
+        "text": "          code: typeof details?.code === \"string\" ? details.code.slice(0, 100) : \"TOOL_FAILED\","
+      },
+      {
+        "line": 822,
+        "text": "          message: String(failure instanceof Error ? failure.message : failure).slice(0, 2000),"
+      },
+      {
+        "line": 823,
+        "text": "          retryable: next.recovery === \"retry\" && details?.retryable !== false,"
+      },
+      {
+        "line": 824,
+        "text": "        };"
+      },
+      {
+        "line": 825,
+        "text": "      } else {"
+      },
+      {
+        "line": 826,
+        "text": "        next.status = \"succeeded\";"
+      },
+      {
+        "line": 827,
+        "text": "        next.result = result;"
+      },
+      {
+        "line": 828,
+        "text": "        next.progress = { ...next.progress, fraction: 1 };"
+      },
+      {
+        "line": 829,
+        "text": "      }"
+      },
+      {
+        "line": 830,
+        "text": "      await this.commit(next);"
+      },
+      {
+        "line": 831,
+        "text": "    });"
+      },
+      {
+        "line": 832,
+        "text": "  }"
+      },
+      {
+        "line": 833,
+        "text": "  async cancel(rawScope: ToolJobScope, id: string): Promise<ToolJob> {"
+      },
+      {
+        "line": 834,
+        "text": "    const scope = scopeValue(rawScope);"
+      },
+      {
+        "line": 835,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 836,
+        "text": "    await this.authorize(scope);"
+      },
+      {
+        "line": 837,
+        "text": "    let active: ActiveJob | undefined;"
+      },
+      {
+        "line": 838,
+        "text": "    await this.exclusive(async () => {"
+      },
+      {
+        "line": 839,
+        "text": "      const current = this.lookup(scope, id, true);"
+      },
+      {
+        "line": 840,
+        "text": "      if (TERMINAL.has(current.status)) return;"
+      },
+      {
+        "line": 841,
+        "text": "      const next = structuredClone(current);"
+      },
+      {
+        "line": 842,
+        "text": "      active = this.active.get(id);"
+      },
+      {
+        "line": 843,
+        "text": "      next.status = active ? \"cancelling\" : \"cancelled\";"
+      },
+      {
+        "line": 844,
+        "text": "      if (!active) {"
+      },
+      {
+        "line": 845,
+        "text": "        next.completedAt = this.now();"
+      },
+      {
+        "line": 846,
+        "text": "        next.error = {"
+      },
+      {
+        "line": 847,
+        "text": "          code: \"CANCELLED\","
+      },
+      {
+        "line": 848,
+        "text": "          message: \"Task was cancelled before execution.\","
+      },
+      {
+        "line": 849,
+        "text": "          retryable: next.recovery === \"retry\","
+      },
+      {
+        "line": 850,
+        "text": "        };"
+      },
+      {
+        "line": 851,
+        "text": "      }"
+      },
+      {
+        "line": 852,
+        "text": "      await this.commit(next);"
+      },
+      {
+        "line": 853,
+        "text": "      active?.controller.abort();"
+      },
+      {
+        "line": 854,
+        "text": "    });"
+      },
+      {
+        "line": 855,
+        "text": "    await active?.done;"
+      },
+      {
+        "line": 856,
+        "text": "    return publicJob(this.lookup(scope, id, true));"
+      },
+      {
+        "line": 857,
+        "text": "  }"
+      },
+      {
+        "line": 858,
+        "text": "  async retry(rawScope: ToolJobScope, id: string): Promise<ToolJob> {"
+      },
+      {
+        "line": 859,
+        "text": "    const scope = scopeValue(rawScope);"
+      },
+      {
+        "line": 860,
+        "text": "    return panelExecutionGate.run(scope, () => this.retryAdmitted(scope, id));"
+      },
+      {
+        "line": 861,
+        "text": "  }"
+      },
+      {
+        "line": 862,
+        "text": "  private async retryAdmitted(scope: ToolJobScope, id: string): Promise<ToolJob> {"
+      },
+      {
+        "line": 863,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 864,
+        "text": "    await this.authorize(scope);"
+      },
+      {
+        "line": 865,
+        "text": "    const job = await this.exclusive(async () => {"
+      },
+      {
+        "line": 866,
+        "text": "      if (this.stopping) throw new Error(\"tool job service is shutting down\");"
+      },
+      {
+        "line": 867,
+        "text": "      const current = this.lookup(scope, id, true);"
+      },
+      {
+        "line": 868,
+        "text": "      if (this.active.has(id) || ![\"failed\", \"cancelled\", \"interrupted\"].includes(current.status))"
+      },
+      {
+        "line": 869,
+        "text": "        throw new Error(\"tool job must finish stopping before retry\");"
+      },
+      {
+        "line": 870,
+        "text": "      if (current.recovery !== \"retry\" || !current.error?.retryable)"
+      },
+      {
+        "line": 871,
+        "text": "        throw new Error(\"tool job requires a new manually reviewed request\");"
+      },
+      {
+        "line": 872,
+        "text": "      if (this.pendingCount(scope) >= toolJobLimits.maxQueuedPerScope)"
+      },
+      {
+        "line": 873,
+        "text": "        throw new Error(\"too many queued tool jobs for this workspace\");"
+      },
+      {
+        "line": 874,
+        "text": "      await this.verifyPackage(current);"
+      },
+      {
+        "line": 875,
+        "text": "      const next = structuredClone(current);"
+      },
+      {
+        "line": 876,
+        "text": "      next.status = \"queued\";"
+      },
+      {
+        "line": 877,
+        "text": "      delete next.error;"
+      },
+      {
+        "line": 878,
+        "text": "      delete next.completedAt;"
+      },
+      {
+        "line": 879,
+        "text": "      delete next.result;"
+      },
+      {
+        "line": 880,
+        "text": "      delete next.progress;"
+      },
+      {
+        "line": 881,
+        "text": "      await this.commit(next);"
+      },
+      {
+        "line": 882,
+        "text": "      return publicJob(next);"
+      },
+      {
+        "line": 883,
+        "text": "    });"
+      },
+      {
+        "line": 884,
+        "text": "    this.schedule();"
+      },
+      {
+        "line": 885,
+        "text": "    return job;"
+      },
+      {
+        "line": 887,
+        "text": "  async cancelProject(projectPath: string, appId?: string): Promise<void> {"
+      },
+      {
+        "line": 888,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 889,
+        "text": "    const project = resolve(projectPath);"
+      },
+      {
+        "line": 890,
+        "text": "    const ids = appId"
+      },
+      {
+        "line": 891,
+        "text": "      ? [appId]"
+      },
+      {
+        "line": 892,
+        "text": "      : ["
+      },
+      {
+        "line": 893,
+        "text": "          ...new Set(["
+      },
+      {
+        "line": 894,
+        "text": "            ...[...this.preparing.values()]"
+      },
+      {
+        "line": 895,
+        "text": "              .filter((item) => item.scope.projectPath === project)"
+      },
+      {
+        "line": 896,
+        "text": "              .map((item) => item.scope.appId),"
+      },
+      {
+        "line": 897,
+        "text": "            ...[...this.jobs.values()]"
+      },
+      {
+        "line": 898,
+        "text": "              .filter((job) => job.scope.projectPath === project)"
+      },
+      {
+        "line": 899,
+        "text": "              .map((job) => job.scope.appId),"
+      },
+      {
+        "line": 900,
+        "text": "          ]),"
+      },
+      {
+        "line": 901,
+        "text": "        ];"
+      },
+      {
+        "line": 902,
+        "text": "    await Promise.all(ids.map((id) => this.cancelApp(id, project)));"
+      },
+      {
+        "line": 903,
+        "text": "  }"
+      },
+      {
+        "line": 904,
+        "text": "  async cancelApp(appId: string, projectPath?: string): Promise<void> {"
+      },
+      {
+        "line": 905,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 906,
+        "text": "    const matches = (scope: ToolJobScope) =>"
+      },
+      {
+        "line": 907,
+        "text": "      scope.appId === appId && (!projectPath || scope.projectPath === resolve(projectPath));"
+      },
+      {
+        "line": 908,
+        "text": "    for (const item of this.preparing.values()) if (matches(item.scope)) item.controller.abort();"
+      },
+      {
+        "line": 909,
+        "text": "    const matching = [...this.jobs.values()].filter("
+      },
+      {
+        "line": 910,
+        "text": "      (job) => matches(job.scope) && !TERMINAL.has(job.status),"
+      },
+      {
+        "line": 911,
+        "text": "    );"
+      },
+      {
+        "line": 912,
+        "text": "    // Revocation bypasses the now-revoked caller grant but still waits for real exits."
+      },
+      {
+        "line": 913,
+        "text": "    await this.exclusive(async () => {"
+      },
+      {
+        "line": 914,
+        "text": "      for (const current of matching) {"
+      },
+      {
+        "line": 915,
+        "text": "        const job = structuredClone(this.jobs.get(current.id)!);"
+      },
+      {
+        "line": 916,
+        "text": "        if (TERMINAL.has(job.status)) continue;"
+      },
+      {
+        "line": 917,
+        "text": "        const active = this.active.get(job.id);"
+      },
+      {
+        "line": 918,
+        "text": "        job.status = active ? \"cancelling\" : \"cancelled\";"
+      },
+      {
+        "line": 919,
+        "text": "        job.error = {"
+      },
+      {
+        "line": 920,
+        "text": "          code: \"APP_REVOKED\","
+      },
+      {
+        "line": 921,
+        "text": "          message: \"The app authorization was revoked.\","
+      },
+      {
+        "line": 922,
+        "text": "          retryable: false,"
+      },
+      {
+        "line": 923,
+        "text": "        };"
+      },
+      {
+        "line": 924,
+        "text": "        if (!active) {"
+      },
+      {
+        "line": 925,
+        "text": "          job.completedAt = this.now();"
+      },
+      {
+        "line": 926,
+        "text": "        }"
+      },
+      {
+        "line": 927,
+        "text": "        await this.commit(job);"
+      },
+      {
+        "line": 928,
+        "text": "        active?.controller.abort();"
+      },
+      {
+        "line": 929,
+        "text": "      }"
+      },
+      {
+        "line": 930,
+        "text": "    });"
+      },
+      {
+        "line": 931,
+        "text": "    await Promise.all(matching.flatMap((job) => this.active.get(job.id)?.done ?? []));"
+      },
+      {
+        "line": 932,
+        "text": "  }"
+      },
+      {
+        "line": 933,
+        "text": "  shutdown(): Promise<void> {"
+      },
+      {
+        "line": 934,
+        "text": "    return (this.shutdownPromise ??= this.stop());"
+      },
+      {
+        "line": 935,
+        "text": "  }"
+      },
+      {
+        "line": 936,
+        "text": "  private async stop(): Promise<void> {"
+      },
+      {
+        "line": 937,
+        "text": "    this.stopping = true;"
+      },
+      {
+        "line": 938,
+        "text": "    await this.initialize();"
+      },
+      {
+        "line": 939,
+        "text": "    // Flush admissions that were already persisting when shutdown began."
+      },
+      {
+        "line": 940,
+        "text": "    await this.exclusive(async () => {});"
+      },
+      {
+        "line": 941,
+        "text": "    for (const item of this.preparing.values()) item.controller.abort();"
+      },
+      {
+        "line": 942,
+        "text": "    for (const item of this.active.values()) item.controller.abort();"
+      },
+      {
+        "line": 943,
+        "text": "    await Promise.all([...this.preparing.values()].map((item) => item.done));"
+      },
+      {
+        "line": 944,
+        "text": "    await Promise.all([...this.active.values()].map((item) => item.done));"
+      },
+      {
+        "line": 945,
+        "text": "    await this.exclusive(async () => {"
+      },
+      {
+        "line": 946,
+        "text": "      for (const current of this.jobs.values()) {"
+      },
+      {
+        "line": 947,
+        "text": "        if (TERMINAL.has(current.status)) continue;"
+      },
+      {
+        "line": 948,
+        "text": "        const job = structuredClone(current);"
+      },
+      {
+        "line": 949,
+        "text": "        job.status = \"interrupted\";"
+      },
+      {
+        "line": 950,
+        "text": "        job.completedAt = this.now();"
+      },
+      {
+        "line": 951,
+        "text": "        job.error = {"
+      },
+      {
+        "line": 952,
+        "text": "          code: \"HOST_INTERRUPTED\","
+      },
+      {
+        "line": 953,
+        "text": "          message: \"Host stopped before this task completed.\","
+      },
+      {
+        "line": 954,
+        "text": "          retryable: job.recovery === \"retry\","
+      },
+      {
+        "line": 955,
+        "text": "        };"
+      },
+      {
+        "line": 956,
+        "text": "        await this.commit(job);"
+      },
+      {
+        "line": 957,
+        "text": "      }"
+      },
+      {
+        "line": 958,
+        "text": "    });"
+      },
+      {
+        "line": 959,
+        "text": "    this.listeners.clear();"
+      },
+      {
+        "line": 960,
+        "text": "    await this.storage.close();"
+      },
+      {
+        "line": 961,
+        "text": "    this.unregisterExecution();"
+      },
+      {
+        "line": 962,
+        "text": "  }"
+      },
+      {
+        "line": 963,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/panels/tool-jobs-storage.ts",
+    "sha256": "42b534c5aeadbb9299bc892c79154ffa7b3b9357a3effc1adf4c460ef34a6c01",
+    "captureTiming": "After source displays. Only fully visible body intervals and later untruncated locator matches are captured. Earlier truncated or omitted locator/tail output not reconstructed as human read; not first-read/pre-read snapshot.",
+    "displayedLines": [
+      {
+        "line": 20,
+        "text": "  private root = \"\";"
+      },
+      {
+        "line": 21,
+        "text": "  private identity = \"\";"
+      },
+      {
+        "line": 22,
+        "text": "  private nonce = \"\";"
+      },
+      {
+        "line": 23,
+        "text": "  private readonly directories = new Map<string, string>();"
+      },
+      {
+        "line": 27,
+        "text": "  async initialize(): Promise<void> {"
+      },
+      {
+        "line": 66,
+        "text": "  async directory(id?: string, work = false, create = false): Promise<string> {"
+      },
+      {
+        "line": 95,
+        "text": "  async read(path: string, limit: number): Promise<unknown> {"
+      },
+      {
+        "line": 116,
+        "text": "      return JSON.parse(bytes.subarray(0, count).toString(\"utf8\"));"
+      },
+      {
+        "line": 117,
+        "text": "    } finally {"
+      },
+      {
+        "line": 118,
+        "text": "      await file.close();"
+      },
+      {
+        "line": 119,
+        "text": "    }"
+      },
+      {
+        "line": 120,
+        "text": "  }"
+      },
+      {
+        "line": 121,
+        "text": ""
+      },
+      {
+        "line": 122,
+        "text": "  async write(id: string, value: unknown, limit: number): Promise<void> {"
+      },
+      {
+        "line": 123,
+        "text": "    const directory = await this.directory(id, false, true);"
+      },
+      {
+        "line": 124,
+        "text": "    const path = join(directory, \"job.json\");"
+      },
+      {
+        "line": 125,
+        "text": "    const temporary = join(directory, `${randomUUID()}.tmp`);"
+      },
+      {
+        "line": 126,
+        "text": "    const file = await open(temporary, \"wx\", 0o600);"
+      },
+      {
+        "line": 127,
+        "text": "    try {"
+      },
+      {
+        "line": 128,
+        "text": "      await file.writeFile(JSON.stringify(toolJobJson(value, limit)));"
+      },
+      {
+        "line": 129,
+        "text": "      await file.sync();"
+      },
+      {
+        "line": 130,
+        "text": "    } finally {"
+      },
+      {
+        "line": 131,
+        "text": "      await file.close();"
+      },
+      {
+        "line": 132,
+        "text": "    }"
+      },
+      {
+        "line": 133,
+        "text": "    try {"
+      },
+      {
+        "line": 134,
+        "text": "      await this.directory(id);"
+      },
+      {
+        "line": 135,
+        "text": "      await rename(temporary, path);"
+      },
+      {
+        "line": 136,
+        "text": "      const parent = await open(dirname(path), \"r\").catch(() => null);"
+      },
+      {
+        "line": 137,
+        "text": "      if (parent) {"
+      },
+      {
+        "line": 138,
+        "text": "        await parent.sync().catch(() => {});"
+      },
+      {
+        "line": 139,
+        "text": "        await parent.close();"
+      },
+      {
+        "line": 140,
+        "text": "      }"
+      },
+      {
+        "line": 141,
+        "text": "    } finally {"
+      },
+      {
+        "line": 142,
+        "text": "      await rm(temporary, { force: true }).catch(() => {});"
+      },
+      {
+        "line": 143,
+        "text": "    }"
+      },
+      {
+        "line": 144,
+        "text": "  }"
+      },
+      {
+        "line": 145,
+        "text": ""
+      },
+      {
+        "line": 146,
+        "text": "  async readQueueCatalog(limit: number): Promise<unknown> {"
+      },
+      {
+        "line": 147,
+        "text": "    try {"
+      },
+      {
+        "line": 148,
+        "text": "      return await this.read(join(await this.directory(), \"queues.json\"), limit);"
+      },
+      {
+        "line": 149,
+        "text": "    } catch (error) {"
+      },
+      {
+        "line": 150,
+        "text": "      if ((error as NodeJS.ErrnoException).code === \"ENOENT\") return [];"
+      },
+      {
+        "line": 151,
+        "text": "      throw error;"
+      },
+      {
+        "line": 152,
+        "text": "    }"
+      },
+      {
+        "line": 153,
+        "text": "  }"
+      },
+      {
+        "line": 154,
+        "text": ""
+      },
+      {
+        "line": 155,
+        "text": "  async writeQueueCatalog(value: unknown, limit: number): Promise<void> {"
+      },
+      {
+        "line": 156,
+        "text": "    const directory = await this.directory();"
+      },
+      {
+        "line": 157,
+        "text": "    const temporary = join(directory, `${randomUUID()}.tmp`);"
+      },
+      {
+        "line": 158,
+        "text": "    try {"
+      },
+      {
+        "line": 159,
+        "text": "      const file = await open(temporary, \"wx\", 0o600);"
+      },
+      {
+        "line": 160,
+        "text": "      try {"
+      },
+      {
+        "line": 161,
+        "text": "        await file.writeFile(JSON.stringify(toolJobJson(value, limit)));"
+      },
+      {
+        "line": 162,
+        "text": "        await file.sync();"
+      },
+      {
+        "line": 163,
+        "text": "      } finally {"
+      },
+      {
+        "line": 164,
+        "text": "        await file.close();"
+      },
+      {
+        "line": 165,
+        "text": "      }"
+      },
+      {
+        "line": 166,
+        "text": "      await this.directory();"
+      },
+      {
+        "line": 167,
+        "text": "      await rename(temporary, join(directory, \"queues.json\"));"
+      },
+      {
+        "line": 168,
+        "text": "      const parent = await open(directory, \"r\").catch(() => null);"
+      },
+      {
+        "line": 169,
+        "text": "      if (parent) {"
+      },
+      {
+        "line": 170,
+        "text": "        await parent.sync().catch(() => {});"
+      },
+      {
+        "line": 171,
+        "text": "        await parent.close();"
+      },
+      {
+        "line": 172,
+        "text": "      }"
+      },
+      {
+        "line": 173,
+        "text": "    } finally {"
+      },
+      {
+        "line": 174,
+        "text": "      await rm(temporary, { force: true }).catch(() => {});"
+      },
+      {
+        "line": 175,
+        "text": "    }"
+      },
+      {
+        "line": 176,
+        "text": "  }"
+      },
+      {
+        "line": 177,
+        "text": ""
+      },
+      {
+        "line": 178,
+        "text": "  async close(): Promise<void> {"
+      },
+      {
+        "line": 179,
+        "text": "    if (!this.nonce) return;"
+      },
+      {
+        "line": 180,
+        "text": "    const path = join(await this.directory(), \"owner.lock\");"
+      },
+      {
+        "line": 181,
+        "text": "    const lock = (await this.read(path, 1024)) as { nonce?: unknown };"
+      },
+      {
+        "line": 182,
+        "text": "    if (lock.nonce === this.nonce) await rm(path);"
+      },
+      {
+        "line": 183,
+        "text": "    this.nonce = \"\";"
+      },
+      {
+        "line": 184,
+        "text": "    this.directories.clear();"
+      },
+      {
+        "line": 185,
+        "text": "  }"
+      },
+      {
+        "line": 186,
+        "text": ""
+      },
+      {
+        "line": 187,
+        "text": "  async remove(id: string): Promise<void> {"
+      },
+      {
+        "line": 188,
+        "text": "    const path = await this.directory(id);"
+      },
+      {
+        "line": 189,
+        "text": "    await rm(path, { recursive: true, force: true });"
+      },
+      {
+        "line": 190,
+        "text": "    for (const key of this.directories.keys())"
+      },
+      {
+        "line": 191,
+        "text": "      if (key === path || key.startsWith(`${path}/`)) this.directories.delete(key);"
+      },
+      {
+        "line": 192,
+        "text": "  }"
+      },
+      {
+        "line": 193,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/panels/shared-tool-jobs.ts",
+    "sha256": "f762637c6ab5d43f6b5502d74655229405060d2ef347a43e4829322d31680566",
+    "captureTiming": "After source displays. Only fully visible body intervals and later untruncated locator matches are captured. Earlier truncated or omitted locator/tail output not reconstructed as human read; not first-read/pre-read snapshot.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import type { InstalledPanelApp } from \"@cjhyy/code-shell-core\";"
+      },
+      {
+        "line": 2,
+        "text": "import type { PanelTaskCookieHost } from \"./task-cookie-host.js\";"
+      },
+      {
+        "line": 3,
+        "text": "import type { TaskCookieSelection } from \"./task-cookies.js\";"
+      },
+      {
+        "line": 4,
+        "text": "import type {"
+      },
+      {
+        "line": 5,
+        "text": "  PanelToolJobService,"
+      },
+      {
+        "line": 6,
+        "text": "  ToolJob,"
+      },
+      {
+        "line": 7,
+        "text": "  ToolJobEvent,"
+      },
+      {
+        "line": 8,
+        "text": "  ToolJobRequest,"
+      },
+      {
+        "line": 9,
+        "text": "  ToolJobScope,"
+      },
+      {
+        "line": 10,
+        "text": "  ToolQueueState,"
+      },
+      {
+        "line": 11,
+        "text": "  ToolQueueUpdate,"
+      },
+      {
+        "line": 12,
+        "text": "  ToolQueueWriteResult,"
+      },
+      {
+        "line": 13,
+        "text": "} from \"./tool-jobs.js\";"
+      },
+      {
+        "line": 14,
+        "text": ""
+      },
+      {
+        "line": 15,
+        "text": "/** Host composition only: no paths, scopes, or execution revisions come from HTTP callers. */"
+      },
+      {
+        "line": 16,
+        "text": "export interface SharedPanelToolBinding {"
+      },
+      {
+        "line": 17,
+        "text": "  readonly scope: Readonly<ToolJobScope>;"
+      },
+      {
+        "line": 18,
+        "text": "  start(request: ToolJobRequest, signal?: AbortSignal): Promise<ToolJob>;"
+      },
+      {
+        "line": 19,
+        "text": "  list(): Promise<Array<ToolJob & { readOnly: boolean }>>;"
+      },
+      {
+        "line": 20,
+        "text": "  has(id: string): Promise<boolean>;"
+      },
+      {
+        "line": 21,
+        "text": "  get(id: string): Promise<ToolJob & { readOnly: boolean }>;"
+      },
+      {
+        "line": 22,
+        "text": "  cancel(id: string): Promise<ToolJob>;"
+      },
+      {
+        "line": 23,
+        "text": "  retry(id: string): Promise<ToolJob>;"
+      },
+      {
+        "line": 24,
+        "text": "  find(requestKey: string): Promise<ToolJob | null>;"
+      },
+      {
+        "line": 25,
+        "text": "  getQueue(): Promise<ToolQueueState>;"
+      },
+      {
+        "line": 26,
+        "text": "  setQueue(update: ToolQueueUpdate): Promise<ToolQueueWriteResult>;"
+      },
+      {
+        "line": 27,
+        "text": "  subscribe(listener: (job: ToolJobEvent) => void): () => void;"
+      },
+      {
+        "line": 28,
+        "text": "  /** Host-only port. Materialized paths must never be returned to a browser. */"
+      },
+      {
+        "line": 29,
+        "text": "  cookies?: {"
+      },
+      {
+        "line": 30,
+        "text": "    list(url: string): ReturnType<PanelTaskCookieHost[\"list\"]>;"
+      },
+      {
+        "line": 31,
+        "text": "    check(selection: TaskCookieSelection): ReturnType<PanelTaskCookieHost[\"check\"]>;"
+      },
+      {
+        "line": 32,
+        "text": "    materialize?(selection: TaskCookieSelection): ReturnType<PanelTaskCookieHost[\"materialize\"]>;"
+      },
+      {
+        "line": 33,
+        "text": "  };"
+      },
+      {
+        "line": 34,
+        "text": "}"
+      },
+      {
+        "line": 35,
+        "text": "export interface SharedPanelToolHost {"
+      },
+      {
+        "line": 36,
+        "text": "  /** Freeze the installed execution revision once; do not silently follow package updates. */"
+      },
+      {
+        "line": 37,
+        "text": "  bind(app: InstalledPanelApp, projectPath: string): Promise<SharedPanelToolBinding>;"
+      },
+      {
+        "line": 38,
+        "text": "  activeCount(projectPath: string): number;"
+      },
+      {
+        "line": 39,
+        "text": "  invalidate(projectPath: string, appId?: string): Promise<void>;"
+      },
+      {
+        "line": 40,
+        "text": "}"
+      },
+      {
+        "line": 41,
+        "text": ""
+      },
+      {
+        "line": 42,
+        "text": "/** Adapts the single owning coordinator without giving a transport shutdown authority. */"
+      },
+      {
+        "line": 43,
+        "text": "export function createSharedPanelToolHost(options: {"
+      },
+      {
+        "line": 44,
+        "text": "  service(): PanelToolJobService;"
+      },
+      {
+        "line": 45,
+        "text": "  resolveScope(app: InstalledPanelApp, projectPath: string): Promise<ToolJobScope>;"
+      },
+      {
+        "line": 46,
+        "text": "  cookies?: Pick<PanelTaskCookieHost, \"list\" | \"check\"> &"
+      },
+      {
+        "line": 47,
+        "text": "    Partial<Pick<PanelTaskCookieHost, \"materialize\">>;"
+      },
+      {
+        "line": 48,
+        "text": "}): SharedPanelToolHost {"
+      },
+      {
+        "line": 49,
+        "text": "  return {"
+      },
+      {
+        "line": 50,
+        "text": "    async bind(app, projectPath) {"
+      },
+      {
+        "line": 51,
+        "text": "      const scope = Object.freeze({ ...(await options.resolveScope(app, projectPath)) });"
+      },
+      {
+        "line": 52,
+        "text": "      const service = options.service();"
+      },
+      {
+        "line": 53,
+        "text": "      return Object.freeze({"
+      },
+      {
+        "line": 54,
+        "text": "        scope,"
+      },
+      {
+        "line": 55,
+        "text": "        start: (request: ToolJobRequest, signal?: AbortSignal) =>"
+      },
+      {
+        "line": 56,
+        "text": "          service.start(scope, request, signal),"
+      },
+      {
+        "line": 57,
+        "text": "        list: () => service.list(scope),"
+      },
+      {
+        "line": 58,
+        "text": "        has: (id: string) => service.has(scope, id),"
+      },
+      {
+        "line": 59,
+        "text": "        get: (id: string) => service.get(scope, id),"
+      },
+      {
+        "line": 60,
+        "text": "        cancel: (id: string) => service.cancel(scope, id),"
+      },
+      {
+        "line": 61,
+        "text": "        retry: (id: string) => service.retry(scope, id),"
+      },
+      {
+        "line": 62,
+        "text": "        find: (requestKey: string) => service.find(scope, requestKey),"
+      },
+      {
+        "line": 63,
+        "text": "        getQueue: () => service.getQueue(scope),"
+      },
+      {
+        "line": 64,
+        "text": "        setQueue: (update: ToolQueueUpdate) => service.setQueue(scope, update),"
+      },
+      {
+        "line": 65,
+        "text": "        subscribe: (listener: (job: ToolJobEvent) => void) => service.subscribe(scope, listener),"
+      },
+      {
+        "line": 66,
+        "text": "        ...(options.cookies && app.permissions.includes(\"credentials.cookies\")"
+      },
+      {
+        "line": 67,
+        "text": "          ? {"
+      },
+      {
+        "line": 68,
+        "text": "              cookies: {"
+      },
+      {
+        "line": 69,
+        "text": "                list: (url: string) => options.cookies!.list(scope, url),"
+      },
+      {
+        "line": 70,
+        "text": "                check: (selection: TaskCookieSelection) => options.cookies!.check(scope, selection),"
+      },
+      {
+        "line": 71,
+        "text": "                ...(options.cookies.materialize"
+      },
+      {
+        "line": 72,
+        "text": "                  ? {"
+      },
+      {
+        "line": 73,
+        "text": "                      materialize: (selection: TaskCookieSelection) =>"
+      },
+      {
+        "line": 74,
+        "text": "                        options.cookies!.materialize!(scope, selection),"
+      },
+      {
+        "line": 75,
+        "text": "                    }"
+      },
+      {
+        "line": 76,
+        "text": "                  : {}),"
+      },
+      {
+        "line": 77,
+        "text": "              },"
+      },
+      {
+        "line": 78,
+        "text": "            }"
+      },
+      {
+        "line": 79,
+        "text": "          : {}),"
+      },
+      {
+        "line": 80,
+        "text": "      });"
+      },
+      {
+        "line": 81,
+        "text": "    },"
+      },
+      {
+        "line": 82,
+        "text": "    activeCount: (projectPath) => options.service().activeCount(projectPath),"
+      },
+      {
+        "line": 83,
+        "text": "    invalidate: (projectPath, appId) => options.service().cancelProject(projectPath, appId),"
+      },
+      {
+        "line": 84,
+        "text": "  };"
+      },
+      {
+        "line": 85,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/panels/runtime.ts",
+    "sha256": "ca4967fc5531b17780c12fb25d02ca3b8f7ae1194c9959a7941f66809fa9fc2a",
+    "captureTiming": "After source displays. Only fully visible body intervals and later untruncated locator matches are captured. Earlier truncated or omitted locator/tail output not reconstructed as human read; not first-read/pre-read snapshot.",
+    "displayedLines": [
+      {
+        "line": 20,
+        "text": "  panelToolJobMethods,"
+      },
+      {
+        "line": 39,
+        "text": "  PanelToolJobService,"
+      },
+      {
+        "line": 41,
+        "text": "  type ToolJob,"
+      },
+      {
+        "line": 42,
+        "text": "  type ToolJobScope,"
+      },
+      {
+        "line": 43,
+        "text": "  type ToolJobRequest,"
+      },
+      {
+        "line": 97,
+        "text": "  ...panelToolJobMethods,"
+      },
+      {
+        "line": 255,
+        "text": "  sharedToolJobs?: SharedPanelToolHost;"
+      },
+      {
+        "line": 536,
+        "text": "  const projectOwnedTools = options.host === \"hub\" || !!options.sharedToolJobs;"
+      },
+      {
+        "line": 572,
+        "text": "  const toolOwners = new Map<number, ToolJobScope & { taskId: string }>();"
+      },
+      {
+        "line": 573,
+        "text": "  const jobOwners = new Map<string, { owner: string; scope: ToolJobScope }>();"
+      },
+      {
+        "line": 574,
+        "text": "  let toolJobs: PanelToolJobService | undefined;"
+      },
+      {
+        "line": 577,
+        "text": "    if (options.host !== \"hub\" || options.sharedToolJobs)"
+      },
+      {
+        "line": 589,
+        "text": "  function cookieAccess(grant: Grant) {"
+      },
+      {
+        "line": 590,
+        "text": "    if ("
+      },
+      {
+        "line": 591,
+        "text": "      !grant.app.permissions.includes(\"process\") ||"
+      },
+      {
+        "line": 592,
+        "text": "      !grant.app.permissions.includes(\"resources\") ||"
+      },
+      {
+        "line": 593,
+        "text": "      !grant.app.permissions.includes(\"credentials.cookies\")"
+      },
+      {
+        "line": 594,
+        "text": "    )"
+      },
+      {
+        "line": 595,
+        "text": "      error(403, \"后台账号访问缺少面板权限。\");"
+      },
+      {
+        "line": 596,
+        "text": "    if (grant.sharedTools) {"
+      },
+      {
+        "line": 597,
+        "text": "      if (!grant.sharedTools.cookies) error(501, \"当前 Host 不支持后台账号授权。\");"
+      },
+      {
+        "line": 598,
+        "text": "      return grant.sharedTools.cookies;"
+      },
+      {
+        "line": 599,
+        "text": "    }"
+      },
+      {
+        "line": 600,
+        "text": "    if (options.sharedToolJobs) error(410, \"共享任务授权已失效。\");"
+      },
+      {
+        "line": 601,
+        "text": "    const scope = {"
+      },
+      {
+        "line": 602,
+        "text": "      appId: grant.app.id,"
+      },
+      {
+        "line": 603,
+        "text": "      projectPath: options.bindingCwd ?? options.cwd,"
+      },
+      {
+        "line": 604,
+        "text": "      revision: grant.revision,"
+      },
+      {
+        "line": 605,
+        "text": "    };"
+      },
+      {
+        "line": 606,
+        "text": "    const host = getTaskCookies();"
+      },
+      {
+        "line": 607,
+        "text": "    return {"
+      },
+      {
+        "line": 608,
+        "text": "      list: (url: string) => host.list(scope, url),"
+      },
+      {
+        "line": 609,
+        "text": "      check: (selection: TaskCookieSelection) => host.check(scope, selection),"
+      },
+      {
+        "line": 610,
+        "text": "      materialize: (selection: TaskCookieSelection) => host.materialize(scope, selection),"
+      },
+      {
+        "line": 611,
+        "text": "    };"
+      },
+      {
+        "line": 612,
+        "text": "  }"
+      },
+      {
+        "line": 613,
+        "text": "  async function taskConsentDetail(grant: Grant, input: unknown, entry: string) {"
+      },
+      {
+        "line": 614,
+        "text": "    const selection = taskCookieFromInput(input);"
+      },
+      {
+        "line": 615,
+        "text": "    if (!selection) return entry;"
+      },
+      {
+        "line": 616,
+        "text": "    const account = await cookieAccess(grant).check(selection);"
+      },
+      {
+        "line": 617,
+        "text": "    return `工具：${entry}\\n账号：${account.label}\\n站点：${new URL(selection.url).hostname}\\n所选登录信息仅交付给已审查的后台程序，任务可在关闭页面后继续。`;"
+      },
+      {
+        "line": 618,
+        "text": "  }"
+      },
+      {
+        "line": 619,
+        "text": "  const localToolRoot ="
+      },
+      {
+        "line": 620,
+        "text": "    options.host === \"desktop\""
+      },
+      {
+        "line": 621,
+        "text": "      ? join(options.dataDir, \"panel-web-tool-jobs\", digest(Buffer.from(options.cwd)).slice(0, 24))"
+      },
+      {
+        "line": 622,
+        "text": "      : join(options.dataDir, \"panel-tool-jobs\");"
+      },
+      {
+        "line": 623,
+        "text": "  let legacyPresent: Promise<boolean> | undefined;"
+      },
+      {
+        "line": 624,
+        "text": "  async function legacyJobs(scope: ToolJobScope) {"
+      },
+      {
+        "line": 625,
+        "text": "    if (!options.sharedToolJobs || options.host !== \"desktop\") return [];"
+      },
+      {
+        "line": 626,
+        "text": "    const present = await (legacyPresent ??= lstat(localToolRoot)"
+      },
+      {
+        "line": 627,
+        "text": "      .then((info) => {"
+      },
+      {
+        "line": 628,
+        "text": "        if (!info.isDirectory() || info.isSymbolicLink())"
+      },
+      {
+        "line": 629,
+        "text": "          throw new Error(\"Invalid legacy task store\");"
+      },
+      {
+        "line": 630,
+        "text": "        return true;"
+      },
+      {
+        "line": 631,
+        "text": "      })"
+      },
+      {
+        "line": 632,
+        "text": "      .catch((cause) => {"
+      },
+      {
+        "line": 633,
+        "text": "        if ((cause as NodeJS.ErrnoException).code === \"ENOENT\") return false;"
+      },
+      {
+        "line": 634,
+        "text": "        throw cause;"
+      },
+      {
+        "line": 635,
+        "text": "      }));"
+      },
+      {
+        "line": 636,
+        "text": "    // Opening an existing store marks unfinished jobs interrupted; it never replays them."
+      },
+      {
+        "line": 637,
+        "text": "    return present"
+      },
+      {
+        "line": 638,
+        "text": "      ? (await getToolJobs().list(scope)).map((job) => ({"
+      },
+      {
+        "line": 639,
+        "text": "          ...job,"
+      },
+      {
+        "line": 640,
+        "text": "          readOnly: true as const,"
+      },
+      {
+        "line": 641,
+        "text": "          historySource: \"desktop-web-legacy\" as const,"
+      },
+      {
+        "line": 642,
+        "text": "        }))"
+      },
+      {
+        "line": 643,
+        "text": "      : [];"
+      },
+      {
+        "line": 644,
+        "text": "  }"
+      },
+      {
+        "line": 645,
+        "text": "  async function installedToolApp(scope: ToolJobScope) {"
+      },
+      {
+        "line": 646,
+        "text": "    if (closed || scope.projectPath !== (options.bindingCwd ?? options.cwd))"
+      },
+      {
+        "line": 647,
+        "text": "      throw new PanelBridgeError(\"REVOKED\", \"Tool task workspace is unavailable\");"
+      },
+      {
+        "line": 648,
+        "text": "    const panel = (await snapshot(scope.appId)).panels.find("
+      },
+      {
+        "line": 649,
+        "text": "      (candidate) => candidate.id === scope.appId,"
+      },
+      {
+        "line": 650,
+        "text": "    );"
+      },
+      {
+        "line": 651,
+        "text": "    const app = (await installed(scope.appId)).find((candidate) => candidate.id === scope.appId);"
+      },
+      {
+        "line": 652,
+        "text": "    if ("
+      },
+      {
+        "line": 653,
+        "text": "      !panel?.enabled ||"
+      },
+      {
+        "line": 654,
+        "text": "      panel.revision !== scope.revision ||"
+      },
+      {
+        "line": 655,
+        "text": "      (panel.packageDigest !== undefined && panel.packageDigest !== app?.packageDigest) ||"
+      },
+      {
+        "line": 656,
+        "text": "      !app?.permissions.includes(\"process\") ||"
+      },
+      {
+        "line": 657,
+        "text": "      !app.permissions.includes(\"resources\")"
+      },
+      {
+        "line": 658,
+        "text": "    )"
+      },
+      {
+        "line": 659,
+        "text": "      throw new PanelBridgeError(\"REVOKED\", \"Installed tool task is no longer authorized\");"
+      },
+      {
+        "line": 660,
+        "text": "    return app;"
+      },
+      {
+        "line": 661,
+        "text": "  }"
+      },
+      {
+        "line": 662,
+        "text": "  const processes = new PanelAppProcessService({"
+      },
+      {
+        "line": 663,
+        "text": "    modelTraces,"
+      },
+      {
+        "line": 664,
+        "text": "    modelTraceOwner: (owner) => {"
+      },
+      {
+        "line": 665,
+        "text": "      const task = toolOwners.get(owner.guestId);"
+      },
+      {
+        "line": 666,
+        "text": "      if (task)"
+      },
+      {
+        "line": 667,
+        "text": "        return {"
+      },
+      {
+        "line": 668,
+        "text": "          appId: owner.appId,"
+      },
+      {
+        "line": 669,
+        "text": "          revision: owner.revision,"
+      },
+      {
+        "line": 670,
+        "text": "          workspacePath: options.cwd,"
+      },
+      {
+        "line": 757,
+        "text": "  async function dispatchToolJobs(grant: Grant, method: string, params: unknown) {"
+      },
+      {
+        "line": 758,
+        "text": "    if (!grant.app.permissions.includes(\"process\") || !grant.app.permissions.includes(\"resources\"))"
+      },
+      {
+        "line": 759,
+        "text": "      error(403, \"原生后台任务需要 process 和 resources 权限。\");"
+      },
+      {
+        "line": 760,
+        "text": "    const scope = {"
+      },
+      {
+        "line": 761,
+        "text": "      appId: grant.app.id,"
+      },
+      {
+        "line": 762,
+        "text": "      projectPath: options.bindingCwd ?? options.cwd,"
+      },
+      {
+        "line": 763,
+        "text": "      revision: grant.revision,"
+      },
+      {
+        "line": 764,
+        "text": "    };"
+      },
+      {
+        "line": 765,
+        "text": "    const input = (params ?? {}) as {"
+      },
+      {
+        "line": 766,
+        "text": "      id?: string;"
+      },
+      {
+        "line": 767,
+        "text": "      entry?: string;"
+      },
+      {
+        "line": 768,
+        "text": "      input?: unknown;"
+      },
+      {
+        "line": 769,
+        "text": "      recovery?: \"manual\" | \"retry\";"
+      },
+      {
+        "line": 770,
+        "text": "      requestKey?: string;"
+      },
+      {
+        "line": 771,
+        "text": "      offset?: number;"
+      },
+      {
+        "line": 772,
+        "text": "      limit?: number;"
+      },
+      {
+        "line": 773,
+        "text": "    };"
+      },
+      {
+        "line": 774,
+        "text": "    const shared = grant.sharedTools;"
+      },
+      {
+        "line": 775,
+        "text": "    const service = shared ?? {"
+      },
+      {
+        "line": 776,
+        "text": "      start: (request: ToolJobRequest, signal?: AbortSignal) =>"
+      },
+      {
+        "line": 777,
+        "text": "        getToolJobs().start(scope, request, signal),"
+      },
+      {
+        "line": 778,
+        "text": "      list: () => getToolJobs().list(scope),"
+      },
+      {
+        "line": 779,
+        "text": "      get: (id: string) => getToolJobs().get(scope, id),"
+      },
+      {
+        "line": 780,
+        "text": "      cancel: (id: string) => getToolJobs().cancel(scope, id),"
+      },
+      {
+        "line": 781,
+        "text": "      retry: (id: string) => getToolJobs().retry(scope, id),"
+      },
+      {
+        "line": 782,
+        "text": "      find: (requestKey: string) => getToolJobs().find(scope, requestKey),"
+      },
+      {
+        "line": 783,
+        "text": "      getQueue: () => getToolJobs().getQueue(scope),"
+      },
+      {
+        "line": 784,
+        "text": "      setQueue: (update: ToolQueueUpdate) => getToolJobs().setQueue(scope, update),"
+      },
+      {
+        "line": 785,
+        "text": "    };"
+      },
+      {
+        "line": 786,
+        "text": "    if (options.sharedToolJobs && !shared) error(410, \"共享任务授权已失效，请重新打开面板。\");"
+      },
+      {
+        "line": 787,
+        "text": "    if (method === \"tasks.start\") {"
+      },
+      {
+        "line": 788,
+        "text": "      const app = await installedToolApp(scope);"
+      },
+      {
+        "line": 789,
+        "text": "      const entry = app.nativeEntries?.[input.entry ?? \"\"];"
+      },
+      {
+        "line": 790,
+        "text": "      if (!entry) error(501, \"安装的原生工具不可用。\");"
+      },
+      {
+        "line": 791,
+        "text": "      const detail = await taskConsentDetail(grant, input.input, input.entry!);"
+      },
+      {
+        "line": 792,
+        "text": "      if (!(await confirm(grant, `启动 ${grant.app.title.default} 的后台工具？`, detail)))"
+      },
+      {
+        "line": 793,
+        "text": "        error(403, \"你取消了后台工具执行。\");"
+      },
+      {
+        "line": 794,
+        "text": "      if (!(await authorized(grant))) error(410, \"面板授权已失效。\");"
+      },
+      {
+        "line": 795,
+        "text": "      if (taskCookieFromInput(input.input))"
+      },
+      {
+        "line": 796,
+        "text": "        await taskConsentDetail(grant, input.input, input.entry!);"
+      },
+      {
+        "line": 797,
+        "text": "      if (!(await authorized(grant))) error(410, \"面板授权已失效。\");"
+      },
+      {
+        "line": 798,
+        "text": "      const preparation = {"
+      },
+      {
+        "line": 799,
+        "text": "        owner: grant.owner,"
+      },
+      {
+        "line": 800,
+        "text": "        appId: scope.appId,"
+      },
+      {
+        "line": 801,
+        "text": "        controller: new AbortController(),"
+      },
+      {
+        "line": 802,
+        "text": "      };"
+      },
+      {
+        "line": 803,
+        "text": "      preparingTools.add(preparation);"
+      },
+      {
+        "line": 804,
+        "text": "      try {"
+      },
+      {
+        "line": 805,
+        "text": "        const job = await service.start("
+      },
+      {
+        "line": 806,
+        "text": "          {"
+      },
+      {
+        "line": 807,
+        "text": "            entry: { name: input.entry!, sha256: entry.sha256 },"
+      },
+      {
+        "line": 808,
+        "text": "            input: input.input,"
+      },
+      {
+        "line": 809,
+        "text": "            recovery: input.recovery ?? \"manual\","
+      },
+      {
+        "line": 810,
+        "text": "            requestKey: input.requestKey,"
+      },
+      {
+        "line": 811,
+        "text": "          },"
+      },
+      {
+        "line": 812,
+        "text": "          preparation.controller.signal,"
+      },
+      {
+        "line": 813,
+        "text": "        );"
+      },
+      {
+        "line": 814,
+        "text": "        if (!projectOwnedTools && !jobOwners.has(job.id))"
+      },
+      {
+        "line": 815,
+        "text": "          jobOwners.set(job.id, { owner: grant.owner, scope });"
+      },
+      {
+        "line": 816,
+        "text": "        if (!(await authorized(grant))) {"
+      },
+      {
+        "line": 817,
+        "text": "          if (!projectOwnedTools && jobOwners.get(job.id)?.owner === grant.owner)"
+      },
+      {
+        "line": 818,
+        "text": "            await service.cancel(job.id);"
+      },
+      {
+        "line": 819,
+        "text": "          error(410, \"登录授权已撤销。\");"
+      },
+      {
+        "line": 820,
+        "text": "        }"
+      },
+      {
+        "line": 821,
+        "text": "        if (!shared) emitTaskEvent(await service.get(job.id));"
+      },
+      {
+        "line": 822,
+        "text": "        return job;"
+      },
+      {
+        "line": 823,
+        "text": "      } catch (cause) {"
+      },
+      {
+        "line": 824,
+        "text": "        if (preparation.controller.signal.aborted)"
+      },
+      {
+        "line": 825,
+        "text": "          error("
+      },
+      {
+        "line": 826,
+        "text": "            410,"
+      },
+      {
+        "line": 827,
+        "text": "            projectOwnedTools"
+      },
+      {
+        "line": 828,
+        "text": "              ? \"登录授权已撤销。请重新连接后查询任务，已接收的项目任务可能仍在运行。\""
+      },
+      {
+        "line": 829,
+        "text": "              : \"登录授权已撤销，输入准备已取消。\","
+      },
+      {
+        "line": 830,
+        "text": "          );"
+      },
+      {
+        "line": 831,
+        "text": "        throw cause;"
+      },
+      {
+        "line": 832,
+        "text": "      } finally {"
+      },
+      {
+        "line": 833,
+        "text": "        preparingTools.delete(preparation);"
+      },
+      {
+        "line": 834,
+        "text": "      }"
+      },
+      {
+        "line": 835,
+        "text": "    }"
+      },
+      {
+        "line": 836,
+        "text": "    if (method === \"tasks.find\") return service.find(input.requestKey!);"
+      },
+      {
+        "line": 837,
+        "text": "    if (method === \"tasks.queue.get\") return service.getQueue();"
+      },
+      {
+        "line": 838,
+        "text": "    if (method === \"tasks.queue.set\") {"
+      },
+      {
+        "line": 839,
+        "text": "      // Resuming may launch previously admitted jobs; use the existing owner consent gate."
+      },
+      {
+        "line": 905,
+        "text": "  function toolSummary(job: ToolJob) {"
+      },
+      {
+        "line": 909,
+        "text": "  function emitTaskEvent(job: ToolJob) {"
+      },
+      {
+        "line": 925,
+        "text": "  function getToolJobs(): PanelToolJobService {"
+      },
+      {
+        "line": 926,
+        "text": "    if (toolJobs) return toolJobs;"
+      },
+      {
+        "line": 927,
+        "text": "    const executor = createPanelToolExecutor({"
+      },
+      {
+        "line": 928,
+        "text": "      ...(options.host === \"hub\" && !options.sharedToolJobs ? { cookies: getTaskCookies() } : {}),"
+      },
+      {
+        "line": 929,
+        "text": "      processes,"
+      },
+      {
+        "line": 930,
+        "text": "      resources,"
+      },
+      {
+        "line": 931,
+        "text": "      owner: (job, send) => {"
+      },
+      {
+        "line": 932,
+        "text": "        const guestId = nextToolOwner--;"
+      },
+      {
+        "line": 933,
+        "text": "        toolOwners.set(guestId, { ...job.scope, taskId: job.id });"
+      },
+      {
+        "line": 934,
+        "text": "        return {"
+      },
+      {
+        "line": 935,
+        "text": "          guestId,"
+      },
+      {
+        "line": 936,
+        "text": "          appId: job.scope.appId,"
+      },
+      {
+        "line": 937,
+        "text": "          appTitle: job.scope.appId,"
+      },
+      {
+        "line": 938,
+        "text": "          revision: job.scope.revision,"
+      },
+      {
+        "line": 939,
+        "text": "          send,"
+      },
+      {
+        "line": 940,
+        "text": "        };"
+      },
+      {
+        "line": 941,
+        "text": "      },"
+      },
+      {
+        "line": 942,
+        "text": "      releaseOwner: (owner) => {"
+      },
+      {
+        "line": 943,
+        "text": "        toolOwners.delete(owner.guestId);"
+      },
+      {
+        "line": 944,
+        "text": "      },"
+      },
+      {
+        "line": 945,
+        "text": "      authorize: async (scope) => {"
+      },
+      {
+        "line": 946,
+        "text": "        await installedToolApp(scope);"
+      },
+      {
+        "line": 947,
+        "text": "      },"
+      },
+      {
+        "line": 948,
+        "text": "      authorizeConnections: async (scope) => {"
+      },
+      {
+        "line": 949,
+        "text": "        const app = await installedToolApp(scope);"
+      },
+      {
+        "line": 950,
+        "text": "        if (!app.permissions.includes(\"credentials.connections\"))"
+      },
+      {
+        "line": 951,
+        "text": "          throw new PanelBridgeError(\"PERMISSION_DENIED\", \"Tool requires connection permission\");"
+      },
+      {
+        "line": 952,
+        "text": "      },"
+      },
+      {
+        "line": 953,
+        "text": "      authorizeDirectRead: async (scope) => {"
+      },
+      {
+        "line": 954,
+        "text": "        const app = await installedToolApp(scope);"
+      },
+      {
+        "line": 955,
+        "text": "        if (!app.permissions.includes(\"resources.directRead\"))"
+      },
+      {
+        "line": 956,
+        "text": "          throw new PanelBridgeError(\"PERMISSION_DENIED\", \"Tool requires direct read permission\");"
+      },
+      {
+        "line": 957,
+        "text": "      },"
+      },
+      {
+        "line": 958,
+        "text": "      resolveDirectoryBookmark: async (scope, bookmark) => {"
+      },
+      {
+        "line": 959,
+        "text": "        await installedToolApp(scope);"
+      },
+      {
+        "line": 960,
+        "text": "        return directoryBookmarks.restore(scope.appId, scope.projectPath, bookmark);"
+      },
+      {
+        "line": 961,
+        "text": "      },"
+      },
+      {
+        "line": 962,
+        "text": "      appDataDirectory: async (scope) => {"
+      },
+      {
+        "line": 963,
+        "text": "        await installedToolApp(scope);"
+      },
+      {
+        "line": 964,
+        "text": "        const path = panelDataDirectory(scope.appId);"
+      },
+      {
+        "line": 965,
+        "text": "        await mkdir(path, { recursive: true, mode: 0o700 });"
+      },
+      {
+        "line": 966,
+        "text": "        return path;"
+      },
+      {
+        "line": 967,
+        "text": "      },"
+      },
+      {
+        "line": 968,
+        "text": "      sealedRoot: join(options.dataDir, \"panel-app-sealed\"),"
+      },
+      {
+        "line": 969,
+        "text": "    });"
+      },
+      {
+        "line": 970,
+        "text": "    toolJobs = new PanelToolJobService({"
+      },
+      {
+        "line": 971,
+        "text": "      // Separate legacy store when a Desktop coordinator is injected. Existing"
+      },
+      {
+        "line": 972,
+        "text": "      // history stays readable; shared jobs never acquire a second disk lock."
+      },
+      {
+        "line": 973,
+        "text": "      rootDir: localToolRoot,"
+      },
+      {
+        "line": 974,
+        "text": "      ...executor,"
+      },
+      {
+        "line": 975,
+        "text": "      isAuthorized: async (scope) => !!(await installedToolApp(scope).catch(() => null)),"
+      },
+      {
+        "line": 976,
+        "text": "      describePackage: async (scope) => {"
+      },
+      {
+        "line": 977,
+        "text": "        const app = await installedToolApp(scope);"
+      },
+      {
+        "line": 978,
+        "text": "        if (!app.packageDigest) throw new Error(\"Project package digest is unavailable\");"
+      },
+      {
+        "line": 979,
+        "text": "        return { version: app.version, packageDigest: app.packageDigest };"
+      },
+      {
+        "line": 980,
+        "text": "      },"
+      },
+      {
+        "line": 981,
+        "text": "      onEvent: emitTaskEvent,"
+      },
+      {
+        "line": 982,
+        "text": "    });"
+      },
+      {
+        "line": 983,
+        "text": "    return toolJobs;"
+      },
+      {
+        "line": 984,
+        "text": "  }"
+      },
+      {
+        "line": 1179,
+        "text": "      if (record.owner === owner) void toolJobs?.cancel(record.scope, id).catch(() => {});"
+      },
+      {
+        "line": 1269,
+        "text": "        options.sharedToolJobs &&"
+      },
+      {
+        "line": 1272,
+        "text": "          ? await options.sharedToolJobs.bind(app, options.bindingCwd ?? options.cwd)"
+      },
+      {
+        "line": 1301,
+        "text": "                : options.host === \"hub\" && !options.sharedToolJobs),"
+      },
+      {
+        "line": 1313,
+        "text": "                        : options.host === \"hub\" && !options.sharedToolJobs),"
+      },
+      {
+        "line": 1377,
+        "text": "                : options.host === \"hub\" && !options.sharedToolJobs)"
+      },
+      {
+        "line": 1539,
+        "text": "    if (method.startsWith(\"tasks.\")) return dispatchToolJobs(grant, method, params);"
+      },
+      {
+        "line": 1942,
+        "text": "      (toolJobs?.activeCount() ?? 0) +"
+      },
+      {
+        "line": 1943,
+        "text": "      (options.sharedToolJobs?.activeCount(options.bindingCwd ?? options.cwd) ?? 0),"
+      },
+      {
+        "line": 1987,
+        "text": "      const sharedInvalidation = options.sharedToolJobs?.invalidate("
+      },
+      {
+        "line": 1991,
+        "text": "      if (!toolJobs) return sharedInvalidation ?? Promise.resolve();"
+      },
+      {
+        "line": 1995,
+        "text": "      return Promise.all([sharedInvalidation, ...appIds.map((id) => toolJobs!.cancelApp(id))]).then("
+      },
+      {
+        "line": 2008,
+        "text": "        await toolJobs?.shutdown();"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/panels/tool-executor.ts",
+    "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+    "captureTiming": "After source displays. Only fully visible body intervals and later untruncated locator matches are captured. Earlier truncated or omitted locator/tail output not reconstructed as human read; not first-read/pre-read snapshot.",
+    "displayedLines": [
+      {
+        "line": 52,
+        "text": "export interface PanelToolExecutorOptions {"
+      },
+      {
+        "line": 193,
+        "text": "  let path = await realpath(root);"
+      },
+      {
+        "line": 196,
+        "text": "    await mkdir(path, { mode: 0o700 }).catch((error) => {"
+      },
+      {
+        "line": 199,
+        "text": "    const info = await lstat(path);"
+      },
+      {
+        "line": 200,
+        "text": "    if (!info.isDirectory() || info.isSymbolicLink() || (await realpath(path)) !== path)"
+      },
+      {
+        "line": 206,
+        "text": "export function createPanelToolExecutor(options: PanelToolExecutorOptions) {"
+      },
+      {
+        "line": 213,
+        "text": "    await options.authorize(scope);"
+      },
+      {
+        "line": 214,
+        "text": "    await authorizeDirectRead(scope, input);"
+      },
+      {
+        "line": 216,
+        "text": "      if (directory.directory === \"bookmark\") await bookmarkDirectory(scope, directory.bookmark!);"
+      },
+      {
+        "line": 220,
+        "text": "      await options.cookies.check(scope, selection);"
+      },
+      {
+        "line": 227,
+        "text": "    await options.authorizeDirectRead(scope);"
+      },
+      {
+        "line": 238,
+        "text": "        await options.resources.dispatch("
+      },
+      {
+        "line": 245,
+        "text": "              await options.authorize(scope);"
+      },
+      {
+        "line": 251,
+        "text": "    } finally {"
+      },
+      {
+        "line": 259,
+        "text": "      const reference = await options.resources.references.get(scope, resource.assetId);"
+      },
+      {
+        "line": 262,
+        "text": "        path: await options.resources.references.location(scope, resource.assetId, { signal }),"
+      },
+      {
+        "line": 269,
+        "text": "    async prepareInput(scope: Scope, raw: unknown, workDir: string, signal: AbortSignal) {"
+      },
+      {
+        "line": 271,
+        "text": "      await authorize(scope, input);"
+      },
+      {
+        "line": 272,
+        "text": "      await materialize("
+      },
+      {
+        "line": 280,
+        "text": "      await verifiedOriginals(scope, input, signal);"
+      },
+      {
+        "line": 281,
+        "text": "      if (input.connectionIds) await options.authorizeConnections(scope);"
+      },
+      {
+        "line": 284,
+        "text": "    async execute(job: Job, context: ExecutionContext) {"
+      },
+      {
+        "line": 285,
+        "text": "      const input = toolInput(job.input);"
+      },
+      {
+        "line": 286,
+        "text": "      await authorize(job.scope, input);"
+      },
+      {
+        "line": 287,
+        "text": "      let stdout = \"\","
+      },
+      {
+        "line": 288,
+        "text": "        outputBytes = 0,"
+      },
+      {
+        "line": 289,
+        "text": "        result: unknown,"
+      },
+      {
+        "line": 290,
+        "text": "        failed: Error | undefined;"
+      },
+      {
+        "line": 291,
+        "text": "      let processId = \"\","
+      },
+      {
+        "line": 292,
+        "text": "        terminal = false,"
+      },
+      {
+        "line": 293,
+        "text": "        stopped: Promise<void> | undefined;"
+      },
+      {
+        "line": 294,
+        "text": "      let progress = Promise.resolve();"
+      },
+      {
+        "line": 295,
+        "text": "      let pendingProgress: Record<string, unknown> | undefined;"
+      },
+      {
+        "line": 296,
+        "text": "      let reportingProgress = false;"
+      },
+      {
+        "line": 297,
+        "text": "      let sequence = 0;"
+      },
+      {
+        "line": 298,
+        "text": "      const pendingEvents = new Map<"
+      },
+      {
+        "line": 299,
+        "text": "        number,"
+      },
+      {
+        "line": 300,
+        "text": "        { event: \"process.output\" | \"process.exit\"; payload: Record<string, unknown> }"
+      },
+      {
+        "line": 301,
+        "text": "      >();"
+      },
+      {
+        "line": 302,
+        "text": "      let reconciling: Promise<void> | undefined;"
+      },
+      {
+        "line": 303,
+        "text": "      let finish!: (value: { code: unknown; signal: unknown }) => void;"
+      },
+      {
+        "line": 304,
+        "text": "      const exit = new Promise<{ code: unknown; signal: unknown }>((resolve) => {"
+      },
+      {
+        "line": 305,
+        "text": "        finish = resolve;"
+      },
+      {
+        "line": 306,
+        "text": "      });"
+      },
+      {
+        "line": 307,
+        "text": "      const stop = () => {"
+      },
+      {
+        "line": 308,
+        "text": "        stopped ??= (async () => {"
+      },
+      {
+        "line": 309,
+        "text": "          if (!processId || terminal) return;"
+      },
+      {
+        "line": 310,
+        "text": "          await options.processes.cancel(owner, { processId });"
+      },
+      {
+        "line": 311,
+        "text": "          await exit;"
+      },
+      {
+        "line": 312,
+        "text": "        })();"
+      },
+      {
+        "line": 313,
+        "text": "        return stopped;"
+      },
+      {
+        "line": 314,
+        "text": "      };"
+      },
+      {
+        "line": 315,
+        "text": "      const parse = (line: string) => {"
+      },
+      {
+        "line": 316,
+        "text": "        if (!line.trim()) return;"
+      },
+      {
+        "line": 317,
+        "text": "        const message = JSON.parse(line);"
+      },
+      {
+        "line": 318,
+        "text": "        if (!message || typeof message !== \"object\" || Array.isArray(message))"
+      },
+      {
+        "line": 319,
+        "text": "          throw new Error(\"Invalid tool response\");"
+      },
+      {
+        "line": 320,
+        "text": "        if (message.type === \"progress\") {"
+      },
+      {
+        "line": 321,
+        "text": "          if ("
+      },
+      {
+        "line": 322,
+        "text": "            !message.progress ||"
+      },
+      {
+        "line": 323,
+        "text": "            typeof message.progress !== \"object\" ||"
+      },
+      {
+        "line": 324,
+        "text": "            Array.isArray(message.progress)"
+      },
+      {
+        "line": 325,
+        "text": "          )"
+      },
+      {
+        "line": 326,
+        "text": "            throw new Error(\"Invalid tool progress\");"
+      },
+      {
+        "line": 327,
+        "text": "          pendingProgress = message.progress;"
+      },
+      {
+        "line": 328,
+        "text": "          if (!reportingProgress) {"
+      },
+      {
+        "line": 329,
+        "text": "            reportingProgress = true;"
+      },
+      {
+        "line": 330,
+        "text": "            progress = (async () => {"
+      },
+      {
+        "line": 331,
+        "text": "              while (pendingProgress !== undefined) {"
+      },
+      {
+        "line": 332,
+        "text": "                const update = pendingProgress;"
+      },
+      {
+        "line": 333,
+        "text": "                pendingProgress = undefined;"
+      },
+      {
+        "line": 334,
+        "text": "                await context.reportProgress(update);"
+      },
+      {
+        "line": 335,
+        "text": "              }"
+      },
+      {
+        "line": 336,
+        "text": "            })()"
+      },
+      {
+        "line": 337,
+        "text": "              .catch((error) => {"
+      },
+      {
+        "line": 338,
+        "text": "                failed ??= error instanceof Error ? error : new Error(String(error));"
+      },
+      {
+        "line": 339,
+        "text": "                void stop();"
+      },
+      {
+        "line": 340,
+        "text": "              })"
+      },
+      {
+        "line": 341,
+        "text": "              .finally(() => {"
+      },
+      {
+        "line": 342,
+        "text": "                reportingProgress = false;"
+      },
+      {
+        "line": 343,
+        "text": "              });"
+      },
+      {
+        "line": 344,
+        "text": "          }"
+      },
+      {
+        "line": 345,
+        "text": "        } else if (message.type === \"result\") {"
+      },
+      {
+        "line": 346,
+        "text": "          if (result !== undefined) throw new Error(\"Tool returned multiple results\");"
+      },
+      {
+        "line": 347,
+        "text": "          result = message.result;"
+      },
+      {
+        "line": 348,
+        "text": "        } else if (message.type === \"error\") {"
+      },
+      {
+        "line": 349,
+        "text": "          failed ??= Object.assign("
+      },
+      {
+        "line": 350,
+        "text": "            new Error("
+      },
+      {
+        "line": 351,
+        "text": "              typeof message.message === \"string\" ? message.message.slice(0, 2000) : \"Tool failed\","
+      },
+      {
+        "line": 352,
+        "text": "            ),"
+      },
+      {
+        "line": 353,
+        "text": "            {"
+      },
+      {
+        "line": 354,
+        "text": "              ...(typeof message.code === \"string\" ? { code: message.code.slice(0, 100) } : {}),"
+      },
+      {
+        "line": 355,
+        "text": "              ...(typeof message.retryable === \"boolean\" ? { retryable: message.retryable } : {}),"
+      },
+      {
+        "line": 356,
+        "text": "            },"
+      },
+      {
+        "line": 357,
+        "text": "          );"
+      },
+      {
+        "line": 358,
+        "text": "          void stop();"
+      },
+      {
+        "line": 359,
+        "text": "        } else throw new Error(\"Unsupported tool response\");"
+      },
+      {
+        "line": 360,
+        "text": "      };"
+      },
+      {
+        "line": 361,
+        "text": "      const consume = ("
+      },
+      {
+        "line": 362,
+        "text": "        event: \"process.output\" | \"process.exit\","
+      },
+      {
+        "line": 363,
+        "text": "        payload: Record<string, unknown>,"
+      },
+      {
+        "line": 364,
+        "text": "      ) => {"
+      },
+      {
+        "line": 365,
+        "text": "        if (event === \"process.exit\") {"
+      },
+      {
+        "line": 366,
+        "text": "          terminal = true;"
+      },
+      {
+        "line": 367,
+        "text": "          finish({ code: payload.code, signal: payload.signal });"
+      },
+      {
+        "line": 368,
+        "text": "          return;"
+      },
+      {
+        "line": 369,
+        "text": "        }"
+      },
+      {
+        "line": 370,
+        "text": "        if (payload.stream !== \"stdout\" || typeof payload.text !== \"string\") return;"
+      },
+      {
+        "line": 371,
+        "text": "        try {"
+      },
+      {
+        "line": 372,
+        "text": "          outputBytes += Buffer.byteLength(payload.text);"
+      },
+      {
+        "line": 373,
+        "text": "          if (outputBytes > processLimits.maxOutputBytes)"
+      },
+      {
+        "line": 374,
+        "text": "            throw new Error(\"Tool output exceeds the limit\");"
+      },
+      {
+        "line": 375,
+        "text": "          stdout += payload.text;"
+      },
+      {
+        "line": 376,
+        "text": "          while (stdout.includes(\"\\n\")) {"
+      },
+      {
+        "line": 377,
+        "text": "            const end = stdout.indexOf(\"\\n\");"
+      },
+      {
+        "line": 378,
+        "text": "            const line = stdout.slice(0, end);"
+      },
+      {
+        "line": 379,
+        "text": "            stdout = stdout.slice(end + 1);"
+      },
+      {
+        "line": 380,
+        "text": "            parse(line);"
+      },
+      {
+        "line": 381,
+        "text": "          }"
+      },
+      {
+        "line": 382,
+        "text": "          if (Buffer.byteLength(stdout) > 256 * 1024)"
+      },
+      {
+        "line": 383,
+        "text": "            throw new Error(\"Tool response exceeds the limit\");"
+      },
+      {
+        "line": 384,
+        "text": "        } catch (error) {"
+      },
+      {
+        "line": 385,
+        "text": "          failed ??= error instanceof Error ? error : new Error(\"Invalid tool output\");"
+      },
+      {
+        "line": 386,
+        "text": "          void stop();"
+      },
+      {
+        "line": 387,
+        "text": "        }"
+      },
+      {
+        "line": 388,
+        "text": "      };"
+      },
+      {
+        "line": 389,
+        "text": "      const receive = ("
+      },
+      {
+        "line": 390,
+        "text": "        event: \"process.output\" | \"process.exit\","
+      },
+      {
+        "line": 391,
+        "text": "        payload: Record<string, unknown>,"
+      },
+      {
+        "line": 392,
+        "text": "      ) => {"
+      },
+      {
+        "line": 393,
+        "text": "        if (processId && payload.processId !== processId) return;"
+      },
+      {
+        "line": 394,
+        "text": "        if (!Number.isSafeInteger(payload.sequence)) {"
+      },
+      {
+        "line": 395,
+        "text": "          consume(event, payload);"
+      },
+      {
+        "line": 396,
+        "text": "          return;"
+      },
+      {
+        "line": 397,
+        "text": "        }"
+      },
+      {
+        "line": 398,
+        "text": "        const cursor = Number(payload.sequence);"
+      },
+      {
+        "line": 399,
+        "text": "        if (cursor <= sequence) return;"
+      },
+      {
+        "line": 400,
+        "text": "        pendingEvents.set(cursor, { event, payload });"
+      },
+      {
+        "line": 401,
+        "text": "        if (pendingEvents.size > processLimits.maxEventsPerProcess) {"
+      },
+      {
+        "line": 402,
+        "text": "          failed ??= new Error(\"Too many missed tool events\");"
+      },
+      {
+        "line": 403,
+        "text": "          void stop();"
+      },
+      {
+        "line": 404,
+        "text": "          return;"
+      },
+      {
+        "line": 405,
+        "text": "        }"
+      },
+      {
+        "line": 406,
+        "text": "        while (pendingEvents.has(sequence + 1)) {"
+      },
+      {
+        "line": 407,
+        "text": "          const item = pendingEvents.get(++sequence)!;"
+      },
+      {
+        "line": 408,
+        "text": "          pendingEvents.delete(sequence);"
+      },
+      {
+        "line": 409,
+        "text": "          consume(item.event, item.payload);"
+      },
+      {
+        "line": 410,
+        "text": "        }"
+      },
+      {
+        "line": 411,
+        "text": "      };"
+      },
+      {
+        "line": 412,
+        "text": "      const owner = options.owner(job, receive);"
+      },
+      {
+        "line": 413,
+        "text": "      const reconcile = () => {"
+      },
+      {
+        "line": 414,
+        "text": "        if (!processId) return Promise.resolve();"
+      },
+      {
+        "line": 415,
+        "text": "        return (reconciling ??= (async () => {"
+      },
+      {
+        "line": 416,
+        "text": "          const receipt = await options.processes.get(owner, {"
+      },
+      {
+        "line": 417,
+        "text": "            processId,"
+      },
+      {
+        "line": 418,
+        "text": "            afterSequence: sequence,"
+      },
+      {
+        "line": 419,
+        "text": "            limit: 256,"
+      },
+      {
+        "line": 420,
+        "text": "          });"
+      },
+      {
+        "line": 421,
+        "text": "          if (!receipt.found) throw new Error(\"Tool process receipt is unavailable\");"
+      },
+      {
+        "line": 422,
+        "text": "          if (receipt.truncated) throw new Error(\"Tool output was lost before it could be read\");"
+      },
+      {
+        "line": 423,
+        "text": "          for (const item of receipt.events) receive(item.event, item.payload);"
+      },
+      {
+        "line": 424,
+        "text": "        })()"
+      },
+      {
+        "line": 425,
+        "text": "          .catch((error) => {"
+      },
+      {
+        "line": 426,
+        "text": "            failed ??= error instanceof Error ? error : new Error(String(error));"
+      },
+      {
+        "line": 427,
+        "text": "            void stop();"
+      },
+      {
+        "line": 428,
+        "text": "          })"
+      },
+      {
+        "line": 429,
+        "text": "          .finally(() => {"
+      },
+      {
+        "line": 430,
+        "text": "            reconciling = undefined;"
+      },
+      {
+        "line": 431,
+        "text": "          }));"
+      },
+      {
+        "line": 432,
+        "text": "      };"
+      },
+      {
+        "line": 433,
+        "text": "      const receiptTimer = setInterval(() => {"
+      },
+      {
+        "line": 434,
+        "text": "        void reconcile();"
+      },
+      {
+        "line": 435,
+        "text": "      }, 200);"
+      },
+      {
+        "line": 436,
+        "text": "      receiptTimer.unref();"
+      },
+      {
+        "line": 437,
+        "text": "      const abort = () => {"
+      },
+      {
+        "line": 438,
+        "text": "        void stop();"
+      },
+      {
+        "line": 439,
+        "text": "      };"
+      },
+      {
+        "line": 440,
+        "text": "      context.signal.addEventListener(\"abort\", abort, { once: true });"
+      },
+      {
+        "line": 441,
+        "text": "      const cleanups: Array<() => void | Promise<void>> = [];"
+      },
+      {
+        "line": 442,
+        "text": "      const resourceDirectoryHandles: string[] = [];"
+      },
+      {
+        "line": 443,
+        "text": "      let checking = false;"
+      },
+      {
+        "line": 444,
+        "text": "      const authorizationTimer = setInterval(() => {"
+      },
+      {
+        "line": 445,
+        "text": "        if (checking || terminal) return;"
+      },
+      {
+        "line": 446,
+        "text": "        checking = true;"
+      },
+      {
+        "line": 447,
+        "text": "        void authorize(job.scope, input)"
+      },
+      {
+        "line": 448,
+        "text": "          .catch(() => {"
+      },
+      {
+        "line": 449,
+        "text": "            failed ??= Object.assign(new Error(\"Tool task authorization was revoked\"), {"
+      },
+      {
+        "line": 450,
+        "text": "              code: \"APP_REVOKED\","
+      },
+      {
+        "line": 451,
+        "text": "              retryable: false,"
+      },
+      {
+        "line": 452,
+        "text": "            });"
+      },
+      {
+        "line": 453,
+        "text": "            return stop();"
+      },
+      {
+        "line": 454,
+        "text": "          })"
+      },
+      {
+        "line": 455,
+        "text": "          .finally(() => {"
+      },
+      {
+        "line": 456,
+        "text": "            checking = false;"
+      },
+      {
+        "line": 457,
+        "text": "          });"
+      },
+      {
+        "line": 458,
+        "text": "      }, 1000);"
+      },
+      {
+        "line": 459,
+        "text": "      authorizationTimer.unref();"
+      },
+      {
+        "line": 460,
+        "text": "      try {"
+      },
+      {
+        "line": 461,
+        "text": "        const executable = await options.processes.findExecutable(owner, { name: \"node\" });"
+      },
+      {
+        "line": 464,
+        "text": "        const entry = await options.processes.resolveEntry(owner, {"
+      },
+      {
+        "line": 470,
+        "text": "        await authorizeDirectRead(job.scope, input);"
+      },
+      {
+        "line": 471,
+        "text": "        const originals = await verifiedOriginals(job.scope, input, context.signal);"
+      },
+      {
+        "line": 472,
+        "text": "        const directory = await options.processes.grantDirectory(owner, context.workDir);"
+      },
+      {
+        "line": 480,
+        "text": "                ? await bookmarkDirectory(job.scope, item.bookmark!)"
+      },
+      {
+        "line": 481,
+        "text": "                : await options.appDataDirectory(job.scope);"
+      },
+      {
+        "line": 482,
+        "text": "          const location = await childDirectory(root, item.path);"
+      },
+      {
+        "line": 483,
+        "text": "          const grant = await options.processes.grantDirectory(owner, location);"
+      },
+      {
+        "line": 484,
+        "text": "          const argument = await options.processes.grantDirectoryArgument(owner, {"
+      },
+      {
+        "line": 492,
+        "text": "          await options.authorizeConnections(job.scope);"
+      },
+      {
+        "line": 493,
+        "text": "          const sealed = await materializePanelConnections("
+      },
+      {
+        "line": 499,
+        "text": "          const argument = await options.processes.grantFileArgument(owner, {"
+      },
+      {
+        "line": 510,
+        "text": "          await mkdir(options.sealedRoot, { recursive: true, mode: 0o700 });"
+      },
+      {
+        "line": 511,
+        "text": "          const sealed = await mkdtemp(join(options.sealedRoot, \"originals-\"));"
+      },
+      {
+        "line": 515,
+        "text": "          await writeFile(path, JSON.stringify({ originals }), { mode: 0o600, flag: \"wx\" });"
+      },
+      {
+        "line": 516,
+        "text": "          const argument = await options.processes.grantFileArgument(owner, {"
+      },
+      {
+        "line": 521,
+        "text": "            // The approval may wait, and a reference may be forgotten or relinked"
+      },
+      {
+        "line": 524,
+        "text": "              await authorize(job.scope, input);"
+      },
+      {
+        "line": 525,
+        "text": "              const current = await verifiedOriginals(job.scope, input, context.signal);"
+      },
+      {
+        "line": 536,
+        "text": "          const sealed = await options.cookies!.materialize(job.scope, selection);"
+      },
+      {
+        "line": 538,
+        "text": "          const argument = await options.processes.grantFileArgument(owner, {"
+      },
+      {
+        "line": 549,
+        "text": "        const launched = await options.processes.start(owner, {"
+      },
+      {
+        "line": 550,
+        "text": "          executableHandle: executable.handle,"
+      },
+      {
+        "line": 551,
+        "text": "          entryHandle: entry.handle,"
+      },
+      {
+        "line": 552,
+        "text": "          directoryHandle: directory.handle,"
+      },
+      {
+        "line": 553,
+        "text": "          fileArgumentHandles,"
+      },
+      {
+        "line": 554,
+        "text": "          args: [],"
+      },
+      {
+        "line": 555,
+        "text": "          stdin: \"pipe\","
+      },
+      {
+        "line": 556,
+        "text": "        });"
+      },
+      {
+        "line": 557,
+        "text": "        processId = launched.processId;"
+      },
+      {
+        "line": 558,
+        "text": "        // Capture this Host-only waiter before revocation can retire the owner's grants."
+      },
+      {
+        "line": 559,
+        "text": "        void options.processes"
+      },
+      {
+        "line": 560,
+        "text": "          .waitForExit(owner, { processId })"
+      },
+      {
+        "line": 561,
+        "text": "          .then((value) => {"
+      },
+      {
+        "line": 562,
+        "text": "            terminal = true;"
+      },
+      {
+        "line": 563,
+        "text": "            finish(value);"
+      },
+      {
+        "line": 564,
+        "text": "          })"
+      },
+      {
+        "line": 565,
+        "text": "          .catch((error) => {"
+      },
+      {
+        "line": 566,
+        "text": "            // This can only be absent after the process has already closed and its"
+      },
+      {
+        "line": 567,
+        "text": "            // owner retired the receipt before the waiter attached."
+      },
+      {
+        "line": 568,
+        "text": "            failed ??= error instanceof Error ? error : new Error(String(error));"
+      },
+      {
+        "line": 569,
+        "text": "            terminal = true;"
+      },
+      {
+        "line": 570,
+        "text": "            finish({ code: null, signal: null });"
+      },
+      {
+        "line": 571,
+        "text": "          });"
+      },
+      {
+        "line": 572,
+        "text": "        if (failed || context.signal.aborted) {"
+      },
+      {
+        "line": 573,
+        "text": "          stopped = undefined;"
+      },
+      {
+        "line": 574,
+        "text": "          await stop();"
+      },
+      {
+        "line": 575,
+        "text": "          context.signal.throwIfAborted();"
+      },
+      {
+        "line": 576,
+        "text": "          throw failed;"
+      },
+      {
+        "line": 577,
+        "text": "        }"
+      },
+      {
+        "line": 578,
+        "text": "        const request = JSON.stringify({"
+      },
+      {
+        "line": 579,
+        "text": "          ...input.request,"
+      },
+      {
+        "line": 580,
+        "text": "          jobId: job.id,"
+      },
+      {
+        "line": 581,
+        "text": "          scopeKey: createHash(\"sha256\")"
+      },
+      {
+        "line": 582,
+        "text": "            .update(JSON.stringify([job.scope.appId, job.scope.projectPath]))"
+      },
+      {
+        "line": 583,
+        "text": "            .digest(\"hex\"),"
+      },
+      {
+        "line": 584,
+        "text": "        });"
+      },
+      {
+        "line": 585,
+        "text": "        if (Buffer.byteLength(request) > processLimits.maxStdinBytes)"
+      },
+      {
+        "line": 586,
+        "text": "          throw new Error(\"Tool input exceeds the stdin limit\");"
+      },
+      {
+        "line": 587,
+        "text": "        // Slice by characters conservatively, preserving surrogate pairs across writes."
+      },
+      {
+        "line": 588,
+        "text": "        const characters = Array.from(request);"
+      },
+      {
+        "line": 589,
+        "text": "        for (let i = 0; i < characters.length; i += 3000) {"
+      },
+      {
+        "line": 590,
+        "text": "          context.signal.throwIfAborted();"
+      },
+      {
+        "line": 591,
+        "text": "          await options.processes.write(owner, {"
+      },
+      {
+        "line": 592,
+        "text": "            processId,"
+      },
+      {
+        "line": 593,
+        "text": "            text: characters.slice(i, i + 3000).join(\"\"),"
+      },
+      {
+        "line": 594,
+        "text": "          });"
+      },
+      {
+        "line": 595,
+        "text": "        }"
+      },
+      {
+        "line": 596,
+        "text": "        await options.processes.end(owner, { processId });"
+      },
+      {
+        "line": 597,
+        "text": "        const receipt = await exit;"
+      },
+      {
+        "line": 598,
+        "text": "        await reconciling;"
+      },
+      {
+        "line": 599,
+        "text": "        await reconcile();"
+      },
+      {
+        "line": 600,
+        "text": "        if (stdout.trim()) parse(stdout);"
+      },
+      {
+        "line": 601,
+        "text": "        await progress;"
+      },
+      {
+        "line": 602,
+        "text": "        context.signal.throwIfAborted();"
+      },
+      {
+        "line": 603,
+        "text": "        if (failed) throw failed;"
+      },
+      {
+        "line": 604,
+        "text": "        for (const resource of directReads(input)) {"
+      },
+      {
+        "line": 605,
+        "text": "          const reference = await options.resources.references.get(job.scope, resource.assetId);"
+      },
+      {
+        "line": 606,
+        "text": "          if (reference.state !== \"available\") throw originalUnavailable(reference.state, true);"
+      },
+      {
+        "line": 607,
+        "text": "        }"
+      },
+      {
+        "line": 608,
+        "text": "        if (receipt.code !== 0 || result === undefined)"
+      },
+      {
+        "line": 609,
+        "text": "          throw new Error(\"Tool did not return a completed result\");"
+      },
+      {
+        "line": 610,
+        "text": "        const value = result as { artifacts?: unknown };"
+      },
+      {
+        "line": 611,
+        "text": "        if (!value || typeof value !== \"object\" || Array.isArray(value))"
+      },
+      {
+        "line": 612,
+        "text": "          throw new Error(\"Tool result must be an object\");"
+      },
+      {
+        "line": 613,
+        "text": "        if (value.artifacts !== undefined) {"
+      },
+      {
+        "line": 614,
+        "text": "          if (!Array.isArray(value.artifacts) || value.artifacts.length > 128)"
+      },
+      {
+        "line": 615,
+        "text": "            throw new Error(\"Invalid tool output inventory\");"
+      },
+      {
+        "line": 616,
+        "text": "          const assets: unknown[] = [];"
+      },
+      {
+        "line": 617,
+        "text": "          for (const artifact of value.artifacts) {"
+      },
+      {
+        "line": 618,
+        "text": "            if ("
+      },
+      {
+        "line": 619,
+        "text": "              !artifact ||"
+      },
+      {
+        "line": 620,
+        "text": "              typeof artifact !== \"object\" ||"
+      },
+      {
+        "line": 621,
+        "text": "              !/^[a-f0-9]{64}$/.test(artifact.sha256) ||"
+      },
+      {
+        "line": 622,
+        "text": "              artifact.assetId !== `asset-${artifact.sha256}`"
+      },
+      {
+        "line": 623,
+        "text": "            )"
+      },
+      {
+        "line": 624,
+        "text": "              throw new Error(\"Invalid tool artifact identity\");"
+      },
+      {
+        "line": 625,
+        "text": "            resourceRelativePath(artifact.file);"
+      },
+      {
+        "line": 626,
+        "text": "            if (!Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0)"
+      },
+      {
+        "line": 627,
+        "text": "              throw new Error(\"Invalid tool artifact size\");"
+      },
+      {
+        "line": 628,
+        "text": "            const captured = await options.resources.dispatch("
+      },
+      {
+        "line": 629,
+        "text": "              job.scope,"
+      },
+      {
+        "line": 630,
+        "text": "              \"resources.capture\","
+      },
+      {
+        "line": 631,
+        "text": "              {"
+      },
+      {
+        "line": 632,
+        "text": "                directoryHandle: directory.handle,"
+      },
+      {
+        "line": 633,
+        "text": "                path: artifact.file,"
+      },
+      {
+        "line": 634,
+        "text": "                name: artifact.name ?? artifact.file.split(\"/\").at(-1),"
+      },
+      {
+        "line": 635,
+        "text": "                mimeType: artifact.mimeType,"
+      },
+      {
+        "line": 636,
+        "text": "                expectedBytes: artifact.bytes,"
+      },
+      {
+        "line": 637,
+        "text": "                expectedSha256: artifact.sha256,"
+      },
+      {
+        "line": 638,
+        "text": "              },"
+      },
+      {
+        "line": 639,
+        "text": "              {"
+      },
+      {
+        "line": 640,
+        "text": "                resolveDirectory: (handle) => options.processes.directoryPath(owner, handle),"
+      },
+      {
+        "line": 641,
+        "text": "                signal: context.signal,"
+      },
+      {
+        "line": 642,
+        "text": "              },"
+      },
+      {
+        "line": 643,
+        "text": "            );"
+      },
+      {
+        "line": 644,
+        "text": "            assets.push({ ...artifact, asset: captured.asset });"
+      },
+      {
+        "line": 645,
+        "text": "          }"
+      },
+      {
+        "line": 646,
+        "text": "          value.artifacts = assets;"
+      },
+      {
+        "line": 647,
+        "text": "        }"
+      },
+      {
+        "line": 648,
+        "text": "        await authorize(job.scope, input);"
+      },
+      {
+        "line": 649,
+        "text": "        return value;"
+      },
+      {
+        "line": 650,
+        "text": "      } finally {"
+      },
+      {
+        "line": 651,
+        "text": "        clearInterval(receiptTimer);"
+      },
+      {
+        "line": 652,
+        "text": "        clearInterval(authorizationTimer);"
+      },
+      {
+        "line": 653,
+        "text": "        context.signal.removeEventListener(\"abort\", abort);"
+      },
+      {
+        "line": 654,
+        "text": "        if (processId && !terminal) {"
+      },
+      {
+        "line": 655,
+        "text": "          stopped = undefined;"
+      },
+      {
+        "line": 656,
+        "text": "          await stop().catch(() => {});"
+      },
+      {
+        "line": 657,
+        "text": "        }"
+      },
+      {
+        "line": 658,
+        "text": "        options.processes.revokeGuest(owner.guestId);"
+      },
+      {
+        "line": 659,
+        "text": "        for (const handle of resourceDirectoryHandles)"
+      },
+      {
+        "line": 660,
+        "text": "          options.resources.releaseDirectory(job.scope, handle);"
+      },
+      {
+        "line": 661,
+        "text": "        options.releaseOwner(owner);"
+      },
+      {
+        "line": 662,
+        "text": "        for (const cleanup of cleanups) await cleanup();"
+      },
+      {
+        "line": 663,
+        "text": "      }"
+      },
+      {
+        "line": 664,
+        "text": "    },"
+      },
+      {
+        "line": 665,
+        "text": "  };"
+      },
+      {
+        "line": 666,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/panels/process-service.ts",
+    "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+    "captureTiming": "After source displays. Only fully visible body intervals and later untruncated locator matches are captured. Earlier truncated or omitted locator/tail output not reconstructed as human read; not first-read/pre-read snapshot.",
+    "displayedLines": [
+      {
+        "line": 43,
+        "text": "  send(event: \"process.output\" | \"process.exit\", payload: Record<string, unknown>): void;"
+      },
+      {
+        "line": 95,
+        "text": "  termination?: Promise<void>;"
+      },
+      {
+        "line": 315,
+        "text": "  private closed = false;"
+      },
+      {
+        "line": 326,
+        "text": "    if (this.closed) throw new Error(\"Panel process service is closed\");"
+      },
+      {
+        "line": 331,
+        "text": "    if (this.closed || (this.guestEpochs.get(owner.guestId) ?? 0) !== epoch) {"
+      },
+      {
+        "line": 742,
+        "text": "      const emit = (event: \"process.output\" | \"process.exit\", payload: Record<string, unknown>) => {"
+      },
+      {
+        "line": 791,
+        "text": "      let finishExit!: (value: { code: number | null; signal: NodeJS.Signals | null }) => void;"
+      },
+      {
+        "line": 805,
+        "text": "          finishExit = resolve;"
+      },
+      {
+        "line": 820,
+        "text": "              return this.processes.get(processId) === running && !running.termination;"
+      },
+      {
+        "line": 835,
+        "text": "            if (checkingInputs || this.processes.get(processId) !== running || running.termination)"
+      },
+      {
+        "line": 840,
+        "text": "                if (this.processes.get(processId) !== running || running.termination) return;"
+      },
+      {
+        "line": 854,
+        "text": "      child.once(\"close\", (code, signal) => {"
+      },
+      {
+        "line": 855,
+        "text": "        void (async () => {"
+      },
+      {
+        "line": 856,
+        "text": "          clearTimeout(lifetime);"
+      },
+      {
+        "line": 857,
+        "text": "          if (inputChecks) clearInterval(inputChecks);"
+      },
+      {
+        "line": 858,
+        "text": "          // Cancellation also waits for the process group, not just its leader."
+      },
+      {
+        "line": 859,
+        "text": "          await running.termination;"
+      },
+      {
+        "line": 860,
+        "text": "          let finalCode = code;"
+      },
+      {
+        "line": 861,
+        "text": "          if (inputChecks && this.processes.get(processId) === running) {"
+      },
+      {
+        "line": 862,
+        "text": "            try {"
+      },
+      {
+        "line": 863,
+        "text": "              await validateInputs();"
+      },
+      {
+        "line": 864,
+        "text": "            } catch {"
+      },
+      {
+        "line": 865,
+        "text": "              finalCode = code === 0 ? 1 : code;"
+      },
+      {
+        "line": 866,
+        "text": "              emit(\"process.output\", {"
+      },
+      {
+        "line": 867,
+        "text": "                processId,"
+      },
+      {
+        "line": 868,
+        "text": "                stream: \"stderr\","
+      },
+      {
+        "line": 869,
+        "text": "                text: \"Process input authorization changed; results were rejected.\\n\","
+      },
+      {
+        "line": 870,
+        "text": "              });"
+      },
+      {
+        "line": 871,
+        "text": "            }"
+      },
+      {
+        "line": 872,
+        "text": "          }"
+      },
+      {
+        "line": 873,
+        "text": "          await running.modelTraceChannel?.finish(record.cancelRequested ? \"cancelled\" : \"failed\");"
+      },
+      {
+        "line": 874,
+        "text": "          finishExit({ code: finalCode, signal });"
+      },
+      {
+        "line": 875,
+        "text": "          this.retiring.delete(processId);"
+      },
+      {
+        "line": 876,
+        "text": "          if (this.processes.get(processId)?.child !== child) return;"
+      },
+      {
+        "line": 877,
+        "text": "          this.processes.delete(processId);"
+      },
+      {
+        "line": 878,
+        "text": "          record.status = \"exited\";"
+      },
+      {
+        "line": 879,
+        "text": "          record.exitedAt = this.now();"
+      },
+      {
+        "line": 880,
+        "text": "          record.code = finalCode;"
+      },
+      {
+        "line": 881,
+        "text": "          record.signal = signal;"
+      },
+      {
+        "line": 882,
+        "text": "          emit(\"process.exit\", { processId, code: finalCode, signal });"
+      },
+      {
+        "line": 883,
+        "text": "          // Keep the receipt only after the operating system reports the real close."
+      },
+      {
+        "line": 884,
+        "text": "          if (!this.closed && (this.guestEpochs.get(owner.guestId) ?? 0) === epoch)"
+      },
+      {
+        "line": 885,
+        "text": "            this.receipts.add(record);"
+      },
+      {
+        "line": 886,
+        "text": "        })().finally(() => releaseExecution?.());"
+      },
+      {
+        "line": 887,
+        "text": "      });"
+      },
+      {
+        "line": 888,
+        "text": "      processOwnsExecution = true;"
+      },
+      {
+        "line": 889,
+        "text": "      return { processId, executable: executable.name };"
+      },
+      {
+        "line": 890,
+        "text": "    } finally {"
+      },
+      {
+        "line": 891,
+        "text": "      if (!processOwnsExecution) releaseExecution?.();"
+      },
+      {
+        "line": 892,
+        "text": "      const remaining = (this.reservations.get(owner.guestId) ?? 1) - 1;"
+      },
+      {
+        "line": 893,
+        "text": "      if (remaining) this.reservations.set(owner.guestId, remaining);"
+      },
+      {
+        "line": 894,
+        "text": "      else this.reservations.delete(owner.guestId);"
+      },
+      {
+        "line": 895,
+        "text": "    }"
+      },
+      {
+        "line": 896,
+        "text": "  }"
+      },
+      {
+        "line": 897,
+        "text": ""
+      },
+      {
+        "line": 898,
+        "text": "  cancel(owner: PanelProcessOwner, params: unknown): { cancelled: boolean } {"
+      },
+      {
+        "line": 899,
+        "text": "    this.epoch(owner);"
+      },
+      {
+        "line": 900,
+        "text": "    const processId = (params as { processId?: unknown } | null)?.processId;"
+      },
+      {
+        "line": 901,
+        "text": "    if (typeof processId !== \"string\") throw new Error(\"process.cancel requires processId\");"
+      },
+      {
+        "line": 902,
+        "text": "    const running = this.processes.get(processId);"
+      },
+      {
+        "line": 903,
+        "text": "    if (!running || !sameProcessOwner(running.record.owner, owner)) return { cancelled: false };"
+      },
+      {
+        "line": 904,
+        "text": "    this.terminate(running);"
+      },
+      {
+        "line": 905,
+        "text": "    return { cancelled: true };"
+      },
+      {
+        "line": 906,
+        "text": "  }"
+      },
+      {
+        "line": 907,
+        "text": ""
+      },
+      {
+        "line": 908,
+        "text": "  /** Host-only wait captured while the owner is live; never exposes output after revocation. */"
+      },
+      {
+        "line": 909,
+        "text": "  waitForExit(owner: PanelProcessOwner, params: { processId: string }) {"
+      },
+      {
+        "line": 910,
+        "text": "    const running = this.processes.get(params.processId) ?? this.retiring.get(params.processId);"
+      },
+      {
+        "line": 911,
+        "text": "    if (running && sameProcessOwner(running.record.owner, owner)) return running.exit;"
+      },
+      {
+        "line": 912,
+        "text": "    const receipt = this.receipts.get(params.processId);"
+      },
+      {
+        "line": 913,
+        "text": "    if (receipt && sameProcessOwner(receipt.owner, owner))"
+      },
+      {
+        "line": 914,
+        "text": "      return Promise.resolve({ code: receipt.code ?? null, signal: receipt.signal ?? null });"
+      },
+      {
+        "line": 915,
+        "text": "    return Promise.reject(new Error(\"process is unavailable or belongs to another Panel App\"));"
+      },
+      {
+        "line": 916,
+        "text": "  }"
+      },
+      {
+        "line": 917,
+        "text": ""
+      },
+      {
+        "line": 918,
+        "text": "  async get(owner: PanelProcessOwner, params: unknown) {"
+      },
+      {
+        "line": 919,
+        "text": "    owner = { ...owner };"
+      },
+      {
+        "line": 920,
+        "text": "    const epoch = this.epoch(owner);"
+      },
+      {
+        "line": 921,
+        "text": "    await this.authorize(owner, epoch);"
+      },
+      {
+        "line": 922,
+        "text": "    const input = params as {"
+      },
+      {
+        "line": 977,
+        "text": "  async write("
+      },
+      {
+        "line": 978,
+        "text": "    owner: PanelProcessOwner,"
+      },
+      {
+        "line": 979,
+        "text": "    params: unknown,"
+      },
+      {
+        "line": 980,
+        "text": "  ): Promise<{ bytesWritten: number; totalBytes: number }> {"
+      },
+      {
+        "line": 981,
+        "text": "    owner = { ...owner };"
+      },
+      {
+        "line": 982,
+        "text": "    const epoch = this.epoch(owner);"
+      },
+      {
+        "line": 983,
+        "text": "    await this.authorize(owner, epoch);"
+      },
+      {
+        "line": 984,
+        "text": "    const input = params as { processId?: unknown; text?: unknown } | null;"
+      },
+      {
+        "line": 985,
+        "text": "    if (typeof input?.text !== \"string\") throw new Error(\"process.write requires UTF-8 text\");"
+      },
+      {
+        "line": 986,
+        "text": "    const bytes = Buffer.byteLength(input.text);"
+      },
+      {
+        "line": 987,
+        "text": "    if (bytes > processLimits.maxStdinChunkBytes)"
+      },
+      {
+        "line": 988,
+        "text": "      throw new Error(\"process stdin chunk exceeds limit\");"
+      },
+      {
+        "line": 989,
+        "text": "    const running = this.writableProcess(owner, input.processId);"
+      },
+      {
+        "line": 990,
+        "text": "    if (running.stdinEnded) throw new Error(\"process stdin has ended\");"
+      },
+      {
+        "line": 991,
+        "text": "    if (running.stdinBytes + bytes > processLimits.maxStdinBytes)"
+      },
+      {
+        "line": 992,
+        "text": "      throw new Error(\"process stdin total exceeds limit\");"
+      },
+      {
+        "line": 993,
+        "text": "    if ("
+      },
+      {
+        "line": 994,
+        "text": "      running.stdinPendingBytes + bytes > processLimits.maxStdinPendingBytes ||"
+      },
+      {
+        "line": 995,
+        "text": "      running.stdinPendingWrites >= processLimits.maxStdinPendingWrites"
+      },
+      {
+        "line": 996,
+        "text": "    )"
+      },
+      {
+        "line": 997,
+        "text": "      throw new Error(\"process stdin is backpressured; await pending writes\");"
+      },
+      {
+        "line": 998,
+        "text": "    running.stdinBytes += bytes;"
+      },
+      {
+        "line": 999,
+        "text": "    running.stdinPendingBytes += bytes;"
+      },
+      {
+        "line": 1000,
+        "text": "    running.stdinPendingWrites++;"
+      },
+      {
+        "line": 1001,
+        "text": "    const totalBytes = running.stdinBytes;"
+      },
+      {
+        "line": 1002,
+        "text": "    const operation = running.stdinTail"
+      },
+      {
+        "line": 1003,
+        "text": "      .then(async () => {"
+      },
+      {
+        "line": 1004,
+        "text": "        await this.authorize(owner, epoch);"
+      },
+      {
+        "line": 1005,
+        "text": "        this.writableProcess(owner, input.processId);"
+      },
+      {
+        "line": 1006,
+        "text": "        await this.sendInput(running, input.text as string);"
+      },
+      {
+        "line": 1007,
+        "text": "      })"
+      },
+      {
+        "line": 1008,
+        "text": "      .finally(() => {"
+      },
+      {
+        "line": 1009,
+        "text": "        running.stdinPendingBytes -= bytes;"
+      },
+      {
+        "line": 1010,
+        "text": "        running.stdinPendingWrites--;"
+      },
+      {
+        "line": 1011,
+        "text": "      });"
+      },
+      {
+        "line": 1012,
+        "text": "    running.stdinTail = operation.catch(() => {"
+      },
+      {
+        "line": 1013,
+        "text": "      running.stdinEnded = true;"
+      },
+      {
+        "line": 1014,
+        "text": "    });"
+      },
+      {
+        "line": 1015,
+        "text": "    await operation;"
+      },
+      {
+        "line": 1016,
+        "text": "    return { bytesWritten: bytes, totalBytes };"
+      },
+      {
+        "line": 1017,
+        "text": "  }"
+      },
+      {
+        "line": 1018,
+        "text": ""
+      },
+      {
+        "line": 1019,
+        "text": "  async end("
+      },
+      {
+        "line": 1020,
+        "text": "    owner: PanelProcessOwner,"
+      },
+      {
+        "line": 1021,
+        "text": "    params: unknown,"
+      },
+      {
+        "line": 1022,
+        "text": "  ): Promise<{ ended: true; totalBytes: number }> {"
+      },
+      {
+        "line": 1023,
+        "text": "    owner = { ...owner };"
+      },
+      {
+        "line": 1024,
+        "text": "    const epoch = this.epoch(owner);"
+      },
+      {
+        "line": 1025,
+        "text": "    await this.authorize(owner, epoch);"
+      },
+      {
+        "line": 1026,
+        "text": "    const processId = (params as { processId?: unknown } | null)?.processId;"
+      },
+      {
+        "line": 1027,
+        "text": "    const running = this.writableProcess(owner, processId);"
+      },
+      {
+        "line": 1028,
+        "text": "    if (running.stdinEnded) throw new Error(\"process stdin has ended\");"
+      },
+      {
+        "line": 1029,
+        "text": "    running.stdinEnded = true;"
+      },
+      {
+        "line": 1030,
+        "text": "    const operation = running.stdinTail.then(async () => {"
+      },
+      {
+        "line": 1031,
+        "text": "      await this.authorize(owner, epoch);"
+      },
+      {
+        "line": 1032,
+        "text": "      this.writableProcess(owner, processId);"
+      },
+      {
+        "line": 1033,
+        "text": "      await this.sendInput(running);"
+      },
+      {
+        "line": 1034,
+        "text": "    });"
+      },
+      {
+        "line": 1035,
+        "text": "    running.stdinTail = operation.catch(() => {});"
+      },
+      {
+        "line": 1036,
+        "text": "    await operation;"
+      },
+      {
+        "line": 1037,
+        "text": "    return { ended: true, totalBytes: running.stdinBytes };"
+      },
+      {
+        "line": 1038,
+        "text": "  }"
+      },
+      {
+        "line": 1039,
+        "text": ""
+      },
+      {
+        "line": 1040,
+        "text": "  private sendInput(running: RunningProcess, text?: string): Promise<void> {"
+      },
+      {
+        "line": 1041,
+        "text": "    const stream = running.child.stdin!;"
+      },
+      {
+        "line": 1042,
+        "text": "    return new Promise((resolve, reject) => {"
+      },
+      {
+        "line": 1043,
+        "text": "      let settled = false;"
+      },
+      {
+        "line": 1044,
+        "text": "      const finish = (error?: Error | null) => {"
+      },
+      {
+        "line": 1045,
+        "text": "        if (settled) return;"
+      },
+      {
+        "line": 1046,
+        "text": "        settled = true;"
+      },
+      {
+        "line": 1047,
+        "text": "        clearTimeout(timer);"
+      },
+      {
+        "line": 1048,
+        "text": "        stream.off(\"error\", onError);"
+      },
+      {
+        "line": 1049,
+        "text": "        running.child.off(\"close\", onClose);"
+      },
+      {
+        "line": 1050,
+        "text": "        if (error) reject(error);"
+      },
+      {
+        "line": 1051,
+        "text": "        else resolve();"
+      },
+      {
+        "line": 1052,
+        "text": "      };"
+      },
+      {
+        "line": 1053,
+        "text": "      const onError = (error: Error) => finish(error);"
+      },
+      {
+        "line": 1054,
+        "text": "      const onClose = () => finish(new Error(\"process exited before stdin completed\"));"
+      },
+      {
+        "line": 1055,
+        "text": "      const timer = setTimeout(() => {"
+      },
+      {
+        "line": 1056,
+        "text": "        this.terminate(running);"
+      },
+      {
+        "line": 1057,
+        "text": "        finish(new Error(\"process stdin write timed out\"));"
+      },
+      {
+        "line": 1058,
+        "text": "      }, processLimits.stdinWriteTimeoutMs);"
+      },
+      {
+        "line": 1059,
+        "text": "      timer.unref();"
+      },
+      {
+        "line": 1060,
+        "text": "      stream.once(\"error\", onError);"
+      },
+      {
+        "line": 1061,
+        "text": "      running.child.once(\"close\", onClose);"
+      },
+      {
+        "line": 1062,
+        "text": "      if (text === undefined) stream.end(() => finish());"
+      },
+      {
+        "line": 1063,
+        "text": "      else stream.write(text, \"utf8\", finish);"
+      },
+      {
+        "line": 1064,
+        "text": "    });"
+      },
+      {
+        "line": 1065,
+        "text": "  }"
+      },
+      {
+        "line": 1104,
+        "text": "    if (this.closed) return;"
+      },
+      {
+        "line": 1105,
+        "text": "    this.closed = true;"
+      },
+      {
+        "line": 1121,
+        "text": "    if (running.termination) return;"
+      },
+      {
+        "line": 1127,
+        "text": "      running.termination = killProcessGroup(pid).catch(() => {});"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/panels/tool-jobs.test.ts",
+    "sha256": "5a69a680c113eb70b0742741b1675ebdf070d60967382cc20bcd1a30e7400932",
+    "captureTiming": "After source displays. Only fully visible body intervals and later untruncated locator matches are captured. Earlier truncated or omitted locator/tail output not reconstructed as human read; not first-read/pre-read snapshot.",
+    "displayedLines": [
+      {
+        "line": 87,
+        "text": "  test(\"Host package identity survives queued restart, explicit retry and duplicate submission\", async () => {"
+      },
+      {
+        "line": 131,
+        "text": "  test(\"retry rejects changed content even at the same version and revision without relabeling history\", async () => {"
+      },
+      {
+        "line": 157,
+        "text": "  test(\"package changes during input preparation or while queued cannot launch a different program\", async () => {"
+      },
+      {
+        "line": 191,
+        "text": "  test(\"legacy history stays readable without inventing a package or retrying on a newer Host\", async () => {"
+      },
+      {
+        "line": 209,
+        "text": "  test(\"missing package inspection fails closed while retaining the original job for repair\", async () => {"
+      },
+      {
+        "line": 234,
+        "text": "  test(\"package mutation cannot pass admission authorization, queued work, cancellation cleanup or retry\", async () => {"
+      },
+      {
+        "line": 276,
+        "text": "  test(\"a full durable queue stays paused without a page and honors scope concurrency\", async () => {"
+      },
+      {
+        "line": 313,
+        "text": "  test(\"queue changes compare revisions across devices and survive Host restart\", async () => {"
+      },
+      {
+        "line": 337,
+        "text": "  test(\"queue validation, revoked access and corrupt catalog fail without starting work\", async () => {"
+      },
+      {
+        "line": 359,
+        "text": "  test(\"request lookup distinguishes absent, accepted and foreign-scope work without starting anything\", async () => {"
+      },
+      {
+        "line": 370,
+        "text": "  test(\"shared subscriptions stay scoped, omit task inputs/results, detach, and isolate listener failures\", async () => {"
+      },
+      {
+        "line": 402,
+        "text": "  test(\"cancelled input preparation cannot publish even if its preparer returns normally\", async () => {"
+      },
+      {
+        "line": 429,
+        "text": "  test(\"cancellation during queued publication cannot reach the executor\", async () => {"
+      },
+      {
+        "line": 445,
+        "text": "  test(\"persists input snapshots, progress and results, and never returns a work directory\", async () => {"
+      },
+      {
+        "line": 484,
+        "text": "  test(\"queues at most two executors and cancellation waits for the actual executor exit\", async () => {"
+      },
+      {
+        "line": 485,
+        "text": "    const c = controlled();"
+      },
+      {
+        "line": 486,
+        "text": "    const f = await fixture({ execute: c.execute });"
+      },
+      {
+        "line": 487,
+        "text": "    const jobs = await Promise.all("
+      },
+      {
+        "line": 488,
+        "text": "      [0, 1, 2].map((index) => f.service.start(scope, { ...request, input: { index } })),"
+      },
+      {
+        "line": 489,
+        "text": "    );"
+      },
+      {
+        "line": 490,
+        "text": "    await eventually(async () => (c.calls.length === 2 ? true : undefined));"
+      },
+      {
+        "line": 491,
+        "text": "    const queued = (await f.service.list(scope)).find((job) => job.status === \"queued\")!;"
+      },
+      {
+        "line": 492,
+        "text": "    expect((await f.service.cancel(scope, queued.id)).status).toBe(\"cancelled\");"
+      },
+      {
+        "line": 493,
+        "text": "    expect(c.calls).toHaveLength(2);"
+      },
+      {
+        "line": 494,
+        "text": "    const active = c.calls[0]!;"
+      },
+      {
+        "line": 495,
+        "text": "    let returned = false;"
+      },
+      {
+        "line": 496,
+        "text": "    const cancel = f.service.cancel(scope, active.job.id).then((job) => {"
+      },
+      {
+        "line": 497,
+        "text": "      returned = true;"
+      },
+      {
+        "line": 498,
+        "text": "      return job;"
+      },
+      {
+        "line": 499,
+        "text": "    });"
+      },
+      {
+        "line": 500,
+        "text": "    await eventually(async () => (active.context.signal.aborted ? true : undefined));"
+      },
+      {
+        "line": 501,
+        "text": "    expect((await f.service.get(scope, active.job.id)).status).toBe(\"cancelling\");"
+      },
+      {
+        "line": 502,
+        "text": "    expect(returned).toBe(false);"
+      },
+      {
+        "line": 503,
+        "text": "    active.gate.resolve({ ignoredAfterCancel: true });"
+      },
+      {
+        "line": 504,
+        "text": "    expect((await cancel).status).toBe(\"cancelled\");"
+      },
+      {
+        "line": 505,
+        "text": "    expect(await f.service.get(scope, active.job.id)).not.toHaveProperty(\"result\");"
+      },
+      {
+        "line": 506,
+        "text": "    c.calls[1]!.gate.resolve(null);"
+      },
+      {
+        "line": 507,
+        "text": "    await finished(f.service, c.calls[1]!.job.id);"
+      },
+      {
+        "line": 508,
+        "text": "    expect(jobs).toHaveLength(3);"
+      },
+      {
+        "line": 509,
+        "text": "  });"
+      },
+      {
+        "line": 510,
+        "text": ""
+      },
+      {
+        "line": 511,
+        "text": "  test(\"shutdown awaits executors and reopens as interrupted without rerunning\", async () => {"
+      },
+      {
+        "line": 512,
+        "text": "    const c = controlled();"
+      },
+      {
+        "line": 513,
+        "text": "    const f = await fixture({ execute: c.execute });"
+      },
+      {
+        "line": 514,
+        "text": "    const started = await f.service.start(scope, request);"
+      },
+      {
+        "line": 515,
+        "text": "    await eventually(async () => (c.calls.length ? true : undefined));"
+      },
+      {
+        "line": 516,
+        "text": "    let closed = false;"
+      },
+      {
+        "line": 517,
+        "text": "    const shutdown = f.service.shutdown().then(() => {"
+      },
+      {
+        "line": 518,
+        "text": "      closed = true;"
+      },
+      {
+        "line": 519,
+        "text": "    });"
+      },
+      {
+        "line": 520,
+        "text": "    await eventually(async () => (c.calls[0]!.context.signal.aborted ? true : undefined));"
+      },
+      {
+        "line": 521,
+        "text": "    expect(closed).toBe(false);"
+      },
+      {
+        "line": 522,
+        "text": "    c.calls[0]!.gate.resolve(null);"
+      },
+      {
+        "line": 523,
+        "text": "    await shutdown;"
+      },
+      {
+        "line": 524,
+        "text": "    let reruns = 0;"
+      },
+      {
+        "line": 542,
+        "text": "  test(\"abandoned running records become interrupted; old revisions are read-only\", async () => {"
+      },
+      {
+        "line": 574,
+        "text": "  test(\"manual and explicitly non-retryable failures require a new request\", async () => {"
+      },
+      {
+        "line": 575,
+        "text": "    const f = await fixture({"
+      },
+      {
+        "line": 576,
+        "text": "      execute: async () => {"
+      },
+      {
+        "line": 577,
+        "text": "        throw Object.assign(new Error(\"do not repeat\"), {"
+      },
+      {
+        "line": 578,
+        "text": "          code: \"BILLING_FAILED\","
+      },
+      {
+        "line": 579,
+        "text": "          retryable: false,"
+      },
+      {
+        "line": 580,
+        "text": "        });"
+      },
+      {
+        "line": 581,
+        "text": "      },"
+      },
+      {
+        "line": 582,
+        "text": "    });"
+      },
+      {
+        "line": 583,
+        "text": "    const first = await f.service.start(scope, request);"
+      },
+      {
+        "line": 584,
+        "text": "    expect(await finished(f.service, first.id)).toMatchObject({"
+      },
+      {
+        "line": 585,
+        "text": "      status: \"failed\","
+      },
+      {
+        "line": 586,
+        "text": "      error: { code: \"BILLING_FAILED\", retryable: false },"
+      },
+      {
+        "line": 587,
+        "text": "    });"
+      },
+      {
+        "line": 588,
+        "text": "    await expect(f.service.retry(scope, first.id)).rejects.toThrow(/manually reviewed/);"
+      },
+      {
+        "line": 589,
+        "text": "    const second = await f.service.start(scope, { ...request, recovery: \"manual\" });"
+      },
+      {
+        "line": 590,
+        "text": "    await finished(f.service, second.id);"
+      },
+      {
+        "line": 591,
+        "text": "    await expect(f.service.retry(scope, second.id)).rejects.toThrow(/manually reviewed/);"
+      },
+      {
+        "line": 592,
+        "text": "  });"
+      },
+      {
+        "line": 593,
+        "text": ""
+      },
+      {
+        "line": 594,
+        "text": "  test(\"request keys deduplicate committed tasks and reject changed inputs\", async () => {"
+      },
+      {
+        "line": 611,
+        "text": "  test(\"concurrent identical starts share input preparation and one task ID\", async () => {"
+      },
+      {
+        "line": 642,
+        "text": "  test(\"cancelling a duplicate waiter does not cancel the original task preparation\", async () => {"
+      },
+      {
+        "line": 669,
+        "text": "  test(\"failed shared preparation rejects all waiters and permits a later explicit retry\", async () => {"
+      },
+      {
+        "line": 700,
+        "text": "  test(\"revocation stops native work, denies new reads, and disables retry\", async () => {"
+      },
+      {
+        "line": 720,
+        "text": "  test(\"one Host owns a store, and interrupted input preparation cannot enter the queue\", async () => {"
+      }
+    ]
+  }
+]

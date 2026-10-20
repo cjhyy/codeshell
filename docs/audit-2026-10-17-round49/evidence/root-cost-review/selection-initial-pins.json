@@ -1,0 +1,39 @@
+{
+  "atUTC": "2026-10-17T16:28:34.758690+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lines": 265,
+      "beforeRootCurrentHypothesisNavigationAndBody": true,
+      "firstEverSemanticReadPin": null
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "lines": 817,
+      "beforeRootCurrentHypothesisNavigationAndBody": true,
+      "firstEverSemanticReadPin": null
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "lines": 391,
+      "beforeRootCurrentHypothesisNavigationAndBody": true,
+      "firstEverSemanticReadPin": null
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "bytes": 2357,
+      "sha256": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "lines": 66,
+      "beforeRootCurrentHypothesisNavigationAndBody": true,
+      "firstEverSemanticReadPin": null
+    }
+  ],
+  "role": "Known potential remote TUI /cost singleton mismatch; targeted verification not blind/unread frontier; product runtime0",
+  "baseline": "dc2b3d4c7b3650e36f27deda6f20c87712a8e684"
+}

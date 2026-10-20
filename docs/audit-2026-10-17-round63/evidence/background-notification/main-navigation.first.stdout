@@ -1,0 +1,10 @@
+104:  agentNotificationBus,
+300:  findNotificationWindow,
+301:  showNativeDesktopNotification,
+1748:        subscribe: (listener) => agentNotificationBus.subscribe(listener),
+3441:  desktopNotifier = new DesktopNotifier(
+3447:        showNativeDesktopNotification(input, {
+3452:                findNotificationWindow(mainWindows, bridge?.panelOwnerWebContentsId(sessionId)) ??
+3741:    agentNotificationBus.subscribe((envelope) =>
+3742:      desktopNotifications.notifyBackgroundResult(desktopNotifier, envelope),
+3750:    agentNotificationBus.subscribe(() => taskInboxService?.scheduleRefresh()),

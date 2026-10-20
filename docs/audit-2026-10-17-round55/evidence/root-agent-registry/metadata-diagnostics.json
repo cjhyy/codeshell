@@ -1,0 +1,19 @@
+{
+  "productFailures": 0,
+  "notes": [
+    {
+      "toolChunk": "7b93db",
+      "exitCode": 1,
+      "issue": "Guessed original MD under evidence/; actual MD at formal root. FileNotFound after two canonical rows printed.",
+      "followup": "Filename-only rg located correct MD, then report read; no product fixture or failure direction restarted.",
+      "rawSplitStdoutStderrPersisted": false
+    },
+    {
+      "toolChunk": "c9ff14",
+      "issue": "Root intentionally displayed only first17000 characters of derivative metadata object collection; only two original canonical objects subsequently read and stored. Not whole collection semantic claim."
+    }
+  ],
+  "sharedBatchFirstExit": {
+    "exitCode": 0
+  }
+}

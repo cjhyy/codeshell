@@ -1,0 +1,210 @@
+1: import { MAX_PANEL_DISCOVERY_DEPTH, MAX_PANEL_DISCOVERY_DIRECTORIES } from "./discovery.js";
+2: import type { GitPanelAppSourceInput } from "./installer.js";
+3: import { PANEL_APP_MANIFEST_FILE } from "./manifest.js";
+4: import { normalizeGitPanelAppSource } from "./source.js";
+5: 
+6: export const MAX_PANEL_UPDATE_MANIFEST_BYTES = 1024 * 1024;
+7: const GITHUB_MANIFEST_TIMEOUT_MS = 10_000;
+8: 
+9: type ManifestFetch = (input: URL, init: RequestInit) => Promise<Response>;
+10: 
+11: function withAbort<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+12:   return new Promise((resolve, reject) => {
+13:     const abort = () => {
+14:       signal.removeEventListener("abort", abort);
+15:       reject(new Error("GitHub version check timed out"));
+16:     };
+17:     operation.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+18:     if (signal.aborted) {
+19:       abort();
+20:       return;
+21:     }
+22:     signal.addEventListener("abort", abort, { once: true });
+23:   });
+24: }
+25: 
+26: function githubManifestUrl(source: GitPanelAppSourceInput, root = source.subdir): URL {
+27:   const repositoryPath = new URL(source.url).pathname.replace(/\.git$/, "");
+28:   const path = [root, PANEL_APP_MANIFEST_FILE]
+29:     .filter(Boolean)
+30:     .join("/")
+31:     .split("/")
+32:     .map(encodeURIComponent)
+33:     .join("/");
+34:   return new URL(
+35:     `https://raw.githubusercontent.com${repositoryPath}/${encodeURIComponent(source.ref ?? "HEAD")}/${path}`,
+36:   );
+37: }
+38: 
+39: async function readBoundedGitHubText(
+40:   url: URL,
+41:   fetchImpl: ManifestFetch,
+42:   signal: AbortSignal,
+43:   allowMissing = false,
+44: ): Promise<string | undefined> {
+45:   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+46:   let response: Response | undefined;
+47:   try {
+48:     response = await withAbort(
+49:       fetchImpl(url, {
+50:         method: "GET",
+51:         redirect: "error",
+52:         headers: {
+53:           Accept: "application/json",
+54:           "Accept-Encoding": "identity",
+55:           "User-Agent": "CodeShell-panel-app-version-check/1",
+56:         },
+57:         signal,
+58:       }),
+59:       signal,
+60:     );
+61:     if (response.status === 404) {
+62:       if (allowMissing) return undefined;
+63:       throw new Error("GitHub source manifest or ref was not found");
+64:     }
+65:     if (!response.ok) throw new Error(`GitHub version check returned HTTP ${response.status}`);
+66:     const declaredText = response.headers.get("content-length");
+67:     const declared = declaredText === null ? undefined : Number(declaredText);
+68:     if (
+69:       declaredText !== null &&
+70:       (!/^[0-9]+$/.test(declaredText) ||
+71:         !Number.isSafeInteger(declared) ||
+72:         declared! > MAX_PANEL_UPDATE_MANIFEST_BYTES)
+73:     ) {
+74:       throw new Error("Panel App source manifest response exceeds the 1 MiB limit");
+75:     }
+76:     if (!response.body) throw new Error("GitHub source manifest is empty");
+77:     reader = response.body.getReader();
+78:     const chunks: Buffer[] = [];
+79:     let total = 0;
+80:     for (;;) {
+81:       const { value, done } = await withAbort(reader.read(), signal);
+82:       if (done) break;
+83:       total += value.byteLength;
+84:       if (total > MAX_PANEL_UPDATE_MANIFEST_BYTES) {
+85:         throw new Error("Panel App source manifest response exceeds the 1 MiB limit");
+86:       }
+87:       chunks.push(Buffer.from(value));
+88:     }
+89:     if (declared !== undefined && total !== declared) {
+90:       throw new Error("GitHub source manifest length does not match Content-Length");
+91:     }
+92:     return Buffer.concat(chunks, total).toString("utf8");
+93:   } finally {
+94:     // Cancellation must not delay a timed-out version check when a peer stops sending data.
+95:     void (reader ? reader.cancel() : response?.body?.cancel())?.catch(() => undefined);
+96:   }
+97: }
+98: 
+99: function uniqueGitHubPanelRoot(text: string, source: GitPanelAppSourceInput): string {
+100:   const data: unknown = JSON.parse(text);
+101:   if (
+102:     !data ||
+103:     typeof data !== "object" ||
+104:     !("truncated" in data) ||
+105:     data.truncated !== false ||
+106:     !("tree" in data) ||
+107:     !Array.isArray(data.tree)
+108:   ) {
+109:     throw new Error("GitHub directory discovery is incomplete; select the Panel App subdirectory");
+110:   }
+111:   const prefix = source.subdir ? `${source.subdir}/` : "";
+112:   const candidates = new Set<string>();
+113:   const directories = new Set<string>();
+114:   for (const entry of data.tree) {
+115:     if (
+116:       !entry ||
+117:       typeof entry !== "object" ||
+118:       typeof entry.path !== "string" ||
+119:       entry.path.length > 4_096 ||
+120:       !["blob", "tree", "commit"].includes(entry.type)
+121:     ) {
+122:       throw new Error("GitHub directory discovery returned an invalid tree");
+123:     }
+124:     if (!entry.path.startsWith(prefix)) continue;
+125:     const relative = entry.path.slice(prefix.length);
+126:     const parts = relative.split("/");
+127:     if (parts.some((part) => !part || part === "." || part === ".." || part.includes("\0"))) {
+128:       throw new Error("GitHub directory discovery returned an invalid path");
+129:     }
+130:     if (
+131:       entry.type === "tree" &&
+132:       parts.length <= MAX_PANEL_DISCOVERY_DEPTH &&
+133:       parts.every((part) => !part.startsWith(".") && part !== "node_modules")
+134:     ) {
+135:       directories.add(relative);
+136:     }
+137:     if (entry.type !== "blob" || parts.slice(-2).join("/") !== PANEL_APP_MANIFEST_FILE) continue;
+138:     const rootParts = parts.slice(0, -2);
+139:     if (
+140:       rootParts.length > MAX_PANEL_DISCOVERY_DEPTH ||
+141:       rootParts.some((part) => part.startsWith(".") || part === "node_modules")
+142:     )
+143:       continue;
+144:     if (entry.mode === "120000") {
+145:       throw new Error("GitHub Panel App manifest must not be a symbolic link");
+146:     }
+147:     candidates.add(rootParts.join("/"));
+148:   }
+149:   // Match installer discovery: once a panel root is found, its children are package contents.
+150:   const roots = [...candidates].filter(
+151:     (root) =>
+152:       ![...candidates].some(
+153:         (parent) => parent !== root && (!parent || root.startsWith(`${parent}/`)),
+154:       ),
+155:   );
+156:   const visitedDirectories = [...directories].filter(
+157:     (directory) => !roots.some((root) => !root || directory.startsWith(`${root}/`)),
+158:   );
+159:   if (visitedDirectories.length + 1 > MAX_PANEL_DISCOVERY_DIRECTORIES) {
+160:     throw new Error("GitHub directory discovery limit exceeded; select the Panel App subdirectory");
+161:   }
+162:   if (roots.length !== 1) {
+163:     throw new Error(
+164:       roots.length > 1
+165:         ? "multiple Panel Apps found; select the Panel App subdirectory"
+166:         : "GitHub source manifest or ref was not found",
+167:     );
+168:   }
+169:   return [source.subdir, roots[0]].filter(Boolean).join("/");
+170: }
+171: 
+172: /**
+173:  * Fetch only the source manifest. Legacy parent-directory installs use one bounded tree listing
+174:  * after a 404, then read the unique panel manifest; package archives and code are never fetched.
+175:  */
+176: export async function readGitHubPanelAppManifest(
+177:   input: GitPanelAppSourceInput,
+178:   options: { fetch?: ManifestFetch; timeoutMs?: number } = {},
+179: ): Promise<string> {
+180:   const source = normalizeGitPanelAppSource(input);
+181:   const controller = new AbortController();
+182:   const timeout = setTimeout(
+183:     () => controller.abort(),
+184:     options.timeoutMs ?? GITHUB_MANIFEST_TIMEOUT_MS,
+185:   );
+186:   const fetchImpl = options.fetch ?? globalThis.fetch;
+187:   try {
+188:     const direct = await readBoundedGitHubText(
+189:       githubManifestUrl(source),
+190:       fetchImpl,
+191:       controller.signal,
+192:       true,
+193:     );
+194:     if (direct !== undefined) return direct;
+195:     const repositoryPath = new URL(source.url).pathname.replace(/\.git$/, "");
+196:     const treeUrl = new URL(
+197:       `https://api.github.com/repos${repositoryPath}/git/trees/${encodeURIComponent(source.ref ?? "HEAD")}?recursive=1`,
+198:     );
+199:     const tree = await readBoundedGitHubText(treeUrl, fetchImpl, controller.signal);
+200:     const root = uniqueGitHubPanelRoot(tree!, source);
+201:     return (await readBoundedGitHubText(
+202:       githubManifestUrl(source, root),
+203:       fetchImpl,
+204:       controller.signal,
+205:     ))!;
+206:   } finally {
+207:     clearTimeout(timeout);
+208:     controller.abort();
+209:   }
+210: }

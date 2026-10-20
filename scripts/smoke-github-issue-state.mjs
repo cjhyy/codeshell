@@ -2,6 +2,7 @@
  * Synthetic provider/account only. No sibling Services source or real GitHub request.
  */
 import assert from "node:assert/strict";
+import { linkProviderModuleUrl } from "./fixtures/link-provider-module.mjs";
 import { spawn } from "node:child_process";
 import { createServer, request as httpRequest } from "node:http";
 import https from "node:https";
@@ -70,6 +71,8 @@ if (process.argv[2] === "--worker") {
   syncBuiltinESMExports();
   // This import happens only after the parent has verified the preload receipt.
   const core = await import("@cjhyy/code-shell-core");
+  const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
+  installDefaultLinkProviders();
   const store = new core.CredentialStore(root, new core.PlaintextCipher(), join(root, "custody"));
   if (process.argv[3] !== "--resume") {
     const attempt = core.beginRemoteLinkAuthorization(
@@ -140,10 +143,16 @@ if (process.argv[2] === "--worker") {
           ],
         };
       }
-      assert.match(
-        JSON.stringify(results.find((block) => block.tool_use_id === "fixture-select")),
-        /schemaRef: select:LinkAction/,
-      );
+      // A resumed session restores its selected tool schemas, so the discovery
+      // receipt may belong to the earlier run rather than the current intent.
+      const selectionReceipt = request.messages
+        .flatMap((message) =>
+          message.role === "user" && Array.isArray(message.content)
+            ? message.content.filter((block) => block.type === "tool_result")
+            : [],
+        )
+        .findLast((block) => block.tool_use_id === "fixture-select");
+      assert.match(JSON.stringify(selectionReceipt), /schemaRef: select:LinkAction/);
       return results.some((block) => block.tool_use_id === "fixture-state")
         ? { text: "Model claims success", stopReason: "stop", usage, toolCalls: [] }
         : {
@@ -387,7 +396,7 @@ if (process.argv[2] === "--worker") {
     AGENT_CWD: root,
     CODE_SHELL_DATA_ROOT: join(root, "data"),
     CODESHELL_COST_SMOKE_GUARD_LOG: receiptFile,
-    CODE_SHELL_CAPABILITY_MODULES: "",
+    CODE_SHELL_CAPABILITY_MODULES: `${linkProviderModuleUrl}#createLinkProviderModule`,
     CODE_SHELL_DEV: "0",
     CODESHELL_SELF_UPDATE_CHECK: "0",
   };

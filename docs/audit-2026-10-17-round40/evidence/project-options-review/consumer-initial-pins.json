@@ -1,0 +1,41 @@
+{
+  "capturedUTC": "2026-10-17T13:46:07.850180+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+      "bytes": 48293,
+      "lineCount": 1237,
+      "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+      "pinBeforeSelectedBodyRead": true,
+      "navigationBeforeDedicatedPinLines": [
+        25,
+        317,
+        1096
+      ],
+      "initialBeforeAnyContentReadSha256": null,
+      "timingNote": "Only navigation locator lines preceded this dedicated pin; preserve distinction from selected body read."
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "bytes": 4376,
+      "lineCount": 107,
+      "sha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+      "pinBeforeSelectedBodyRead": true,
+      "navigationBeforeDedicatedPinLines": [
+        8
+      ],
+      "initialBeforeAnyContentReadSha256": null,
+      "timingNote": "Only navigation locator lines preceded this dedicated pin; preserve distinction from selected body read."
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+      "bytes": 3130,
+      "lineCount": 78,
+      "sha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "pinBeforeSelectedBodyRead": true,
+      "navigationBeforeDedicatedPinLines": [],
+      "initialBeforeAnyContentReadSha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "timingNote": "Pinned before body read in this review."
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "writtenUTC": "2026-10-17T14:22:07.659656+00:00",
+  "kind": "Metadata-only displayed-range clarification; frozen original23 artifacts unchanged",
+  "originalManifest": {
+    "path": "/tmp/codeshell-audit-round43-process-state-review/source-manifest.json",
+    "bytes": 7861,
+    "sha256": "26efe22f5cbeb19f19f2e88965be1a8cdcb651b2bfabd1bd44df1f19f2bbb8f5"
+  },
+  "sourcePath": "packages/server/src/panels/process-service.ts",
+  "originalDisplayedBodyRanges": [
+    [
+      732,
+      771
+    ],
+    [
+      846,
+      892
+    ],
+    [
+      894,
+      965
+    ]
+  ],
+  "originalBodyRangeUnionLines": 159,
+  "originalAlreadyStoredAdditionalNavigationSnippetLines": [
+    11,
+    12,
+    15,
+    34,
+    35,
+    89,
+    311,
+    318,
+    780,
+    841,
+    969,
+    1061,
+    1083,
+    1117,
+    1123,
+    1124
+  ],
+  "additionalNavigationCount": 16,
+  "additionalNavigationWithinBody": [],
+  "combinedDisplayedLineRanges": [
+    [
+      11,
+      12
+    ],
+    [
+      15,
+      15
+    ],
+    [
+      34,
+      35
+    ],
+    [
+      89,
+      89
+    ],
+    [
+      311,
+      311
+    ],
+    [
+      318,
+      318
+    ],
+    [
+      732,
+      771
+    ],
+    [
+      780,
+      780
+    ],
+    [
+      841,
+      841
+    ],
+    [
+      846,
+      892
+    ],
+    [
+      894,
+      965
+    ],
+    [
+      969,
+      969
+    ],
+    [
+      1061,
+      1061
+    ],
+    [
+      1083,
+      1083
+    ],
+    [
+      1117,
+      1117
+    ],
+    [
+      1123,
+      1124
+    ]
+  ],
+  "combinedDisplayedLineCount": 175,
+  "originalDeclaredDisplayedLineCount": 175,
+  "totalDisplayedLinesAll3FilesRemains": 357,
+  "allSelected75WithinCombinedDisplayed": true,
+  "ordinarySemanticTotalUnchanged": 222,
+  "provenanceFromExistingToolOutputs": [
+    {
+      "toolChunk": "93d776",
+      "lines": [
+        11,
+        12,
+        15,
+        89,
+        311,
+        318,
+        1083,
+        1117
+      ],
+      "scope": "Initial post-pin service name/record/receipt locator output"
+    },
+    {
+      "toolChunk": "ce183a",
+      "lines": [
+        780,
+        841,
+        969,
+        1061,
+        1123,
+        1124
+      ],
+      "scope": "Existing post-pin emit/status/once-close navigation output"
+    },
+    {
+      "toolChunk": "808648",
+      "lines": [
+        34,
+        35,
+        1123,
+        1124
+      ],
+      "scope": "Existing post-pin constant/stopping-field navigation output"
+    }
+  ],
+  "limits": "Only frozen metadata and already visible tool records used. No source body or product bytes reread, no new semantic coverage, no helper/fixture/test/native/Git execution. Combined ranges are a display schema clarification; original files/receipt remain authoritative unchanged byte artifacts."
+}

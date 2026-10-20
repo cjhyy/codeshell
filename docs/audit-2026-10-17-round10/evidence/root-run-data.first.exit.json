@@ -1,0 +1,15 @@
+{
+  "baseline": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round10/evidence/root-run-data.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "rawCombinedStdoutStderrSavedBeforeInspection": true,
+  "elapsedSeconds": 0.37334513664245605,
+  "scope": "New CheckpointWriter heuristic observation and ordinary metadata/store controls; real source classes with fake store or owned temp; no Engine/RunManager."
+}

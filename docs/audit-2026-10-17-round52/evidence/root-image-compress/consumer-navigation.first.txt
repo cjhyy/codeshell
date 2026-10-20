@@ -1,0 +1,56 @@
+packages/desktop/src/renderer/ChatView.tsx:54:  type ImageAttachment,
+packages/desktop/src/renderer/ChatView.tsx:62:import { compressBatch, type ImageDetail } from "./chat/compress";
+packages/desktop/src/renderer/ChatView.tsx:199:  imageDetail?: ImageDetail;
+packages/desktop/src/renderer/ChatView.tsx:257:  attachments: ImageAttachment[];
+packages/desktop/src/renderer/ChatView.tsx:258:  onAttachmentsChange: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
+packages/desktop/src/renderer/ChatView.tsx:280:function toRunAttachments(images: ImageAttachment[]): InputAttachmentMeta[] {
+packages/desktop/src/renderer/ChatView.tsx:422:  imageDetail,
+packages/desktop/src/renderer/ChatView.tsx:1238:      // will actually be sent. compressBatch never throws; it falls
+packages/desktop/src/renderer/ChatView.tsx:1241:      const compressed = await compressBatch(accepted, imageDetail);
+packages/desktop/src/renderer/ChatView.tsx:1258:                dataUrl: att.dataUrl,
+packages/desktop/src/renderer/ChatView.tsx:1324:      if (file.type.startsWith("image/") || (path && classifyPath(path) === "image")) {
+packages/desktop/src/renderer/ChatView.tsx:2082:                      src={a.dataUrl}
+packages/desktop/src/renderer/ChatView.tsx:2091:                            src: g.dataUrl,
+packages/desktop/src/renderer/chat/compress.test.ts:3:  scaledDimensions,
+packages/desktop/src/renderer/chat/compress.test.ts:12: * Only `scaledDimensions` is unit-testable in pure Node — the rest of
+packages/desktop/src/renderer/chat/compress.test.ts:14: * don't fake here. The interesting bug surface is the aspect-ratio math
+packages/desktop/src/renderer/chat/compress.test.ts:19:describe("scaledDimensions", () => {
+packages/desktop/src/renderer/chat/compress.test.ts:21:    expect(scaledDimensions(1024, 768, 2048)).toEqual({ width: 1024, height: 768 });
+packages/desktop/src/renderer/chat/compress.test.ts:22:    expect(scaledDimensions(2048, 2048, 2048)).toEqual({ width: 2048, height: 2048 });
+packages/desktop/src/renderer/chat/compress.test.ts:27:    expect(scaledDimensions(4000, 2000, 2048)).toEqual({ width: 2048, height: 1024 });
+packages/desktop/src/renderer/chat/compress.test.ts:32:    expect(scaledDimensions(2000, 4000, 2048)).toEqual({ width: 1024, height: 2048 });
+packages/desktop/src/renderer/chat/compress.test.ts:36:    expect(scaledDimensions(4096, 4096, 2048)).toEqual({ width: 2048, height: 2048 });
+packages/desktop/src/renderer/chat/compress.test.ts:39:  test("preserves aspect ratio within one pixel (rounding-tolerant)", () => {
+packages/desktop/src/renderer/chat/compress.test.ts:41:    const { width, height } = scaledDimensions(5123, 2718, 2048);
+packages/desktop/src/renderer/chat/attachments.ts:18:export interface ImageAttachment {
+packages/desktop/src/renderer/chat/attachments.ts:26:  dataUrl: string;
+packages/desktop/src/renderer/chat/attachments.ts:67:  allowedMimes: new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"]),
+packages/desktop/src/renderer/chat/attachments.ts:91: * Validate + read a batch of files into ImageAttachment. Returns the
+packages/desktop/src/renderer/chat/attachments.ts:98:  existing: ImageAttachment[],
+packages/desktop/src/renderer/chat/attachments.ts:99:): Promise<{ accepted: ImageAttachment[]; errors: AttachmentError[] }> {
+packages/desktop/src/renderer/chat/attachments.ts:101:  const accepted: ImageAttachment[] = [];
+packages/desktop/src/renderer/chat/attachments.ts:135:      const dataUrl = await readFileAsDataUrl(file);
+packages/desktop/src/renderer/chat/attachments.ts:140:        dataUrl,
+packages/desktop/src/renderer/chat/attachments.ts:158:function parseDataUrlMeta(dataUrl: string): { mime: string; size: number } | null {
+packages/desktop/src/renderer/chat/attachments.ts:159:  const m = /^data:([^;,]+)?(;base64)?,([\s\S]*)$/.exec(dataUrl);
+packages/desktop/src/renderer/chat/attachments.ts:161:  const mime = m[1] || "image/png";
+packages/desktop/src/renderer/chat/attachments.ts:173: * lets the assistant/tools reference the original file. `dataUrl` is read by
+packages/desktop/src/renderer/chat/attachments.ts:179:  dataUrl: string,
+packages/desktop/src/renderer/chat/attachments.ts:180:  existing: ImageAttachment[],
+packages/desktop/src/renderer/chat/attachments.ts:182:    Pick<ImageAttachment, "path" | "relPath" | "absPath" | "sha256" | "origin" | "sessionId">
+packages/desktop/src/renderer/chat/attachments.ts:184:): { attachment?: ImageAttachment; error?: AttachmentError } {
+packages/desktop/src/renderer/chat/attachments.ts:195:  const dataMeta = parseDataUrlMeta(dataUrl);
+packages/desktop/src/renderer/chat/attachments.ts:228:      dataUrl,
+packages/desktop/src/renderer/chat/attachments.ts:250:export function encodeAttachmentsForWire(text: string, images: ImageAttachment[]): string {
+packages/desktop/src/renderer/chat/attachments.ts:253:    .map((img) => `<codeshell-image ${imageAttrs(img)}>\n${img.dataUrl}\n</codeshell-image>`)
+packages/desktop/src/renderer/chat/attachments.ts:258:function imageAttrs(img: ImageAttachment): string {
+packages/desktop/src/renderer/chat/attachments.ts:294:  images: { name: string; mime: string; dataUrl: string }[];
+packages/desktop/src/renderer/chat/attachments.ts:302: * instead of 60 chars of `data:image/png;base64,…`.
+packages/desktop/src/renderer/chat/attachments.ts:328:      const dataUrl = body.trim();
+packages/desktop/src/renderer/chat/attachments.ts:334:      if (dataUrl === "") return "";
+packages/desktop/src/renderer/chat/attachments.ts:335:      const mime = /mime="([^"]*)"/.exec(attrsRaw)?.[1] ?? "image/png";
+packages/desktop/src/renderer/chat/attachments.ts:340:        dataUrl,
+packages/desktop/src/renderer/chat/attachments.ts:359:    if (it.kind === "file" && it.type.startsWith("image/")) {
+packages/desktop/src/renderer/chat/attachments.ts:375:    if (it.kind === "file" && it.type.startsWith("image/")) {
+packages/desktop/src/renderer/chat/attachments.ts:383:export async function sha256FromDataUrl(dataUrl: string): Promise<string | undefined> {
+packages/desktop/src/renderer/chat/attachments.ts:384:  const match = /^data:[^;,]+;base64,([\s\S]*)$/.exec(dataUrl);

@@ -1,0 +1,12 @@
+{
+  "baseline": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "main": "ab3b801f00d18ceabe824c099c3bd4824bae32c3",
+  "paths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/src/renderer/MessageStream.test.tsx",
+    "packages/desktop/src/renderer/MessageStream.tsx",
+    "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx"
+  ],
+  "productRuns": 0
+}

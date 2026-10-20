@@ -1,0 +1,29 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+    "bytes": 55598,
+    "sha256": "ce815200130b58605bcab247b8feeab84df2f2ccd20260a9590963b34f789533",
+    "selectedObject": "/sources/132",
+    "value": {
+      "path": "scripts/package-release-audit-config.ts",
+      "bytes": 9020,
+      "frozenSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "currentSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "matchesFrozen": true,
+      "coverage": "selected45-105 release roster; source only, no validators/build/publish execution"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+    "bytes": 27024,
+    "sha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf",
+    "selectedObject": "/files/90",
+    "value": {
+      "path": "scripts/package-release-audit-config.ts",
+      "bytes": 9020,
+      "sha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  }
+]

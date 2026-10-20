@@ -1,0 +1,13 @@
+{
+  "sameShaCanonicalTargetFullEstablished": false,
+  "decision": "Proceed with current target ordinary preview module static review; not first-ever/unread guarantee.",
+  "currentTargetSha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+  "canonicalEvidence": [
+    "R39 source-manifest/hashOnlyFiles127 explicitly hash-only-before-any-current-semantic-read.",
+    "R45 source-manifest/hashOnlyFiles0 no source body read; report14 explicitly leaves preview hash-only.",
+    "R50 frontier-selection source-manifest/files23 sameSHA hash-only/selected[]/body0."
+  ],
+  "methodBoundary": "scope/review/readScope/inspectionScope/reviewMode and source ranges checked; hash-only/rank/unknown/no-row do not imply full or never read. No generic field alias auto-full.",
+  "oldCauseLimitation": "ThemePackPreview AND preview/theme etc is broad and here has same151hits as filename; not independent exact-cause novelty proof, cap100 not exhausted. No new issue proposed.",
+  "failedDirections": "Historical rejected/failed dynamic directions remain SKIP; no product or test runtime resumed."
+}

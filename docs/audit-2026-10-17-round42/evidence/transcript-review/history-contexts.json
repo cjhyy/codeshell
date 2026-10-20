@@ -1,0 +1,2614 @@
+{
+  "createdUTC": "2026-10-17T14:18:00.680794+00:00",
+  "hits": {
+    "source_path": [
+      {
+        "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "jsonPointer": null,
+        "line": 206,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "in/mobile-remote/room-manager.ts:438` 到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end` action 调 `appendT",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "jsonPointer": null,
+        "line": 206,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "ote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end` action 调 `appendTurnEndMessage()`。\n- `packages/desktop/src/renderer/types.ts:1196` 到 `packages",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/636",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/1308",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/1323/path",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "bytes": 6622,
+          "lines": 195,
+          "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "jsonPointer": "/contexts/history-mapping/2/context",
+        "line": 4,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "manager.ts:438` 到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "jsonPointer": "/contexts/history-mapping/2/context",
+        "line": 4,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "ote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/49/matches/4/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/49/matches/4/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/80/matches/1/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "jsonPointer": "/source_inventory/636",
+          "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+        },
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/1/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/3/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/5/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/7/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/9/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/11/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/13/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/1/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/3/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/5/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/7/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/9/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/11/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/13/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/225/matches/1/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/1/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/3/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/5/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/7/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/9/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/11/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/13/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/227/matches/1/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/1/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/3/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/5/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/7/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/9/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/229/matches/1/text",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/522/resolved",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent.ts",
+          "specifier": "./agent-transcript-translator.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/526/from",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "specifier": "./agent-registry.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-registry.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/597/resolved",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent.ts",
+          "specifier": "./agent-transcript-translator.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/604/from",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "specifier": "./agent-registry.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-registry.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      }
+    ],
+    "source_filename": [
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "jsonPointer": null,
+        "line": 2112,
+        "needle": "agent-transcript-translator",
+        "context": "agent.ts` / `Agent` | 启动子代理 | prompt + agent_type/name/max_turns/run_in_background | 子代理可并行或后台运行；后台状态进程内保存 |\n| `agent-registry.ts` | 后台 agent registry | agentId → status/result/cancel/transcript | process-local，进程崩溃丢状态；上限 `MAX_BACKGROUND_AGENTS = 6` |\n| `agent-notifications.ts` | 后台 agent 完成通知 | 与 Agent 工具配合 | 通知和 transcript routing 需避免串流到主会话 |\n| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |\n| `arena.ts` / `Arena` | 多模型协作分析工具 | topic + participants/config | 会调用多个 LLM，成本高；见第 27 节 |\n| `task.ts` / `TodoWrite` | 管理任务列表 | todos 全量快照 | UI pinned panel 依赖；TaskGuard 会提醒 stale in_progress |\n| `brief.ts` | 简报/摘要类工具 | 由定义决定 | 通常只读/文本生成 |\n\nAgent 工具与 Engine 的 subAgentSpawner 连接：Engine 在 ToolContext 中注入 spawner，Agent 工具据此创建子 Engine 或后台 agent。后台 registry 是进程级内存，不是跨进程 durable run。\n\n### 24.5 MCP / LSP / Skill / Memory / Config / Cron 类\n\n| 工具/文件 | 功能 | 使用方式 | 风险 |\n|---|---|---|---|\n| `mcp-tools.ts` / `MCPTool`、`ListMcpResources`、`ReadMcpResource` | 通过 MCPManager 调 MCP server | server/tool/resource 参",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9"
+      },
+      {
+        "path": "docs/archive/core-risk-signal-index.md",
+        "jsonPointer": null,
+        "line": 160,
+        "needle": "agent-transcript-translator",
+        "context": "bypassPermissions`×1, `acceptEdits`×1, `timeout`×1 |\n| `skills/frontmatter.ts` | `catch {`×2, `join(`×1 |\n| `skills/scanner.ts` | `catch {`×2, `join(`×5 |\n| `state.ts` | `as any`×8 |\n| `tool-system/builtin/agent-notifications.ts` | `as any`×2, `catch {`×2, `join(`×4 |\n| `tool-system/builtin/agent-registry.ts` | `catch {`×3 |\n| `tool-system/builtin/agent-transcript-translator.ts` | `as any`×7 |\n| `tool-system/builtin/agent.ts` | `join(`×6, `spawn`×22, `exec`×1, `fire-and-forget`×1, `timeout`×12, `AbortController`×2, `throw new Error`×1 |\n| `tool-system/builtin/apply-patch/applier.ts` | `catch {`×3, `join(`×2, `throw new Error`×7 |\n| `tool-system/builtin/apply-patch/index.ts` | `join(`×2 |\n| `tool-system/builtin/apply-patch/parser.ts` | `join(`×1 |\n| `tool-system/builtin/arena.ts` | `catch {`×1, `join(`×4, `exec`×2, `throw new Error`×1 |\n| `tool-system/builtin/ask-user.ts` | `exec`×2 |\n| `tool-system/builtin/bash.ts` | `spawn`×7, `exec`×2, `timeout`×9 |\n| `tool-system/builtin/config.ts` | `writeFileSync`×2, `join(`×2 |\n| `tool-system/builtin/cron.ts` | `join(`×1,",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "316fe82e34d1c76cdbea35e8700d45132ab7b689e9b45a61f64618bf0e82ffc4"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "jsonPointer": null,
+        "line": 206,
+        "needle": "agent-transcript-translator",
+        "context": "到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end` action 调 `appe",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "jsonPointer": null,
+        "line": 206,
+        "needle": "agent-transcript-translator",
+        "context": "n_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end` action 调 `appendTurnEndMessage()`。\n- `packages/desktop/src/renderer/types.ts:1196` 到 `packa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132"
+      },
+      {
+        "path": "docs/archive/subagent-design-comparison-2026-05-27.md",
+        "jsonPointer": null,
+        "line": 10,
+        "needle": "agent-transcript-translator",
+        "context": "# 子 Agent 设计对比与改进建议\n\n> 2026-05-27 · 对比 Codex / Claude Code / OpenCode 的子 agent 机制，针对 codeshell 现状给出可落地的改进点。\n> 范围：机制对比 + 具体改进建议，不含代码实现。\n\n---\n\n## 1. codeshell 现状速览\n\n源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。\n\n核心事实：\n\n- **派发**：`Agent(description, prompt, name?, maxTurns?, run_in_background?)` 工具。支持同步（阻塞父级）和后台（`run_in_background`）两种模式。同一条 LLM 消息里多个 `Agent` 调用会并行执行。\n- **定义方式**：**没有 agent 定义注册表**。每次调用都是临时（ephemeral）的——`name` / `description` / `prompt` 全部是调用时传入的字符串参数。`agent-registry.ts` 只存运行时元数据（id、status、时间戳、abort handle），不存\"agent 类型定义\"。\n- **上下文隔离**：每个子 agent 是一个全新的 `Engine` 实例（`engine.ts:563`），独立 session、独立 transcript。**只传入 prompt 文本，不继承父级 transcript**。返回时只回传最终文本（后台 agent 的完整 transcript 单独存在 registry 里供 UI 渲染）。\n- **工具权限**：派发时从父级继承 `disabledBuiltinTools` / `enabledBuiltinTools`，并强制剥离 `Agent`/`AgentStatus`/`AgentCancel`（禁止嵌套）。**无法按 agent 类型定",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "47a8e5da53d674fd1077a3916988262373a09f444bc6d0a63c491547068c8d09"
+      },
+      {
+        "path": "docs/archive/subagent-design-comparison-2026-05-27.md",
+        "jsonPointer": null,
+        "line": 81,
+        "needle": "agent-transcript-translator",
+        "context": "ex `model_reasoning_effort`）：在 `Agent` 工具/agent 定义里暴露 `model`，把廉价的检索/总结任务路由到便宜模型。codeshell 已经在 arena 里证明了多模型 resolve 能力（`MODEL_PRESETS`），把同一套机制接到 `Agent` 即可，不用从零做。\n\n3. **并发上限 + 子 agent 超时**（对标 Codex `max_threads` / `max_depth`）：给后台 agent 加进程级并发上限和单 agent 超时，避免内存里无界堆积、避免同步调用卡死时父级空烧 `maxTurns`。\n\n### P2：体验与可观测性\n\n4. **后台 agent 结果流式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。\n\n5. **子 agent 生命周期 hooks**：现状 `engine.ts:231` 对子 agent 禁用了 shell hooks，可观测性弱。至少补 start/finish/error 三个事件，便于审计和调试。\n\n6. **（可选）自动委派**：对标 CC——让 LLM 读 agent 定义的 `description` 自行决定何时委派，而不是每次显式 `Agent` 调用。这是心智模型上的提升，但要权衡可控性，建议放最后、且默认关闭。\n\n---\n\n## 4. 一句话总结\n\ncodeshell 的子 agent 在**运行时机制**（独立 Engine、并行、后台通知、arena 多模型）上其实不弱，**真正的短板在\"定义层\"**：缺少可复用的 agent 角色注册表，导致工具白名单、模型路由这些三家都标配的 per-agent 能力无处挂载。建议优先补 P0 的定义注册表，再在其上叠加 P1 的三项 per-agent 能力——改动集中、收益最大。\n\n---\n\n### 参考来源\n- [Create custom subagents — Claude Code Docs](https://code.claude.com/docs/en/sub-agents)\n- [Subagents in the SDK — Claude API Docs](https://platform.claude.com/docs/en/agent-sdk/subagents)\n- [S",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "47a8e5da53d674fd1077a3916988262373a09f444bc6d0a63c491547068c8d09"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/636",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "jsonPointer": "/contexts/stream_revoke/4/context",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ec9c35efee5c80ec69a6c5b33d273ef095133164b5e4e6b8a0f2669495c0f8a0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/1308",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/1323/path",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "bytes": 6622,
+          "lines": 195,
+          "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "jsonPointer": "/contexts/history-mapping/2/context",
+        "line": 4,
+        "needle": "agent-transcript-translator",
+        "context": "到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "jsonPointer": "/contexts/history-mapping/2/context",
+        "line": 4,
+        "needle": "agent-transcript-translator",
+        "context": "n_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/skills-dedup-corpus.json",
+        "jsonPointer": "/hits/106/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b3293013b7a3e7b39f209c1d8e51b4c6700a6bebd8a66727a3a52967b674c2e2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/root-dedup.json",
+        "jsonPointer": "/matches/50/excerpt",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "cb465195195433b72d3de735ea2a724470a22fd3bf6ad781f58f83fbe61dd7c2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/23/matches/26/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/34/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "| `tool-system/builtin/agent-transcript-translator.ts` | `as any`×7 |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/49/matches/4/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/49/matches/4/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/60/matches/0/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/60/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "4. **后台 agent 结果流式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/80/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "jsonPointer": "/source_inventory/636",
+          "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+        },
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/108/matches/2/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/122/matches/0/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/5/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/7/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/9/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/11/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/13/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/5/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/7/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/9/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/11/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/13/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/225/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/5/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/7/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/9/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/11/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/13/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/227/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/5/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/7/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/9/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/229/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/320/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/522/specifier",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "./agent-transcript-translator.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/522/resolved",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent.ts",
+          "specifier": "./agent-transcript-translator.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/526/from",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "specifier": "./agent-registry.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-registry.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/597/specifier",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "./agent-transcript-translator.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/597/resolved",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent.ts",
+          "specifier": "./agent-transcript-translator.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/604/from",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "specifier": "./agent-registry.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-registry.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+        "jsonPointer": "/modules/38/productionFiles/9",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e633c7a607420e27750c2d2f2bba294a405728d93ddf6310c2aefa6e62634bb9"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-20-bg-agent-completion-notification-design.md",
+        "jsonPointer": null,
+        "line": 61,
+        "needle": "agent-transcript-translator",
+        "context": "hind stream events. Out of scope.\n- **Synchronous sub-agents.** `Agent(run_in_background: false)` already works\n  correctly — final text comes back as the tool_result string. We do not\n  change this path.\n- **Sub-agent transcript view.** The per-agent dock detail view continues to\n  render entries from `AsyncAgentEntry.transcript` (populated by\n  `agent-transcript-translator.ts`). This is a separate concern — transcript\n  is the *process* record (thinking, tool calls), notifications are the\n  *result* hand-off. They serve different audiences (user vs LLM).\n- **Auto-promotion to background after N seconds.** Listed in TODO P0 (E),\n  separate spec.\n\n## Reference: Claude Code's mechanism\n\nClaude Code solves the same problem with a four-piece design:\n\n1. **`LocalAgentTaskState`** in `AppState.tasks[agentId]` — task lifecycle\n   state. Includes `messages[]` (transcript) and a `notified` flag for\n   idempotency.\n2. **`completeAgentTask(result, setAppState)`** — atomic state transition;\n   `status` → `completed`, stores result.\n3. **`enqueueAgentNotification(...)`** —",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "6912ee06525f6396e02d7d5fbb462f0f62febf46c768d66a5bdd8b1633638388"
+      }
+    ],
+    "source_sha": [
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/1323/sha256",
+        "line": 1,
+        "needle": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+        "context": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "bytes": 6622,
+          "lines": 195,
+          "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      }
+    ],
+    "transcript_contract": [
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "jsonPointer": null,
+        "line": 2112,
+        "needle": "agent-transcript-translator",
+        "context": "agent.ts` / `Agent` | 启动子代理 | prompt + agent_type/name/max_turns/run_in_background | 子代理可并行或后台运行；后台状态进程内保存 |\n| `agent-registry.ts` | 后台 agent registry | agentId → status/result/cancel/transcript | process-local，进程崩溃丢状态；上限 `MAX_BACKGROUND_AGENTS = 6` |\n| `agent-notifications.ts` | 后台 agent 完成通知 | 与 Agent 工具配合 | 通知和 transcript routing 需避免串流到主会话 |\n| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |\n| `arena.ts` / `Arena` | 多模型协作分析工具 | topic + participants/config | 会调用多个 LLM，成本高；见第 27 节 |\n| `task.ts` / `TodoWrite` | 管理任务列表 | todos 全量快照 | UI pinned panel 依赖；TaskGuard 会提醒 stale in_progress |\n| `brief.ts` | 简报/摘要类工具 | 由定义决定 | 通常只读/文本生成 |\n\nAgent 工具与 Engine 的 subAgentSpawner 连接：Engine 在 ToolContext 中注入 spawner，Agent 工具据此创建子 Engine 或后台 agent。后台 registry 是进程级内存，不是跨进程 durable run。\n\n### 24.5 MCP / LSP / Skill / Memory / Config / Cron 类\n\n| 工具/文件 | 功能 | 使用方式 | 风险 |\n|---|---|---|---|\n| `mcp-tools.ts` / `MCPTool`、`ListMcpResources`、`ReadMcpResource` | 通过 MCPManager 调 MCP server | server/tool/resource 参",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9"
+      },
+      {
+        "path": "docs/archive/core-risk-signal-index.md",
+        "jsonPointer": null,
+        "line": 160,
+        "needle": "agent-transcript-translator",
+        "context": "bypassPermissions`×1, `acceptEdits`×1, `timeout`×1 |\n| `skills/frontmatter.ts` | `catch {`×2, `join(`×1 |\n| `skills/scanner.ts` | `catch {`×2, `join(`×5 |\n| `state.ts` | `as any`×8 |\n| `tool-system/builtin/agent-notifications.ts` | `as any`×2, `catch {`×2, `join(`×4 |\n| `tool-system/builtin/agent-registry.ts` | `catch {`×3 |\n| `tool-system/builtin/agent-transcript-translator.ts` | `as any`×7 |\n| `tool-system/builtin/agent.ts` | `join(`×6, `spawn`×22, `exec`×1, `fire-and-forget`×1, `timeout`×12, `AbortController`×2, `throw new Error`×1 |\n| `tool-system/builtin/apply-patch/applier.ts` | `catch {`×3, `join(`×2, `throw new Error`×7 |\n| `tool-system/builtin/apply-patch/index.ts` | `join(`×2 |\n| `tool-system/builtin/apply-patch/parser.ts` | `join(`×1 |\n| `tool-system/builtin/arena.ts` | `catch {`×1, `join(`×4, `exec`×2, `throw new Error`×1 |\n| `tool-system/builtin/ask-user.ts` | `exec`×2 |\n| `tool-system/builtin/bash.ts` | `spawn`×7, `exec`×2, `timeout`×9 |\n| `tool-system/builtin/config.ts` | `writeFileSync`×2, `join(`×2 |\n| `tool-system/builtin/cron.ts` | `join(`×1,",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "316fe82e34d1c76cdbea35e8700d45132ab7b689e9b45a61f64618bf0e82ffc4"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "jsonPointer": null,
+        "line": 206,
+        "needle": "transcript translator",
+        "context": "messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end` action 调 `appendTurnEndMessage()`。\n- `packages/desktop/src/renderer/types.ts:1196` 到 `packages/desktop/src/renderer/types.ts:1215`",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "jsonPointer": null,
+        "line": 206,
+        "needle": "agent transcript",
+        "context": "r/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end` action 调 `appendTurnEndMessage()`。\n- `packages/desktop/src/renderer/types.ts:1196` 到 `packages/desktop/src/renderer/typ",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "jsonPointer": null,
+        "line": 206,
+        "needle": "agent-transcript-translator",
+        "context": "到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end` action 调 `appe",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+        "jsonPointer": null,
+        "line": 206,
+        "needle": "agent-transcript-translator",
+        "context": "n_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end` action 调 `appendTurnEndMessage()`。\n- `packages/desktop/src/renderer/types.ts:1196` 到 `packa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132"
+      },
+      {
+        "path": "docs/archive/subagent-design-comparison-2026-05-27.md",
+        "jsonPointer": null,
+        "line": 10,
+        "needle": "agent-transcript-translator",
+        "context": "# 子 Agent 设计对比与改进建议\n\n> 2026-05-27 · 对比 Codex / Claude Code / OpenCode 的子 agent 机制，针对 codeshell 现状给出可落地的改进点。\n> 范围：机制对比 + 具体改进建议，不含代码实现。\n\n---\n\n## 1. codeshell 现状速览\n\n源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。\n\n核心事实：\n\n- **派发**：`Agent(description, prompt, name?, maxTurns?, run_in_background?)` 工具。支持同步（阻塞父级）和后台（`run_in_background`）两种模式。同一条 LLM 消息里多个 `Agent` 调用会并行执行。\n- **定义方式**：**没有 agent 定义注册表**。每次调用都是临时（ephemeral）的——`name` / `description` / `prompt` 全部是调用时传入的字符串参数。`agent-registry.ts` 只存运行时元数据（id、status、时间戳、abort handle），不存\"agent 类型定义\"。\n- **上下文隔离**：每个子 agent 是一个全新的 `Engine` 实例（`engine.ts:563`），独立 session、独立 transcript。**只传入 prompt 文本，不继承父级 transcript**。返回时只回传最终文本（后台 agent 的完整 transcript 单独存在 registry 里供 UI 渲染）。\n- **工具权限**：派发时从父级继承 `disabledBuiltinTools` / `enabledBuiltinTools`，并强制剥离 `Agent`/`AgentStatus`/`AgentCancel`（禁止嵌套）。**无法按 agent 类型定",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "47a8e5da53d674fd1077a3916988262373a09f444bc6d0a63c491547068c8d09"
+      },
+      {
+        "path": "docs/archive/subagent-design-comparison-2026-05-27.md",
+        "jsonPointer": null,
+        "line": 81,
+        "needle": "agent-transcript-translator",
+        "context": "ex `model_reasoning_effort`）：在 `Agent` 工具/agent 定义里暴露 `model`，把廉价的检索/总结任务路由到便宜模型。codeshell 已经在 arena 里证明了多模型 resolve 能力（`MODEL_PRESETS`），把同一套机制接到 `Agent` 即可，不用从零做。\n\n3. **并发上限 + 子 agent 超时**（对标 Codex `max_threads` / `max_depth`）：给后台 agent 加进程级并发上限和单 agent 超时，避免内存里无界堆积、避免同步调用卡死时父级空烧 `maxTurns`。\n\n### P2：体验与可观测性\n\n4. **后台 agent 结果流式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。\n\n5. **子 agent 生命周期 hooks**：现状 `engine.ts:231` 对子 agent 禁用了 shell hooks，可观测性弱。至少补 start/finish/error 三个事件，便于审计和调试。\n\n6. **（可选）自动委派**：对标 CC——让 LLM 读 agent 定义的 `description` 自行决定何时委派，而不是每次显式 `Agent` 调用。这是心智模型上的提升，但要权衡可控性，建议放最后、且默认关闭。\n\n---\n\n## 4. 一句话总结\n\ncodeshell 的子 agent 在**运行时机制**（独立 Engine、并行、后台通知、arena 多模型）上其实不弱，**真正的短板在\"定义层\"**：缺少可复用的 agent 角色注册表，导致工具白名单、模型路由这些三家都标配的 per-agent 能力无处挂载。建议优先补 P0 的定义注册表，再在其上叠加 P1 的三项 per-agent 能力——改动集中、收益最大。\n\n---\n\n### 参考来源\n- [Create custom subagents — Claude Code Docs](https://code.claude.com/docs/en/sub-agents)\n- [Subagents in the SDK — Claude API Docs](https://platform.claude.com/docs/en/agent-sdk/subagents)\n- [S",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "47a8e5da53d674fd1077a3916988262373a09f444bc6d0a63c491547068c8d09"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "jsonPointer": "/source_inventory/636",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+        "jsonPointer": "/contexts/stream_revoke/4/context",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "ec9c35efee5c80ec69a6c5b33d273ef095133164b5e4e6b8a0f2669495c0f8a0"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "jsonPointer": "/files/1308",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "2e7367ba84857498da0a9137bdf1f54d172fe3cd10bfebe4bcdb3e9f131aa83c"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/1323/path",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "bytes": 6622,
+          "lines": 195,
+          "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76"
+        },
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "jsonPointer": "/contexts/history-mapping/2/context",
+        "line": 4,
+        "needle": "transcript translator",
+        "context": "messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "jsonPointer": "/contexts/history-mapping/2/context",
+        "line": 4,
+        "needle": "agent transcript",
+        "context": "r/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "jsonPointer": "/contexts/history-mapping/2/context",
+        "line": 4,
+        "needle": "agent-transcript-translator",
+        "context": "到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+        "jsonPointer": "/contexts/history-mapping/2/context",
+        "line": 4,
+        "needle": "agent-transcript-translator",
+        "context": "n_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/skills-dedup-corpus.json",
+        "jsonPointer": "/hits/106/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "b3293013b7a3e7b39f209c1d8e51b4c6700a6bebd8a66727a3a52967b674c2e2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/root-dedup.json",
+        "jsonPointer": "/matches/50/excerpt",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "cb465195195433b72d3de735ea2a724470a22fd3bf6ad781f58f83fbe61dd7c2"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+        "jsonPointer": "/matches/54/text",
+        "line": 1,
+        "needle": "agent transcript",
+        "context": "13. `viewMode='agent'` switches the `VirtualMessageList` data source to the agent transcript.",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "bc0828bccb07f0f3110d59256d37c4735ebb5e7ca642ca555d69bb17a732ddbb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+        "jsonPointer": "/matches/55/text",
+        "line": 1,
+        "needle": "agent transcript",
+        "context": "- All existing nested `AgentBlock` rendering inside `VirtualMessageList` is gated off. Existing `AgentBlock*` components remain in place for use *inside* the agent transcript view.",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "bc0828bccb07f0f3110d59256d37c4735ebb5e7ca642ca555d69bb17a732ddbb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/23/matches/26/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/34/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "| `tool-system/builtin/agent-transcript-translator.ts` | `as any`×7 |",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/49/matches/4/text",
+        "line": 1,
+        "needle": "transcript translator",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/49/matches/4/text",
+        "line": 1,
+        "needle": "agent transcript",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/49/matches/4/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/49/matches/4/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/60/matches/0/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/60/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "4. **后台 agent 结果流式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/80/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "jsonPointer": "/source_inventory/636",
+          "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+        },
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/108/matches/2/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/122/matches/0/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/124/matches/7/text",
+        "line": 1,
+        "needle": "agent transcript",
+        "context": "13. `viewMode='agent'` switches the `VirtualMessageList` data source to the agent transcript.",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/124/matches/8/text",
+        "line": 1,
+        "needle": "agent transcript",
+        "context": "- All existing nested `AgentBlock` rendering inside `VirtualMessageList` is gated off. Existing `AgentBlock*` components remain in place for use *inside* the agent transcript view.",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/5/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/7/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/9/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/11/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/211/matches/13/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/5/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/7/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/9/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/11/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/214/matches/13/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/225/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/5/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/7/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/9/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/11/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/226/matches/13/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/227/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/3/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/5/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/7/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/228/matches/9/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/229/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "jsonPointer": "/hits/320/matches/1/text",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/522/specifier",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "./agent-transcript-translator.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/522/resolved",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent.ts",
+          "specifier": "./agent-transcript-translator.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "jsonPointer": "/relativeImports/526/from",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "specifier": "./agent-registry.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-registry.ts"
+        },
+        "sourceSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/597/specifier",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "./agent-transcript-translator.js",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/597/resolved",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent.ts",
+          "specifier": "./agent-transcript-translator.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "jsonPointer": "/relativeImports/604/from",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": {
+          "from": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+          "specifier": "./agent-registry.js",
+          "resolved": "packages/core/src/tool-system/builtin/agent-registry.ts"
+        },
+        "sourceSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a"
+      },
+      {
+        "path": "docs/refactor/goal-persistence-final-design.md",
+        "jsonPointer": null,
+        "line": 110,
+        "needle": "agent transcript",
+        "context": "9298d1bb88820a0d35294f1eeb07ea/codex-rs/state/goals_migrations/0001_thread_goals.sql)、[expected goal ID](https://github.com/openai/codex/blob/1f0566d3f59298d1bb88820a0d35294f1eeb07ea/codex-rs/state/src/runtime/goals.rs#L183-L330) |\n| Claude Code | 每 project、每 session 一份 `~/.claude/projects/<project>/<session-id>.jsonl`；每行是 message/tool/metadata。subagent transcript 使用独立 subpath。`sessions-index.json` 的存在可由官方 issue 观察到，但其当前内部 schema/权威性未正式文档化 | 官方明确“持续保存”，resume 同 session ID 后向既有 conversation 追加；Agent SDK mirror API 也是 batch `append()` | 官方明确同一 session 在两个 terminal resume 会让消息交错到一个 transcript，说明没有 single-owner 拒绝契约。是否用 `O_APPEND`、每行 advisory lock 或其他低层互斥：**未证实**；未发现公开 revision/CAS/watermark 契约 | 本地盘先写，外部 session store 只是 best-effort mirror；resume 读取 linked message chain。精确 partial-line、flush/fsync、崩溃尾行修复：**未证实**。官方 issue 报告过 parent chain 损坏，但 issue 不是实现契约 | 生命周期主要由 JSONL 中 message/tool/metadata 与 UUID parent chain 表达；compaction 后 resume 看到 linked post-compaction chain。独立“长任务状态表”：**未证实** | [Manage sessions：路径、连续保存、并发交错](https://code.claude.com/docs/en/se",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "0c625c0f65859c1a4a834be68af80e1f3fcebe9af4e8c480f6f3576ba41eb3f2"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "27901742587b38394ab0cdf8daa92b2caa63f71ab081b4334ee698d7fa0b1b20"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a3a5549789c9ca5bf3875100d3b5a4082b7a3235d21e754cadeaa8263d7e2760"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "87e863ea22b79d2e1b2f86510a0f9f3ac7dec686307f074d257b21fbcff3a32f"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "jsonPointer": "/final/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "992a5fc7d6ae5465085740763a2ab7126bb724cff975aa79c92219e064238636"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "948f8c27845a364ab05fa77f119c24b338d6d647163819d1ce778f121f6a9676"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97f0c990b569c5032a5fa7122fef3033da18c55fac2ef99cf0446153653ed90"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "jsonPointer": "/snapshot/loadedWorkspaceModules/114",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "20825a6bc37d519183ea4bdb111863e80ab9be985fbe477f03cf804474ef9a37"
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+        "jsonPointer": "/modules/38/productionFiles/9",
+        "line": 1,
+        "needle": "agent-transcript-translator",
+        "context": "tool-system/builtin/agent-transcript-translator.ts",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "e633c7a607420e27750c2d2f2bba294a405728d93ddf6310c2aefa6e62634bb9"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+        "jsonPointer": null,
+        "line": 1687,
+        "needle": "agent transcript",
+        "context": "tween the transcript and the input box, showing the agent. Elapsed time updates every second.\n\n- [ ] **Step 10: Commit**\n\n```bash\ngit add src/ui/components/AgentDock.tsx tests/ui/agent-dock.test.tsx src/ui/App.tsx\ngit commit -m \"feat(ui): AgentDock surfaces background sub-agents with elapsed timer\"\n```\n\n**Phase 4 complete.**\n\n---\n\n## Phase 5 — Per-Agent Transcript + Ctrl-Digit View Switching (P3 part 2, 1.5 day)\n\n### Task 5.1: Add `transcript` field to AsyncAgentEntry\n\n**Files:**\n- Modify: `src/tool-system/builtin/agent-registry.ts`\n- Test: extend `tests/tool-system/agent-registry-subscribe.test.ts` (existing file)\n\n- [ ] **Step 1: Write the failing test**\n\nAppend to `tests/tool-system/agent-registry-subscribe.test.ts`:\n\n```ts\ntest(\"appendToTranscript stores entries on the agent and notifies\", () => {\n  asyncAgentRegistry.reset();\n  asyncAgentRegistry.register({\n    agentId: \"a1\",\n    description: \"x\",\n    status: \"running\",\n    startedAt: Date.now(),\n    abort: () => {},\n  });\n  const cb = mock(() => {});\n  asyncAgentRegistry.subscribe(cb);\n  asyncA",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "801173bd5e0e8a8e8876e03527955f6f35b614123c262469ae45da2ddf9f1dc4"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+        "jsonPointer": null,
+        "line": 1790,
+        "needle": "agent transcript",
+        "context": "h(entry);\n  this.notify();\n}\n```\n\n- [ ] **Step 4: Run the tests, confirm they pass**\n\nRun: `bun test tests/tool-system/agent-registry-subscribe.test.ts`\nExpected: all pass.\n\n- [ ] **Step 5: Commit**\n\n```bash\ngit add src/tool-system/builtin/agent-registry.ts tests/tool-system/agent-registry-subscribe.test.ts\ngit commit -m \"feat(agent-registry): per-agent transcript + appendToTranscript\"\n```\n\n---\n\n### Task 5.2: Plumb agent stream events into transcript\n\n**Files:**\n- Modify: `src/tool-system/builtin/agent.ts` (background branch only)\n\n- [ ] **Step 1: Understand the current stream callback**\n\nRead `src/tool-system/builtin/agent.ts:60-80` and `src/tool-system/context.ts` (around the `SubAgentSpawner` definition).\n\n`spawner.spawn(opts)` returns the final text. Stream events are routed through `spawner.parentStream` callback. For background mode, we want a **second** stream sink that writes into the agent's own transcript.\n\n- [ ] **Step 2: Modify the background branch to wrap parentStream**\n\nIn `src/tool-system/builtin/agent.ts`, locate the background path ",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "801173bd5e0e8a8e8876e03527955f6f35b614123c262469ae45da2ddf9f1dc4"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+        "jsonPointer": null,
+        "line": 1837,
+        "needle": "agent transcript",
+        "context": "rtController();\n  asyncAgentRegistry.register({\n    agentId,\n    description,\n    status: \"running\",\n    startedAt: Date.now(),\n    abort: () => controller.abort(),\n  });\n\n  // Re-route stream events into the agent's own transcript, not the parent's.\n  const transcriptSink: StreamCallback = (event) => {\n    // Translate provider stream events into agent transcript entries.\n    // Minimal mapping — preserve raw type so the UI can render any kind.\n    asyncAgentRegistry.appendToTranscript(agentId, {\n      id: `bg-${agentId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,\n      type: event.type,\n      ...event,\n    } as any);\n  };\n\n  const bgSpawner: SubAgentSpawner = {\n    ...spawner,\n    parentStream: transcriptSink, // override only for the background run\n  };\n\n  void runSubAgent(bgSpawner, {\n    agentId,\n    description,\n    prompt,\n    maxTurns,\n    signal: controller.signal,\n  })\n    .then((text) => asyncAgentRegistry.markCompleted(agentId, text))\n    .catch((err: Error) => {\n      if (controller.signal.aborted) return;\n      asyncAgentR",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "801173bd5e0e8a8e8876e03527955f6f35b614123c262469ae45da2ddf9f1dc4"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+        "jsonPointer": null,
+        "line": 1889,
+        "needle": "agent transcript",
+        "context": "SubAgentSpawner` not being assignable, add a structural cast or extend the interface to allow partial overrides.\n\n- [ ] **Step 3: Verify no existing test regresses**\n\nRun: `bun test`\nExpected: clean.\n\n- [ ] **Step 4: Commit**\n\n```bash\ngit add src/tool-system/builtin/agent.ts\ngit commit -m \"feat(agent): route background-agent stream events into per-agent transcript\"\n```\n\n---\n\n### Task 5.3: View-mode state + Ctrl-digit switching\n\n**Files:**\n- Modify: `src/ui/App.tsx`\n- Modify: `src/ui/components/VirtualMessageList.tsx` (only if its data source needs to be parameterized)\n- Test: `tests/ui/agent-view-switching.test.ts`\n\n- [ ] **Step 1: Add `viewMode` state to App**\n\nOpen `src/ui/App.tsx`. After the existing chatStore subscription (search for `chatStore.getEntries` or the `useSyncExternalStore` call that backs the transcript), add:\n\n```tsx\ntype ViewMode = { kind: \"main\" } | { kind: \"agent\"; agentId: string };\nconst [viewMode, setViewMode] = useState<ViewMode>({ kind: \"main\" });\n```\n\n- [ ] **Step 2: Derive transcript-to-render from viewMode**\n\nFind where t",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "801173bd5e0e8a8e8876e03527955f6f35b614123c262469ae45da2ddf9f1dc4"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+        "jsonPointer": null,
+        "line": 1105,
+        "needle": "agent transcript",
+        "context": "t is idle, the input box\nis empty, and no overlays/modals are open. Any of those changing re-\nruns the effect, so notifications land at the first idle moment.\n\nThe injected user message is the full XML payload (LLM sees details);\nthe chatStore gets only the terse buildNotificationSummary line so\nthe user feed doesn't drown in result text. Full per-agent transcript\nremains available via the dock detail view.\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>\nEOF\n)\"\n```\n\n---\n\n## Task 9: Render bg_agent_notification entries in the chat feed\n\n**Files:**\n- Modify: `src/ui/App.tsx`\n\n- [ ] **Step 9.1: Locate the renderEntry \"system\" branch**\n\nIn `src/ui/App.tsx` around line 1822, the existing `case \"system\":` reads:\n\n```tsx\n    case \"system\": {\n      const sysEntry = entry as ChatEntry & { type: \"system\" };\n      if (sysEntry.subtype === \"compact_boundary\") {\n        return (\n          <Box key={key} marginLeft={1} marginTop={1}>\n            <Text dim>{sysEntry.text ?? \"── context compacted ──\"}</Text>\n          </Box>\n        );\n      }\n",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "a97efbe87f234c6f87a7751756a34526a3e8b70a4ac9e80cd195913df3a80a07"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-llm-ui-decoupling-design.md",
+        "jsonPointer": null,
+        "line": 568,
+        "needle": "agent transcript",
+        "context": "d`.\n\n`tests/ui/agent-dock.test.tsx`:\n\n4. No running agents → `AgentDock` renders null.\n5. One running agent → dock renders `[1] description 0s`.\n6. Timer only ticks while at least one agent is running.\n\nP3 integration (manual):\n\n7. Spawn `Agent(run_in_background=true)`, main turn continues to take input; dock displays the agent; Ctrl+1 switches to agent transcript; Ctrl+0 returns to main.\n\n---\n\n## 10. Test Strategy Summary\n\n| Layer | File | Critical Cases |\n|---|---|---|\n| L1 watchdog | `tests/llm/stream-watchdog.test.ts` | Idle timeout, reset on chunk, dispose, no late fire |\n| L1 integration | `tests/llm/openai-stream-watchdog.test.ts` | Mock fetch hang → StreamIdleTimeoutError + retry |\n| L2 guard | `tests/ui/query-guard.test.ts` | 7 cases (§6.8) |\n| L4 store | `tests/ui/store-commit-streaming.test.ts` | Partial commit, empty skip, thinking dropped |\n| L4 integration | `tests/ui/abort-flow.test.ts` | Force-end → interrupted entry; watchdog → system msg; race no double-write |\n| P3 registry | `tests/tool-system/agent-registry-subscribe.test.ts` | n",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "44a152017ccf0d02fbda8a51ed7cc3076a66d38b104aa07b979b60359ed99b4d"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-llm-ui-decoupling-design.md",
+        "jsonPointer": null,
+        "line": 604,
+        "needle": "agent transcript",
+        "context": "te migration + L2 tests | 1.0 d | UI state machine consistent; Esc takes effect immediately |\n| **3 (P2)** | chatStore commit API + Esc handler + L4 tests | 0.5 d | Partial assistant text preserved across interrupt |\n| **4 (P3 base)** | Registry subscribe + AgentDock + 1 Hz timer | 0.5 d | Dock visible; not yet switchable |\n| **5 (P3 full)** | Per-agent transcript + Ctrl-digit switching + integration | 1.5 d | Multi-agent navigation experience |\n\n**Total: 4 days.**\n\n**Required ordering**:\n\n- Phase 1 must land first — only one that directly addresses the current freeze.\n- Phase 4 → Phase 5 must come after Phase 2 (QueryGuard is infrastructure).\n- Phase 3 can run in parallel with Phase 4 (no shared files).\n\nEach phase = one PR. Each PR is independently testable and revertable.\n\n---\n\n## 12. Risks and Rollback\n\n| Risk | Impact | Mitigation |\n|---|---|---|\n| Watchdog kills a slow \"thinking\" model | Cancels a request the user wanted | Default disabled; 90 s threshold; PR description includes measured thinking-phase durations for deepseek/qwen/anthropic |\n|",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "44a152017ccf0d02fbda8a51ed7cc3076a66d38b104aa07b979b60359ed99b4d"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-llm-ui-decoupling-design.md",
+        "jsonPointer": null,
+        "line": 626,
+        "needle": "agent transcript",
+        "context": "ion |\n| chatStore commit API collides with existing stream-finalize | Duplicate or lost entries | Phase 3 first task: read store's stream-finalize path, decide reuse vs. add |\n| Dock timer triggers full-tree re-render | Performance regression | Local `useState({})` forceUpdate scoped to dock; no `useSyncExternalStore` wired to time |\n| Phase 5 per-agent transcript breaks existing AgentBlock | UI corruption | Phase 5 preserves AgentBlock's current synchronous path; background agents add a parallel transcript write path |\n\n**Rollback**:\n\n- Phase 1: leave env unset — code is dormant.\n- Phase 2: full PR revert (all `setIsRunning` sites changed; no partial revert).\n- Phase 3: revert `commitStreamingEntry` independently; Esc returns to no-partial behavior.\n- Phase 4–5: delete `AgentDock` + drop registry subscribe fields; per-agent transcript writes become dead writes (harmless).\n\n---\n\n## 13. Out of Scope (Explicit)\n\n- Watchdog on anthropic provider (follow-up if it manifests).\n- HTTP-layer timeouts (connect/TLS) — SDK defaults.\n- Modifying ink renderer / a",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "44a152017ccf0d02fbda8a51ed7cc3076a66d38b104aa07b979b60359ed99b4d"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-llm-ui-decoupling-design.md",
+        "jsonPointer": null,
+        "line": 633,
+        "needle": "agent transcript",
+        "context": "gents add a parallel transcript write path |\n\n**Rollback**:\n\n- Phase 1: leave env unset — code is dormant.\n- Phase 2: full PR revert (all `setIsRunning` sites changed; no partial revert).\n- Phase 3: revert `commitStreamingEntry` independently; Esc returns to no-partial behavior.\n- Phase 4–5: delete `AgentDock` + drop registry subscribe fields; per-agent transcript writes become dead writes (harmless).\n\n---\n\n## 13. Out of Scope (Explicit)\n\n- Watchdog on anthropic provider (follow-up if it manifests).\n- HTTP-layer timeouts (connect/TLS) — SDK defaults.\n- Modifying ink renderer / alt-screen.\n- Default-backgrounding regular sub-agents — synchronous CC semantics preserved.\n- Mouse-click dock switching.\n- Cross-process agent persistence.\n\n---\n\n## 14. Open Questions for Plan Phase\n\n1. **Engine catch-path audit** (§8.2) — does the current engine write a transcript entry on `AbortError`? If yes, Phase 3 must remove that write to avoid duplication with the new UI-side commit.\n2. **chatStore stream-finalize shape** (§8.4) — extend existing or add new API?\n3. **",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "44a152017ccf0d02fbda8a51ed7cc3076a66d38b104aa07b979b60359ed99b4d"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+        "jsonPointer": null,
+        "line": 14,
+        "needle": "agent transcript",
+        "context": "ground mode** (`Agent(run_in_background=true)`). Stream events do not enter `chatStore`. The agent exists only in `asyncAgentRegistry` as a status row (running / completed / failed). There is no way to view what it is doing or what it produced beyond the final string returned to the parent.\n\nBoth gaps point to the same missing primitive: a per-sub-agent transcript decoupled from the main chat, plus a UI surface that lets the user browse and drill into running and recently-finished sub-agents.\n\n## 2. Goals\n\n1. Main `chatStore` shows **one compact summary row per sub-agent call**. No inline tool-call expansion.\n2. Each sub-agent owns an **independent transcript** persisted on its registry entry. Single source of truth — no duplication into `chatStore`.\n3. A bottom **dock** lists running and recently-finished sub-agents (sync + background, uniform treatment).\n4. `↑/↓` navigates the dock; `Enter` switches the main view to that sub-agent's full transcript (full-screen, framed with the agent name in the upper-right border).\n5. `Ctrl+T` toggles dock visibil",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8e935210e8955390a2d91a813df09a89dc67ad9daf3330d499ea95146c70331d"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+        "jsonPointer": null,
+        "line": 245,
+        "needle": "agent transcript",
+        "context": "or='ansi:cyan'` and a title in the upper-right (the agent name). The same `MessageRow` / `MessageContent` / `ToolCall` components render the transcript — visual parity with the main thread.\n\n## 7. Keyboard Routing\n\nSource-of-truth precedence (top wins):\n\n1. **Modal overlays** (permission prompt, model selector, etc.) — keep current behaviour.\n2. **Agent transcript view active** (`viewMode.kind === 'agent'`):\n   - `Esc` → `setViewMode({ kind: 'main' })`\n   - `↑/↓ PgUp/PgDn` → main scroll (existing scroll handler)\n   - `Ctrl+T` → toggle dock visibility (state retained across view changes)\n3. **Dock has at least one row AND input is empty**:\n   - `↑/↓` → move dock focus (clamped to `[0, visible.length - 1]`)\n   - `Enter` → `setViewMode({ kind: 'agent', id: visible[focused].agentId })`\n   - `Ctrl+T` → toggle dock visibility\n4. **Otherwise** (input has text, or dock empty/hidden):\n   - `↑/↓` → input history (current behaviour)\n   - `Enter` → submit input (current behaviour)\n   - `Ctrl+T` → toggle dock visibility (always available)\n\nThe `dock focus` and `d",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8e935210e8955390a2d91a813df09a89dc67ad9daf3330d499ea95146c70331d"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+        "jsonPointer": null,
+        "line": 304,
+        "needle": "agent transcript",
+        "context": "adeAt-past: row disappears.\n\n`tests/ui/agent-call-row.test.tsx`:\n\n10. Running row shows `name · latestTool · elapsed`.\n11. Completed row default `expanded=false` shows summary; `Enter` toggles expanded.\n12. Failed row shows error on expand.\n\n`tests/ui/view-mode.test.tsx`:\n\n13. `viewMode='agent'` switches the `VirtualMessageList` data source to the agent transcript.\n14. `Esc` returns to `viewMode='main'`.\n15. Auto-fallback to main when fadeAt passes while viewing.\n\nManual P3 integration check:\n\n16. Spawn one sync + one background agent. Both appear in dock. Main thread shows an `AgentCallRow` only for the **sync** one (background sub-agents are dock-only; the parent retrieves their result via tools, not the main store — see §5). `↑/↓ Enter` enters either agent's transcript; `Esc` returns. `Ctrl+T` toggles dock.\n\n## 11. Migration / Rollout\n\nSingle PR or feature-flag-gated:\n\n- All existing nested `AgentBlock` rendering inside `VirtualMessageList` is gated off. Existing `AgentBlock*` components remain in place for use *inside* the agent transcript view.\n",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8e935210e8955390a2d91a813df09a89dc67ad9daf3330d499ea95146c70331d"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+        "jsonPointer": null,
+        "line": 316,
+        "needle": "agent transcript",
+        "context": "ult via tools, not the main store — see §5). `↑/↓ Enter` enters either agent's transcript; `Esc` returns. `Ctrl+T` toggles dock.\n\n## 11. Migration / Rollout\n\nSingle PR or feature-flag-gated:\n\n- All existing nested `AgentBlock` rendering inside `VirtualMessageList` is gated off. Existing `AgentBlock*` components remain in place for use *inside* the agent transcript view.\n- A snapshot test of the main transcript needs updating: the inline tool-call rows for sub-agents are gone.\n- No data migration — registry / chatStore are process-local.\n\nIf desired, gate behind `CODESHELL_SUBAGENT_DOCK=1` env for the first release, default on once verified.\n\n## 12. Open Questions\n\nNone blocking. Settled during brainstorming:\n\n- Dock cap: 3 + overflow indicator.\n- Fade timeout: 30 s for both success and failure.\n- Summary row content: `name · latestTool · elapsed` (running), `name · status · duration` (terminal).\n- Sync sub-agents enter the dock too (deviation from spec 9.1).\n- Inline `AgentBlock` rendering in main thread is removed.\n",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "8e935210e8955390a2d91a813df09a89dc67ad9daf3330d499ea95146c70331d"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-20-bg-agent-completion-notification-design.md",
+        "jsonPointer": null,
+        "line": 406,
+        "needle": "transcript translator",
+        "context": "ng {\n  // emoji + name/description + status badge per agent, joined with newlines.\n}\n```\n\n## Data flow (end-to-end)\n\n```\nMain agent calls Agent(run_in_background: true)\n     │\n     │ tool_result: \"Async agent launched...\"\n     ▼\nagent.ts background path:\n  void runSubAgent(spawner, opts).then(...).catch(...)\n     │\n     │ (sub-agent runs detached, transcript translator\n     │  populates AsyncAgentEntry.transcript along the way)\n     │\n     ▼\nsub-agent completes with finalText\n     │\n     ├──► asyncAgentRegistry.markCompleted(agentId)\n     │       └──► registry subscribers re-render\n     │              (dock badge: running → completed)\n     │\n     └──► notificationQueue.enqueue({\n              agentId, name, description,\n              status: \"completed\",\n              finalText, enqueuedAt\n          })\n             └──► queue subscribers re-render\n                    │\n                    ▼\nApp.tsx useNotificationProcessor effect:\n  guards check (idle + input empty + no overlays)\n     │\n     │ pass\n     ▼\n  items = notificationQueue.drainAll()\n  xml = bui",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "6912ee06525f6396e02d7d5fbb462f0f62febf46c768d66a5bdd8b1633638388"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-20-bg-agent-completion-notification-design.md",
+        "jsonPointer": null,
+        "line": 59,
+        "needle": "agent transcript",
+        "context": "ccepts that the UI\n  cross-imports `tool-system/` state. An Electron / SDK port would require a\n  separate effort to push these stores behind stream events. Out of scope.\n- **Synchronous sub-agents.** `Agent(run_in_background: false)` already works\n  correctly — final text comes back as the tool_result string. We do not\n  change this path.\n- **Sub-agent transcript view.** The per-agent dock detail view continues to\n  render entries from `AsyncAgentEntry.transcript` (populated by\n  `agent-transcript-translator.ts`). This is a separate concern — transcript\n  is the *process* record (thinking, tool calls), notifications are the\n  *result* hand-off. They serve different audiences (user vs LLM).\n- **Auto-promotion to background after N seconds.** Listed in TODO P0 (E),\n  separate spec.\n\n## Reference: Claude Code's mechanism\n\nClaude Code solves the same problem with a four-piece design:\n\n1. **`LocalAgentTaskState`** in `AppState.tasks[agentId]` — task lifecycle\n   state. Includes `messages[]` (transcript) and a `notified` flag for\n   idempotency.\n2. **`com",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "6912ee06525f6396e02d7d5fbb462f0f62febf46c768d66a5bdd8b1633638388"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-20-bg-agent-completion-notification-design.md",
+        "jsonPointer": null,
+        "line": 61,
+        "needle": "agent-transcript-translator",
+        "context": "hind stream events. Out of scope.\n- **Synchronous sub-agents.** `Agent(run_in_background: false)` already works\n  correctly — final text comes back as the tool_result string. We do not\n  change this path.\n- **Sub-agent transcript view.** The per-agent dock detail view continues to\n  render entries from `AsyncAgentEntry.transcript` (populated by\n  `agent-transcript-translator.ts`). This is a separate concern — transcript\n  is the *process* record (thinking, tool calls), notifications are the\n  *result* hand-off. They serve different audiences (user vs LLM).\n- **Auto-promotion to background after N seconds.** Listed in TODO P0 (E),\n  separate spec.\n\n## Reference: Claude Code's mechanism\n\nClaude Code solves the same problem with a four-piece design:\n\n1. **`LocalAgentTaskState`** in `AppState.tasks[agentId]` — task lifecycle\n   state. Includes `messages[]` (transcript) and a `notified` flag for\n   idempotency.\n2. **`completeAgentTask(result, setAppState)`** — atomic state transition;\n   `status` → `completed`, stores result.\n3. **`enqueueAgentNotification(...)`** —",
+        "immediateParentForExactValue": null,
+        "sourceSha256": "6912ee06525f6396e02d7d5fbb462f0f62febf46c768d66a5bdd8b1633638388"
+      }
+    ]
+  },
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/1323",
+      "row": {
+        "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "bytes": 6622,
+        "lines": 195,
+        "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76"
+      }
+    }
+  ],
+  "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+}

@@ -1,0 +1,48 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalBaseline": null,
+  "prepOnly": true,
+  "files": [
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "bytes": 3079,
+      "lineCount": 89,
+      "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "datedInventorySha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "sameAsDatedInventory": true,
+      "firstPinBeforeSemanticRead": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "semanticLines": 89,
+      "initialSemanticReadSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "bytes": 6234,
+      "lineCount": 193,
+      "sha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "datedInventorySha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "sameAsDatedInventory": true,
+      "firstPinBeforeSemanticRead": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          193
+        ]
+      ],
+      "semanticLines": 193,
+      "initialSemanticReadSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f"
+    }
+  ],
+  "hashOnlyFiles": [],
+  "semanticLines": 282,
+  "productRuns": 0,
+  "historyScope": "Root did not run a separate history scan in this prep. Independent peer scopes and dated snapshots remain separately attributed.",
+  "limits": "# Root plugin input static read\n\nRoot在原before-read pins后全文读两个leaf共282产品行，未阅读其测试或consumer bodies；rg导航不扩大覆盖。Root没有独立history scan，后续结合独立peer所读普通consumer/旧记录作分类，不能借peer阅读当Root覆盖。0formal/0candidate/0new-related。\n\nGitHub HTTPS的整串追加.git可从源码推得尾斜杠或query组合形状，但尚未建立支持浏览器尾参数/尾斜杠的普通契约或server失败证据，不登记候选。installer parseSource保留完整HTTPS、npm selector/default latest及github ref/subdir形状按源静态阅读。旧MIG-R15-C1由peer历史证明同因，保持排除；Root未读旧candidate全文，不补造自己的read时点。\n\n这不是新未读frontier声明或全包无bug结论。原上下文4be保留，正式Round33 baseline后绑定。没有运行parser、URL/semver/Promise表达式、CLI、安装、测试、Git业务、HTTP、原生、模型或权限安全实验，0pass/expect。Root本prep仅5项metadata artifacts加self-excluded receipt，initial-pins未重写。"
+}

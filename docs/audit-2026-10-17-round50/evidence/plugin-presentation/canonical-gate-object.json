@@ -1,0 +1,21 @@
+{
+  "row": {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "pointer": "/files/2710",
+    "beforeReadInventoryPin": {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    "currentDocumentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+    "matchesInventoryPin": true,
+    "readUTC": "2026-10-17T16:58:21.226240+00:00",
+    "rawObject": {
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "bytes": 4452,
+      "lines": 114,
+      "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc"
+    }
+  },
+  "interpretation": "Original metadata inventory only, not full review evidence; derived unknown/rank likewise does not prove never-read. No mutable87 material used."
+}

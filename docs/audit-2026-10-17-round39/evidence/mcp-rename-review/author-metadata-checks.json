@@ -1,0 +1,1706 @@
+{
+  "checkedUTC": "2026-10-17T13:41:03.083298+00:00",
+  "reviewMode": "Author report/classification/validation/history-decisions/diagnostics and structured counts read; source file bytes checked without adopting author semantic coverage. Large matching-history-objects.first.json is hash-only, not printed/read semantically.",
+  "artifactReceiptRows": [
+    {
+      "path": "classification.json",
+      "bytes": 1514,
+      "sha256": "49df7f0aa54beec16350e1143b6a29cc5b8ae850c52fbb511b97ae0920b72f23",
+      "matches": true
+    },
+    {
+      "path": "field-reference-navigation.json",
+      "bytes": 15853,
+      "sha256": "5dfb6c6d9f8937e4c81a9d1c6ecf29d53c47feda4330c8b138e38bf2b35f6eb5",
+      "matches": true
+    },
+    {
+      "path": "final-source-check.json",
+      "bytes": 7714,
+      "sha256": "345f00f3d47a350f12add82386251b0a65267d3b0b314fc2cb51b5020aaef21b",
+      "matches": true
+    },
+    {
+      "path": "focused-history.json",
+      "bytes": 77390,
+      "sha256": "58eecb9cc815db10ec014641754b29ed75a585a574aed891b1277d895e2d44fa",
+      "matches": true
+    },
+    {
+      "path": "forwarding-initial-pins.json",
+      "bytes": 964,
+      "sha256": "8001d3505d9ec2a97a19d923d0ee6482949cdeb641e66a341133f56e1fb2391f",
+      "matches": true
+    },
+    {
+      "path": "history-decisions.json",
+      "bytes": 2326,
+      "sha256": "d9a457da255220700f7124149be5ed8302a9cc71bf7504aa770306b95f2e770a",
+      "matches": true
+    },
+    {
+      "path": "history-delta.json",
+      "bytes": 20234,
+      "sha256": "37640a7b22e7e99648d39d5c1fc16069790c444661fd6dd0f3d0dedf954c57bf",
+      "matches": true
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3473,
+      "sha256": "92a44ffa5610e3ae6a696decbc17cb55110b9f58b6be36524fd41b26df19479e",
+      "matches": true
+    },
+    {
+      "path": "history.json",
+      "bytes": 686708,
+      "sha256": "b6b576545df6a40893225cae752f9abb65a84144038999af1b937a9d02f431aa",
+      "matches": true
+    },
+    {
+      "path": "initial-inventory-pins.json",
+      "bytes": 71599,
+      "sha256": "473a806b5c355b3ddd6209af125053df592d626d1cd70a7d8543e96111bde811",
+      "matches": true
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 7193,
+      "sha256": "4a5a2eceab03d51512e8b9699b46498893e9d588dbc1e5328f0e2832198c8148",
+      "matches": true
+    },
+    {
+      "path": "matching-history-objects.first.json",
+      "bytes": 5530631,
+      "sha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+      "matches": true
+    },
+    {
+      "path": "matching-history-objects.json",
+      "bytes": 12437,
+      "sha256": "2f27bd134743799147ce20818c0217bfea03baaddde6fbf542d7f4764c009cea",
+      "matches": true
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 1059,
+      "sha256": "c5bee2cf14ab62f7655880032f917d9582216ad3e905e2d2c8beb7ac5e34e644",
+      "matches": true
+    },
+    {
+      "path": "report.md",
+      "bytes": 9783,
+      "sha256": "ba19c8152289e1c987031e1e7b6f691ac0b70313f062461bbf6bc2475b0612ec",
+      "matches": true
+    },
+    {
+      "path": "scope.json",
+      "bytes": 796,
+      "sha256": "9914aeae8175e84cb84e57a76a1ea3905c04404177f175a915d8d8f9c70f438f",
+      "matches": true
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 99596,
+      "sha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "matches": true
+    },
+    {
+      "path": "static-value-flow.json",
+      "bytes": 2265,
+      "sha256": "29352cdafa93614c5fcf9f95bdf42f568cf3ee4c05d8458a43665d7bd1760e06",
+      "matches": true
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1147,
+      "sha256": "1bc6db729bd2e0786f2b1b8650f7fb9432666cb1efc68a9523471391e10c88f8",
+      "matches": true
+    }
+  ],
+  "receiptSetMatches": true,
+  "totalArtifactsIncludingReceipt": 20,
+  "pinnedAuthorInputs": [
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/artifact-receipt.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/classification.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/field-reference-navigation.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/final-source-check.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/focused-history.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/forwarding-initial-pins.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-decisions.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-delta.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-method.py",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/links-check.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/matching-history-objects.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/metadata-diagnostics.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/report.md",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/scope.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/source-manifest.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/static-value-flow.json",
+      "matches": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/validation.json",
+      "matches": true
+    }
+  ],
+  "sourceByteChecks": [
+    {
+      "path": "packages/core/src/engine/engine.mcp-health.test.ts",
+      "kind": "files",
+      "bytes": 4504,
+      "sha256": "f7856ae810d5ed68d3a3f4ed227c8cfbb1aafdbc064c32792566623cc7aed1c9",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/links/figma-mcp.ts",
+      "kind": "files",
+      "bytes": 12009,
+      "sha256": "7cd7625fac0d3a919adae1ffb98bdccc47a20fca5c789d9cdb12ed3877e2d754",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.test.ts",
+      "kind": "files",
+      "bytes": 10277,
+      "sha256": "8e2b9f6216748052b773b66ff7f6c9dede8fa7999b439d4cf49c384660d8a4a7",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "kind": "files",
+      "bytes": 14536,
+      "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "kind": "files",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/schema-export.test.ts",
+      "kind": "files",
+      "bytes": 2440,
+      "sha256": "be618e42ec8bf589358c4f56317def2df60d9eec512b0af747872939b17b19db",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "kind": "files",
+      "bytes": 1738,
+      "sha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.test.ts",
+      "kind": "files",
+      "bytes": 9662,
+      "sha256": "90f63a4b8357f9c7af4e7dbf724ddd0d6f139086ce6e175f32076693e02042d2",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "kind": "files",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.test.ts",
+      "kind": "files",
+      "bytes": 2443,
+      "sha256": "bf494d885d89dcedcda54ed19d67e7ff5cb54ed92d259c65ed9f8af1c8b2803e",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/host-mcp-servers.ts",
+      "kind": "files",
+      "bytes": 3692,
+      "sha256": "9e5a407ac43f9b65c184412a1655f0f58c3ec6315d8b54b9a812c11f2a291a1c",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "kind": "files",
+      "bytes": 6682,
+      "sha256": "eb1fac9ef17b18e42b7e90e2bd009044c3902a75de64355557d36a3d0ee6a494",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.ts",
+      "kind": "files",
+      "bytes": 2457,
+      "sha256": "202b36f9698a031050cab0ff094c69e2d5ae27e782660b9261cd48deafbd24e5",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.test.ts",
+      "kind": "files",
+      "bytes": 53805,
+      "sha256": "fe5f2abf784158344be36df1c3de77d72dc5e0c0b7bb98d29915d612ce3e6c3d",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "kind": "files",
+      "bytes": 74360,
+      "sha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-startup.test.ts",
+      "kind": "files",
+      "bytes": 14247,
+      "sha256": "9ef092bb2bbe51c5f8625bdf53a14412c90f3dea6143f7117b49e6383deae9f2",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-workspace.test.ts",
+      "kind": "files",
+      "bytes": 17427,
+      "sha256": "495d6ccc3b63999c6c202308f8a0c8285ae5bb64ffb8a97a1ddec2afee64189e",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "kind": "files",
+      "bytes": 51788,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "kind": "files",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "kind": "files",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "kind": "files",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "kind": "files",
+      "bytes": 75319,
+      "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx",
+      "kind": "files",
+      "bytes": 10438,
+      "sha256": "59e15a04af1bcd9f56ecb21e1a30cccbe9ea27f07d6304d6ce963bdc36185417",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "kind": "files",
+      "bytes": 848,
+      "sha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "kind": "files",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "kind": "files",
+      "bytes": 35851,
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "kind": "files",
+      "bytes": 4590,
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "kind": "files",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "kind": "files",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/preload/plugin-mcp-approval.contract.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 999,
+      "sha256": "3ff25d5b0e00db837b7f9f8b5f430ad8897404fd709455e45a732c5cf5a61b90",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.sandbox-mcp.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1779,
+      "sha256": "4c86764f49cfd7f534d27dc0573fbc12e2855debee50cd78906a148afe5ac6b7",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/llm/reasoning-setting.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2308,
+      "sha256": "074e899a7c3ec0026abef911cdc61a2286a9540f8e3088661f2a5d0eb8f386fe",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/llm/reasoning-setting.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2304,
+      "sha256": "a00d2dee0e430bafb8b89a50a0a71f54cff8a6ab6766221d1dcccad3d551b11f",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.reload-settings.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 14912,
+      "sha256": "f8115dd2f20a888e3fc895a6751123989958f948b9cfddd6c47cef6a081a16fb",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session-manager.mcp.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 841,
+      "sha256": "2cae0120d1f391b532c32c7b3a3b5c5ffbdeb6aa169ca035908037ecc9adf649",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginMcpApproval.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 4232,
+      "sha256": "41d66374eccd7173c9951a839fa466030dd4562d3520ed0db2df796d78f3d1f3",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginMcpApproval.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 5143,
+      "sha256": "33d631f00cdbd9a2c46a7f158c42594d0bbb4331bd61152c842ab3d265f614fc",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginMcpIntegrity.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3134,
+      "sha256": "896a790750822d892eb2037b574d723e5f763e63bc0308189c5e9769099d87e0",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-results.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3310,
+      "sha256": "244d4ad6165050b148d4cc043befc99f1afac30a15b74173b1a1707ead0e2e65",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-tool-policy.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1704,
+      "sha256": "7a83830968d380c078a9f2a59994e67df9e689ac8cbe78f3e52fe2b98108f710",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/permission.auto-mcp-risk.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2175,
+      "sha256": "db206006088d3d95a7711c5062ecda700d472e353d62e1d4841bd625eaa670fa",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-compat.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2681,
+      "sha256": "0634336b3ac6dffe05d468cd0d9e090772dccfed70debb86b821f5ac0ebb24e0",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-stdio-env-filter.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3024,
+      "sha256": "c758dffb83063eb1229aea393b4ddaac7e26cdd6a5ccba55f548a913f3ecdb97",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-policy.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 681,
+      "sha256": "7dbc25bf701cc356e9172594cbf3bcad8c6bc46decaa17e2c1059056e0c298fb",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-compat.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3821,
+      "sha256": "8c015a21b5699b83499d23a2aa823567b07eefc435b5515fbcd2d18e06029112",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.lifecycle-events.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1396,
+      "sha256": "56d0aa3f9ab4051cabca6bc0e92c6078fa8be922f967f69c503e09e0531cae0b",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-envelope.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 12184,
+      "sha256": "62a03dc0231cd0bfdf0a37f649980ec835754b0545af303ef756271f7aa232e9",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/credentials/mcp-binding.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2030,
+      "sha256": "4920fa2c1cacc45b8132372f6f797e70d61c1d9146de40f94258a16de24ebd0a",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/credentials/mcp-binding.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2824,
+      "sha256": "c9cd49181c11187bd6d8f42b1e429161e4731893313ff1fca7f3dbadefc57b4f",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/links/figma-mcp.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 20475,
+      "sha256": "8493357b0bd1c08ccf6a9953e3cf619ad4cee5cff558863456d00f311346bd31",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/links/figma-mcp-params.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 7575,
+      "sha256": "5f02616071cc859e34e9c9c9b8a9b8aa40a8b0e6f93eca8f5985ada41a4af4a2",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/links/figma-mcp-contract.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2175,
+      "sha256": "80c5129b27ef3cace61b9e77272b4bcd900cb100b66e805ba49293dd2be967ac",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-stdio-transport.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 4308,
+      "sha256": "e40a6830c20ac01dc536728d004207798aeab44968da3632db6cfe3f75c3945b",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertMcp.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 4919,
+      "sha256": "029d9dec5b473655705a91b54ce384f23a25528623d7cb31fb926cfd2413c2c2",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertMcp.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3986,
+      "sha256": "49f093937fc163f566a85554d4746d143478c3dbaccb7f9b58aa317dc149b10d",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/sources/adapters/mcp-resource.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3883,
+      "sha256": "de35feef393ddfa1ed133cf4eca18ae6b9e3727dc9cfb468a85a8a7ab8c4ac11",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/sources/adapters/mcp-resource.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3183,
+      "sha256": "ae2a2b2a9f5c7ae122b11e3d8a6c61db98aca7d416f767619982259bc3de36ff",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-workspace.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3049,
+      "sha256": "70375fd73ff68670740b0a741a592bcef6343daeeb8cc18983c2519f664336d7",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-health.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 732,
+      "sha256": "7712e4f35d48271217e4cf3ede149be1f07dd68737e64efb3c0e0c2b8e700270",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/session-tool-host.settings-parity.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 8060,
+      "sha256": "f2e127879b42837c43d8466601b850a58edab1fe0b2d4e2518d86685505d3ebb",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/session-tool-host.mcp-caller.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 9241,
+      "sha256": "47239045f32ff27d206607e19b23b25e9dc933dcd71d2d7b73737088c392ff7c",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-results.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3225,
+      "sha256": "48b3b032fa3ecd9d1938aa7c3d32ace779193ed7b5021c7797fe4306220786aa",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-stdio-diagnostics.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3545,
+      "sha256": "c20429333c8f3d8beb64d01058cfff51d74f2cb20ab817ca3176334c65d582a0",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-stdio-diagnostics.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1278,
+      "sha256": "70b4b7f34a5c59cbe452a9052e668c75e64ba3e21d18e7d16ddbecd45c71ddb5",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-tool-policy.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1824,
+      "sha256": "33cfd55c601ab18841db797223df1c905542c49f01c5095e9952819645bcbb64",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/hook-provenance.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 8082,
+      "sha256": "8dc3451a7f23c3ffbca707adc373746a8289d24bcac9eb68201afbbe14f2cd66",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/personalization.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 736,
+      "sha256": "e3ff9e3dc6a89543794b73df00894e150d42da3be3c7a4f244b71c1571db74ea",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 28456,
+      "sha256": "e8cf9d80a5209413f5410404ad323d037851c74eb20cbab1bf4050a5464a281a",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/model-connections.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3582,
+      "sha256": "9745c67b8ae4d6233c1878d30f727ccdbdc561f3d1084da71ae2953e05936e69",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/manager-concurrency.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 4642,
+      "sha256": "7f552f8e2d83a15f6f6e1020a6a437f1f7f1487b22f99a86680f19fd34403922",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/feature-flags.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 6075,
+      "sha256": "f7c651347175eebe245977b2a4661a4409fd47690a497c88bb23ff55aa7e5eef",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.custom-root.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2736,
+      "sha256": "ff00442818a8742e6702440424a7fff5672b857894634e81d96b566b4a0a36c0",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/recovery.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 11888,
+      "sha256": "07fba554a2354da750fe431c49a3808bcc042bbb0ab613058832fac48a66161e",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/profile-subtree.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 799,
+      "sha256": "c45663f192fa865b538588c976ef8af3e42626add9746539bcd24c4dc28710e4",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/sources-binding.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 590,
+      "sha256": "e44727961930123faf05172c335ff64287d4ae3672fd01743e67f41e805f079a",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.mutate-fail-closed.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 5721,
+      "sha256": "006178a65c67c99f2e3a969e0902a433a698ee5f7454447d014bb69213e52860",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.local-tombstones.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3274,
+      "sha256": "d965d86d0d1dae7fbb7bafda5237e57a8ee118d04185ceb2989fb5fd143579fa",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/yaml-config.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 4946,
+      "sha256": "864835a96c9706b91f296ca118ae72e1e4801a8eb6f5c025e1e3707ff57a61d5",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/recovery.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 14138,
+      "sha256": "3b8c69fbe3797fd12509bbc51acbc87238f4888bd61a76f9b31f7035e5594cb7",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/hook-provenance.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 17633,
+      "sha256": "a9ccfb6e0ea1d68e2a66e3070ad2a621e0d5b66b1aa942afbce21e6ffe959c13",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/feature-flags.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3998,
+      "sha256": "536321c6df41298c7531887c1868829687cd0309722b18e2fec62157c7c31951",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read-mcp-resource.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3176,
+      "sha256": "4dbaaf5dbb2f33b97c8067f6de505cad9feded959f15e9c46f37e7ec3f37ae72",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/migrate-config.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 5819,
+      "sha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/migrate-config.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 7097,
+      "sha256": "dcaea89c45ba71a2b15d2cc3d41bb66b37f448f969804330bd6a2afcae6e2d54",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.sandbox-mcp.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2505,
+      "sha256": "7f82c320d066a1c7d3a6fa8f63710cf48e457e0d9ec71bcb3907f7c103ba9b7f",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/mcp-tools.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 5120,
+      "sha256": "8d71c4cd1909d4481720040b0a75e45b39252b6a46f76115e076282f5605c68a",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/__tests__/schema-personalization.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 989,
+      "sha256": "ca0b6600bc41b3a91e65ea66a0f9e5ec0cb5c2e7e7ed82f69a2a55347e973214",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/settings/__tests__/personalization.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1176,
+      "sha256": "8377b92bd7a981f7310f5e31f49903a8a869cb88cfeaa207e3336125014a56e7",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/settings-changed.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 696,
+      "sha256": "e03890f4872e00737355ec31a9c0cb99c61d8105d920af33fe072b147b3e32cf",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/shared/pet-settings.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1365,
+      "sha256": "8f579042f52b0b3f9770d944a699522c327b12021552bc6b859ff614b25ef5c2",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/shared/pet-settings.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 4273,
+      "sha256": "7fccebfabbb199beb6c0440759a316e7cf2702c542d20dbcd68a02893bf71420",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/engine/run-tooling.mcp.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 8006,
+      "sha256": "c84cecc0bcc2aa94f20ddeb0f1b0cd71ab04f8aa2383091947dc29b7341b2740",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/mcp-oauth-profiles.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 901,
+      "sha256": "157ce7e8aa698b3bba4ab729854bbc8ba03967ae9017524b6201ffb9c39f8ca3",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/figma-mcp-link.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 19379,
+      "sha256": "8378e8828cb4699af8ab2d17fccc98bb1f2dc99fec596056ed835c04cf53bee2",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/mcp-oauth-e2e.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 20951,
+      "sha256": "634a28a30ec79e5f3b4522ace846ed7d5d663093cbc6b1f5cf83700d28474364",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/mcp-probe-service.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 6938,
+      "sha256": "2d6d8e7143e417202b9ce20828fefb68100b905f8f51e3e94e179e80af5585b4",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 12253,
+      "sha256": "baf79192702ca50509fc68fd053c49cb131237b5f3e6038988bed278cc6d08f6",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-write-worker.fixture.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 802,
+      "sha256": "23b1e2043c76ee0bceea6d55cc06415827a15d3812ea6f5c415697e7155edee6",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/mcp-probe-service.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 11363,
+      "sha256": "b9bf1f6a1b948dc89941fae45f7422bc6ebc765ba292bb97ae48083e64489f40",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/figma-mcp-link.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 29761,
+      "sha256": "3dec0069ddde71b2812d65b10af02235d81d46e509f4ec27831cbd680072d090",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/mcp-oauth-service.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 43461,
+      "sha256": "fb4819add38a65912382c8045f782ba9e7032d72aca5c48afb952d618e4784fb",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.crossproc.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2090,
+      "sha256": "2585077f123200a1f06992193f9682b98e7e510677d3a9fd4cdb7a3b997a3ab5",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/agent-bridge.mcp-credentials.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1269,
+      "sha256": "fdccb6da616db87c5565e6d9af4798ab3b1b28600620304aca61601781c67d29",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/figma-mcp-link.oauth.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 8959,
+      "sha256": "b4be4912a83bf728d49498a91729031b8e306820a7631b5ef8576145a228b4ac",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/mcp-oauth-service.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 45862,
+      "sha256": "df51136ec9972997e9ce9804b4d2cc3db1d3844b139302c2395a64a674719095",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 15526,
+      "sha256": "a00d7bb34d04e52c83954aa8ad998db111798543664b3f13e6dc060e7da6ad14",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/computer-use/settings-ipc.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3771,
+      "sha256": "56d65f3313cd01f7bc563d920f941ea7c55428cb37f84edadce4ed6a304f3090",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/main/computer-use/settings-ipc.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 5908,
+      "sha256": "5d54cfb176ad89a6e4dc5f169b881eb12afe212a9de5bfab877fc04802df67be",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1037,
+      "sha256": "c47d69ec2715f9207054f044ff40a0864a524433decbb42c59ae3393065f1734",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/mcp/McpView.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 7494,
+      "sha256": "151f07d38a37033aff61e7facf948ca0b8e01820e47437f8b15b33100221dedd",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 6201,
+      "sha256": "afd67e330d24a8a061e811325453a0e4ee178f5877a64de3ae561fcd7a69d6ae",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelCatalogPanel.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 31558,
+      "sha256": "a506326be9a24d85f924e58b96a0b57196d99956cb6fcb95337b2f51f76a24af",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ProfileMemoryPromotionDialog.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 12801,
+      "sha256": "d0e15d6e2a41a3ce790858add4952d178644ffbe2cca4f82ffc93eac646779f2",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPreferences.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1430,
+      "sha256": "e82e3b0d9e3ba60a10a1c377882437cccb4b3a760bf924f72ba8db666715858c",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.search.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 5772,
+      "sha256": "d48706c5a37e34e0b4455dc23bfd5d1ffa9154aa7a20b279adc88f9e3ff8a393",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.plugin.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 5271,
+      "sha256": "af26bb90c77813989dc61ef8bd43a5866983c57be7efe13c2e962302a1f49a14",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemeAudioSection.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 9189,
+      "sha256": "117cdf06b7d509907c85501eeac844acb986dd61247c27beb656a5d9ebbf0ea8",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/catalogModelOptions.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2748,
+      "sha256": "b696a8d5e2316a6ad4cfc04d94d60312509f457077dd722af461a76247f3d050",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.import.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 4227,
+      "sha256": "2c92b3b6228d8a9a29acba9f75fb52a8adbeeed2f44b5a577a78d6ebbd54c8a7",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useSettingsResource.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 4812,
+      "sha256": "0239c4086e472dd5914f8786cb41d9ef632f94a2bfe451fcaa909a14275690e1",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AgentsSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 22854,
+      "sha256": "2cf92aaf58de56afa7f812416ee3db55b87c84b1c1a803d4d391ff73c4347dfe",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ComputerUseSettings.interaction.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 13215,
+      "sha256": "06494de1783f3fd8f017e04876db4a675dbc204274c95cfb018a59c5f7a6e012",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/TextConnectionsPanel.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 8889,
+      "sha256": "05229ff4405261230ca97076d60588e9adb8a458dcdd96d49a041954a5388356",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 478,
+      "sha256": "a6516feb7111fb35b28660e5d1b351f0a90d635433a9b36cb51cdc5a5892a356",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConnectionInstanceCard.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 7376,
+      "sha256": "05320244bcb035a92c23e7fa9699edff74b8d9dc84f4c8e2f6265c13bdb4c466",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CloudAccountLinks.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 9144,
+      "sha256": "030ce280f1ade12c479cae16ad79e7c614bc37c0e7f73b1dd7d7e4246ba7348d",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 26939,
+      "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ComputerUseSettings.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 937,
+      "sha256": "f924f23f9d71c6625e41b2d2aadc9dd02886148ee33d546f4c0f94d401311ca3",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/MemoryStoreView.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1678,
+      "sha256": "23c25378ad03ba05e577dd1f4e43265ef16e006ebefc7ff3693709edd7b0f4b6",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 12329,
+      "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/capabilitiesOverview.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 5894,
+      "sha256": "6ccc432eb2619fe846751a5f0122d86de5f68cac1147367636034d6f6ff583ed",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ProjectOverviewSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 3346,
+      "sha256": "b047f0900c9a311759ea032c12a22a8692e39a815d7aef63a824c5b841935b64",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 5719,
+      "sha256": "8e4215d5becf549c8cd647bcc1fc3a3c025813f1ed998b50831bd7d61b02322a",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/connUi.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 3656,
+      "sha256": "7239fdbb620eba31a00ac410b5bd07a4dc9ab1e9f05adf05e5560a9d4d2417e5",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 2721,
+      "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemeAudioSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 9413,
+      "sha256": "7e2ebf2d0e85a736ac43d17ceb75a6cabd1bd51a0e3f4092dada5801cb71725a",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CloudAccountSettings.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 22395,
+      "sha256": "56c6c770dda55a5c095733d3b567ad1cbb5df8bdc5c21ccaa3eb739bfc6eec53",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/DeviceRelaySettings.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 5880,
+      "sha256": "25b4d7f5827b542dbb5a88ca6f71d6eb889bde4118d2e5e957713c08d3094762",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsLegacyCleanup.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1146,
+      "sha256": "e43b06f6a334317ebc383920af21f5fa93f86ac9c9ab4ceb0bcecc179c6d46fa",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useModelConnections.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 14636,
+      "sha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 14267,
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/HooksSection.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1058,
+      "sha256": "7d2140e22157dea3bdcd5013e697aaee2f7a1398f56c8e32822ca93e642298d0",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/connFormat.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 279,
+      "sha256": "980fd1f878f2c8754f2f82bbb17d4da850a3a65f3ab0550806be3f27aad4ef20",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 4521,
+      "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 6293,
+      "sha256": "338fe34455bab4384199c8990d238a607577aedee24a65c1e9459120cb23e618",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 12083,
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 2402,
+      "sha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useSearchConnections.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 13398,
+      "sha256": "807484f665840cefa47826b2b8d76fbc6da7613c2ffa85bfd29f1a47080fa7d3",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CloudAccountProfile.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 6763,
+      "sha256": "858addaefea2bb73ce7f467f9af79d453106d381efa220dd4a86c3a66634987a",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ProfilePluginExportDialog.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 10302,
+      "sha256": "bbc0dc6b23166e0ad4f9b8b58c61d2c71dbdbb9648c99e4817f05ae91182deb3",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelConnections.read.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 632,
+      "sha256": "fa029f0c5a8833c554d7c9ff792b826342809317e2636cfc0d658c75f53eb7e4",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpDetailDialogs.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 4997,
+      "sha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/MemorySection.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 4262,
+      "sha256": "e47bebebf459cb663fecaa0596d3ff1fd90d078cb769a2c6bd88665e4eef9963",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConnectionsEmptyState.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 3814,
+      "sha256": "aa61c1ffc88a4c12ce5f6a7337545203290733ce9f45b4835fdec1c29305b3b8",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AuxModelSelector.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1452,
+      "sha256": "399b6b7d221fbf953a4fa4af2fd4c6f214b5938da8db10af97419d416816cf04",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ProfileSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 4304,
+      "sha256": "dd9ea88f581e433cb9117de5a6b1f2dc62dec4c9ddbc93cd820a0bf200840c73",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 4694,
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/MemorySection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 47958,
+      "sha256": "0ce1008d5b25a94facf538f15f88745c9a1d31c681d2b759cbb0a8ca697256df",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelConnections.interaction.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 12096,
+      "sha256": "df995e564a8c77f317f6b41e2151adf449bcf076be81a368dc9a80ee4d6313ad",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.browser.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1182,
+      "sha256": "c211327f3eefebb89b74c5c6084a42d96560470487f1bdbc640425608746b258",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SearchConnections.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 719,
+      "sha256": "6193d7bcbf0d4c7ccd4765d32b697a4baf786b282dce51d09327471c7efaa76e",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useSettingsResource.seed.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1188,
+      "sha256": "86d0e760ec6943d4be19f6e5ca65b6c9e16ec2a896a8c747b085805f025d2e6d",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/speechConnections.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 2590,
+      "sha256": "480a97031d4d78468066e68c180a340123bac4a89ae5aeb2bebdc68fc0696e10",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ProfilePluginExportDialog.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 4315,
+      "sha256": "3bfe153a4f8198cfdf84802097831c875d1b7c034eae8aabf30f10254d109028",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CollapsibleGroup.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 2188,
+      "sha256": "517649acaabead45d4462ef94b5db972ed2c62958a1826d282253892d8bf1371",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ProfileSection.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 9384,
+      "sha256": "8983ae85568be50acaa25ba272f477b8d7f758759c89ed1f86a02911c4395846",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 10856,
+      "sha256": "86b6ee8805ed365d43a40929e4d3a2334b7ea9c40b401d37ac1c79d2b1bd4f9b",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/capabilitiesOverview.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 5924,
+      "sha256": "809d71e2ae03645dac896836b468b70bcc3cfdc247c2507832e6d14d14061bd9",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/textConnections.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 8807,
+      "sha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/GeneralSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 3020,
+      "sha256": "da570521b001f3eec42fc2058883453db53a00289371bee1264f07d391ab7308",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useSettingsResource.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1809,
+      "sha256": "695645a580d0ed6371931042f891ed1dbc5ccebb0e36b57d83dbc9746f0335ab",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ProfileMemoryPromotionDialog.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1847,
+      "sha256": "c2f7e6f1eb9a2a03cf5588329eb4dceac691a320d70a94b6595d1e9f8799b6ac",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 6236,
+      "sha256": "37dccc775a6d86bede91c1188032a4dc47c6a1a7bddeec539784adbe213e9b09",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 2543,
+      "sha256": "047d26ec4d94e57f7c2847529eb586c56c4671e6e67476a38ac1a6d319cb9f54",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelCatalogPanel.failures.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1054,
+      "sha256": "aa0077505251f5a3fd7de251952ff53b3ddaf0b20231a946ddaf1a9f53114d72",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/settingsCache.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1054,
+      "sha256": "f80311b0eeef1ed1c4a87638fbb25df0bfe58fc10746a1c6ea1f7140b7975709",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/DataSourcesModule.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 5647,
+      "sha256": "c800e5b105459446963f87ff0a464a8d905a756cb133226b689eee5f0795098a",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ComputerUseSettings.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 8811,
+      "sha256": "d98377459146b71b0a8562f49241fbcd3bef4ebe47e4ac31c1876fa4d30ca458",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/textConnections.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 10962,
+      "sha256": "2f441d3e9332ea0f75dfde52f1b7c4e8b0886e33a8538bc98d2ea2fb639a43d8",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/DigitalHumansSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 32730,
+      "sha256": "89245a3f48fa02cb2c55214b5f47da53bafc3459f9c2ee66ce48ffdf57db114c",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPreferences.interaction.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 6710,
+      "sha256": "fb4a06fd4924b1c56f4e5be5c4c3f4f56c389906161b1d7288032d250f7c5897",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SearchConnectionsPanel.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 12404,
+      "sha256": "2b82667fca4010c0ef59bbe252c4d6d8e81ec671e93f285d1c9ba2ea3c5faad6",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SignupLink.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 652,
+      "sha256": "ea042196c90769029373bb90b8c900420553f7d7c525be1a5c420507bd971e70",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.scope.contract.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 3421,
+      "sha256": "ea41541802cb5b4021cf4181d3aef6732ef2f111978539acb981484842e74b22",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/PermissionSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 3595,
+      "sha256": "3f1eaa8ba02cdbc03d981db20dae2f7eeac2b14c01c0e4725ffe0ec19edd5fbf",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ProjectPicker.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 3171,
+      "sha256": "5686239b36c8e38a1cb3b390f5f3b7c0db394132fc5ab97573e7c2cf92dcafc9",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelConnections.operations.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 7172,
+      "sha256": "92dc326f8fe8ccb5588dae6c431533ecfae409f07d3ecc00b78e82f4cfb4d142",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelConnections.read.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 5182,
+      "sha256": "50da2e16c672c7b5830d827016de702704922aa12f1e9ca0393def61ee480847",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SandboxSection.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 9370,
+      "sha256": "f303f9c1bcf0d453d9d6f713c00a483a195dbb0f94bff53b7472b71c5d0b3f89",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/catalogEditor.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1918,
+      "sha256": "c6534a82262d07576f1f561a2e04aa3c6d0049539c6216d81ce1baf4ad24d9ed",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 3183,
+      "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CloudAccountLinks.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1371,
+      "sha256": "40b5b7493b54b08a1c0a3520f47f8cb82c298e194fb37077d06b4c47f6dac3a2",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/DigitalHumansSection.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 11860,
+      "sha256": "4ad91fca4b7576bb15f392ff305b486c9bc1b698fdd267cf3735de1576928638",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SearchConnections.interaction.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 5638,
+      "sha256": "f59ed19c1cc373d3e54fdef71105a7345be6f952b74a67a9d174b2a7443d21ba",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1100,
+      "sha256": "1a939705bf4dbc4b76ef4ab8b04b994c88dde6bd2bec2f16213399b8465f3738",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CloudAccountLinks.interaction.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 8671,
+      "sha256": "984a2978a3e0baeaf234971a37835ffb6c24d2292b48ef4e5f6269fdef1292d1",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useTargetedDebouncedSave.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 2137,
+      "sha256": "8916fdac9f2657c2530d81d08682d014b16baaa617814d1dab469c3edb90aa4d",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelCatalogPanel.failures.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 16221,
+      "sha256": "d4efdf40b0bffbc268d884d8cd0500d80bf492bcfa2a27dca1410d36569e5e34",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useTargetedDebouncedSave.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1632,
+      "sha256": "60c6bf288df3d371ab5763a6f0c18ea0c8d9026d17032c1da12e1c52a82271ba",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/DataSourcesModule.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 1122,
+      "sha256": "0f007bdd1612d9f144444f9d7d8857ae29ca9e53117d42fd21908d105928f4fa",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.interaction.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 9799,
+      "sha256": "65f74ec2488028832f52e007aea282914715e275e86e65eeeec3977d91966080",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelCatalogPanel.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 6178,
+      "sha256": "98d96d2497b5811e0b950caf554308f2968d634cc235dbeb6cd52e2752dc9434",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/MemoryStoreView.interaction.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 10181,
+      "sha256": "30552a70894cb702c343470c135707adcea5461de02bc7c146bf5dac3026d785",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelConnections.operations.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 726,
+      "sha256": "6ef303b80c7c6db0bf14734eefeadc5a3f9e0e56c067ed0927a8ca11768e7e24",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ProfileMemoryPromotionDialog.interaction.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 23293,
+      "sha256": "ec5e2f33fdd1bd20cc02e9e36bebc35a1238708de922fbe54a838aee06e9a6f1",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/DataSourcesModule.interaction.fixture.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 6505,
+      "sha256": "394685f2a65b91328035b42cc968e4ea5a4465a273024d40b286e8c0a539b6ec",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelConnections.interaction.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 823,
+      "sha256": "05172009c848779be0b79209965461cbf8e00d2e3241520f3a11782a7a2cca6d",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/catalogEditor.test.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 1244,
+      "sha256": "86eceaedb6fac8f8ced0f7d255193b01068c99d24abbb6d21945a3c3499efd7f",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationExecutionSettings.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 8986,
+      "sha256": "a1e509409fd7606ea8fc695e53de7703b1a3cdfb3705d3e0df411e44e4ec72a9",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "kind": "hashOnlyFiles",
+      "bytes": 132800,
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/pet/PetSettingsPage.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 16649,
+      "sha256": "fe4167cda8e663dc50827ee8630b867ebc6070c0ce4a837437eb9e529471d1a1",
+      "matches": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/pet/PetSettingsPage.test.tsx",
+      "kind": "hashOnlyFiles",
+      "bytes": 2475,
+      "sha256": "081671422f3f45bb81ecf2a42d05a308a797f9d57fc9896afbe4e07aaf1e1db6",
+      "matches": true
+    }
+  ],
+  "sourceByteCheckCount": 212,
+  "allSourceBytesMatch": true,
+  "authorDeclaredCounts": {
+    "productAndTestSemanticPins": 29,
+    "fullPins": 6,
+    "selectedPins": 12,
+    "navigationOnlyPins": 11,
+    "productAndTestReadLinesIncludingNavigation": 1561,
+    "hashOnlyProductPins": 183,
+    "existingTestDeclarationSyntaxRead": 10,
+    "lifecycleTestEachCasesListed": 13,
+    "testsExecuted": 0,
+    "instructionNewSemanticReadLines": 0
+  },
+  "allAuthorArtifactsMatch": true,
+  "noProductExecutions": true
+}

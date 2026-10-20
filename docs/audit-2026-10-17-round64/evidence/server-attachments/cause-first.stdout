@@ -1,0 +1,16 @@
+{
+  "documents": 6801,
+  "totalMatches": 6,
+  "retained": 6,
+  "cap": 180,
+  "errors": [],
+  "drift": [],
+  "matchedDocuments": [
+    "docs/archive/todo/review-master-2026-07-08.md",
+    "docs/archive/todo/review-tests-deps-2026-07-08.md",
+    "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+    "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+    "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+    "docs/todo/cloud-account-management-delivery.md"
+  ]
+}

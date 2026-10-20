@@ -1,0 +1,403 @@
+{
+  "reviewer": "aggregator_round27_resume",
+  "prepParentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "parentReportedFormalBaselineContextOnly": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "prepFormalizationByRootPending": true,
+  "beforeReadAtUTC": "2026-10-17T11:50:39.135620+00:00",
+  "sources": [
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "bytes": 2824,
+      "lineCount": 94,
+      "sha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "initialFilesystemSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "initialPinTiming": "before this independent reviewer direct source-range reread; does not reconstruct author initial timing",
+      "selectedLineRanges": [
+        [
+          1,
+          94
+        ]
+      ],
+      "coveredLineCount": 94,
+      "coverage": "full",
+      "role": "product",
+      "finishSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "bytes": 9304,
+      "lineCount": 300,
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "initialFilesystemSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "initialPinTiming": "before this independent reviewer direct source-range reread; does not reconstruct author initial timing",
+      "selectedLineRanges": [
+        [
+          139,
+          300
+        ]
+      ],
+      "coveredLineCount": 162,
+      "coverage": "selected",
+      "role": "ordinary-formatter-consumer",
+      "finishSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/core/src/utils/earlyInput.ts",
+      "bytes": 5398,
+      "lineCount": 191,
+      "sha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "initialFilesystemSha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "initialPinTiming": "before this independent reviewer direct source-range reread; does not reconstruct author initial timing",
+      "selectedLineRanges": [
+        [
+          60,
+          110
+        ]
+      ],
+      "coveredLineCount": 51,
+      "coverage": "selected",
+      "role": "static-consumer-boundary",
+      "finishSha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "lineCount": 536,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "initialFilesystemSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "initialPinTiming": "before this independent reviewer direct source-range reread; does not reconstruct author initial timing",
+      "selectedLineRanges": [
+        [
+          60,
+          90
+        ]
+      ],
+      "coveredLineCount": 31,
+      "coverage": "selected",
+      "role": "internal-export-boundary",
+      "finishSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "bytes": 6276,
+      "lineCount": 40,
+      "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "initialFilesystemSha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "initialPinTiming": "before this independent reviewer direct source-range reread; does not reconstruct author initial timing",
+      "selectedLineRanges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "coveredLineCount": 40,
+      "coverage": "full",
+      "role": "old-report",
+      "finishSha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "matchesInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "lineCount": 1893,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "initialFilesystemSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "initialPinTiming": "before independent reviewer local same-name helper disambiguation read",
+      "selectedLineRanges": [
+        [
+          1092,
+          1112
+        ]
+      ],
+      "coveredLineCount": 21,
+      "coverage": "selected",
+      "role": "same-name navigation disambiguation only, not an author prep scope expansion",
+      "finishSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "matchesInitialPin": true
+    }
+  ],
+  "authorArtifacts": [],
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "notes": [
+    "Review exact frozen prep only; b348 prep baseline retained, not rewritten to future/formal baseline. No author files or repository files written.",
+    "Current source filesystem hashes are not Git blob binding; each own source row gives only declared full/selected semantic ranges."
+  ],
+  "additionalConsumerPinAtUTC": "2026-10-17T11:51:09.389900+00:00",
+  "authorArtifactChecks": [
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/consumer-pins.json",
+      "bytes": 782,
+      "sha256": "b02f49409284d177233c2ad6fef35b2b20486926a25e93221272c76cd5cc0d7c",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/decisions.json",
+      "bytes": 758,
+      "sha256": "3f08faa1c78a3510f56de99e8cfaf8ff2636437327e51742e78d89150f1a3e91",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/history-method.py",
+      "bytes": 3311,
+      "sha256": "a7f35a34ee2b6020509f51081be9f4dffc0bef2ee1554f90c72f737dbe9458ff",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/history-source-pin.first.json",
+      "bytes": 204,
+      "sha256": "fe191551d5a7b2ea074ff6ab0c5c0dedef515b75e71fffc0499cdeebe540b855",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/history-source-pin.json",
+      "bytes": 414,
+      "sha256": "478bd29e9d21ed463f64d5645a32ec4698c8896815c3ab6b1fb58e427e5f214e",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/history.json",
+      "bytes": 615580,
+      "sha256": "8e2c69f2f82afc94e5bd7e317c84831d61f2142ba2b2c42d1aafd9b3570dbb1d",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/initial-pins.json",
+      "bytes": 574,
+      "sha256": "4fabf8601289ff495581268144fab487a273ee5258a9c2be27a2d2d8f212245e",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/metadata-notes.json",
+      "bytes": 395,
+      "sha256": "bc63c3b9668e41cc8564a3c861dd40f3cb8ea717ce019fc8ffd1ba44bebbced5",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/proposal.md",
+      "bytes": 2324,
+      "sha256": "b89f6e26da356573c4c930fb9a86cbeccbd5d0dcd8bf37c9727de1c2ca8e419f",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/source-manifest.json",
+      "bytes": 4148,
+      "sha256": "b941971aa91261dad212015559e350d089218daf115d672eb22d54b3c8c3918e",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/validation.json",
+      "bytes": 277,
+      "sha256": "832bee5d24acdcb27781b8418383432eacdb72bb06a68e85cef2023192efe6b7",
+      "matchesAuthorReceipt": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round30-root-frontier/author-receipt.json",
+      "bytes": 1821,
+      "sha256": "942497bc9d9cef2c387dc274226410db615626559e0e8900802963214739faa9",
+      "selfExcludedReceiptCaptured": true
+    }
+  ],
+  "authorSourceChecks": [
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "sha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "bytes": 2824,
+      "lineCount": 94,
+      "ranges": [
+        [
+          1,
+          94
+        ]
+      ],
+      "coveredLineCount": 94,
+      "role": "product",
+      "currentBytesAndBoundsMatched": true,
+      "initialSemanticReadSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "firstPinTiming": "Before declared source range semantic reading; earlier names/rg navigation only."
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "bytes": 9304,
+      "lineCount": 300,
+      "ranges": [
+        [
+          139,
+          300
+        ]
+      ],
+      "coveredLineCount": 162,
+      "role": "ordinary-formatter-consumer",
+      "currentBytesAndBoundsMatched": true,
+      "initialSemanticReadSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "firstPinTiming": "Before declared source range semantic reading; earlier names/rg navigation only."
+    },
+    {
+      "path": "packages/core/src/utils/earlyInput.ts",
+      "sha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "bytes": 5398,
+      "lineCount": 191,
+      "ranges": [
+        [
+          60,
+          110
+        ]
+      ],
+      "coveredLineCount": 51,
+      "role": "static-consumer-boundary-no-stdin-execution",
+      "currentBytesAndBoundsMatched": true,
+      "initialSemanticReadSha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "firstPinTiming": "Before declared source range semantic reading; earlier names/rg navigation only."
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "bytes": 17401,
+      "lineCount": 536,
+      "ranges": [
+        [
+          60,
+          90
+        ]
+      ],
+      "coveredLineCount": 31,
+      "role": "internal-export-boundary",
+      "currentBytesAndBoundsMatched": true,
+      "initialSemanticReadSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "firstPinTiming": "Before declared source range semantic reading; earlier names/rg navigation only."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "bytes": 6276,
+      "lineCount": 40,
+      "ranges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "coveredLineCount": 40,
+      "role": "old-report",
+      "currentBytesAndBoundsMatched": true,
+      "initialSemanticReadSha256": null,
+      "firstPinTiming": "Dedicated source pin after history excerpt was inspected, before direct full text; initial semantic SHA remains null."
+    }
+  ],
+  "authorProposalLocalLinkChecks": [
+    {
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "metadata-notes.json",
+      "exists": true
+    },
+    {
+      "target": "decisions.json",
+      "exists": true
+    },
+    {
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true
+    }
+  ],
+  "historyMetadataRequery": {
+    "exclusions": [
+      "docs/audit-2026-10-17-round29/**",
+      "docs/audit-2026-10-17-round30/**"
+    ],
+    "prepParentReportedBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+    "totals": {
+      "files": 2765,
+      "archivePaths": 169,
+      "markdown": 1275,
+      "json": 1490,
+      "scalarLeaves": 833428,
+      "stringLeaves": 562917,
+      "parseErrors": 0
+    },
+    "matches": {
+      "intl-format": 111,
+      "display-option": 15,
+      "old-failed": 133
+    },
+    "matchesAuthorCounts": true,
+    "inventoryHashesAndBytesMatched": true,
+    "inventoryCanonicalSha256": "b6a6f52892bf6751afa780e41d51231d8b89a19217c54720f7f496b2ddcc35df",
+    "contextCap": 100,
+    "retainedContextCounts": {
+      "intl-format": 100,
+      "display-option": 15,
+      "old-failed": 100
+    },
+    "readDisplayOptionContexts": 15,
+    "authorScriptExecuted": false,
+    "method": "Independent stdlib file/hash/JSON scalar/regex only; values not keys, MD by lines, exact archive/_archive. Inventory is not semantic coverage."
+  },
+  "consumerNavigation": {
+    "path": "consumer-navigation.txt",
+    "scope": "rg package source names only; no whole-consumer semantic read",
+    "hits": 11,
+    "sameNameDesktopHelperIsIndependentLocalFunction": true,
+    "additionalRgLineReads": [
+      {
+        "path": "packages/core/src/utils/format.ts",
+        "lines": [
+          3
+        ],
+        "kind": "navigation import line only"
+      },
+      {
+        "path": "packages/core/src/utils/earlyInput.ts",
+        "lines": [
+          14
+        ],
+        "kind": "navigation import line only"
+      }
+    ]
+  },
+  "finishAtUTC": "2026-10-17T11:52:09.108854+00:00",
+  "independentSourceCounts": {
+    "sourcePins": 6,
+    "full": 2,
+    "selected": 4,
+    "authorOrdinaryProductRangesReadLines": 338,
+    "priorReportReadLines": 40,
+    "sameNameDisambiguationAdditionalReadLines": 21,
+    "totalDeclaredReadLines": 399,
+    "navigationImportsNotAddedToSemanticCoverage": 2
+  },
+  "validation": {
+    "productAttempts": 0,
+    "productImports": 0,
+    "productFunctionCalls": 0,
+    "testsExecuted": 0,
+    "fixturesExecuted": 0,
+    "stdinTtyExperiments": 0,
+    "nativeRuns": 0,
+    "gitCommands": 0,
+    "networkRequests": 0,
+    "authIdentityExperiments": 0,
+    "authorScriptExecutions": 0,
+    "metadataErrors": []
+  },
+  "reviewLocalLinksChecked": [
+    "source-manifest.json",
+    "consumer-navigation.txt"
+  ],
+  "freezeAtUTC": "2026-10-17T11:52:47.823808+00:00",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "reviewOutcome": "Supports scoped static 0/0/0; no metadata correction requested; no author or product writes."
+}

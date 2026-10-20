@@ -1,0 +1,28 @@
+48:     const entry = {
+49:       management: createDesktopPanelManagement(cwd, {
+50:         withMutation: (write) => deps.withMutation(cwd, write),
+51:         onChanged: (id) => {
+52:           for (const value of desktopPanelManagers.values()) value.updates.invalidate(id);
+53:           panelAppUpdateService.invalidate(id);
+54:           deps.onChanged();
+55:         },
+56:       }),
+57:       updates: createProjectPanelAppUpdateService(cwd),
+58:     };
+59:     desktopPanelManagers.set(key, entry);
+60:     while (desktopPanelManagers.size > 64) {
+185:             : {}),
+186:         };
+187:       }),
+188:   );
+189:   ipcMain.handle(
+190:     "panel-apps:checkUpdate",
+191:     async (_e, id: string, force: boolean | undefined, rawCwd: string) => {
+192:       const cwd = await requireRendererProjectPath(rawCwd);
+193:       if (typeof id !== "string" || (force !== undefined && typeof force !== "boolean"))
+194:         throw new Error("panel-apps:checkUpdate requires id and an optional boolean force");
+195:       return desktopPanelManager(cwd).updates.check(id, force === true);
+196:     },
+197:   );
+198:   ipcMain.handle(
+199:     "panel-apps:installLocal",

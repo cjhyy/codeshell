@@ -76,6 +76,77 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  test("new-session target and visible history use the remote Host case policy", async () => {
+    const created: unknown[] = [];
+    const projects = [
+      {
+        id: "upper",
+        name: "Upper",
+        path: "/srv/Example",
+        pathCaseSensitive: true,
+        roots: [{ id: "upper-root", name: "main", path: "/srv/Example", role: "primary" as const }],
+      },
+      {
+        id: "lower",
+        name: "Lower",
+        path: "/srv/example",
+        pathCaseSensitive: true,
+        roots: [{ id: "lower-root", name: "main", path: "/srv/example", role: "primary" as const }],
+      },
+    ];
+    const app = remoteApp({
+      activeCwd: "/srv/example",
+      projects,
+      sessions: [
+        { id: "upper-session", title: "Upper session", cwd: "/srv/Example", updatedAt: 1 },
+        { id: "lower-session", title: "Lower session", cwd: "/srv/example", updatedAt: 2 },
+      ],
+      newSession: (target) => created.push(target),
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      const visible = hook.result.current.sessions.map((item) => item.sessionId);
+      await act(async () => hook.result.current.newSession());
+      expect(created).toEqual([{ projectId: "lower", rootId: "lower-root" }]);
+      expect(visible).toEqual(["lower-session"]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("an optional question retains its card while a new message can be sent", async () => {
+    const sent: unknown[] = [];
+    const app = remoteApp({
+      activeSessionId: "existing",
+      approvals: [
+        {
+          id: "optional",
+          requestId: "optional",
+          sessionId: "existing",
+          toolName: "__ask_user__",
+          summary: "Optional question",
+          risk: "low",
+          asynchronous: true,
+        },
+      ],
+      sendChat: async (message) => {
+        sent.push(message);
+        return true;
+      },
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    expect(hook.result.current.running).toBe(false);
+    expect(hook.result.current.approvals[0].asynchronous).toBe(true);
+    await act(async () => {
+      hook.result.current.setDraft("Continue independently");
+      expect(hook.result.current.send()).toBe(true);
+      await flushMicrotasks();
+    });
+    expect(sent).toHaveLength(1);
+    expect(hook.result.current.approvalContent).toHaveLength(1);
+    await hook.unmount();
+  });
+
   test("send reports local admission and preserves a newer draft when its private send guard is busy", async () => {
     const ack = deferred<boolean>();
     let app = remoteApp({ sendChat: () => ack.promise });

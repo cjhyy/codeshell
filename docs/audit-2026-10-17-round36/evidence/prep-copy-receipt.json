@@ -1,0 +1,204 @@
+{
+  "copies": [
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/artifact-receipt.json",
+      "path": "evidence/chat-view-frontier/artifact-receipt.json",
+      "bytes": 3474,
+      "sha256": "528cfb3956dc927e31a4f927ba1137045adb7b587298a63a6404631027165d28"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/classification.json",
+      "path": "evidence/chat-view-frontier/classification.json",
+      "bytes": 1316,
+      "sha256": "0c3ffe6054c2a89ed898532e37ba7a04dbfbbea4d64b7137033352600f9c4075"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/consumer-history-initial-pins.json",
+      "path": "evidence/chat-view-frontier/consumer-history-initial-pins.json",
+      "bytes": 2881,
+      "sha256": "fcf5a310da54bb16dee52972b4c34c3aa3f5fb8abf7dede76e45104b28a120b6"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/focused-history.json",
+      "path": "evidence/chat-view-frontier/focused-history.json",
+      "bytes": 27482,
+      "sha256": "5b85f7f0b7e33a4cc75a721997ef6a80d363ba4570c6a0b47c68c20c5f73a73b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/history-delta.json",
+      "path": "evidence/chat-view-frontier/history-delta.json",
+      "bytes": 256,
+      "sha256": "ed568a9c2ec00ce740e90bd2b1abe522de4dc3ebaeaf6630f0b6b4e4e37d441e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/history-method.py",
+      "path": "evidence/chat-view-frontier/history-method.py",
+      "bytes": 3351,
+      "sha256": "7102c99443a316e3ff5e0a2c5784e6f95597ece3fe0dce91137784cf6ab884d8"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/history.json",
+      "path": "evidence/chat-view-frontier/history.json",
+      "bytes": 705686,
+      "sha256": "8526bc9cc05eef33a280e73446683f25bec0c2cc0c644085471290acc8906530"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/initial-pins.json",
+      "path": "evidence/chat-view-frontier/initial-pins.json",
+      "bytes": 1468,
+      "sha256": "8a2b4fba960cb8a16527117359ca9f2e70eb2a12cf64040ef3a277c84128cbe9"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/known-cause-late-pin.json",
+      "path": "evidence/chat-view-frontier/known-cause-late-pin.json",
+      "bytes": 403,
+      "sha256": "cdd69032c90575b7d41b313718bb7d0308d6fb757828f11ab50886fc7202a54a"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/links-check.json",
+      "path": "evidence/chat-view-frontier/links-check.json",
+      "bytes": 2229,
+      "sha256": "b76b8ba4c25475af3f02edf3f34ab718e7982f86055c42f62518c276301d44c9"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/message-stream-initial-pin.json",
+      "path": "evidence/chat-view-frontier/message-stream-initial-pin.json",
+      "bytes": 344,
+      "sha256": "dfe9dcd011dc22f9fb4b03ae45419929a37d4979aff2347b866c501c770bd44b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/parent-caller-initial-pins.json",
+      "path": "evidence/chat-view-frontier/parent-caller-initial-pins.json",
+      "bytes": 737,
+      "sha256": "a624295ee1ae526ec339ebc47782a4f4e46f0ede52b9e0a9241c5889418bbea4"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/prior-coverage.json",
+      "path": "evidence/chat-view-frontier/prior-coverage.json",
+      "bytes": 1710,
+      "sha256": "773ed0d9bba4a224000c64f9114033cc3616420a778035c51879385fbe8572aa"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/report.md",
+      "path": "evidence/chat-view-frontier/report.md",
+      "bytes": 6408,
+      "sha256": "96de25be63fb54a3c12c6e137fe0b86efb964359f97e40b69a6c7936a4e74d39"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/source-manifest.json",
+      "path": "evidence/chat-view-frontier/source-manifest.json",
+      "bytes": 20864,
+      "sha256": "ad334f20513f2dcedb9be323028da3d329bbcc527c8e3449aee0ee1e8d4263c4"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-chat-view-frontier/validation.json",
+      "path": "evidence/chat-view-frontier/validation.json",
+      "bytes": 1200,
+      "sha256": "6a384e6b5798c4856691ebe098746af9262d56b091a0a98bec62c6d414b5b06d"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/additional-pins.json",
+      "path": "evidence/ui-state-frontier/additional-pins.json",
+      "bytes": 1317,
+      "sha256": "10e446bf308afb2045719332e40662b7367053b2142331c2b013c33f2404846c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/consumer-pins.json",
+      "path": "evidence/ui-state-frontier/consumer-pins.json",
+      "bytes": 1583,
+      "sha256": "7d0f9211f7ef26f9dd2ec5715a58e25afb001a86e9f8785d1e8ecf57b68279ad"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/display-pins.json",
+      "path": "evidence/ui-state-frontier/display-pins.json",
+      "bytes": 1279,
+      "sha256": "dc744db72b1d2370fb7d46b9226863f9b5c642bc10e2462dc4e22997a0737b05"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/history-method.py",
+      "path": "evidence/ui-state-frontier/history-method.py",
+      "bytes": 3780,
+      "sha256": "bdf845f6231c795f2fe109a0dcbb07a3e41e0f6a8ca9e2879c24b46d564c00e0"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/history-supplement.json",
+      "path": "evidence/ui-state-frontier/history-supplement.json",
+      "bytes": 38581,
+      "sha256": "a828400d3e825f2fb7c3c9cebfb727c244f777e947bdd33c055acc549b1ac4b7"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/history.json",
+      "path": "evidence/ui-state-frontier/history.json",
+      "bytes": 665855,
+      "sha256": "78944dd0083659666c4661031965bfee049c890d977eb9c39119416105e94d32"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/initial-pins.json",
+      "path": "evidence/ui-state-frontier/initial-pins.json",
+      "bytes": 1487,
+      "sha256": "77d9794ae6f80058ef75fe013fc81725db5b05ade5f0790e52e633d9c2becd0d"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/review.md",
+      "path": "evidence/ui-state-frontier/review.md",
+      "bytes": 4860,
+      "sha256": "a516fab53cb19b4e472c67dcd00e7280ee3954f9e02e8fa17e5b78cc2e290600"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/reviewer-receipt.json",
+      "path": "evidence/ui-state-frontier/reviewer-receipt.json",
+      "bytes": 3638,
+      "sha256": "490eb50abafdd78a93350c1a751e45fe25bb4641506cdea05583badad64cf0da"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/source-excerpts.txt",
+      "path": "evidence/ui-state-frontier/source-excerpts.txt",
+      "bytes": 47336,
+      "sha256": "e586cc5dd7cd2fabe335c3d61156059e06c4e27f9bfb2dd6a227f596d7376f08"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/source-manifest.json",
+      "path": "evidence/ui-state-frontier/source-manifest.json",
+      "bytes": 16514,
+      "sha256": "0dd631193c43a7e24b3b1d542a0b923b4a9316f0561f64fbed2eedf5f1307a33"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-ui-state-frontier/validation.json",
+      "path": "evidence/ui-state-frontier/validation.json",
+      "bytes": 3050,
+      "sha256": "2b126b8d7dac017e7fa1af847b283a7eb41ebb0d7ab80b6cddd8a988099373a8"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-root-review/author-receipt.json",
+      "path": "evidence/root-review/author-receipt.json",
+      "bytes": 676,
+      "sha256": "4e19230661ce66511f8c276857444bf399806eec253376e9cae04b12865d5c41"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-root-review/initial-artifact-pins.json",
+      "path": "evidence/root-review/initial-artifact-pins.json",
+      "bytes": 1471,
+      "sha256": "5d735bb51c356fe909f61bba764b6370a07ad8be03ed467663840192b09afd2d"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-root-review/review.md",
+      "path": "evidence/root-review/review.md",
+      "bytes": 1744,
+      "sha256": "6293857f0cf1d1788d99e40f0b83f25ed02c62b72fd004f6d9ddb47e3cea3acb"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-root-review/source-checks.json",
+      "path": "evidence/root-review/source-checks.json",
+      "bytes": 19347,
+      "sha256": "9c5a6f21484584ca5f6a1b5cc31b5211ad2ed43ef18cce0b07c5b127faa92e0e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round36-root-review/validation.json",
+      "path": "evidence/root-review/validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    }
+  ],
+  "sourceRootExactDirsOnly": true,
+  "productRuns": 0
+}

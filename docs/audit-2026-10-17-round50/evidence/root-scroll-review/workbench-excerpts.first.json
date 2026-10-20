@@ -1,0 +1,43 @@
+{
+  "atUTC": "2026-10-17T16:49:19.070227+00:00",
+  "path": "packages/web/app/Workbench.tsx",
+  "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+  "displayedRanges": [
+    [
+      147,
+      166
+    ],
+    [
+      746,
+      792
+    ],
+    [
+      849,
+      905
+    ]
+  ],
+  "excerpts": [
+    {
+      "range": [
+        147,
+        166
+      ],
+      "text": " 147   const sidebarRef = React.useRef<HTMLElement>(null);\n 148   const sidebarBackdropRef = React.useRef<HTMLDivElement>(null);\n 149   const sidebarToggleRef = React.useRef<HTMLButtonElement>(null);\n 150   const sidebarCloseFocus = React.useRef<{\n 151     source: HTMLElement;\n 152     workspace: string;\n 153     cancelled: boolean;\n 154   } | null>(null);\n 155   const messageListId = React.useId();\n 156   const textareaRef = React.useRef<HTMLTextAreaElement>(null);\n 157   const latest = useLatestMessages({\n 158     items: chat.items,\n 159     scope: JSON.stringify([controller.workspaceKey, activeId]),\n 160     connection,\n 161     loading: Boolean(controller.loading),\n 162     active: view === \"chat\",\n 163     approvalCount: controller.approvals.length,\n 164   });\n 165   React.useLayoutEffect(() => {\n 166     const handoff = historyHandoff.current;"
+    },
+    {
+      "range": [
+        746,
+        792
+      ],
+      "text": " 746         ) : null}\n 747         {view !== \"chat\" && approvals.length > 0 ? (\n 748           <div className=\"banner\">\n 749             {blockingApprovals.length ? \"\u5f53\u524d\u5bf9\u8bdd\u9700\u8981\u4f60\u7684\u786e\u8ba4\u3002\" : \"\u5f53\u524d\u5bf9\u8bdd\u6709\u53ef\u7a0d\u540e\u56de\u7b54\u7684\u95ee\u9898\u3002\"}\n 750             <button className=\"ghost\" onClick={() => requestNavigation(() => setView(\"chat\"))}>\n 751               \u8fd4\u56de\u5bf9\u8bdd\n 752             </button>\n 753           </div>\n 754         ) : null}\n 755         <section\n 756           className={`chat${empty ? \" chat-empty\" : \"\"}`}\n 757           hidden={view !== \"chat\"}\n 758           aria-label=\"\u5bf9\u8bdd\"\n 759         >\n 760           <div className=\"message-viewport\">\n 761             <div\n 762               className=\"messages\"\n 763               id={messageListId}\n 764               role=\"region\"\n 765               aria-label=\"\u6d88\u606f\u5217\u8868\"\n 766               tabIndex={0}\n 767               ref={latest.listRef}\n 768               onScroll={latest.onScroll}\n 769             >\n 770               <div className=\"transcript\" ref={latest.contentRef}>\n 771                 {controller.chatControls}\n 772                 {controller.loading ? (\n 773                   <div className=\"banner\" role=\"status\">\n 774                     \u6b63\u5728\u6062\u590d\u4f1a\u8bdd\u8bb0\u5f55\u2026\n 775                   </div>\n 776                 ) : null}\n 777                 {chat.goal ? (\n 778                   <div className=\"banner goal\">\n 779                     <span>{chat.goal}</span>\n 780                     {controller.goalActions}\n 781                   </div>\n 782                 ) : null}\n 783                 {chat.items.map((item) => {\n 784                   switch (item.kind) {\n 785                     case \"user\":\n 786                       return (\n 787                         <div key={item.id} className=\"msg user\">\n 788                           {item.text}\n 789                           {item.attachments?.map((attachment, index) =>\n 790                             hub && attachment.path ? (\n 791                               <button\n 792                                 className=\"attachment attachment-open\""
+    },
+    {
+      "range": [
+        849,
+        905
+      ],
+      "text": " 849                   <div className=\"empty-chat\">\n 850                     <span className=\"welcome-mark\">\n 851                       <WorkbenchIcon name=\"brand\" />\n 852                     </span>\n 853                     <h1>\u4eca\u5929\u60f3\u5b8c\u6210\u4ec0\u4e48\uff1f</h1>\n 854                     <p>\u4ece\u4e00\u4e2a\u95ee\u9898\u6216\u60f3\u6cd5\u5f00\u59cb\uff0c\u8ba9 CodeShell \u5e2e\u4f60\u4e00\u6b65\u6b65\u5b8c\u6210\u3002</p>\n 855                     <span className=\"welcome-workspace\">\n 856                       <WorkbenchIcon name=\"folder\" />\n 857                       {projectName ?? workspaceName}\n 858                     </span>\n 859                   </div>\n 860                 ) : null}\n 861               </div>\n 862             </div>\n 863             {latest.showJump && (\n 864               <button\n 865                 type=\"button\"\n 866                 className=\"latest-messages\"\n 867                 aria-controls={messageListId}\n 868                 aria-label={\n 869                   latest.newOutputCount\n 870                     ? `\u56de\u5230\u6700\u65b0\u6d88\u606f\uff0c${latest.newOutputCount > 99 ? \"99+\" : latest.newOutputCount} \u6761\u65b0\u8f93\u51fa`\n 871                     : \"\u56de\u5230\u6700\u65b0\u6d88\u606f\"\n 872                 }\n 873                 onClick={latest.jumpToLatest}\n 874               >\n 875                 <span aria-hidden=\"true\">\u2193</span>\n 876                 \u56de\u5230\u6700\u65b0\u6d88\u606f\n 877                 {latest.newOutputCount > 0 && (\n 878                   <span className=\"latest-count\" aria-hidden=\"true\">\n 879                     {latest.newOutputCount > 99 ? \"99+\" : latest.newOutputCount} \u6761\u65b0\u8f93\u51fa\n 880                   </span>\n 881                 )}\n 882               </button>\n 883             )}\n 884             <span\n 885               className=\"latest-announcement\"\n 886               role=\"status\"\n 887               aria-live=\"polite\"\n 888               aria-atomic=\"true\"\n 889             >\n 890               {latest.newOutputCount > 0\n 891                 ? `${latest.newOutputCount > 99 ? \"99+\" : latest.newOutputCount} \u6761\u65b0\u8f93\u51fa\uff0c\u53ef\u56de\u5230\u6700\u65b0\u6d88\u606f\u3002`\n 892                 : \"\"}\n 893             </span>\n 894           </div>\n 895           {controller.readOnlyNote ? <div className=\"banner\">{controller.readOnlyNote}</div> : null}\n 896           <div className=\"composer-wrap\">\n 897             <footer className=\"composer\">\n 898               {files.length || (uploading && controller.host === \"hub\") ? (\n 899                 <div className=\"attachments\" aria-live=\"polite\">\n 900                   {files.map((file) => (\n 901                     <span className=\"attachment\" key={file.id}>\n 902                       <WorkbenchIcon name=\"attachment\" />\n 903                       {file.name}\n 904                       <button\n 905                         className=\"ghost\""
+    }
+  ],
+  "scope": "Actual scroll ref/content wrapper/jump button consumer; adjacent approval/auth/file callback components only opaque boundaries, no execution."
+}

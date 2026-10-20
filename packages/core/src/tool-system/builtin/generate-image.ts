@@ -22,6 +22,11 @@
 import { writeFile, mkdir, readFile } from "node:fs/promises";
 import { join, isAbsolute, resolve as resolvePath, basename, extname } from "node:path";
 import { randomBytes } from "node:crypto";
+import {
+  modelTraceFetch,
+  withModelTrace,
+  withModelTraceContext,
+} from "../../model-traces/context.js";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { SettingsManager } from "../../settings/manager.js";
@@ -30,6 +35,7 @@ import {
   DEFAULT_IMAGE_MODEL,
   type ImageProviderCreds,
   type InputImage,
+  type ImageGenerateResult,
 } from "./image-providers.js";
 import { getMergedCatalog, findCatalogEntry } from "../../model-catalog/index.js";
 import { genInstancesFromConnections } from "../../model-catalog/gen-connections.js";
@@ -423,7 +429,7 @@ export async function generateImageTool(
           "in your code-shell settings to use GenerateImage.";
   }
 
-  const adapter = getImageProvider(resolved.kind);
+  const adapter = getImageProvider(resolved.kind, modelTraceFetch(globalThis.fetch));
   if (!adapter) {
     return `Error: image generation is not supported for provider kind "${resolved.kind}".`;
   }
@@ -432,15 +438,45 @@ export async function generateImageTool(
   const model =
     overrideModel ?? resolved.defaultModel ?? DEFAULT_IMAGE_MODEL[resolved.kind] ?? "gpt-image-2";
 
-  const result = await adapter.generate({
-    prompt,
-    size,
-    quality,
-    model,
-    creds: resolved.creds,
-    inputImages,
-    signal: ctx?.signal,
-  });
+  let result: ImageGenerateResult | undefined;
+  try {
+    await withModelTraceContext({ workspacePath: cwd, purpose: "image_generation" }, () =>
+      withModelTrace(
+        {
+          provider: resolved.kind,
+          model,
+          parameters: { size, quality, referenceImageCount: inputImages?.length ?? 0 },
+        },
+        {
+          systemPrompt: "",
+          messages: [{ role: "user", content: prompt }],
+          tools: [],
+          signal: ctx?.signal,
+        },
+        async () => {
+          result = await adapter.generate({
+            prompt,
+            size,
+            quality,
+            model,
+            creds: resolved.creds,
+            inputImages,
+            signal: ctx?.signal,
+          });
+          if (!result.ok) throw new Error(result.error);
+          return {
+            text: "[generated image payload omitted]",
+            toolCalls: [],
+            stopReason: "completed",
+          };
+        },
+      ),
+    );
+  } catch (error) {
+    // Adapters already represent provider failures as results; tracing preserves that contract.
+    if (!result || result.ok) throw error;
+  }
+  if (!result) return "Error generating image: no provider result";
   if (!result.ok) {
     return `Error generating image: ${result.error}`;
   }

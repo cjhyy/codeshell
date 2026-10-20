@@ -28,6 +28,78 @@ interface TitleDraft {
   reviewedTitle?: string;
 }
 
+interface HistoryFocusRequest {
+  source: HTMLElement;
+  cancelled: boolean;
+}
+export function useHistoryActionFocus() {
+  const live = React.useRef(false);
+  const current = React.useRef<HistoryFocusRequest | null>(null);
+  React.useLayoutEffect(() => {
+    live.current = true;
+    const handoff = (event: Event) => {
+      const target =
+        event instanceof FocusEvent && event.type === "focusout"
+          ? event.relatedTarget
+          : event.target;
+      if (!(target instanceof Node) || (target === document.body && event.type !== "pointerdown"))
+        return;
+      if (current.current && !current.current.source.contains(target))
+        current.current.cancelled = true;
+    };
+    const blur = () => {
+      if (current.current) current.current.cancelled = true;
+    };
+    document.addEventListener("pointerdown", handoff, true);
+    document.addEventListener("focusin", handoff, true);
+    document.addEventListener("focusout", handoff, true);
+    window.addEventListener("blur", blur);
+    return () => {
+      live.current = false;
+      current.current = null;
+      document.removeEventListener("pointerdown", handoff, true);
+      document.removeEventListener("focusin", handoff, true);
+      document.removeEventListener("focusout", handoff, true);
+      window.removeEventListener("blur", blur);
+    };
+  }, []);
+  const capture = React.useCallback((source: Element | null = document.activeElement) => {
+    if (current.current) current.current.cancelled = true;
+    const request =
+      source instanceof HTMLElement && source !== document.body
+        ? { source, cancelled: false }
+        : null;
+    current.current = request;
+    return request;
+  }, []);
+  const isCurrent = React.useCallback(
+    (request: HistoryFocusRequest | null) =>
+      !!request && live.current && current.current === request,
+    [],
+  );
+  const take = React.useCallback((request: HistoryFocusRequest | null) => {
+    if (!request || !live.current || current.current !== request) return null;
+    current.current = null;
+    const active = document.activeElement;
+    return request.cancelled ||
+      (active && active !== document.body && active !== request.source && active.isConnected)
+      ? null
+      : request;
+  }, []);
+  const adopt = React.useCallback((request: HistoryFocusRequest | null) => {
+    if (current.current) current.current.cancelled = true;
+    current.current = request && live.current && !request.cancelled ? request : null;
+    return current.current;
+  }, []);
+  const finish = React.useCallback(
+    (request: HistoryFocusRequest | null, target: HTMLElement | null) => {
+      if (take(request) && target?.isConnected && !target.matches(":disabled")) target.focus();
+    },
+    [take],
+  );
+  return { capture, finish, isCurrent, take, adopt };
+}
+
 export interface ManagedSessions {
   sessions: ManagedSession[];
   nextCursor: string | null;
@@ -54,7 +126,7 @@ export function HubSessions({
   onDirtyChange,
 }: {
   onAuthLost: () => void;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, intent?: HistoryFocusRequest | null) => void;
   onChanged?: () => void;
   version?: number;
   onDirtyChange?: (dirty: boolean) => void;
@@ -67,26 +139,115 @@ export function HubSessions({
   const [loading, setLoading] = React.useState(true);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [readFailed, setReadFailed] = React.useState(false);
+  const [actionFeedback, setActionFeedback] = React.useState<{
+    id: string;
+    kind: "error" | "success";
+    message: string;
+  } | null>(null);
   const [notice, setNotice] = React.useState("");
   const [reload, setReload] = React.useState(0);
   const [busy, setBusy] = React.useState("");
   const [edit, setEdit] = React.useState<TitleDraft | null>(null);
+  const openGeneration = React.useRef(0);
+  const [openAfterWrite, setOpenAfterWrite] = React.useState<{
+    id: string;
+    request: HistoryFocusRequest | null;
+    generation: number;
+    identity: string;
+  } | null>(null);
   const titleInput = React.useRef<HTMLInputElement>(null);
+  const historyPane = React.useRef<HTMLElement>(null);
   const titleError = React.useRef<HTMLDivElement>(null);
   const editTrigger = React.useRef<HTMLButtonElement | null>(null);
+  const renameButtons = React.useRef(new Map<string, HTMLButtonElement>());
   const searchInput = React.useRef<HTMLInputElement>(null);
-  React.useEffect(() => {
-    if (edit?.id) titleInput.current?.focus();
-  }, [edit?.id]);
-  React.useEffect(() => {
-    if (edit?.error) titleError.current?.focus();
-  }, [edit?.error]);
-  const finishEdit = () => {
+  const actionMessage = React.useRef<HTMLDivElement>(null);
+  const readError = React.useRef<HTMLDivElement>(null);
+  const moreButton = React.useRef<HTMLButtonElement>(null);
+  const titleButtons = React.useRef(new Map<string, HTMLButtonElement>());
+  const listIdentity = React.useRef("");
+  const filterIdentity = React.useRef("");
+  listIdentity.current = JSON.stringify([query, archived, version]);
+  filterIdentity.current = JSON.stringify([query, archived]);
+  const focus = useHistoryActionFocus();
+  React.useLayoutEffect(() => {
+    const pane = historyPane.current;
+    if (!pane) return;
+    let active = true;
+    const revealFocus = () => {
+      const target = document.activeElement;
+      if (!active || !(target instanceof HTMLElement) || !pane.contains(target)) return;
+      const bounds = pane.getBoundingClientRect();
+      const top = bounds.top + pane.clientTop + 4;
+      const bottom = bounds.top + pane.clientTop + pane.clientHeight - 4;
+      const rect = target.getBoundingClientRect();
+      if (rect.height <= bottom - top) {
+        if (rect.top < top) pane.scrollTop -= Math.ceil(top - rect.top);
+        else if (rect.bottom > bottom) pane.scrollTop += Math.ceil(rect.bottom - bottom);
+      } else if (rect.bottom < top || rect.top > bottom) {
+        // A full title may exceed the pane; retain its readable slice while scrolling.
+        pane.scrollTop += Math.floor(rect.top - top);
+      }
+    };
+    const observer = new ResizeObserver(revealFocus);
+    observer.observe(pane);
+    for (const child of pane.children) observer.observe(child);
+    pane.addEventListener("focusin", revealFocus);
+    window.addEventListener("resize", revealFocus);
+    revealFocus();
+    return () => {
+      active = false;
+      observer.disconnect();
+      pane.removeEventListener("focusin", revealFocus);
+      window.removeEventListener("resize", revealFocus);
+    };
+  }, [actionFeedback, edit?.id, error, entries, loading, loadingMore]);
+  const [focusIntent, setFocusIntent] = React.useState<{
+    request: HistoryFocusRequest | null;
+    kind: "edit" | "error" | "return" | "input" | "action" | "read" | "more";
+    id: string;
+  } | null>(null);
+  const scheduleFocus = (
+    request: HistoryFocusRequest | null,
+    kind: NonNullable<typeof focusIntent>["kind"],
+    id: string,
+  ) => {
+    if (focus.isCurrent(request)) setFocusIntent({ request, kind, id });
+  };
+  React.useLayoutEffect(() => {
+    if (!focusIntent || busy || loading || loadingMore) return;
+    if (focusIntent.kind === "return" && edit) return;
+    setFocusIntent(null);
+    const sameEdit = edit?.id === focusIntent.id;
+    const target =
+      focusIntent.kind === "edit" || focusIntent.kind === "input"
+        ? sameEdit
+          ? titleInput.current
+          : null
+        : focusIntent.kind === "error"
+          ? sameEdit
+            ? titleError.current
+            : null
+          : focusIntent.kind === "read"
+            ? readError.current
+            : focusIntent.kind === "more"
+              ? (titleButtons.current.get(focusIntent.id) ??
+                moreButton.current ??
+                searchInput.current)
+              : focusIntent.kind === "action"
+                ? actionFeedback?.id === focusIntent.id
+                  ? actionMessage.current
+                  : null
+                : (renameButtons.current.get(focusIntent.id) ??
+                  (editTrigger.current?.isConnected && !editTrigger.current.disabled
+                    ? editTrigger.current
+                    : searchInput.current));
+    focus.finish(focusIntent.request, target);
+  }, [actionFeedback, busy, edit, focus, focusIntent, loading, loadingMore]);
+  const finishEdit = (request: HistoryFocusRequest | null) => {
     setEdit(null);
-    requestAnimationFrame(() => {
-      if (editTrigger.current?.isConnected) editTrigger.current.focus();
-      else searchInput.current?.focus();
-    });
+    scheduleFocus(request, "return", edit?.id ?? "");
   };
   React.useEffect(() => {
     onDirtyChange?.(!!edit || !!busy);
@@ -96,6 +257,22 @@ export function HubSessions({
   const write = React.useRef<AbortController | null>(null);
   const callbacks = React.useRef({ onAuthLost, onChanged, onOpen });
   callbacks.current = { onAuthLost, onChanged, onOpen };
+  React.useEffect(() => {
+    if (!openAfterWrite || busy || loading || loadingMore) return;
+    // Let the settled busy/dirty notification commit in Workbench before it
+    // evaluates the existing navigation guard. Keep intent listeners active.
+    const frame = requestAnimationFrame(() => {
+      setOpenAfterWrite(null);
+      if (
+        openGeneration.current !== openAfterWrite.generation ||
+        filterIdentity.current !== openAfterWrite.identity
+      )
+        return;
+      const intent = focus.take(openAfterWrite.request);
+      if (intent) callbacks.current.onOpen(openAfterWrite.id, intent);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [busy, loading, loadingMore, openAfterWrite, focus.take]);
   const report = React.useCallback((cause: unknown) => {
     if (cause instanceof ApiError && cause.status === 401) callbacks.current.onAuthLost();
     else setError(cause instanceof Error ? cause.message : "会话操作失败，请重试。");
@@ -110,6 +287,7 @@ export function HubSessions({
     read.current = controller;
     setLoading(true);
     setLoadingMore(false);
+    setReadFailed(false);
     setError("");
     void readManagedSessions({ query: search, archived, signal: controller.signal })
       .then((data) => {
@@ -119,7 +297,10 @@ export function HubSessions({
         }
       })
       .catch((cause) => {
-        if (!controller.signal.aborted) report(cause);
+        if (!controller.signal.aborted) {
+          setReadFailed(true);
+          report(cause);
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -134,8 +315,12 @@ export function HubSessions({
     [],
   );
 
-  const more = () => {
+  const more = (source: HTMLElement) => {
     if (!cursor || loadingMore || loading) return;
+    const request = focus.capture(source);
+    const identity = listIdentity.current;
+    const knownBefore = new Set(entries.map((entry) => entry.sessionId));
+    setError("");
     const controller = new AbortController();
     read.current?.abort();
     read.current = controller;
@@ -148,9 +333,23 @@ export function HubSessions({
           return [...current, ...data.sessions.filter((item) => !known.has(item.sessionId))];
         });
         setCursor(data.nextCursor);
+        if (focus.isCurrent(request) && listIdentity.current === identity)
+          setFocusIntent({
+            request,
+            kind: "more",
+            id: data.sessions.find((entry) => !knownBefore.has(entry.sessionId))?.sessionId ?? "",
+          });
       })
       .catch((cause) => {
-        if (!controller.signal.aborted) report(cause);
+        if (!controller.signal.aborted) {
+          report(cause);
+          if (
+            !(cause instanceof ApiError && cause.status === 401) &&
+            focus.isCurrent(request) &&
+            listIdentity.current === identity
+          )
+            setFocusIntent({ request, kind: "read", id: "" });
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoadingMore(false);
@@ -161,13 +360,18 @@ export function HubSessions({
     id: string,
     patch: { title: string; expectedTitle: string } | { archived: boolean },
     open = false,
+    source: Element | null = document.activeElement,
   ) => {
     if (write.current) return;
+    const request = focus.capture(source);
+    const openIdentity = filterIdentity.current;
+    const generation = openGeneration.current;
     const controller = new AbortController();
     write.current = controller;
     setBusy(id);
     setError("");
     setNotice("");
+    setActionFeedback(null);
     if ("title" in patch) setEdit((current) => current && { ...current, error: "" });
     try {
       await api(`/api/v1/sessions/${encodeURIComponent(id)}`, {
@@ -178,12 +382,20 @@ export function HubSessions({
       });
       if (controller.signal.aborted) return;
       if ("title" in patch) {
-        finishEdit();
+        finishEdit(request);
         setNotice(patch.title ? "标题已保存。" : "已恢复自动标题。");
-      } else setNotice(patch.archived ? "对话已归档，可以在“已归档”中恢复。" : "对话已恢复。");
+      } else {
+        setActionFeedback({
+          id,
+          kind: "success",
+          message: patch.archived ? "对话已归档，可以在“已归档”中恢复。" : "对话已恢复。",
+        });
+        if (!open) scheduleFocus(request, "action", id);
+      }
+      setLoading(true);
       setReload((value) => value + 1);
       callbacks.current.onChanged?.();
-      if (open) callbacks.current.onOpen(id);
+      if (open) setOpenAfterWrite({ id, request, generation, identity: openIdentity });
     } catch (cause) {
       if (!controller.signal.aborted) {
         if ("title" in patch && !(cause instanceof ApiError && cause.status === 401)) {
@@ -197,16 +409,26 @@ export function HubSessions({
                 }
               : current,
           );
-        } else report(cause);
+          scheduleFocus(request, "error", id);
+        } else if (cause instanceof ApiError && cause.status === 401) report(cause);
+        else {
+          setActionFeedback({
+            id,
+            kind: "error",
+            message: cause instanceof Error ? cause.message : "会话操作失败，请重试。",
+          });
+          scheduleFocus(request, "action", id);
+        }
       }
     } finally {
       if (write.current === controller) write.current = null;
       if (!controller.signal.aborted) setBusy("");
     }
   };
-  const refreshTitle = async () => {
+  const refreshTitle = async (source: HTMLElement) => {
     if (!edit || write.current) return;
     const id = edit.id;
+    const request = focus.capture(source);
     const controller = new AbortController();
     write.current = controller;
     setBusy(id);
@@ -230,7 +452,7 @@ export function HubSessions({
             }
           : draft,
       );
-      titleInput.current?.focus();
+      scheduleFocus(request, "input", id);
     } catch (cause) {
       if (!controller.signal.aborted) {
         if (cause instanceof ApiError && cause.status === 401) report(cause);
@@ -244,19 +466,41 @@ export function HubSessions({
                 }
               : draft,
           );
+        if (!(cause instanceof ApiError && cause.status === 401))
+          scheduleFocus(request, "error", id);
       }
     } finally {
       if (write.current === controller) write.current = null;
       if (!controller.signal.aborted) setBusy("");
     }
   };
-  const open = (entry: ManagedSession) =>
-    entry.archivedAt
-      ? void mutate(entry.sessionId, { archived: false }, true)
-      : callbacks.current.onOpen(entry.sessionId);
+  const open = (entry: ManagedSession, source: HTMLElement) => {
+    openGeneration.current += 1;
+    setOpenAfterWrite(null);
+    if (entry.archivedAt) void mutate(entry.sessionId, { archived: false }, true, source);
+    else {
+      const request = document.activeElement === source ? focus.capture(source) : null;
+      callbacks.current.onOpen(entry.sessionId, focus.take(request));
+    }
+  };
 
+  const receipt = actionFeedback ? (
+    <div
+      ref={actionMessage}
+      className={`library-${actionFeedback.kind === "error" ? "error" : "hint"} session-operation-receipt`}
+      role={actionFeedback.kind === "error" ? "alert" : "status"}
+      tabIndex={0}
+      aria-label="会话操作结果"
+    >
+      {actionFeedback.message}
+    </div>
+  ) : null;
   return (
-    <section className="hub-library hub-sessions" aria-labelledby="hub-history-heading">
+    <section
+      ref={historyPane}
+      className="hub-library hub-sessions"
+      aria-labelledby="hub-history-heading"
+    >
       <header className="library-heading">
         <div>
           <h1 id="hub-history-heading">历史对话</h1>
@@ -267,10 +511,19 @@ export function HubSessions({
         </button>
       </header>
       {error ? (
-        <div className="library-error" role="alert">
+        <div
+          ref={readError}
+          className="library-error session-read-error"
+          role="alert"
+          tabIndex={0}
+          aria-label="对话读取失败"
+        >
           {error}
         </div>
       ) : null}
+      {!loading && actionFeedback && !entries.some((entry) => entry.sessionId === actionFeedback.id)
+        ? receipt
+        : null}
       {notice ? (
         <p className="library-hint" role="status">
           {notice}
@@ -303,7 +556,12 @@ export function HubSessions({
           onSubmit={(event) => {
             event.preventDefault();
             if (!busy && !edit.conflict && !edit.unavailable)
-              void mutate(edit.id, { title: edit.title, expectedTitle: edit.expectedTitle });
+              void mutate(
+                edit.id,
+                { title: edit.title, expectedTitle: edit.expectedTitle },
+                false,
+                (event.nativeEvent as SubmitEvent).submitter ?? document.activeElement,
+              );
           }}
         >
           <div>
@@ -318,7 +576,8 @@ export function HubSessions({
               className="library-error"
               id="session-title-error"
               role="alert"
-              tabIndex={-1}
+              tabIndex={0}
+              aria-label="标题保存失败"
               ref={titleError}
             >
               {edit.error}
@@ -357,12 +616,17 @@ export function HubSessions({
                 type="button"
                 className="library-button"
                 disabled={!!busy}
-                onClick={() => void refreshTitle()}
+                onClick={(event) => void refreshTitle(event.currentTarget)}
               >
                 读取最新标题
               </button>
             ) : null}
-            <button type="button" className="library-button" disabled={!!busy} onClick={finishEdit}>
+            <button
+              type="button"
+              className="library-button"
+              disabled={!!busy}
+              onClick={(event) => finishEdit(focus.capture(event.currentTarget))}
+            >
               取消
             </button>
             {edit.expectedTitle ? (
@@ -370,8 +634,13 @@ export function HubSessions({
                 type="button"
                 className="library-button"
                 disabled={!!busy || edit.conflict || edit.unavailable}
-                onClick={() =>
-                  void mutate(edit.id, { title: "", expectedTitle: edit.expectedTitle })
+                onClick={(event) =>
+                  void mutate(
+                    edit.id,
+                    { title: "", expectedTitle: edit.expectedTitle },
+                    false,
+                    event.currentTarget,
+                  )
                 }
               >
                 使用自动标题
@@ -387,17 +656,29 @@ export function HubSessions({
           </p>
         ) : entries.length === 0 ? (
           <p className="library-empty">
-            {search
-              ? "没有找到匹配的对话。"
-              : archived === "true"
-                ? "还没有归档的对话。"
-                : "还没有保存的对话，开始一条新对话后会显示在这里。"}
+            {readFailed
+              ? "未能读取对话，请使用刷新重试。"
+              : search
+                ? "没有找到匹配的对话。"
+                : archived === "true"
+                  ? "还没有归档的对话。"
+                  : "还没有保存的对话，开始一条新对话后会显示在这里。"}
           </p>
         ) : (
           entries.map((entry) => (
-            <article className="session-history-row" key={entry.sessionId}>
+            <article
+              className={`session-history-row${actionFeedback?.id === entry.sessionId ? " has-feedback" : ""}`}
+              key={entry.sessionId}
+            >
               <div className="session-history-info">
-                <button className="session-history-title" onClick={() => open(entry)}>
+                <button
+                  ref={(node) => {
+                    if (node) titleButtons.current.set(entry.sessionId, node);
+                    else titleButtons.current.delete(entry.sessionId);
+                  }}
+                  className="session-history-title"
+                  onClick={(event) => open(entry, event.currentTarget)}
+                >
                   {entry.title}
                 </button>
                 {entry.preview && entry.preview !== entry.title ? (
@@ -415,11 +696,18 @@ export function HubSessions({
               </div>
               <div className="library-actions">
                 <button
+                  ref={(node) => {
+                    if (node) renameButtons.current.set(entry.sessionId, node);
+                    else renameButtons.current.delete(entry.sessionId);
+                  }}
                   className="library-button"
                   disabled={!!busy || !!edit}
                   onClick={(event) => {
                     editTrigger.current = event.currentTarget;
+                    const request = focus.capture(event.currentTarget);
                     setNotice("");
+                    setActionFeedback(null);
+                    scheduleFocus(request, "edit", entry.sessionId);
                     setEdit({
                       id: entry.sessionId,
                       title: entry.title,
@@ -433,7 +721,14 @@ export function HubSessions({
                 <button
                   className="library-button"
                   disabled={!!busy || entry.running}
-                  onClick={() => void mutate(entry.sessionId, { archived: !entry.archivedAt })}
+                  onClick={(event) =>
+                    void mutate(
+                      entry.sessionId,
+                      { archived: !entry.archivedAt },
+                      false,
+                      event.currentTarget,
+                    )
+                  }
                 >
                   {busy === entry.sessionId ? "处理中…" : entry.archivedAt ? "恢复" : "归档"}
                 </button>
@@ -455,13 +750,19 @@ export function HubSessions({
                   </details>
                 )}
               </div>
+              {actionFeedback?.id === entry.sessionId ? receipt : null}
             </article>
           ))
         )}
       </div>
       {cursor && !loading ? (
         <div className="session-load-more">
-          <button className="library-button" disabled={loadingMore} onClick={more}>
+          <button
+            ref={moreButton}
+            className="library-button"
+            disabled={loadingMore}
+            onClick={(event) => more(event.currentTarget)}
+          >
             {loadingMore ? "读取中…" : "加载更多"}
           </button>
         </div>

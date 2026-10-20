@@ -1,0 +1,1113 @@
+{
+  "captureAtUTC": "2026-10-17T16:02:55.741035+00:00",
+  "captureTiming": "After recorded actual source displays, all first pin/finish SHA equal",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "selected": [
+        {
+          "range": [
+            22,
+            22
+          ],
+          "text": "import { StatusLine } from \"./components/StatusLine.js\";"
+        },
+        {
+          "range": [
+            46,
+            46
+          ],
+          "text": "import { asyncAgentRegistry } from \"@cjhyy/code-shell-core/internal\";"
+        },
+        {
+          "range": [
+            73,
+            73
+          ],
+          "text": "import { formatDuration, formatTokens } from \"@cjhyy/code-shell-core/internal\";"
+        },
+        {
+          "range": [
+            213,
+            218
+          ],
+          "text": "  const isQueryActive = useSyncExternalStore(queryGuard.subscribe, queryGuard.getSnapshot);\n  const hasRunningBgAgents = useSyncExternalStore(\n    asyncAgentRegistry.subscribe,\n    asyncAgentRegistry.hasRunning,\n  );\n  const isRunning = isQueryActive || hasRunningBgAgents;"
+        },
+        {
+          "range": [
+            389,
+            394
+          ],
+          "text": "  // Track live streamed token count in a ref — no App-level re-render per tick.\n  // Provider emits tokens per text delta (real cl100k_base count, not chars/4).\n  // StatusLine reads this ref directly via its own internal interval.\n  const streamingTokensRef = useRef(0);\n  const runStartRef = useRef(0);\n  const [streamMode, setStreamMode] = useState<\"responding\" | \"tool-use\" | \"thinking\">(\"thinking\");"
+        },
+        {
+          "range": [
+            436,
+            446
+          ],
+          "text": "  useEffect(() => {\n    if (isRunning) {\n      runStartRef.current = Date.now();\n    }\n    uiLog.info(\"debug.app.isRunning_change\", {\n      isRunning,\n      isQueryActive,\n      hasRunningBgAgents,\n      runStartRef: runStartRef.current,\n    });\n  }, [isRunning, isQueryActive, hasRunningBgAgents]);"
+        },
+        {
+          "range": [
+            1543,
+            1544
+          ],
+          "text": "      const guardToken = queryGuard.reserve();\n      if (guardToken === null) return false;"
+        },
+        {
+          "range": [
+            1558,
+            1564
+          ],
+          "text": "      const abortController = new AbortController();\n      if (!queryGuard.tryStart(abortController, guardToken)) {\n        // Race-safety check — should be unreachable since reserve just succeeded\n        queryGuard.cancelReservation(guardToken);\n        return false;\n      }\n      localRunTokenRef.current = guardToken;"
+        },
+        {
+          "range": [
+            1626,
+            1629
+          ],
+          "text": "        const handleTransportResponse = () => {\n          const released = queryGuard.endLocalResponse(guardToken);\n          if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;\n          cancelledLocalRunTokensRef.current.delete(guardToken);"
+        },
+        {
+          "range": [
+            1643,
+            1652
+          ],
+          "text": "        const result = await client.run(\n          {\n            task: engineMessage,\n            sessionId: sessionId ?? \"\",\n            ...(goal ? { goal } : {}),\n            ...(opts.disableGoal ? { disableGoal: true } : {}),\n          },\n          undefined,\n          handleTransportResponse,\n        );"
+        },
+        {
+          "range": [
+            1666,
+            1681
+          ],
+          "text": "        setSessionId(result.sessionId);\n        await refreshUsage(result.sessionId);\n\n        const elapsed = Date.now() - runStartRef.current;\n        const parts: string[] = [formatDuration(elapsed)];\n        if (result.usage && result.usage.totalTokens > 0) {\n          parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);\n          if (result.usage.cacheReadTokens) {\n            parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);\n          }\n        }\n\n        chatStore.update((prev) => [\n          ...prev,\n          entry({ type: \"system\", subtype: \"turn_duration\", text: parts.join(\" · \") }),\n        ]);"
+        },
+        {
+          "range": [
+            1716,
+            1720
+          ],
+          "text": "      } finally {\n        // end() is idempotent — safe to call even if forceEnd already released\n        // the guard (ESC/Ctrl+C path).\n        queryGuard.end(guardToken);\n        if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;"
+        },
+        {
+          "range": [
+            1814,
+            1819
+          ],
+          "text": "  const handleSubmit = useCallback(\n    async (value: string) => {\n      const trimmed = value.trim();\n      if (!trimmed) return;\n\n      const head = trimmed.split(/\\s+/)[0]?.toLowerCase();"
+        },
+        {
+          "range": [
+            1829,
+            1857
+          ],
+          "text": "      if (isQueryActive && !canExecuteCommandWhileRunning(trimmed)) {\n        setQueuedInputs((prev) => [...prev, trimmed]);\n        setInput(\"\");\n        return;\n      }\n      if (!isQueryActive) {\n        setInput(\"\");\n        setShowBanner(false);\n        onScrollToBottom();\n      } else {\n        setInput(\"\");\n      }\n\n      if (trimmed.startsWith(\"/\")) {\n        handleSlashCommand(trimmed);\n        return;\n      }\n\n      await submitToEngine(trimmed, { asInjection: false });\n    },\n    [isQueryActive, submitToEngine, onScrollToBottom, client],\n  );\n\n  useEffect(() => {\n    if (isQueryActive || queuedInputs.length === 0 || input.trim() !== \"\") return;\n    const [next, ...rest] = queuedInputs;\n    setQueuedInputs(rest);\n    if (next) void handleSubmit(next);\n  }, [isQueryActive, queuedInputs, input, handleSubmit]);"
+        },
+        {
+          "range": [
+            2227,
+            2227
+          ],
+          "text": "      <TuiControlSurface"
+        },
+        {
+          "range": [
+            2262,
+            2272
+          ],
+          "text": "        handleSlashCommand={handleSlashCommand}\n        queuedInputs={queuedInputs}\n        input={input}\n        setInput={setInput}\n        handleSubmit={handleSubmit}\n        commands={commandDefs}\n        isRunning={isRunning}\n        dockFocusIdx={dockFocusIdx}\n        setDockFocusIdx={setDockFocusIdx}\n        viewMode={viewMode}\n      />"
+        },
+        {
+          "range": [
+            2286,
+            2297
+          ],
+          "text": "        <StatusLine\n          model={model}\n          effort={currentEffort}\n          tokens={totalTokens}\n          cost={totalCost}\n          sessionId={sessionId}\n          baseContextTokens={contextTokens}\n          maxContextTokens={activeMaxContextTokens}\n          isRunning={isRunning}\n          streamingTokensRef={streamingTokensRef}\n          runStartRef={runStartRef}\n        />"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            1,
+            85
+          ],
+          "text": "/**\n * Main Ink App — the root component for Code Shell's terminal UI.\n *\n * Uses AgentClient (protocol layer) instead of Engine directly.\n * All engine interaction goes through the client-server protocol.\n */\nimport {\n  useState,\n  useCallback,\n  useRef,\n  useEffect,\n  useMemo,\n  useReducer,\n  useSyncExternalStore,\n} from \"react\";\nimport { Box, Text, useApp, useInput, forceRedraw } from \"../render/index.js\";\nimport { Banner } from \"./components/Banner.js\";\nimport { UpdateBanner } from \"./components/UpdateBanner.js\";\nimport { WelcomeTips } from \"./components/WelcomeTips.js\";\nimport { TaskList } from \"./components/TaskList.js\";\nimport { SpinnerWithVerb } from \"./components/SpinnerWithVerb.js\";\nimport { StatusLine } from \"./components/StatusLine.js\";\nimport { FullscreenLayout, useUnseenDivider } from \"./components/FullscreenLayout.js\";\nimport {\n  VirtualMessageList,\n  type VirtualMessageListHandle,\n} from \"./components/VirtualMessageList.js\";\nimport { FullscreenModeContext, INITIAL_FULLSCREEN_MODE } from \"./fullscreen-mode.js\";\nimport { AgentClient } from \"@cjhyy/code-shell-core\";\nimport { formatUsageCost } from \"@cjhyy/code-shell-core\";\nimport { useSessionUsage } from \"./hooks/useSessionUsage.js\";\nimport { PermissionPrompt } from \"./components/PermissionPrompt.js\";\nimport type { ModelEntry } from \"./components/ModelSelector.js\";\nimport type { ProviderManagerEntry } from \"./components/ModelManager.js\";\nimport type { SessionPickerEntry } from \"./components/SessionPicker.js\";\nimport { TuiControlSurface, type ModelManagerState } from \"./components/TuiControlSurface.js\";\nimport {\n  activeQuestion,\n  INITIAL_PENDING_QUESTIONS,\n  reducePendingQuestions,\n} from \"./pending-questions.js\";\nimport { CommandRegistry } from \"../cli/commands/registry.js\";\nimport type { RestoredChatEntry } from \"../cli/commands/registry.js\";\nimport { QueryGuard } from \"./query-guard.js\";\nimport { AgentDock, getVisibleAgents, MAX_VISIBLE } from \"./components/AgentDock.js\";\nimport { asyncAgentRegistry } from \"@cjhyy/code-shell-core/internal\";\nimport {\n  notificationQueue,\n  buildNotificationMessage,\n  buildNotificationSummary,\n} from \"@cjhyy/code-shell-core/internal\";\nimport { coreCommands } from \"../cli/commands/builtin/core-commands.js\";\nimport { gitCommands } from \"../cli/commands/builtin/git-commands.js\";\nimport { permissionsCommand } from \"../cli/commands/builtin/permissions-command.js\";\nimport { featuresCommand } from \"../cli/commands/builtin/features-command.js\";\nimport { utilityCommands } from \"../cli/commands/builtin/utility-commands.js\";\nimport { advancedCommands } from \"../cli/commands/builtin/advanced-commands.js\";\nimport { extraCommands } from \"../cli/commands/builtin/extra-commands.js\";\nimport { moreCommands } from \"../cli/commands/builtin/more-commands.js\";\nimport { goalCommand } from \"../cli/commands/builtin/goal-command.js\";\nimport { imageCommand } from \"../cli/commands/builtin/image-command.js\";\nimport { loopCommand } from \"../cli/commands/builtin/loop-command.js\";\nimport { buildPluginSlashCommands } from \"../cli/commands/builtin/plugin-commands-registration.js\";\nimport type { StreamEvent } from \"@cjhyy/code-shell-core\";\nimport type { TaskInfo } from \"@cjhyy/code-shell-core/internal\";\nimport { chatStore, createEntry, type ChatEntry } from \"./store.js\";\nimport { StreamAttempt } from \"./stream-attempt.js\";\nimport {\n  nextPermissionMode,\n  permissionConfigurePayload,\n  type TuiPermissionMode,\n} from \"./permission-mode.js\";\nimport { formatDuration, formatTokens } from \"@cjhyy/code-shell-core/internal\";\nimport { removeLastFromHistory } from \"./input-history.js\";\nimport { logger } from \"@cjhyy/code-shell-core\";\nimport { recordUIEvent } from \"@cjhyy/code-shell-core/internal\";\nimport {\n  recordAppRender,\n  recordStreamEvent,\n  startAllPerfProbes,\n  stopAllPerfProbes,\n} from \"./perf-probes.js\";\nimport {\n  ModeIndicator,\n  canExecuteCommandWhileRunning,"
+        },
+        {
+          "range": [
+            200,
+            230
+          ],
+          "text": "  useEffect(() => {\n    if (\n      tasks.length > 0 &&\n      tasks.every((t) => t.status === \"completed\" || t.status === \"stopped\")\n    ) {\n      tasksTimerRef.current = setTimeout(() => setTasks([]), 3000);\n    }\n    return () => {\n      if (tasksTimerRef.current) clearTimeout(tasksTimerRef.current);\n    };\n  }, [tasks]);\n\n  const queryGuard = useRef(providedQueryGuard ?? new QueryGuard()).current;\n  const isQueryActive = useSyncExternalStore(queryGuard.subscribe, queryGuard.getSnapshot);\n  const hasRunningBgAgents = useSyncExternalStore(\n    asyncAgentRegistry.subscribe,\n    asyncAgentRegistry.hasRunning,\n  );\n  const isRunning = isQueryActive || hasRunningBgAgents;\n\n  type ViewMode = { kind: \"main\" } | { kind: \"agent\"; agentId: string };\n  const [viewMode, setViewMode] = useState<ViewMode>({ kind: \"main\" });\n  const [dockFocusIdx, setDockFocusIdx] = useState<number | null>(null);\n\n  const agentsSnapshot = useSyncExternalStore(\n    asyncAgentRegistry.subscribe,\n    asyncAgentRegistry.getSnapshot,\n  );\n  useEffect(() => {\n    if (viewMode.kind !== \"agent\") return;\n    const entry = agentsSnapshot.find((a) => a.agentId === viewMode.agentId);"
+        },
+        {
+          "range": [
+            415,
+            450
+          ],
+          "text": "\n  // Session persistence is owned by the server-side Engine; the client only\n  // tracks `sessionId` for display and for re-passing on subsequent runs.\n\n  // Unseen message divider tracking\n  const {\n    dividerIndex,\n    showPill,\n    unseenCount,\n    onScrollAway,\n    onScrollToBottom: clearUnseen,\n  } = useUnseenDivider(chatLog.length);\n  // Imperative handle on VirtualMessageList so we can scroll the list to\n  // the bottom when the user dismisses the \"N new messages\" pill or\n  // submits a new turn.\n  const listRef = useRef<VirtualMessageListHandle | null>(null);\n  const onScrollToBottom = useCallback(() => {\n    clearUnseen();\n    listRef.current?.scrollToBottom();\n  }, [clearUnseen]);\n\n  useEffect(() => {\n    if (isRunning) {\n      runStartRef.current = Date.now();\n    }\n    uiLog.info(\"debug.app.isRunning_change\", {\n      isRunning,\n      isQueryActive,\n      hasRunningBgAgents,\n      runStartRef: runStartRef.current,\n    });\n  }, [isRunning, isQueryActive, hasRunningBgAgents]);\n\n  // Flicker investigation: log every change to the two sources of isRunning\n  // independently, so we can tell whether a phantom \"running\" state is the\n  // query path or a stuck background agent."
+        },
+        {
+          "range": [
+            1650,
+            1690
+          ],
+          "text": "          undefined,\n          handleTransportResponse,\n        );\n\n        // ESC / Ctrl+C took us through the optimistic-cancel path — UI is\n        // already idle, history rewound. Don't append turn-duration / status\n        // entries from this resolution (would arrive 1–7s after ESC).\n        if (runWasCancelled()) {\n          return true;\n        }\n\n        if (!streamPresentationFinalized) {\n          finalizeStreamPresentation();\n          streamPresentationFinalized = true;\n        }\n\n        setSessionId(result.sessionId);\n        await refreshUsage(result.sessionId);\n\n        const elapsed = Date.now() - runStartRef.current;\n        const parts: string[] = [formatDuration(elapsed)];\n        if (result.usage && result.usage.totalTokens > 0) {\n          parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);\n          if (result.usage.cacheReadTokens) {\n            parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);\n          }\n        }\n\n        chatStore.update((prev) => [\n          ...prev,\n          entry({ type: \"system\", subtype: \"turn_duration\", text: parts.join(\" · \") }),\n        ]);\n\n        if (result.reason !== \"completed\") {\n          chatStore.update((prev) => [\n            ...prev,\n            entry({ type: \"status\", reason: friendlyReason(result.reason) }),\n          ]);\n        }\n      } catch (err) {\n        if (goal && stagedGoalEpoch !== null) {"
+        },
+        {
+          "range": [
+            387,
+            396
+          ],
+          "text": "  const [wizard, setWizard] = useState<\"flow\" | null>(null);\n\n  // Track live streamed token count in a ref — no App-level re-render per tick.\n  // Provider emits tokens per text delta (real cl100k_base count, not chars/4).\n  // StatusLine reads this ref directly via its own internal interval.\n  const streamingTokensRef = useRef(0);\n  const runStartRef = useRef(0);\n  const [streamMode, setStreamMode] = useState<\"responding\" | \"tool-use\" | \"thinking\">(\"thinking\");\n  const [thinkingContent, setThinkingContent] = useState<string | null>(null);\n  // Optimistic-cancel guard — set true on ESC so the in-flight `await"
+        },
+        {
+          "range": [
+            1538,
+            1570
+          ],
+          "text": "        goal?: string;\n        displayText?: string;\n        disableGoal?: boolean;\n      },\n    ): Promise<boolean> => {\n      const guardToken = queryGuard.reserve();\n      if (guardToken === null) return false;\n      const runCancellationEpoch = cancellationEpochRef.current;\n      const runWasCancelled = () => cancellationEpochRef.current !== runCancellationEpoch;\n      streamingTokensRef.current = 0;\n      if (\n        cancelledLocalRunTokensRef.current.size === 0 &&\n        !cancelledExternalRunPendingRef.current\n      ) {\n        cancelledRef.current = false;\n      }\n      // taskManager removed — tasks live in the transcript now; engine\n      // emits task_update on resume so the UI re-hydrates without a\n      // module-level reset.\n\n      const abortController = new AbortController();\n      if (!queryGuard.tryStart(abortController, guardToken)) {\n        // Race-safety check — should be unreachable since reserve just succeeded\n        queryGuard.cancelReservation(guardToken);\n        return false;\n      }\n      localRunTokenRef.current = guardToken;\n\n      const goal = !opts.asInjection ? opts.goal?.trim() || null : null;\n      const stagedGoalEpoch = goal ? ++goalMirrorEpochRef.current : null;\n      if (goal) {\n        activeGoalRef.current = goal;\n        activeGoalIdRef.current = null;"
+        },
+        {
+          "range": [
+            1608,
+            1639
+          ],
+          "text": "        // attachments.ts`) so the engine's parse-task pipeline handles\n        // both UIs identically. Injection turns don't get images either.\n        if (!opts.asInjection && pendingImagesRef.current.length > 0) {\n          // Strip the trailing \"[name, size]\" caption line each\n          // image-command block tacks on for the status echo — it's\n          // not part of the wire format the engine parses.\n          const blocks = pendingImagesRef.current.map((b) => {\n            const lines = b.split(\"\\n\");\n            // Find the closing </codeshell-image> and drop anything after.\n            const closeIdx = lines.findIndex((l) => l.trim() === \"</codeshell-image>\");\n            return closeIdx >= 0 ? lines.slice(0, closeIdx + 1).join(\"\\n\") : b;\n          });\n          engineMessage = engineMessage\n            ? `${engineMessage}\\n\\n${blocks.join(\"\\n\")}`\n            : blocks.join(\"\\n\");\n          pendingImagesRef.current = [];\n        }\n\n        const handleTransportResponse = () => {\n          const released = queryGuard.endLocalResponse(guardToken);\n          if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;\n          cancelledLocalRunTokensRef.current.delete(guardToken);\n          if (\n            cancelledLocalRunTokensRef.current.size === 0 &&\n            !cancelledExternalRunPendingRef.current\n          ) {\n            cancelledRef.current = false;\n          }\n          // Finalize this run synchronously before the transport can parse a\n          // queued external turn's early stream events from the same chunk.\n          if (released && !runWasCancelled() && !streamPresentationFinalized) {\n            finalizeStreamPresentation();"
+        },
+        {
+          "range": [
+            1709,
+            1724
+          ],
+          "text": "        }\n        if (!runWasCancelled()) {\n          chatStore.update((prev) => [\n            ...prev,\n            entry({ type: \"error\", error: friendlyError((err as Error).message) }),\n          ]);\n        }\n      } finally {\n        // end() is idempotent — safe to call even if forceEnd already released\n        // the guard (ESC/Ctrl+C path).\n        queryGuard.end(guardToken);\n        if (localRunTokenRef.current === guardToken) localRunTokenRef.current = null;\n        cancelledLocalRunTokensRef.current.delete(guardToken);\n        if (\n          cancelledLocalRunTokensRef.current.size === 0 &&\n          !cancelledExternalRunPendingRef.current"
+        },
+        {
+          "range": [
+            2284,
+            2300
+          ],
+          "text": "        {screen === \"transcript\" && <Text color=\"ansi:magenta\">{\" TRANSCRIPT \"}</Text>}\n        <Box flexGrow={1} />\n        <StatusLine\n          model={model}\n          effort={currentEffort}\n          tokens={totalTokens}\n          cost={totalCost}\n          sessionId={sessionId}\n          baseContextTokens={contextTokens}\n          maxContextTokens={activeMaxContextTokens}\n          isRunning={isRunning}\n          streamingTokensRef={streamingTokensRef}\n          runStartRef={runStartRef}\n        />\n      </Box>\n\n      {/* Dock at the very bottom — below StatusLine. Renders null when"
+        },
+        {
+          "range": [
+            1798,
+            1860
+          ],
+          "text": "        sessionId,\n      })\n    ) {\n      return;\n    }\n\n    const notificationSessionId = sessionId;\n    if (!notificationSessionId) return;\n\n    const items = notificationQueue.drainAll(notificationSessionId);\n    if (items.length === 0) return;\n    const xml = buildNotificationMessage(items);\n    const summary = buildNotificationSummary(items);\n    void submitToEngine(xml, { asInjection: true, chatSummary: summary });\n  }, [notificationSnapshot, isQueryActive, input, overlayOpen, submitToEngine, sessionId]);\n\n  const handleSubmit = useCallback(\n    async (value: string) => {\n      const trimmed = value.trim();\n      if (!trimmed) return;\n\n      const head = trimmed.split(/\\s+/)[0]?.toLowerCase();\n      if (isQueryActive && head === \"/force\") {\n        const next = trimmed.slice(\"/force\".length).trim();\n        if (next) setQueuedInputs((prev) => [...prev, next]);\n        setInput(\"\");\n        client\n          .cancel(sidRef.current ?? sessionId ?? \"\", \"user-force\")\n          .catch((err) => uiLog.warn(\"/force cancel failed\", { err: String(err) }));\n        return;\n      }\n      if (isQueryActive && !canExecuteCommandWhileRunning(trimmed)) {\n        setQueuedInputs((prev) => [...prev, trimmed]);\n        setInput(\"\");\n        return;\n      }\n      if (!isQueryActive) {\n        setInput(\"\");\n        setShowBanner(false);\n        onScrollToBottom();\n      } else {\n        setInput(\"\");\n      }\n\n      if (trimmed.startsWith(\"/\")) {\n        handleSlashCommand(trimmed);\n        return;\n      }\n\n      await submitToEngine(trimmed, { asInjection: false });\n    },\n    [isQueryActive, submitToEngine, onScrollToBottom, client],\n  );\n\n  useEffect(() => {\n    if (isQueryActive || queuedInputs.length === 0 || input.trim() !== \"\") return;\n    const [next, ...rest] = queuedInputs;\n    setQueuedInputs(rest);\n    if (next) void handleSubmit(next);\n  }, [isQueryActive, queuedInputs, input, handleSubmit]);\n\n  const handleSlashCommand = useCallback(\n    (cmd: string) => {"
+        },
+        {
+          "range": [
+            2160,
+            2205
+          ],
+          "text": "      )}\n\n      {/* Chat log — virtualized for large conversations.\n          Cursor outline + isStreaming/expanded gating is handled inside\n          VirtualMessageList; renderEntry stays cursor-agnostic so its\n          closure identity doesn't matter for MessageRow memo. */}\n      <VirtualMessageList\n        ref={listRef}\n        entries={renderedEntries}\n        renderEntry={renderEntry}\n        columns={process.stdout.columns ?? 80}\n        streamingEntryId={streamingEntryId}\n        selectedEntryId={selectedEntryId}\n        expanded={isTranscript}\n        dividerIndex={dividerIndex}\n        unseenCount={unseenCount}\n        onScrollAway={onScrollAway}\n      />\n\n      {/* Spinner with verb (when loading).\n          Hidden while waiting on user input (AskUser / approval) — the elapsed\n          counter would otherwise keep climbing while we're idle on the user. */}\n      {isRunning && (!pendingQuestion || pendingQuestion.asynchronous) && !pendingApproval && (\n        <SpinnerWithVerb\n          mode={streamMode}\n          streamingTokensRef={streamingTokensRef}\n          runStartRef={runStartRef}\n          thinkingContent={thinkingContent ?? undefined}\n        />\n      )}\n\n      {renderedTasks.length > 0 && <TaskList tasks={renderedTasks} />}\n    </>\n  );\n\n  const overlayContent = pendingApproval ? (\n    <PermissionPrompt\n      toolName={pendingApproval.toolName}\n      description={pendingApproval.description}\n      riskLevel={pendingApproval.riskLevel}\n      cwd={cwd}\n      args={pendingApproval.args}\n      onDecision={(approved, scope) => {\n        const { requestId } = pendingApproval;\n        setPendingApproval(null);\n        // Map scope to backend fields:"
+        },
+        {
+          "range": [
+            2227,
+            2232
+          ],
+          "text": "      <TuiControlSurface\n        client={client}\n        screen={screen}\n        cursorIdx={cursorIdx}\n        showOnboarding={showOnboarding}\n        setShowOnboarding={setShowOnboarding}"
+        },
+        {
+          "range": [
+            2262,
+            2273
+          ],
+          "text": "        handleSlashCommand={handleSlashCommand}\n        queuedInputs={queuedInputs}\n        input={input}\n        setInput={setInput}\n        handleSubmit={handleSubmit}\n        commands={commandDefs}\n        isRunning={isRunning}\n        dockFocusIdx={dockFocusIdx}\n        setDockFocusIdx={setDockFocusIdx}\n        viewMode={viewMode}\n      />\n"
+        },
+        {
+          "range": [
+            1642,
+            1652
+          ],
+          "text": "        };\n        const result = await client.run(\n          {\n            task: engineMessage,\n            sessionId: sessionId ?? \"\",\n            ...(goal ? { goal } : {}),\n            ...(opts.disableGoal ? { disableGoal: true } : {}),\n          },\n          undefined,\n          handleTransportResponse,\n        );"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 452,
+          "text": "    uiLog.info(\"flicker.isQueryActive_change\", { isQueryActive });"
+        },
+        {
+          "line": 453,
+          "text": "  }, [isQueryActive]);"
+        },
+        {
+          "line": 455,
+          "text": "    uiLog.info(\"flicker.hasRunningBgAgents_change\", {"
+        },
+        {
+          "line": 456,
+          "text": "      hasRunningBgAgents,"
+        },
+        {
+          "line": 463,
+          "text": "  }, [hasRunningBgAgents, agentsSnapshot]);"
+        },
+        {
+          "line": 698,
+          "text": "          if (localRunTokenRef.current === null && queryGuard.startExternal() !== null) {"
+        },
+        {
+          "line": 717,
+          "text": "          if (agentId === undefined && queryGuard.endExternal()) {"
+        },
+        {
+          "line": 1367,
+          "text": "        const cancelledOwner = queryGuard.forceEnd(\"user-cancel\");"
+        },
+        {
+          "line": 1412,
+          "text": "    // Gate on isQueryActive (not isRunning), otherwise ESC would be eaten by"
+        },
+        {
+          "line": 1420,
+          "text": "      isQueryActive &&"
+        },
+        {
+          "line": 1435,
+          "text": "      const cancelledOwner = queryGuard.forceEnd(\"user-cancel\");"
+        },
+        {
+          "line": 1444,
+          "text": "      // socket teardown), and the awaited client.run() in handleSubmit will"
+        },
+        {
+          "line": 1526,
+          "text": "  //   - handleSubmit: real user input. asInjection=false, the user's text"
+        },
+        {
+          "line": 1794,
+          "text": "        isQueryActive,"
+        },
+        {
+          "line": 1795,
+          "text": "        queryGuardBusy: queryGuard.getSnapshot(),"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "selected": [
+        {
+          "range": [
+            31,
+            33
+          ],
+          "text": "  isRunning?: boolean;\n  streamingTokensRef?: MutableRefObject<number>;\n  runStartRef?: MutableRefObject<number>;"
+        },
+        {
+          "range": [
+            47,
+            52
+          ],
+          "text": "  runStartRef,\n}: StatusLineProps) {\n  const modelShort = shortModel(model);\n\n  // Own 1s interval — only this component re-renders, not App\n  const [tick, setTick] = useState(0);"
+        },
+        {
+          "range": [
+            69,
+            75
+          ],
+          "text": "  useEffect(() => {\n    if (!isRunning) {\n      setTick(0);\n      if (PERF_ENABLED) {\n        uiLog.info(\"debug.statusline.interval\", { action: \"skip_not_running\" });\n      }\n      return;"
+        },
+        {
+          "range": [
+            80,
+            80
+          ],
+          "text": "    const timer = setInterval(() => {"
+        },
+        {
+          "range": [
+            93,
+            101
+          ],
+          "text": "      setTick((t) => t + 1);\n    }, 1000);\n    return () => {\n      if (PERF_ENABLED) {\n        uiLog.info(\"debug.statusline.interval\", { action: \"clear\" });\n      }\n      clearInterval(timer);\n    };\n  }, [isRunning]);"
+        },
+        {
+          "range": [
+            125,
+            128
+          ],
+          "text": "  const elapsed =\n    isRunning && runStartRef ? Math.floor((Date.now() - runStartRef.current) / 1000) : 0;\n  // Probe: surface the raw inputs to elapsed so we can tell if runStartRef\n  // was reset mid-turn (would explain a \"frozen\" looking timer)."
+        },
+        {
+          "range": [
+            167,
+            173
+          ],
+          "text": "      {isRunning && (\n        <>\n          <Text color=\"ansi:cyan\">{\"● \"}</Text>\n          <Text color=\"ansi:cyan\">{formatElapsed(elapsed)}</Text>\n          {streamingTokens > 0 && <Text dim> {formatNumber(streamingTokens)} tok</Text>}\n          <Text dim> │ </Text>\n        </>"
+        },
+        {
+          "range": [
+            216,
+            220
+          ],
+          "text": "function formatElapsed(seconds: number): string {\n  if (seconds < 60) return `${seconds}s`;\n  const m = Math.floor(seconds / 60);\n  const s = seconds % 60;\n  return `${m}m${s.toString().padStart(2, \"0\")}s`;"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            110,
+            135
+          ],
+          "text": "    const sinceLastRender = now - lastRenderAtRef.current;\n    lastRenderAtRef.current = now;\n    renderCountRef.current++;\n    // Only log every 5th render to avoid drowning during streams; pair with\n    // tick_fire which is 1Hz to triangulate.\n    if (renderCountRef.current % 5 === 0) {\n      uiLog.info(\"debug.statusline.render_beat\", {\n        n: renderCountRef.current,\n        sinceLast_ms: Math.round(sinceLastRender),\n        tickState: tick,\n        tickFires: tickFiredCountRef.current,\n      });\n    }\n  }\n\n  const elapsed =\n    isRunning && runStartRef ? Math.floor((Date.now() - runStartRef.current) / 1000) : 0;\n  // Probe: surface the raw inputs to elapsed so we can tell if runStartRef\n  // was reset mid-turn (would explain a \"frozen\" looking timer).\n  if (PERF_ENABLED && isRunning && renderCountRef.current % 10 === 0) {\n    uiLog.info(\"debug.statusline.elapsed_inputs\", {\n      elapsed_s: elapsed,\n      runStartRef: runStartRef?.current ?? 0,\n      ageOfRunStart_ms: runStartRef ? Date.now() - runStartRef.current : 0,\n    });\n  }"
+        },
+        {
+          "range": [
+            155,
+            178
+          ],
+          "text": "    recordUIEvent(sessionId, \"ui.ctx.render\", payload);\n  }, [baseContextTokens, maxContextTokens, ctxPct, sessionId]);\n  const ctxColor = ctxPct > 80 ? \"ansi:red\" : ctxPct > 60 ? \"ansi:yellow\" : \"ansi:green\";\n\n  // Context mini-bar (8 chars)\n  const barWidth = 8;\n  const filled = Math.round((ctxPct / 100) * barWidth);\n  const ctxBar = \"█\".repeat(filled) + \"░\".repeat(barWidth - filled);\n\n  return (\n    <Box>\n      {/* Running indicator */}\n      {isRunning && (\n        <>\n          <Text color=\"ansi:cyan\">{\"● \"}</Text>\n          <Text color=\"ansi:cyan\">{formatElapsed(elapsed)}</Text>\n          {streamingTokens > 0 && <Text dim> {formatNumber(streamingTokens)} tok</Text>}\n          <Text dim> │ </Text>\n        </>\n      )}\n\n      {/* Model — alt+m switches; only show hint when terminal has room */}\n      <Text dim>{modelShort}</Text>\n      {(process.stdout.columns ?? 80) >= 100 && <Text dim>{\" (alt+m)\"}</Text>}"
+        },
+        {
+          "range": [
+            26,
+            37
+          ],
+          "text": "   * tracks the real prompt token count without UI-side accumulation.\n   */\n  baseContextTokens?: number;\n  maxContextTokens?: number;\n  gitBranch?: string;\n  isRunning?: boolean;\n  streamingTokensRef?: MutableRefObject<number>;\n  runStartRef?: MutableRefObject<number>;\n}\n\nexport function StatusLine({\n  model,"
+        },
+        {
+          "range": [
+            47,
+            102
+          ],
+          "text": "  runStartRef,\n}: StatusLineProps) {\n  const modelShort = shortModel(model);\n\n  // Own 1s interval — only this component re-renders, not App\n  const [tick, setTick] = useState(0);\n  // Perf probe refs: track interval fires vs renders to detect when the\n  // setInterval has died (or is firing but ink is dropping the repaint).\n  const lastTickAtRef = useRef<number>(performance.now());\n  const lastRenderAtRef = useRef<number>(performance.now());\n  const tickFiredCountRef = useRef<number>(0);\n  const renderCountRef = useRef<number>(0);\n\n  useEffect(() => {\n    if (PERF_ENABLED) {\n      uiLog.info(\"debug.statusline.mount\", { isRunning: !!isRunning });\n    }\n    return () => {\n      if (PERF_ENABLED) uiLog.info(\"debug.statusline.unmount\", {});\n    };\n  }, []);\n\n  useEffect(() => {\n    if (!isRunning) {\n      setTick(0);\n      if (PERF_ENABLED) {\n        uiLog.info(\"debug.statusline.interval\", { action: \"skip_not_running\" });\n      }\n      return;\n    }\n    if (PERF_ENABLED) {\n      uiLog.info(\"debug.statusline.interval\", { action: \"start\" });\n    }\n    const timer = setInterval(() => {\n      const now = performance.now();\n      const sinceLast = now - lastTickAtRef.current;\n      lastTickAtRef.current = now;\n      tickFiredCountRef.current++;\n      if (PERF_ENABLED) {\n        // Log every fire — only ~1Hz so volume is fine.\n        uiLog.info(\"debug.statusline.tick_fire\", {\n          n: tickFiredCountRef.current,\n          sinceLast_ms: Math.round(sinceLast),\n          drift_ms: Math.round(sinceLast - 1000),\n        });\n      }\n      setTick((t) => t + 1);\n    }, 1000);\n    return () => {\n      if (PERF_ENABLED) {\n        uiLog.info(\"debug.statusline.interval\", { action: \"clear\" });\n      }\n      clearInterval(timer);\n    };\n  }, [isRunning]);\n  void tick;"
+        },
+        {
+          "range": [
+            216,
+            227
+          ],
+          "text": "function formatElapsed(seconds: number): string {\n  if (seconds < 60) return `${seconds}s`;\n  const m = Math.floor(seconds / 60);\n  const s = seconds % 60;\n  return `${m}m${s.toString().padStart(2, \"0\")}s`;\n}\n\nfunction formatNumber(n: number): string {\n  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + \"M\";\n  if (n >= 1_000) return (n / 1_000).toFixed(1) + \"K\";\n  return String(n);\n}"
+        }
+      ],
+      "navigation": []
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "selected": [
+        {
+          "range": [
+            118,
+            133
+          ],
+          "text": "  // ── observer API (React useSyncExternalStore compatible) ──────────────\n\n  subscribe = (cb: () => void): (() => void) => {\n    this.listeners.add(cb);\n    return () => {\n      this.listeners.delete(cb);\n    };\n  };\n\n  getSnapshot = (): AsyncAgentEntry[] => {\n    return this.snapshot;\n  };\n\n  hasRunning = (): boolean => {\n    return this.snapshot.some((e) => e.status === \"running\" || e.status === \"cancelling\");\n  };"
+        },
+        {
+          "range": [
+            148,
+            157
+          ],
+          "text": "  private notify(): void {\n    this.snapshot = [...this.agents.values()];\n    for (const cb of this.listeners) {\n      try {\n        cb();\n      } catch {\n        // isolate per-listener errors\n      }\n    }\n  }"
+        },
+        {
+          "range": [
+            175,
+            177
+          ],
+          "text": "    this.closedDirectionIntake.delete(entry.agentId);\n    this.agents.set(entry.agentId, entry);\n    this.notify();"
+        },
+        {
+          "range": [
+            360,
+            362
+          ],
+          "text": "    e.status = status;\n    e.finishedAt = Date.now();\n    e.finishedFadeAt = e.finishedAt + 30_000;"
+        },
+        {
+          "range": [
+            369,
+            371
+          ],
+          "text": "    e.progress = undefined;\n    this.notify();\n    return true;"
+        },
+        {
+          "range": [
+            374,
+            376
+          ],
+          "text": "  private markFinished(agentId: string, status: \"completed\" | \"failed\" | \"cancelled\"): void {\n    const e = this.agents.get(agentId);\n    if (!e || (e.status !== \"running\" && e.status !== \"cancelling\")) return;"
+        },
+        {
+          "range": [
+            380,
+            382
+          ],
+          "text": "    e.status = status;\n    e.finishedAt = Date.now();\n    e.finishedFadeAt = e.finishedAt + 30_000;"
+        },
+        {
+          "range": [
+            387,
+            389
+          ],
+          "text": "    e.liveControl = undefined;\n    e.progress = undefined;\n    this.notify();"
+        },
+        {
+          "range": [
+            392,
+            394
+          ],
+          "text": "  markCompleted(agentId: string): void {\n    this.markFinished(agentId, \"completed\");\n  }"
+        },
+        {
+          "range": [
+            445,
+            445
+          ],
+          "text": "export const asyncAgentRegistry = new AsyncAgentRegistry();"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            113,
+            179
+          ],
+          "text": "  private snapshot: AsyncAgentEntry[] = [];\n  private writerLeases = new Map<string, ChildWriterLease>();\n  private generationByChildSession = new Map<string, number>();\n  private closedDirectionIntake = new Set<string>();\n\n  // ── observer API (React useSyncExternalStore compatible) ──────────────\n\n  subscribe = (cb: () => void): (() => void) => {\n    this.listeners.add(cb);\n    return () => {\n      this.listeners.delete(cb);\n    };\n  };\n\n  getSnapshot = (): AsyncAgentEntry[] => {\n    return this.snapshot;\n  };\n\n  hasRunning = (): boolean => {\n    return this.snapshot.some((e) => e.status === \"running\" || e.status === \"cancelling\");\n  };\n\n  /** True if any background agent spawned by `sessionId` is still running.\n   *  Drives Engine.run's \"wait for my background agents before resolving\". */\n  hasRunningForSession = (sessionId: string): boolean => {\n    return this.snapshot.some(\n      (e) => (e.status === \"running\" || e.status === \"cancelling\") && e.sessionId === sessionId,\n    );\n  };\n\n  /** Count of agents currently in the \"running\" state (cap enforcement). */\n  runningCount(): number {\n    return this.snapshot.filter((e) => e.status === \"running\" || e.status === \"cancelling\").length;\n  }\n\n  private notify(): void {\n    this.snapshot = [...this.agents.values()];\n    for (const cb of this.listeners) {\n      try {\n        cb();\n      } catch {\n        // isolate per-listener errors\n      }\n    }\n  }\n\n  // ── mutators ──────────────────────────────────────────────────────────\n\n  register(entry: AsyncAgentEntry): void {\n    if (entry.childSessionId && entry.runtimeGeneration === undefined) {\n      const generation = (this.generationByChildSession.get(entry.childSessionId) ?? 0) + 1;\n      entry.runtimeGeneration = generation;\n      this.generationByChildSession.set(entry.childSessionId, generation);\n    } else if (entry.childSessionId && entry.runtimeGeneration !== undefined) {\n      this.generationByChildSession.set(\n        entry.childSessionId,\n        Math.max(\n          this.generationByChildSession.get(entry.childSessionId) ?? 0,\n          entry.runtimeGeneration,\n        ),\n      );\n    }\n    this.closedDirectionIntake.delete(entry.agentId);\n    this.agents.set(entry.agentId, entry);\n    this.notify();\n  }\n"
+        },
+        {
+          "range": [
+            342,
+            398
+          ],
+          "text": "  completeTerminal(\n    agentId: string,\n    status: \"completed\" | \"failed\" | \"cancelled\",\n    lease: ChildWriterLease,\n  ): boolean {\n    const e = this.agents.get(agentId);\n    const held = this.writerLeases.get(lease.childSessionId);\n    if (\n      !e ||\n      (e.status !== \"running\" && e.status !== \"cancelling\") ||\n      e.childSessionId !== lease.childSessionId ||\n      e.runtimeGeneration !== lease.runtimeGeneration ||\n      e.writerLease?.ownerToken !== lease.ownerToken ||\n      held?.ownerToken !== lease.ownerToken ||\n      held.runtimeGeneration !== lease.runtimeGeneration\n    ) {\n      return false;\n    }\n    e.status = status;\n    e.finishedAt = Date.now();\n    e.finishedFadeAt = e.finishedAt + 30_000;\n    this.closedDirectionIntake.add(agentId);\n    this.writerLeases.delete(lease.childSessionId);\n    if (e.sessionId) notificationQueue.clearProgress(e.sessionId, agentId, lease.runtimeGeneration);\n    notificationQueue.clearDirections(lease.childSessionId, lease.runtimeGeneration);\n    e.liveControl = undefined;\n    e.writerLease = undefined;\n    e.progress = undefined;\n    this.notify();\n    return true;\n  }\n\n  private markFinished(agentId: string, status: \"completed\" | \"failed\" | \"cancelled\"): void {\n    const e = this.agents.get(agentId);\n    if (!e || (e.status !== \"running\" && e.status !== \"cancelling\")) return;\n    // Live runtimes require the full generation/owner fence. Their supervisor\n    // must call completeTerminal after Engine.run has completely settled.\n    if (e.writerLease) return;\n    e.status = status;\n    e.finishedAt = Date.now();\n    e.finishedFadeAt = e.finishedAt + 30_000;\n    this.closedDirectionIntake.add(agentId);\n    if (e.sessionId && e.runtimeGeneration !== undefined) {\n      notificationQueue.clearProgress(e.sessionId, agentId, e.runtimeGeneration);\n    }\n    e.liveControl = undefined;\n    e.progress = undefined;\n    this.notify();\n  }\n\n  markCompleted(agentId: string): void {\n    this.markFinished(agentId, \"completed\");\n  }\n\n  markFailed(agentId: string): void {\n    this.markFinished(agentId, \"failed\");\n  }"
+        },
+        {
+          "range": [
+            445,
+            445
+          ],
+          "text": "export const asyncAgentRegistry = new AsyncAgentRegistry();"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 4,
+          "text": " * When an Agent tool call uses run_in_background: true, the sub-agent"
+        },
+        {
+          "line": 6,
+          "text": " * agentId → status / result / cancel handle so the parent agent can"
+        },
+        {
+          "line": 10,
+          "text": " * the same contract Claude Code's Agent.run_in_background gives, and"
+        },
+        {
+          "line": 15,
+          "text": "export type AsyncAgentStatus = \"running\" | \"cancelling\" | \"completed\" | \"failed\" | \"cancelled\";"
+        },
+        {
+          "line": 43,
+          "text": "  routeDirection(draft: DirectionEnvelopeDraft): DirectionAck | Promise<DirectionAck>;"
+        },
+        {
+          "line": 86,
+          "text": "   *  Engine.run wait only on ITS OWN background agents (hasRunningForSession),"
+        },
+        {
+          "line": 100,
+          "text": "  status: AsyncAgentStatus;"
+        },
+        {
+          "line": 102,
+          "text": "  finishedAt?: number;"
+        },
+        {
+          "line": 103,
+          "text": "  /** finishedAt + 30_000. Dock filters rows past this. */"
+        },
+        {
+          "line": 104,
+          "text": "  finishedFadeAt?: number;"
+        },
+        {
+          "line": 106,
+          "text": "  /** Stream events recorded by run_in_background agents for UI view-switching. */"
+        },
+        {
+          "line": 220,
+          "text": "      entry.status !== \"running\" ||"
+        },
+        {
+          "line": 231,
+          "text": "    this.notify();"
+        },
+        {
+          "line": 254,
+          "text": "    if (!entry || entry.status !== \"running\") return false;"
+        },
+        {
+          "line": 256,
+          "text": "    this.notify();"
+        },
+        {
+          "line": 260,
+          "text": "  routeDirection(request: RouteDirectionRequest): DirectionAck | Promise<DirectionAck> {"
+        },
+        {
+          "line": 265,
+          "text": "      status: \"rejected\","
+        },
+        {
+          "line": 283,
+          "text": "    if (entry.status !== \"running\") return rejected(\"target-not-running\", target);"
+        },
+        {
+          "line": 311,
+          "text": "    this.notify();"
+        },
+        {
+          "line": 315,
+          "text": "   * Re-emit the registry change signal after callers mutate an agent's"
+        },
+        {
+          "line": 317,
+          "text": "   * because `notify` rebuilds the snapshot and tells React subscribers to"
+        },
+        {
+          "line": 322,
+          "text": "    this.notify();"
+        },
+        {
+          "line": 407,
+          "text": "    if (e.status !== \"running\") return false;"
+        },
+        {
+          "line": 408,
+          "text": "    e.status = \"cancelling\";"
+        },
+        {
+          "line": 414,
+          "text": "    this.notify();"
+        },
+        {
+          "line": 429,
+          "text": "      if (e.status === \"running\" || e.status === \"cancelling\") {"
+        },
+        {
+          "line": 441,
+          "text": "    this.notify();"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "selected": [
+        {
+          "range": [
+            447,
+            447
+          ],
+          "text": "  const runInBackground = args.run_in_background === true;"
+        },
+        {
+          "range": [
+            471,
+            476
+          ],
+          "text": "  // ─── Background path ───────────────────────────────────────────\n  // Register the agent, kick off execution detached from the current turn,\n  // return immediately with the agent_id. Parent abort does NOT cascade\n  // (background agents survive the spawning turn). Cancellation goes\n  // through AgentCancel(agent_id).\n  if (runInBackground) {"
+        },
+        {
+          "range": [
+            487,
+            489
+          ],
+          "text": "    asyncAgentRegistry.register({\n      agentId,\n      name,"
+        },
+        {
+          "range": [
+            491,
+            495
+          ],
+          "text": "      continuation,\n      description,\n      // Tag with the spawning session so the parent Engine.run waits only on\n      // its own background agents (hasRunningForSession).\n      sessionId: ctx?.sessionId,"
+        },
+        {
+          "range": [
+            499,
+            500
+          ],
+          "text": "      status: \"running\",\n      startedAt: Date.now(),"
+        },
+        {
+          "range": [
+            537,
+            544
+          ],
+          "text": "    void runSubAgent(\n      spawner,\n      {\n        agentId,\n        name,\n        description,\n        agentType: overrides.resolvedType,\n        prompt,"
+        },
+        {
+          "range": [
+            575,
+            582
+          ],
+          "text": "        onProgressEvent: progressTracker.onEvent,\n        onAgentProgress: progressTracker.onRuntime,\n        signal: controller.signal,\n      },\n      lifecycleSink,\n      detailSink,\n    )\n      .then((text) => {"
+        },
+        {
+          "range": [
+            594,
+            597
+          ],
+          "text": "        const transitioned = liveLease\n          ? asyncAgentRegistry.completeTerminal(agentId, \"completed\", liveLease)\n          : (asyncAgentRegistry.markCompleted(agentId), true);\n        if (!transitioned) return;"
+        },
+        {
+          "range": [
+            711,
+            723
+          ],
+          "text": "    // Mark the foreground completion as waiting for this child's notification.\n    // The Engine consumes the marker only after the whole tool batch finishes,\n    // and suppresses it for headless/sub-agent runs that cannot be woken later.\n    ctx.runYield?.request(\"background_notification\");\n    return [\n      `Async agent launched successfully.`,\n      `agent_id: ${agentId} (internal — do not show to user)`,\n      `description: ${description}`,\n      ``,\n      `The agent is working in the background. You will be notified automatically when it completes.`,\n      `Briefly tell the user what you launched and end your response. Do not generate any other text — agent results will arrive in a subsequent message.`,\n      `If you need to stop it: AgentCancel(agent_id=\"${agentId}\").`,\n    ].join(\"\\n\");"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            443,
+            456
+          ],
+          "text": "    name = overrides.resolvedType;\n  }\n\n  const maxTurns = (args.max_turns as number) || overrides.maxTurns || 15;\n  const runInBackground = args.run_in_background === true;\n  const agentId = nanoid(8);\n  const parentStream = spawner.parentStream;\n  const continuation: SubAgentContinuation | undefined = ctx.sessionId\n    ? structuredClone({\n        version: 1,\n        parentSessionId: ctx.sessionId,\n        agentType: overrides.resolvedType ?? null,\n        name,\n        description,"
+        },
+        {
+          "range": [
+            480,
+            515
+          ],
+          "text": "        `Wait for some to finish or cancel one with AgentCancel(agent_id) before launching more.`\n      );\n    }\n    const controller = new AbortController();\n    const runtimeGeneration = asyncAgentRegistry.allocateRuntimeGeneration(agentId);\n    const progressTracker = createAgentProgressTracker(agentId);\n    let liveLease: ChildWriterLease | undefined;\n    asyncAgentRegistry.register({\n      agentId,\n      name,\n      agentType: overrides.resolvedType,\n      continuation,\n      description,\n      // Tag with the spawning session so the parent Engine.run waits only on\n      // its own background agents (hasRunningForSession).\n      sessionId: ctx?.sessionId,\n      childSessionId: agentId,\n      runtimeGeneration,\n      progress: progressTracker.current(),\n      status: \"running\",\n      startedAt: Date.now(),\n      abort: () => controller.abort(),\n    });\n\n    // B: liveness heartbeat for this explicit background agent too.\n    ensureAgentHeartbeat();\n\n    // Translate this background agent's per-event stream into ChatEntry-\n    // shaped rows inside its own transcript. The dock detail view reuses\n    // App.renderEntry which only understands ChatEntry types — storing\n    // raw StreamEvents would render as blanks. The translator mirrors\n    // App.tsx#handleStreamEvent's reduction but is scoped to one agent\n    // (per-instance closure state), so it doesn't interleave with other\n    // agents.\n    //\n    // Also forward the agent-scoped events so a desktop child card can show"
+        },
+        {
+          "range": [
+            549,
+            571
+          ],
+          "text": "        skillAllowlist: overrides.skillAllowlist,\n        sandboxMode: overrides.sandboxMode,\n        mcpAllowlist: overrides.mcpAllowlist,\n        appendSystemPrompt: overrides.appendSystemPrompt,\n        readOnlySession:\n          overrides.resolvedType === \"researcher\" || overrides.resolvedType === \"explorer\",\n        hooks: ctx?.hooks,\n        recordBilledUsage: ctx?.recordBilledUsage,\n        runtimeGeneration,\n        bindLiveControl: (control, ownerToken) => {\n          const lease = asyncAgentRegistry.acquireWriterLease(\n            control.childSessionId,\n            control.runtimeGeneration,\n            ownerToken,\n          );\n          if (!lease) return false;\n          if (!asyncAgentRegistry.bindLiveControl(agentId, control, lease)) {\n            asyncAgentRegistry.releaseWriterLease(lease);\n            return false;\n          }\n          liveLease = lease;\n          return lease;\n        },"
+        },
+        {
+          "range": [
+            587,
+            612
+          ],
+          "text": "            kind: \"agent_cancelled\",\n            agentId,\n            name,\n            description,\n          });\n          return;\n        }\n        const transitioned = liveLease\n          ? asyncAgentRegistry.completeTerminal(agentId, \"completed\", liveLease)\n          : (asyncAgentRegistry.markCompleted(agentId), true);\n        if (!transitioned) return;\n        // External-readable copy of the result (tail / cross-session history).\n        // Best-effort; never blocks the completion path.\n        void writeAgentOutputFile(agentId, {\n          status: \"completed\",\n          body: text,\n          description,\n          name,\n          onError: (m, meta) => logger.warn(m, meta),\n        });\n        // B2 / Gate 1: attribute completion to the session that spawned\n        // this agent so concurrent sessions don't drain each other's\n        // notifications. Engine.run() always populates ctx.sessionId; the\n        // missing-session branch is only reachable from ad-hoc tool calls\n        // outside Engine.run() (notably tests) — we log and drop rather\n        // than crash the agent path."
+        },
+        {
+          "range": [
+            687,
+            723
+          ],
+          "text": "              name,\n              description,\n              status: \"failed\",\n              error: err.message,\n              enqueuedAt: Date.now(),\n            },\n            ctx.sessionId,\n          );\n        } else {\n          logger.warn(\"agent_completion_without_session\", {\n            agentId,\n            name,\n            status: \"failed\",\n          });\n        }\n        void ctx?.hooks?.emit(\"notification\", {\n          kind: \"agent_failed\",\n          agentId,\n          name,\n          description,\n          error: err.message,\n        });\n      });\n\n    // Mark the foreground completion as waiting for this child's notification.\n    // The Engine consumes the marker only after the whole tool batch finishes,\n    // and suppresses it for headless/sub-agent runs that cannot be woken later.\n    ctx.runYield?.request(\"background_notification\");\n    return [\n      `Async agent launched successfully.`,\n      `agent_id: ${agentId} (internal — do not show to user)`,\n      `description: ${description}`,\n      ``,\n      `The agent is working in the background. You will be notified automatically when it completes.`,\n      `Briefly tell the user what you launched and end your response. Do not generate any other text — agent results will arrive in a subsequent message.`,\n      `If you need to stop it: AgentCancel(agent_id=\"${agentId}\").`,\n    ].join(\"\\n\");"
+        },
+        {
+          "range": [
+            467,
+            483
+          ],
+          "text": "    : undefined;\n\n  const autoBgMs = resolveAutoBgMs();\n\n  // ─── Background path ───────────────────────────────────────────\n  // Register the agent, kick off execution detached from the current turn,\n  // return immediately with the agent_id. Parent abort does NOT cascade\n  // (background agents survive the spawning turn). Cancellation goes\n  // through AgentCancel(agent_id).\n  if (runInBackground) {\n    if (asyncAgentRegistry.runningCount() >= MAX_BACKGROUND_AGENTS) {\n      return (\n        `Error: too many background agents running (limit ${MAX_BACKGROUND_AGENTS}). ` +\n        `Wait for some to finish or cancel one with AgentCancel(agent_id) before launching more.`\n      );\n    }\n    const controller = new AbortController();"
+        },
+        {
+          "range": [
+            525,
+            544
+          ],
+          "text": "        // Mark detached before spawn can emit any detail. Otherwise the parent\n        // turn's completion sweep prematurely seals this still-running card.\n        safeEmit(parentStream, {\n          type: \"agent_backgrounded\",\n          agentId,\n          name,\n          description,\n          agentType: overrides.resolvedType,\n        });\n      }\n    };\n\n    void runSubAgent(\n      spawner,\n      {\n        agentId,\n        name,\n        description,\n        agentType: overrides.resolvedType,\n        prompt,"
+        },
+        {
+          "range": [
+            571,
+            586
+          ],
+          "text": "        },\n        closeLiveControl: (_control, lease) => {\n          if (lease) asyncAgentRegistry.closeDirectionIntake(agentId, lease);\n        },\n        onProgressEvent: progressTracker.onEvent,\n        onAgentProgress: progressTracker.onRuntime,\n        signal: controller.signal,\n      },\n      lifecycleSink,\n      detailSink,\n    )\n      .then((text) => {\n        if (controller.signal.aborted) {\n          if (liveLease) asyncAgentRegistry.completeTerminal(agentId, \"cancelled\", liveLease);\n          else asyncAgentRegistry.markCancelled(agentId);\n          void ctx?.hooks?.emit(\"notification\", {"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 15,
+          "text": "import { asyncAgentRegistry, MAX_BACKGROUND_AGENTS } from \"./agent-registry.js\";"
+        },
+        {
+          "line": 16,
+          "text": "import type { ChildWriterLease, LiveChildControl } from \"./agent-registry.js\";"
+        },
+        {
+          "line": 230,
+          "text": "    \"You can optionally run an agent in the background using the run_in_background \" +"
+        },
+        {
+          "line": 269,
+          "text": "      run_in_background: {"
+        },
+        {
+          "line": 584,
+          "text": "          if (liveLease) asyncAgentRegistry.completeTerminal(agentId, \"cancelled\", liveLease);"
+        },
+        {
+          "line": 595,
+          "text": "          ? asyncAgentRegistry.completeTerminal(agentId, \"completed\", liveLease)"
+        },
+        {
+          "line": 662,
+          "text": "          if (liveLease) asyncAgentRegistry.completeTerminal(agentId, \"cancelled\", liveLease);"
+        },
+        {
+          "line": 673,
+          "text": "          ? asyncAgentRegistry.completeTerminal(agentId, \"failed\", liveLease)"
+        },
+        {
+          "line": 768,
+          "text": "  asyncAgentRegistry.register({"
+        },
+        {
+          "line": 846,
+          "text": "    asyncAgentRegistry.register({"
+        },
+        {
+          "line": 866,
+          "text": "      asyncAgentRegistry.completeTerminal(agentId, status, liveBinding.lease);"
+        },
+        {
+          "line": 880,
+          "text": "  const runPromise = runSubAgent(spawner, {"
+        },
+        {
+          "line": 942,
+          "text": "          runPromise"
+        },
+        {
+          "line": 947,
+          "text": "      : { ok: true as const, text: await runPromise };"
+        },
+        {
+          "line": 954,
+          "text": "        await runPromise;"
+        },
+        {
+          "line": 961,
+          "text": "      // notification queue, exactly like an explicit run_in_background agent."
+        },
+        {
+          "line": 963,
+          "text": "      handoffToBackground(runPromise, syncController, {"
+        },
+        {
+          "line": 1052,
+          "text": " * completion handlers that mirror the explicit run_in_background path so its"
+        },
+        {
+          "line": 1057,
+          "text": "  runPromise: Promise<string>,"
+        },
+        {
+          "line": 1077,
+          "text": "     * (it shares this runPromise and reaches its success emit) already fires —"
+        },
+        {
+          "line": 1104,
+          "text": "  asyncAgentRegistry.register({"
+        },
+        {
+          "line": 1142,
+          "text": "  runPromise"
+        },
+        {
+          "line": 1146,
+          "text": "          asyncAgentRegistry.completeTerminal(agentId, \"cancelled\", liveBinding.lease);"
+        },
+        {
+          "line": 1154,
+          "text": "        ? asyncAgentRegistry.completeTerminal(agentId, \"completed\", liveBinding.lease)"
+        },
+        {
+          "line": 1201,
+          "text": "          asyncAgentRegistry.completeTerminal(agentId, \"cancelled\", liveBinding.lease);"
+        },
+        {
+          "line": 1209,
+          "text": "        ? asyncAgentRegistry.completeTerminal(agentId, \"failed\", liveBinding.lease)"
+        },
+        {
+          "line": 1244,
+          "text": "// ─── AgentStatus / AgentCancel — companions to run_in_background ─"
+        },
+        {
+          "line": 1249,
+          "text": "    \"Check the status of a background agent launched with Agent(run_in_background=true). \" +"
+        },
+        {
+          "line": 1258,
+          "text": "        description: \"The agent_id returned by Agent(run_in_background=true). Omit to list.\","
+        },
+        {
+          "line": 1338,
+          "text": "    \"Cancel a background agent launched with Agent(run_in_background=true). \" +"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "selected": [
+        {
+          "range": [
+            247,
+            247
+          ],
+          "text": "export { asyncAgentRegistry, type AsyncAgentEntry } from \"./tool-system/builtin/agent-registry.js\";"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            247,
+            247
+          ],
+          "text": "export { asyncAgentRegistry, type AsyncAgentEntry } from \"./tool-system/builtin/agent-registry.js\";"
+        }
+      ],
+      "navigation": []
+    },
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "sha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "selected": [
+        {
+          "range": [
+            364,
+            370
+          ],
+          "text": "      <CommandInput\n        value={input}\n        onChange={setInput}\n        onSubmit={handleSubmit}\n        commands={commands}\n        placeholder={isRunning ? \"Interrupt… (Ctrl+C to cancel)\" : undefined}\n        disabled={dockFocusIdx !== null}"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            364,
+            376
+          ],
+          "text": "      <CommandInput\n        value={input}\n        onChange={setInput}\n        onSubmit={handleSubmit}\n        commands={commands}\n        placeholder={isRunning ? \"Interrupt… (Ctrl+C to cancel)\" : undefined}\n        disabled={dockFocusIdx !== null}\n        onArrowOut={(direction) => {\n          if (direction !== \"down\") return;\n          const visible = getVisibleAgents(asyncAgentRegistry.getSnapshot(), Date.now());\n          if (visible.length === 0) return;\n          if (viewMode.kind === \"agent\") {\n            const index = visible.findIndex((agent) => agent.agentId === viewMode.agentId);"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 5,
+          "text": "import { CommandInput } from \"./CommandInput.js\";"
+        },
+        {
+          "line": 59,
+          "text": "  queuedInputs: string[];"
+        },
+        {
+          "line": 61,
+          "text": "  setInput: Dispatch<SetStateAction<string>>;"
+        },
+        {
+          "line": 62,
+          "text": "  handleSubmit: (input: string) => void;"
+        },
+        {
+          "line": 64,
+          "text": "  isRunning: boolean;"
+        },
+        {
+          "line": 98,
+          "text": "    queuedInputs,"
+        },
+        {
+          "line": 100,
+          "text": "    setInput,"
+        },
+        {
+          "line": 101,
+          "text": "    handleSubmit,"
+        },
+        {
+          "line": 103,
+          "text": "    isRunning,"
+        },
+        {
+          "line": 357,
+          "text": "      {queuedInputs.length > 0 && ("
+        },
+        {
+          "line": 360,
+          "text": "            {`⌛ 已缓存 ${queuedInputs.length} 条，将在本轮结束后依次发送（/force 立即打断并优先发送）`}"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "sha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "selected": [
+        {
+          "range": [
+            169,
+            175
+          ],
+          "text": "    }\n    // P1.7: Record input history and reset navigator\n    addToHistory(v);\n    historyRef.current.refresh();\n    setFromHistory(false);\n    onSubmit(v);\n    setSelectedIndex(0);"
+        },
+        {
+          "range": [
+            232,
+            238
+          ],
+          "text": "          <TextInput\n            value={value}\n            onChange={handleChange}\n            onSubmit={handleSubmit}\n            placeholder={placeholder ?? \"Ask anything… (/ for commands, ↑ for history)\"}\n            focus={!disabled}\n            hint={inlineHint}"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            169,
+            178
+          ],
+          "text": "    }\n    // P1.7: Record input history and reset navigator\n    addToHistory(v);\n    historyRef.current.refresh();\n    setFromHistory(false);\n    onSubmit(v);\n    setSelectedIndex(0);\n  };\n\n  // Compute visible window for scrolling"
+        },
+        {
+          "range": [
+            228,
+            242
+          ],
+          "text": "      {/* Input line */}\n      <Box flexDirection=\"column\">\n        <Box>\n          <Text>{\"❯ \"}</Text>\n          <TextInput\n            value={value}\n            onChange={handleChange}\n            onSubmit={handleSubmit}\n            placeholder={placeholder ?? \"Ask anything… (/ for commands, ↑ for history)\"}\n            focus={!disabled}\n            hint={inlineHint}\n            cursorResetCounter={cursorResetCounter}\n          />\n        </Box>\n      </Box>"
+        }
+      ],
+      "navigation": [
+        {
+          "line": 25,
+          "text": "  if (!usage) return \"\";"
+        },
+        {
+          "line": 27,
+          "text": "  if (!trimmed.startsWith(name)) return \"\";"
+        },
+        {
+          "line": 28,
+          "text": "  return trimmed.slice(name.length).trim();"
+        },
+        {
+          "line": 34,
+          "text": "  onSubmit: (value: string) => void;"
+        },
+        {
+          "line": 43,
+          "text": "  disabled?: boolean;"
+        },
+        {
+          "line": 51,
+          "text": "  onSubmit,"
+        },
+        {
+          "line": 55,
+          "text": "  disabled,"
+        },
+        {
+          "line": 74,
+          "text": "    if (!showAutocomplete) return [];"
+        },
+        {
+          "line": 75,
+          "text": "    if (filter === \"\") return commands;"
+        },
+        {
+          "line": 76,
+          "text": "    return commands.filter("
+        },
+        {
+          "line": 93,
+          "text": "    if (disabled) return;"
+        },
+        {
+          "line": 98,
+          "text": "        return;"
+        },
+        {
+          "line": 101,
+          "text": "        return;"
+        },
+        {
+          "line": 109,
+          "text": "        return;"
+        },
+        {
+          "line": 113,
+          "text": "        return;"
+        },
+        {
+          "line": 131,
+          "text": "        return;"
+        },
+        {
+          "line": 158,
+          "text": "          onSubmit(v);"
+        },
+        {
+          "line": 161,
+          "text": "          return;"
+        },
+        {
+          "line": 167,
+          "text": "        return;"
+        },
+        {
+          "line": 189,
+          "text": "    if (!value.startsWith(\"/\") || !value.endsWith(\" \")) return undefined;"
+        },
+        {
+          "line": 192,
+          "text": "    if (value.length !== head.length + 1) return undefined;"
+        },
+        {
+          "line": 194,
+          "text": "    if (!cmd) return undefined;"
+        },
+        {
+          "line": 196,
+          "text": "    return hint || undefined;"
+        },
+        {
+          "line": 199,
+          "text": "  return ("
+        },
+        {
+          "line": 210,
+          "text": "            return ("
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.test.tsx",
+      "sha256": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "selected": [
+        {
+          "range": [
+            1,
+            23
+          ],
+          "text": "import { expect, test } from \"bun:test\";\nimport React from \"react\";\nimport { StatusLine } from \"./StatusLine.js\";\nimport { flush, mount, plainText } from \"../../../../../tests/render-fixtures.js\";\n\ntest(\"terminal footer retains unknown and partial cost evidence instead of formatting it as zero\", async () => {\n  const harness = mount(\n    <StatusLine\n      model=\"gpt-4o\"\n      effort=\"high\"\n      tokens={120}\n      cost=\"~$0.000000 + 2 unknown (partial)\"\n    />,\n  );\n  try {\n    await flush();\n    expect(plainText(harness)).toContain(\"2 unknown\");\n    expect(plainText(harness)).toContain(\"partial\");\n    expect(plainText(harness)).not.toContain(\"$0.00 │\");\n  } finally {\n    harness.unmount();\n  }\n});"
+        }
+      ],
+      "display": [
+        {
+          "range": [
+            1,
+            23
+          ],
+          "text": "import { expect, test } from \"bun:test\";\nimport React from \"react\";\nimport { StatusLine } from \"./StatusLine.js\";\nimport { flush, mount, plainText } from \"../../../../../tests/render-fixtures.js\";\n\ntest(\"terminal footer retains unknown and partial cost evidence instead of formatting it as zero\", async () => {\n  const harness = mount(\n    <StatusLine\n      model=\"gpt-4o\"\n      effort=\"high\"\n      tokens={120}\n      cost=\"~$0.000000 + 2 unknown (partial)\"\n    />,\n  );\n  try {\n    await flush();\n    expect(plainText(harness)).toContain(\"2 unknown\");\n    expect(plainText(harness)).toContain(\"partial\");\n    expect(plainText(harness)).not.toContain(\"$0.00 │\");\n  } finally {\n    harness.unmount();\n  }\n});"
+        }
+      ],
+      "navigation": []
+    }
+  ],
+  "laterCaptureSupplement": {
+    "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+    "range": [
+      445,
+      445
+    ],
+    "capturedUTC": "2026-10-17T16:04:25.691796+00:00",
+    "toolChunk": "28a7e8",
+    "note": "Appended selected/display line445 after original capture. No retroactive time or before-read claim."
+  }
+}

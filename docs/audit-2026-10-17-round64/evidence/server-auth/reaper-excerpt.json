@@ -1,0 +1,10 @@
+{
+  "path": "packages/server/src/serve/headless-server.ts",
+  "range": [
+    281,
+    294
+  ],
+  "text": "          void hubAuth\n            .authenticate(auth.request)\n            .then((session) => {\n              if (!session) ws.close(4401, \"session expired\");\n            })\n            .catch(() => ws.close(4401, \"session unavailable\"));\n        }\n      }, opts.authRecheckMs ?? 5_000)\n    : undefined;\n  authReaper?.unref?.();\n\n  const deletePendingWorkerResponse = (requestId: string): void => {\n    const route = pendingWorkerResponses.get(requestId);\n    if (!route) return;\n",
+  "bytes": 480,
+  "sha256": "881eafe99fe99924d91c99280249fbd12b125d77ba996c1401fe3276d1c48f29"
+}

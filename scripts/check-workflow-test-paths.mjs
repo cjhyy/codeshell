@@ -25,7 +25,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workflowDir = resolve(repoRoot, ".github/workflows");
 
 // A path-shaped token under packages/ or tests/ ending in a test extension.
-const TEST_PATH = /(?:packages|tests)\/[A-Za-z0-9_./-]*\.test\.(?:ts|tsx|mjs|js)/g;
+const TEST_PATH = /(?:packages|tests)\/[A-Za-z0-9_./-]*\.test\.(?:tsx|ts|mjs|js)/g;
 
 let missing = 0;
 let checked = 0;

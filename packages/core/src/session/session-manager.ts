@@ -27,6 +27,7 @@ import { nanoid } from "nanoid";
 import type {
   SessionForkLineage,
   SessionState,
+  SubAgentContinuation,
   SessionKind,
   SessionWorkspace,
   TokenUsage,
@@ -35,6 +36,7 @@ import type {
 } from "../types.js";
 import { Transcript } from "./transcript.js";
 import { preserveOutputCoverage } from "./output-coverage-state.js";
+import { parseSubAgentContinuation } from "./subagent-continuation.js";
 import { SessionError } from "../exceptions.js";
 import { addCumulativeUsage, addTokenUsage, normalizeCumulativeUsageCounters } from "./usage.js";
 import {
@@ -96,6 +98,8 @@ const RUN_FINAL_STATE_FIELDS = [
   "turnCount",
   "turnSeq",
   "tokenUsage",
+  "toolSelection",
+  "cacheUsageVersion",
   "cumulativePromptTokens",
   "cumulativeCacheReadTokens",
   "cumulativeCacheCreationTokens",
@@ -116,6 +120,7 @@ export interface SessionClosingRunFinalizer {
     readFinal: () => {
       fields: SessionRunFinalStatePatch;
       usageDelta: TokenUsage;
+      cacheUsageDelta?: TokenUsage;
       previousContextUsageAnchor: SessionState["contextUsageAnchor"];
     },
   ) => boolean;
@@ -351,6 +356,7 @@ const FORK_EVENT_POLICY = {
   session_meta: "skip",
   subagent: "copy",
   external_file_changes: "copy",
+  turn_diff: "copy",
   turn_boundary: "copy",
   // Idempotency receipts belong to the source session and never contribute to
   // model context. Copying them could replay a source response in the child.
@@ -658,14 +664,26 @@ export class SessionManager {
             if (latest.runId !== runId) return false;
             // Read after settlement and on every CAS retry, including a fresh
             // ledger serialization. Do not freeze usage/cost before end hooks.
-            const { fields: partial, usageDelta, previousContextUsageAnchor } = readFinal();
+            const {
+              fields: partial,
+              usageDelta,
+              previousContextUsageAnchor,
+              cacheUsageDelta = { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            } = readFinal();
             if (typeof partial.status !== "string" || partial.status === "active") return false;
             // Project at runtime too: a cast/JavaScript caller cannot smuggle
             // domain metadata or a new run identity through the narrow lease.
             const fields = Object.fromEntries(
               RUN_FINAL_STATE_FIELDS.map((field) => [field, structuredClone(partial[field])]),
             );
-            if (Object.values(usageDelta).some((n) => !Number.isFinite(n) || n < 0)) return false;
+            // Older closing callers have no loading snapshot; retain the latest hints.
+            fields.toolSelection ??= latest.toolSelection;
+            if (
+              [...Object.values(usageDelta), ...Object.values(cacheUsageDelta)].some(
+                (n) => !Number.isFinite(n) || n < 0,
+              )
+            )
+              return false;
             // This delta belongs only to the revoked run's uncommitted usage.
             // Other owners' pre/post-close auxiliary usage stays in latest.
             fields.tokenUsage = addTokenUsage(latest.tokenUsage, usageDelta);
@@ -673,7 +691,7 @@ export class SessionManager {
               fields,
               addCumulativeUsage(
                 normalizeCumulativeUsageCounters(latest, latest.tokenUsage),
-                usageDelta,
+                cacheUsageDelta,
               ),
             );
             // An independent owner may have advanced context before close too.
@@ -709,11 +727,19 @@ export class SessionManager {
     origin?: import("../types.js").SessionOrigin,
     kind: SessionKind = "work",
     ephemeral = false,
+    subAgentContinuation?: SubAgentContinuation,
   ): SessionBundle {
     // External callers may pass any string; nanoid output is trusted. Either
     // way the ID gets joined into a filesystem path, so the public entry
     // point validates before that join.
     if (explicitSessionId !== undefined) assertSafeSessionId(explicitSessionId);
+    const continuation =
+      subAgentContinuation === undefined
+        ? undefined
+        : parseSubAgentContinuation(subAgentContinuation, parentSessionId);
+    if (subAgentContinuation !== undefined && !continuation) {
+      throw new SessionError("Invalid sub-agent continuation metadata or parent ownership");
+    }
     const sessionId = explicitSessionId ?? nanoid(16);
     const state: SessionState = {
       sessionId,
@@ -725,6 +751,7 @@ export class SessionManager {
       model,
       provider,
       tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      cacheUsageVersion: 1,
       cumulativePromptTokens: 0,
       cumulativeCacheReadTokens: 0,
       cumulativeCacheCreationTokens: 0,
@@ -736,6 +763,7 @@ export class SessionManager {
       // new top-level session (key present, null) apart from a legacy session
       // (key absent) and from a sub-agent (key present, non-empty string).
       parentSessionId: parentSessionId ?? null,
+      ...(continuation ? { subAgentContinuation: continuation } : {}),
       ...(ephemeral || sessionId.startsWith("qchat-") ? { ephemeral: true } : {}),
       ...(origin ? { origin } : {}),
     };
@@ -1006,6 +1034,18 @@ export class SessionManager {
       const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
       return state.parentSessionId === null || typeof state.parentSessionId === "string"
         ? state.parentSessionId
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Validated frozen child scope. Missing/corrupt snapshots cannot authorize resume. */
+  readSubAgentContinuation(sessionId: string): SubAgentContinuation | undefined {
+    try {
+      const state = this.readSessionState(sessionId);
+      return state
+        ? parseSubAgentContinuation(state.subAgentContinuation, state.parentSessionId)
         : undefined;
     } catch {
       return undefined;
@@ -1655,7 +1695,8 @@ export class SessionManager {
   /**
    * Atomically add one billed auxiliary request to the latest source state.
    * This field-level read/add/write avoids publishing a detached stale state
-   * snapshot and accounts prompt, completion, total, cache, and cost together.
+   * snapshot and accounts every billed token and cost. Foreground cache metrics
+   * remain unchanged; helper requests have a separate prompt/cache namespace.
    */
   recordAuxiliaryUsage(
     sessionId: string,
@@ -1664,6 +1705,7 @@ export class SessionManager {
   ): Pick<
     SessionState,
     | "tokenUsage"
+    | "cacheUsageVersion"
     | "cumulativePromptTokens"
     | "cumulativeCacheReadTokens"
     | "cumulativeCacheCreationTokens"
@@ -1675,7 +1717,6 @@ export class SessionManager {
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const state = this.readPersistedState(sessionId);
       Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));
-      Object.assign(state, addCumulativeUsage(state, capturedUsage));
       state.tokenUsage = addTokenUsage(state.tokenUsage, capturedUsage);
       if (costState !== undefined) {
         state.costState = typeof costState === "function" ? costState() : costState;
@@ -1684,6 +1725,7 @@ export class SessionManager {
       if (result.ok) {
         return {
           tokenUsage: state.tokenUsage,
+          cacheUsageVersion: state.cacheUsageVersion,
           cumulativePromptTokens: state.cumulativePromptTokens,
           cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
           cumulativeCacheCreationTokens: state.cumulativeCacheCreationTokens,
@@ -2481,6 +2523,7 @@ export function buildForkState(
     model: source.model,
     provider: source.provider,
     tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    cacheUsageVersion: 1,
     cumulativePromptTokens: 0,
     cumulativeCacheReadTokens: 0,
     cumulativeCacheCreationTokens: 0,
@@ -2518,6 +2561,15 @@ export function buildForkTranscript(
     id: nanoid(12),
   }));
   Transcript.remapContextForkReferences(sourceEvents, copied);
+  const copiedIds = new Map(sourceEvents.map((event, index) => [event.id, copied[index]!.id]));
+  for (const event of copied) {
+    if (event.type !== "turn_diff") continue;
+    for (const key of ["turnId", "runId"] as const) {
+      const original = event.data[key];
+      if (typeof original === "string" && copiedIds.has(original))
+        event.data[key] = copiedIds.get(original)!;
+    }
+  }
   return [meta, ...copied];
 }
 

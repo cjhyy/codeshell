@@ -1,0 +1,30 @@
+{
+  "metadataErrors": [
+    {
+      "tool": "11c27f",
+      "exitCode": 1,
+      "cause": "Root assumed optional source-manifest.json existed in metadata-only105; its actual packet has report/checks/receipt and no source reading. No frozen packet changed; assembler explicitly skips absent manifest.",
+      "productFailure": false
+    }
+  ],
+  "rootOriginalR7Read": {
+    "md": "docs/audit-2026-10-17-round7/root-metadata.md",
+    "lines": [
+      3,
+      7,
+      9
+    ],
+    "manifest": "docs/audit-2026-10-17-round7/source-manifest.json",
+    "fields": [
+      "baseline",
+      "assemblyWorkingTreeHead",
+      "/files/48/path",
+      "/files/48/bytes",
+      "/files/48/sha256",
+      "/files/48/frozenBlobVerified",
+      "/files/48/currentWorkingTreeMatchesFrozenBlob"
+    ],
+    "disposition": "Target-only dated same-SHA full accepted with102 current pin;105 same author self-review, not independent source review."
+  },
+  "productRuns": 0
+}

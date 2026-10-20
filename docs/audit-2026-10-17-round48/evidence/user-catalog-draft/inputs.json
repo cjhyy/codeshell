@@ -1,0 +1,59 @@
+{
+  "scope": "Only these archived audit metadata inputs; no product files, no repository scripts, no Git, no other tmp paths. Inline Python standard-library operations are metadata I/O only.",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+      "bytes": 71885,
+      "sha256": "6e9e8a286a6e07a1306e7d007bad8935f15e202a9d1e44878b9589b9a6cf6075",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:04:09.015970+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/source-status-root/report.md",
+      "bytes": 1668,
+      "sha256": "7c5943798f57e6f19847fc7f85913a539df97226e5f6093e53c5ed0bd8e41518",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:04:09.017750+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/source-status-review/review.md",
+      "bytes": 3266,
+      "sha256": "2a3776d504fd37f3235f48a4d7b844b8d2153b59f9e34594aa363bf80518d40c",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:04:09.018280+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/source-status-aggregate/review.md",
+      "bytes": 1503,
+      "sha256": "1835dbf329ea67e66f76a0de4b5358118a196e17ab1fa8d74f13f4312ce1afe8",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:04:09.018950+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/README.md",
+      "bytes": 3797,
+      "sha256": "a1a3f9c88b4f7b238d85c170b47da4e284085801920321a466438e631e337f24",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:04:09.019489+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/findings.json",
+      "bytes": 93,
+      "sha256": "c03071df6e65c132888f7010021389908d63e738ac6e95b6c68e402f947a2206",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:04:09.020145+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/coverage.json",
+      "bytes": 1006,
+      "sha256": "b90407015b4902578dfe144f38ce616f9d6c61b8b02bc270a10ffe551a849396",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:04:09.020768+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/report.md",
+      "bytes": 3940,
+      "sha256": "99f4356ec1ad48f9671c9dcfbdb9651bfdf40aecbbe73613dc696dd6ab9a41cb",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:04:09.021359+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/review.md",
+      "bytes": 6180,
+      "sha256": "99c91341df6e5e9e9db13182d8987c9733e95aa440199868a947c0b5794dd08c",
+      "pinnedBeforeContentReadUTC": "2026-10-17T16:04:09.021896+00:00"
+    }
+  ]
+}

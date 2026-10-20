@@ -1,0 +1,38 @@
+{
+  "baseline": "ec1f6ae458d3646d07db20e876a2b9ce8c9939b9",
+  "mainHead": "ec1f6ae458d3646d07db20e876a2b9ce8c9939b9",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 17,
+  "activeSourceChecks": 22,
+  "incidentalSourceChecks": 0,
+  "hashOnlyChecks": 8,
+  "receiptChecks": 171,
+  "verbatimCopies": 88,
+  "frozenWhitespaceArtifacts": 0,
+  "historyTimepoints": [
+    {
+      "readers": "prep54/55/56",
+      "files": 4088,
+      "markdownFiles": 1410,
+      "jsonFiles": 2678,
+      "stringLeaves": 1631727,
+      "scalarLeaves": 2469249,
+      "includedFrozenRound": 44,
+      "excludedThenMutableRound": 45
+    },
+    {
+      "reader": "Root58",
+      "files": 4162,
+      "markdownFiles": 1416,
+      "jsonFiles": 2746,
+      "stringLeaves": 1676345,
+      "scalarLeaves": 2534677,
+      "includedFrozenRound": 45,
+      "excludedThenFutureRound": 46
+    }
+  ],
+  "productRuns": 0,
+  "goalStillActive": true
+}

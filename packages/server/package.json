@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-server",
-  "version": "0.9.42",
+  "version": "0.9.45",
   "description": "CodeShell server transport layer — mobile remote HTTP/WS host, pairing, passcode gate, tunnel, rooms, uploads, and session/attachment services. Electron-free; precursor of the auth gateway.",
   "type": "module",
   "main": "./dist/index.js",
@@ -50,7 +50,8 @@
   "bin": {
     "code-shell-serve": "./dist/bin/code-shell-serve.js",
     "code-shell-settings-recovery": "./dist/bin/code-shell-settings-recovery.js",
-    "code-shell-cloud-account": "./dist/bin/code-shell-cloud-account.js"
+    "code-shell-cloud-account": "./dist/bin/code-shell-cloud-account.js",
+    "code-shell-link-cleanup": "./dist/bin/code-shell-link-cleanup.js"
   },
   "files": [
     "dist"

@@ -31,6 +31,12 @@ describe("composeCapabilityModulesEnv", () => {
     );
   });
 
+  test("loads the product Link provider module through the trusted worker seam", () => {
+    expect(
+      composeCapabilityModulesEnv({ ...urls, links: "file:///links.js" }, {}, mustNotResolve),
+    ).toBe(`${baseline},file:///links.js#createLinkProviderModule`);
+  });
+
   test("appends the enabled module once and resolves it only for that spawn", () => {
     let resolutions = 0;
     const resolveLab = () => {

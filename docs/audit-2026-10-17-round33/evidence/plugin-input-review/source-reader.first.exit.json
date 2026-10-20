@@ -1,0 +1,17 @@
+{
+  "recordedUtc": "2026-10-17T12:12:01.769481+00:00",
+  "toolChunkId": "19f37e",
+  "observedExitCode": 1,
+  "kind": "metadata source-reader range precheck",
+  "observedDiagnostic": "Traceback (most recent call last):\n  File \"<stdin>\", line 12, in <module>\nAssertionError: ('packages/core/src/plugins/gitOps.ts', 213, 208)\n",
+  "requestedUnenteredRange": [
+    206,
+    213
+  ],
+  "actualFileLines": 208,
+  "alreadyPrinted": "Both full parser test files and gitOps.ts122-153. No lines from requested206-213 or later consumers were printed.",
+  "handling": "Use durable line-count metadata for the first actual read of206-208 and previously unentered consumer ranges; do not rerun prior source ranges or any product.",
+  "fullRawCombinedOutputPersisted": false,
+  "productAttempts": 0,
+  "productFailure": false
+}

@@ -1,0 +1,634 @@
+{
+  "atUTC": "2026-10-17T20:40:17.242338+00:00",
+  "rootReportedBaseline": "d195788bc2c18cd85c81aea4a431ab29074df5cf",
+  "gitCertified": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T20:34:43.580428+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "instruction-hash-reuse",
+      "scopeBoundary": "No own product body/navigation in prep165; hash alone is not semantic coverage."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T20:34:43.581157+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "instruction-hash-reuse",
+      "scopeBoundary": "No own product body/navigation in prep165; hash alone is not semantic coverage."
+    },
+    {
+      "path": "packages/core/src/sources/resolve.ts",
+      "bytes": 5489,
+      "lineCount": 138,
+      "sha256": "3d54fa881dd97c8b183fef070dc4f69742b391a730f0f9f3b20bb47301a3ef98",
+      "pinnedAtUTC": "2026-10-17T20:34:43.581667+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "old-scope-body-before-excluded",
+      "scopeBoundary": "No own product body/navigation in prep165; hash alone is not semantic coverage."
+    },
+    {
+      "path": "packages/core/src/sources/collection.test.ts",
+      "bytes": 18712,
+      "lineCount": 483,
+      "sha256": "fadac8725cd2eea6a5b03e1284fc03f0181169623852005d22af7b75ed8e3424",
+      "pinnedAtUTC": "2026-10-17T20:34:43.582221+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "unused-test-hash-only",
+      "scopeBoundary": "No own product body/navigation in prep165; hash alone is not semantic coverage."
+    },
+    {
+      "path": "packages/core/src/sources/collection.ts",
+      "bytes": 3025,
+      "lineCount": 89,
+      "sha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6",
+      "pinnedAtUTC": "2026-10-17T20:34:43.582625+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "semanticLineCount": 89,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "bodyDisplayedLineCount": 89,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "displayedLineCount": 89,
+      "semanticFull": true,
+      "coverage": "full",
+      "category": "product-semantic",
+      "scopeBoundary": "Full static DTO/schema leaf read. Normalizer and real path/identity/I/O enforcement callees not read or exercised; full file is not transitive mechanism certification. Prior original Sources MD7 already described selected reading, so no first-read claim."
+    },
+    {
+      "path": "packages/core/src/sources/link-view.ts",
+      "bytes": 3804,
+      "lineCount": 97,
+      "sha256": "b93f18dd00dddd7abb6a67df1faafda6b3f1d9e445cda2c18a3860eedae5a135",
+      "pinnedAtUTC": "2026-10-17T20:34:43.582923+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [
+        [
+          12,
+          36
+        ]
+      ],
+      "semanticLineCount": 25,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          97
+        ]
+      ],
+      "bodyDisplayedLineCount": 97,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          1,
+          97
+        ]
+      ],
+      "displayedLineCount": 97,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Whole file displayed; only12–36 config→scopeId/title is semantic. Availability/credential/authority methods39–97 are displayed boundary only, with no auth/custody or safety certification."
+    },
+    {
+      "path": "packages/core/src/sources/collection-url.test.ts",
+      "bytes": 18818,
+      "lineCount": 544,
+      "sha256": "975ac5e7f72368a87173699058916e1990860013c5e8bc0b31c5275b3665b5b1",
+      "pinnedAtUTC": "2026-10-17T20:34:43.583330+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "unused-test-hash-only",
+      "scopeBoundary": "No own product body/navigation in prep165; hash alone is not semantic coverage."
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.ts",
+      "bytes": 1622,
+      "lineCount": 36,
+      "sha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "pinnedAtUTC": "2026-10-17T20:34:43.583541+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "old-scope-body-before-excluded",
+      "scopeBoundary": "No own product body/navigation in prep165; hash alone is not semantic coverage."
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.test.ts",
+      "bytes": 5019,
+      "lineCount": 136,
+      "sha256": "63f3c12f5e55b09d777ce1319379537289d1a8482f69b63af5ae6d405d64b7cb",
+      "pinnedAtUTC": "2026-10-17T20:34:43.583838+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "unused-test-hash-only",
+      "scopeBoundary": "No own product body/navigation in prep165; hash alone is not semantic coverage."
+    },
+    {
+      "path": "packages/core/src/sources/resolve.test.ts",
+      "bytes": 9703,
+      "lineCount": 281,
+      "sha256": "811480404850c671e1ade430cd9b2e7cb3214f00b4c5c0e7825fb40bbc2d8f54",
+      "pinnedAtUTC": "2026-10-17T20:34:43.584131+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "unused-test-hash-only",
+      "scopeBoundary": "No own product body/navigation in prep165; hash alone is not semantic coverage."
+    },
+    {
+      "path": "packages/core/src/sources/adapters/collection.ts",
+      "bytes": 5415,
+      "lineCount": 147,
+      "sha256": "564e8db97c4fd74a3b1a3d0fd98aad82eead3f20ef58238801d60630c6a014d5",
+      "pinnedAtUTC": "2026-10-17T20:34:43.584493+00:00",
+      "timing": "before any own prep165 body/nav; exact source inventory confirmed",
+      "selectedLineRanges": [
+        [
+          43,
+          44
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          70,
+          83
+        ],
+        [
+          116,
+          147
+        ]
+      ],
+      "semanticLineCount": 49,
+      "bodyDisplayedLineRanges": [
+        [
+          40,
+          49
+        ],
+        [
+          70,
+          84
+        ],
+        [
+          116,
+          147
+        ]
+      ],
+      "bodyDisplayedLineCount": 57,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          30,
+          30
+        ],
+        [
+          50,
+          50
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          55,
+          55
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          90,
+          90
+        ],
+        [
+          93,
+          93
+        ],
+        [
+          98,
+          98
+        ],
+        [
+          110,
+          110
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          30,
+          30
+        ],
+        [
+          40,
+          50
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          55,
+          55
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          70,
+          84
+        ],
+        [
+          90,
+          90
+        ],
+        [
+          93,
+          93
+        ],
+        [
+          98,
+          98
+        ],
+        [
+          110,
+          110
+        ],
+        [
+          116,
+          147
+        ]
+      ],
+      "displayedLineCount": 67,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Ordinary source config/entry ID/name/display projection only. Filesystem, URL/Link I/O, account, grant, authority/credential and native mechanisms not certified. Earlier source reading overlap is retained; not first-ever or unique global coverage."
+    },
+    {
+      "path": "packages/core/src/sources/catalog.ts",
+      "bytes": 9080,
+      "lineCount": 233,
+      "sha256": "7257cd54f1a1fd1ef9c1972429b0dfda284ebc560b022018a43cbc532d2c8142",
+      "pinnedAtUTC": "2026-10-17T20:38:07.868342+00:00",
+      "timing": "before own body/nav; filename-only consumer inventory confirmed",
+      "selectedLineRanges": [
+        [
+          19,
+          43
+        ],
+        [
+          165,
+          176
+        ]
+      ],
+      "semanticLineCount": 37,
+      "bodyDisplayedLineRanges": [
+        [
+          19,
+          43
+        ],
+        [
+          165,
+          176
+        ]
+      ],
+      "bodyDisplayedLineCount": 37,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          8,
+          9
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          77,
+          77
+        ],
+        [
+          106,
+          107
+        ],
+        [
+          126,
+          126
+        ],
+        [
+          130,
+          130
+        ],
+        [
+          135,
+          135
+        ],
+        [
+          143,
+          143
+        ],
+        [
+          195,
+          195
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          212,
+          212
+        ],
+        [
+          226,
+          226
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          8,
+          9
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          19,
+          43
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          77,
+          77
+        ],
+        [
+          106,
+          107
+        ],
+        [
+          126,
+          126
+        ],
+        [
+          130,
+          130
+        ],
+        [
+          135,
+          135
+        ],
+        [
+          143,
+          143
+        ],
+        [
+          165,
+          176
+        ],
+        [
+          195,
+          195
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          212,
+          212
+        ],
+        [
+          226,
+          226
+        ]
+      ],
+      "displayedLineCount": 52,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Ordinary source config/entry ID/name/display projection only. Filesystem, URL/Link I/O, account, grant, authority/credential and native mechanisms not certified. Earlier source reading overlap is retained; not first-ever or unique global coverage."
+    },
+    {
+      "path": "packages/core/src/sources/collection-local.ts",
+      "bytes": 6114,
+      "lineCount": 171,
+      "sha256": "a7168998bd1a689b712fa63139a37ad22eae53bb3419dd7efcdee6ad3a73fb54",
+      "pinnedAtUTC": "2026-10-17T20:38:07.869207+00:00",
+      "timing": "before own body/nav; filename-only consumer inventory confirmed",
+      "selectedLineRanges": [
+        [
+          122,
+          127
+        ],
+        [
+          129,
+          130
+        ],
+        [
+          136,
+          150
+        ]
+      ],
+      "semanticLineCount": 23,
+      "bodyDisplayedLineRanges": [
+        [
+          122,
+          153
+        ]
+      ],
+      "bodyDisplayedLineCount": 32,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          108,
+          108
+        ],
+        [
+          110,
+          111
+        ],
+        [
+          154,
+          154
+        ],
+        [
+          165,
+          165
+        ],
+        [
+          170,
+          170
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          108,
+          108
+        ],
+        [
+          110,
+          111
+        ],
+        [
+          122,
+          154
+        ],
+        [
+          165,
+          165
+        ],
+        [
+          170,
+          170
+        ]
+      ],
+      "displayedLineCount": 41,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Ordinary source config/entry ID/name/display projection only. Filesystem, URL/Link I/O, account, grant, authority/credential and native mechanisms not certified. Earlier source reading overlap is retained; not first-ever or unique global coverage."
+    }
+  ],
+  "summary": {
+    "sourceRows": 13,
+    "semanticProductRows": 5,
+    "semanticProductLines": 223,
+    "fullStaticDtoLeafRows": 1,
+    "otherSelectedProductRows": 4,
+    "bodyDisplayLines": 312,
+    "displayUnionLinesIncludingNavigation": 346,
+    "oldScopeBodyBeforeExcludedRows": 2,
+    "unusedTestHashOnlyRows": 4,
+    "instructionHashOnlyRows": 2,
+    "testDeclarationLines": 0,
+    "testExecution": 0
+  }
+}

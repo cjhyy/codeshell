@@ -1,0 +1,23 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "decision": "finite-negative ordinary data-contract scope only",
+  "negativeEvidence": [
+    "Manifest writer emits the same format/version/floor/files shape that actual openBundle accepts, and reopens it after writing.",
+    "Writer emits version2 exactly one event or fragment per record; fragment total bound is consistent with 16MiB/64KiB; ordinary fragment group is assembled before rotation and written as one joined batch.",
+    "Reader validates newline framing, increasing sequence, mutually exclusive event/fragment, ordered complete fragment groups and region end; no normal producer counterexample established in selected ranges.",
+    "Padded storage encoder emits checksum wrapper and fixed32768 bytes consumed by parser."
+  ],
+  "limits": [
+    "No whole repair, filesystem, ownership, lease, authority, identity, permission, security, integrity guarantee certified.",
+    "No malformed JSON/DTO or arbitrary Buffer/fragment fixture used to invent an issue.",
+    "No actual backup/restore, user cache, file mutations, product/helper/test execution.",
+    "No full-source coverage inferred from entire display; no exhaustive history semantic claim."
+  ]
+}

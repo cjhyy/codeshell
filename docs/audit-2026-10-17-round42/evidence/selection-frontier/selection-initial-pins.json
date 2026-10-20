@@ -1,0 +1,47 @@
+{
+  "atUTC": "2026-10-17T14:16:36.581731+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "bytes": 16266,
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "lineCount": 439,
+      "coverage": "hash-only inventory before selection",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "bytes": 3286,
+      "sha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "lineCount": 84,
+      "coverage": "hash-only inventory before selection",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertSkills.ts",
+      "bytes": 3178,
+      "sha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8",
+      "lineCount": 79,
+      "coverage": "hash-only inventory before selection",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "bytes": 14597,
+      "sha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "lineCount": 446,
+      "coverage": "hash-only inventory before selection",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "lineCount": 86,
+      "coverage": "hash-only inventory before selection",
+      "semanticRead": false
+    }
+  ],
+  "productRuns": 0,
+  "scope": "Hash/line metadata only; no product text rendered or executed."
+}

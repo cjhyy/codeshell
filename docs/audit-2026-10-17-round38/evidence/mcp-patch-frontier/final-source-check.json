@@ -1,0 +1,123 @@
+{
+  "kind": "final filesystem byte check only, no new semantic reading",
+  "capturedAtUTC": "2026-10-17T13:22:30.430723+00:00",
+  "rootSuppliedCurrentFormalContext": "bbad45be04dacfecb29cba04ed51caf167fe4e53",
+  "formalContextSuppliedByRootNotGitVerified": true,
+  "originalPrepContextShortUnchanged": "ee5c",
+  "originalFormalBaselineRemainsNull": true,
+  "initialAndPriorFinishPinsPreserved": true,
+  "allFilesMatchOriginalPins": true,
+  "files": [
+    {
+      "group": "files",
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "expectedBytes": 1991,
+      "expectedSha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "files",
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "bytes": 4590,
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "expectedBytes": 4590,
+      "expectedSha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "files",
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "expectedBytes": 74294,
+      "expectedSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "files",
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "expectedBytes": 10247,
+      "expectedSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "files",
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "expectedBytes": 29767,
+      "expectedSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "files",
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "expectedBytes": 765,
+      "expectedSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "files",
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "expectedBytes": 86436,
+      "expectedSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "files",
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "expectedBytes": 299337,
+      "expectedSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "files",
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "bytes": 14536,
+      "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "expectedBytes": 14536,
+      "expectedSha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "historicalReportReads",
+      "path": "docs/audit-2026-10-17-round26/review-target-report.md",
+      "bytes": 8182,
+      "sha256": "817dfe32e40679b6abfc7993ded08dde2781dec745cbc446ff257d1bd3b9de0c",
+      "expectedBytes": 8182,
+      "expectedSha256": "817dfe32e40679b6abfc7993ded08dde2781dec745cbc446ff257d1bd3b9de0c",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "instructionCarryForward",
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "expectedBytes": 17639,
+      "expectedSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesOriginalPin": true
+    },
+    {
+      "group": "instructionCarryForward",
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "expectedBytes": 206,
+      "expectedSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesOriginalPin": true
+    }
+  ],
+  "repoWrites": 0,
+  "gitCommands": 0,
+  "newProductSemanticReadLines": 0
+}

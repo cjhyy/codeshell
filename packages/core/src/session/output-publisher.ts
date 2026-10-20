@@ -33,6 +33,7 @@ const visible = new Set([
   "tool_result",
   "room_tool_result",
   "tool_summary",
+  "turn_diff",
   "tombstone",
   "assistant_message",
   "turn_complete",

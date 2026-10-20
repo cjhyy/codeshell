@@ -1,0 +1,105 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "sourceChecks": [
+    {
+      "path": "packages/core/src/automation/cron-expr.ts",
+      "sha256": "5a5fcfd813afb00e42b32cbaa19f9be68918fed0608a30a33cb494ce7f2c3da0",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/automation/cron-expr.test.ts",
+      "sha256": "05eb2d10833520218cd8df091ea3ab0426ef74674399974c42308564bdc865d4",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/automation/parse-schedule.test.ts",
+      "sha256": "3a7d40058d8219e4882e6e25772b1bc52dffd54246d847f60fbbb537023b61db",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/automation/scheduler-cron-expr.test.ts",
+      "sha256": "996638bd4f00828c3c34303e5ccb9519edd530c2699f6c28127d0b247358b44e",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/automation/scheduler.ts",
+      "sha256": "6b59290c36a81bbab5445372deb8033c67b638ea9f53ad34831e8dccfdd27c70",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/automation/index.ts",
+      "sha256": "af4f2754c05a986ba8e65a6c7310806e0ea901d6123b8a0148ab514f77227961",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/cron.ts",
+      "sha256": "8971b2edcc7de99541f6b662f9307ba7abb1592c7df57963c671d417f97281d5",
+      "matchesFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "sha256": "3f153cd67dca7c20fbe27cf83c0eef6c32bfe4bd3ffd14c48300af98550360e1",
+      "matchesFrozen": true
+    }
+  ],
+  "reportLinks": [
+    {
+      "reference": "evidence/cron-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-source-manifest.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/cron-focused.test.ts",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-focused.test.ts",
+      "exists": true
+    },
+    {
+      "reference": "../audit-2026-10-17/scheduling-data.md",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "exists": true
+    },
+    {
+      "reference": "evidence/cron-source-status.json",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-source-status.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/cron-dedup.json",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/cron-dedup-decisions.json",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup-decisions.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/cron-first.raw.log",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-first.raw.log",
+      "exists": true
+    },
+    {
+      "reference": "evidence/cron-first.exit.json",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-first.exit.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/cron-validation.json",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-validation.json",
+      "exists": true
+    },
+    {
+      "reference": "evidence/cron-artifact-receipt.json",
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-artifact-receipt.json",
+      "exists": true
+    }
+  ],
+  "rawHashMatchesExit": true,
+  "jsonParseErrors": [],
+  "productReruns": 0
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "PET-R10-01",
+    "priority": "P3",
+    "title": "并发搜索超过默认结果上限后静默丢行",
+    "file": "packages/pet/src/disclosure/search.ts",
+    "line": 154,
+    "rootCause": "Completed concurrent matches are sliced without setting truncated when cursor has already assigned all candidates.",
+    "evidence": "production searchSessionTranscripts over owned temporary healthy persisted-format JSON",
+    "log": "evidence/pet-search-display.first.log",
+    "tests": 1,
+    "status": "confirmed-at-frozen-source",
+    "limits": [
+      "Desktop UI/IPC and Sessions forwarding are static only",
+      "No data deletion or unbounded-search requirement"
+    ],
+    "dedup": "Distinct from R56/W22 unscanned candidate band and PET-01 JSON raw prefilter"
+  },
+  {
+    "id": "PET-R10-02",
+    "priority": "P3",
+    "title": "Unicode 小写扩长后 snippet 不含命中词",
+    "file": "packages/pet/src/disclosure/search.ts",
+    "line": 63,
+    "rootCause": "UTF-16 offsets from lowercased expanded text are reused to slice original text.",
+    "evidence": "production searchSessionTranscripts over owned temporary healthy Unicode message JSON; ASCII prefix control",
+    "log": "evidence/pet-search-display.first.log",
+    "tests": 1,
+    "status": "confirmed-at-frozen-source",
+    "limits": [
+      "Synthetic repeated valid Unicode stress prefix",
+      "Core appendMessage producer checked statically; fixture writes compatible JSON",
+      "UI and Sessions consumers static only"
+    ],
+    "dedup": "Distinct from old Pet JSON prefilter and candidate cap findings; old TUI Unicode coverage is unrelated"
+  }
+]

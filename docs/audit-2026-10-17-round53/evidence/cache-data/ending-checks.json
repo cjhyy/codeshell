@@ -1,0 +1,54 @@
+{
+  "checkedUTC": "2026-10-17T17:52:52.090462+00:00",
+  "sourceAndInstructions": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/prompt/section-cache.ts",
+      "bytes": 970,
+      "lines": 43,
+      "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/llm/model-cache.ts",
+      "bytes": 1996,
+      "lines": 65,
+      "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/llm/model-fetcher.ts",
+      "bytes": 12186,
+      "lines": 348,
+      "sha256": "8d3ae009ba99976e30df911a58138a6923600f43dddabe8563d0418e61dc216b",
+      "matchesInitial": true
+    }
+  ],
+  "all5PinsUnchanged": true,
+  "fallbackSameInitial5150InventoryAndBytes": true,
+  "history": {
+    "original": 5150,
+    "ending": 5150,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "filter": "docs/bugsMDJSONincludefrozen52/exclude53+",
+    "inventoryExitCode": 0,
+    "stderr": ""
+  },
+  "newSemanticReadDuringEnding": 0,
+  "Git": 0
+}

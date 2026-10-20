@@ -1,0 +1,15 @@
+dot-name-generic 11 docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md /text line 550
+saveProjectSetting(key, value, cwd)`。
+- `SettingsManager.deleteProjectSetting(key, cwd)` 或等价删除能力。
+- settings schema 增加 `capabilityOverrides`。
+- 单元测试覆盖点号路径写入、目录创建、原子写、invalidate。
+
+### Phase 2：能力控制层 project overlay
+
+- `CapabilityService.setEnabled()` 增加 scope/cwd。
+- 新增 `setOverride()` 或等价 API 表达 `inherit/on/off`。
+- descriptor 返回 `globalEnabled`、`projectOverride`、`effectiveSource`。
+- desktop capabilities service / IPC 透传 scope/cwd/state。
+- `readDisabledLists()` 或其上游能力计算接入 overlay。
+
+### Phase 3：suba

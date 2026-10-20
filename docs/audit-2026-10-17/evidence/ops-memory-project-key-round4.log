@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/ops-memory-project-key-round4.test.ts:
+{"observation":"project-memory-key-collision","projectA":"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-audit-ops-project-key-Ab8SMV/workspace/team/api","projectB":"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-audit-ops-project-key-Ab8SMV/workspace/team-api","memoryDirA":"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-audit-ops-project-key-Ab8SMV/state/projects/var-folders-1d-6__4f4y51g90nblfptt8s9v80000gn-T-codeshell-audit-ops-project-key-Ab8SMV-workspace-team-api/memory/user","memoryDirB":"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-audit-ops-project-key-Ab8SMV/state/projects/var-folders-1d-6__4f4y51g90nblfptt8s9v80000gn-T-codeshell-audit-ops-project-key-Ab8SMV-workspace-team-api/memory/user","initiallyVisibleInB":["project-a-note"],"afterColdB":["project-b-note","project-a-note"],"indexB":"# Persistent Memory (index)\n\nThese are summaries of memories from previous sessions. Only the summary is shown here.\nWhen a memory looks relevant to the current task, read its full content with the MemoryRead tool before relying on it. Every entry includes its exact scope and location; copy both values exactly and never infer them from the memory name or type. Readable locations for this run: global or project.\nIf MemoryRead reports that an entry is missing, do not repeat the same call. Use MemoryList once to refresh that exact store, or continue without the memory.\n\n## Project memories (this repo)\n- [scope=\"user\" location=\"project\" type=\"project\"] team-api-v2: Project B uses schema v2\n- [scope=\"user\" location=\"project\" type=\"project\"] team-api-v1: Project A uses schema v1"}
+(pass) observation: nested project and hyphenated sibling share persistent memory and injection [44.49ms]
+
+ 1 pass
+ 0 fail
+ 6 expect() calls
+Ran 1 test across 1 file. [102.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

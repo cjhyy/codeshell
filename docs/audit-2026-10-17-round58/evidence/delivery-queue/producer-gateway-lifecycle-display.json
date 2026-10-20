@@ -1,0 +1,62 @@
+[
+  {
+    "path": "packages/chat/src/chat-gateway.ts",
+    "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+    "displayedLineRanges": [
+      [
+        54,
+        234
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T19:23:23.878177+00:00"
+  },
+  {
+    "path": "packages/chat/src/cli.ts",
+    "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+    "displayedLineRanges": [
+      [
+        76,
+        119
+      ],
+      [
+        146,
+        213
+      ],
+      [
+        250,
+        306
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T19:23:23.879908+00:00"
+  },
+  {
+    "path": "packages/chat/src/telegram.ts",
+    "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+    "displayedLineRanges": [
+      [
+        90,
+        133
+      ],
+      [
+        267,
+        289
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T19:23:23.880528+00:00"
+  },
+  {
+    "path": "packages/chat/src/channel.ts",
+    "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+    "displayedLineRanges": [
+      [
+        1,
+        105
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T19:23:23.881079+00:00"
+  }
+]

@@ -1,0 +1,142 @@
+{
+  "atUTC": "2026-10-17T16:26:08.107130+00:00",
+  "files": [
+    {
+      "path": "command-header-excerpts.first.json",
+      "bytes": 1864,
+      "sha256": "51d8a88d6241bbf52c6fd5d7305d77702e368905320ac3ea112c0f70170c1b4c"
+    },
+    {
+      "path": "command-name-navigation-first-exit.json",
+      "bytes": 78,
+      "sha256": "51e7659aa7b37b5925e08b38a43504a118274e3be8267e4326b1d8f3c67d7229"
+    },
+    {
+      "path": "command-name-navigation.first.txt",
+      "bytes": 402,
+      "sha256": "200dddc723101b3d8b1b717b1e24855528e6d1e49732e5d6b33384e5ca9c24db"
+    },
+    {
+      "path": "consumer-excerpts.first.json",
+      "bytes": 9756,
+      "sha256": "6d6f36960563a052c75824a70d23e32270e32ed373d0688f275b0e1da2c30d0c"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 803,
+      "sha256": "d548cb4f9794ef6926cc10d34229cde8ac1d8c856b352d7764fb631addc93276"
+    },
+    {
+      "path": "consumer-navigation-first-exit.json",
+      "bytes": 79,
+      "sha256": "d79d6a857964e680d3e5d48ac49088f34af74fa3322bb9f33f9c6393d3b424ef"
+    },
+    {
+      "path": "consumer-navigation.first.txt",
+      "bytes": 7293,
+      "sha256": "be9e298be0c9a75545d88053a53c9abdb121e25ba96fef73b402d8c5ede9dd90"
+    },
+    {
+      "path": "cost-command-excerpts.first.json",
+      "bytes": 2867,
+      "sha256": "0946119ffbeeeb35910abc6e159d54b6826ed1ad86cd50f3df59d82596e687a4"
+    },
+    {
+      "path": "coverage-rows.json",
+      "bytes": 57572,
+      "sha256": "c276f7fe58607a5908973e36fba25ff77e1e23800c0e1c809ae4eee23552c6fb"
+    },
+    {
+      "path": "display-consumer-excerpts.first.json",
+      "bytes": 4845,
+      "sha256": "65ca9153455e6ecb8a5067ee329bb3c536d164fdc444dee094d434841b3f6ae3"
+    },
+    {
+      "path": "display-consumer-initial-pins.json",
+      "bytes": 800,
+      "sha256": "a1921b4f0f423c17b79e35607f46f07157afafc0c840b793eeb9493b4d0edcdb"
+    },
+    {
+      "path": "display-navigation-first-exit.json",
+      "bytes": 79,
+      "sha256": "6dd5dedf06ba094f176c8995e0cf111a87f3b37b300571b2581779eb5653793a"
+    },
+    {
+      "path": "display-navigation.first.txt",
+      "bytes": 1062,
+      "sha256": "aedf72a912b9930453510ff29365d29849bb332dd7630df1a97bb617647fe11e"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 290,
+      "sha256": "ae2a1c4aef46854aa302b02e416accbd4cb80b9433fe3b1f11a9d4801f5c4875"
+    },
+    {
+      "path": "history-first-exit.json",
+      "bytes": 52,
+      "sha256": "813a5e2abb6257963eebb395c3b411d704b09caff666de100309b736a40519ed"
+    },
+    {
+      "path": "history-first.txt",
+      "bytes": 289,
+      "sha256": "7f96fcdec58fcd19623ec65907a3e67218f03fce6d4f7d36e50c16f9f4a996ee"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1022216,
+      "sha256": "e735288c7b19232b8587dff2c49f644a81ab5c301e9d92e768c577d8d5fe2cd3"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1555,
+      "sha256": "67414d0cb21485b8fe293acd79cc24e9329a73391804277019ee1d2fd9d814c7"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2544,
+      "sha256": "2bace0bec08ed6902cd45ee12c4abff88928dd558ce94f7e8cd86f63ca37ffc7"
+    },
+    {
+      "path": "review-checks.json",
+      "bytes": 2318,
+      "sha256": "37fd892b319cf7c540ce0af40d7e411992a54215d0e676d382dd5987b6101c2b"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 2985,
+      "sha256": "e832ef69a3caecfe40543f26fa4e4e4bec8d5ab80b6e175eb42a0b72f5eb6e1e"
+    },
+    {
+      "path": "selection-decisions.json",
+      "bytes": 1417,
+      "sha256": "28da806516c212eb5fc887c21679272402d023efc94b0cef7312fb63d5375870"
+    },
+    {
+      "path": "selection-initial-pins.json",
+      "bytes": 1478,
+      "sha256": "6f99fb60f8b35fdfc94b064c817757e3d9d559e5a74c6d81e632e6d411dcf880"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 8690,
+      "sha256": "4cf0957b27ba4364cf150137f127fc32ed7033bc2ce4d6d8b8f2beefc78224e4"
+    },
+    {
+      "path": "summary-current-read.json",
+      "bytes": 381,
+      "sha256": "d061da57b45d2a71c5b7a87e15356677ef4d9063256a238c08f4f3ff2686a058"
+    },
+    {
+      "path": "summary-focused-history.json",
+      "bytes": 34123,
+      "sha256": "a0b376a659d632858402c9d2c671b7ef8e8f2064fce95226e543025ca74ccf05"
+    },
+    {
+      "path": "summary-source-excerpts.first.txt",
+      "bytes": 3296,
+      "sha256": "45f11a4658236aa1bee5c3403742a6a966901bdbd1234d35239bc62fabf4f687"
+    }
+  ],
+  "scope": "Frozen Root74 static ordinary summary review; no further mutation.",
+  "productRuns": 0
+}

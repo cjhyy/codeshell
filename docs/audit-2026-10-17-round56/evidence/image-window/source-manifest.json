@@ -1,0 +1,438 @@
+{
+  "createdAt": "2026-10-17T18:48:49.435311+00:00",
+  "rootReportedBaseline": "ae7bd786f133f9c42d212d41110b54eb18c4a9e4",
+  "gitCertified": false,
+  "files": [
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "lineCount": 86,
+      "kind": "product",
+      "coverage": "targeted-selected old-full overlap",
+      "selectedLineRanges": [
+        [
+          1,
+          2
+        ],
+        [
+          4,
+          84
+        ]
+      ],
+      "semanticLineCount": 83,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          86
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          86
+        ]
+      ],
+      "displayedLineCount": 86,
+      "purpose": "Physical entire86-line leaf redisplayed; ordinary fresh/expiry/order/count/byte retention logic only, not new unique or first full coverage",
+      "firstPinUTC": "2026-10-17T18:44:14.969794+00:00",
+      "firstReadSha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "initialPinArtifact": "initial-pins.json",
+      "firstEverSemanticReadPin": null
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "bytes": 43905,
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "lineCount": 1184,
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          40,
+          58
+        ],
+        [
+          60,
+          88
+        ],
+        [
+          107,
+          179
+        ]
+      ],
+      "semanticLineCount": 121,
+      "displayedBodyLineRanges": [
+        [
+          32,
+          58
+        ],
+        [
+          60,
+          184
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          32,
+          58
+        ],
+        [
+          60,
+          184
+        ]
+      ],
+      "displayedLineCount": 152,
+      "purpose": "Only content-block collection, preserve references, occurrence queues and placeholders in current history; complete compaction/reload/provider mechanism not audited",
+      "firstPinUTC": "2026-10-17T18:45:47.510872+00:00",
+      "firstReadSha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "initialPinArtifact": "helper-before-pin.json",
+      "firstEverSemanticReadPin": null
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "lineCount": 2412,
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          45,
+          45
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          294,
+          294
+        ],
+        [
+          495,
+          497
+        ],
+        [
+          572,
+          574
+        ],
+        [
+          581,
+          582
+        ],
+        [
+          657,
+          657
+        ],
+        [
+          731,
+          733
+        ],
+        [
+          763,
+          765
+        ],
+        [
+          1058,
+          1061
+        ],
+        [
+          1141,
+          1141
+        ],
+        [
+          1232,
+          1233
+        ],
+        [
+          1320,
+          1330
+        ],
+        [
+          1731,
+          1735
+        ],
+        [
+          2044,
+          2052
+        ],
+        [
+          2063,
+          2068
+        ],
+        [
+          2293,
+          2297
+        ]
+      ],
+      "semanticLineCount": 61,
+      "displayedBodyLineRanges": [
+        [
+          486,
+          500
+        ],
+        [
+          564,
+          590
+        ],
+        [
+          648,
+          663
+        ],
+        [
+          720,
+          736
+        ],
+        [
+          750,
+          769
+        ],
+        [
+          1055,
+          1066
+        ],
+        [
+          1225,
+          1240
+        ],
+        [
+          1317,
+          1334
+        ],
+        [
+          1726,
+          1737
+        ],
+        [
+          2039,
+          2069
+        ],
+        [
+          2286,
+          2301
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        45,
+        91,
+        272,
+        294,
+        520,
+        934,
+        1141,
+        1142,
+        1159,
+        1358,
+        1969,
+        2018,
+        2072,
+        2107,
+        2157,
+        2205,
+        2279
+      ],
+      "displayedLineRanges": [
+        [
+          45,
+          45
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          272,
+          272
+        ],
+        [
+          294,
+          294
+        ],
+        [
+          486,
+          500
+        ],
+        [
+          520,
+          520
+        ],
+        [
+          564,
+          590
+        ],
+        [
+          648,
+          663
+        ],
+        [
+          720,
+          736
+        ],
+        [
+          750,
+          769
+        ],
+        [
+          934,
+          934
+        ],
+        [
+          1055,
+          1066
+        ],
+        [
+          1141,
+          1142
+        ],
+        [
+          1159,
+          1159
+        ],
+        [
+          1225,
+          1240
+        ],
+        [
+          1317,
+          1334
+        ],
+        [
+          1358,
+          1358
+        ],
+        [
+          1726,
+          1737
+        ],
+        [
+          1969,
+          1969
+        ],
+        [
+          2018,
+          2018
+        ],
+        [
+          2039,
+          2069
+        ],
+        [
+          2072,
+          2072
+        ],
+        [
+          2107,
+          2107
+        ],
+        [
+          2157,
+          2157
+        ],
+        [
+          2205,
+          2205
+        ],
+        [
+          2279,
+          2279
+        ],
+        [
+          2286,
+          2301
+        ]
+      ],
+      "displayedLineCount": 217,
+      "purpose": "Only ordinary fresh-message tracking and prepare/consume call sites; model, SDK, real session, authority/identity, notes rollover, callbacks and fallback/error lifecycle not executed or globally certified",
+      "firstPinUTC": "2026-10-17T18:44:30.120639+00:00",
+      "firstReadSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "initialPinArtifact": "consumer-before-pins.json",
+      "firstEverSemanticReadPin": null
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.test.ts",
+      "bytes": 4760,
+      "sha256": "606acebf485d9b3117143b532fe5061ce90fe25ea07961d06b12de874796385a",
+      "lineCount": 99,
+      "kind": "test-declaration",
+      "coverage": "full existing test source as declarations only",
+      "selectedLineRanges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "semanticLineCount": 99,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "displayedLineCount": 99,
+      "purpose": "Entire existing99-line test source read as declarations; no Bun import/helper/Array fixture/repeat/image allocation or test execution",
+      "firstPinUTC": "2026-10-17T18:44:30.116105+00:00",
+      "firstReadSha256": "606acebf485d9b3117143b532fe5061ce90fe25ea07961d06b12de874796385a",
+      "initialPinArtifact": "consumer-before-pins.json",
+      "firstEverSemanticReadPin": null
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "lines": 867,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:44:30.119278+00:00",
+      "initialPinArtifact": "consumer-before-pins.json",
+      "coverage": "hash-only; combined symbol search found no image-window direct reference, body0",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:44:14.966307+00:00",
+      "initialPinArtifact": "initial-pins.json",
+      "coverage": "hash-only this packet; prior same-SHA instruction reading reused"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:44:14.968348+00:00",
+      "initialPinArtifact": "initial-pins.json",
+      "coverage": "hash-only this packet; prior same-SHA instruction reading reused"
+    }
+  ],
+  "productSemanticLineCount": 265,
+  "testDeclarationLineCount": 99,
+  "semanticLineCount": 364,
+  "displayedLineCount": 554,
+  "physicalFullLeafRedisplay": 86,
+  "oldSameShaFullOverlap": true,
+  "newUniqueCoverageClaim": false,
+  "globalCoverageUpdated": false,
+  "sourceReadingEnded": true,
+  "limits": [
+    "OldR4/R21 explicit same-SHA full sources retained; current re-review is only the supplied ordinary window/message-order hypothesis, not unread/first coverage.",
+    "Current-history index/placeholder behavior is distinct from old full-transcript reload mismatch; no claim that old compaction/reload issue is fixed.",
+    "Existing test declaration scope is not runtime pass or allocated image bytes; provider/nonvision stripVision127 causes and runtime paths are not reopened."
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "checkedUTC": "2026-10-17T17:33:36.925673+00:00",
+  "pins": 4,
+  "allPinsUnchanged": true,
+  "sourceBodyLines": 0,
+  "testDeclarationLines": 0,
+  "instructionCurrentBodyLines": 0,
+  "history": {
+    "initialFiles": 5017,
+    "changed": 0,
+    "addedIncluded": 0,
+    "removedIncluded": 0,
+    "sameIncludedPathSet": true
+  },
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "oldFullSourceExclusions": 1,
+  "metadataCommandFailures": 0,
+  "metadataTruncations": 0,
+  "productRuntimeRuns": 0,
+  "GitOperations": 0,
+  "globalCountsUpdated": false,
+  "localReportLinks": {
+    "count": 12,
+    "allValidWhenReceiptCreated": true
+  }
+}

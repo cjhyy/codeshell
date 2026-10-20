@@ -1,0 +1,139 @@
+{
+  "baseline": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "totals": {
+    "firstBunShards": 4,
+    "completedCleanShards": 4,
+    "failedBunShards": 0,
+    "passedTests": 31,
+    "expectations": 125,
+    "failedTests": 0,
+    "skippedOrFilteredTests": 0,
+    "existingBaselineTests": 0,
+    "newFocusedObservationsAndControls": 31,
+    "actualPureHelperTests": 30,
+    "staticSourceComparisonTests": 1,
+    "productReruns": 0
+  },
+  "runs": [
+    {
+      "log": "evidence/root-fingerprint.first.log",
+      "exitFile": "evidence/root-fingerprint.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round17/evidence/root-fingerprint.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 34,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 7,
+      "scope": "Six actual server helper tests and one static counterpart source comparison; no Desktop import",
+      "sha256": "9e9377873ffd34cf3ff952b54c14dbd70292028d9a63f0b470f8890db823b4ed"
+    },
+    {
+      "log": "evidence/catalog-pure.first.raw.log",
+      "exitFile": "evidence/catalog-pure.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 12,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 36,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 12,
+      "scope": "Actual server catalog plus three pure UI helpers; settings/Host/Engine/pool/worker static only",
+      "sha256": "cfa1d3f04a5aa20618958528a948e388f984c8a28494d97650ecadd847239b0b"
+    },
+    {
+      "log": "evidence/mappers-pure.first.raw.log",
+      "exitFile": "evidence/mappers-pure.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round17/evidence/mappers-pure.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 33,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 9,
+      "scope": "Actual leaf mapper APIs on owned ordinary-shaped records; real follower/reducer/UI not executed",
+      "sha256": "29b48cc6c9468a4407798a723bd65bfd94cc8f8360258067a55850b3b943d840"
+    },
+    {
+      "log": "evidence/frontier-ingress-port.first.raw.log",
+      "exitFile": "evidence/frontier-ingress-port.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round17/evidence/frontier-ingress-port.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 3,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 22,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 3,
+      "scope": "Actual ingress generator/URL constructor in memory; CLI/config/README static, no listener/proxy/network",
+      "sha256": "01965d3132617dd93c6c051a279154dec07576554738cda39bf9e427ec248908"
+    }
+  ],
+  "metadataNotes": [
+    "evidence/catalog-navigation-skip.md",
+    "evidence/frontier-assembly-note.md",
+    "evidence/review-mappers.md"
+  ],
+  "notes": [
+    "Four first combined stdout/stderr logs and exit receipts saved before inspection; no failed Bun shard, product retry, fixture repair or alternative validation.",
+    "All31 tests are new focused observations/controls.30 invoke actual pure helpers and1 compares owned Desktop/server source without importing or compiling Desktop. No existing broad suite.",
+    "Ingress explicit80 rejection is actual leaf evidence with same-host8080/default8787 controls. CLI/config port range/documentation are static, no running proxy failure claimed.",
+    "Catalog defaults policy conflicts with existing invalid-default test; id trim is actual pure-helper chain but React/persistence/schema/pool/task selection not executed. Candidates only.",
+    "Mapper synthetic historical id and real result id come from valid hand-built objects; same in-flight call/identity contract/consumer outcome not reproduced. No lost result/UI claim.",
+    "Fingerprint deterministic shape/UTF16 suffix observed; no uniqueness, crypto, dedup/automation/mobile-run or renderer runtime guarantee.",
+    "Metadata navigation/receipt-order/SyntaxWarning/source-scope corrections are separately recorded and do not restore failed dynamic directions.",
+    "Other-task old header-only Review parser source change tracked separately without old/new regression runtime or restoring ApplyPatch summary dynamics.",
+    "No real models, paid APIs, accounts, user artifacts, external messages, product network/native/PTY/auth/permission/security/custody/watchdog experiments, shared dependency/dist rebuild or full build/typecheck/lint/suite."
+  ]
+}

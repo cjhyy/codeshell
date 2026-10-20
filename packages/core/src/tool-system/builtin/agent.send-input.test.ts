@@ -3,6 +3,7 @@ import { agentTool, agentSendInputTool } from "./agent.js";
 import type { SubAgentSpawner, SubAgentSpawnRequest, ToolContext } from "../context.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
 import { notificationQueue } from "./agent-notifications.js";
+import type { SubAgentContinuation } from "../../types.js";
 
 /**
  * A fake spawner that records every request and lets a test script the
@@ -12,17 +13,22 @@ import { notificationQueue } from "./agent-notifications.js";
 function makeSpawner(opts?: {
   reply?: (req: SubAgentSpawnRequest) => string;
   existing?: Set<string>;
+  saved?: Map<string, SubAgentContinuation>;
 }): {
   spawner: SubAgentSpawner;
   reqs: SubAgentSpawnRequest[];
 } {
   const reqs: SubAgentSpawnRequest[] = [];
   const existing = opts?.existing ?? new Set<string>();
+  const saved = opts?.saved ?? new Map<string, SubAgentContinuation>();
   const spawner: SubAgentSpawner = {
     spawn: async (req) => {
       reqs.push(req);
       // First spawn of an id materializes it; resume sees it as existing.
       existing.add(req.resumeSessionId ?? req.agentId);
+      if (req.continuation) {
+        saved.set(req.resumeSessionId ?? req.agentId, structuredClone(req.continuation));
+      }
       const text = opts?.reply ? opts.reply(req) : "ok";
       // agent_id === childSid: the child session id is the agentId unless
       // we're resuming a specific session.
@@ -30,6 +36,7 @@ function makeSpawner(opts?: {
     },
     sessionExists: (sid: string) => existing.has(sid),
     getSessionParentId: (sid: string) => (existing.has(sid) ? "s-test" : undefined),
+    getSessionContinuation: (sid) => saved.get(sid),
     parentStream: () => {},
     describe: () => ({ cwd: "/tmp", permissionMode: "acceptEdits" }),
   };
@@ -85,8 +92,11 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
     // First: spawn a sub-agent. Capture its agent_id from the result text.
     const { spawner, reqs } = makeSpawner({ reply: (r) => `handled: ${r.prompt}` });
     const ctx = makeCtx(spawner);
-    await agentTool({ description: "d", prompt: "remember the number 7" }, ctx);
-    const agentId = reqs[0]!.agentId;
+    const first = await agentTool({ description: "d", prompt: "remember the number 7" }, ctx);
+    const agentId = first.match(/^agent_id: ([A-Za-z0-9_-]+)/m)?.[1];
+    expect(agentId).toBe(reqs[0]!.agentId);
+    expect(first).toContain("AgentSendInput");
+    expect(first.endsWith("\n\nhandled: remember the number 7")).toBe(true);
 
     // Now send a follow-up. It must spawn with resumeSessionId === agentId.
     const out = await agentSendInputTool(
@@ -97,6 +107,17 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
     expect(reqs[1]!.resumeSessionId).toBe(agentId);
     expect(reqs[1]!.prompt).toBe("what number did I tell you?");
     expect(out).toContain("handled: what number did I tell you?");
+    expect(out.match(/^agent_id: ([A-Za-z0-9_-]+)/m)?.[1]).toBe(agentId);
+
+    const third = await agentSendInputTool(
+      { agent_id: agentId, prompt: "review your answer" },
+      ctx,
+    );
+    expect(reqs).toHaveLength(3);
+    expect(reqs[2]!.resumeSessionId).toBe(agentId);
+    expect(third).toContain(`agent_id: ${agentId}`);
+    expect(asyncAgentRegistry.get(agentId!)?.status).toBe("completed");
+    expect(notificationQueue.getSnapshot("s-test")).toHaveLength(0);
   });
 
   it("resumes a known agent even after the in-memory registry is wiped (disk probe)", async () => {
@@ -159,6 +180,99 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
     const out = await agentSendInputTool({ agent_id: "doesnotexist", prompt: "x" }, ctx);
     expect(out).toMatch(/Error/i);
     expect(out).toMatch(/doesnotexist/);
+  });
+
+  it("refuses disk-only legacy sessions without a saved role scope", async () => {
+    const { spawner, reqs } = makeSpawner({ existing: new Set(["legacy-child"]) });
+    const out = await agentSendInputTool(
+      { agent_id: "legacy-child", prompt: "continue" },
+      makeCtx(spawner),
+    );
+    expect(out).toMatch(/no saved continuation scope/i);
+    expect(reqs).toHaveLength(0);
+  });
+
+  it("retains the original role scope and turn cap after restart and role removal", async () => {
+    const { spawner, reqs } = makeSpawner();
+    const role = {
+      name: "explorer",
+      description: "investigation",
+      model: "small",
+      maxTurns: 5,
+      systemPrompt: "read only",
+      tools: ["Read", "Grep"],
+      skills: [],
+      sandbox: "bwrap",
+      mcp: [],
+    };
+    let available = true;
+    const ctx = {
+      ...makeCtx(spawner),
+      agentDefinitions: {
+        list: () => (available ? [role] : []),
+        get: (name: string) => (available && name === role.name ? role : undefined),
+      },
+    } as unknown as ToolContext;
+    await agentTool(
+      { description: "review", prompt: "inspect", agent_type: "explorer", max_turns: 3 },
+      ctx,
+    );
+    const agentId = reqs[0]!.agentId;
+    role.tools.push("Write");
+    available = false;
+    asyncAgentRegistry.reset();
+
+    const out = await agentSendInputTool({ agent_id: agentId, prompt: "check again" }, ctx);
+    expect(out).toContain(`agent_id: ${agentId}`);
+    expect(reqs).toHaveLength(2);
+    expect(reqs[1]).toMatchObject({
+      resumeSessionId: agentId,
+      model: "small",
+      maxTurns: 3,
+      toolAllowlist: ["Read", "Grep"],
+      skillAllowlist: [],
+      sandboxMode: "bwrap",
+      mcpAllowlist: [],
+      appendSystemPrompt: "read only",
+      readOnlySession: true,
+    });
+    expect(asyncAgentRegistry.get(agentId)?.agentType).toBe("explorer");
+  });
+
+  it("keeps an explicitly ephemeral child when a default role is added later", async () => {
+    const { spawner, reqs } = makeSpawner();
+    const ctx = makeCtx(spawner);
+    await agentTool({ description: "plain", prompt: "first" }, ctx);
+    const agentId = reqs[0]!.agentId;
+    expect(reqs[0]!.continuation?.agentType).toBeNull();
+    ctx.agentDefinitions = {
+      list: () => [{ name: "general-purpose" }],
+      get: () => ({ name: "general-purpose", tools: ["Write"], systemPrompt: "new role" }),
+    } as unknown as ToolContext["agentDefinitions"];
+    await agentSendInputTool({ agent_id: agentId, prompt: "next" }, ctx);
+    expect(reqs[1]!.toolAllowlist).toBeUndefined();
+    expect(reqs[1]!.appendSystemPrompt).toBeUndefined();
+    expect(asyncAgentRegistry.get(agentId)?.agentType).toBeUndefined();
+  });
+
+  it("refuses a legacy restricted role when its definition is unavailable", async () => {
+    const { spawner, reqs } = makeSpawner({ existing: new Set(["legacy-role"]) });
+    asyncAgentRegistry.register({
+      agentId: "legacy-role",
+      agentType: "removed-reviewer",
+      description: "review",
+      sessionId: "s-test",
+      childSessionId: "legacy-role",
+      status: "completed",
+      startedAt: 0,
+      abort: () => {},
+    });
+    const out = await agentSendInputTool(
+      { agent_id: "legacy-role", prompt: "continue" },
+      makeCtx(spawner),
+    );
+    expect(out).toMatch(/cannot restore.*role scope/i);
+    expect(reqs).toHaveLength(0);
   });
 
   it("errors when agent_id is missing", async () => {

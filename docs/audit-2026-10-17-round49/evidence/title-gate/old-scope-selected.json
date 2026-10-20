@@ -1,0 +1,42 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/11",
+      "fields": {
+        "path": "packages/core/src/sources/context-summary.ts",
+        "sha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+        "scope": "Full static leaf; authority/credential resolver not imported or exercised."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/11",
+      "fields": {
+        "path": "packages/core/src/engine/session-title.ts",
+        "sha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+        "scope": "Full initial static source by Root; separate worker owns fake callback runtime scope."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/evidence/title-preflight.json",
+      "jsonPointer": "",
+      "fields": {
+        "frozenSha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+        "scope": "Actual leaf with owned createMessage callbacks and collectors; no Engine, SDK, provider, model, network, storage, rename, native or timer execution."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round22/evidence/title-source-manifest.json",
+      "jsonPointer": "/sources/0",
+      "fields": {
+        "path": "packages/core/src/engine/session-title.ts",
+        "frozenSha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+        "coverage": "full",
+        "note": "actual leaf executed; two type-only imports"
+      }
+    }
+  ],
+  "count": 4,
+  "scope": "Selected original metadata scope objects inspected before product body; derived tables not semantic evidence."
+}

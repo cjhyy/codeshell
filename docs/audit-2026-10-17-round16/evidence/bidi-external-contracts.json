@@ -1,0 +1,17 @@
+{
+  "observedOn": "2026-10-17",
+  "tools": "web open/find only; no runtime network in fixture",
+  "sources": [
+    {
+      "url": "https://www.unicode.org/Public/UCD/latest/ucd/extracted/DerivedBidiClass.txt",
+      "observation": "1E900..1E943 is explicitly assigned Bidi_Class R; the fixture uses 1E900 and 1E901.",
+      "scope": "Directional property only, not proof of this package dependency version supporting the characters or terminal/font rendering."
+    },
+    {
+      "url": "https://www.unicode.org/reports/tr9/",
+      "versionObserved": "Unicode 18.0.0; Revision 52; 2026-09-01",
+      "observation": "Section 3.4 L4 and section 7 describe mirrored glyph behavior for characters at odd resolved embedding levels.",
+      "scope": "Display contract only; no terminal/backend experiment, and no claim that every renderer must substitute Unicode code points."
+    }
+  ]
+}

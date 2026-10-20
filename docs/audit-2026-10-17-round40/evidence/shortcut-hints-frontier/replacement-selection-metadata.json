@@ -1,0 +1,175 @@
+{
+  "capturedUTC": "2026-10-17T13:53:32.853804+00:00",
+  "metadataOnlyRankingCandidates": [
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "lineCount": 209,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "datedStatus": "current-sha-pin-only-no-semantic-coverage",
+      "datedCoverageRows": [
+        {
+          "path": "packages/core/src/utils/toolDisplay.ts",
+          "bytes": 6985,
+          "lines": 209,
+          "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+          "status": "current-sha-pin-only-no-semantic-coverage",
+          "currentFullClaimVariants": 0,
+          "currentSelectedClaimVariants": 0,
+          "currentSelectedUnionLines": 0,
+          "currentSelectedUnionRanges": [],
+          "priorVersionClaimVariants": 0,
+          "currentPinOnlyVariants": 1,
+          "claimVariants": 1,
+          "claims": [
+            {
+              "sourceSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": null,
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+                  "jsonLocation": "$[\"sources\"][4]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][24]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                  "jsonLocation": "$[\"workerSourceChecks\"][50]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/utils/json.ts",
+      "bytes": 2558,
+      "lineCount": 84,
+      "sha256": "afbd3affb109a4a2bbfc1e55cdb47a3f91aca03a7a987264a29928410243e129",
+      "datedStatus": "current-sha-pin-only-no-semantic-coverage",
+      "datedCoverageRows": [
+        {
+          "path": "packages/core/src/utils/json.ts",
+          "bytes": 2558,
+          "lines": 84,
+          "sha256": "afbd3affb109a4a2bbfc1e55cdb47a3f91aca03a7a987264a29928410243e129",
+          "status": "current-sha-pin-only-no-semantic-coverage",
+          "currentFullClaimVariants": 0,
+          "currentSelectedClaimVariants": 0,
+          "currentSelectedUnionLines": 0,
+          "currentSelectedUnionRanges": [],
+          "priorVersionClaimVariants": 0,
+          "currentPinOnlyVariants": 1,
+          "claimVariants": 1,
+          "claims": [
+            {
+              "sourceSha256": "afbd3affb109a4a2bbfc1e55cdb47a3f91aca03a7a987264a29928410243e129",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": null,
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+                  "jsonLocation": "$[\"sources\"][1]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][56]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+                  "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][1]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/web/src/lib/userMessageDisplay.ts",
+      "bytes": 5926,
+      "lineCount": 164,
+      "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+      "datedStatus": "current-sha-pin-only-no-semantic-coverage",
+      "datedCoverageRows": [
+        {
+          "path": "packages/web/src/lib/userMessageDisplay.ts",
+          "bytes": 5926,
+          "lines": 164,
+          "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+          "status": "current-sha-pin-only-no-semantic-coverage",
+          "currentFullClaimVariants": 0,
+          "currentSelectedClaimVariants": 0,
+          "currentSelectedUnionLines": 0,
+          "currentSelectedUnionRanges": [],
+          "priorVersionClaimVariants": 0,
+          "currentPinOnlyVariants": 1,
+          "claimVariants": 1,
+          "claims": [
+            {
+              "sourceSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": null,
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                  "jsonLocation": "$[\"files\"][3]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][59]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                  "jsonLocation": "$[\"workerSourceChecks\"][3]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                  "jsonLocation": "$[\"sources\"][3]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][96]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][105]"
+                },
+                {
+                  "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+                  "jsonLocation": "$[\"sourceManifest\"][28]"
+                },
+                {
+                  "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+                  "jsonLocation": "$[\"sourceManifest\"][28]"
+                },
+                {
+                  "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+                  "jsonLocation": "$[49]"
+                },
+                {
+                  "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+                  "jsonLocation": "$[49]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limits": "No leaf body read. These are metadata options to choose exactly one replacement, not multiple active source reviews."
+}

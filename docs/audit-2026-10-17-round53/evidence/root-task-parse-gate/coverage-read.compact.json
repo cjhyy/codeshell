@@ -1,0 +1,499 @@
+[
+  {
+    "index": 0,
+    "historyPath": "docs/audit-2026-10-17-round15/evidence/injection-source-manifest.json",
+    "at": "$[\"sources\"][2]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "scope": "Fully read and actual pure parser called; no real image bytes, policy, IO, Engine or provider."
+    }
+  },
+  {
+    "index": 1,
+    "historyPath": "docs/audit-2026-10-17-round15/source-manifest.json",
+    "at": "$[\"files\"][15]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 2,
+    "historyPath": "docs/audit-2026-10-17-round15/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][14]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 3,
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][202]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "currentSelectedUnionRanges": []
+    }
+  },
+  {
+    "index": 4,
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][497]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 5,
+    "historyPath": "docs/audit-2026-10-17-round32/evidence/review-taskparse-checks.json",
+    "at": "$[\"sourceChecks\"][0]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 6,
+    "historyPath": "docs/audit-2026-10-17-round32/evidence/review-taskparse-initial-pins.json",
+    "at": "$[\"files\"][0]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "firstPinBeforeIndependentSemanticRead": true
+    }
+  },
+  {
+    "index": 7,
+    "historyPath": "docs/audit-2026-10-17-round32/evidence/review-taskparse-source-manifest.json",
+    "at": "$[\"files\"][0]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "initialSemanticReadTiming": "Before this independent review source ranges; not a claim about earlier audit read-time.",
+      "gitBlobComparedByReviewer": false
+    }
+  },
+  {
+    "index": 8,
+    "historyPath": "docs/audit-2026-10-17-round32/evidence/taskparse-hash-checks.json",
+    "at": "$[\"files\"][0]",
+    "sha256": null,
+    "qualifiers": {
+      "coverage": "full"
+    }
+  },
+  {
+    "index": 9,
+    "historyPath": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/finish-hash-checks.json",
+    "at": "$[\"sourceChecks\"][0]",
+    "sha256": null,
+    "qualifiers": {}
+  },
+  {
+    "index": 10,
+    "historyPath": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/initial-pins.json",
+    "at": "$[\"files\"][0]",
+    "sha256": null,
+    "qualifiers": {
+      "firstSemanticReadSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "pinBeforeSemanticRead": true
+    }
+  },
+  {
+    "index": 11,
+    "historyPath": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/source-manifest.json",
+    "at": "$[\"files\"][0]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "semanticLines": 190,
+      "initialSemanticReadSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "semanticReadUtc": null
+    }
+  },
+  {
+    "index": 12,
+    "historyPath": "docs/audit-2026-10-17-round32/evidence/taskparse-source-manifest.json",
+    "at": "$[\"files\"][0]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "semanticLines": 190,
+      "initialSemanticReadSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "semanticReadReusedFromPrep": true,
+      "newFormalSemanticReadLines": 0
+    }
+  },
+  {
+    "index": 13,
+    "historyPath": "docs/audit-2026-10-17-round32/evidence/taskparse-source-manifest.json",
+    "at": "$[\"files\"][0][\"prepRow\"]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "semanticLines": 190,
+      "initialSemanticReadSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "semanticReadUtc": null
+    }
+  },
+  {
+    "index": 14,
+    "historyPath": "docs/audit-2026-10-17-round32/source-manifest.json",
+    "at": "$[\"files\"][13]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 15,
+    "historyPath": "docs/audit-2026-10-17-round32/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][10]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "coverage": "full"
+    }
+  },
+  {
+    "index": 16,
+    "historyPath": "docs/audit-2026-10-17-round32/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][30]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "coverage": "full"
+    }
+  },
+  {
+    "index": 17,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2080]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "explicit-full",
+      "scopeFields": {
+        "coverage": "full"
+      },
+      "rangeFields": {
+        "selectedLineRanges": [
+          [
+            1,
+            190
+          ]
+        ]
+      },
+      "rangeBoundsValidForCurrent": true
+    }
+  },
+  {
+    "index": 18,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2081]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "explicit-full",
+      "scopeFields": {
+        "coverage": "full"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 19,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2082]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "explicit-full",
+      "scopeFields": {
+        "coverage": "full"
+      },
+      "rangeFields": {
+        "selectedLineRanges": [
+          [
+            1,
+            190
+          ]
+        ]
+      },
+      "rangeBoundsValidForCurrent": true
+    }
+  },
+  {
+    "index": 20,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2083]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "explicit-full",
+      "scopeFields": {
+        "coverage": "full"
+      },
+      "rangeFields": {
+        "selectedLineRanges": [
+          [
+            1,
+            190
+          ]
+        ]
+      },
+      "rangeBoundsValidForCurrent": true
+    }
+  },
+  {
+    "index": 21,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2084]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "explicit-full",
+      "scopeFields": {
+        "coverage": "full"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 22,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2085]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "explicit-full",
+      "scopeFields": {
+        "readScope": "full"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 23,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2086]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 24,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2087]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 25,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2088]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 26,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2089]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 27,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2090]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 28,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2091]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 29,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2092]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 30,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][2093]",
+    "sha256": null,
+    "qualifiers": {
+      "coverageKind": "scope-unknown",
+      "scopeFields": {
+        "scope": "Fully read and actual pure parser called; no real image bytes, policy, IO, Engine or provider."
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false
+    }
+  },
+  {
+    "index": 31,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][809]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "claimKindCounts": {
+        "explicit-full": 6,
+        "incidental-path-or-pin-object": 7,
+        "scope-unknown": 1
+      }
+    }
+  },
+  {
+    "index": 32,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][809]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 33,
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][809]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {
+      "coverageStatus": "carryable-explicit-full"
+    }
+  },
+  {
+    "index": 34,
+    "historyPath": "docs/audit-2026-10-17-round9/evidence/attachments-source-manifest.json",
+    "at": "$[\"sources\"][3]",
+    "sha256": null,
+    "qualifiers": {
+      "readScope": "full",
+      "readRanges": null
+    }
+  },
+  {
+    "index": 35,
+    "historyPath": "docs/audit-2026-10-17-round9/source-manifest.json",
+    "at": "$[\"files\"][26]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 36,
+    "historyPath": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+    "at": "$[\"sourceManifest\"][13]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 37,
+    "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+    "at": "$[\"sourceManifest\"][13]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 38,
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/observed.json",
+    "at": "$[\"sourceManifest\"][13]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 39,
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+    "at": "$[13]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 40,
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/static-prepared-receipt.json",
+    "at": "$[\"sourceManifest\"][13]",
+    "sha256": null,
+    "qualifiers": {}
+  },
+  {
+    "index": 41,
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+    "at": "$[\"runs\"][0][\"sourceManifest\"][13]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 42,
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+    "at": "$[\"runs\"][1][\"sourceManifest\"][13]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 43,
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+    "at": "$[\"sourceManifest\"][13]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 44,
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+    "at": "$[13]",
+    "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+    "qualifiers": {}
+  },
+  {
+    "index": 45,
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/static-prepared-receipt.json",
+    "at": "$[\"sourceManifest\"][13]",
+    "sha256": null,
+    "qualifiers": {}
+  }
+]

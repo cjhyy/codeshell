@@ -1,0 +1,4 @@
+packages/core/src/protocol/dispatch.ts:34:  [Methods.GoalExtend]: ProtocolRequestHandler;
+packages/core/src/protocol/server.ts:633:        [Methods.GoalExtend]: (req) => this.handleGoalExtend(req),
+packages/core/src/protocol/server.ts:2236:  private handleGoalExtend(req: RpcRequest): void {
+packages/core/src/protocol/server.ts:2561:   * handleGoalExtend / handleCancel's dual path). Returns { ok, cleared }.

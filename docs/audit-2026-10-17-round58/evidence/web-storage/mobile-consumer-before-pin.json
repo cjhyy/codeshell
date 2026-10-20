@@ -1,0 +1,8 @@
+{
+  "path": "packages/desktop/src/mobile/App.tsx",
+  "bytes": 11542,
+  "lineCount": 325,
+  "sha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+  "pinnedAtUTC": "2026-10-17T19:19:31.570850+00:00",
+  "timing": "before body/nav; cf5e40 filename-only ordinary useRemoteApp consumer"
+}

@@ -1,0 +1,1378 @@
+{
+  "selectedUTC": "2026-10-17T13:52:45.283624+00:00",
+  "method": "All retained exact path/lib-format/SHA locator contexts dedup by exact context text. Broad format_contract399 capped160 separate; not all read.",
+  "uniqueContexts": 23,
+  "rows": [
+    {
+      "context": "packages/web/src/lib/format.ts",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 0,
+          "path": "docs/audit-2026-10-16/inventory.json",
+          "jsonPointer": "/source_inventory/2399",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 1,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/102/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/110/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 5,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/111/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 6,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/112/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 7,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/113/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 8,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/201/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 9,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/202/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 10,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/251/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 11,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/252/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 14,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/255/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 15,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/256/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 16,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/261/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 18,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/463/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 19,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/464/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 21,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/7/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 24,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/21/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 25,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/23/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 26,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/26/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 27,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/29/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 28,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/32/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 31,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/38/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 32,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/39/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 33,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/40/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 34,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/42/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 35,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/49/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 36,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/52/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 37,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/56/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 38,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/57/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 39,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+          "jsonPointer": "/files/1/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 40,
+          "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+          "jsonPointer": "/files/52/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 41,
+          "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/1/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 43,
+          "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+          "jsonPointer": "/files/10/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 44,
+          "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+          "jsonPointer": "/files/40/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 45,
+          "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/14/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 46,
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+          "jsonPointer": "/paths/53",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 47,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "jsonPointer": "/files/1031/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 48,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/4054/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 49,
+          "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+          "jsonPointer": "/sources/5/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 50,
+          "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+          "jsonPointer": "/files/88/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 51,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-findings.json",
+          "jsonPointer": "/confirmed/0/sourceFile",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 52,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-main-source-disposition.json",
+          "jsonPointer": "/findings/0/sourceFile",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 55,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+          "jsonPointer": "/sources/1/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 56,
+          "path": "docs/audit-2026-10-17-round8/findings.json",
+          "jsonPointer": "/findings/4/source",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 57,
+          "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+          "jsonPointer": "/files/97/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 61,
+          "path": "docs/audit-2026-10-17/evidence/ui-findings.json",
+          "jsonPointer": "/issues/1/file",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 62,
+          "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+          "jsonPointer": "/productionSources/4/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 63,
+          "path": "docs/audit-2026-10-17/findings.json",
+          "jsonPointer": "/findings/19/source",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 64,
+          "path": "docs/audit-2026-10-17/source-manifest.json",
+          "jsonPointer": "/files/45/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 65,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/84740d56/paths/172",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 66,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/a66f4ef2/paths/173",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 0,
+          "path": "docs/audit-2026-10-16/inventory.json",
+          "jsonPointer": "/source_inventory/2399",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 1,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/102/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/110/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 5,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/111/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 6,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/112/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 7,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/113/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 8,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/201/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 9,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/202/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 10,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/251/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 11,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/252/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 14,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/255/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 15,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/256/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 16,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/261/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 18,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/463/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 19,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/464/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 25,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/7/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 28,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/21/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 29,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/23/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 30,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/26/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 31,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/29/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 32,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/32/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 35,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/38/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 36,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/39/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 37,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/40/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 38,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/42/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 39,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/49/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 40,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/52/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 41,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/56/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 42,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/57/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 43,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+          "jsonPointer": "/files/1/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 44,
+          "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+          "jsonPointer": "/files/52/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 45,
+          "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/1/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 47,
+          "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+          "jsonPointer": "/files/10/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 48,
+          "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+          "jsonPointer": "/files/40/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 49,
+          "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/14/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 50,
+          "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+          "jsonPointer": "/paths/53",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 51,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "jsonPointer": "/files/1031/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 52,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/4054/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 53,
+          "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+          "jsonPointer": "/sources/5/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 54,
+          "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+          "jsonPointer": "/files/88/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 55,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-findings.json",
+          "jsonPointer": "/confirmed/0/sourceFile",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 56,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-main-source-disposition.json",
+          "jsonPointer": "/findings/0/sourceFile",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 59,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+          "jsonPointer": "/sources/1/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 60,
+          "path": "docs/audit-2026-10-17-round8/findings.json",
+          "jsonPointer": "/findings/4/source",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 61,
+          "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+          "jsonPointer": "/files/97/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 65,
+          "path": "docs/audit-2026-10-17/evidence/ui-findings.json",
+          "jsonPointer": "/issues/1/file",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 66,
+          "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+          "jsonPointer": "/productionSources/4/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 67,
+          "path": "docs/audit-2026-10-17/findings.json",
+          "jsonPointer": "/findings/19/source",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 68,
+          "path": "docs/audit-2026-10-17/source-manifest.json",
+          "jsonPointer": "/files/45/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 69,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/84740d56/paths/172",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 70,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/a66f4ef2/paths/173",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/105/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 29,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/33/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/105/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 33,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/33/text",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/106/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 30,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/34/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/106/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 34,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/34/text",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "../../../packages/web/src/lib/format.ts",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 12,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/253/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 22,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/9/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 53,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-preflight.json",
+          "jsonPointer": "/checks/0/relativeImport",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 12,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/253/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 26,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/9/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 57,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-preflight.json",
+          "jsonPointer": "/checks/0/relativeImport",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/web/src/lib/format.ts",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 13,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/254/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 23,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/10/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 54,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-preflight.json",
+          "jsonPointer": "/checks/0/resolved",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 13,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/254/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 27,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/10/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 58,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-preflight.json",
+          "jsonPointer": "/checks/0/resolved",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "- Source: `packages/web/src/lib/format.ts:20`, with normalization at `:12–14` and project/group consumers at `:39–42,62–63`.",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 17,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/262/text",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 20,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/4/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 17,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/262/text",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 24,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+          "jsonPointer": "/matches/format/4/text",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "ince had its exact source condition eliminated by a parallel change on main; WEB-R8-02's source is unchanged.** The first-run tests were not rerun on main. No browser, WebSocket, real server, upload service, native app or model was started.\n\n## WEB-R8-01 [P3] A project rooted at `/` does not own its descendant cwd in the Web projection\n\n- Source: `packages/web/src/lib/format.ts:20`, ",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 42,
+          "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+          "jsonPointer": "/hits/old_alias/19/context",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "context": "ince had its exact source condition eliminated by a parallel change on main; WEB-R8-02's source is unchanged.** The first-run tests were not rerun on main. No browser, WebSocket, real server, upload service, native app or model was started.\n\n## WEB-R8-01 [P3] A project rooted at `/` does not own its descendant cwd in the Web projection\n\n- Source: `packages/web/src/lib/format.ts:20`, with normalization at `:12–14` and project/group consumers at `:39–42,62–63`.\n- Contract: `projectForCwd` explicitly returns the project whose root owns the cwd, selecting the longest prefix. Existing `format.test.ts` establishes ordinary descendant grouping and V2 secondary-root support. `/` is a valid POSIX absolute directory value for this API; production `ProjectStore.resolvePickedRoot` (`packages/desktop/src/main/project-store.ts:743–760`) checks an existing absolute directory and contains no explicit filesystem-root exclusion. That registration observation is static; the fixture does not register or inspect the operator's filesystem root.\n- Trigger: supplied project metadata cont",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 58,
+          "path": "docs/audit-2026-10-17-round8/web.md",
+          "jsonPointer": null,
+          "line": 7
+        }
+      ]
+    },
+    {
+      "context": "-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 59,
+          "path": "docs/audit-2026-10-17/desktop-data.md",
+          "jsonPointer": null,
+          "line": 32
+        }
+      ]
+    },
+    {
+      "context": "、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的生产 `targetForCwd` 还用这个结果构建 `{ projectId }`，小写 cwd 在错误项目中没有精确 root，因而会落入错误项目的主根作为新会话目标；这段影响是静态接线，未运行创建会话或真实 Host。Mobile `SessionList.tsx:50–63` 实际消费错误分组与 currentProject。\n- 证据：guarded 源码相对导入纯函数，`evidence/ui-web-project-case.test.ts` 三项：错误归属/列表顺序影响、两个会话合成一组、普通不同根与最长前缀正常对照。没有使用真实磁盘或模拟 Host 平台来验证目录注册；结论明确以大小写敏感 Host 为条件。生产 `packages",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 60,
+          "path": "docs/audit-2026-10-17/desktop-data.md",
+          "jsonPointer": null,
+          "line": 36
+        }
+      ]
+    },
+    {
+      "context": "- Modify `packages/desktop/src/mobile/lib/format.ts` — 导出 `sameCwd`(目前是私有)供组件用",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 20,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/495/text",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "- Modify: `packages/desktop/src/mobile/lib/format.ts`",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 21,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/497/text",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "In `packages/desktop/src/mobile/lib/format.ts`, change the private `sameCwd` (currently",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 22,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/498/text",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "git add packages/desktop/src/mobile/lib/format.ts",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 23,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/499/text",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "t source condition eliminated by a parallel change on main; WEB-R8-02's source is unchanged.** The first-run tests were not rerun on main. No browser, WebSocket, real server, upload service, native app or model was started.\n\n## WEB-R8-01 [P3] A project rooted at `/` does not own its descendant cwd in the Web projection\n\n- Source: `packages/web/src/lib/format.ts:20`, ",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 46,
+          "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+          "jsonPointer": "/hits/old_alias/19/context",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "context": "t source condition eliminated by a parallel change on main; WEB-R8-02's source is unchanged.** The first-run tests were not rerun on main. No browser, WebSocket, real server, upload service, native app or model was started.\n\n## WEB-R8-01 [P3] A project rooted at `/` does not own its descendant cwd in the Web projection\n\n- Source: `packages/web/src/lib/format.ts:20`, with normalization at `:12–14` and project/group consumers at `:39–42,62–63`.\n- Contract: `projectForCwd` explicitly returns the project whose root owns the cwd, selecting the longest prefix. Existing `format.test.ts` establishes ordinary descendant grouping and V2 secondary-root support. `/` is a valid POSIX absolute directory value for this API; production `ProjectStore.resolvePickedRoot` (`packages/desktop/src/main/project-store.ts:743–760`) checks an existing absolute directory and contains no explicit filesystem-root exclusion. That registration observation is static; the fixture does not register or inspect the operator's filesystem root.\n- Trigger: supplied project metadata cont",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 62,
+          "path": "docs/audit-2026-10-17-round8/web.md",
+          "jsonPointer": null,
+          "line": 7
+        }
+      ]
+    },
+    {
+      "context": "trip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：W",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 63,
+          "path": "docs/audit-2026-10-17/desktop-data.md",
+          "jsonPointer": null,
+          "line": 32
+        }
+      ]
+    },
+    {
+      "context": "ssages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 Host（例如 Linux），已注册两个合法不同根 `/srv/Example` 和 `/srv/example`，大写根先列出，打开小写根或其子目录。\n- 预期：`projectForCwd(\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的生产 `targetForCwd` 还用这个结果构建 `{ projectId }`，小写 cwd 在错误项目中没有精确 root，因而会落入错误项目的主根作为新会话目标；这段影响是静态接线，未运行创建会话或真实 Host。Mobile `SessionList.tsx:50–63` 实际消费错误分组与 currentProject。\n- 证据：guarded 源码相对导入纯函数，`evidence/ui-web-project-case.test.ts` 三项：错误归属/列表顺序影响、两个会话合成一组、普通不同根与最长前缀正常对照。没有使用真实磁盘或模拟 Host 平台来验证目录注册；结论明确以大小写敏感 Host 为条件。生产 `packages",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 64,
+          "path": "docs/audit-2026-10-17/desktop-data.md",
+          "jsonPointer": null,
+          "line": 36
+        }
+      ]
+    },
+    {
+      "context": "oteApp.ts` — `activeProjectCwd` 状态、ccRoom RPC 调用、`ccRoom.approvalResolved` 消费、newSession 竞态修复、cc 会话列表状态\n- Modify `packages/desktop/src/mobile/components/SessionList.tsx` — 按 `activeProjectCwd` 过滤渲染\n- Create `packages/desktop/src/mobile/components/CcSessionList.tsx` — 手机端 cc 会话列表(对照 renderer/cc-room/CCRoomView)\n- Modify `packages/desktop/src/mobile/lib/format.ts` — 导出 `sameCwd`(目前是私有)供组件用\n\n**Section C — 磁盘 recents 升真源:**\n- Modify `packages/desktop/src/main/recents-store.ts` — `RecentProject` 扩 `pinned`/`deletedAt`;新增 `setPinned`/`softDelete`/`loadProjects`;放宽 MAX 语义\n- Create `packages/desktop/src/main/recents-store.test.ts` — pin/软删除/重启持久化测试\n- Modify `packages/desktop/src/main/index.ts` — 项目变更 IPC + 变更后广播 `room.projects.ok` 给手机 + IPC 事件给桌面\n- Modify `packages/desktop/src/preload/index.ts` — 暴露 `projects.*` 给渲染层 + `onProjectsChanged` 监听\n- Modify `packages/desktop/src/renderer/repos.ts` — 投影模式:从主进程灌,localStorage 仅缓存\n- Modify `packages/desktop/src/renderer/App.tsx` — repo 增删 pin 改走主进程 + 回灌投影\n\n---\n\n## SECTION A — ccRoom RPC 表面 + 审批解决广播\n\n### Task A1: App",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 71,
+          "path": "docs/superpowers/plans/2026-06-25-mobile-ccroom-parity.md",
+          "jsonPointer": null,
+          "line": 29
+        }
+      ]
+    },
+    {
+      "context": "p/src/preload/index.ts packages/desktop/src/preload/types.d.ts packages/desktop/src/renderer/cc-room/CCConversationView.tsx\ngit commit -m \"feat(cc-room): desktop clears approval card on approvalResolved\"\n```\n\n---\n\n## SECTION B — 手机 activeProjectCwd + cc 会话列表\n\n### Task B1: 导出 sameCwd from format.ts\n\n**Files:**\n- Modify: `packages/desktop/src/mobile/lib/format.ts`\n\n- [ ] **Step 1: Export sameCwd**\n\nIn `packages/desktop/src/mobile/lib/format.ts`, change the private `sameCwd` (currently\n`function sameCwd(...)`) to an export:\n\n```typescript\nexport function sameCwd(a?: string | null, b?: string | null): boolean {\n  const norm = (v?: string | null): string => (v ?? \"\").replace(/[/\\\\]+$/, \"\").toLowerCase();\n  return norm(a) === norm(b);\n}\n```\n\n- [ ] **Step 2: Typecheck**\n\nRun: `cd packages/desktop && bunx tsc --noEmit`\nExpected: PASS.\n\n- [ ] **Step 3: Commit**\n\n```bash\ngit add packages/desktop/src/mobile/lib/format.ts\ngit commit -m \"refactor(mobile): export sameCwd helper\"\n```\n\n---\n\n### Task B2: useRemoteApp 加 activeProjectCwd + ccRoom RPC + 竞态修复\n\n**Files",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 72,
+          "path": "docs/superpowers/plans/2026-06-25-mobile-ccroom-parity.md",
+          "jsonPointer": null,
+          "line": 440
+        }
+      ]
+    },
+    {
+      "context": "c/renderer/cc-room/CCConversationView.tsx\ngit commit -m \"feat(cc-room): desktop clears approval card on approvalResolved\"\n```\n\n---\n\n## SECTION B — 手机 activeProjectCwd + cc 会话列表\n\n### Task B1: 导出 sameCwd from format.ts\n\n**Files:**\n- Modify: `packages/desktop/src/mobile/lib/format.ts`\n\n- [ ] **Step 1: Export sameCwd**\n\nIn `packages/desktop/src/mobile/lib/format.ts`, change the private `sameCwd` (currently\n`function sameCwd(...)`) to an export:\n\n```typescript\nexport function sameCwd(a?: string | null, b?: string | null): boolean {\n  const norm = (v?: string | null): string => (v ?? \"\").replace(/[/\\\\]+$/, \"\").toLowerCase();\n  return norm(a) === norm(b);\n}\n```\n\n- [ ] **Step 2: Typecheck**\n\nRun: `cd packages/desktop && bunx tsc --noEmit`\nExpected: PASS.\n\n- [ ] **Step 3: Commit**\n\n```bash\ngit add packages/desktop/src/mobile/lib/format.ts\ngit commit -m \"refactor(mobile): export sameCwd helper\"\n```\n\n---\n\n### Task B2: useRemoteApp 加 activeProjectCwd + ccRoom RPC + 竞态修复\n\n**Files:**\n- Modify: `packages/desktop/src/mobile/hooks/useRemoteApp.ts`\n\n- [ ] **Step 1:",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 73,
+          "path": "docs/superpowers/plans/2026-06-25-mobile-ccroom-parity.md",
+          "jsonPointer": null,
+          "line": 444
+        }
+      ]
+    },
+    {
+      "context": "meCwd(a?: string | null, b?: string | null): boolean {\n  const norm = (v?: string | null): string => (v ?? \"\").replace(/[/\\\\]+$/, \"\").toLowerCase();\n  return norm(a) === norm(b);\n}\n```\n\n- [ ] **Step 2: Typecheck**\n\nRun: `cd packages/desktop && bunx tsc --noEmit`\nExpected: PASS.\n\n- [ ] **Step 3: Commit**\n\n```bash\ngit add packages/desktop/src/mobile/lib/format.ts\ngit commit -m \"refactor(mobile): export sameCwd helper\"\n```\n\n---\n\n### Task B2: useRemoteApp 加 activeProjectCwd + ccRoom RPC + 竞态修复\n\n**Files:**\n- Modify: `packages/desktop/src/mobile/hooks/useRemoteApp.ts`\n\n- [ ] **Step 1: Add activeProjectCwd state + cc session state**\n\nNear the other `useState` declarations in `useRemoteApp` (around the approvals state, line 132),\nadd:\n\n```typescript\n  // The currently SELECTED project (one-true-source for \"what am I looking at\"),\n  // distinct from activeSessionCwd which is derived from the bound session. Drives\n  // session-list filtering AND ccRoom.listSessions.\n  const [activeProjectCwd, setActiveProjectCwd] = useState<string | null>(null);\n  // Extern",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 74,
+          "path": "docs/superpowers/plans/2026-06-25-mobile-ccroom-parity.md",
+          "jsonPointer": null,
+          "line": 462
+        }
+      ]
+    },
+    {
+      "context": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "locators": [
+        {
+          "group": "source_sha",
+          "index": 0,
+          "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+          "jsonPointer": "/files/1/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 1,
+          "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+          "jsonPointer": "/files/52/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/1/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+          "jsonPointer": "/files/10/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+          "jsonPointer": "/files/40/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 5,
+          "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+          "jsonPointer": "/files/40/currentSha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 6,
+          "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+          "jsonPointer": "/files/40/mainSha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 7,
+          "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/14/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 8,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "jsonPointer": "/files/1031/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 9,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "jsonPointer": "/files/1031/claims/1/sourceSha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 10,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/4054/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 11,
+          "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+          "jsonPointer": "/sources/1/inspectedMainSha256",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+      "jsonPointer": "/files/1",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "gitBlobSha": "26655abc6970d8583afa73c23a68ea2f45a1903e",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "currentEqualsFrozen": true,
+        "lines": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "jsonPointer": "/files/52",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/1",
+      "row": {
+        "manifest": "web-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/10",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "jsonPointer": "/files/40",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "mainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/14",
+      "row": {
+        "manifest": "root-source-manifest.json",
+        "path": "packages/web/src/lib/format.ts",
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/1031",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 2,
+        "claims": [
+          {
+            "sourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+                "jsonLocation": "$[\"productionSources\"][4]"
+              },
+              {
+                "path": "docs/audit-2026-10-17/source-manifest.json",
+                "jsonLocation": "$[\"files\"][45]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][5]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                "jsonLocation": "$[\"files\"][88]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                "jsonLocation": "$[\"files\"][97]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                "jsonLocation": "$[\"files\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"files\"][52]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][1]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                "jsonLocation": "$[\"files\"][10]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"files\"][40]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][14]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/4054",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "lines": 140,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+      "jsonPointer": "/sources/1",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "readScope": "full",
+        "readRanges": null,
+        "bytes": 4480,
+        "lines": 117,
+        "frozenSourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "inspectedMainSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "inspectedMainMatchesFrozenBlob": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "relatedFindings": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "decision": "Finite negative for normal full/summary/completed-side data chain. No new ordinary producer→consumer counterexample established; not whole-session correctness.",
+  "knownCauseExclusions": [
+    {
+      "id": "SESSION-R9-01",
+      "directOriginal": "docs/audit-2026-10-17-round9/session.md5–17",
+      "cause": "Provider tool batch above live cap leaves persisted unmatched tool_use and rejects full fork; not re-reported/tested."
+    },
+    {
+      "id": "CTX-1",
+      "directOriginal": "docs/audit-2026-10-17-round4/context.md7–17",
+      "cause": "Ordinary fallback snip prefix splits successful tool round; not re-reported or retested."
+    },
+    {
+      "id": "CTX-2",
+      "directOriginal": "docs/audit-2026-10-17-round4/context.md19–29",
+      "cause": "Normal compaction/archival summary drops structured result text. This fork path uses distinct portable serializer which recursively keeps it; no new CTX2 clone."
+    }
+  ],
+  "otherOldReferencesOnly": "R9 explicitly points old M1 is_error replay and July synthetic-duplicate fork issue. Those exact original July records were not reread here or revalidated; no new issue based on arbitrary unmatched tools/changed IDs or any old failed dynamic route.",
+  "normalScope": [
+    "Full fork has inclusive frozen cursor and explicit event policy, new event IDs, copied-prefix context reference remap.",
+    "Side protocol selects completed snapshot and ephemeral state; current active tail intentionally excluded.",
+    "Summary protocol freezes validated closed range before aux call; returns nonempty summary before publish, target holds session_meta/context_transfer rather than raw selected prose.",
+    "State copies cwd, cloned workspace, model/provider; counters/invokedSkills/parent reset, current parent goal/control not copied. No claim all profiles/project authority are cloned or certified."
+  ],
+  "limits": [
+    "No real sessions/FS/model/provider/RPC/UI/helper/test/native/network/Git execution.",
+    "No global full/custody/locking/runExclusive/atomic-publication correctness claim.",
+    "Large aux-fragment/token-fit/model-trace semantics displayed but outside finite normal package opinion.",
+    "Unknown/no explicit current full in retainedcap is not evidence unread; no global coverage update."
+  ]
+}

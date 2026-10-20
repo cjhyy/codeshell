@@ -1,0 +1,35 @@
+{
+  "atUTC": "2026-10-17T19:54:59.316789+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round6/root-package.md",
+      "bytes": 2847,
+      "sha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62",
+      "beforeRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "bytes": 27024,
+      "sha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf",
+      "beforeRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "bytes": 55598,
+      "sha256": "ce815200130b58605bcab247b8feeab84df2f2ccd20260a9590963b34f789533",
+      "beforeRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/package-summary.json",
+      "bytes": 15695,
+      "sha256": "89fdf5f5001defd71cb4e20866240873835d1aefbb4bee3f8f8a0d34c65459dd",
+      "beforeRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-source-manifest.json",
+      "bytes": 14803,
+      "sha256": "d4fc68369370f5cc536f247838406c883a629134acdfbd48434b3dd78bd4e644",
+      "beforeRead": true
+    }
+  ]
+}

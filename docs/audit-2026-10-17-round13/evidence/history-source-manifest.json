@@ -1,0 +1,109 @@
+{
+  "frozenSource": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenGitBlob": "50671f6297598a14ad4710b61ab103747fa7676a",
+      "currentEqualsFrozen": true,
+      "lines": 217,
+      "scope": "fully read instructions; no product execution"
+    },
+    {
+      "path": "packages/tui/src/ui/input-history.ts",
+      "frozenSha256": "4d1a5084b69a2de5b2d946ef3a06e773a393fa33f82e9345e692357bc1d483d7",
+      "frozenGitBlob": "922af51d624170627bfdc4b018474327de6edd90",
+      "currentEqualsFrozen": true,
+      "lines": 343,
+      "scope": "fully read; actual exported helper execution with owned homedir/fs and ordinary strings"
+    },
+    {
+      "path": "packages/tui/src/ui/input-history.test.ts",
+      "frozenSha256": "c14df0e33a1ec5888dcf7f4c6a16facb3c590b55d99e42d82c421e1e4ab2fd79",
+      "frozenGitBlob": "4c9d9b413b4c3729541bd1468f66bf35873b81bd",
+      "currentEqualsFrozen": true,
+      "lines": 47,
+      "scope": "fully read for side effects; not executed because existing fixture includes sensitive-command checks outside this scope"
+    },
+    {
+      "path": "packages/tui/src/ui/components/model-display.ts",
+      "frozenSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+      "frozenGitBlob": "48abed8500bb6fb059d0f7974c4a756c50c51fcd",
+      "currentEqualsFrozen": true,
+      "lines": 24,
+      "scope": "fully read and actual pure helpers executed"
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "frozenSha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "frozenGitBlob": "c145562b3d0727560ce0c44c0ee33cbd2445b74e",
+      "currentEqualsFrozen": true,
+      "lines": 245,
+      "scope": "selected source read lines 1–190; static submit/ref/navigation consumer only; no React execution"
+    },
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "frozenSha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "frozenGitBlob": "0e671e464c5c844ae6983621817d6d47c3defd72",
+      "currentEqualsFrozen": true,
+      "lines": 387,
+      "scope": "selected lines 280–395; static stable default input branch only"
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "frozenSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "frozenGitBlob": "3f81587a1a0328218ba560c35057b49c1d977ce2",
+      "currentEqualsFrozen": true,
+      "lines": 2318,
+      "scope": "selected interruption and bottom-content lines; static only; no engine or UI execution"
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "frozenSha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "frozenGitBlob": "208ccbeabbaa0d64a75a245c9d3f5e734c627394",
+      "currentEqualsFrozen": true,
+      "lines": 122,
+      "scope": "selected startup lines 30–70; static initHistory consumer only; no startup execution"
+    },
+    {
+      "path": "packages/tui/src/ui/components/ModelSelector.tsx",
+      "frozenSha256": "25bc0aa8321022c92ead4b07899226609b49feffe92bbc2d4e716b80fc54291e",
+      "frozenGitBlob": "a9da8caa2d43341d37e8d84df0c21ee445f61fa5",
+      "currentEqualsFrozen": true,
+      "lines": 99,
+      "scope": "full source read; static fmtTokens/modelTags consumers; no React execution"
+    },
+    {
+      "path": "packages/tui/src/ui/components/ModelManager.tsx",
+      "frozenSha256": "2346850d9619dbc3be646215ed7d3a6ea5d75b4ac1209aaae864a447ea12e479",
+      "frozenGitBlob": "e053801953f108e3d88f49a3ea4a00bd3e5c9d8d",
+      "currentEqualsFrozen": true,
+      "lines": 439,
+      "scope": "selected first 160 lines only; static shared-helper import; no provider handlers executed"
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "frozenSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "frozenGitBlob": "206ea615d2b61685ad9089ce8025c36188f98350",
+      "currentEqualsFrozen": true,
+      "lines": 344,
+      "scope": "source read only; no runtime import due to wider renderer/command dependencies"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenGitBlob": "2f339dccc5fa77b1c7098d7b3273ac64448e8b63",
+      "currentEqualsFrozen": true,
+      "lines": 8,
+      "scope": "guarded runner executed for one focused fixture"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "frozenSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8",
+      "frozenGitBlob": "71e451c9b7fa51f638cb515a522c2fa4af5bd4a9",
+      "currentEqualsFrozen": true,
+      "lines": 343,
+      "scope": "dedup matched history inventory row only; no broad architecture verification"
+    }
+  ]
+}

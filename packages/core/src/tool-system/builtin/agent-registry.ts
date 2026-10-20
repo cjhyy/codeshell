@@ -14,6 +14,7 @@
 
 export type AsyncAgentStatus = "running" | "cancelling" | "completed" | "failed" | "cancelled";
 
+import type { SubAgentContinuation } from "../../types.js";
 import type {
   DirectionAck,
   DirectionDelivery,
@@ -78,6 +79,8 @@ export interface AsyncAgentEntry {
   /** Dispatched role (e.g. "general-purpose", "explorer"); shown in the dock
    *  so you can see what kind of agent is running. */
   agentType?: string;
+  /** Original role scope, retained across continuations instead of re-resolving a role. */
+  continuation?: SubAgentContinuation;
   description: string;
   /** Session that spawned this background agent. Lets the spawning
    *  Engine.run wait only on ITS OWN background agents (hasRunningForSession),

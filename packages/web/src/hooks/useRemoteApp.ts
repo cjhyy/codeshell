@@ -99,7 +99,11 @@ export interface RemoteApp {
   notice?: string;
   logout: () => void;
   // actions
-  sendChat: (input: { text: string; attachments: MobileComposerAttachment[] }) => Promise<boolean>;
+  sendChat: (input: {
+    text: string;
+    attachments: MobileComposerAttachment[];
+    modelTraceSource?: string;
+  }) => Promise<boolean>;
   stopRun: () => void;
   selectSession: (id: string) => void;
   newSession: (target?: MobileSessionCreateTarget, name?: string) => void;
@@ -1391,7 +1395,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   // ── actions ────────────────────────────────────────────────────────────
   const sendChat = useCallback(
-    async (input: { text: string; attachments: MobileComposerAttachment[] }): Promise<boolean> => {
+    async (input: {
+      text: string;
+      attachments: MobileComposerAttachment[];
+      modelTraceSource?: string;
+    }): Promise<boolean> => {
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
       if (socket.status !== "online") return false;
@@ -1447,6 +1455,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         queued = socket.send(
           {
             type: "chat.send",
+            ...(input.modelTraceSource ? { modelTraceSource: input.modelTraceSource } : {}),
             text,
             sessionId,
             clientMessageId,

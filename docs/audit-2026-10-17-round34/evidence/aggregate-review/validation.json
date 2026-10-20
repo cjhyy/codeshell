@@ -1,0 +1,28 @@
+{
+  "recordedUTC": "2026-10-17T12:36:57.411762+00:00",
+  "scope": "Future Round34 frozen prep aggregate metadata review only",
+  "runs": [],
+  "productAttempts": 0,
+  "productPass": 0,
+  "productExpect": 0,
+  "newProductSemanticLinesRead": 0,
+  "productNetworkCalls": 0,
+  "webRequestsByThisReview": 0,
+  "gitCommands": 0,
+  "metadataChecks": {
+    "frozenArtifactFiles": 57,
+    "authorReceiptRows": 52,
+    "currentReceiptFilesSeparatelyPinned": 5,
+    "sourceRows": 34,
+    "sourceUniquePaths": 30,
+    "reportLinks": 35,
+    "localReportLinks": 33,
+    "externalLinksNotFetched": 2
+  },
+  "independenceLimit": "Reviewer authored semver and original independent UTF8 preps. This aggregate metadata review is not a new independent semantic product-source review.",
+  "currentFormalHistoryChecked": false,
+  "metadataReadNote": "One large metadata output was truncated; the required missing renderer report and structured source/receipt fields were subsequently read separately. No product execution occurred.",
+  "metadataPackagingFirstAttemptExitCode": 1,
+  "metadataPackagingFirstDiagnostic": "metadata-notes.json / packaging-first.stderr.txt",
+  "productFailures": 0
+}

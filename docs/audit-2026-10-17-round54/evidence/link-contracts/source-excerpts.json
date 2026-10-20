@@ -1,0 +1,2830 @@
+[
+  {
+    "path": "packages/link/src/operations.ts",
+    "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+    "captureTiming": "After actual displays787649/98c3f8/8928d0/66489f/30b196/ea2a05/847d10/51441e/31293f/3102c4/2e4e93/c986a3. Only displayed lines captured; regex navigation indices reconstruct the same original matching lines. Not first-read/pre-read evidence.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import { FIGMA_MCP_ACTION_IDS } from \"./figma.js\";"
+      },
+      {
+        "line": 2,
+        "text": "import type {"
+      },
+      {
+        "line": 3,
+        "text": "  LinkOperationContract,"
+      },
+      {
+        "line": 4,
+        "text": "  LinkResourcePolicy,"
+      },
+      {
+        "line": 5,
+        "text": "  LinkValueSchema,"
+      },
+      {
+        "line": 6,
+        "text": "} from \"./operation-types.js\";"
+      },
+      {
+        "line": 7,
+        "text": ""
+      },
+      {
+        "line": 8,
+        "text": "const text = (maxLength = 300, minLength = 1): LinkValueSchema => ({"
+      },
+      {
+        "line": 9,
+        "text": "  type: \"string\","
+      },
+      {
+        "line": 10,
+        "text": "  minLength,"
+      },
+      {
+        "line": 11,
+        "text": "  maxLength,"
+      },
+      {
+        "line": 12,
+        "text": "});"
+      },
+      {
+        "line": 13,
+        "text": "const flag: LinkValueSchema = { type: \"boolean\" };"
+      },
+      {
+        "line": 14,
+        "text": "// Existing v1 adapters accept numeric strings and clamp pagination. Keep that behavior."
+      },
+      {
+        "line": 15,
+        "text": "const integer: LinkValueSchema = { anyOf: [{ type: \"integer\", minimum: 1 }, text(100)] };"
+      },
+      {
+        "line": 16,
+        "text": "const number: LinkValueSchema = { anyOf: [{ type: \"number\" }, text(100)] };"
+      },
+      {
+        "line": 17,
+        "text": "const list = (items: LinkValueSchema = { type: \"object\" }, maxItems = 100): LinkValueSchema => ({"
+      },
+      {
+        "line": 18,
+        "text": "  type: \"array\","
+      },
+      {
+        "line": 19,
+        "text": "  items,"
+      },
+      {
+        "line": 20,
+        "text": "  maxItems,"
+      },
+      {
+        "line": 21,
+        "text": "});"
+      },
+      {
+        "line": 22,
+        "text": "const object = ("
+      },
+      {
+        "line": 23,
+        "text": "  properties: Record<string, LinkValueSchema>,"
+      },
+      {
+        "line": 24,
+        "text": "  required: string[] = [],"
+      },
+      {
+        "line": 25,
+        "text": "): LinkValueSchema => ({ type: \"object\", properties, required, additionalProperties: false });"
+      },
+      {
+        "line": 26,
+        "text": "const output = ("
+      },
+      {
+        "line": 27,
+        "text": "  properties: Record<string, LinkValueSchema>,"
+      },
+      {
+        "line": 28,
+        "text": "  required: string[] = [],"
+      },
+      {
+        "line": 29,
+        "text": "): LinkValueSchema => ({ type: \"object\", properties, required, additionalProperties: true });"
+      },
+      {
+        "line": 30,
+        "text": "const listOutput = (key: string, max = 100) =>"
+      },
+      {
+        "line": 31,
+        "text": "  output({ [key]: list({ type: \"object\" }, max) }, [key]);"
+      },
+      {
+        "line": 32,
+        "text": "const groups: Record<string, string> = {"
+      },
+      {
+        "line": 33,
+        "text": "  github: \"repositories\","
+      },
+      {
+        "line": 34,
+        "text": "  gitlab: \"projects\","
+      },
+      {
+        "line": 35,
+        "text": "  figma: \"files\","
+      },
+      {
+        "line": 36,
+        "text": "  notion: \"pages\","
+      },
+      {
+        "line": 37,
+        "text": "  linear: \"teams\","
+      },
+      {
+        "line": 38,
+        "text": "  slack: \"channels\","
+      },
+      {
+        "line": 39,
+        "text": "  sentry: \"organizations\","
+      },
+      {
+        "line": 40,
+        "text": "  airtable: \"bases\","
+      },
+      {
+        "line": 41,
+        "text": "  todoist: \"projects\","
+      },
+      {
+        "line": 42,
+        "text": "  vercel: \"projects\","
+      },
+      {
+        "line": 43,
+        "text": "};"
+      },
+      {
+        "line": 44,
+        "text": "const inputResource = ("
+      },
+      {
+        "line": 53,
+        "text": "const filtered = (provider: string, action: string): LinkResourcePolicy => {"
+      },
+      {
+        "line": 69,
+        "text": "  return {"
+      },
+      {
+        "line": 81,
+        "text": "};"
+      },
+      {
+        "line": 82,
+        "text": "const repo = { owner: text(100), repo: text(100) };"
+      },
+      {
+        "line": 83,
+        "text": "const file = { file_url_or_key: text(4096), file_key: text(200) };"
+      },
+      {
+        "line": 84,
+        "text": "const fileInput = ("
+      },
+      {
+        "line": 85,
+        "text": "  properties: Record<string, LinkValueSchema> = {},"
+      },
+      {
+        "line": 86,
+        "text": "  required: string[] = [],"
+      },
+      {
+        "line": 87,
+        "text": "): LinkValueSchema => ({"
+      },
+      {
+        "line": 91,
+        "text": "const fileResource = inputResource(\"files\", [\"file_url_or_key\", \"file_key\"], {"
+      },
+      {
+        "line": 96,
+        "text": "const nodeList: LinkValueSchema = { anyOf: [text(20_000), list(text(200), 50)] };"
+      },
+      {
+        "line": 98,
+        "text": "type Options = Partial<"
+      },
+      {
+        "line": 99,
+        "text": "  Pick<LinkOperationContract, \"effect\" | \"executors\" | \"defaults\" | \"content\" | \"normalization\">"
+      },
+      {
+        "line": 100,
+        "text": ">;"
+      },
+      {
+        "line": 101,
+        "text": "function operation("
+      },
+      {
+        "line": 102,
+        "text": "  provider: string,"
+      },
+      {
+        "line": 103,
+        "text": "  action: string,"
+      },
+      {
+        "line": 104,
+        "text": "  inputSchema: LinkValueSchema,"
+      },
+      {
+        "line": 105,
+        "text": "  outputSchema: LinkValueSchema,"
+      },
+      {
+        "line": 106,
+        "text": "  resourcePolicy = filtered(provider, action),"
+      },
+      {
+        "line": 107,
+        "text": "  options: Options = {},"
+      },
+      {
+        "line": 108,
+        "text": "): LinkOperationContract {"
+      },
+      {
+        "line": 109,
+        "text": "  const effect = options.effect ?? \"read\";"
+      },
+      {
+        "line": 110,
+        "text": "  return {"
+      },
+      {
+        "line": 111,
+        "text": "    operationId: `${provider}.${action}`,"
+      },
+      {
+        "line": 112,
+        "text": "    providerId: provider,"
+      },
+      {
+        "line": 113,
+        "text": "    action,"
+      },
+      {
+        "line": 114,
+        "text": "    effect,"
+      },
+      {
+        "line": 115,
+        "text": "    executors:"
+      },
+      {
+        "line": 116,
+        "text": "      options.executors ??"
+      },
+      {
+        "line": 117,
+        "text": "      ([\"github\", \"gitlab\", \"notion\", \"todoist\", \"vercel\"].includes(provider)"
+      },
+      {
+        "line": 118,
+        "text": "        ? [\"api\", \"cli\"]"
+      },
+      {
+        "line": 119,
+        "text": "        : [\"api\"]),"
+      },
+      {
+        "line": 120,
+        "text": "    inputSchema,"
+      },
+      {
+        "line": 121,
+        "text": "    outputSchema,"
+      },
+      {
+        "line": 122,
+        "text": "    resourcePolicy,"
+      },
+      {
+        "line": 123,
+        "text": "    defaults: options.defaults ?? {},"
+      },
+      {
+        "line": 124,
+        "text": "    limits: {"
+      },
+      {
+        "line": 125,
+        "text": "      inputBytes: action === \"create_issue\" ? 256 * 1024 : 65_536,"
+      },
+      {
+        "line": 126,
+        "text": "      responseBytes: provider === \"figma\" ? 8 * 1024 * 1024 : 1024 * 1024,"
+      },
+      {
+        "line": 127,
+        "text": "      inputDepth: 20,"
+      },
+      {
+        "line": 128,
+        "text": "      responseDepth: 256,"
+      },
+      {
+        "line": 129,
+        "text": "    },"
+      },
+      {
+        "line": 130,
+        "text": "    repeatability: effect === \"write\" ? \"verified-write-once\" : \"read-only\","
+      },
+      {
+        "line": 131,
+        "text": "    normalization: options.normalization ?? [],"
+      },
+      {
+        "line": 132,
+        "text": "    ...(options.content ? { content: options.content } : {}),"
+      },
+      {
+        "line": 133,
+        "text": "  };"
+      },
+      {
+        "line": 134,
+        "text": "}"
+      },
+      {
+        "line": 135,
+        "text": "const gh = ("
+      },
+      {
+        "line": 136,
+        "text": "  action: string,"
+      },
+      {
+        "line": 137,
+        "text": "  properties: Record<string, LinkValueSchema> = {},"
+      },
+      {
+        "line": 138,
+        "text": "  required: string[] = [],"
+      },
+      {
+        "line": 139,
+        "text": "  result: LinkValueSchema = output({}),"
+      },
+      {
+        "line": 140,
+        "text": "  options: Options = {},"
+      },
+      {
+        "line": 141,
+        "text": ") =>"
+      },
+      {
+        "line": 142,
+        "text": "  operation("
+      },
+      {
+        "line": 143,
+        "text": "    \"github\","
+      },
+      {
+        "line": 144,
+        "text": "    action,"
+      },
+      {
+        "line": 145,
+        "text": "    object({ ...repo, ...properties }, [\"owner\", \"repo\", ...required]),"
+      },
+      {
+        "line": 146,
+        "text": "    result,"
+      },
+      {
+        "line": 147,
+        "text": "    inputResource(\"repositories\", [\"owner\", \"repo\"], { lowercase: true }),"
+      },
+      {
+        "line": 148,
+        "text": "    options,"
+      },
+      {
+        "line": 149,
+        "text": "  );"
+      },
+      {
+        "line": 150,
+        "text": "const pagination = {"
+      },
+      {
+        "line": 151,
+        "text": "  defaults: { limit: 30 },"
+      },
+      {
+        "line": 152,
+        "text": "  normalization: [\"limit: positive number or numeric string; clamp to 100\"],"
+      },
+      {
+        "line": 153,
+        "text": "};"
+      },
+      {
+        "line": 154,
+        "text": "const sourcePagination = {"
+      },
+      {
+        "line": 155,
+        "text": "  defaults: { page: 1, limit: 30 },"
+      },
+      {
+        "line": 156,
+        "text": "  normalization: ["
+      },
+      {
+        "line": 157,
+        "text": "    \"page: positive number or numeric string; clamp to 100\","
+      },
+      {
+        "line": 158,
+        "text": "    \"limit: positive integer <= 100\","
+      },
+      {
+        "line": 159,
+        "text": "    \"sha: full hexadecimal commit id\","
+      },
+      {
+        "line": 160,
+        "text": "  ],"
+      },
+      {
+        "line": 161,
+        "text": "};"
+      },
+      {
+        "line": 162,
+        "text": "const content = { kind: \"application/json\", coverage: \"selected-resource\" as const };"
+      },
+      {
+        "line": 163,
+        "text": ""
+      },
+      {
+        "line": 164,
+        "text": "/** Reviewed v1 contracts. Discovery can select these operations, never add executable code. */"
+      },
+      {
+        "line": 165,
+        "text": "export const LINK_OPERATION_CONTRACTS: readonly LinkOperationContract[] = ["
+      },
+      {
+        "line": 166,
+        "text": "  operation("
+      },
+      {
+        "line": 167,
+        "text": "    \"github\","
+      },
+      {
+        "line": 168,
+        "text": "    \"list_repositories\","
+      },
+      {
+        "line": 169,
+        "text": "    object({ limit: integer }),"
+      },
+      {
+        "line": 170,
+        "text": "    listOutput(\"repositories\"),"
+      },
+      {
+        "line": 171,
+        "text": "    undefined,"
+      },
+      {
+        "line": 172,
+        "text": "    pagination,"
+      },
+      {
+        "line": 173,
+        "text": "  ),"
+      },
+      {
+        "line": 174,
+        "text": "  gh("
+      },
+      {
+        "line": 175,
+        "text": "    \"get_repository\","
+      },
+      {
+        "line": 176,
+        "text": "    {},"
+      },
+      {
+        "line": 177,
+        "text": "    [],"
+      },
+      {
+        "line": 178,
+        "text": "    output({ id: {}, full_name: text(), private: flag, archived: flag, html_url: text(4096) }),"
+      },
+      {
+        "line": 179,
+        "text": "  ),"
+      },
+      {
+        "line": 180,
+        "text": "  gh(\"get_starred\", {}, [], output({ starred: flag }, [\"starred\"])),"
+      },
+      {
+        "line": 181,
+        "text": "  gh("
+      },
+      {
+        "line": 182,
+        "text": "    \"set_starred\","
+      },
+      {
+        "line": 270,
+        "text": "  operation("
+      },
+      {
+        "line": 278,
+        "text": "  operation("
+      },
+      {
+        "line": 286,
+        "text": "  operation("
+      },
+      {
+        "line": 300,
+        "text": "  operation("
+      },
+      {
+        "line": 332,
+        "text": "  operation("
+      },
+      {
+        "line": 355,
+        "text": "  operation("
+      },
+      {
+        "line": 382,
+        "text": "  operation("
+      },
+      {
+        "line": 394,
+        "text": "  operation("
+      },
+      {
+        "line": 402,
+        "text": "    operation("
+      },
+      {
+        "line": 436,
+        "text": "  operation("
+      },
+      {
+        "line": 444,
+        "text": "  operation("
+      },
+      {
+        "line": 451,
+        "text": "  operation("
+      },
+      {
+        "line": 462,
+        "text": "  operation(\"linear\", \"list_teams\", object({ limit: integer }), listOutput(\"teams\", 50)),"
+      },
+      {
+        "line": 463,
+        "text": "  operation("
+      },
+      {
+        "line": 474,
+        "text": "  operation("
+      },
+      {
+        "line": 485,
+        "text": "  operation("
+      },
+      {
+        "line": 498,
+        "text": "  operation("
+      },
+      {
+        "line": 518,
+        "text": "  operation(\"sentry\", \"list_organizations\", object({}), listOutput(\"organizations\")),"
+      },
+      {
+        "line": 519,
+        "text": "  operation("
+      },
+      {
+        "line": 526,
+        "text": "  operation(\"airtable\", \"list_bases\", object({}), listOutput(\"bases\")),"
+      },
+      {
+        "line": 527,
+        "text": "  operation("
+      },
+      {
+        "line": 534,
+        "text": "  operation(\"todoist\", \"list_projects\", object({ limit: integer }), listOutput(\"projects\")),"
+      },
+      {
+        "line": 535,
+        "text": "  operation(\"todoist\", \"list_tasks\", object({ limit: integer }), listOutput(\"tasks\"), undefined, {"
+      },
+      {
+        "line": 539,
+        "text": "  operation("
+      },
+      {
+        "line": 553,
+        "text": "  operation("
+      },
+      {
+        "line": 569,
+        "text": "function freezeContract(value: unknown): void {"
+      },
+      {
+        "line": 570,
+        "text": "  if (!value || typeof value !== \"object\" || Object.isFrozen(value)) return;"
+      },
+      {
+        "line": 571,
+        "text": "  Object.values(value).forEach(freezeContract);"
+      },
+      {
+        "line": 572,
+        "text": "  Object.freeze(value);"
+      },
+      {
+        "line": 573,
+        "text": "}"
+      },
+      {
+        "line": 574,
+        "text": "freezeContract(LINK_OPERATION_CONTRACTS);"
+      },
+      {
+        "line": 575,
+        "text": ""
+      },
+      {
+        "line": 576,
+        "text": "const contracts = new Map("
+      },
+      {
+        "line": 577,
+        "text": "  LINK_OPERATION_CONTRACTS.map((contract) => [contract.operationId, contract]),"
+      },
+      {
+        "line": 578,
+        "text": ");"
+      },
+      {
+        "line": 579,
+        "text": "export function getLinkOperationContract("
+      },
+      {
+        "line": 580,
+        "text": "  provider: string,"
+      },
+      {
+        "line": 581,
+        "text": "  action: string,"
+      },
+      {
+        "line": 582,
+        "text": "): LinkOperationContract | undefined {"
+      },
+      {
+        "line": 583,
+        "text": "  return contracts.get(`${provider}.${action}`);"
+      },
+      {
+        "line": 584,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/link/src/operation-types.ts",
+    "sha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+    "captureTiming": "After actual displays787649/98c3f8/8928d0/66489f/30b196/ea2a05/847d10/51441e/31293f/3102c4/2e4e93/c986a3. Only displayed lines captured; regex navigation indices reconstruct the same original matching lines. Not first-read/pre-read evidence.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "/** Portable, reviewed operation contracts. These definitions never contain credentials or code. */"
+      },
+      {
+        "line": 2,
+        "text": "export interface LinkValueSchema {"
+      },
+      {
+        "line": 3,
+        "text": "  readonly type?: \"object\" | \"array\" | \"string\" | \"number\" | \"integer\" | \"boolean\" | \"null\";"
+      },
+      {
+        "line": 4,
+        "text": "  readonly properties?: Readonly<Record<string, LinkValueSchema>>;"
+      },
+      {
+        "line": 5,
+        "text": "  readonly required?: readonly string[];"
+      },
+      {
+        "line": 6,
+        "text": "  readonly additionalProperties?: boolean;"
+      },
+      {
+        "line": 7,
+        "text": "  readonly items?: LinkValueSchema;"
+      },
+      {
+        "line": 8,
+        "text": "  readonly minLength?: number;"
+      },
+      {
+        "line": 9,
+        "text": "  readonly maxLength?: number;"
+      },
+      {
+        "line": 10,
+        "text": "  readonly minimum?: number;"
+      },
+      {
+        "line": 11,
+        "text": "  readonly maximum?: number;"
+      },
+      {
+        "line": 12,
+        "text": "  readonly minItems?: number;"
+      },
+      {
+        "line": 13,
+        "text": "  readonly maxItems?: number;"
+      },
+      {
+        "line": 14,
+        "text": "  readonly enum?: readonly (string | number | boolean | null)[];"
+      },
+      {
+        "line": 15,
+        "text": "  /** Only reviewed, bounded patterns from the built-in catalog are accepted. */"
+      },
+      {
+        "line": 16,
+        "text": "  readonly pattern?: string;"
+      },
+      {
+        "line": 17,
+        "text": "  readonly anyOf?: readonly LinkValueSchema[];"
+      },
+      {
+        "line": 18,
+        "text": "  readonly oneOf?: readonly LinkValueSchema[];"
+      },
+      {
+        "line": 19,
+        "text": "}"
+      },
+      {
+        "line": 20,
+        "text": ""
+      },
+      {
+        "line": 43,
+        "text": "export interface LinkOperationContract {"
+      },
+      {
+        "line": 44,
+        "text": "  readonly operationId: string;"
+      },
+      {
+        "line": 45,
+        "text": "  readonly providerId: string;"
+      },
+      {
+        "line": 46,
+        "text": "  /** Unqualified v1 wire name: lower-case letters and underscores only. */"
+      },
+      {
+        "line": 47,
+        "text": "  readonly action: string;"
+      },
+      {
+        "line": 48,
+        "text": "  readonly effect: \"read\" | \"write\";"
+      },
+      {
+        "line": 49,
+        "text": "  readonly executors: readonly (\"api\" | \"mcp\" | \"cli\")[];"
+      },
+      {
+        "line": 50,
+        "text": "  readonly inputSchema: LinkValueSchema;"
+      },
+      {
+        "line": 51,
+        "text": "  readonly outputSchema: LinkValueSchema;"
+      },
+      {
+        "line": 52,
+        "text": "  readonly resourcePolicy: LinkResourcePolicy;"
+      },
+      {
+        "line": 53,
+        "text": "  readonly content?: {"
+      },
+      {
+        "line": 54,
+        "text": "    readonly kind: string;"
+      },
+      {
+        "line": 55,
+        "text": "    readonly coverage: \"summary\" | \"requested-subtree\" | \"selected-resource\" | \"page\";"
+      },
+      {
+        "line": 56,
+        "text": "  };"
+      },
+      {
+        "line": 57,
+        "text": "  readonly defaults: Readonly<Record<string, string | number | boolean>>;"
+      },
+      {
+        "line": 58,
+        "text": "  readonly limits: {"
+      },
+      {
+        "line": 59,
+        "text": "    readonly inputBytes: number;"
+      },
+      {
+        "line": 60,
+        "text": "    readonly responseBytes: number;"
+      },
+      {
+        "line": 61,
+        "text": "    readonly inputDepth: number;"
+      },
+      {
+        "line": 62,
+        "text": "    readonly responseDepth: number;"
+      },
+      {
+        "line": 63,
+        "text": "  };"
+      },
+      {
+        "line": 64,
+        "text": "  readonly repeatability: \"read-only\" | \"verified-write-once\";"
+      },
+      {
+        "line": 65,
+        "text": "  /** Existing adapters perform these canonicalizations after structural validation. */"
+      },
+      {
+        "line": 66,
+        "text": "  readonly normalization: readonly string[];"
+      },
+      {
+        "line": 67,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/links/runtime/operation.ts",
+    "sha256": "ab20cf800ad31d91e0fe25405bf4e70e5d434c5ab1afe337d125980f89b3b447",
+    "captureTiming": "After actual displays787649/98c3f8/8928d0/66489f/30b196/ea2a05/847d10/51441e/31293f/3102c4/2e4e93/c986a3. Only displayed lines captured; regex navigation indices reconstruct the same original matching lines. Not first-read/pre-read evidence.",
+    "displayedLines": [
+      {
+        "line": 4,
+        "text": "  getLinkOperationContract,"
+      },
+      {
+        "line": 9,
+        "text": "export async function executeLinkOperation(options: {"
+      },
+      {
+        "line": 10,
+        "text": "  providerId: string;"
+      },
+      {
+        "line": 11,
+        "text": "  action: string;"
+      },
+      {
+        "line": 12,
+        "text": "  params: Record<string, unknown>;"
+      },
+      {
+        "line": 13,
+        "text": "  execute(params: Record<string, unknown>): Promise<unknown>;"
+      },
+      {
+        "line": 14,
+        "text": "  assertAuthorized?(): void;"
+      },
+      {
+        "line": 15,
+        "text": "  signal?: AbortSignal;"
+      },
+      {
+        "line": 16,
+        "text": "}): Promise<unknown> {"
+      },
+      {
+        "line": 17,
+        "text": "  const contract = getLinkOperationContract(options.providerId, options.action);"
+      },
+      {
+        "line": 18,
+        "text": "  if (!contract)"
+      },
+      {
+        "line": 19,
+        "text": "    throw new LinkOperationError("
+      },
+      {
+        "line": 20,
+        "text": "      \"unsupported_contract\","
+      },
+      {
+        "line": 21,
+        "text": "      \"This Host does not support the requested operation contract.\","
+      },
+      {
+        "line": 22,
+        "text": "    );"
+      },
+      {
+        "line": 23,
+        "text": "  // Detach input before asynchronous code can observe caller changes."
+      },
+      {
+        "line": 24,
+        "text": "  const params = snapshotLinkOperationInput(contract, options.params);"
+      },
+      {
+        "line": 25,
+        "text": "  options.signal?.throwIfAborted();"
+      },
+      {
+        "line": 26,
+        "text": "  options.assertAuthorized?.();"
+      },
+      {
+        "line": 27,
+        "text": "  const result = await options.execute(params);"
+      },
+      {
+        "line": 28,
+        "text": "  options.assertAuthorized?.();"
+      },
+      {
+        "line": 29,
+        "text": "  options.signal?.throwIfAborted();"
+      },
+      {
+        "line": 30,
+        "text": "  assertLinkOperationResult(contract, result);"
+      },
+      {
+        "line": 31,
+        "text": "  return result;"
+      },
+      {
+        "line": 32,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/links/link-action-tool.ts",
+    "sha256": "c23f5ecc303cdf37dc07f54a5f33f80612a6b6bde36fdaf37ad8e4ec7f07a2d2",
+    "captureTiming": "After actual displays787649/98c3f8/8928d0/66489f/30b196/ea2a05/847d10/51441e/31293f/3102c4/2e4e93/c986a3. Only displayed lines captured; regex navigation indices reconstruct the same original matching lines. Not first-read/pre-read evidence.",
+    "displayedLines": [
+      {
+        "line": 27,
+        "text": "  getLinkOperationContract,"
+      },
+      {
+        "line": 36,
+        "text": "import { isFigmaMcpCredential, McpLinkActionError } from \"./figma-mcp-contract.js\";"
+      },
+      {
+        "line": 37,
+        "text": "import { figmaMcpParameters } from \"./figma-mcp-params.js\";"
+      },
+      {
+        "line": 51,
+        "text": "    \"in project/isolated scope. Call with provider and action plus params to run \" +"
+      },
+      {
+        "line": 64,
+        "text": "    \"read_design_content defaults to depth 2; get_file is only a legacy page summary. Detailed nodes and source files are fetched only as needed.\","
+      },
+      {
+        "line": 82,
+        "text": "      params: {"
+      },
+      {
+        "line": 141,
+        "text": "    throw new Error(\"Link Action params must be an object\");"
+      },
+      {
+        "line": 276,
+        "text": "      figmaResourceUrl = figmaMcpParameters(actionId, parseParams(args.params)).target.resourceUrl;"
+      },
+      {
+        "line": 362,
+        "text": "      code: \"unsupported_contract\","
+      },
+      {
+        "line": 366,
+        "text": "  const contract = getLinkOperationContract(providerId, actionId);"
+      },
+      {
+        "line": 367,
+        "text": "  if (!contract || (contract.effect === \"write\") !== (action.risk === \"write\"))"
+      },
+      {
+        "line": 370,
+        "text": "      code: \"unsupported_contract\","
+      },
+      {
+        "line": 371,
+        "text": "      error: \"This Host does not support the requested operation contract.\","
+      },
+      {
+        "line": 398,
+        "text": "    });"
+      },
+      {
+        "line": 399,
+        "text": "  }"
+      },
+      {
+        "line": 400,
+        "text": "  let params: Record<string, unknown>;"
+      },
+      {
+        "line": 401,
+        "text": "  let operationAuthorization: LinkOperationAuthorization;"
+      },
+      {
+        "line": 402,
+        "text": "  try {"
+      },
+      {
+        "line": 403,
+        "text": "    // Closed-set approval must describe the exact detached values later sent."
+      },
+      {
+        "line": 404,
+        "text": "    params = JSON.parse("
+      },
+      {
+        "line": 405,
+        "text": "      canonicalOperationValue("
+      },
+      {
+        "line": 406,
+        "text": "        parseParams(args.params),"
+      },
+      {
+        "line": 407,
+        "text": "        providerId === \"github\" && actionId === \"create_issue\" ? 256 * 1024 : 64 * 1024,"
+      },
+      {
+        "line": 408,
+        "text": "      ),"
+      },
+      {
+        "line": 409,
+        "text": "    );"
+      },
+      {
+        "line": 410,
+        "text": "    if (providerId === \"github\" && actionId === \"create_issue\")"
+      },
+      {
+        "line": 411,
+        "text": "      params = githubCreateIssueParameters(params);"
+      },
+      {
+        "line": 412,
+        "text": "    if (providerId === \"github\" && actionId === \"set_starred\")"
+      },
+      {
+        "line": 413,
+        "text": "      params = githubSetStarredParameters(params);"
+      },
+      {
+        "line": 414,
+        "text": "    if (providerId === \"github\" && actionId === \"update_issue\")"
+      },
+      {
+        "line": 415,
+        "text": "      params = githubIssueStateParameters(params);"
+      },
+      {
+        "line": 416,
+        "text": "    validateLinkOperationInput(contract, params);"
+      },
+      {
+        "line": 417,
+        "text": "    const recipeId = resolveLinkRecipeId(connection.credential.meta ?? {});"
+      },
+      {
+        "line": 418,
+        "text": "    if (!recipeId)"
+      },
+      {
+        "line": 419,
+        "text": "      throw new LinkOperationError(\"unsupported_contract\", \"The connection recipe is unsupported.\");"
+      },
+      {
+        "line": 431,
+        "text": "        : [contract.operationId],"
+      },
+      {
+        "line": 434,
+        "text": "    assertLinkOperationAuthorized(contract, params, operationAuthorization);"
+      },
+      {
+        "line": 470,
+        "text": "      `允许 CodeShell 通过 ${provider.displayName} 连接执行「${action.title}」吗？\\n\\n参数：${JSON.stringify(params).slice(0, 2_000)}`,"
+      },
+      {
+        "line": 545,
+        "text": "            params,"
+      },
+      {
+        "line": 559,
+        "text": "            params,"
+      },
+      {
+        "line": 575,
+        "text": "        data = await executeCliLinkAction(providerId, actionId, params, { cwd, signal });"
+      },
+      {
+        "line": 590,
+        "text": "            params,"
+      },
+      {
+        "line": 607,
+        "text": "          params,"
+      },
+      {
+        "line": 613,
+        "text": "      assertLinkOperationResult(contract, data);"
+      },
+      {
+        "line": 614,
+        "text": "      data = filterLinkOperationResult(contract, data, operationAuthorization);"
+      },
+      {
+        "line": 626,
+        "text": "        params,"
+      },
+      {
+        "line": 640,
+        "text": "        params,"
+      },
+      {
+        "line": 654,
+        "text": "        params,"
+      },
+      {
+        "line": 684,
+        "text": "      provider: providerId,"
+      },
+      {
+        "line": 685,
+        "text": "      action: actionId,"
+      },
+      {
+        "line": 686,
+        "text": "      runtime: linkConnectionMetadata(connection.credential.meta).linkExecutionRuntime,"
+      },
+      {
+        "line": 687,
+        "text": "      connectionId: connection.credential.id,"
+      },
+      {
+        "line": 688,
+        "text": "      operationId: contract.operationId,"
+      },
+      {
+        "line": 689,
+        "text": "      recipeId: resolveLinkRecipeId(connection.credential.meta ?? {}),"
+      },
+      {
+        "line": 690,
+        "text": "      provenance: {"
+      },
+      {
+        "line": 691,
+        "text": "        provider: providerId,"
+      },
+      {
+        "line": 692,
+        "text": "        connectionId: connection.credential.id,"
+      },
+      {
+        "line": 693,
+        "text": "        observedAt: new Date().toISOString(),"
+      },
+      {
+        "line": 694,
+        "text": "      },"
+      },
+      {
+        "line": 695,
+        "text": "      ...(contract.content ? { content: contract.content } : {}),"
+      },
+      {
+        "line": 696,
+        "text": "      ...(wantsFigmaMcp ? { backend: \"mcp\" } : {}),"
+      },
+      {
+        "line": 697,
+        "text": "      untrustedExternalContent: true,"
+      },
+      {
+        "line": 698,
+        "text": "      data,"
+      },
+      {
+        "line": 699,
+        "text": "      ...(operation ? { operation } : {}),"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/links/remote-adapters.ts",
+    "sha256": "fa0efd76239cd3194dda45a840231818ed042d513cdd72dea907e5f5ccae4606",
+    "captureTiming": "After actual displays787649/98c3f8/8928d0/66489f/30b196/ea2a05/847d10/51441e/31293f/3102c4/2e4e93/c986a3. Only displayed lines captured; regex navigation indices reconstruct the same original matching lines. Not first-read/pre-read evidence.",
+    "displayedLines": [
+      {
+        "line": 24,
+        "text": "      \"list_repositories\","
+      },
+      {
+        "line": 35,
+        "text": "      \"get_starred\","
+      },
+      {
+        "line": 79,
+        "text": "export function normalizeRemoteFigmaFileInput(value: unknown): string {"
+      },
+      {
+        "line": 83,
+        "text": "export const LEGACY_GITHUB_ACTIONS = [\"list_repositories\", \"list_issues\", \"get_issue\"] as const;"
+      },
+      {
+        "line": 84,
+        "text": "export function getRemoteLinkProviderAdapter(id: string): RemoteLinkProviderAdapter | undefined {"
+      },
+      {
+        "line": 87,
+        "text": "export function reviewedRemoteLinkActions("
+      },
+      {
+        "line": 103,
+        "text": "export function normalizeRemoteLinkResourceId(providerId: string, value: unknown): string {"
+      },
+      {
+        "line": 152,
+        "text": "export function parseRemoteLinkResourceGroups("
+      },
+      {
+        "line": 161,
+        "text": "    (providerId === \"github\" && Array.isArray(authorization.repositories)"
+      },
+      {
+        "line": 187,
+        "text": "  if (providerId === \"github\" && authorization.repositories !== undefined) {"
+      },
+      {
+        "line": 221,
+        "text": "export function prepareRemoteLinkAction("
+      },
+      {
+        "line": 222,
+        "text": "  providerId: string,"
+      },
+      {
+        "line": 223,
+        "text": "  action: string,"
+      },
+      {
+        "line": 224,
+        "text": "  params: Record<string, unknown>,"
+      },
+      {
+        "line": 225,
+        "text": "  groups: readonly RemoteLinkResourceGroup[],"
+      },
+      {
+        "line": 226,
+        "text": "): Record<string, unknown> {"
+      },
+      {
+        "line": 227,
+        "text": "  reviewedRemoteLinkActions(providerId, [action]);"
+      },
+      {
+        "line": 228,
+        "text": "  const allowed = selected(providerId, groups);"
+      },
+      {
+        "line": 229,
+        "text": "  const requireResource = (value: unknown) => {"
+      },
+      {
+        "line": 230,
+        "text": "    const id = normalizeRemoteLinkResourceId(providerId, value);"
+      },
+      {
+        "line": 231,
+        "text": "    if (!allowed.has(id)) {"
+      },
+      {
+        "line": 232,
+        "text": "      if (providerId === \"figma\") throw new RemoteLinkResourceNotGrantedError();"
+      },
+      {
+        "line": 233,
+        "text": "      throw new Error(\"Remote Link resource is outside this grant\");"
+      },
+      {
+        "line": 234,
+        "text": "    }"
+      },
+      {
+        "line": 235,
+        "text": "    return id;"
+      },
+      {
+        "line": 236,
+        "text": "  };"
+      },
+      {
+        "line": 237,
+        "text": "  if (providerId === \"github\") {"
+      },
+      {
+        "line": 238,
+        "text": "    if (action === \"list_repositories\") {"
+      },
+      {
+        "line": 239,
+        "text": "      assertKeys(params, [\"limit\"]);"
+      },
+      {
+        "line": 240,
+        "text": "      return {};"
+      },
+      {
+        "line": 241,
+        "text": "    }"
+      },
+      {
+        "line": 242,
+        "text": "    const owner = pathSegmentParam(params, \"owner\", { required: true, maxLength: 100 })!;"
+      },
+      {
+        "line": 243,
+        "text": "    const repo = pathSegmentParam(params, \"repo\", { required: true, maxLength: 100 })!;"
+      },
+      {
+        "line": 244,
+        "text": "    const repository = requireResource(`${owner}/${repo}`);"
+      },
+      {
+        "line": 245,
+        "text": "    if (action === \"update_issue\") {"
+      },
+      {
+        "line": 246,
+        "text": "      const canonical = githubIssueStateParameters(params);"
+      },
+      {
+        "line": 247,
+        "text": "      return { repository, issue_number: canonical.issue_number, state: canonical.state };"
+      },
+      {
+        "line": 248,
+        "text": "    }"
+      },
+      {
+        "line": 249,
+        "text": "    if (action === \"get_issue\") {"
+      },
+      {
+        "line": 250,
+        "text": "      assertKeys(params, [\"owner\", \"repo\", \"issue_number\"]);"
+      },
+      {
+        "line": 251,
+        "text": "      return { repository, number: intParam(params, \"issue_number\", 0, Number.MAX_SAFE_INTEGER) };"
+      },
+      {
+        "line": 252,
+        "text": "    }"
+      },
+      {
+        "line": 253,
+        "text": "    if (action === \"list_issues\") {"
+      },
+      {
+        "line": 254,
+        "text": "      assertKeys(params, [\"owner\", \"repo\", \"limit\", \"page\", \"state\"]);"
+      },
+      {
+        "line": 255,
+        "text": "      const state = stringParam(params, \"state\") ?? \"open\";"
+      },
+      {
+        "line": 256,
+        "text": "      if (![\"open\", \"closed\", \"all\"].includes(state)) throw new Error(\"Invalid issue state\");"
+      },
+      {
+        "line": 257,
+        "text": "      return {"
+      },
+      {
+        "line": 258,
+        "text": "        repository,"
+      },
+      {
+        "line": 259,
+        "text": "        state,"
+      },
+      {
+        "line": 260,
+        "text": "        page: intParam(params, \"page\", 1, 1_000),"
+      },
+      {
+        "line": 261,
+        "text": "        ...(params.limit === undefined ? {} : { limit: intParam(params, \"limit\", 30, 100) }),"
+      },
+      {
+        "line": 262,
+        "text": "      };"
+      },
+      {
+        "line": 263,
+        "text": "    }"
+      },
+      {
+        "line": 264,
+        "text": "    if ((GITHUB_SOURCE_ACTIONS as readonly string[]).includes(action))"
+      },
+      {
+        "line": 265,
+        "text": "      return githubSourceParams(action, params);"
+      },
+      {
+        "line": 266,
+        "text": "    const output: Record<string, unknown> = { owner, repo };"
+      },
+      {
+        "line": 267,
+        "text": "    if (action === \"get_file\") {"
+      },
+      {
+        "line": 268,
+        "text": "      assertKeys(params, [\"owner\", \"repo\", \"path\", \"ref\"]);"
+      },
+      {
+        "line": 269,
+        "text": "      pathParam(params, \"path\", { required: true, maxLength: 2_000 });"
+      },
+      {
+        "line": 270,
+        "text": "      output.path = stringParam(params, \"path\", { required: true, maxLength: 2_000 });"
+      },
+      {
+        "line": 271,
+        "text": "    } else if ([\"get_readme\", \"get_repository\", \"get_starred\"].includes(action))"
+      },
+      {
+        "line": 272,
+        "text": "      assertKeys(params, [\"owner\", \"repo\"]);"
+      },
+      {
+        "line": 273,
+        "text": "    else if (action === \"set_starred\") {"
+      },
+      {
+        "line": 274,
+        "text": "      assertKeys(params, [\"owner\", \"repo\", \"starred\"]);"
+      },
+      {
+        "line": 275,
+        "text": "      if (typeof params.starred !== \"boolean\") throw new Error(\"GitHub starred must be a boolean\");"
+      },
+      {
+        "line": 276,
+        "text": "      output.starred = params.starred;"
+      },
+      {
+        "line": 277,
+        "text": "    } else if (action === \"get_pull_request\") {"
+      },
+      {
+        "line": 278,
+        "text": "      assertKeys(params, [\"owner\", \"repo\", \"pull_number\"]);"
+      },
+      {
+        "line": 279,
+        "text": "      output.pull_number = intParam(params, \"pull_number\", 0, Number.MAX_SAFE_INTEGER);"
+      },
+      {
+        "line": 280,
+        "text": "    } else if (action === \"list_pull_requests\") {"
+      },
+      {
+        "line": 281,
+        "text": "      assertKeys(params, [\"owner\", \"repo\", \"limit\", \"page\"]);"
+      },
+      {
+        "line": 282,
+        "text": "      output.limit = intParam(params, \"limit\", 30, 100);"
+      },
+      {
+        "line": 283,
+        "text": "      output.page = intParam(params, \"page\", 1, 1_000);"
+      },
+      {
+        "line": 284,
+        "text": "    } else if (action === \"create_issue\") {"
+      },
+      {
+        "line": 285,
+        "text": "      assertKeys(params, [\"owner\", \"repo\", \"title\", \"body\"]);"
+      },
+      {
+        "line": 286,
+        "text": "      output.title = stringParam(params, \"title\", { required: true, maxLength: 256 });"
+      },
+      {
+        "line": 287,
+        "text": "      const body = stringParam(params, \"body\", { maxLength: 20_000 });"
+      },
+      {
+        "line": 288,
+        "text": "      if (body) output.body = body;"
+      },
+      {
+        "line": 289,
+        "text": "    }"
+      },
+      {
+        "line": 290,
+        "text": "    if (action === \"get_file\") {"
+      },
+      {
+        "line": 291,
+        "text": "      const ref = stringParam(params, \"ref\", { maxLength: 300 });"
+      },
+      {
+        "line": 292,
+        "text": "      if (ref) output.ref = ref;"
+      },
+      {
+        "line": 293,
+        "text": "    }"
+      },
+      {
+        "line": 294,
+        "text": "    return output;"
+      },
+      {
+        "line": 295,
+        "text": "  }"
+      },
+      {
+        "line": 296,
+        "text": "  if (providerId === \"slack\" && [\"get_message\", \"get_thread\"].includes(action)) {"
+      },
+      {
+        "line": 356,
+        "text": "  return output;"
+      },
+      {
+        "line": 394,
+        "text": "export function normalizeRemoteLinkActionResult("
+      },
+      {
+        "line": 395,
+        "text": "  providerId: string,"
+      },
+      {
+        "line": 396,
+        "text": "  action: string,"
+      },
+      {
+        "line": 397,
+        "text": "  raw: unknown,"
+      },
+      {
+        "line": 398,
+        "text": "  params: Record<string, unknown>,"
+      },
+      {
+        "line": 399,
+        "text": "  groups: readonly RemoteLinkResourceGroup[],"
+      },
+      {
+        "line": 400,
+        "text": "): unknown {"
+      },
+      {
+        "line": 401,
+        "text": "  const allowed = selected(providerId, groups);"
+      },
+      {
+        "line": 402,
+        "text": "  const permitted = (id: unknown) => {"
+      },
+      {
+        "line": 403,
+        "text": "    try {"
+      },
+      {
+        "line": 404,
+        "text": "      return allowed.has("
+      },
+      {
+        "line": 405,
+        "text": "        normalizeRemoteLinkResourceId(providerId, typeof id === \"number\" ? String(id) : id),"
+      },
+      {
+        "line": 406,
+        "text": "      );"
+      },
+      {
+        "line": 407,
+        "text": "    } catch {"
+      },
+      {
+        "line": 408,
+        "text": "      return false;"
+      },
+      {
+        "line": 409,
+        "text": "    }"
+      },
+      {
+        "line": 410,
+        "text": "  };"
+      },
+      {
+        "line": 411,
+        "text": "  const record = asRecord(raw);"
+      },
+      {
+        "line": 412,
+        "text": "  if (providerId === \"github\") {"
+      },
+      {
+        "line": 413,
+        "text": "    if ((GITHUB_SOURCE_ACTIONS as readonly string[]).includes(action)) {"
+      },
+      {
+        "line": 414,
+        "text": "      if (!permitted(`${params.owner}/${params.repo}`)) throw new Error(\"Unauthorized repository\");"
+      },
+      {
+        "line": 415,
+        "text": "      return normalizeGithubSourceResult(action, params, raw);"
+      },
+      {
+        "line": 416,
+        "text": "    }"
+      },
+      {
+        "line": 417,
+        "text": "    if ([\"list_repositories\", \"list_issues\", \"list_pull_requests\"].includes(action)) {"
+      },
+      {
+        "line": 418,
+        "text": "      if (!Array.isArray(raw)) throw new Error(\"Invalid remote Link result\");"
+      },
+      {
+        "line": 419,
+        "text": "      const values = raw.filter((item) =>"
+      },
+      {
+        "line": 420,
+        "text": "        action === \"list_repositories\""
+      },
+      {
+        "line": 421,
+        "text": "          ? permitted(asRecord(item)?.full_name)"
+      },
+      {
+        "line": 422,
+        "text": "          : action !== \"list_issues\" || !asRecord(item)?.pull_request,"
+      },
+      {
+        "line": 423,
+        "text": "      );"
+      },
+      {
+        "line": 424,
+        "text": "      const key ="
+      },
+      {
+        "line": 425,
+        "text": "        action === \"list_repositories\""
+      },
+      {
+        "line": 426,
+        "text": "          ? \"repositories\""
+      },
+      {
+        "line": 427,
+        "text": "          : action === \"list_issues\""
+      },
+      {
+        "line": 428,
+        "text": "            ? \"issues\""
+      },
+      {
+        "line": 429,
+        "text": "            : \"pull_requests\";"
+      },
+      {
+        "line": 430,
+        "text": "      const fields ="
+      },
+      {
+        "line": 431,
+        "text": "        action === \"list_repositories\""
+      },
+      {
+        "line": 432,
+        "text": "          ? ["
+      },
+      {
+        "line": 433,
+        "text": "              \"id\","
+      },
+      {
+        "line": 434,
+        "text": "              \"full_name\","
+      },
+      {
+        "line": 435,
+        "text": "              \"description\","
+      },
+      {
+        "line": 436,
+        "text": "              \"private\","
+      },
+      {
+        "line": 437,
+        "text": "              \"archived\","
+      },
+      {
+        "line": 438,
+        "text": "              \"default_branch\","
+      },
+      {
+        "line": 439,
+        "text": "              \"html_url\","
+      },
+      {
+        "line": 440,
+        "text": "              \"updated_at\","
+      },
+      {
+        "line": 441,
+        "text": "            ]"
+      },
+      {
+        "line": 442,
+        "text": "          : action === \"list_issues\""
+      },
+      {
+        "line": 443,
+        "text": "            ? [\"number\", \"title\", \"state\", \"html_url\", \"created_at\", \"updated_at\", \"user\", \"labels\"]"
+      },
+      {
+        "line": 444,
+        "text": "            : pullFields;"
+      },
+      {
+        "line": 445,
+        "text": "      return {"
+      },
+      {
+        "line": 446,
+        "text": "        [key]: values"
+      },
+      {
+        "line": 447,
+        "text": "          .slice(0, intParam(params, \"limit\", 30, 100))"
+      },
+      {
+        "line": 448,
+        "text": "          .map((item) => pick(item, fields)),"
+      },
+      {
+        "line": 449,
+        "text": "      };"
+      },
+      {
+        "line": 450,
+        "text": "    }"
+      },
+      {
+        "line": 451,
+        "text": "    if (!record) throw new Error(\"Invalid remote Link result\");"
+      },
+      {
+        "line": 452,
+        "text": "    if (action === \"get_repository\") {"
+      },
+      {
+        "line": 453,
+        "text": "      if (!permitted(record.full_name))"
+      },
+      {
+        "line": 454,
+        "text": "        throw new Error(\"Remote Link returned an unauthorized repository\");"
+      },
+      {
+        "line": 455,
+        "text": "      return pick(record, [\"id\", \"full_name\", \"private\", \"archived\", \"html_url\"]);"
+      },
+      {
+        "line": 456,
+        "text": "    }"
+      },
+      {
+        "line": 457,
+        "text": "    if (action === \"get_starred\") {"
+      },
+      {
+        "line": 458,
+        "text": "      if (typeof record.starred !== \"boolean\") throw new Error(\"Invalid remote Star state\");"
+      },
+      {
+        "line": 459,
+        "text": "      return { starred: record.starred };"
+      },
+      {
+        "line": 460,
+        "text": "    }"
+      },
+      {
+        "line": 461,
+        "text": "    if (action === \"set_starred\" || action === \"update_issue\") {"
+      },
+      {
+        "line": 462,
+        "text": "      if (record.acknowledged !== true) throw new Error(\"Invalid remote Star acknowledgement\");"
+      },
+      {
+        "line": 463,
+        "text": "      return { acknowledged: true };"
+      },
+      {
+        "line": 464,
+        "text": "    }"
+      },
+      {
+        "line": 465,
+        "text": "    if ([\"get_readme\", \"get_file\"].includes(action)) {"
+      },
+      {
+        "line": 570,
+        "text": "  return output;"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/links/remote.ts",
+    "sha256": "4834bb4cc18d4c65b0db24b43369a7e3637fae697592bec0226c15ce69065cd0",
+    "captureTiming": "After actual displays787649/98c3f8/8928d0/66489f/30b196/ea2a05/847d10/51441e/31293f/3102c4/2e4e93/c986a3. Only displayed lines captured; regex navigation indices reconstruct the same original matching lines. Not first-read/pre-read evidence.",
+    "displayedLines": [
+      {
+        "line": 19,
+        "text": "  normalizeRemoteLinkActionResult,"
+      },
+      {
+        "line": 22,
+        "text": "  prepareRemoteLinkAction,"
+      },
+      {
+        "line": 639,
+        "text": "  params: Record<string, unknown>;"
+      },
+      {
+        "line": 663,
+        "text": "    !asRecord(input.params) ||"
+      },
+      {
+        "line": 773,
+        "text": "      credential.meta?.linkProvider !== providerId ||"
+      },
+      {
+        "line": 774,
+        "text": "      !(adapter.actions as readonly string[]).includes(input.action) ||"
+      },
+      {
+        "line": 775,
+        "text": "      !credential.meta?.linkCapabilityIds?.includes(`${providerId}.${input.action}`)"
+      },
+      {
+        "line": 776,
+        "text": "    )"
+      },
+      {
+        "line": 777,
+        "text": "      throw new RemoteLinkError(\"forbidden\");"
+      },
+      {
+        "line": 778,
+        "text": "  };"
+      },
+      {
+        "line": 779,
+        "text": "  const resources = (credential: Credential) => {"
+      },
+      {
+        "line": 780,
+        "text": "    try {"
+      },
+      {
+        "line": 781,
+        "text": "      return parseRemoteLinkResourceGroups("
+      },
+      {
+        "line": 782,
+        "text": "        providerId,"
+      },
+      {
+        "line": 783,
+        "text": "        credential.meta?.linkResourceGroups"
+      },
+      {
+        "line": 784,
+        "text": "          ? { resourceGroups: credential.meta.linkResourceGroups }"
+      },
+      {
+        "line": 785,
+        "text": "          : { repositories: credential.meta?.linkResourceLabels },"
+      },
+      {
+        "line": 786,
+        "text": "      );"
+      },
+      {
+        "line": 787,
+        "text": "    } catch {"
+      },
+      {
+        "line": 788,
+        "text": "      throw new RemoteLinkError(\"reconnect\", { reason: \"resource_mismatch\" });"
+      },
+      {
+        "line": 789,
+        "text": "    }"
+      },
+      {
+        "line": 790,
+        "text": "  };"
+      },
+      {
+        "line": 791,
+        "text": "  const prepare = (credential: Credential) => {"
+      },
+      {
+        "line": 792,
+        "text": "    assertAction(credential);"
+      },
+      {
+        "line": 793,
+        "text": "    try {"
+      },
+      {
+        "line": 794,
+        "text": "      return prepareRemoteLinkAction(providerId, input.action, input.params, resources(credential));"
+      },
+      {
+        "line": 795,
+        "text": "    } catch (error) {"
+      },
+      {
+        "line": 796,
+        "text": "      if (error instanceof RemoteLinkError) throw error;"
+      },
+      {
+        "line": 797,
+        "text": "      if (error instanceof UnsupportedFigmaFileTypeError)"
+      },
+      {
+        "line": 798,
+        "text": "        throw new RemoteLinkError(\"unsupported_file_type\");"
+      },
+      {
+        "line": 799,
+        "text": "      if (error instanceof RemoteLinkResourceNotGrantedError)"
+      },
+      {
+        "line": 800,
+        "text": "        throw new RemoteLinkError(\"file_not_authorized\");"
+      },
+      {
+        "line": 801,
+        "text": "      throw new RemoteLinkError(\"forbidden\");"
+      },
+      {
+        "line": 802,
+        "text": "    }"
+      },
+      {
+        "line": 803,
+        "text": "  };"
+      },
+      {
+        "line": 804,
+        "text": "  const parse = (credential: Credential) => {"
+      },
+      {
+        "line": 805,
+        "text": "    if (!isCredentialSecretAvailable(credential.secret))"
+      },
+      {
+        "line": 806,
+        "text": "      throw new RemoteLinkError(\"reconnect\", { reason: \"secret_unavailable\" });"
+      },
+      {
+        "line": 853,
+        "text": "    prepare(current);"
+      },
+      {
+        "line": 952,
+        "text": "  const body = preflight(current, () => prepare(current));"
+      },
+      {
+        "line": 968,
+        "text": "      throw new RemoteLinkError(\"reconnect\", { reason: \"invalid_connection\" });"
+      },
+      {
+        "line": 969,
+        "text": "    return value;"
+      },
+      {
+        "line": 970,
+        "text": "  });"
+      },
+      {
+        "line": 971,
+        "text": "  report({ stage: \"preflight\", outcome: \"succeeded\" });"
+      },
+      {
+        "line": 972,
+        "text": "  assertAuthorized();"
+      },
+      {
+        "line": 973,
+        "text": "  let response: Record<string, unknown>;"
+      },
+      {
+        "line": 974,
+        "text": "  try {"
+      },
+      {
+        "line": 975,
+        "text": "    response = await request("
+      },
+      {
+        "line": 976,
+        "text": "      secret.issuer,"
+      },
+      {
+        "line": 977,
+        "text": "      `/api/v1/data/connections/${connection}/actions/${input.action}`,"
+      },
+      {
+        "line": 978,
+        "text": "      {"
+      },
+      {
+        "line": 979,
+        "text": "        method: \"POST\","
+      },
+      {
+        "line": 980,
+        "text": "        headers: {"
+      },
+      {
+        "line": 981,
+        "text": "          Authorization: `Bearer ${secret.accessToken}`,"
+      },
+      {
+        "line": 982,
+        "text": "          \"Content-Type\": \"application/json\","
+      },
+      {
+        "line": 983,
+        "text": "        },"
+      },
+      {
+        "line": 984,
+        "text": "        body: JSON.stringify(body),"
+      },
+      {
+        "line": 985,
+        "text": "        signal: options.signal,"
+      },
+      {
+        "line": 986,
+        "text": "      },"
+      },
+      {
+        "line": 987,
+        "text": "      providerId === \"figma\" ? FIGMA_RESPONSE_BYTES : undefined,"
+      },
+      {
+        "line": 988,
+        "text": "      { stage: \"action\", report },"
+      },
+      {
+        "line": 989,
+        "text": "    );"
+      },
+      {
+        "line": 990,
+        "text": "  } catch (error) {"
+      },
+      {
+        "line": 991,
+        "text": "    if (error instanceof RemoteLinkError && error.code === \"reconnect\") {"
+      },
+      {
+        "line": 992,
+        "text": "      writeState(current, \"reconnect\");"
+      },
+      {
+        "line": 993,
+        "text": "    }"
+      },
+      {
+        "line": 994,
+        "text": "    throw error;"
+      },
+      {
+        "line": 995,
+        "text": "  }"
+      },
+      {
+        "line": 996,
+        "text": "  assertAuthorized();"
+      },
+      {
+        "line": 997,
+        "text": "  const latest = read();"
+      },
+      {
+        "line": 998,
+        "text": "  if ("
+      },
+      {
+        "line": 999,
+        "text": "    latest.meta?.linkRemoteState !== \"connected\" ||"
+      },
+      {
+        "line": 1000,
+        "text": "    latest.meta.linkRemoteConnectionId !== connection ||"
+      },
+      {
+        "line": 1001,
+        "text": "    latest.meta.linkRemoteIssuer !== secret.issuer ||"
+      },
+      {
+        "line": 1002,
+        "text": "    !latest.meta.linkCapabilityIds?.includes(`${providerId}.${input.action}`) ||"
+      },
+      {
+        "line": 1003,
+        "text": "    authority(latest) !== originalAuthority"
+      },
+      {
+        "line": 1004,
+        "text": "  )"
+      },
+      {
+        "line": 1005,
+        "text": "    throw new RemoteLinkError(\"changed\");"
+      },
+      {
+        "line": 1006,
+        "text": "  assertAuthorized();"
+      },
+      {
+        "line": 1007,
+        "text": "  try {"
+      },
+      {
+        "line": 1008,
+        "text": "    return normalizeRemoteLinkActionResult("
+      },
+      {
+        "line": 1009,
+        "text": "      providerId,"
+      },
+      {
+        "line": 1010,
+        "text": "      input.action,"
+      },
+      {
+        "line": 1011,
+        "text": "      response.result,"
+      },
+      {
+        "line": 1012,
+        "text": "      input.params,"
+      },
+      {
+        "line": 1013,
+        "text": "      resources(latest),"
+      },
+      {
+        "line": 1014,
+        "text": "    );"
+      },
+      {
+        "line": 1015,
+        "text": "  } catch (error) {"
+      },
+      {
+        "line": 1016,
+        "text": "    if (error instanceof FigmaContentUnavailableError)"
+      },
+      {
+        "line": 1017,
+        "text": "      throw new RemoteLinkError(\"content_unavailable\");"
+      },
+      {
+        "line": 1018,
+        "text": "    if (error instanceof LinkProviderResponseTooLargeError)"
+      },
+      {
+        "line": 1019,
+        "text": "      throw new RemoteLinkError(\"response_too_large\");"
+      },
+      {
+        "line": 1020,
+        "text": "    throw new RemoteLinkError(\"unavailable\");"
+      },
+      {
+        "line": 1021,
+        "text": "  }"
+      },
+      {
+        "line": 1022,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/links/providers/defaults.ts",
+    "sha256": "5018a7d16dc3d5b3bd740dafd62bc8389f430110c819801a9739f767e40e9a72",
+    "captureTiming": "After actual displays787649/98c3f8/8928d0/66489f/30b196/ea2a05/847d10/51441e/31293f/3102c4/2e4e93/c986a3. Only displayed lines captured; regex navigation indices reconstruct the same original matching lines. Not first-read/pre-read evidence.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import { executeLinkOperation } from \"../runtime/operation.js\";"
+      },
+      {
+        "line": 183,
+        "text": "    limit = 50,"
+      },
+      {
+        "line": 186,
+        "text": "      .slice(0, limit)"
+      },
+      {
+        "line": 218,
+        "text": "          \"Read GitHub contribution evidence; params: owner, repo, pull_number (or full sha for get_commit), optional page/limit. Returns bounded patches and authors, never inferred responsibility.\","
+      },
+      {
+        "line": 225,
+        "text": "              }),"
+      },
+      {
+        "line": 226,
+        "text": "            ),"
+      },
+      {
+        "line": 227,
+        "text": "        ),"
+      },
+      {
+        "line": 228,
+        "text": "      ),"
+      },
+      {
+        "line": 229,
+        "text": "      action("
+      },
+      {
+        "line": 230,
+        "text": "        \"list_repositories\","
+      },
+      {
+        "line": 231,
+        "text": "        \"列出仓库\","
+      },
+      {
+        "line": 232,
+        "text": "        \"列出当前 Token 可访问的 GitHub 仓库。\","
+      },
+      {
+        "line": 233,
+        "text": "        async (ctx) => {"
+      },
+      {
+        "line": 234,
+        "text": "          const url = new URL(\"https://api.github.com/user/repos\");"
+      },
+      {
+        "line": 235,
+        "text": "          url.searchParams.set(\"per_page\", String(intParam(ctx.params, \"limit\", 30, 100)));"
+      },
+      {
+        "line": 236,
+        "text": "          url.searchParams.set(\"sort\", \"updated\");"
+      },
+      {
+        "line": 237,
+        "text": "          const data = await request(ctx, url, {"
+      },
+      {
+        "line": 238,
+        "text": "            headers: githubHeaders(ctx.token),"
+      },
+      {
+        "line": 239,
+        "text": "          });"
+      },
+      {
+        "line": 240,
+        "text": "          return {"
+      },
+      {
+        "line": 241,
+        "text": "            repositories: compactList("
+      },
+      {
+        "line": 242,
+        "text": "              data,"
+      },
+      {
+        "line": 243,
+        "text": "              ["
+      },
+      {
+        "line": 244,
+        "text": "                \"id\","
+      },
+      {
+        "line": 245,
+        "text": "                \"full_name\","
+      },
+      {
+        "line": 246,
+        "text": "                \"description\","
+      },
+      {
+        "line": 247,
+        "text": "                \"private\","
+      },
+      {
+        "line": 248,
+        "text": "                \"archived\","
+      },
+      {
+        "line": 249,
+        "text": "                \"default_branch\","
+      },
+      {
+        "line": 250,
+        "text": "                \"html_url\","
+      },
+      {
+        "line": 251,
+        "text": "                \"updated_at\","
+      },
+      {
+        "line": 252,
+        "text": "              ],"
+      },
+      {
+        "line": 253,
+        "text": "              100,"
+      },
+      {
+        "line": 254,
+        "text": "            ),"
+      },
+      {
+        "line": 255,
+        "text": "          };"
+      },
+      {
+        "line": 256,
+        "text": "        },"
+      },
+      {
+        "line": 257,
+        "text": "      ),"
+      },
+      {
+        "line": 343,
+        "text": "        \"列出 GitHub Issue（排除 Pull Request）；params: owner, repo，可选 limit、page（1..1000）、state（open/closed/all，默认open）。\","
+      },
+      {
+        "line": 350,
+        "text": "          url.searchParams.set(\"per_page\", String(intParam(ctx.params, \"limit\", 30, 100)));"
+      },
+      {
+        "line": 416,
+        "text": "        \"列出 GitHub Pull Request；params: owner, repo，可选 limit、page（1..1000）。\","
+      },
+      {
+        "line": 423,
+        "text": "          url.searchParams.set(\"per_page\", String(intParam(ctx.params, \"limit\", 30, 100)));"
+      },
+      {
+        "line": 587,
+        "text": "        url.searchParams.set(\"per_page\", String(intParam(ctx.params, \"limit\", 30, 100)));"
+      },
+      {
+        "line": 609,
+        "text": "        url.searchParams.set(\"per_page\", String(intParam(ctx.params, \"limit\", 30, 100)));"
+      },
+      {
+        "line": 775,
+        "text": "                  page_size: intParam(ctx.params, \"limit\", 30, 100),"
+      },
+      {
+        "line": 855,
+        "text": "        const first = intParam(ctx.params, \"limit\", 30, 50);"
+      },
+      {
+        "line": 912,
+        "text": "            : \"Read one Slack thread page; params: channel, ts (parent), optional permalink/cursor/limit (max 15). Channel threads may require a user token.\","
+      },
+      {
+        "line": 921,
+        "text": "                limit: String(p.limit),"
+      },
+      {
+        "line": 946,
+        "text": "          limit: String(intParam(ctx.params, \"limit\", 50, 200)),"
+      },
+      {
+        "line": 961,
+        "text": "        \"读取 Slack 频道最近消息；params: channel, 可选 limit（最多 15）。\","
+      },
+      {
+        "line": 966,
+        "text": "            limit: String(intParam(ctx.params, \"limit\", 15, 15)),"
+      },
+      {
+        "line": 1109,
+        "text": "        url.searchParams.set(\"limit\", String(intParam(ctx.params, \"limit\", 50, 100)));"
+      },
+      {
+        "line": 1136,
+        "text": "        url.searchParams.set(\"limit\", String(intParam(ctx.params, \"limit\", 50, 100)));"
+      },
+      {
+        "line": 1155,
+        "text": "          url.searchParams.set(\"limit\", String(intParam(ctx.params, \"limit\", 50, 100)));"
+      },
+      {
+        "line": 1190,
+        "text": "        executeLinkOperation({"
+      }
+    ]
+  },
+  {
+    "path": "packages/link/src/operations.test.ts",
+    "sha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+    "captureTiming": "After actual displays787649/98c3f8/8928d0/66489f/30b196/ea2a05/847d10/51441e/31293f/3102c4/2e4e93/c986a3. Only displayed lines captured; regex navigation indices reconstruct the same original matching lines. Not first-read/pre-read evidence.",
+    "displayedLines": [
+      {
+        "line": 3,
+        "text": "import { LINK_OPERATION_CONTRACTS, getLinkOperationContract } from \"./operations.js\";"
+      },
+      {
+        "line": 19,
+        "text": "  capabilityIds: [\"github.create_issue\", \"github.list_repositories\"],"
+      },
+      {
+        "line": 26,
+        "text": "describe(\"reviewed operation contracts\", () => {"
+      },
+      {
+        "line": 27,
+        "text": "  test(\"the complete catalog equals the committed immutable snapshot\", () => {"
+      },
+      {
+        "line": 28,
+        "text": "    expect("
+      },
+      {
+        "line": 29,
+        "text": "      Object.fromEntries(LINK_OPERATION_CONTRACTS.map((item) => [item.operationId, item])),"
+      },
+      {
+        "line": 30,
+        "text": "    ).toEqual("
+      },
+      {
+        "line": 31,
+        "text": "      JSON.parse(readFileSync(new URL(\"../contracts/operations.v1.json\", import.meta.url), \"utf8\")),"
+      },
+      {
+        "line": 32,
+        "text": "    );"
+      },
+      {
+        "line": 33,
+        "text": "    expect(new Set(LINK_OPERATION_CONTRACTS.map((item) => item.operationId)).size).toBe("
+      },
+      {
+        "line": 34,
+        "text": "      LINK_OPERATION_CONTRACTS.length,"
+      },
+      {
+        "line": 35,
+        "text": "    );"
+      },
+      {
+        "line": 36,
+        "text": "    for (const contract of LINK_OPERATION_CONTRACTS) {"
+      },
+      {
+        "line": 37,
+        "text": "      expect(contract.action).toMatch(/^[a-z_]+$/);"
+      },
+      {
+        "line": 38,
+        "text": "      expect(Object.isFrozen(contract.inputSchema)).toBe(true);"
+      },
+      {
+        "line": 39,
+        "text": "      expect(contract.resourcePolicy.group).toBeTruthy();"
+      },
+      {
+        "line": 40,
+        "text": "      expect(contract.effect === \"write\").toBe(contract.repeatability === \"verified-write-once\");"
+      },
+      {
+        "line": 41,
+        "text": "    }"
+      },
+      {
+        "line": 42,
+        "text": "  });"
+      },
+      {
+        "line": 43,
+        "text": "  test(\"legacy Figma summary and explicit content have separate contracts\", () => {"
+      },
+      {
+        "line": 44,
+        "text": "    const legacy = getLinkOperationContract(\"figma\", \"get_file\")!;"
+      },
+      {
+        "line": 45,
+        "text": "    const content = getLinkOperationContract(\"figma\", \"read_design_content\")!;"
+      },
+      {
+        "line": 46,
+        "text": "    expect(legacy.defaults.depth).toBe(1);"
+      },
+      {
+        "line": 47,
+        "text": "    expect(content.defaults.depth).toBe(2);"
+      },
+      {
+        "line": 50,
+        "text": "      assertLinkOperationResult(getLinkOperationContract(\"figma\", \"get_nodes\")!, {}),"
+      },
+      {
+        "line": 62,
+        "text": "  test(\"a create operation authorizes its parent resource without a content trait\", () => {"
+      },
+      {
+        "line": 63,
+        "text": "    const contract = getLinkOperationContract(\"github\", \"create_issue\")!;"
+      },
+      {
+        "line": 64,
+        "text": "    expect(contract.content).toBeUndefined();"
+      },
+      {
+        "line": 66,
+        "text": "      contract,"
+      },
+      {
+        "line": 72,
+        "text": "        contract,"
+      },
+      {
+        "line": 79,
+        "text": "        contract,"
+      },
+      {
+        "line": 85,
+        "text": "  test(\"full Figma results preserve deep JSON nodes and arbitrary nested data keys\", () => {"
+      },
+      {
+        "line": 90,
+        "text": "    assertLinkOperationResult(getLinkOperationContract(\"figma\", \"read_design_content\")!, {"
+      },
+      {
+        "line": 95,
+        "text": "      assertLinkOperationResult(getLinkOperationContract(\"figma\", \"read_design_content\")!, {"
+      },
+      {
+        "line": 100,
+        "text": "  test(\"broker listings require explicit resources and cannot use upstream-scoped authority\", () => {"
+      },
+      {
+        "line": 101,
+        "text": "    const contract = getLinkOperationContract(\"github\", \"list_repositories\")!;"
+      },
+      {
+        "line": 104,
+        "text": "        contract,"
+      },
+      {
+        "line": 111,
+        "text": "        contract,"
+      },
+      {
+        "line": 117,
+        "text": "  test(\"every listing filters selected resources and drops missing or crossed identities\", () => {"
+      },
+      {
+        "line": 118,
+        "text": "    const contract = getLinkOperationContract(\"github\", \"list_repositories\")!;"
+      },
+      {
+        "line": 121,
+        "text": "        contract,"
+      },
+      {
+        "line": 132,
+        "text": "    const linear = getLinkOperationContract(\"linear\", \"list_issues\")!;"
+      },
+      {
+        "line": 156,
+        "text": "  test(\"resource URLs never supply an arbitrary endpoint\", () => {"
+      },
+      {
+        "line": 157,
+        "text": "    const contract = getLinkOperationContract(\"figma\", \"get_file\")!;"
+      },
+      {
+        "line": 168,
+        "text": "      contract,"
+      },
+      {
+        "line": 179,
+        "text": "      expect(() => assertLinkOperationAuthorized(contract, { file_url_or_key }, auth)).toThrow();"
+      },
+      {
+        "line": 180,
+        "text": "  });"
+      },
+      {
+        "line": 181,
+        "text": "  test(\"inputs and results are bounded before adapters can use them\", () => {"
+      },
+      {
+        "line": 182,
+        "text": "    const contract = getLinkOperationContract(\"github\", \"get_starred\")!;"
+      },
+      {
+        "line": 183,
+        "text": "    expect(() =>"
+      },
+      {
+        "line": 184,
+        "text": "      validateLinkOperationInput(contract, {"
+      },
+      {
+        "line": 185,
+        "text": "        owner: \"a\","
+      },
+      {
+        "line": 186,
+        "text": "        repo: \"b\","
+      },
+      {
+        "line": 187,
+        "text": "        endpoint: \"https://attacker.test\","
+      },
+      {
+        "line": 188,
+        "text": "      }),"
+      },
+      {
+        "line": 189,
+        "text": "    ).toThrow();"
+      },
+      {
+        "line": 190,
+        "text": "    for (const key of [\"toString\", \"valueOf\", \"hasOwnProperty\"])"
+      },
+      {
+        "line": 191,
+        "text": "      expect(() =>"
+      },
+      {
+        "line": 192,
+        "text": "        validateLinkOperationInput(contract, { owner: \"a\", repo: \"b\", [key]: \"unknown\" }),"
+      },
+      {
+        "line": 193,
+        "text": "      ).toThrow();"
+      },
+      {
+        "line": 194,
+        "text": "    expect(() =>"
+      },
+      {
+        "line": 195,
+        "text": "      validateLinkOperationInput(contract, JSON.parse('{\"owner\":\"a\",\"repo\":\"b\",\"__proto__\":{}}')),"
+      },
+      {
+        "line": 196,
+        "text": "    ).toThrow();"
+      },
+      {
+        "line": 197,
+        "text": "    assertLinkOperationResult(contract, { starred: true });"
+      },
+      {
+        "line": 198,
+        "text": "    expect(() => assertLinkOperationResult(contract, { starred: \"yes\" })).toThrow();"
+      },
+      {
+        "line": 199,
+        "text": "    expect(() =>"
+      },
+      {
+        "line": 200,
+        "text": "      assertLinkOperationResult(contract, { starred: true, data: \"x\".repeat(1024 * 1024) }),"
+      },
+      {
+        "line": 201,
+        "text": "    ).toThrow();"
+      },
+      {
+        "line": 203,
+        "text": "  test(\"recipes derive custody relative to the current Host\", () => {"
+      }
+    ]
+  }
+]

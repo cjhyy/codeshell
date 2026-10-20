@@ -1,0 +1,47 @@
+{
+  "rootReportedBaseline": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "gitCertified": false,
+  "instructionReuse": "Same-SHA CODESHELL217 full read in136; AGENTS prior read reused. No new instruction body in140.",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T19:16:48.447935+00:00",
+      "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T19:16:48.448177+00:00",
+      "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+    },
+    {
+      "path": "packages/web/src/lib/storage.ts",
+      "bytes": 2114,
+      "lineCount": 57,
+      "sha256": "86312680d2363fc3b69945527aeaa24130bfddbfff620404c99e189fea87237d",
+      "pinnedAtUTC": "2026-10-17T19:16:48.448460+00:00",
+      "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+    },
+    {
+      "path": "packages/web/src/lib/deviceCredential.ts",
+      "bytes": 985,
+      "lineCount": 22,
+      "sha256": "c9b1bb11317bf0b11310d6731024e80c262ba684712b4240f498be0dec22ab20",
+      "pinnedAtUTC": "2026-10-17T19:16:48.448757+00:00",
+      "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+    },
+    {
+      "path": "packages/web/src/lib/environment.ts",
+      "bytes": 1644,
+      "lineCount": 43,
+      "sha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+      "pinnedAtUTC": "2026-10-17T19:16:48.448953+00:00",
+      "timing": "before own body/navigation; filenames confirmed by inventory.first.stdout"
+    }
+  ]
+}

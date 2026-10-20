@@ -1,0 +1,13 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "scripts",
+    "-g",
+    "*release*",
+    "-g",
+    "*version*"
+  ],
+  "exitCode": 0,
+  "atUTC": "2026-10-17T19:54:32.014455+00:00"
+}

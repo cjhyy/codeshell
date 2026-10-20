@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "totalLines": 1139,
+      "pinBefore": "new dependency history query or body read"
+    },
+    {
+      "path": "packages/core/src/links/operation-hook-custody.ts",
+      "bytes": 3460,
+      "sha256": "ca8631e3c422002f7874c3b474b05e4ce49704996ecee961fe9596864f12bd69",
+      "totalLines": 82,
+      "pinBefore": "new dependency history query or body read"
+    }
+  ]
+}

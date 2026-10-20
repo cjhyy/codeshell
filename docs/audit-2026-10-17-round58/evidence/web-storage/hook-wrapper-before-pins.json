@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/web/src/index.ts",
+      "bytes": 2491,
+      "lineCount": 62,
+      "sha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "pinnedAtUTC": "2026-10-17T19:19:21.512264+00:00",
+      "timing": "before body/nav; filename-only a365a7"
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "bytes": 73050,
+      "lineCount": 1831,
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "pinnedAtUTC": "2026-10-17T19:19:21.515268+00:00",
+      "timing": "before body/nav; filename-only a365a7"
+    }
+  ]
+}

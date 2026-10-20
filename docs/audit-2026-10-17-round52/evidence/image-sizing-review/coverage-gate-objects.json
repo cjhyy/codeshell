@@ -1,0 +1,1816 @@
+{
+  "objects": [
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "pointer": "/files/2557",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "bytes": 8303,
+        "lines": 218,
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+      "documentSha256": "24521cc48937990df3f7354716a15dc0045eab96fc171ef7227ecbd544437cc3",
+      "pointer": "/chatview/0",
+      "originalObjectKeys": [
+        "path",
+        "locator",
+        "valueChars",
+        "offset",
+        "contextStart",
+        "contextEnd",
+        "text",
+        "wholeValueIncluded"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "text": {
+          "boundedString": "`packages/desktop/src/renderer/SidebarNav.tsx:46`，`packages/desktop/src/renderer/SidebarNav.tsx:57` | 点击侧栏图标切换模块 |\n| **TopBar 状态与面板入口** | 显示项目、会话状态、运行状态、目标状态和右侧面板开关 | `packages/desktop/src/renderer/TopBar.tsx:51`，`packages/desktop/src/renderer/TopBar.tsx:133`，`packages/desktop/src/renderer/TopBar.tsx:260` | 顶栏查看状态或打开面板 |\n| **对话/聊天发送** | 聊天主界面，空态 composer 居中，有消息后 composer 固定底部；发送消息进 AgentBridge | `packages/desktop/src/renderer/ChatView.tsx:171`，`packages/desktop/src/renderer/ChatView.tsx:569`，`packages/desktop/src/preload/index.ts:237` | 输入消息后 Enter 发送，Shift+Enter 换行 |\n| **消息流与工具卡** | 折叠/分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示",
+          "originalCharacters": 1300,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_path/2",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "rc/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.",
+          "originalCharacters": 1092,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_path/3",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": " transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/Mentio",
+          "originalCharacters": 1092,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_path/4",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/Ch",
+          "originalCharacters": 1092,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_path/5",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/au",
+          "originalCharacters": 1092,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_path/6",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "hatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent g",
+          "originalCharacters": 1092,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_path/31",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "\n回归风险面：\n\n- main IPC 不能阻塞 UI 太久，大图 hash/write 要异步。\n- 不能把 data URL 打到日志。\n- Windows 路径和中文文件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireForDisplay`",
+          "originalCharacters": 1092,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_filename/2",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "dShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/r",
+          "originalCharacters": 1062,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_filename/3",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/des",
+          "originalCharacters": 1062,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_filename/4",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 defa",
+          "originalCharacters": 1062,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_filename/5",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "ktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** ",
+          "originalCharacters": 1062,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_filename/6",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "ktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.ts:26`，`packages/desktop/src/renderer/chat/MentionPopover.tsx:41`，`packages/desktop/src/renderer/ChatView.tsx:1117` | 输入 `@` 后键盘选择补全项 |\n| **权限模式切换** | composer 权限药丸映射到 core permission mode | `packages/desktop/src/renderer/chat/PermissionPill.tsx:70`，`packages/desktop/src/renderer/ChatView.tsx:1261` | 点权限药丸切 default/accept edits/auto/bypass 等 |\n| **Goal 模式开关** | 持久目标开关，配合 agent goal RPC 和顶栏目标状态 | `packages/de",
+          "originalCharacters": 1062,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json",
+      "documentSha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+      "pointer": "/hits/source_filename/31",
+      "originalObjectKeys": [
+        "path",
+        "jsonPointer",
+        "line",
+        "needle",
+        "context",
+        "immediateParentForExactValue",
+        "sourceSha256"
+      ],
+      "metadataProjection": {
+        "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md"
+      },
+      "directPathBearingFields": {
+        "context": {
+          "boundedString": "，大图 hash/write 要异步。\n- 不能把 data URL 打到日志。\n- Windows 路径和中文文件名 safeSlug。\n\n### Stage 2：composer 图片状态路径化，保持 legacy wire 兼容\n\n改动文件：\n\n- `packages/desktop/src/renderer/chat/attachments.ts`\n- `packages/desktop/src/renderer/chat/attachments.test.ts`\n- `packages/desktop/src/renderer/chat/compress.ts`（只在需要保留 staged metadata 时改）\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/preload/types.d.ts`\n\n改什么：\n\n- `ImageAttachment` 扩展 `path/relPath/absPath/sha256/origin/sessionId`。\n- `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireForDisplay` 忽略未知 attrs，继续显示缩略图。\n- ChatVie",
+          "originalCharacters": 1062,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Navigation and stored metadata only. Explicit actual selected semantic ranges will be recorded separately."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/10250",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/10251",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "pointer": "/files/2876",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "status",
+        "currentExplicitFullClaimIds",
+        "currentExplicitSelectedClaimIds",
+        "currentSelectedUnionLines",
+        "claimIds",
+        "claimKindCounts"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "bytes": 8303,
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "lines": 218
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Current TS/TSX filesystem bytes joined to conservative explicit historical JSON row claims. No-row is unknown, never unread. MD-only full is not exhaustive here; all later source candidates still need precise MD+JSON prior-cause/full gate. Pending tmp semantic reads are not backfilled."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "pointer": "/files/2876",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "bytes": 8303,
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "lines": 218
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Current repository rg-visible TS/TSX filesystem paths, respecting normal repository ignore rules, excluding .git/node_modules. Not a Git tracked set or semantic read. All source bytes used only for SHA/length/byte-splitlines count; no source text displayed, parsed or executed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "pointer": "/files/2877",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "initial49ShaMatches",
+        "blockedBy49EndingOverlay",
+        "coverageStatus"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "bytes": 8303,
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "lines": 218
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Same49 rg-visible TS/TSX filesystem filter, normal repo ignores; not Git tracked inventory. Bytes used solely for SHA/length/linecount; no source body decoded/displayed/executed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+      "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+      "pointer": "/hits/shell-epoch/0",
+      "originalObjectKeys": [
+        "path",
+        "locator",
+        "valueChars",
+        "contextStart",
+        "contextEnd",
+        "text",
+        "wholeValueIncluded"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "text": {
+          "boundedString": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/",
+          "originalCharacters": 1070,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+      "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+      "pointer": "/hits/shell-epoch/25",
+      "originalObjectKeys": [
+        "path",
+        "locator",
+        "valueChars",
+        "contextStart",
+        "contextEnd",
+        "text",
+        "wholeValueIncluded"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json"
+      },
+      "directPathBearingFields": {
+        "text": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/cause-history.json",
+      "documentSha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410",
+      "pointer": "/hits/shell-summary/0",
+      "originalObjectKeys": [
+        "path",
+        "locator",
+        "valueChars",
+        "contextStart",
+        "contextEnd",
+        "text",
+        "wholeValueIncluded"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "text": {
+          "boundedString": "分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/",
+          "originalCharacters": 1070,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+      "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+      "pointer": "/toolcard/0",
+      "originalObjectKeys": [
+        "path",
+        "locator",
+        "valueChars",
+        "offset",
+        "contextStart",
+        "contextEnd",
+        "text",
+        "wholeValueIncluded"
+      ],
+      "metadataProjection": {
+        "path": "docs/architecture/11-feature-inventory.md"
+      },
+      "directPathBearingFields": {
+        "text": {
+          "boundedString": " 固定底部；发送消息进 AgentBridge | `packages/desktop/src/renderer/ChatView.tsx:171`，`packages/desktop/src/renderer/ChatView.tsx:569`，`packages/desktop/src/preload/index.ts:237` | 输入消息后 Enter 发送，Shift+Enter 换行 |\n| **消息流与工具卡** | 折叠/分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat",
+          "originalCharacters": 1300,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+      "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+      "pointer": "/toolcard/6",
+      "originalObjectKeys": [
+        "path",
+        "locator",
+        "valueChars",
+        "offset",
+        "contextStart",
+        "contextEnd",
+        "text",
+        "wholeValueIncluded"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json"
+      },
+      "directPathBearingFields": {
+        "text": {
+          "boundedString": " 固定底部；发送消息进 AgentBridge | `packages/desktop/src/renderer/ChatView.tsx:171`，`packages/desktop/src/renderer/ChatView.tsx:569`，`packages/desktop/src/preload/index.ts:237` | 输入消息后 Enter 发送，Shift+Enter 换行 |\n| **消息流与工具卡** | 折叠/分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat",
+          "originalCharacters": 927,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/history-contexts.json",
+      "documentSha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed",
+      "pointer": "/toolcard/9",
+      "originalObjectKeys": [
+        "path",
+        "locator",
+        "valueChars",
+        "offset",
+        "contextStart",
+        "contextEnd",
+        "text",
+        "wholeValueIncluded"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json"
+      },
+      "directPathBearingFields": {
+        "text": {
+          "boundedString": "rc/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.",
+          "originalCharacters": 923,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+      "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+      "pointer": "/hits/path/6",
+      "originalObjectKeys": [
+        "path",
+        "location",
+        "excerpt"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json"
+      },
+      "directPathBearingFields": {
+        "excerpt": {
+          "boundedString": "`packages/desktop/src/renderer/SidebarNav.tsx:46`，`packages/desktop/src/renderer/SidebarNav.tsx:57` | 点击侧栏图标切换模块 |\n| **TopBar 状态与面板入口** | 显示项目、会话状态、运行状态、目标状态和右侧面板开关 | `packages/desktop/src/renderer/TopBar.tsx:51`，`packages/desktop/src/renderer/TopBar.tsx:133`，`packages/desktop/src/renderer/TopBar.tsx:260` | 顶栏查看状态或打开面板 |\n| **对话/聊天发送** | 聊天主界面，空态 composer 居中，有消息后 composer 固定底部；发送消息进 AgentBridge | `packages/desktop/src/renderer/ChatView.tsx:171`，`packages/desktop/src/renderer/ChatView.tsx:569`，`packages/desktop/src/preload/index.ts:237` | 输入消息后 Enter 发送，Shift+Enter 换行 |\n| **消息流与工具卡** | 折叠/分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示",
+          "originalCharacters": 1300,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": {
+              "roots": [
+                "docs",
+                "bugs"
+              ],
+              "includeFrozenThrough": 44,
+              "excludedExactRounds": [
+                45,
+                46,
+                47,
+                48,
+                49,
+                50,
+                51,
+                52,
+                53,
+                54,
+                55
+              ],
+              "requestedExclusions": [
+                45,
+                52,
+                53,
+                54,
+                55
+              ],
+              "method": "MD lines and recursive JSON value scalars including archives; keys excluded. Original full/scope/review fields kept."
+            },
+            "totals": {
+              "files": 4088,
+              "md": 1410,
+              "json": 2678,
+              "strings": 1631727,
+              "scalars": 2469249,
+              "exactArchivePaths": 169
+            },
+            "counts": {
+              "path": 25,
+              "filename": 26,
+              "sha": 7,
+              "ordinary-contract": 218,
+              "old-failed": 19
+            },
+            "limits": [
+              "Counts and capped retained contexts are not semantic exhaustion or proof of unreadness.",
+              "No author54 report/manifest/excerpts read; only repository canonical history gate."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+      "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+      "pointer": "/hits/filename/6",
+      "originalObjectKeys": [
+        "path",
+        "location",
+        "excerpt"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json"
+      },
+      "directPathBearingFields": {
+        "excerpt": {
+          "boundedString": "`packages/desktop/src/renderer/SidebarNav.tsx:46`，`packages/desktop/src/renderer/SidebarNav.tsx:57` | 点击侧栏图标切换模块 |\n| **TopBar 状态与面板入口** | 显示项目、会话状态、运行状态、目标状态和右侧面板开关 | `packages/desktop/src/renderer/TopBar.tsx:51`，`packages/desktop/src/renderer/TopBar.tsx:133`，`packages/desktop/src/renderer/TopBar.tsx:260` | 顶栏查看状态或打开面板 |\n| **对话/聊天发送** | 聊天主界面，空态 composer 居中，有消息后 composer 固定底部；发送消息进 AgentBridge | `packages/desktop/src/renderer/ChatView.tsx:171`，`packages/desktop/src/renderer/ChatView.tsx:569`，`packages/desktop/src/preload/index.ts:237` | 输入消息后 Enter 发送，Shift+Enter 换行 |\n| **消息流与工具卡** | 折叠/分组展示 assistant、thinking、tool、agent、task、goal、文件变更等消息 | `packages/desktop/src/renderer/messages/streamGroups.ts:183`，`packages/desktop/src/renderer/messages/ToolGroupCard.tsx:66`，`packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示",
+          "originalCharacters": 1300,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": {
+              "roots": [
+                "docs",
+                "bugs"
+              ],
+              "includeFrozenThrough": 44,
+              "excludedExactRounds": [
+                45,
+                46,
+                47,
+                48,
+                49,
+                50,
+                51,
+                52,
+                53,
+                54,
+                55
+              ],
+              "requestedExclusions": [
+                45,
+                52,
+                53,
+                54,
+                55
+              ],
+              "method": "MD lines and recursive JSON value scalars including archives; keys excluded. Original full/scope/review fields kept."
+            },
+            "totals": {
+              "files": 4088,
+              "md": 1410,
+              "json": 2678,
+              "strings": 1631727,
+              "scalars": 2469249,
+              "exactArchivePaths": 169
+            },
+            "counts": {
+              "path": 25,
+              "filename": 26,
+              "sha": 7,
+              "ordinary-contract": 218,
+              "old-failed": 19
+            },
+            "limits": [
+              "Counts and capped retained contexts are not semantic exhaustion or proof of unreadness.",
+              "No author54 report/manifest/excerpts read; only repository canonical history gate."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round46/evidence/tool-card-review/history.json",
+      "documentSha256": "f421cb0a6c403107d8ed7b17d64b5739854898b9b3588b806ea3bbea4ae1b5a4",
+      "pointer": "/hits/filename/9",
+      "originalObjectKeys": [
+        "path",
+        "location",
+        "excerpt"
+      ],
+      "metadataProjection": {
+        "path": "docs/audit-2026-10-17-round43/evidence/draft-review/history-contexts.json"
+      },
+      "directPathBearingFields": {
+        "excerpt": {
+          "boundedString": "rc/renderer/tool-cards/ToolCardShell.tsx:25` | 聊天 transcript 自动渲染工具运行和结果 |\n| **Files Changed 卡片** | 汇总文件改动，显示变更行数、文件列表、撤销/重做入口 | `packages/desktop/src/renderer/messages/FilesChangedCard.tsx:41`，`packages/desktop/src/renderer/messages/fileChangeAggregator.ts:261` | AI 修改文件后在消息流里点查看或撤销 |\n| **图片附件（上传/拖拽/粘贴）** | 接受图片文件、剪贴板和拖拽，按清晰度压缩，并支持 lightbox 预览 | `packages/desktop/src/renderer/ChatView.tsx:602`，`packages/desktop/src/renderer/ChatView.tsx:620`，`packages/desktop/src/renderer/chat/compress.ts:74`，`packages/desktop/src/renderer/chat/Lightbox.tsx:76` | 点击附件、拖图、粘贴图片或点击缩略图 |\n| **语音输入** | 检查 STT 可用性、请求麦克风、录音、自动最长录制、转写后填入 composer | `packages/desktop/src/renderer/ChatView.tsx:248`，`packages/desktop/src/renderer/ChatView.tsx:294`，`packages/desktop/src/renderer/ChatView.tsx:1297` | 输入框点击麦克风开始/停止录音 |\n| **@ 提及（文件/技能）** | 识别 mention range，展示文件/技能补全，插入到输入框 | `packages/desktop/src/renderer/chat/mention.",
+          "originalCharacters": 1092,
+          "truncatedProjection": true
+        }
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": {
+              "roots": [
+                "docs",
+                "bugs"
+              ],
+              "includeFrozenThrough": 44,
+              "excludedExactRounds": [
+                45,
+                46,
+                47,
+                48,
+                49,
+                50,
+                51,
+                52,
+                53,
+                54,
+                55
+              ],
+              "requestedExclusions": [
+                45,
+                52,
+                53,
+                54,
+                55
+              ],
+              "method": "MD lines and recursive JSON value scalars including archives; keys excluded. Original full/scope/review fields kept."
+            },
+            "totals": {
+              "files": 4088,
+              "md": 1410,
+              "json": 2678,
+              "strings": 1631727,
+              "scalars": 2469249,
+              "exactArchivePaths": 169
+            },
+            "counts": {
+              "path": 25,
+              "filename": 26,
+              "sha": 7,
+              "ordinary-contract": 218,
+              "old-failed": 19
+            },
+            "limits": [
+              "Counts and capped retained contexts are not semantic exhaustion or proof of unreadness.",
+              "No author54 report/manifest/excerpts read; only repository canonical history gate."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "documentSha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+      "pointer": "/files/9",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "pinnedUTC",
+        "coverage",
+        "oldInventoryRow",
+        "matchesOldInventorySha"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "bytes": 8303,
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "lines": 218,
+        "coverage": "hash-only; no source body displayed or semantically read"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+      "documentSha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830",
+      "pointer": "/files/20",
+      "originalObjectKeys": [
+        "rank",
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "status",
+        "decisionReason",
+        "activatedOldFull",
+        "nextStep",
+        "canonicalSupportPointers",
+        "machineClaimCount",
+        "locatorCount",
+        "noCanonicalQualifiedRowProofOfUnread"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "bytes": 8303,
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "lines": 218
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "counts": {
+              "semantic-scope-not-confirmed": 18,
+              "same-SHA-explicit-hash-only": 3,
+              "same-SHA-explicit-selected": 5,
+              "old-hash-different-SHA": 1,
+              "ambiguous-over-EOF-selected-qualifier": 1,
+              "ambiguous-bounded-full-qualifier": 1,
+              "old-full-different-SHA": 1
+            }
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+      "documentSha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e",
+      "pointer": "/products/9",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "sameAsInitial",
+        "checkedUTC"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "bytes": 8303,
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/41",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "ranges": {
+          "lines": 218
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/159",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/160",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/247",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "ranges": {
+          "lines": 218
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/277",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "ranges": {
+          "lines": 218
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/307",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "ranges": {
+          "lines": 218
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/1",
+      "originalObjectKeys": [
+        "document",
+        "line",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/10",
+      "originalObjectKeys": [
+        "document",
+        "line",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/12",
+      "originalObjectKeys": [
+        "document",
+        "line",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/13",
+      "originalObjectKeys": [
+        "document",
+        "line",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/47",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/144",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/145",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/403",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/404",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/405",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/406",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/407",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/639",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/640",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/699",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/700",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/751",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/789",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "pointer": "/locators/790",
+      "originalObjectKeys": [
+        "document",
+        "pointer",
+        "kind",
+        "path"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/9",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "pinnedUTC",
+        "coverage",
+        "selectedLineRanges",
+        "displayedLineRanges",
+        "semanticLineCount",
+        "displayedLineCount",
+        "initialPinIsSemanticReadProof",
+        "endingSha256"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "bytes": 8303,
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "lines": 218,
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "semanticLineCount": 0
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "totals": {
+              "productHashOnlyFiles": 30,
+              "productSourceBodiesDisplayed": 0,
+              "productSemanticFiles": 0,
+              "productSemanticLines": 0,
+              "productNavigationLines": 0,
+              "testDeclarationLines": 0,
+              "testsExecuted": 0
+            }
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "documentSha256": "93065b4c156a054749aa3d32ed3b331f7d85c0d82466c1e716c3502e7b9e9560",
+      "pointer": "/packets/3/manifestRangeChecks/9",
+      "originalObjectKeys": [
+        "pointer",
+        "path",
+        "sha256",
+        "coverage",
+        "declaredFileLines",
+        "selectedLineRanges",
+        "displayedLineRanges",
+        "navigationLineRanges",
+        "computedSemanticLines",
+        "declaredSemanticLines",
+        "computedBodyDisplayedLines",
+        "declaredBodyDisplayedLines",
+        "computedDisplayIncludingNavigationLines",
+        "declaredDisplayIncludingNavigationLines",
+        "allRangesWithinDeclaredFileLength",
+        "semanticWithinDisplayedOrNavigation",
+        "semanticCountMatches",
+        "bodyCountMatches",
+        "displayCountMatches",
+        "navigationOnlyComplementMatches",
+        "fullOnlyIfAllDeclaredLinesSelected",
+        "endingHashMatchesInitial",
+        "sourceKind",
+        "purposeOrScope"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "sourceKind": "product"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": {
+              "allowedPacketsOnly": true,
+              "freshHistoryScan": false,
+              "mutable90_91_92Read": false,
+              "ownAuthorPackets": [
+                85,
+                88
+              ],
+              "newProductSemanticLines": 0,
+              "doesNotCertifySourceRootCauseOrRuntime": true
+            },
+            "totals": {
+              "packets": 6,
+              "actualInputArtifacts": 99,
+              "verifiedSelfExcludedReceiptRows": 93,
+              "reportLocalLinksChecked": 79,
+              "manifestRowsRangeChecked": 49,
+              "authorMetadataSourceSemanticsRepeatedByThisReview": 0,
+              "allInputsUnchanged": true,
+              "newFormal": 0,
+              "newCandidate": 0,
+              "newRelated": 0
+            },
+            "limits": [
+              "Exact six packet directories only; no fresh history scan or mutable90/91/92 reads.",
+              "Source ranges validated against declared manifest lengths/counts, not independently against product bodies or runtime.",
+              "Receipt-byte integrity does not certify author semantic/root-cause/runtime conclusions.",
+              "All historical query totals/caps and diagnostics remain dated author metadata; no independent full-history semantic review.",
+              "Source excerpts, methods and retained history captures were only opaque byte-hashed, never executed or decoded as new product semantics.",
+              "85 and88 were written by this reviewer and are own-author metadata self-checks.",
+              "No adding overlapping84/85 or other repeated source selections as unique/global coverage."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/files/33",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "currentBytes",
+        "currentSha256",
+        "mainBytes",
+        "mainSha256",
+        "currentWorkingTreeMatchesFrozenBlob",
+        "mainMatchesFrozenBlob"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "bytes": 8303,
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/hashOnlyChecks/13",
+      "originalObjectKeys": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts",
+        "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+        "coverage": "hash-only"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/compress.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    }
+  ],
+  "count": 60,
+  "metadataProjectionOnly": true,
+  "notSemanticCoverageClaimsOrGuaranteedCanonical": true
+}

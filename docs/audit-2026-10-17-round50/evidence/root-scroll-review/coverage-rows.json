@@ -1,0 +1,1440 @@
+[
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][1011]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "lines": 1404,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "status": "prior-version-only",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 1,
+      "currentPinOnlyVariants": 0,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343",
+          "matchesCurrentFilesystem": false,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": null,
+          "manifests": [
+            {
+              "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+              "jsonLocation": "$[\"sourceManifest\"][30]"
+            },
+            {
+              "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+              "jsonLocation": "$[\"sourceManifest\"][30]"
+            },
+            {
+              "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+              "jsonLocation": "$[52]"
+            },
+            {
+              "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+              "jsonLocation": "$[52]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][3987]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "lines": 1404,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][4029]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][15933]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/web/app/Workbench.tsx"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/2345"
+        },
+        {
+          "historyRow": 3390,
+          "jsonPointer": "/module_inventory/84740d56/paths/142"
+        },
+        {
+          "historyRow": 3390,
+          "jsonPointer": "/module_inventory/a66f4ef2/paths/143"
+        }
+      ],
+      "claimId": "C015934"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][15934]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sourceHashFields": {
+        "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/web/app/Workbench.tsx"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1348,
+          "jsonPointer": "/files/1011"
+        },
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/3987"
+        }
+      ],
+      "claimId": "C015935"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][15935]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sourceHashFields": {
+        "latestSha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343",
+        "initialSha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+      },
+      "hashBinding": "different-sha-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/web/app/Workbench.tsx"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 3026,
+          "jsonPointer": "/sources/21"
+        }
+      ],
+      "claimId": "C015936"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][15936]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sourceHashFields": {
+        "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+      },
+      "hashBinding": "different-sha-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/web/app/Workbench.tsx"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 3085,
+          "jsonPointer": "/sourceManifest/30"
+        },
+        {
+          "historyRow": 3093,
+          "jsonPointer": "/sourceManifest/52"
+        },
+        {
+          "historyRow": 3143,
+          "jsonPointer": "/sourceManifest/30"
+        },
+        {
+          "historyRow": 3150,
+          "jsonPointer": "/sourceManifest/52"
+        },
+        {
+          "historyRow": 3280,
+          "jsonPointer": "/sourceManifest/30"
+        },
+        {
+          "historyRow": 3281,
+          "jsonPointer": "/sourceManifest/30"
+        },
+        {
+          "historyRow": 3289,
+          "jsonPointer": "/sourceManifest/30"
+        },
+        {
+          "historyRow": 3290,
+          "jsonPointer": "/sourceManifest/30"
+        },
+        {
+          "historyRow": 3327,
+          "jsonPointer": "/sourceManifest/52"
+        },
+        {
+          "historyRow": 3329,
+          "jsonPointer": "/52"
+        },
+        {
+          "historyRow": 3338,
+          "jsonPointer": "/runs/0/sourceManifest/52"
+        },
+        {
+          "historyRow": 3338,
+          "jsonPointer": "/runs/1/sourceManifest/52"
+        },
+        {
+          "historyRow": 3342,
+          "jsonPointer": "/sourceManifest/52"
+        },
+        {
+          "historyRow": 3346,
+          "jsonPointer": "/52"
+        }
+      ],
+      "claimId": "C015937"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][15937]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/web/app/Workbench.tsx"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 3330,
+          "jsonPointer": "/sourceManifest/52"
+        },
+        {
+          "historyRow": 3347,
+          "jsonPointer": "/sourceManifest/52"
+        }
+      ],
+      "claimId": "C015938"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][16067]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/web/app/useLatestMessages.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/2369"
+        }
+      ],
+      "claimId": "C016068"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][16068]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sourceHashFields": {
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/web/app/useLatestMessages.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/4029"
+        }
+      ],
+      "claimId": "C016069"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][4310]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lines": 1404,
+      "status": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitFullClaimIds": [],
+      "currentExplicitSelectedClaimIds": [],
+      "currentSelectedUnionLines": 0,
+      "claimIds": [
+        "C015934",
+        "C015935",
+        "C015936",
+        "C015937",
+        "C015938"
+      ],
+      "claimKindCounts": {
+        "incidental-path-or-pin-object": 5
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][4352]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lines": 173,
+      "status": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitFullClaimIds": [],
+      "currentExplicitSelectedClaimIds": [],
+      "currentSelectedUnionLines": 0,
+      "claimIds": [
+        "C016068",
+        "C016069"
+      ],
+      "claimKindCounts": {
+        "incidental-path-or-pin-object": 2
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][4310]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lines": 1404
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][4352]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lines": 173
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][4311]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lines": 1404,
+      "initial49ShaMatches": true,
+      "blockedBy49EndingOverlay": false,
+      "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][4353]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lines": 173,
+      "initial49ShaMatches": true,
+      "blockedBy49EndingOverlay": false,
+      "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/consumer-initial-pins.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lineCount": 1404,
+      "pinUTC": "2026-10-17T15:35:41.780776+00:00",
+      "beforeSemanticOrNavigationRead": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/consumer-initial-pins.json",
+    "at": "$[\"files\"][2]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173,
+      "pinUTC": "2026-10-17T15:35:41.783323+00:00",
+      "beforeSemanticOrNavigationRead": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/ending-checks.json",
+    "at": "$[\"sourceChecks\"][4]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "initialSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "sameSha256": true,
+      "lineCount": 1404
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/ending-checks.json",
+    "at": "$[\"sourceChecks\"][6]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "initialSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "sameSha256": true,
+      "lineCount": 173
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-excerpts.json",
+    "at": "$[\"snapshots\"][2]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "range": [
+        1,
+        20
+      ],
+      "capturedUTC": "2026-10-17T15:36:29.667907+00:00",
+      "text": "import { EnvironmentMenu } from \"./EnvironmentMenu.js\";\nimport React from \"react\";\nimport { Devices } from \"./Devices.js\";\nimport { CloudAccountControls, type CloudAccountControlsProps } from \"./CloudAccountControls.js\";\nimport { HubSettings, type HubSettingsSection } from \"./HubSettings.js\";\nimport { HubFiles } from \"./HubFiles.js\";\nimport { HubModelTraces } from \"./HubModelTraces.js\";\nimport { HubSessions, useHistoryActionFocus } from \"./HubSessions.js\";\nimport { HubLinks } from \"./HubLinks.js\";\nimport { HubPanels } from \"./HubPanels.js\";\nimport { PanelHost } from \"./PanelHost.js\";\nimport type { ManagedPanel } from \"../../server/src/panels/types.js\";\nimport { MessageContent, ToolMessage, subagentStatusLabel } from \"./MessageContent.js\";\nimport { sessionTitle } from \"./chat.js\";\nimport type { WorkbenchController, WorkbenchNavigation } from \"./workbench-types.js\";\nimport { parseWorkbenchLocation } from \"./website-routes.js\";\nimport { useLatestMessages } from \"./useLatestMessages.js\";\nimport \"./app.css\";\nimport \"./workbench-desktop.css\";\n"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-excerpts.json",
+    "at": "$[\"snapshots\"][3]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "range": [
+        120,
+        172
+      ],
+      "capturedUTC": "2026-10-17T15:36:29.668599+00:00",
+      "text": "  const [navigationDirty, setNavigationDirty] = React.useState(false);\n  const [pendingNavigation, setPendingNavigation] = React.useState<(() => void) | null>(null);\n  const [settingsSection, setSettingsSection] = React.useState<HubSettingsSection>(\n    () => parseWorkbenchLocation(new URL(window.location.href)).section,\n  );\n  React.useEffect(() => {\n    const url = new URL(window.location.href);\n    if (view === \"chat\") url.searchParams.delete(\"view\");\n    else url.searchParams.set(\"view\", view === \"panel\" ? \"panels\" : view);\n    if (view === \"settings\" && settingsSection !== \"overview\")\n      url.searchParams.set(\"section\", settingsSection);\n    else url.searchParams.delete(\"section\");\n    window.history.replaceState(window.history.state, \"\", url.pathname + url.search + url.hash);\n  }, [view, settingsSection]);\n  React.useEffect(() => {\n    const pop = () => {\n      const next = parseWorkbenchLocation(new URL(window.location.href));\n      setView(next.view);\n      setSettingsSection(next.section);\n    };\n    window.addEventListener(\"popstate\", pop);\n    return () => window.removeEventListener(\"popstate\", pop);\n  }, []);\n  const [narrow, setNarrow] = React.useState(() => window.matchMedia(\"(max-width: 760px)\").matches);\n  const [sidebarOpen, setSidebarOpen] = React.useState(\n    () => !window.matchMedia(\"(max-width: 760px)\").matches,\n  );\n  const sidebarRef = React.useRef<HTMLElement>(null);\n  const sidebarBackdropRef = React.useRef<HTMLDivElement>(null);\n  const sidebarToggleRef = React.useRef<HTMLButtonElement>(null);\n  const sidebarCloseFocus = React.useRef<{\n    source: HTMLElement;\n    workspace: string;\n    cancelled: boolean;\n  } | null>(null);\n  const messageListId = React.useId();\n  const textareaRef = React.useRef<HTMLTextAreaElement>(null);\n  const latest = useLatestMessages({\n    items: chat.items,\n    scope: JSON.stringify([controller.workspaceKey, activeId]),\n    connection,\n    loading: Boolean(controller.loading),\n    active: view === \"chat\",\n    approvalCount: controller.approvals.length,\n  });\n  React.useLayoutEffect(() => {\n    const handoff = historyHandoff.current;\n    if (!handoff) return;\n    if (view !== \"chat\" || narrow || handoff.workspace !== controller.workspaceKey) {\n      historyHandoff.current = null;\n      historyFocus.finish(handoff.request, null);\n    } else if (activeId === handoff.id) {\n      historyHandoff.current = null;"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-excerpts.json",
+    "at": "$[\"snapshots\"][4]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "range": [
+        775,
+        846
+      ],
+      "capturedUTC": "2026-10-17T15:36:29.668620+00:00",
+      "text": "                  </div>\n                ) : null}\n                {chat.goal ? (\n                  <div className=\"banner goal\">\n                    <span>{chat.goal}</span>\n                    {controller.goalActions}\n                  </div>\n                ) : null}\n                {chat.items.map((item) => {\n                  switch (item.kind) {\n                    case \"user\":\n                      return (\n                        <div key={item.id} className=\"msg user\">\n                          {item.text}\n                          {item.attachments?.map((attachment, index) =>\n                            hub && attachment.path ? (\n                              <button\n                                className=\"attachment attachment-open\"\n                                key={index}\n                                onClick={() => openFiles(attachment.path)}\n                              >\n                                📎 {attachment.name}\n                              </button>\n                            ) : (\n                              <span className=\"attachment\" key={index}>\n                                📎 {attachment.name}\n                              </span>\n                            ),\n                          )}\n                        </div>\n                      );\n                    case \"assistant\":\n                      if (item.done && !item.text && !item.reasoning) return null;\n                      return (\n                        <div key={item.id} className=\"msg assistant\">\n                          <MessageContent\n                            text={item.text}\n                            reasoning={item.reasoning}\n                            streaming={!item.done}\n                            onOpenFile={hub ? openMessageFile : undefined}\n                          />\n                        </div>\n                      );\n                    case \"tool\":\n                      return (\n                        <div key={item.id} className={`msg tool${item.error ? \" tool-error\" : \"\"}`}>\n                          <ToolMessage item={item} running={running} />\n                        </div>\n                      );\n                    case \"subagent\":\n                      return (\n                        <div key={item.id} className=\"msg info\">\n                          ↳ {item.label} · {subagentStatusLabel(item.status)}\n                        </div>\n                      );\n                    case \"system\":\n                      return (\n                        <div key={item.id} className=\"msg info\">\n                          {item.text}\n                        </div>\n                      );\n                    case \"system_error\":\n                      return (\n                        <div key={item.id} className=\"msg error\">\n                          {item.text}\n                        </div>\n                      );\n                    default:\n                      return null;\n                  }\n                })}\n                {controller.approvalContent}"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-excerpts.json",
+    "at": "$[\"snapshots\"][10]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "range": [
+        61,
+        100
+      ],
+      "capturedUTC": "2026-10-17T15:37:31.117764+00:00",
+      "text": "export function Workbench({\n  controller,\n  onBackToProjects,\n  projectName,\n  cloudAccount,\n  renderAccountControl,\n}: {\n  controller: WorkbenchController;\n  onBackToProjects?: () => void;\n  projectName?: string;\n  cloudAccount?: CloudAccountControlsProps;\n  renderAccountControl?: (navigation: WorkbenchNavigation) => React.ReactNode;\n}) {\n  const {\n    connection,\n    sessions,\n    activeId,\n    chat,\n    draft,\n    files,\n    uploading,\n    workerNote,\n    replayNote,\n    error,\n    workspaceCwd,\n    workspaceName,\n    configuration,\n    configurationVersion,\n    sessionsVersion,\n    localDrafts,\n    running,\n    title,\n    approvalCount,\n    onAuthLost,\n    refreshSessions,\n    refreshConfiguration,\n    session,\n  } = controller;\n  const hub = controller.workspaceApi;\n  const hostLabel = controller.host === \"desktop\" ? \"桌面\" : \"服务端\";"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+    "at": "$[\"files\"][1]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lineCount": 1404,
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "kind": "product",
+      "selectedLineRanges": [
+        [
+          61,
+          98
+        ],
+        [
+          783,
+          788
+        ],
+        [
+          806,
+          845
+        ]
+      ],
+      "selectedLineCount": 84,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          61,
+          100
+        ],
+        [
+          120,
+          172
+        ],
+        [
+          775,
+          846
+        ]
+      ],
+      "bodyDisplayedLineCount": 185,
+      "additionalNavigationSnippetLines": [
+        362,
+        366,
+        367,
+        369,
+        372,
+        622
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          61,
+          100
+        ],
+        [
+          120,
+          172
+        ],
+        [
+          362,
+          362
+        ],
+        [
+          366,
+          367
+        ],
+        [
+          369,
+          369
+        ],
+        [
+          372,
+          372
+        ],
+        [
+          622,
+          622
+        ],
+        [
+          775,
+          846
+        ]
+      ],
+      "displayedLineCount": 191,
+      "initialSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "initialPinUTC": "2026-10-17T15:35:41.780776+00:00",
+      "initialPinTiming": "before first current source body/navigation display",
+      "endingSameSha256": true,
+      "scope": "Controller DTO destructuring and actual message dispatch. Navigation to auth/approval/file callback names and viewport/history hooks does not review their mechanisms.",
+      "prepPinRow": {
+        "path": "packages/web/app/Workbench.tsx",
+        "bytes": 53688,
+        "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+        "lineCount": 1404,
+        "pinUTC": "2026-10-17T15:35:41.780776+00:00",
+        "beforeSemanticOrNavigationRead": true
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+    "at": "$[\"files\"][1][\"prepPinRow\"]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "lineCount": 1404,
+      "pinUTC": "2026-10-17T15:35:41.780776+00:00",
+      "beforeSemanticOrNavigationRead": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+    "at": "$[\"files\"][4]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173,
+      "coverage": "hash-only; no new semantic source reading",
+      "kind": "unread-adjacent-hook",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "initialPinUTC": "2026-10-17T15:35:41.783323+00:00",
+      "initialPinTiming": "before any navigation/body; no body subsequently read",
+      "endingSameSha256": true,
+      "prepPinRow": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "bytes": 6078,
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173,
+        "pinUTC": "2026-10-17T15:35:41.783323+00:00",
+        "beforeSemanticOrNavigationRead": true
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+    "at": "$[\"files\"][4][\"prepPinRow\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173,
+      "pinUTC": "2026-10-17T15:35:41.783323+00:00",
+      "beforeSemanticOrNavigationRead": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+    "at": "$[\"files\"][4]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "currentBytes": 53688,
+      "currentSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "mainBytes": 53688,
+      "mainSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+    "at": "$[\"files\"][5]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "currentBytes": 6078,
+      "currentSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "mainBytes": 6078,
+      "mainSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][1]",
+    "row": {
+      "manifest": "web-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "coverage": "selected-static-ordinary-data; not-full semantic review",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round47/source-manifest.json",
+    "at": "$[\"hashOnlyChecks\"][0]",
+    "row": {
+      "manifest": "web-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "coverage": "hash-only; no new semantic source reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+    "at": "$[\"rows\"][0][\"object\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173,
+      "coverage": "hash-only; no new semantic source reading",
+      "kind": "unread-adjacent-hook",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "initialPinUTC": "2026-10-17T15:35:41.783323+00:00",
+      "initialPinTiming": "before any navigation/body; no body subsequently read",
+      "endingSameSha256": true,
+      "prepPinRow": {
+        "path": "packages/web/app/useLatestMessages.ts",
+        "bytes": 6078,
+        "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+        "lineCount": 173,
+        "pinUTC": "2026-10-17T15:35:41.783323+00:00",
+        "beforeSemanticOrNavigationRead": true
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+    "at": "$[\"rows\"][0][\"object\"][\"prepPinRow\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173,
+      "pinUTC": "2026-10-17T15:35:41.783323+00:00",
+      "beforeSemanticOrNavigationRead": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/canonical-gate-objects.json",
+    "at": "$[\"rows\"][1][\"object\"]",
+    "row": {
+      "manifest": "web-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "coverage": "hash-only; no new semantic source reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][0][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lines": 173
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][1][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "coverageKind": "incidental-path-or-pin-object"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][2][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "coverageKind": "incidental-path-or-pin-object"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][3][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lines": 173
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][4][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lines": 173
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][5][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lines": 173
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][6][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][7][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][8][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "coverage": "hash-only; no new semantic source reading",
+      "selectedLineRanges": [],
+      "lineCount": 173,
+      "kind": "unread-adjacent-hook"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][9][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "lineCount": 173
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][10][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/coverage-gate-rows.json",
+    "at": "$[\"rows\"][11][\"row\"]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "coverage": "hash-only; no new semantic source reading"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/ending-checks.json",
+    "at": "$[\"sourceChecks\"][0]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "unchanged": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/ending-checks.json",
+    "at": "$[\"sourceChecks\"][1]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "unchanged": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/initial-pins.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "pinnedBeforeProductBodyUTC": "2026-10-17T16:29:39.319426+00:00",
+      "semanticRead": false
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-display-pins.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "pinnedBeforeDisplayUTC": "2026-10-17T16:30:31.480915+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "semanticRead": "pending manual scope interpretation"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-display-pins.json",
+    "at": "$[\"files\"][1]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "lines": 1404,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:31:10.252428+00:00",
+      "displayedLineRanges": [
+        [
+          142,
+          166
+        ],
+        [
+          783,
+          826
+        ],
+        [
+          863,
+          894
+        ],
+        [
+          72,
+          84
+        ],
+        [
+          827,
+          849
+        ]
+      ],
+      "semanticRead": false,
+      "additionalBeforeDisplayUTC": "2026-10-17T16:33:22.595804+00:00",
+      "additionalSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "lines": 173,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "pinnedBeforeDisplayUTC": "2026-10-17T16:30:31.480915+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          4,
+          46
+        ],
+        [
+          48,
+          65
+        ],
+        [
+          71,
+          79
+        ],
+        [
+          126,
+          150
+        ],
+        [
+          172,
+          173
+        ]
+      ],
+      "semanticLineCount": 97,
+      "bodyDisplayedLineCount": 173,
+      "navigationLineRanges": [],
+      "navigationLineCount": 0,
+      "displayedUnionIncludingNavigationLineCount": 173,
+      "purpose": "Ordinary visibleOutput/outputChanged, DTO fields, previous/unread map/set and scope/reset notices only. Whole173 displayed, only selected data semantics. Scroll positions, layout effects scheduling, resize observer, focus/DOM/client/connection mechanisms not certified.",
+      "endingBytes": 6078,
+      "endingSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:35:43.587218+00:00",
+      "initialSemanticReadSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "dedicatedSelectedReadSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+    "at": "$[\"files\"][1]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "lines": 1404,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "pinnedBeforeSelectedBodyUTC": "2026-10-17T16:31:10.252428+00:00",
+      "displayedLineRanges": [
+        [
+          142,
+          166
+        ],
+        [
+          783,
+          826
+        ],
+        [
+          863,
+          894
+        ],
+        [
+          72,
+          84
+        ],
+        [
+          827,
+          849
+        ]
+      ],
+      "additionalBeforeDisplayUTC": "2026-10-17T16:33:22.595804+00:00",
+      "additionalSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          74,
+          78
+        ],
+        [
+          157,
+          164
+        ],
+        [
+          783,
+          788
+        ],
+        [
+          806,
+          813
+        ],
+        [
+          818,
+          841
+        ],
+        [
+          863,
+          863
+        ],
+        [
+          868,
+          871
+        ],
+        [
+          876,
+          881
+        ],
+        [
+          890,
+          892
+        ]
+      ],
+      "semanticLineCount": 65,
+      "bodyDisplayedLineCount": 137,
+      "navigationLineRanges": [
+        [
+          15,
+          15
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          78,
+          78
+        ],
+        [
+          157,
+          157
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          159,
+          159
+        ],
+        [
+          161,
+          161
+        ],
+        [
+          173,
+          173
+        ],
+        [
+          175,
+          175
+        ],
+        [
+          346,
+          346
+        ],
+        [
+          364,
+          364
+        ],
+        [
+          372,
+          372
+        ],
+        [
+          622,
+          622
+        ],
+        [
+          767,
+          767
+        ],
+        [
+          768,
+          768
+        ],
+        [
+          770,
+          770
+        ],
+        [
+          771,
+          771
+        ],
+        [
+          783,
+          783
+        ],
+        [
+          863,
+          863
+        ],
+        [
+          869,
+          869
+        ],
+        [
+          870,
+          870
+        ],
+        [
+          873,
+          873
+        ],
+        [
+          877,
+          877
+        ],
+        [
+          879,
+          879
+        ],
+        [
+          890,
+          890
+        ],
+        [
+          891,
+          891
+        ]
+      ],
+      "navigationLineCount": 28,
+      "displayedUnionIncludingNavigationLineCount": 151,
+      "purpose": "Actual hook items/scope/loading/active DTO, matching hidden empty-done assistant, normal text/status fields and unread count labels. Attachment/open-file callbacks, DOM/focus/accessibility timing, approvals mechanism and auth are excluded.",
+      "endingBytes": 53688,
+      "endingSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "unchanged": true,
+      "endingCheckedUTC": "2026-10-17T16:35:43.587218+00:00",
+      "initialSemanticReadSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "dedicatedSelectedReadSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/source-manifest.json",
+    "at": "$[\"files\"][36]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "currentBytes": 53688,
+      "currentSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "mainBytes": 53688,
+      "mainSha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/source-manifest.json",
+    "at": "$[\"files\"][39]",
+    "row": {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "currentBytes": 6078,
+      "currentSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "mainBytes": 6078,
+      "mainSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][30]",
+    "row": {
+      "manifest": "latest-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round49/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][31]",
+    "row": {
+      "manifest": "latest-message-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+    "at": "$[\"sources\"][21]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "latestSha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343",
+      "initialSha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/reproductions/legacy-history-round24/observed.json",
+    "at": "$[\"sourceManifest\"][30]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+    "at": "$[\"sourceManifest\"][52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/legacy-history-round24/observed.json",
+    "at": "$[\"sourceManifest\"][30]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+    "at": "$[\"sourceManifest\"][52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.observed.json",
+    "at": "$[\"sourceManifest\"][30]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+    "at": "$[\"sourceManifest\"][30]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.observed.json",
+    "at": "$[\"sourceManifest\"][30]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+    "at": "$[\"sourceManifest\"][30]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/observed.json",
+    "at": "$[\"sourceManifest\"][52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+    "at": "$[52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/static-prepared-receipt.json",
+    "at": "$[\"sourceManifest\"][52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "primary84740": {
+        "exists": true,
+        "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+      },
+      "latesta66f": {
+        "exists": true,
+        "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+      },
+      "sameHash": true
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+    "at": "$[\"runs\"][0][\"sourceManifest\"][52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/root-preflight.json",
+    "at": "$[\"runs\"][1][\"sourceManifest\"][52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/observed.json",
+    "at": "$[\"sourceManifest\"][52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+    "at": "$[52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+    }
+  },
+  {
+    "historyPath": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/static-prepared-receipt.json",
+    "at": "$[\"sourceManifest\"][52]",
+    "row": {
+      "path": "packages/web/app/Workbench.tsx",
+      "primary84740": {
+        "exists": true,
+        "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+      },
+      "latesta66f": {
+        "exists": true,
+        "sha256": "7a3334a3b8474d1cc7ba973e8fcbda8658da94692d7c779fc5c9af5a603e3343"
+      },
+      "sameHash": true
+    }
+  }
+]

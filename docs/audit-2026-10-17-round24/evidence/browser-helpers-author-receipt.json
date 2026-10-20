@@ -1,0 +1,76 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "worker": "session_title_round22 assigned Browser helpers round24",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round24/browser-helpers-report.md",
+      "bytes": 6756,
+      "sha256": "1c9a7532e2345e31f1422f4b785d024f31921e892a1aaa69608559acd3f11251"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-candidates.json",
+      "bytes": 220,
+      "sha256": "2a77756a74d2682c1327e46d6b02c2a40fbf133ab3ff2aa15c952b65f00383b4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-dedup-decisions.json",
+      "bytes": 2031,
+      "sha256": "969f65e4f28d592362e407a58ae5cecf982fa7d793296ba7c6c15a1bf4e5ada5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-dedup.json",
+      "bytes": 496874,
+      "sha256": "e69964ea9c28ece5679c46e73689709290de169ff00c8b53ad3746c8615f632d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-dedup.py",
+      "bytes": 2887,
+      "sha256": "dc054a244a82574c06e71ba31fa516085416a76bd236b4474e614533b50f7e56"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-findings.json",
+      "bytes": 218,
+      "sha256": "dac8418f6d871145d3288b8a4eaef35654a80692d0c93115bd861bf1dd0066e8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-history-selected.json",
+      "bytes": 6537,
+      "sha256": "ca2c6ae9e3cf8c5e5356756759b09552e5ff97bf16652708fdfd8daf72e35a0e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-metadata-notes.json",
+      "bytes": 746,
+      "sha256": "96805d6ca54f032553e67d2ebfccc290005deddd2f7d06537b581fb8192b3c8a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-related.json",
+      "bytes": 217,
+      "sha256": "9cb747ac0de8ec7e6205060a85c6d5472f7bfe12746ca61de2c772eb6630e949"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-source-manifest.json",
+      "bytes": 8057,
+      "sha256": "df9944c10e68b7c45be25cf572519b71b17a9475afd1c1523720eef7b663a4cc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/browser-helpers-validation.json",
+      "bytes": 1256,
+      "sha256": "5cc8fc3cba29615fd65fb315cca3cf3b95ec6c9777f51771ff12eba529481654"
+    }
+  ],
+  "sourceManifest": "evidence/browser-helpers-source-manifest.json",
+  "checks": {
+    "artifactHashCount": 11,
+    "sourcePins": 14,
+    "allFrozenCurrentMatches": true,
+    "targetFullFiles": 5,
+    "targetFullLines": 1511,
+    "markdownLinks": 20,
+    "markdownLinkErrors": [],
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "productWrites": 0,
+    "gitWrites": 0
+  },
+  "note": "Only browser-helpers-report.md and evidence/browser-helpers-* authored. No product/runtime tests, imports, browser/native/process/HOME/network/security/authority experiment. Old acceptance figures are not current runs. Previous /tmp package proposal unchanged, not included as new coverage. Self excluded."
+}

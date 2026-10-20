@@ -1,0 +1,33 @@
+{
+  "name": "precise-windows-2",
+  "selections": [
+    [
+      "overlay-token-path",
+      1
+    ],
+    [
+      "overlay-token-path",
+      2
+    ],
+    [
+      "overlay-token-path",
+      3
+    ],
+    [
+      "dot-name-generic",
+      0
+    ],
+    [
+      "dot-name-generic",
+      1
+    ],
+    [
+      "dot-name-generic",
+      2
+    ],
+    [
+      "dot-name-generic",
+      3
+    ]
+  ]
+}

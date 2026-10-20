@@ -1,0 +1,17 @@
+{
+  "firstInventory": {
+    "toolChunk": "20cc03",
+    "command": "rg --files docs bugs -g *.md -g *.json",
+    "exitCode": 0,
+    "displayTokenCap": 100,
+    "reportedOriginalTokenCount": 86235,
+    "reportedTotalOutputLines": 5153,
+    "truncated": true,
+    "originalStdoutFileCaptured": false,
+    "evidence": "Original tool result retains truncated presentation. This record is a diagnostic, not reconstructed byte-original stdout. A later metadata script captures inventory internally and emits only counts.",
+    "rerunScope": "File-name metadata inventory only; no product execution"
+  },
+  "otherMetadataCommandErrors": 0,
+  "otherOutputTruncations": 0,
+  "productExecutionFailures": 0
+}

@@ -1,0 +1,118 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "files": [
+    {
+      "path": "workflow-fixture-report.md",
+      "bytes": 6694,
+      "sha256": "4370e27fb9cb86dd8939dfe3b67181b341d25d42373d628b4d6387dd97f8c59c"
+    },
+    {
+      "path": "evidence/root-candidates.json",
+      "bytes": 81,
+      "sha256": "82ebb0b7102072855ab598af6d3257414b3365b7d12cf3b64067f7825a0d35c8"
+    },
+    {
+      "path": "evidence/root-dedup-decisions.json",
+      "bytes": 1269,
+      "sha256": "bea4566c57ac8ae3bdf67ea912efee04ce56635e827415acb5229650ff7da480"
+    },
+    {
+      "path": "evidence/root-dedup.json",
+      "bytes": 473339,
+      "sha256": "7c8a21fc1361b6ca7385a26ef03ddeaa6429047e2d55ebda8d6a69ad4fb5a37b"
+    },
+    {
+      "path": "evidence/root-dedup.py",
+      "bytes": 3099,
+      "sha256": "0bada4b8fa1a87b948a13aefd2782e0cacd1ab667781f3b61bb7bc6ba0a96583"
+    },
+    {
+      "path": "evidence/root-findings.json",
+      "bytes": 79,
+      "sha256": "f93dea99a884a3dd71048b141cf9bac573aac70516b891e716dd75421bd2a060"
+    },
+    {
+      "path": "evidence/root-metadata-notes.json",
+      "bytes": 654,
+      "sha256": "dc37395d310934e868c1c68fd3333205d8065a582fefb2643830e0646f6b2599"
+    },
+    {
+      "path": "evidence/root-prep-current.json",
+      "bytes": 38798,
+      "sha256": "05cac3927bd8b1ebbdcd7a063d97cc815de8e084fc311e2b03f3b0d044d44c71"
+    },
+    {
+      "path": "evidence/root-related.json",
+      "bytes": 83,
+      "sha256": "798b0ceb3e8b49b4007dc5e60123747dc3f5d5e54489eeaf66251386a6b08c72"
+    },
+    {
+      "path": "evidence/root-shutdown-dedup.json",
+      "bytes": 548101,
+      "sha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e"
+    },
+    {
+      "path": "evidence/root-shutdown-dedup.py",
+      "bytes": 3114,
+      "sha256": "54da793f30208b30dc2feff640f3fde2ed41005788a83233b4befe0af0e39ada"
+    },
+    {
+      "path": "evidence/root-source-manifest.json",
+      "bytes": 6174,
+      "sha256": "07a591f90f098819ce39d0febf661ef42ccfe11b1abc94ec21577bd4101eef1a"
+    },
+    {
+      "path": "evidence/root-target-inventory.json",
+      "bytes": 1739,
+      "sha256": "e4bd681ea1f19820c31871d8438944fddd8386ef22f17442f46f2ca787426ab6"
+    },
+    {
+      "path": "evidence/root-package-prep/artifacts.json",
+      "bytes": 1770,
+      "sha256": "b4a65f7e1be3c8e9bd9e7fcc7c7b2168a3c4e83b4e0432517d1c964e82f172a7"
+    },
+    {
+      "path": "evidence/root-package-prep/dedup.py",
+      "bytes": 3045,
+      "sha256": "84f48a9715413de84d3c74fc122bc95eda648727033cfbd0318067710ea604ee"
+    },
+    {
+      "path": "evidence/root-package-prep/history.json",
+      "bytes": 520281,
+      "sha256": "6f4513a2b7ed9ad6edbb6cb2e42ebeda0ee358e561914d12cbdf5e3842426196"
+    },
+    {
+      "path": "evidence/root-package-prep/inventory.json",
+      "bytes": 27574,
+      "sha256": "f46c47265d8ac8dda06459c94d119f936845559f6bdb9d6e3f8912c66aff44aa"
+    },
+    {
+      "path": "evidence/root-package-prep/metadata-notes.json",
+      "bytes": 791,
+      "sha256": "b3984a1917afb8e07751fa7dc7437d3b62e209388339281309452b55a87a54ab"
+    },
+    {
+      "path": "evidence/root-package-prep/package-summary.json",
+      "bytes": 15695,
+      "sha256": "89fdf5f5001defd71cb4e20866240873835d1aefbb4bee3f8f8a0d34c65459dd"
+    },
+    {
+      "path": "evidence/root-package-prep/proposal.json",
+      "bytes": 3441,
+      "sha256": "e50425ef22d7b4467370f829d54afa5ea8c2581a26e67462ee607db62752a4f8"
+    },
+    {
+      "path": "evidence/root-package-prep/selected-history.json",
+      "bytes": 8556,
+      "sha256": "fc53daa4febca616539d857110fa9d22d06541b8ef463bab57130bdf4f41b926"
+    },
+    {
+      "path": "evidence/root-package-prep/source-manifest.json",
+      "bytes": 55598,
+      "sha256": "ce815200130b58605bcab247b8feeab84df2f2ccd20260a9590963b34f789533"
+    }
+  ],
+  "productRuntimeAttempts": 0,
+  "tests": 0,
+  "note": "Corrected metadata before crossreview;selfexcluded. Allprep copies preserved, no product logs."
+}

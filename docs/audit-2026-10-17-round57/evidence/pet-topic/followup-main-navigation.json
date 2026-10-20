@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "createPetFollowUpRuntime|dispatch:.*petDispatch",
+    "packages/desktop/src/main/index.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "212:import { createPetFollowUpRuntime } from \"./pet/pet-follow-up-runtime.js\";\n2163:    const followUpRuntime = await createPetFollowUpRuntime({\n2177:      dispatch: () => petDispatchService,\n",
+  "stderr": ""
+}

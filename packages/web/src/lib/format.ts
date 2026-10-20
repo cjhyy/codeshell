@@ -9,22 +9,45 @@ export function basename(p: string): string {
   return parts[parts.length - 1] ?? "";
 }
 
-function normalizePath(p: string): string {
-  const normalized = p.replace(/\\/g, "/").replace(/\/+$/, "");
+function isWindowsPath(p: string): boolean {
+  return /^[a-z]:[/\\]/i.test(p) || /^\\\\[^\\]+\\[^\\]+/.test(p);
+}
+
+function normalizePath(p: string, project: ProjectPathLike): string {
+  const windows = isWindowsPath(project.path);
+  const normalized = (windows ? p.replace(/\\/g, "/") : p).replace(/\/+$/, "");
   return normalized === "" ? "/" : normalized;
 }
 
-function isSameOrInside(cwd: string, root: string): boolean {
-  const target = normalizePath(cwd).toLowerCase();
-  const base = normalizePath(root).toLowerCase();
-  return target === base || target.startsWith(`${base}/`);
+function comparisonPath(path: string, project: ProjectPathLike): string {
+  const normalized = normalizePath(path, project);
+  const sensitive = project.pathCaseSensitive ?? !isWindowsPath(project.path);
+  return sensitive ? normalized : normalized.toLocaleLowerCase("en-US");
+}
+
+function isSameOrInside(cwd: string, root: string, project: ProjectPathLike): boolean {
+  const target = comparisonPath(cwd, project);
+  const base = comparisonPath(root, project);
+  return target === base || target.startsWith(base.endsWith("/") ? base : `${base}/`);
 }
 
 interface ProjectPathLike {
   id?: string;
   path: string;
   name: string;
+  pathCaseSensitive?: boolean;
   roots?: Array<{ path: string }>;
+}
+
+/** Compare Host paths using that project's declared canonical-key policy. */
+export function sameProjectPath(
+  left: string | null | undefined,
+  right: string | null | undefined,
+  project?: ProjectPathLike,
+): boolean {
+  if (!left || !right) return left === right;
+  const policy = project ?? { path: left, name: "" };
+  return comparisonPath(left, policy) === comparisonPath(right, policy);
 }
 
 /** Return the desktop project whose V2 root owns `cwd` (longest prefix wins). */
@@ -38,8 +61,8 @@ export function projectForCwd<T extends ProjectPathLike>(
   for (const p of projects) {
     const roots = p.roots?.length ? p.roots.map((root) => root.path) : [p.path];
     for (const root of roots) {
-      if (!root || !isSameOrInside(cwd, root)) continue;
-      const len = normalizePath(root).length;
+      if (!root || !isSameOrInside(cwd, root, p)) continue;
+      const len = normalizePath(root, p).length;
       if (len > bestLen) {
         best = p;
         bestLen = len;

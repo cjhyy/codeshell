@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "bytes": 14536,
+      "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "totalLines": 370,
+      "pinTimeUTC": "2026-10-17T13:15:31.628691+00:00",
+      "purpose": "before selected base settings config spread in pure merge consumer, no loader/connection call"
+    }
+  ]
+}

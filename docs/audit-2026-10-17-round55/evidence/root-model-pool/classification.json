@@ -1,0 +1,29 @@
+{
+  "formal": [],
+  "candidates": [],
+  "related": [],
+  "counterevidence": [
+    {
+      "question": "False/off reasoning lost by ModelPool conditional?",
+      "finding": "Reasoning is a discriminated object; producer maps false to {mode:off}, object remains truthy and gets carried. Existing declaration covers on/off."
+    },
+    {
+      "question": "Token caps or extraBody lost at model switch?",
+      "finding": "Producer copies preset limits and nonreasoning extraBody; toLLMConfig carries maxOutputTokens without inventing limit, entry extraBody and modelKey; Engine replaces model LLMConfig and keeps separate clientDefaults."
+    },
+    {
+      "question": "No params must inject reasoning default?",
+      "finding": "Existing declaration explicitly expects no reasoning when no paramValues. No new contract violation established."
+    },
+    {
+      "question": "First usable fallback with orphaned credentials?",
+      "finding": "Selected missing-key connection is explicitly rejected by resolver. No new supported normal mixed-state contract/producer counterexample established in this finite pass; no dynamic or SDK resolver test reopened."
+    }
+  ],
+  "exclusions": [
+    "R10 inferred context cache reload/provenance excluded old cause",
+    "Arbitrary returned-reference mutation, duplicate keys and unsupported malformed settings not promoted without real caller",
+    "Cold session connection identity source displayed adjacent only; not audited here",
+    "Actual provider prices/context quotas not asserted from comments"
+  ]
+}

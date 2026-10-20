@@ -1,0 +1,44 @@
+{
+  "source": "docs/audit-2026-10-17-round28/evidence/root-source-manifest.json",
+  "selectedRows": [
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.ts",
+      "bytes": 813,
+      "sha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "initialFilesystemSha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "finishFilesystemSha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "firstPinTiming": "Before declared semantic read",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          26
+        ]
+      ],
+      "lineCount": 26,
+      "coveredLineCount": 26,
+      "role": "product",
+      "rootFrozenGitBlobBound": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.test.ts",
+      "bytes": 1238,
+      "sha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "initialFilesystemSha256": null,
+      "finishFilesystemSha256": "86fec8f51d39abdf995ce5b15a13efa26312fccc4b30636bbf76bbebb69f84cd",
+      "firstPinTiming": "First durable hash after source read; no invented read-start capture",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          41
+        ]
+      ],
+      "lineCount": 41,
+      "coveredLineCount": 41,
+      "role": "test source only",
+      "rootFrozenGitBlobBound": true
+    }
+  ],
+  "note": "Historical manifest comparison only; old tests not rerun or counted as pass."
+}

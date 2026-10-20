@@ -1,0 +1,16 @@
+{
+  "firstNavigation": {
+    "kind": "guessed nonexistent root src path in a metadata inventory pipeline",
+    "pipelineExitCode": 0,
+    "rgExitCode": "not separately captured",
+    "firstResponse": "rg: src: No such file or directory (os error 2)",
+    "handling": "Root src direction skipped; subsequent inventory uses known repository root only and actual rg-listed entries. No product import/test/build/resolver/runtime executed."
+  },
+  "productAttempts": 0,
+  "gitWrites": 0,
+  "round23Writes": 0,
+  "boundedNavigation": {
+    "description": "Several broad grouped history/reference outputs exceeded tool caps. Full saved JSON counts retained; only shown excerpts plus explicitly selected primary source ranges are treated as semantic reading.",
+    "productRuntimeAttempts": 0
+  }
+}

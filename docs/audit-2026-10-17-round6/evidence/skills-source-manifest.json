@@ -1,0 +1,241 @@
+{
+  "frozenCommit": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "fileCount": 26,
+  "allMatchFrozen": true,
+  "files": [
+    {
+      "path": "packages/core/src/skills/frontmatter.ts",
+      "bytes": 2157,
+      "lines": 82,
+      "sha256": "f763ead39c22dfadfb616139f87ab2b3ec5561921b491c0123d8b2ba435af784",
+      "frozenSha256": "f763ead39c22dfadfb616139f87ab2b3ec5561921b491c0123d8b2ba435af784",
+      "matchesFrozen": true,
+      "reviewMode": "complete"
+    },
+    {
+      "path": "packages/core/src/skills/scanner.ts",
+      "bytes": 16891,
+      "lines": 477,
+      "sha256": "22b278b115f2c86e1deee9cfbc5488dde27de587a8914ea6f34d45e9a2067543",
+      "frozenSha256": "22b278b115f2c86e1deee9cfbc5488dde27de587a8914ea6f34d45e9a2067543",
+      "matchesFrozen": true,
+      "reviewMode": "complete in-scope local-discovery/cache/metadata branches; installed plugin/panel branch wiring read only"
+    },
+    {
+      "path": "packages/core/src/skills/snapshot.ts",
+      "bytes": 2376,
+      "lines": 63,
+      "sha256": "8a8060eb3050f6743bdbb1fa55ff834a279000efd955ff5a41198a3c643ff560",
+      "frozenSha256": "8a8060eb3050f6743bdbb1fa55ff834a279000efd955ff5a41198a3c643ff560",
+      "matchesFrozen": true,
+      "reviewMode": "complete"
+    },
+    {
+      "path": "packages/core/src/skills/index.ts",
+      "bytes": 335,
+      "lines": 8,
+      "sha256": "1b8af3acf86ab5df450b7cd6903ad0e462500049be754306a568a5de0eb0b28f",
+      "frozenSha256": "1b8af3acf86ab5df450b7cd6903ad0e462500049be754306a568a5de0eb0b28f",
+      "matchesFrozen": true,
+      "reviewMode": "complete"
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "bytes": 6078,
+      "lines": 147,
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "frozenSha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "matchesFrozen": true,
+      "reviewMode": "complete"
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "bytes": 4696,
+      "lines": 124,
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "frozenSha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "matchesFrozen": true,
+      "reviewMode": "complete"
+    },
+    {
+      "path": "packages/core/src/utils/memoize.ts",
+      "bytes": 1329,
+      "lines": 35,
+      "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "frozenSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "matchesFrozen": true,
+      "reviewMode": "complete"
+    },
+    {
+      "path": "packages/core/src/skills/management.ts",
+      "bytes": 13583,
+      "lines": 376,
+      "sha256": "f0db62d54438642a6ae534847d837a44c26a5dcc9a95b5bfbe1e4c99bcf72f11",
+      "frozenSha256": "f0db62d54438642a6ae534847d837a44c26a5dcc9a95b5bfbe1e4c99bcf72f11",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/skill.ts",
+      "bytes": 6131,
+      "lines": 154,
+      "sha256": "c5e225c2957f9bc41abdd3ca2478fb16bb6f7b4323dec27c5e35af2f3ddf76c6",
+      "frozenSha256": "c5e225c2957f9bc41abdd3ca2478fb16bb6f7b4323dec27c5e35af2f3ddf76c6",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/skill-prompt.ts",
+      "bytes": 6480,
+      "lines": 174,
+      "sha256": "22f9a42da4799209c12f9be9976fdcd7c6abfc2925cf1d40fa2c905a0ac4943e",
+      "frozenSha256": "22f9a42da4799209c12f9be9976fdcd7c6abfc2925cf1d40fa2c905a0ac4943e",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210013,
+      "lines": 5072,
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "frozenSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/prompt/composer.ts",
+      "bytes": 18842,
+      "lines": 436,
+      "sha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "frozenSha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "lines": 1571,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "frozenSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/desktop/src/main/agents-service.ts",
+      "bytes": 8401,
+      "lines": 231,
+      "sha256": "ab48d11b016ecd5673cee1e967095b7a6dc8e1f3cacd6714f05701af139810d7",
+      "frozenSha256": "ab48d11b016ecd5673cee1e967095b7a6dc8e1f3cacd6714f05701af139810d7",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AgentsSection.tsx",
+      "bytes": 22854,
+      "lines": 569,
+      "sha256": "2cf92aaf58de56afa7f812416ee3db55b87c84b1c1a803d4d391ff73c4347dfe",
+      "frozenSha256": "2cf92aaf58de56afa7f812416ee3db55b87c84b1c1a803d4d391ff73c4347dfe",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lines": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "frozenSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/extra-commands.ts",
+      "bytes": 15006,
+      "lines": 405,
+      "sha256": "29d3189fdc1971492daeca4aa6b426f0e619a7ac8a1d59908aa64d3d21903e86",
+      "frozenSha256": "29d3189fdc1971492daeca4aa6b426f0e619a7ac8a1d59908aa64d3d21903e86",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.test.ts",
+      "bytes": 1112,
+      "lines": 36,
+      "sha256": "e2fb959fbdf2c1219586535f76c245a0891ec9d645fb22ceae6509366d6ccd72",
+      "frozenSha256": "e2fb959fbdf2c1219586535f76c245a0891ec9d645fb22ceae6509366d6ccd72",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.skills.test.ts",
+      "bytes": 2308,
+      "lines": 60,
+      "sha256": "37e85a3c064841a5f207e673c47e71a2ee4afe7bee7c9839e3747371f632d1cc",
+      "frozenSha256": "37e85a3c064841a5f207e673c47e71a2ee4afe7bee7c9839e3747371f632d1cc",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "tests/agent-definition.test.ts",
+      "bytes": 2079,
+      "lines": 55,
+      "sha256": "e636dff92c8ab005d41baa11258c1ba8bc21c8741c49ec75434995cc3df008f8",
+      "frozenSha256": "e636dff92c8ab005d41baa11258c1ba8bc21c8741c49ec75434995cc3df008f8",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.test.ts",
+      "bytes": 5320,
+      "lines": 141,
+      "sha256": "58ad2038043640cd80f4218dc2db76c16008eabc8acef968d0c6d91879f8dbcb",
+      "frozenSha256": "58ad2038043640cd80f4218dc2db76c16008eabc8acef968d0c6d91879f8dbcb",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "tests/agent-definition-registry.test.ts",
+      "bytes": 2654,
+      "lines": 67,
+      "sha256": "7cdea014141dc5b18caaaa0c8877faa91276238f80b5e47c0ba9353c4f1c616f",
+      "frozenSha256": "7cdea014141dc5b18caaaa0c8877faa91276238f80b5e47c0ba9353c4f1c616f",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "packages/core/src/skills/snapshot.test.ts",
+      "bytes": 6511,
+      "lines": 160,
+      "sha256": "5fe616cb321bfaabcb12e8f7ffa3557b9d1688dc50380629425803e0ae846286",
+      "frozenSha256": "5fe616cb321bfaabcb12e8f7ffa3557b9d1688dc50380629425803e0ae846286",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "tests/skills-scanner.test.ts",
+      "bytes": 23012,
+      "lines": 627,
+      "sha256": "72cf502df27d19152e708ac3d74f85797fe1bf6a16d5443ffb6432445a955ecc",
+      "frozenSha256": "72cf502df27d19152e708ac3d74f85797fe1bf6a16d5443ffb6432445a955ecc",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "lines": 8,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "reviewMode": "caller-contract-or-selected-excerpts"
+    }
+  ]
+}

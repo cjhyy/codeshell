@@ -1,0 +1,5397 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/settings/hook-provenance.ts",
+      "sha256": "8dc3451a7f23c3ffbca707adc373746a8289d24bcac9eb68201afbbe14f2cd66",
+      "ranges": [
+        [
+          1,
+          238
+        ]
+      ],
+      "text": [
+        {
+          "line": 1,
+          "text": "/**"
+        },
+        {
+          "line": 2,
+          "text": " * Host-only custody for opt-in executable Hook origins. These values contain"
+        },
+        {
+          "line": 3,
+          "text": " * file identity, not Settings contents or a review's permission callback."
+        },
+        {
+          "line": 4,
+          "text": " */"
+        },
+        {
+          "line": 5,
+          "text": "import { createHash } from \"node:crypto\";"
+        },
+        {
+          "line": 6,
+          "text": "import {"
+        },
+        {
+          "line": 7,
+          "text": "  closeSync,"
+        },
+        {
+          "line": 8,
+          "text": "  constants,"
+        },
+        {
+          "line": 9,
+          "text": "  fstatSync,"
+        },
+        {
+          "line": 10,
+          "text": "  lstatSync,"
+        },
+        {
+          "line": 11,
+          "text": "  openSync,"
+        },
+        {
+          "line": 12,
+          "text": "  readSync,"
+        },
+        {
+          "line": 13,
+          "text": "  realpathSync,"
+        },
+        {
+          "line": 14,
+          "text": "  type BigIntStats,"
+        },
+        {
+          "line": 15,
+          "text": "} from \"node:fs\";"
+        },
+        {
+          "line": 16,
+          "text": "import { dirname, resolve } from \"node:path\";"
+        },
+        {
+          "line": 17,
+          "text": ""
+        },
+        {
+          "line": 18,
+          "text": "const MAX_SETTINGS_FILE_BYTES = 4 * 1024 * 1024;"
+        },
+        {
+          "line": 19,
+          "text": ""
+        },
+        {
+          "line": 20,
+          "text": "export interface SettingsHookFileIdentity {"
+        },
+        {
+          "line": 21,
+          "text": "  readonly dev: string;"
+        },
+        {
+          "line": 22,
+          "text": "  readonly ino: string;"
+        },
+        {
+          "line": 23,
+          "text": "  readonly mode: string;"
+        },
+        {
+          "line": 24,
+          "text": "  readonly size: string;"
+        },
+        {
+          "line": 25,
+          "text": "  readonly mtimeNs: string;"
+        },
+        {
+          "line": 26,
+          "text": "  readonly ctimeNs: string;"
+        },
+        {
+          "line": 27,
+          "text": "  readonly nlink: string;"
+        },
+        {
+          "line": 28,
+          "text": "}"
+        },
+        {
+          "line": 29,
+          "text": ""
+        },
+        {
+          "line": 30,
+          "text": "export interface SettingsHookParentIdentity {"
+        },
+        {
+          "line": 31,
+          "text": "  readonly path: string;"
+        },
+        {
+          "line": 32,
+          "text": "  readonly dev: string;"
+        },
+        {
+          "line": 33,
+          "text": "  readonly ino: string;"
+        },
+        {
+          "line": 34,
+          "text": "  readonly mode: string;"
+        },
+        {
+          "line": 35,
+          "text": "}"
+        },
+        {
+          "line": 36,
+          "text": ""
+        },
+        {
+          "line": 37,
+          "text": "export interface SettingsHookSourceSnapshot {"
+        },
+        {
+          "line": 38,
+          "text": "  readonly path: string;"
+        },
+        {
+          "line": 39,
+          "text": "  readonly rawSha256: string;"
+        },
+        {
+          "line": 40,
+          "text": "  readonly custody: {"
+        },
+        {
+          "line": 41,
+          "text": "    readonly jsonPath: string;"
+        },
+        {
+          "line": 42,
+          "text": "    readonly file: SettingsHookFileIdentity;"
+        },
+        {
+          "line": 43,
+          "text": "    readonly parents: readonly SettingsHookParentIdentity[];"
+        },
+        {
+          "line": 44,
+          "text": "    readonly precedingCandidates: readonly string[];"
+        },
+        {
+          "line": 45,
+          "text": "  };"
+        },
+        {
+          "line": 46,
+          "text": "}"
+        },
+        {
+          "line": 47,
+          "text": ""
+        },
+        {
+          "line": 48,
+          "text": "export interface SettingsHookOrigin extends SettingsHookSourceSnapshot {"
+        },
+        {
+          "line": 49,
+          "text": "  readonly kind: \"settings\";"
+        },
+        {
+          "line": 50,
+          "text": "  readonly layer: \"managed\" | \"user\" | \"project\" | \"local\";"
+        },
+        {
+          "line": 51,
+          "text": "  readonly sourceLayerIndex: number;"
+        },
+        {
+          "line": 52,
+          "text": "  readonly definitionSha256: string;"
+        },
+        {
+          "line": 53,
+          "text": "}"
+        },
+        {
+          "line": 54,
+          "text": ""
+        },
+        {
+          "line": 55,
+          "text": "function identity(info: BigIntStats): SettingsHookFileIdentity {"
+        },
+        {
+          "line": 56,
+          "text": "  return Object.freeze({"
+        },
+        {
+          "line": 57,
+          "text": "    dev: String(info.dev),"
+        },
+        {
+          "line": 58,
+          "text": "    ino: String(info.ino),"
+        },
+        {
+          "line": 59,
+          "text": "    mode: String(info.mode),"
+        },
+        {
+          "line": 60,
+          "text": "    size: String(info.size),"
+        },
+        {
+          "line": 61,
+          "text": "    mtimeNs: String(info.mtimeNs),"
+        },
+        {
+          "line": 62,
+          "text": "    ctimeNs: String(info.ctimeNs),"
+        },
+        {
+          "line": 63,
+          "text": "    nlink: String(info.nlink),"
+        },
+        {
+          "line": 64,
+          "text": "  });"
+        },
+        {
+          "line": 65,
+          "text": "}"
+        },
+        {
+          "line": 66,
+          "text": ""
+        },
+        {
+          "line": 67,
+          "text": "function equal(a: unknown, b: unknown): boolean {"
+        },
+        {
+          "line": 68,
+          "text": "  return JSON.stringify(a) === JSON.stringify(b);"
+        },
+        {
+          "line": 69,
+          "text": "}"
+        },
+        {
+          "line": 70,
+          "text": ""
+        },
+        {
+          "line": 71,
+          "text": "function parents(path: string): readonly SettingsHookParentIdentity[] {"
+        },
+        {
+          "line": 72,
+          "text": "  const paths: string[] = [];"
+        },
+        {
+          "line": 73,
+          "text": "  for (let current = dirname(path); ; current = dirname(current)) {"
+        },
+        {
+          "line": 74,
+          "text": "    paths.unshift(current);"
+        },
+        {
+          "line": 75,
+          "text": "    if (dirname(current) === current) break;"
+        },
+        {
+          "line": 76,
+          "text": "  }"
+        },
+        {
+          "line": 77,
+          "text": "  return Object.freeze("
+        },
+        {
+          "line": 78,
+          "text": "    paths.map((path) => {"
+        },
+        {
+          "line": 79,
+          "text": "      const info = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 80,
+          "text": "      if (!info.isDirectory() || info.isSymbolicLink()) {"
+        },
+        {
+          "line": 81,
+          "text": "        throw new Error(\"Settings Hook origin traversal is unsafe\");"
+        },
+        {
+          "line": 82,
+          "text": "      }"
+        },
+        {
+          "line": 83,
+          "text": "      return Object.freeze({"
+        },
+        {
+          "line": 84,
+          "text": "        path,"
+        },
+        {
+          "line": 85,
+          "text": "        dev: String(info.dev),"
+        },
+        {
+          "line": 86,
+          "text": "        ino: String(info.ino),"
+        },
+        {
+          "line": 87,
+          "text": "        mode: String(info.mode),"
+        },
+        {
+          "line": 88,
+          "text": "      });"
+        },
+        {
+          "line": 89,
+          "text": "    }),"
+        },
+        {
+          "line": 90,
+          "text": "  );"
+        },
+        {
+          "line": 91,
+          "text": "}"
+        },
+        {
+          "line": 92,
+          "text": ""
+        },
+        {
+          "line": 93,
+          "text": "function absent(path: string): boolean {"
+        },
+        {
+          "line": 94,
+          "text": "  try {"
+        },
+        {
+          "line": 95,
+          "text": "    lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 96,
+          "text": "    return false;"
+        },
+        {
+          "line": 97,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 98,
+          "text": "    if ((error as NodeJS.ErrnoException).code === \"ENOENT\") return true;"
+        },
+        {
+          "line": 99,
+          "text": "    throw error;"
+        },
+        {
+          "line": 100,
+          "text": "  }"
+        },
+        {
+          "line": 101,
+          "text": "}"
+        },
+        {
+          "line": 102,
+          "text": ""
+        },
+        {
+          "line": 103,
+          "text": "function assertRegular(info: BigIntStats): void {"
+        },
+        {
+          "line": 104,
+          "text": "  if ("
+        },
+        {
+          "line": 105,
+          "text": "    !info.isFile() ||"
+        },
+        {
+          "line": 106,
+          "text": "    info.isSymbolicLink() ||"
+        },
+        {
+          "line": 107,
+          "text": "    info.nlink !== 1n ||"
+        },
+        {
+          "line": 108,
+          "text": "    info.size < 0n ||"
+        },
+        {
+          "line": 109,
+          "text": "    info.size > BigInt(MAX_SETTINGS_FILE_BYTES)"
+        },
+        {
+          "line": 110,
+          "text": "  ) {"
+        },
+        {
+          "line": 111,
+          "text": "    throw new Error(\"Settings Hook origin is not a bounded single-link regular file\");"
+        },
+        {
+          "line": 112,
+          "text": "  }"
+        },
+        {
+          "line": 113,
+          "text": "}"
+        },
+        {
+          "line": 114,
+          "text": ""
+        },
+        {
+          "line": 115,
+          "text": "/**"
+        },
+        {
+          "line": 116,
+          "text": " * Hash and fatal UTF-8 decode the same bounded descriptor Buffer. Ancestor"
+        },
+        {
+          "line": 117,
+          "text": " * checks are metadata custody checks, not an atomic directory-fd walk or an"
+        },
+        {
+          "line": 118,
+          "text": " * assertion that transient hostile ancestor ABA changes are impossible."
+        },
+        {
+          "line": 119,
+          "text": " */"
+        },
+        {
+          "line": 120,
+          "text": "export function readSettingsHookSnapshot(jsonPath: string): {"
+        },
+        {
+          "line": 121,
+          "text": "  readonly content: string;"
+        },
+        {
+          "line": 122,
+          "text": "  readonly source: SettingsHookSourceSnapshot;"
+        },
+        {
+          "line": 123,
+          "text": "} {"
+        },
+        {
+          "line": 124,
+          "text": "  const canonicalJsonPath = resolve(jsonPath);"
+        },
+        {
+          "line": 125,
+          "text": "  const parentPins = parents(canonicalJsonPath);"
+        },
+        {
+          "line": 126,
+          "text": "  const base = canonicalJsonPath.replace(/\\.json$/, \"\");"
+        },
+        {
+          "line": 127,
+          "text": "  const precedingCandidates: string[] = [];"
+        },
+        {
+          "line": 128,
+          "text": "  let selected: string | undefined;"
+        },
+        {
+          "line": 129,
+          "text": "  for (const candidate of [canonicalJsonPath, `${base}.yaml`, `${base}.yml`]) {"
+        },
+        {
+          "line": 130,
+          "text": "    if (absent(candidate)) precedingCandidates.push(candidate);"
+        },
+        {
+          "line": 131,
+          "text": "    else {"
+        },
+        {
+          "line": 132,
+          "text": "      selected = candidate;"
+        },
+        {
+          "line": 133,
+          "text": "      break;"
+        },
+        {
+          "line": 134,
+          "text": "    }"
+        },
+        {
+          "line": 135,
+          "text": "  }"
+        },
+        {
+          "line": 136,
+          "text": "  if (!selected) throw new Error(\"Settings Hook origin is absent\");"
+        },
+        {
+          "line": 137,
+          "text": "  const path = selected;"
+        },
+        {
+          "line": 138,
+          "text": "  const opening = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 139,
+          "text": "  assertRegular(opening);"
+        },
+        {
+          "line": 140,
+          "text": "  if (realpathSync(path) !== path) throw new Error(\"Settings Hook origin is not canonical\");"
+        },
+        {
+          "line": 141,
+          "text": "  let fd: number | undefined;"
+        },
+        {
+          "line": 142,
+          "text": "  try {"
+        },
+        {
+          "line": 143,
+          "text": "    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);"
+        },
+        {
+          "line": 144,
+          "text": "    const descriptor = fstatSync(fd, { bigint: true });"
+        },
+        {
+          "line": 145,
+          "text": "    assertRegular(descriptor);"
+        },
+        {
+          "line": 146,
+          "text": "    const file = identity(opening);"
+        },
+        {
+          "line": 147,
+          "text": "    if (!equal(file, identity(descriptor))) throw new Error(\"Settings Hook origin changed at open\");"
+        },
+        {
+          "line": 148,
+          "text": "    // One extra byte proves growth beyond the opening length while retaining"
+        },
+        {
+          "line": 149,
+          "text": "    // the global hard bound; tiny settings do not allocate 4 MiB per recheck."
+        },
+        {
+          "line": 150,
+          "text": "    const buffer = Buffer.allocUnsafe(Number(opening.size) + 1);"
+        },
+        {
+          "line": 151,
+          "text": "    let length = 0;"
+        },
+        {
+          "line": 152,
+          "text": "    while (length < buffer.length) {"
+        },
+        {
+          "line": 153,
+          "text": "      const count = readSync(fd, buffer, length, buffer.length - length, null);"
+        },
+        {
+          "line": 154,
+          "text": "      if (count === 0) break;"
+        },
+        {
+          "line": 155,
+          "text": "      length += count;"
+        },
+        {
+          "line": 156,
+          "text": "    }"
+        },
+        {
+          "line": 157,
+          "text": "    const finalDescriptor = fstatSync(fd, { bigint: true });"
+        },
+        {
+          "line": 158,
+          "text": "    const finalPath = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 159,
+          "text": "    assertRegular(finalDescriptor);"
+        },
+        {
+          "line": 160,
+          "text": "    assertRegular(finalPath);"
+        },
+        {
+          "line": 161,
+          "text": "    if ("
+        },
+        {
+          "line": 162,
+          "text": "      length > MAX_SETTINGS_FILE_BYTES ||"
+        },
+        {
+          "line": 163,
+          "text": "      BigInt(length) !== opening.size ||"
+        },
+        {
+          "line": 164,
+          "text": "      !equal(file, identity(finalDescriptor)) ||"
+        },
+        {
+          "line": 165,
+          "text": "      !equal(file, identity(finalPath)) ||"
+        },
+        {
+          "line": 166,
+          "text": "      !equal(parentPins, parents(path)) ||"
+        },
+        {
+          "line": 167,
+          "text": "      precedingCandidates.some((candidate) => !absent(candidate)) ||"
+        },
+        {
+          "line": 168,
+          "text": "      realpathSync(path) !== path"
+        },
+        {
+          "line": 169,
+          "text": "    ) {"
+        },
+        {
+          "line": 170,
+          "text": "      throw new Error(\"Settings Hook origin changed during capture\");"
+        },
+        {
+          "line": 171,
+          "text": "    }"
+        },
+        {
+          "line": 172,
+          "text": "    const bytes = buffer.subarray(0, length);"
+        },
+        {
+          "line": 173,
+          "text": "    const rawSha256 = createHash(\"sha256\").update(bytes).digest(\"hex\");"
+        },
+        {
+          "line": 174,
+          "text": "    // Do not label a replacement-decoded UTF-8 string as the raw byte hash."
+        },
+        {
+          "line": 175,
+          "text": "    // Preserve U+FEFF exactly as readFileSync(..., \"utf8\"): JSON.parse must"
+        },
+        {
+          "line": 176,
+          "text": "    // continue rejecting BOM-prefixed JSON; YAML keeps its existing parser."
+        },
+        {
+          "line": 177,
+          "text": "    const content = new TextDecoder(\"utf-8\", { fatal: true, ignoreBOM: true }).decode(bytes);"
+        },
+        {
+          "line": 178,
+          "text": "    const source: SettingsHookSourceSnapshot = Object.freeze({"
+        },
+        {
+          "line": 179,
+          "text": "      path,"
+        },
+        {
+          "line": 180,
+          "text": "      rawSha256,"
+        },
+        {
+          "line": 181,
+          "text": "      custody: Object.freeze({"
+        },
+        {
+          "line": 182,
+          "text": "        jsonPath: canonicalJsonPath,"
+        },
+        {
+          "line": 183,
+          "text": "        file,"
+        },
+        {
+          "line": 184,
+          "text": "        parents: parentPins,"
+        },
+        {
+          "line": 185,
+          "text": "        precedingCandidates: Object.freeze(precedingCandidates),"
+        },
+        {
+          "line": 186,
+          "text": "      }),"
+        },
+        {
+          "line": 187,
+          "text": "    });"
+        },
+        {
+          "line": 188,
+          "text": "    return Object.freeze({ content, source });"
+        },
+        {
+          "line": 189,
+          "text": "  } finally {"
+        },
+        {
+          "line": 190,
+          "text": "    if (fd !== undefined) closeSync(fd);"
+        },
+        {
+          "line": 191,
+          "text": "  }"
+        },
+        {
+          "line": 192,
+          "text": "}"
+        },
+        {
+          "line": 193,
+          "text": ""
+        },
+        {
+          "line": 194,
+          "text": "/** No manager, owner, grant, AbortSignal or resource resolver is retained. */"
+        },
+        {
+          "line": 195,
+          "text": "export function assertSettingsHookOriginCurrent(origin: SettingsHookOrigin): void {"
+        },
+        {
+          "line": 196,
+          "text": "  const current = readSettingsHookSnapshot(origin.custody.jsonPath).source;"
+        },
+        {
+          "line": 197,
+          "text": "  if ("
+        },
+        {
+          "line": 198,
+          "text": "    current.path !== origin.path ||"
+        },
+        {
+          "line": 199,
+          "text": "    current.rawSha256 !== origin.rawSha256 ||"
+        },
+        {
+          "line": 200,
+          "text": "    !equal(current.custody, origin.custody)"
+        },
+        {
+          "line": 201,
+          "text": "  ) {"
+        },
+        {
+          "line": 202,
+          "text": "    throw new Error(\"Settings Hook origin custody changed\");"
+        },
+        {
+          "line": 203,
+          "text": "  }"
+        },
+        {
+          "line": 204,
+          "text": "}"
+        },
+        {
+          "line": 205,
+          "text": ""
+        },
+        {
+          "line": 206,
+          "text": "/**"
+        },
+        {
+          "line": 207,
+          "text": " * A previously byte-verified immutable source keeps its full file identity."
+        },
+        {
+          "line": 208,
+          "text": " * Recheck all custody facts without rehashing the same Settings for every"
+        },
+        {
+          "line": 209,
+          "text": " * mapped resource. Current-review policy loads still read/hash fresh RAW bytes."
+        },
+        {
+          "line": 210,
+          "text": " */"
+        },
+        {
+          "line": 211,
+          "text": "export function assertSettingsHookOriginMetadataCurrent(origin: SettingsHookOrigin): void {"
+        },
+        {
+          "line": 212,
+          "text": "  const current = lstatSync(origin.path, { bigint: true });"
+        },
+        {
+          "line": 213,
+          "text": "  assertRegular(current);"
+        },
+        {
+          "line": 214,
+          "text": "  if ("
+        },
+        {
+          "line": 215,
+          "text": "    !equal(identity(current), origin.custody.file) ||"
+        },
+        {
+          "line": 216,
+          "text": "    !equal(parents(origin.path), origin.custody.parents) ||"
+        },
+        {
+          "line": 217,
+          "text": "    origin.custody.precedingCandidates.some((candidate) => !absent(candidate)) ||"
+        },
+        {
+          "line": 218,
+          "text": "    realpathSync(origin.path) !== origin.path"
+        },
+        {
+          "line": 219,
+          "text": "  )"
+        },
+        {
+          "line": 220,
+          "text": "    throw new Error(\"Settings Hook origin custody changed\");"
+        },
+        {
+          "line": 221,
+          "text": "}"
+        },
+        {
+          "line": 222,
+          "text": ""
+        },
+        {
+          "line": 223,
+          "text": "/** Stable digest of a validated Hook definition, independent of JSON key order. */"
+        },
+        {
+          "line": 224,
+          "text": "export function settingsHookDefinitionSha256(hook: unknown): string {"
+        },
+        {
+          "line": 225,
+          "text": "  function ordered(value: unknown): unknown {"
+        },
+        {
+          "line": 226,
+          "text": "    if (Array.isArray(value)) return value.map(ordered);"
+        },
+        {
+          "line": 227,
+          "text": "    if (!value || typeof value !== \"object\") return value;"
+        },
+        {
+          "line": 228,
+          "text": "    return Object.fromEntries("
+        },
+        {
+          "line": 229,
+          "text": "      Object.entries(value as Record<string, unknown>)"
+        },
+        {
+          "line": 230,
+          "text": "        .filter(([, child]) => child !== undefined)"
+        },
+        {
+          "line": 231,
+          "text": "        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))"
+        },
+        {
+          "line": 232,
+          "text": "        .map(([key, child]) => [key, ordered(child)]),"
+        },
+        {
+          "line": 233,
+          "text": "    );"
+        },
+        {
+          "line": 234,
+          "text": "  }"
+        },
+        {
+          "line": 235,
+          "text": "  return createHash(\"sha256\")"
+        },
+        {
+          "line": 236,
+          "text": "    .update(JSON.stringify(ordered(hook)))"
+        },
+        {
+          "line": 237,
+          "text": "    .digest(\"hex\");"
+        },
+        {
+          "line": 238,
+          "text": "}"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "ranges": [
+        [
+          260,
+          525
+        ],
+        [
+          880,
+          970
+        ]
+      ],
+      "text": [
+        {
+          "line": 260,
+          "text": "   */"
+        },
+        {
+          "line": 261,
+          "text": "  load("
+        },
+        {
+          "line": 262,
+          "text": "    flagOverrides?: Record<string, unknown>,"
+        },
+        {
+          "line": 263,
+          "text": "    options?: { persistMigrations?: boolean; hookOrigins?: boolean },"
+        },
+        {
+          "line": 264,
+          "text": "  ): ValidatedSettings {"
+        },
+        {
+          "line": 265,
+          "text": "    this.sources = [];"
+        },
+        {
+          "line": 266,
+          "text": "    this.merged = null;"
+        },
+        {
+          "line": 267,
+          "text": "    this.hookOrigins = Object.freeze([]);"
+        },
+        {
+          "line": 268,
+          "text": "    this.mergedHookSources = [];"
+        },
+        {
+          "line": 269,
+          "text": "    this.hookOriginsEnabled = options?.hookOrigins === true;"
+        },
+        {
+          "line": 270,
+          "text": "    this.unavailableHookPriority = -1;"
+        },
+        {
+          "line": 271,
+          "text": ""
+        },
+        {
+          "line": 272,
+          "text": "    // Scope gates which disk layers we read. 'full' reads the host user dir"
+        },
+        {
+          "line": 273,
+          "text": "    // (~/.code-shell); 'project' and 'isolated' never do. See SettingsScope."
+        },
+        {
+          "line": 274,
+          "text": "    const readUser = this.scope === \"full\";"
+        },
+        {
+          "line": 275,
+          "text": "    const readProject = this.scope !== \"isolated\";"
+        },
+        {
+          "line": 276,
+          "text": ""
+        },
+        {
+          "line": 277,
+          "text": "    if (readUser) {"
+        },
+        {
+          "line": 278,
+          "text": "      // 1. Managed (lowest priority)"
+        },
+        {
+          "line": 279,
+          "text": "      this.loadJsonFile(join(this.userConfigDir(), \"settings.managed.json\"), \"managed\", 0);"
+        },
+        {
+          "line": 280,
+          "text": ""
+        },
+        {
+          "line": 281,
+          "text": "      // 2. User — only ~/.code-shell/. We used to also read ~/.claude/settings.json"
+        },
+        {
+          "line": 282,
+          "text": "      // for \"zero-migration from Claude Code\", but Claude Code's schema diverges"
+        },
+        {
+          "line": 283,
+          "text": "      // (e.g. `model` is a string there, an object here). Merging caused boot"
+        },
+        {
+          "line": 284,
+          "text": "      // crashes on machines that had Claude Code installed but never ran us."
+        },
+        {
+          "line": 285,
+          "text": "      // File-level compat (CLAUDE.md, .claude/skills/) is kept elsewhere — only"
+        },
+        {
+          "line": 286,
+          "text": "      // the settings.json read is dropped."
+        },
+        {
+          "line": 287,
+          "text": "      this.loadJsonFile(join(this.userConfigDir(), \"settings.json\"), \"user\", 1);"
+        },
+        {
+          "line": 288,
+          "text": "    }"
+        },
+        {
+          "line": 289,
+          "text": ""
+        },
+        {
+          "line": 290,
+          "text": "    if (readProject) {"
+        },
+        {
+          "line": 291,
+          "text": "      // 3. Project"
+        },
+        {
+          "line": 292,
+          "text": "      const projectPath = this.tryProjectSettingsPath(this.cwd, \"settings.json\");"
+        },
+        {
+          "line": 293,
+          "text": "      if (projectPath) this.loadJsonFile(projectPath, \"project\", 2);"
+        },
+        {
+          "line": 294,
+          "text": "      else if (this.hookOriginsEnabled)"
+        },
+        {
+          "line": 295,
+          "text": "        this.unavailableHookPriority = Math.max(this.unavailableHookPriority, 2);"
+        },
+        {
+          "line": 296,
+          "text": ""
+        },
+        {
+          "line": 297,
+          "text": "      // 4. Local"
+        },
+        {
+          "line": 298,
+          "text": "      const localPath = this.tryProjectSettingsPath(this.cwd, \"settings.local.json\");"
+        },
+        {
+          "line": 299,
+          "text": "      if (localPath) this.loadJsonFile(localPath, \"local\", 3);"
+        },
+        {
+          "line": 300,
+          "text": "      else if (this.hookOriginsEnabled)"
+        },
+        {
+          "line": 301,
+          "text": "        this.unavailableHookPriority = Math.max(this.unavailableHookPriority, 3);"
+        },
+        {
+          "line": 302,
+          "text": "    }"
+        },
+        {
+          "line": 303,
+          "text": ""
+        },
+        {
+          "line": 304,
+          "text": "    // 5. CLI flags (highest priority)"
+        },
+        {
+          "line": 305,
+          "text": "    if (flagOverrides && Object.keys(flagOverrides).length > 0) {"
+        },
+        {
+          "line": 306,
+          "text": "      this.sources.push({ name: \"flag\", priority: 4, data: sanitizeSettingsObject(flagOverrides) });"
+        },
+        {
+          "line": 307,
+          "text": "    }"
+        },
+        {
+          "line": 308,
+          "text": ""
+        },
+        {
+          "line": 309,
+          "text": "    // Sort by priority ascending (merge in order, later wins)"
+        },
+        {
+          "line": 310,
+          "text": "    this.sources.sort((a, b) => a.priority - b.priority);"
+        },
+        {
+          "line": 311,
+          "text": ""
+        },
+        {
+          "line": 312,
+          "text": "    // Version-based config migration (migrate-config.ts), applied per physical"
+        },
+        {
+          "line": 313,
+          "text": "    // file (user + project settings.json) so the write-back lands in the file"
+        },
+        {
+          "line": 314,
+          "text": "    // the data came from. A file is only rewritten (with a .bak) when a step"
+        },
+        {
+          "line": 315,
+          "text": "    // actually changed its content — a version-stamp-only diff isn't worth"
+        },
+        {
+          "line": 316,
+          "text": "    // dirtying the user's (or a repo-tracked project) file for; steps are"
+        },
+        {
+          "line": 317,
+          "text": "    // idempotent, so re-running on unstamped files each load is fine."
+        },
+        {
+          "line": 318,
+          "text": "    if (readUser) {"
+        },
+        {
+          "line": 319,
+          "text": "      this.applyConfigMigration("
+        },
+        {
+          "line": 320,
+          "text": "        join(this.userConfigDir(), \"settings.json\"),"
+        },
+        {
+          "line": 321,
+          "text": "        \"user\","
+        },
+        {
+          "line": 322,
+          "text": "        options?.persistMigrations,"
+        },
+        {
+          "line": 323,
+          "text": "      );"
+        },
+        {
+          "line": 324,
+          "text": "    }"
+        },
+        {
+          "line": 325,
+          "text": "    if (readProject) {"
+        },
+        {
+          "line": 326,
+          "text": "      const projectPath = this.tryProjectSettingsPath(this.cwd, \"settings.json\");"
+        },
+        {
+          "line": 327,
+          "text": "      if (projectPath)"
+        },
+        {
+          "line": 328,
+          "text": "        this.applyConfigMigration(projectPath, \"project\", options?.persistMigrations);"
+        },
+        {
+          "line": 329,
+          "text": "    }"
+        },
+        {
+          "line": 330,
+          "text": ""
+        },
+        {
+          "line": 331,
+          "text": "    // Workspace-trust gate: an untrusted project must not influence execution"
+        },
+        {
+          "line": 332,
+          "text": "    // through dangerous fields committed into its own .code-shell/settings.*."
+        },
+        {
+          "line": 333,
+          "text": "    // Strip them from the project/local layers (after migration re-read the"
+        },
+        {
+          "line": 334,
+          "text": "    // files, so we filter the final data) before merge. See"
+        },
+        {
+          "line": 335,
+          "text": "    // DANGEROUS_PROJECT_FIELDS and the `projectTrusted` ctor arg."
+        },
+        {
+          "line": 336,
+          "text": "    if (!this.projectTrusted) {"
+        },
+        {
+          "line": 337,
+          "text": "      for (const [index, source] of this.sources.entries()) {"
+        },
+        {
+          "line": 338,
+          "text": "        if (source.name !== \"project\" && source.name !== \"local\") continue;"
+        },
+        {
+          "line": 339,
+          "text": "        const data = { ...source.data };"
+        },
+        {
+          "line": 340,
+          "text": "        for (const field of DANGEROUS_PROJECT_FIELDS) {"
+        },
+        {
+          "line": 341,
+          "text": "          if (field in data) delete data[field];"
+        },
+        {
+          "line": 342,
+          "text": "        }"
+        },
+        {
+          "line": 343,
+          "text": "        this.sources[index] = Object.freeze({ ...source, data });"
+        },
+        {
+          "line": 344,
+          "text": "      }"
+        },
+        {
+          "line": 345,
+          "text": "    }"
+        },
+        {
+          "line": 346,
+          "text": ""
+        },
+        {
+          "line": 347,
+          "text": "    // Deep merge"
+        },
+        {
+          "line": 348,
+          "text": "    const raw = this.deepMerge();"
+        },
+        {
+          "line": 349,
+          "text": ""
+        },
+        {
+          "line": 350,
+          "text": "    // Auto-migrate legacy models[] in the user settings file. Runs directly"
+        },
+        {
+          "line": 351,
+          "text": "    // on the user-scope file (not the merged result), because the merge"
+        },
+        {
+          "line": 352,
+          "text": "    // collapses provenance and the migration needs to write back to a"
+        },
+        {
+          "line": 353,
+          "text": "    // single physical file. Gated on readUser: under non-full scope we must"
+        },
+        {
+          "line": 354,
+          "text": "    // not read — let alone rewrite — the host's ~/.code-shell/settings.json."
+        },
+        {
+          "line": 355,
+          "text": "    const userPath = join(this.userConfigDir(), \"settings.json\");"
+        },
+        {
+          "line": 356,
+          "text": "    if (readUser && resolveConfigPath(userPath) === userPath) {"
+        },
+        {
+          "line": 357,
+          "text": "      try {"
+        },
+        {
+          "line": 358,
+          "text": "        // Read-only loads must retain preceding in-memory version migrations."
+        },
+        {
+          "line": 359,
+          "text": "        // Ordinary loads preserve their existing disk reread before model migration."
+        },
+        {
+          "line": 360,
+          "text": "        if (options?.persistMigrations !== false) this.clearSourceOrigin(\"user\");"
+        },
+        {
+          "line": 361,
+          "text": "        const userSource = this.sources.find((source) => source.name === \"user\");"
+        },
+        {
+          "line": 362,
+          "text": "        const userRaw ="
+        },
+        {
+          "line": 363,
+          "text": "          options?.persistMigrations === false ? userSource?.data : parseConfigFile(userPath);"
+        },
+        {
+          "line": 364,
+          "text": "        if (!userRaw) throw new Error(\"invalid user settings\");"
+        },
+        {
+          "line": 365,
+          "text": "        const result = migrateModels({"
+        },
+        {
+          "line": 366,
+          "text": "          providers: (userRaw.providers as never) ?? [],"
+        },
+        {
+          "line": 367,
+          "text": "          models: (userRaw.models as never) ?? [],"
+        },
+        {
+          "line": 368,
+          "text": "        });"
+        },
+        {
+          "line": 369,
+          "text": "        if (result.changed) {"
+        },
+        {
+          "line": 370,
+          "text": "          const migrated = {"
+        },
+        {
+          "line": 371,
+          "text": "            ...userRaw,"
+        },
+        {
+          "line": 372,
+          "text": "            providers: result.providers,"
+        },
+        {
+          "line": 373,
+          "text": "            models: result.models,"
+        },
+        {
+          "line": 374,
+          "text": "          };"
+        },
+        {
+          "line": 375,
+          "text": "          const sanitized = sanitizeSettingsObject(migrated);"
+        },
+        {
+          "line": 376,
+          "text": "          // Atomic write (tmp+rename) — a concurrent load must not see a"
+        },
+        {
+          "line": 377,
+          "text": "          // half-written file. File exists here (existsSync guard above)."
+        },
+        {
+          "line": 378,
+          "text": "          if (options?.persistMigrations !== false) {"
+        },
+        {
+          "line": 379,
+          "text": "            this.writeBackup(userPath);"
+        },
+        {
+          "line": 380,
+          "text": "            this.atomicWriteJson(userPath, sanitized);"
+        },
+        {
+          "line": 381,
+          "text": "          }"
+        },
+        {
+          "line": 382,
+          "text": "          // Re-deep-merge with the migrated user data so the validate"
+        },
+        {
+          "line": 383,
+          "text": "          // call sees the new shape rather than the legacy one."
+        },
+        {
+          "line": 384,
+          "text": "          this.replaceSource(\"user\", sanitized, userSource?.origin);"
+        },
+        {
+          "line": 385,
+          "text": "          const remerged = this.deepMerge();"
+        },
+        {
+          "line": 386,
+          "text": "          return this.validateMerged(remerged);"
+        },
+        {
+          "line": 387,
+          "text": "        }"
+        },
+        {
+          "line": 388,
+          "text": "      } catch {"
+        },
+        {
+          "line": 389,
+          "text": "        // Migration is best-effort — fall through to normal validate."
+        },
+        {
+          "line": 390,
+          "text": "      }"
+        },
+        {
+          "line": 391,
+          "text": "    }"
+        },
+        {
+          "line": 392,
+          "text": ""
+        },
+        {
+          "line": 393,
+          "text": "    return this.validateMerged(raw);"
+        },
+        {
+          "line": 394,
+          "text": "  }"
+        },
+        {
+          "line": 395,
+          "text": ""
+        },
+        {
+          "line": 396,
+          "text": "  /**"
+        },
+        {
+          "line": 397,
+          "text": "   * Run the version-based migrations (migrate-config.ts MIGRATIONS) against a"
+        },
+        {
+          "line": 398,
+          "text": "   * single physical settings file. Best-effort: any read/parse/write error"
+        },
+        {
+          "line": 399,
+          "text": "   * falls through silently and the original source data is used as-is."
+        },
+        {
+          "line": 400,
+          "text": "   * Writes back (with a .bak, like the models[] migration above) ONLY when a"
+        },
+        {
+          "line": 401,
+          "text": "   * step changed actual content — the configVersion stamp alone doesn't"
+        },
+        {
+          "line": 402,
+          "text": "   * justify touching the file. On write-back the in-memory source is updated"
+        },
+        {
+          "line": 403,
+          "text": "   * so this load() already sees the migrated shape."
+        },
+        {
+          "line": 404,
+          "text": "   */"
+        },
+        {
+          "line": 405,
+          "text": "  private applyConfigMigration(path: string, sourceName: SettingsSourceName, persist = true): void {"
+        },
+        {
+          "line": 406,
+          "text": "    if (resolveConfigPath(path) !== path) return;"
+        },
+        {
+          "line": 407,
+          "text": "    try {"
+        },
+        {
+          "line": 408,
+          "text": "      const source = this.sources.find((s) => s.name === sourceName);"
+        },
+        {
+          "line": 409,
+          "text": "      // The opt-in read-only path migrates its actual same-buffer load. Ordinary"
+        },
+        {
+          "line": 410,
+          "text": "      // loads retain their historical reread, but cannot retain the old origin."
+        },
+        {
+          "line": 411,
+          "text": "      const paired = !persist && source?.origin !== undefined;"
+        },
+        {
+          "line": 412,
+          "text": "      if (!paired) this.clearSourceOrigin(sourceName);"
+        },
+        {
+          "line": 413,
+          "text": "      const parsed = paired ? source.data : parseConfigFile(path);"
+        },
+        {
+          "line": 414,
+          "text": "      if (!parsed || typeof parsed !== \"object\" || Array.isArray(parsed)) return;"
+        },
+        {
+          "line": 415,
+          "text": "      const raw = sanitizeSettingsObject(parsed as Record<string, unknown>);"
+        },
+        {
+          "line": 416,
+          "text": "      const result = migrateConfig(raw);"
+        },
+        {
+          "line": 417,
+          "text": "      if (!result.changed) return;"
+        },
+        {
+          "line": 418,
+          "text": "      // Compare content with the version stamp normalized away — stamp-only"
+        },
+        {
+          "line": 419,
+          "text": "      // changes are not persisted."
+        },
+        {
+          "line": 420,
+          "text": "      const stripStamp = (c: Record<string, unknown>): Record<string, unknown> => {"
+        },
+        {
+          "line": 421,
+          "text": "        const { [CONFIG_VERSION_KEY]: _v, ...rest } = c;"
+        },
+        {
+          "line": 422,
+          "text": "        return rest;"
+        },
+        {
+          "line": 423,
+          "text": "      };"
+        },
+        {
+          "line": 424,
+          "text": "      if (JSON.stringify(stripStamp(raw)) === JSON.stringify(stripStamp(result.config))) return;"
+        },
+        {
+          "line": 425,
+          "text": "      // Atomic write (tmp+rename) so a concurrent load can't read a half-written"
+        },
+        {
+          "line": 426,
+          "text": "      // migrated file — matches the normal save path (atomicWriteJson). The file"
+        },
+        {
+          "line": 427,
+          "text": "      // exists here (existsSync guard above), so the recursive mkdir is a no-op."
+        },
+        {
+          "line": 428,
+          "text": "      const sanitized = sanitizeSettingsObject(result.config as Record<string, unknown>);"
+        },
+        {
+          "line": 429,
+          "text": "      if (persist) {"
+        },
+        {
+          "line": 430,
+          "text": "        this.writeBackup(path);"
+        },
+        {
+          "line": 431,
+          "text": "        this.atomicWriteJson(path, sanitized);"
+        },
+        {
+          "line": 432,
+          "text": "      }"
+        },
+        {
+          "line": 433,
+          "text": "      this.replaceSource(sourceName, sanitized, paired ? source.origin : undefined);"
+        },
+        {
+          "line": 434,
+          "text": "    } catch {"
+        },
+        {
+          "line": 435,
+          "text": "      // Best-effort — fall through to normal merge/validate."
+        },
+        {
+          "line": 436,
+          "text": "    }"
+        },
+        {
+          "line": 437,
+          "text": "  }"
+        },
+        {
+          "line": 438,
+          "text": ""
+        },
+        {
+          "line": 439,
+          "text": "  /**"
+        },
+        {
+          "line": 440,
+          "text": "   * Get current effective settings."
+        },
+        {
+          "line": 441,
+          "text": "   */"
+        },
+        {
+          "line": 442,
+          "text": "  get(): ValidatedSettings {"
+        },
+        {
+          "line": 443,
+          "text": "    if (!this.merged) return this.load();"
+        },
+        {
+          "line": 444,
+          "text": "    return this.merged;"
+        },
+        {
+          "line": 445,
+          "text": "  }"
+        },
+        {
+          "line": 446,
+          "text": ""
+        },
+        {
+          "line": 447,
+          "text": "  /**"
+        },
+        {
+          "line": 448,
+          "text": "   * Invalidate cached merge."
+        },
+        {
+          "line": 449,
+          "text": "   */"
+        },
+        {
+          "line": 450,
+          "text": "  invalidate(): void {"
+        },
+        {
+          "line": 451,
+          "text": "    this.clearHookOrigins();"
+        },
+        {
+          "line": 452,
+          "text": "    this.merged = null;"
+        },
+        {
+          "line": 453,
+          "text": "  }"
+        },
+        {
+          "line": 454,
+          "text": ""
+        },
+        {
+          "line": 455,
+          "text": "  /**"
+        },
+        {
+          "line": 456,
+          "text": "   * Host-only parallel view of validated get().hooks. No Settings values are"
+        },
+        {
+          "line": 457,
+          "text": "   * exported, and invalidation never silently reloads an executable origin."
+        },
+        {
+          "line": 458,
+          "text": "   */"
+        },
+        {
+          "line": 459,
+          "text": "  getHookOrigins(): readonly (SettingsHookOrigin | undefined)[] {"
+        },
+        {
+          "line": 460,
+          "text": "    if (!this.merged) return Object.freeze([]);"
+        },
+        {
+          "line": 461,
+          "text": "    const hooks = this.merged.hooks ?? [];"
+        },
+        {
+          "line": 462,
+          "text": "    return Object.freeze("
+        },
+        {
+          "line": 463,
+          "text": "      hooks.map((hook, index) => {"
+        },
+        {
+          "line": 464,
+          "text": "        const origin = this.hookOrigins[index];"
+        },
+        {
+          "line": 465,
+          "text": "        return hooks.length === this.hookOrigins.length &&"
+        },
+        {
+          "line": 466,
+          "text": "          origin?.definitionSha256 === settingsHookDefinitionSha256(hook)"
+        },
+        {
+          "line": 467,
+          "text": "          ? origin"
+        },
+        {
+          "line": 468,
+          "text": "          : undefined;"
+        },
+        {
+          "line": 469,
+          "text": "      }),"
+        },
+        {
+          "line": 470,
+          "text": "    );"
+        },
+        {
+          "line": 471,
+          "text": "  }"
+        },
+        {
+          "line": 472,
+          "text": ""
+        },
+        {
+          "line": 473,
+          "text": "  private clearHookOrigins(): void {"
+        },
+        {
+          "line": 474,
+          "text": "    this.sources = this.sources.map(({ origin: _origin, ...source }) => Object.freeze(source));"
+        },
+        {
+          "line": 475,
+          "text": "    this.hookOrigins = Object.freeze((this.merged?.hooks ?? []).map(() => undefined));"
+        },
+        {
+          "line": 476,
+          "text": "    this.mergedHookSources = [];"
+        },
+        {
+          "line": 477,
+          "text": "  }"
+        },
+        {
+          "line": 478,
+          "text": ""
+        },
+        {
+          "line": 479,
+          "text": "  private clearSourceOrigin(name: SettingsSourceName): void {"
+        },
+        {
+          "line": 480,
+          "text": "    this.sources = this.sources.map((source) => {"
+        },
+        {
+          "line": 481,
+          "text": "      if (source.name !== name) return source;"
+        },
+        {
+          "line": 482,
+          "text": "      const { origin: _origin, ...unpaired } = source;"
+        },
+        {
+          "line": 483,
+          "text": "      return Object.freeze(unpaired);"
+        },
+        {
+          "line": 484,
+          "text": "    });"
+        },
+        {
+          "line": 485,
+          "text": "    this.hookOrigins = Object.freeze((this.merged?.hooks ?? []).map(() => undefined));"
+        },
+        {
+          "line": 486,
+          "text": "    this.mergedHookSources = [];"
+        },
+        {
+          "line": 487,
+          "text": "  }"
+        },
+        {
+          "line": 488,
+          "text": ""
+        },
+        {
+          "line": 489,
+          "text": "  private replaceSource("
+        },
+        {
+          "line": 490,
+          "text": "    name: SettingsSourceName,"
+        },
+        {
+          "line": 491,
+          "text": "    data: Record<string, unknown>,"
+        },
+        {
+          "line": 492,
+          "text": "    origin?: SettingsHookSourceSnapshot,"
+        },
+        {
+          "line": 493,
+          "text": "  ): void {"
+        },
+        {
+          "line": 494,
+          "text": "    this.sources = this.sources.map((source) =>"
+        },
+        {
+          "line": 495,
+          "text": "      source.name === name"
+        },
+        {
+          "line": 496,
+          "text": "        ? Object.freeze({ name, priority: source.priority, data, origin })"
+        },
+        {
+          "line": 497,
+          "text": "        : source,"
+        },
+        {
+          "line": 498,
+          "text": "    );"
+        },
+        {
+          "line": 499,
+          "text": "  }"
+        },
+        {
+          "line": 500,
+          "text": ""
+        },
+        {
+          "line": 501,
+          "text": "  private validateMerged(raw: Record<string, unknown>): ValidatedSettings {"
+        },
+        {
+          "line": 502,
+          "text": "    const validated = validateSettings(raw);"
+        },
+        {
+          "line": 503,
+          "text": "    const hooks = validated.hooks ?? [];"
+        },
+        {
+          "line": 504,
+          "text": "    this.hookOrigins = Object.freeze("
+        },
+        {
+          "line": 505,
+          "text": "      hooks.map((hook, index) => {"
+        },
+        {
+          "line": 506,
+          "text": "        const selected = this.mergedHookSources[index];"
+        },
+        {
+          "line": 507,
+          "text": "        if ("
+        },
+        {
+          "line": 508,
+          "text": "          !this.hookOriginsEnabled ||"
+        },
+        {
+          "line": 509,
+          "text": "          !selected?.source.origin ||"
+        },
+        {
+          "line": 510,
+          "text": "          selected.source.priority <= this.unavailableHookPriority ||"
+        },
+        {
+          "line": 511,
+          "text": "          selected.source.name === \"flag\" ||"
+        },
+        {
+          "line": 512,
+          "text": "          hooks.length !== this.mergedHookSources.length"
+        },
+        {
+          "line": 513,
+          "text": "        )"
+        },
+        {
+          "line": 514,
+          "text": "          return undefined;"
+        },
+        {
+          "line": 515,
+          "text": "        return Object.freeze({"
+        },
+        {
+          "line": 516,
+          "text": "          ...selected.source.origin,"
+        },
+        {
+          "line": 517,
+          "text": "          kind: \"settings\" as const,"
+        },
+        {
+          "line": 518,
+          "text": "          layer: selected.source.name,"
+        },
+        {
+          "line": 519,
+          "text": "          sourceLayerIndex: selected.sourceLayerIndex,"
+        },
+        {
+          "line": 520,
+          "text": "          definitionSha256: settingsHookDefinitionSha256(hook),"
+        },
+        {
+          "line": 521,
+          "text": "        });"
+        },
+        {
+          "line": 522,
+          "text": "      }),"
+        },
+        {
+          "line": 523,
+          "text": "    );"
+        },
+        {
+          "line": 524,
+          "text": "    this.merged = validated;"
+        },
+        {
+          "line": 525,
+          "text": "    return validated;"
+        },
+        {
+          "line": 880,
+          "text": "      assertSafeSettingsWriteTarget(path);"
+        },
+        {
+          "line": 881,
+          "text": "      // Re-read INSIDE the lock: a snapshot taken before acquiring it would be"
+        },
+        {
+          "line": 882,
+          "text": "      // exactly the stale value that drops the other writer's key. Strict read:"
+        },
+        {
+          "line": 883,
+          "text": "      // an existing-but-unreadable file must abort the mutation rather than be"
+        },
+        {
+          "line": 884,
+          "text": "      // rewritten from {} — see readConfigFileForMutation."
+        },
+        {
+          "line": 885,
+          "text": "      const current = this.readJsonObjectForMutation(path);"
+        },
+        {
+          "line": 886,
+          "text": "      if (mutate(current) === false) return;"
+        },
+        {
+          "line": 887,
+          "text": "      this.atomicWriteJson(path, current);"
+        },
+        {
+          "line": 888,
+          "text": "    } finally {"
+        },
+        {
+          "line": 889,
+          "text": "      release();"
+        },
+        {
+          "line": 890,
+          "text": "    }"
+        },
+        {
+          "line": 891,
+          "text": "  }"
+        },
+        {
+          "line": 892,
+          "text": ""
+        },
+        {
+          "line": 893,
+          "text": "  private loadJsonFile(path: string, name: SettingsSourceName, priority: number): void {"
+        },
+        {
+          "line": 894,
+          "text": "    if (this.hookOriginsEnabled) {"
+        },
+        {
+          "line": 895,
+          "text": "      try {"
+        },
+        {
+          "line": 896,
+          "text": "        const snapshot = readSettingsHookSnapshot(path);"
+        },
+        {
+          "line": 897,
+          "text": "        const data = parseConfigContent(snapshot.source.path, snapshot.content);"
+        },
+        {
+          "line": 898,
+          "text": "        if (data) {"
+        },
+        {
+          "line": 899,
+          "text": "          this.sources.push(Object.freeze({ name, priority, data, origin: snapshot.source }));"
+        },
+        {
+          "line": 900,
+          "text": "          return;"
+        },
+        {
+          "line": 901,
+          "text": "        }"
+        },
+        {
+          "line": 902,
+          "text": "      } catch {"
+        },
+        {
+          "line": 903,
+          "text": "        // Only executable provenance becomes unavailable. Ordinary loading"
+        },
+        {
+          "line": 904,
+          "text": "        // keeps the legacy corrupt-file/UTF-8/selection behavior below."
+        },
+        {
+          "line": 905,
+          "text": "      }"
+        },
+        {
+          "line": 906,
+          "text": "      // Keep ordinary tolerant data below, while preserving the fact that an"
+        },
+        {
+          "line": 907,
+          "text": "      // existing layer (including an unsafe candidate) was not proven absent."
+        },
+        {
+          "line": 908,
+          "text": "      for (const candidate of settingsCandidatePaths(path)) {"
+        },
+        {
+          "line": 909,
+          "text": "        try {"
+        },
+        {
+          "line": 910,
+          "text": "          lstatSync(candidate);"
+        },
+        {
+          "line": 911,
+          "text": "          this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);"
+        },
+        {
+          "line": 912,
+          "text": "          break;"
+        },
+        {
+          "line": 913,
+          "text": "        } catch (error) {"
+        },
+        {
+          "line": 914,
+          "text": "          if ((error as NodeJS.ErrnoException).code !== \"ENOENT\") {"
+        },
+        {
+          "line": 915,
+          "text": "            this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);"
+        },
+        {
+          "line": 916,
+          "text": "            break;"
+        },
+        {
+          "line": 917,
+          "text": "          }"
+        },
+        {
+          "line": 918,
+          "text": "        }"
+        },
+        {
+          "line": 919,
+          "text": "      }"
+        },
+        {
+          "line": 920,
+          "text": "    }"
+        },
+        {
+          "line": 921,
+          "text": "    // `path` is the canonical .json path for this layer. When it's absent but"
+        },
+        {
+          "line": 922,
+          "text": "    // a sibling settings.yaml/.yml exists, read the YAML instead (JSON wins"
+        },
+        {
+          "line": 923,
+          "text": "    // when both exist — JSON is the write-back format, YAML is hand-written)."
+        },
+        {
+          "line": 924,
+          "text": "    const resolved = resolveConfigPath(path);"
+        },
+        {
+          "line": 925,
+          "text": "    if (!resolved) return;"
+        },
+        {
+          "line": 926,
+          "text": "    const data = parseConfigFile(resolved);"
+        },
+        {
+          "line": 927,
+          "text": "    if (data) this.sources.push({ name, priority, data });"
+        },
+        {
+          "line": 928,
+          "text": "  }"
+        },
+        {
+          "line": 929,
+          "text": ""
+        },
+        {
+          "line": 930,
+          "text": "  private deepMerge(): Record<string, unknown> {"
+        },
+        {
+          "line": 931,
+          "text": "    let result: Record<string, unknown> = {};"
+        },
+        {
+          "line": 932,
+          "text": "    for (const source of this.sources) {"
+        },
+        {
+          "line": 933,
+          "text": "      result = merge(result, source.data);"
+        },
+        {
+          "line": 934,
+          "text": "    }"
+        },
+        {
+          "line": 935,
+          "text": "    // Top-level `hooks` is the one array that CONCATENATES across layers"
+        },
+        {
+          "line": 936,
+          "text": "    // instead of being replaced wholesale: a user-level (global) hook and a"
+        },
+        {
+          "line": 937,
+          "text": "    // project-level hook should BOTH run, mirroring how Claude Code merges"
+        },
+        {
+          "line": 938,
+          "text": "    // hooks from all settings files. Order follows layer priority (user"
+        },
+        {
+          "line": 939,
+          "text": "    // first, project after). An explicit `\"hooks\": null` in a layer still"
+        },
+        {
+          "line": 940,
+          "text": "    // resets everything below it (the escape hatch merge() already gives"
+        },
+        {
+          "line": 941,
+          "text": "    // every other key); per-entry opt-out is the `disabled` field."
+        },
+        {
+          "line": 942,
+          "text": "    let hooks: unknown[] | undefined;"
+        },
+        {
+          "line": 943,
+          "text": "    let hookSources: typeof this.mergedHookSources = [];"
+        },
+        {
+          "line": 944,
+          "text": "    let sawHooks = false;"
+        },
+        {
+          "line": 945,
+          "text": "    for (const source of this.sources) {"
+        },
+        {
+          "line": 946,
+          "text": "      if (!(\"hooks\" in source.data)) continue;"
+        },
+        {
+          "line": 947,
+          "text": "      const v = source.data.hooks;"
+        },
+        {
+          "line": 948,
+          "text": "      if (v === null) {"
+        },
+        {
+          "line": 949,
+          "text": "        hooks = undefined;"
+        },
+        {
+          "line": 950,
+          "text": "        hookSources = [];"
+        },
+        {
+          "line": 951,
+          "text": "        sawHooks = true;"
+        },
+        {
+          "line": 952,
+          "text": "      } else if (Array.isArray(v)) {"
+        },
+        {
+          "line": 953,
+          "text": "        hooks = [...(hooks ?? []), ...v];"
+        },
+        {
+          "line": 954,
+          "text": "        hookSources = ["
+        },
+        {
+          "line": 955,
+          "text": "          ...hookSources,"
+        },
+        {
+          "line": 956,
+          "text": "          ...v.map((_hook, sourceLayerIndex) => ({ source, sourceLayerIndex })),"
+        },
+        {
+          "line": 957,
+          "text": "        ];"
+        },
+        {
+          "line": 958,
+          "text": "        sawHooks = true;"
+        },
+        {
+          "line": 959,
+          "text": "      }"
+        },
+        {
+          "line": 960,
+          "text": "      // Non-array garbage is left to merge()'s wholesale result so"
+        },
+        {
+          "line": 961,
+          "text": "      // validateSettings still sees (and rejects) it unchanged."
+        },
+        {
+          "line": 962,
+          "text": "    }"
+        },
+        {
+          "line": 963,
+          "text": "    if (sawHooks) {"
+        },
+        {
+          "line": 964,
+          "text": "      if (hooks !== undefined) result.hooks = hooks;"
+        },
+        {
+          "line": 965,
+          "text": "      else delete result.hooks;"
+        },
+        {
+          "line": 966,
+          "text": "    }"
+        },
+        {
+          "line": 967,
+          "text": "    this.mergedHookSources = hookSources;"
+        },
+        {
+          "line": 968,
+          "text": "    return result;"
+        },
+        {
+          "line": 969,
+          "text": "  }"
+        },
+        {
+          "line": 970,
+          "text": "}"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/links/operation-hook-custody.ts",
+      "sha256": "ca8631e3c422002f7874c3b474b05e4ce49704996ecee961fe9596864f12bd69",
+      "ranges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "text": [
+        {
+          "line": 1,
+          "text": "import { lstatSync, realpathSync } from \"node:fs\";"
+        },
+        {
+          "line": 2,
+          "text": "import { dirname, join } from \"node:path\";"
+        },
+        {
+          "line": 3,
+          "text": "import type { ConfiguredToolHook } from \"../hooks/configured-tool-hooks.js\";"
+        },
+        {
+          "line": 4,
+          "text": "import { installedPluginsPath } from \"../plugins/installedPlugins.js\";"
+        },
+        {
+          "line": 5,
+          "text": "import { listPluginHooksForHost, type PluginHookSource } from \"../plugins/loadPluginHooks.js\";"
+        },
+        {
+          "line": 6,
+          "text": "import {"
+        },
+        {
+          "line": 7,
+          "text": "  assertSettingsHookOriginCurrent,"
+        },
+        {
+          "line": 8,
+          "text": "  assertSettingsHookOriginMetadataCurrent,"
+        },
+        {
+          "line": 9,
+          "text": "  type SettingsHookOrigin,"
+        },
+        {
+          "line": 10,
+          "text": "} from \"../settings/hook-provenance.js\";"
+        },
+        {
+          "line": 11,
+          "text": ""
+        },
+        {
+          "line": 12,
+          "text": "function identity(path: string): string {"
+        },
+        {
+          "line": 13,
+          "text": "  const info = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 14,
+          "text": "  if (info.isSymbolicLink()) throw new Error(\"Hook source custody is unsafe\");"
+        },
+        {
+          "line": 15,
+          "text": "  if (info.isDirectory()) return [info.dev, info.ino, info.mode].map(String).join(\":\");"
+        },
+        {
+          "line": 16,
+          "text": "  if (!info.isFile() || info.nlink !== 1n) throw new Error(\"Hook source custody is unsafe\");"
+        },
+        {
+          "line": 17,
+          "text": "  return [info.dev, info.ino, info.mode, info.size, info.mtimeNs, info.ctimeNs, info.nlink]"
+        },
+        {
+          "line": 18,
+          "text": "    .map(String)"
+        },
+        {
+          "line": 19,
+          "text": "    .join(\":\");"
+        },
+        {
+          "line": 20,
+          "text": "}"
+        },
+        {
+          "line": 21,
+          "text": ""
+        },
+        {
+          "line": 22,
+          "text": "export function sourceMatches("
+        },
+        {
+          "line": 23,
+          "text": "  expected: Record<string, unknown>,"
+        },
+        {
+          "line": 24,
+          "text": "  actual: Record<string, unknown> | undefined,"
+        },
+        {
+          "line": 25,
+          "text": "): boolean {"
+        },
+        {
+          "line": 26,
+          "text": "  return ("
+        },
+        {
+          "line": 27,
+          "text": "    actual !== undefined && Object.entries(expected).every(([key, value]) => actual[key] === value)"
+        },
+        {
+          "line": 28,
+          "text": "  );"
+        },
+        {
+          "line": 29,
+          "text": "}"
+        },
+        {
+          "line": 30,
+          "text": ""
+        },
+        {
+          "line": 31,
+          "text": "/** Shared native custody only. No review owner/signal/SettingsManager is retained. */"
+        },
+        {
+          "line": 32,
+          "text": "export function createHookSourceCustody(hook: Readonly<ConfiguredToolHook>): () => void {"
+        },
+        {
+          "line": 33,
+          "text": "  if (!hook.source) throw new Error(\"Hook source provenance unavailable\");"
+        },
+        {
+          "line": 34,
+          "text": "  const source = structuredClone(hook.source);"
+        },
+        {
+          "line": 35,
+          "text": "  if (source.kind === \"settings\") {"
+        },
+        {
+          "line": 36,
+          "text": "    assertSettingsHookOriginCurrent(source as SettingsHookOrigin);"
+        },
+        {
+          "line": 37,
+          "text": "    return () => assertSettingsHookOriginMetadataCurrent(source as SettingsHookOrigin);"
+        },
+        {
+          "line": 38,
+          "text": "  }"
+        },
+        {
+          "line": 39,
+          "text": "  const plugin = source as PluginHookSource;"
+        },
+        {
+          "line": 40,
+          "text": "  if (!plugin.custody) throw new Error(\"Plugin Hook source provenance unavailable\");"
+        },
+        {
+          "line": 41,
+          "text": "  if (realpathSync(plugin.installPath) !== plugin.installPath)"
+        },
+        {
+          "line": 42,
+          "text": "    throw new Error(\"Hook installation is not canonical\");"
+        },
+        {
+          "line": 43,
+          "text": "  const paths = new Set(["
+        },
+        {
+          "line": 44,
+          "text": "    installedPluginsPath(),"
+        },
+        {
+          "line": 45,
+          "text": "    plugin.installPath,"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/hooks/configured-tool-hooks.ts",
+      "sha256": "6ce05b375c7afefc51383308eeeb81522d16e3650fb3a228a3c2ed506e7aafac",
+      "ranges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "text": [
+        {
+          "line": 1,
+          "text": "import { lstatSync } from \"node:fs\";"
+        },
+        {
+          "line": 2,
+          "text": "import { join } from \"node:path\";"
+        },
+        {
+          "line": 3,
+          "text": "import type { SettingsManager } from \"../settings/manager.js\";"
+        },
+        {
+          "line": 4,
+          "text": "import { userHome, type SettingsScope } from \"../settings/manager.js\";"
+        },
+        {
+          "line": 5,
+          "text": "import { listPluginHooksForHost, matcherAccepts } from \"../plugins/loadPluginHooks.js\";"
+        },
+        {
+          "line": 6,
+          "text": "import type { PluginHookSource } from \"../plugins/loadPluginHooks.js\";"
+        },
+        {
+          "line": 7,
+          "text": "import type { SettingsHookOrigin } from \"../settings/hook-provenance.js\";"
+        },
+        {
+          "line": 8,
+          "text": "import { installedPluginsPath } from \"../plugins/installedPlugins.js\";"
+        },
+        {
+          "line": 9,
+          "text": "import { shellHookMatches } from \"./shell-runner.js\";"
+        },
+        {
+          "line": 10,
+          "text": "import type { HookEventName } from \"./events.js\";"
+        },
+        {
+          "line": 11,
+          "text": "import { sha256 } from \"../runtime/constrained-process/resources.js\";"
+        },
+        {
+          "line": 12,
+          "text": ""
+        },
+        {
+          "line": 13,
+          "text": "export const TOOL_HOOK_EVENTS = ["
+        },
+        {
+          "line": 14,
+          "text": "  \"pre_tool_use\","
+        },
+        {
+          "line": 15,
+          "text": "  \"on_permission_check\","
+        },
+        {
+          "line": 16,
+          "text": "  \"on_tool_start\","
+        },
+        {
+          "line": 17,
+          "text": "  \"on_tool_end\","
+        },
+        {
+          "line": 18,
+          "text": "  \"post_tool_use\","
+        },
+        {
+          "line": 19,
+          "text": "] as const satisfies readonly HookEventName[];"
+        },
+        {
+          "line": 20,
+          "text": ""
+        },
+        {
+          "line": 21,
+          "text": "export interface ConfiguredToolHook {"
+        },
+        {
+          "line": 22,
+          "text": "  id: string;"
+        },
+        {
+          "line": 23,
+          "text": "  event: HookEventName;"
+        },
+        {
+          "line": 24,
+          "text": "  protocol: \"settings\" | \"plugin\";"
+        },
+        {
+          "line": 25,
+          "text": "  priority: 50 | 80;"
+        },
+        {
+          "line": 26,
+          "text": "  command: string;"
+        },
+        {
+          "line": 27,
+          "text": "  timeoutMs: number;"
+        },
+        {
+          "line": 28,
+          "text": "  cwd?: string;"
+        },
+        {
+          "line": 29,
+          "text": "  pluginInstallPath?: string;"
+        },
+        {
+          "line": 30,
+          "text": "  source?: PluginHookSource | SettingsHookOrigin;"
+        },
+        {
+          "line": 31,
+          "text": "}"
+        },
+        {
+          "line": 32,
+          "text": ""
+        },
+        {
+          "line": 33,
+          "text": "function fileIdentity(path: string): unknown {"
+        },
+        {
+          "line": 34,
+          "text": "  try {"
+        },
+        {
+          "line": 35,
+          "text": "    const info = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 36,
+          "text": "    if (info.isSymbolicLink()) throw new Error(\"Hook authority cannot use a symlink\");"
+        },
+        {
+          "line": 37,
+          "text": "    // A configuration directory's unrelated state children are not policy."
+        },
+        {
+          "line": 38,
+          "text": "    // Pin traversal/replacement/permissions; the actual known config files"
+        },
+        {
+          "line": 39,
+          "text": "    // below retain their complete identity, including timestamps and size."
+        },
+        {
+          "line": 40,
+          "text": "    if (info.isDirectory()) return [path, info.dev, info.ino, info.mode].map(String);"
+        },
+        {
+          "line": 41,
+          "text": "    return [path, info.dev, info.ino, info.mode, info.size, info.mtimeNs, info.ctimeNs].map(String);"
+        },
+        {
+          "line": 42,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 43,
+          "text": "    if ((error as NodeJS.ErrnoException).code === \"ENOENT\") return [path, \"absent\"];"
+        },
+        {
+          "line": 44,
+          "text": "    throw error;"
+        },
+        {
+          "line": 45,
+          "text": "  }"
+        },
+        {
+          "line": 46,
+          "text": "}"
+        },
+        {
+          "line": 47,
+          "text": ""
+        },
+        {
+          "line": 48,
+          "text": "/**"
+        },
+        {
+          "line": 49,
+          "text": " * Selection only. Never borrows Engine handlers or runs commands. Preserve the"
+        },
+        {
+          "line": 50,
+          "text": " * existing settings/plugin matcher, disable, approval and priority contracts."
+        },
+        {
+          "line": 51,
+          "text": " */"
+        },
+        {
+          "line": 52,
+          "text": "export function prepareConfiguredToolHooks(options: {"
+        },
+        {
+          "line": 53,
+          "text": "  settings: SettingsManager;"
+        },
+        {
+          "line": 54,
+          "text": "  cwd: string;"
+        },
+        {
+          "line": 55,
+          "text": "  settingsScope: SettingsScope;"
+        },
+        {
+          "line": 56,
+          "text": "  disabledPlugins: string[];"
+        },
+        {
+          "line": 57,
+          "text": "  disabledPluginHooks: string[];"
+        },
+        {
+          "line": 58,
+          "text": "  toolName: string;"
+        },
+        {
+          "line": 59,
+          "text": "}) {"
+        },
+        {
+          "line": 60,
+          "text": "  const events = new Set<HookEventName>(TOOL_HOOK_EVENTS);"
+        },
+        {
+          "line": 61,
+          "text": "  const definitions = options.settings.get().hooks ?? [];"
+        },
+        {
+          "line": 62,
+          "text": "  const origins = options.settings.getHookOrigins();"
+        },
+        {
+          "line": 63,
+          "text": "  const plugins = listPluginHooksForHost(options.disabledPlugins);"
+        },
+        {
+          "line": 64,
+          "text": "  const descriptors: ConfiguredToolHook[] = [];"
+        },
+        {
+          "line": 65,
+          "text": "  for (const [index, hook] of definitions.entries()) {"
+        },
+        {
+          "line": 66,
+          "text": "    if ("
+        },
+        {
+          "line": 67,
+          "text": "      !hook.disabled &&"
+        },
+        {
+          "line": 68,
+          "text": "      events.has(hook.event as HookEventName) &&"
+        },
+        {
+          "line": 69,
+          "text": "      shellHookMatches(hook, {"
+        },
+        {
+          "line": 70,
+          "text": "        eventName: hook.event as HookEventName,"
+        },
+        {
+          "line": 71,
+          "text": "        data: { toolName: options.toolName },"
+        },
+        {
+          "line": 72,
+          "text": "      })"
+        },
+        {
+          "line": 73,
+          "text": "    )"
+        },
+        {
+          "line": 74,
+          "text": "      descriptors.push({"
+        },
+        {
+          "line": 75,
+          "text": "        id: `settings:${index}:${sha256(JSON.stringify(hook))}`,"
+        },
+        {
+          "line": 76,
+          "text": "        event: hook.event as HookEventName,"
+        },
+        {
+          "line": 77,
+          "text": "        protocol: \"settings\","
+        },
+        {
+          "line": 78,
+          "text": "        priority: 50,"
+        },
+        {
+          "line": 79,
+          "text": "        command: hook.command,"
+        },
+        {
+          "line": 80,
+          "text": "        timeoutMs: Math.min(hook.timeout_ms ?? 60000, 60000),"
+        },
+        {
+          "line": 81,
+          "text": "        ...(hook.cwd === undefined ? {} : { cwd: hook.cwd }),"
+        },
+        {
+          "line": 82,
+          "text": "        ...(origins[index] === undefined ? {} : { source: origins[index] }),"
+        },
+        {
+          "line": 83,
+          "text": "      });"
+        },
+        {
+          "line": 84,
+          "text": "  }"
+        },
+        {
+          "line": 85,
+          "text": "  for (const [index, hook] of plugins.entries()) {"
+        },
+        {
+          "line": 86,
+          "text": "    if ("
+        },
+        {
+          "line": 87,
+          "text": "      hook.disabled ||"
+        },
+        {
+          "line": 88,
+          "text": "      options.disabledPluginHooks.includes(hook.key) ||"
+        },
+        {
+          "line": 89,
+          "text": "      ![\"approved\", \"legacy\"].includes(hook.approval) ||"
+        },
+        {
+          "line": 90,
+          "text": "      !events.has(hook.event) ||"
+        },
+        {
+          "line": 91,
+          "text": "      !matcherAccepts(hook.event, hook.matcher, {"
+        },
+        {
+          "line": 92,
+          "text": "        eventName: hook.event,"
+        },
+        {
+          "line": 93,
+          "text": "        data: { toolName: options.toolName },"
+        },
+        {
+          "line": 94,
+          "text": "      })"
+        },
+        {
+          "line": 95,
+          "text": "    )"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/links/operation-reader.ts",
+      "sha256": "70e90c38ccae3a4e336adf45c7be582e63b405cba347428a16c372b3012f2c6f",
+      "ranges": [
+        [
+          25,
+          60
+        ]
+      ],
+      "text": [
+        {
+          "line": 25,
+          "text": "/**"
+        },
+        {
+          "line": 26,
+          "text": " * A user-triggered Host read, independent of any Engine's transient run mode."
+        },
+        {
+          "line": 27,
+          "text": " * It composes current user rules, profile resolution and builtin controls. No"
+        },
+        {
+          "line": 28,
+          "text": " * Engine, model, Session mutation, arbitrary action or approval bypass exists."
+        },
+        {
+          "line": 29,
+          "text": " */"
+        },
+        {
+          "line": 30,
+          "text": "export function createGithubOperationReader(options: {"
+        },
+        {
+          "line": 31,
+          "text": "  cwd: string;"
+        },
+        {
+          "line": 32,
+          "text": "  sessionId: string;"
+        },
+        {
+          "line": 33,
+          "text": "  sessionProfile?: string;"
+        },
+        {
+          "line": 34,
+          "text": "  /** Trusted Host settings authority, including current global deny rules. */"
+        },
+        {
+          "line": 35,
+          "text": "  settingsScope: SettingsScope;"
+        },
+        {
+          "line": 36,
+          "text": "  /** Intersection with the proven original credential scope. */"
+        },
+        {
+          "line": 37,
+          "text": "  credentialScope?: SettingsScope;"
+        },
+        {
+          "line": 38,
+          "text": "  assertAuthorized(): void;"
+        },
+        {
+          "line": 39,
+          "text": "  approveRead(action: GithubReconcileRead, target: string): Promise<boolean>;"
+        },
+        {
+          "line": 40,
+          "text": "  signal: AbortSignal;"
+        },
+        {
+          "line": 41,
+          "text": "  hooks?: HookRegistry;"
+        },
+        {
+          "line": 42,
+          "text": "  /** Trusted native Host custody only; never supplied by model/renderer input. */"
+        },
+        {
+          "line": 43,
+          "text": "  hookProcesses?: OperationHookProcesses;"
+        },
+        {
+          "line": 44,
+          "text": "}) {"
+        },
+        {
+          "line": 45,
+          "text": "  const policy = () => {"
+        },
+        {
+          "line": 46,
+          "text": "    const settings = new SettingsManager(options.cwd, options.settingsScope, true);"
+        },
+        {
+          "line": 47,
+          "text": "    settings.load(undefined, { persistMigrations: false, hookOrigins: true });"
+        },
+        {
+          "line": 48,
+          "text": "    const profile = resolveRunProfileState({"
+        },
+        {
+          "line": 49,
+          "text": "      sessionWorkspaceProfile: options.sessionProfile,"
+        },
+        {
+          "line": 50,
+          "text": "      cwd: options.cwd,"
+        },
+        {
+          "line": 51,
+          "text": "      settings,"
+        },
+        {
+          "line": 52,
+          "text": "    });"
+        },
+        {
+          "line": 53,
+          "text": "    const builtinLists = effectiveBuiltinLists("
+        },
+        {
+          "line": 54,
+          "text": "      settings.get().agent.enabledBuiltinTools ?? [],"
+        },
+        {
+          "line": 55,
+          "text": "      settings.get().agent.disabledBuiltinTools ?? [],"
+        },
+        {
+          "line": 56,
+          "text": "      effectiveProjectOverrides(settings, options.cwd, profile.sessionProfileOverrides)?.builtin,"
+        },
+        {
+          "line": 57,
+          "text": "    );"
+        },
+        {
+          "line": 58,
+          "text": "    const disabled = builtinLists.disabledBuiltinTools.includes(\"LinkAction\");"
+        },
+        {
+          "line": 59,
+          "text": "    const disabledLists = computeEffectiveDisabledLists("
+        },
+        {
+          "line": 60,
+          "text": "      settings,"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/links/operation-hook-host.ts",
+      "sha256": "fb6ea16d81e31e137730974e32b556c251315181f5dca734fc5283d36b4b1aa2",
+      "ranges": [
+        [
+          140,
+          180
+        ]
+      ],
+      "text": [
+        {
+          "line": 140,
+          "text": "            }"
+        },
+        {
+          "line": 141,
+          "text": "          const plan = match(hook, context);"
+        },
+        {
+          "line": 142,
+          "text": "          if ("
+        },
+        {
+          "line": 143,
+          "text": "            !plan ||"
+        },
+        {
+          "line": 144,
+          "text": "            (plan !== \"inline\" &&"
+        },
+        {
+          "line": 145,
+          "text": "              (cache.get(plan) === \"invalid\" ||"
+        },
+        {
+          "line": 146,
+          "text": "                (typeof cache.get(plan) === \"object\" &&"
+        },
+        {
+          "line": 147,
+          "text": "                  (cache.get(plan) as CapturedPlan).state === \"invalid\")))"
+        },
+        {
+          "line": 148,
+          "text": "          )"
+        },
+        {
+          "line": 149,
+          "text": "            throw new Error(\"Configured Hook plan unavailable\");"
+        },
+        {
+          "line": 150,
+          "text": "        }"
+        },
+        {
+          "line": 151,
+          "text": "      },"
+        },
+        {
+          "line": 152,
+          "text": "      resolveClosure(hook, context) {"
+        },
+        {
+          "line": 153,
+          "text": "        const plan = match(hook, context);"
+        },
+        {
+          "line": 154,
+          "text": "        if (!plan) return undefined;"
+        },
+        {
+          "line": 155,
+          "text": "        if (plan === \"inline\") return {};"
+        },
+        {
+          "line": 156,
+          "text": "        let record = cache.get(plan);"
+        },
+        {
+          "line": 157,
+          "text": "        if (record === \"invalid\" || record === \"capturing\")"
+        },
+        {
+          "line": 158,
+          "text": "          throw new Error(\"Hook plan custody unavailable\");"
+        },
+        {
+          "line": 159,
+          "text": "        if (!record) {"
+        },
+        {
+          "line": 160,
+          "text": "          cache.set(plan, \"capturing\");"
+        },
+        {
+          "line": 161,
+          "text": "          try {"
+        },
+        {
+          "line": 162,
+          "text": "            const assertSourceCustody = createHookSourceCustody(hook);"
+        },
+        {
+          "line": 163,
+          "text": "            const assertCustody = () => {"
+        },
+        {
+          "line": 164,
+          "text": "              assertNativeState();"
+        },
+        {
+          "line": 165,
+          "text": "              assertSourceCustody();"
+        },
+        {
+          "line": 166,
+          "text": "            };"
+        },
+        {
+          "line": 167,
+          "text": "            const grants = plan.files.map((file) => {"
+        },
+        {
+          "line": 168,
+          "text": "              const path ="
+        },
+        {
+          "line": 169,
+          "text": "                plan.source.kind === \"plugin\""
+        },
+        {
+          "line": 170,
+          "text": "                  ? join(plan.source.installPath, file.source)"
+        },
+        {
+          "line": 171,
+          "text": "                  : file.source;"
+        },
+        {
+          "line": 172,
+          "text": "              if (!credentialPolicy) throw new Error(\"Native Hook state custody unavailable\");"
+        },
+        {
+          "line": 173,
+          "text": "              assertHookResourceNotCredential(path, credentialPolicy);"
+        },
+        {
+          "line": 174,
+          "text": "              if (resolve(path) !== path || realpathSync(path) !== path)"
+        },
+        {
+          "line": 175,
+          "text": "                throw new Error(\"Hook resource path is not canonical\");"
+        },
+        {
+          "line": 176,
+          "text": "              return {"
+        },
+        {
+          "line": 177,
+          "text": "                path,"
+        },
+        {
+          "line": 178,
+          "text": "                name: file.name,"
+        },
+        {
+          "line": 179,
+          "text": "                expectedBytes: file.bytes,"
+        },
+        {
+          "line": 180,
+          "text": "                expectedSha256: file.sha256,"
+        }
+      ]
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "ranges": [
+        [
+          1,
+          475
+        ],
+        [
+          850,
+          887
+        ]
+      ],
+      "text": [
+        {
+          "line": 1,
+          "text": "import { createHash } from \"node:crypto\";"
+        },
+        {
+          "line": 2,
+          "text": "import { constants as fsConstants } from \"node:fs\";"
+        },
+        {
+          "line": 3,
+          "text": "import {"
+        },
+        {
+          "line": 4,
+          "text": "  appendFile,"
+        },
+        {
+          "line": 5,
+          "text": "  lstat,"
+        },
+        {
+          "line": 6,
+          "text": "  mkdir,"
+        },
+        {
+          "line": 7,
+          "text": "  open,"
+        },
+        {
+          "line": 8,
+          "text": "  readdir,"
+        },
+        {
+          "line": 9,
+          "text": "  realpath,"
+        },
+        {
+          "line": 10,
+          "text": "  rename,"
+        },
+        {
+          "line": 11,
+          "text": "  rm,"
+        },
+        {
+          "line": 12,
+          "text": "  stat,"
+        },
+        {
+          "line": 13,
+          "text": "  writeFile,"
+        },
+        {
+          "line": 14,
+          "text": "} from \"node:fs/promises\";"
+        },
+        {
+          "line": 15,
+          "text": "import { basename, extname, join, relative, resolve, sep } from \"node:path\";"
+        },
+        {
+          "line": 16,
+          "text": "import { sanitizeImageBytes } from \"./image-byte-probe.js\";"
+        },
+        {
+          "line": 17,
+          "text": ""
+        },
+        {
+          "line": 18,
+          "text": "export type InputAttachmentKind = \"image\" | \"file\" | \"directory\";"
+        },
+        {
+          "line": 19,
+          "text": ""
+        },
+        {
+          "line": 20,
+          "text": "export type InputAttachmentOrigin ="
+        },
+        {
+          "line": 21,
+          "text": "  | \"paste\""
+        },
+        {
+          "line": 22,
+          "text": "  | \"os-drop\""
+        },
+        {
+          "line": 23,
+          "text": "  | \"file-panel\""
+        },
+        {
+          "line": 24,
+          "text": "  | \"picker\""
+        },
+        {
+          "line": 25,
+          "text": "  | \"mention\""
+        },
+        {
+          "line": 26,
+          "text": "  | \"generated\""
+        },
+        {
+          "line": 27,
+          "text": "  | \"mobile\""
+        },
+        {
+          "line": 28,
+          "text": "  | \"im-gateway\""
+        },
+        {
+          "line": 29,
+          "text": "  | \"tool\";"
+        },
+        {
+          "line": 30,
+          "text": ""
+        },
+        {
+          "line": 31,
+          "text": "export interface InputAttachmentMeta {"
+        },
+        {
+          "line": 32,
+          "text": "  id: string;"
+        },
+        {
+          "line": 33,
+          "text": "  sessionId: string;"
+        },
+        {
+          "line": 34,
+          "text": "  kind: InputAttachmentKind;"
+        },
+        {
+          "line": 35,
+          "text": "  origin: InputAttachmentOrigin;"
+        },
+        {
+          "line": 36,
+          "text": "  path: string;"
+        },
+        {
+          "line": 37,
+          "text": "  absPath: string;"
+        },
+        {
+          "line": 38,
+          "text": "  relPath?: string;"
+        },
+        {
+          "line": 39,
+          "text": "  mime?: string;"
+        },
+        {
+          "line": 40,
+          "text": "  size: number;"
+        },
+        {
+          "line": 41,
+          "text": "  sha256: string;"
+        },
+        {
+          "line": 42,
+          "text": "  originalName?: string;"
+        },
+        {
+          "line": 43,
+          "text": "  createdAt: number;"
+        },
+        {
+          "line": 44,
+          "text": "  sourcePath?: string;"
+        },
+        {
+          "line": 45,
+          "text": "  width?: number;"
+        },
+        {
+          "line": 46,
+          "text": "  height?: number;"
+        },
+        {
+          "line": 47,
+          "text": "  vision?: {"
+        },
+        {
+          "line": 48,
+          "text": "    include: boolean;"
+        },
+        {
+          "line": 49,
+          "text": "    mediaPath?: string;"
+        },
+        {
+          "line": 50,
+          "text": "    detail?: \"low\" | \"standard\" | \"high\";"
+        },
+        {
+          "line": 51,
+          "text": "  };"
+        },
+        {
+          "line": 52,
+          "text": "  directory?: {"
+        },
+        {
+          "line": 53,
+          "text": "    treePath?: string;"
+        },
+        {
+          "line": 54,
+          "text": "    truncated?: boolean;"
+        },
+        {
+          "line": 55,
+          "text": "    entryCount?: number;"
+        },
+        {
+          "line": 56,
+          "text": "  };"
+        },
+        {
+          "line": 57,
+          "text": "}"
+        },
+        {
+          "line": 58,
+          "text": ""
+        },
+        {
+          "line": 59,
+          "text": "export interface StageImageDataUrlInput {"
+        },
+        {
+          "line": 60,
+          "text": "  cwd: string;"
+        },
+        {
+          "line": 61,
+          "text": "  sessionId: string;"
+        },
+        {
+          "line": 62,
+          "text": "  name?: string;"
+        },
+        {
+          "line": 63,
+          "text": "  mime?: string;"
+        },
+        {
+          "line": 64,
+          "text": "  dataUrl: string;"
+        },
+        {
+          "line": 65,
+          "text": "  origin: InputAttachmentOrigin;"
+        },
+        {
+          "line": 66,
+          "text": "}"
+        },
+        {
+          "line": 67,
+          "text": ""
+        },
+        {
+          "line": 68,
+          "text": "export interface StageImageBytesInput {"
+        },
+        {
+          "line": 69,
+          "text": "  cwd: string;"
+        },
+        {
+          "line": 70,
+          "text": "  sessionId: string;"
+        },
+        {
+          "line": 71,
+          "text": "  name?: string;"
+        },
+        {
+          "line": 72,
+          "text": "  mime: string;"
+        },
+        {
+          "line": 73,
+          "text": "  bytes?: Uint8Array;"
+        },
+        {
+          "line": 74,
+          "text": "  sourceFile?: string;"
+        },
+        {
+          "line": 75,
+          "text": "  origin: InputAttachmentOrigin;"
+        },
+        {
+          "line": 76,
+          "text": "}"
+        },
+        {
+          "line": 77,
+          "text": ""
+        },
+        {
+          "line": 78,
+          "text": "export interface StageFileBytesInput {"
+        },
+        {
+          "line": 79,
+          "text": "  cwd: string;"
+        },
+        {
+          "line": 80,
+          "text": "  sessionId: string;"
+        },
+        {
+          "line": 81,
+          "text": "  name?: string;"
+        },
+        {
+          "line": 82,
+          "text": "  mime?: string;"
+        },
+        {
+          "line": 83,
+          "text": "  bytes: Uint8Array;"
+        },
+        {
+          "line": 84,
+          "text": "  origin: InputAttachmentOrigin;"
+        },
+        {
+          "line": 85,
+          "text": "}"
+        },
+        {
+          "line": 86,
+          "text": ""
+        },
+        {
+          "line": 87,
+          "text": "export interface AttachmentCleanupInput {"
+        },
+        {
+          "line": 88,
+          "text": "  cwd: string;"
+        },
+        {
+          "line": 89,
+          "text": "  sessionId?: string;"
+        },
+        {
+          "line": 90,
+          "text": "  now?: number;"
+        },
+        {
+          "line": 91,
+          "text": "}"
+        },
+        {
+          "line": 92,
+          "text": ""
+        },
+        {
+          "line": 93,
+          "text": "export interface AttachmentInspectInput {"
+        },
+        {
+          "line": 94,
+          "text": "  cwd: string;"
+        },
+        {
+          "line": 95,
+          "text": "  sessionId?: string;"
+        },
+        {
+          "line": 96,
+          "text": "}"
+        },
+        {
+          "line": 97,
+          "text": ""
+        },
+        {
+          "line": 98,
+          "text": "interface ManifestRecord {"
+        },
+        {
+          "line": 99,
+          "text": "  event: \"staged\" | \"sent\" | \"removedFromDraft\" | \"cleanup\";"
+        },
+        {
+          "line": 100,
+          "text": "  id?: string;"
+        },
+        {
+          "line": 101,
+          "text": "  sessionId: string;"
+        },
+        {
+          "line": 102,
+          "text": "  kind?: InputAttachmentKind;"
+        },
+        {
+          "line": 103,
+          "text": "  origin?: InputAttachmentOrigin;"
+        },
+        {
+          "line": 104,
+          "text": "  path?: string;"
+        },
+        {
+          "line": 105,
+          "text": "  absPath?: string;"
+        },
+        {
+          "line": 106,
+          "text": "  relPath?: string;"
+        },
+        {
+          "line": 107,
+          "text": "  mime?: string;"
+        },
+        {
+          "line": 108,
+          "text": "  size?: number;"
+        },
+        {
+          "line": 109,
+          "text": "  sha256?: string;"
+        },
+        {
+          "line": 110,
+          "text": "  originalName?: string;"
+        },
+        {
+          "line": 111,
+          "text": "  createdAt?: number;"
+        },
+        {
+          "line": 112,
+          "text": "  sentAt?: number;"
+        },
+        {
+          "line": 113,
+          "text": "  removedAt?: number;"
+        },
+        {
+          "line": 114,
+          "text": "  cleanedAt?: number;"
+        },
+        {
+          "line": 115,
+          "text": "  status?: \"draft\" | \"sent\";"
+        },
+        {
+          "line": 116,
+          "text": "}"
+        },
+        {
+          "line": 117,
+          "text": ""
+        },
+        {
+          "line": 118,
+          "text": "const CODE_SHELL_DIR = \".code-shell\";"
+        },
+        {
+          "line": 119,
+          "text": "const ATTACHMENTS_DIR = \"attachments\";"
+        },
+        {
+          "line": 120,
+          "text": "const MANIFEST_FILE = \"manifest.jsonl\";"
+        },
+        {
+          "line": 121,
+          "text": "const GITIGNORE_CONTENT = \"*\\n!.gitignore\\n\";"
+        },
+        {
+          "line": 122,
+          "text": "export const DRAFT_ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;"
+        },
+        {
+          "line": 123,
+          "text": "export const SENT_ATTACHMENT_TTL_MS = 30 * 24 * 60 * 60 * 1000;"
+        },
+        {
+          "line": 124,
+          "text": "export const MAX_STAGED_IMAGE_BYTES = 10 * 1024 * 1024;"
+        },
+        {
+          "line": 125,
+          "text": "export const MAX_STAGED_FILE_BYTES = 20 * 1024 * 1024;"
+        },
+        {
+          "line": 126,
+          "text": "const MAX_ATTACHMENT_NAME_CHARS = 1_024;"
+        },
+        {
+          "line": 127,
+          "text": "const MAX_ATTACHMENT_MIME_CHARS = 256;"
+        },
+        {
+          "line": 128,
+          "text": "const MAX_MANIFEST_LINE_BYTES = 128 * 1024;"
+        },
+        {
+          "line": 129,
+          "text": "const MAX_MANIFEST_SCAN_BYTES = 32 * 1024 * 1024;"
+        },
+        {
+          "line": 130,
+          "text": "const MAX_MANIFEST_RECORDS = 50_000;"
+        },
+        {
+          "line": 131,
+          "text": "const MAX_ATTACHMENT_SESSION_DIRS = 10_000;"
+        },
+        {
+          "line": 132,
+          "text": ""
+        },
+        {
+          "line": 133,
+          "text": "const ATTACHMENT_ORIGINS = new Set<InputAttachmentOrigin>(["
+        },
+        {
+          "line": 134,
+          "text": "  \"paste\","
+        },
+        {
+          "line": 135,
+          "text": "  \"os-drop\","
+        },
+        {
+          "line": 136,
+          "text": "  \"file-panel\","
+        },
+        {
+          "line": 137,
+          "text": "  \"picker\","
+        },
+        {
+          "line": 138,
+          "text": "  \"mention\","
+        },
+        {
+          "line": 139,
+          "text": "  \"generated\","
+        },
+        {
+          "line": 140,
+          "text": "  \"mobile\","
+        },
+        {
+          "line": 141,
+          "text": "  \"im-gateway\","
+        },
+        {
+          "line": 142,
+          "text": "  \"tool\","
+        },
+        {
+          "line": 143,
+          "text": "]);"
+        },
+        {
+          "line": 144,
+          "text": ""
+        },
+        {
+          "line": 145,
+          "text": "function assertAttachmentLabels(input: {"
+        },
+        {
+          "line": 146,
+          "text": "  name?: string;"
+        },
+        {
+          "line": 147,
+          "text": "  mime?: string;"
+        },
+        {
+          "line": 148,
+          "text": "  origin: InputAttachmentOrigin;"
+        },
+        {
+          "line": 149,
+          "text": "}): void {"
+        },
+        {
+          "line": 150,
+          "text": "  if ("
+        },
+        {
+          "line": 151,
+          "text": "    (input.name !== undefined &&"
+        },
+        {
+          "line": 152,
+          "text": "      (typeof input.name !== \"string\" ||"
+        },
+        {
+          "line": 153,
+          "text": "        input.name.length > MAX_ATTACHMENT_NAME_CHARS ||"
+        },
+        {
+          "line": 154,
+          "text": "        input.name.includes(\"\\0\"))) ||"
+        },
+        {
+          "line": 155,
+          "text": "    (input.mime !== undefined &&"
+        },
+        {
+          "line": 156,
+          "text": "      (typeof input.mime !== \"string\" ||"
+        },
+        {
+          "line": 157,
+          "text": "        input.mime.length > MAX_ATTACHMENT_MIME_CHARS ||"
+        },
+        {
+          "line": 158,
+          "text": "        input.mime.includes(\"\\0\"))) ||"
+        },
+        {
+          "line": 159,
+          "text": "    !ATTACHMENT_ORIGINS.has(input.origin)"
+        },
+        {
+          "line": 160,
+          "text": "  ) {"
+        },
+        {
+          "line": 161,
+          "text": "    throw new Error(\"invalid attachment metadata\");"
+        },
+        {
+          "line": 162,
+          "text": "  }"
+        },
+        {
+          "line": 163,
+          "text": "}"
+        },
+        {
+          "line": 164,
+          "text": ""
+        },
+        {
+          "line": 165,
+          "text": "const IMAGE_MIME_EXT: Record<string, string> = {"
+        },
+        {
+          "line": 166,
+          "text": "  \"image/png\": \".png\","
+        },
+        {
+          "line": 167,
+          "text": "  \"image/jpeg\": \".jpg\","
+        },
+        {
+          "line": 168,
+          "text": "  \"image/jpg\": \".jpg\","
+        },
+        {
+          "line": 169,
+          "text": "  \"image/webp\": \".webp\","
+        },
+        {
+          "line": 170,
+          "text": "  \"image/gif\": \".gif\","
+        },
+        {
+          "line": 171,
+          "text": "};"
+        },
+        {
+          "line": 172,
+          "text": ""
+        },
+        {
+          "line": 173,
+          "text": "const ALLOWED_IMAGE_MIMES = new Set(Object.keys(IMAGE_MIME_EXT));"
+        },
+        {
+          "line": 174,
+          "text": ""
+        },
+        {
+          "line": 175,
+          "text": "let idCounter = 0;"
+        },
+        {
+          "line": 176,
+          "text": ""
+        },
+        {
+          "line": 177,
+          "text": "export async function stageImageDataUrl("
+        },
+        {
+          "line": 178,
+          "text": "  input: StageImageDataUrlInput,"
+        },
+        {
+          "line": 179,
+          "text": "): Promise<InputAttachmentMeta> {"
+        },
+        {
+          "line": 180,
+          "text": "  const parsed = parseDataUrl(input.dataUrl);"
+        },
+        {
+          "line": 181,
+          "text": "  if (!parsed || !ALLOWED_IMAGE_MIMES.has(parsed.mime)) {"
+        },
+        {
+          "line": 182,
+          "text": "    throw new Error(`unsupported image data URL MIME`);"
+        },
+        {
+          "line": 183,
+          "text": "  }"
+        },
+        {
+          "line": 184,
+          "text": "  if (input.mime && normalizeMime(input.mime) !== parsed.mime) {"
+        },
+        {
+          "line": 185,
+          "text": "    throw new Error(`data URL MIME ${parsed.mime} does not match declared MIME ${input.mime}`);"
+        },
+        {
+          "line": 186,
+          "text": "  }"
+        },
+        {
+          "line": 187,
+          "text": "  return stageImageBuffer(input, parsed.mime, parsed.buffer);"
+        },
+        {
+          "line": 188,
+          "text": "}"
+        },
+        {
+          "line": 189,
+          "text": ""
+        },
+        {
+          "line": 190,
+          "text": "/** Stage already-transferred bytes without expanding them back through base64. */"
+        },
+        {
+          "line": 191,
+          "text": "export async function stageImageBytes(input: StageImageBytesInput): Promise<InputAttachmentMeta> {"
+        },
+        {
+          "line": 192,
+          "text": "  assertAttachmentLabels(input);"
+        },
+        {
+          "line": 193,
+          "text": "  const mime = normalizeMime(input.mime);"
+        },
+        {
+          "line": 194,
+          "text": "  if (!ALLOWED_IMAGE_MIMES.has(mime)) throw new Error(`unsupported image MIME ${input.mime}`);"
+        },
+        {
+          "line": 195,
+          "text": "  if ((input.bytes === undefined) === (input.sourceFile === undefined)) {"
+        },
+        {
+          "line": 196,
+          "text": "    throw new Error(\"exactly one of bytes or sourceFile is required\");"
+        },
+        {
+          "line": 197,
+          "text": "  }"
+        },
+        {
+          "line": 198,
+          "text": "  let buffer: Buffer;"
+        },
+        {
+          "line": 199,
+          "text": "  if (input.sourceFile !== undefined) {"
+        },
+        {
+          "line": 200,
+          "text": "    if ("
+        },
+        {
+          "line": 201,
+          "text": "      typeof input.sourceFile !== \"string\" ||"
+        },
+        {
+          "line": 202,
+          "text": "      !input.sourceFile ||"
+        },
+        {
+          "line": 203,
+          "text": "      input.sourceFile.length > 32_768 ||"
+        },
+        {
+          "line": 204,
+          "text": "      input.sourceFile.includes(\"\\0\")"
+        },
+        {
+          "line": 205,
+          "text": "    ) {"
+        },
+        {
+          "line": 206,
+          "text": "      throw new Error(\"image source path is invalid\");"
+        },
+        {
+          "line": 207,
+          "text": "    }"
+        },
+        {
+          "line": 208,
+          "text": "    const handle = await open("
+        },
+        {
+          "line": 209,
+          "text": "      input.sourceFile,"
+        },
+        {
+          "line": 210,
+          "text": "      fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0),"
+        },
+        {
+          "line": 211,
+          "text": "    );"
+        },
+        {
+          "line": 212,
+          "text": "    try {"
+        },
+        {
+          "line": 213,
+          "text": "      const source = await handle.stat();"
+        },
+        {
+          "line": 214,
+          "text": "      if (!source.isFile()) throw new Error(\"image source must be a regular file\");"
+        },
+        {
+          "line": 215,
+          "text": "      if (source.size > MAX_STAGED_IMAGE_BYTES) {"
+        },
+        {
+          "line": 216,
+          "text": "        throw new Error("
+        },
+        {
+          "line": 217,
+          "text": "          `image attachment exceeds size limit (${formatBytes(MAX_STAGED_IMAGE_BYTES)})`,"
+        },
+        {
+          "line": 218,
+          "text": "        );"
+        },
+        {
+          "line": 219,
+          "text": "      }"
+        },
+        {
+          "line": 220,
+          "text": "      buffer = await handle.readFile();"
+        },
+        {
+          "line": 221,
+          "text": "    } finally {"
+        },
+        {
+          "line": 222,
+          "text": "      await handle.close();"
+        },
+        {
+          "line": 223,
+          "text": "    }"
+        },
+        {
+          "line": 224,
+          "text": "  } else {"
+        },
+        {
+          "line": 225,
+          "text": "    buffer = Buffer.from(input.bytes!);"
+        },
+        {
+          "line": 226,
+          "text": "  }"
+        },
+        {
+          "line": 227,
+          "text": "  return stageImageBuffer(input, mime, buffer);"
+        },
+        {
+          "line": 228,
+          "text": "}"
+        },
+        {
+          "line": 229,
+          "text": ""
+        },
+        {
+          "line": 230,
+          "text": "async function stageImageBuffer("
+        },
+        {
+          "line": 231,
+          "text": "  input: {"
+        },
+        {
+          "line": 232,
+          "text": "    cwd: string;"
+        },
+        {
+          "line": 233,
+          "text": "    sessionId: string;"
+        },
+        {
+          "line": 234,
+          "text": "    name?: string;"
+        },
+        {
+          "line": 235,
+          "text": "    origin: InputAttachmentOrigin;"
+        },
+        {
+          "line": 236,
+          "text": "  },"
+        },
+        {
+          "line": 237,
+          "text": "  mime: string,"
+        },
+        {
+          "line": 238,
+          "text": "  buffer: Buffer,"
+        },
+        {
+          "line": 239,
+          "text": "): Promise<InputAttachmentMeta> {"
+        },
+        {
+          "line": 240,
+          "text": "  assertAttachmentLabels(input);"
+        },
+        {
+          "line": 241,
+          "text": "  const cwd = await resolveExistingDirectory(input.cwd, \"cwd\");"
+        },
+        {
+          "line": 242,
+          "text": "  assertSafeSessionId(input.sessionId);"
+        },
+        {
+          "line": 243,
+          "text": "  if (buffer.byteLength > MAX_STAGED_IMAGE_BYTES) {"
+        },
+        {
+          "line": 244,
+          "text": "    throw new Error(`image attachment exceeds size limit (${formatBytes(MAX_STAGED_IMAGE_BYTES)})`);"
+        },
+        {
+          "line": 245,
+          "text": "  }"
+        },
+        {
+          "line": 246,
+          "text": "  const sanitized = sanitizeImageBytes(mime, buffer);"
+        },
+        {
+          "line": 247,
+          "text": "  buffer = sanitized.bytes;"
+        },
+        {
+          "line": 248,
+          "text": "  const image = sanitized.image;"
+        },
+        {
+          "line": 249,
+          "text": ""
+        },
+        {
+          "line": 250,
+          "text": "  const attachmentsRoot = await ensureAttachmentsRoot(cwd);"
+        },
+        {
+          "line": 251,
+          "text": "  const sessionDir = await ensureSessionDir(attachmentsRoot, input.sessionId);"
+        },
+        {
+          "line": 252,
+          "text": "  const sha256 = createHash(\"sha256\").update(buffer).digest(\"hex\");"
+        },
+        {
+          "line": 253,
+          "text": "  const sha16 = sha256.slice(0, 16);"
+        },
+        {
+          "line": 254,
+          "text": "  const ext = IMAGE_MIME_EXT[mime] ?? \".bin\";"
+        },
+        {
+          "line": 255,
+          "text": "  const safeBase = safeSlug(input.name, \"image\");"
+        },
+        {
+          "line": 256,
+          "text": "  const existing = await findExistingSessionFile(sessionDir, sha16);"
+        },
+        {
+          "line": 257,
+          "text": "  const filename = existing ?? `${sha16}-${safeBase}${ext}`;"
+        },
+        {
+          "line": 258,
+          "text": "  const absPath = await safeJoin(sessionDir, filename, sessionDir);"
+        },
+        {
+          "line": 259,
+          "text": ""
+        },
+        {
+          "line": 260,
+          "text": "  if (!existing) {"
+        },
+        {
+          "line": 261,
+          "text": "    const tmpPath = await safeJoin("
+        },
+        {
+          "line": 262,
+          "text": "      sessionDir,"
+        },
+        {
+          "line": 263,
+          "text": "      `.${filename}.${process.pid}.${Date.now()}.tmp`,"
+        },
+        {
+          "line": 264,
+          "text": "      sessionDir,"
+        },
+        {
+          "line": 265,
+          "text": "    );"
+        },
+        {
+          "line": 266,
+          "text": "    await writeFile(tmpPath, buffer, { flag: \"wx\" });"
+        },
+        {
+          "line": 267,
+          "text": "    try {"
+        },
+        {
+          "line": 268,
+          "text": "      await rename(tmpPath, absPath);"
+        },
+        {
+          "line": 269,
+          "text": "    } catch (error) {"
+        },
+        {
+          "line": 270,
+          "text": "      await rm(tmpPath, { force: true }).catch(() => undefined);"
+        },
+        {
+          "line": 271,
+          "text": "      throw error;"
+        },
+        {
+          "line": 272,
+          "text": "    }"
+        },
+        {
+          "line": 273,
+          "text": "  }"
+        },
+        {
+          "line": 274,
+          "text": ""
+        },
+        {
+          "line": 275,
+          "text": "  const relPath = normalizePath(relative(cwd, absPath));"
+        },
+        {
+          "line": 276,
+          "text": "  const createdAt = Date.now();"
+        },
+        {
+          "line": 277,
+          "text": "  idCounter += 1;"
+        },
+        {
+          "line": 278,
+          "text": "  const meta: InputAttachmentMeta = {"
+        },
+        {
+          "line": 279,
+          "text": "    id: `att_${sha16}_${idCounter.toString(36)}`,"
+        },
+        {
+          "line": 280,
+          "text": "    sessionId: input.sessionId,"
+        },
+        {
+          "line": 281,
+          "text": "    kind: \"image\","
+        },
+        {
+          "line": 282,
+          "text": "    origin: input.origin,"
+        },
+        {
+          "line": 283,
+          "text": "    path: relPath,"
+        },
+        {
+          "line": 284,
+          "text": "    absPath,"
+        },
+        {
+          "line": 285,
+          "text": "    relPath,"
+        },
+        {
+          "line": 286,
+          "text": "    mime,"
+        },
+        {
+          "line": 287,
+          "text": "    size: buffer.byteLength,"
+        },
+        {
+          "line": 288,
+          "text": "    sha256,"
+        },
+        {
+          "line": 289,
+          "text": "    ...(input.name ? { originalName: input.name } : {}),"
+        },
+        {
+          "line": 290,
+          "text": "    createdAt,"
+        },
+        {
+          "line": 291,
+          "text": "    width: image.width,"
+        },
+        {
+          "line": 292,
+          "text": "    height: image.height,"
+        },
+        {
+          "line": 293,
+          "text": "    vision: { include: true },"
+        },
+        {
+          "line": 294,
+          "text": "  };"
+        },
+        {
+          "line": 295,
+          "text": "  await appendManifest(sessionDir, { event: \"staged\", status: \"draft\", ...meta });"
+        },
+        {
+          "line": 296,
+          "text": "  return meta;"
+        },
+        {
+          "line": 297,
+          "text": "}"
+        },
+        {
+          "line": 298,
+          "text": ""
+        },
+        {
+          "line": 299,
+          "text": "/** Stage an untrusted non-image file inside the canonical attachment root. */"
+        },
+        {
+          "line": 300,
+          "text": "export async function stageFileBytes(input: StageFileBytesInput): Promise<InputAttachmentMeta> {"
+        },
+        {
+          "line": 301,
+          "text": "  assertAttachmentLabels(input);"
+        },
+        {
+          "line": 302,
+          "text": "  const cwd = await resolveExistingDirectory(input.cwd, \"cwd\");"
+        },
+        {
+          "line": 303,
+          "text": "  assertSafeSessionId(input.sessionId);"
+        },
+        {
+          "line": 304,
+          "text": "  const buffer = Buffer.from(input.bytes);"
+        },
+        {
+          "line": 305,
+          "text": "  if (buffer.byteLength > MAX_STAGED_FILE_BYTES) {"
+        },
+        {
+          "line": 306,
+          "text": "    throw new Error(`file attachment exceeds size limit (${formatBytes(MAX_STAGED_FILE_BYTES)})`);"
+        },
+        {
+          "line": 307,
+          "text": "  }"
+        },
+        {
+          "line": 308,
+          "text": ""
+        },
+        {
+          "line": 309,
+          "text": "  const attachmentsRoot = await ensureAttachmentsRoot(cwd);"
+        },
+        {
+          "line": 310,
+          "text": "  const sessionDir = await ensureSessionDir(attachmentsRoot, input.sessionId);"
+        },
+        {
+          "line": 311,
+          "text": "  const sha256 = createHash(\"sha256\").update(buffer).digest(\"hex\");"
+        },
+        {
+          "line": 312,
+          "text": "  const sha16 = sha256.slice(0, 16);"
+        },
+        {
+          "line": 313,
+          "text": "  const safeBase = safeSlug(input.name, \"file\");"
+        },
+        {
+          "line": 314,
+          "text": "  const rawExt = extname(basename(input.name ?? \"\"));"
+        },
+        {
+          "line": 315,
+          "text": "  const originalExt = /^\\.[A-Za-z0-9]{1,15}$/.test(rawExt) ? rawExt : \"\";"
+        },
+        {
+          "line": 316,
+          "text": "  const existing = await findExistingSessionFile(sessionDir, sha16);"
+        },
+        {
+          "line": 317,
+          "text": "  const filename = existing ?? `${sha16}-${safeBase}${originalExt}`;"
+        },
+        {
+          "line": 318,
+          "text": "  const absPath = await safeJoin(sessionDir, filename, sessionDir);"
+        },
+        {
+          "line": 319,
+          "text": ""
+        },
+        {
+          "line": 320,
+          "text": "  if (!existing) {"
+        },
+        {
+          "line": 321,
+          "text": "    const tmpPath = await safeJoin("
+        },
+        {
+          "line": 322,
+          "text": "      sessionDir,"
+        },
+        {
+          "line": 323,
+          "text": "      `.${filename}.${process.pid}.${Date.now()}.tmp`,"
+        },
+        {
+          "line": 324,
+          "text": "      sessionDir,"
+        },
+        {
+          "line": 325,
+          "text": "    );"
+        },
+        {
+          "line": 326,
+          "text": "    await writeFile(tmpPath, buffer, { flag: \"wx\" });"
+        },
+        {
+          "line": 327,
+          "text": "    try {"
+        },
+        {
+          "line": 328,
+          "text": "      await rename(tmpPath, absPath);"
+        },
+        {
+          "line": 329,
+          "text": "    } catch (error) {"
+        },
+        {
+          "line": 330,
+          "text": "      await rm(tmpPath, { force: true }).catch(() => undefined);"
+        },
+        {
+          "line": 331,
+          "text": "      throw error;"
+        },
+        {
+          "line": 332,
+          "text": "    }"
+        },
+        {
+          "line": 333,
+          "text": "  }"
+        },
+        {
+          "line": 334,
+          "text": ""
+        },
+        {
+          "line": 335,
+          "text": "  const relPath = normalizePath(relative(cwd, absPath));"
+        },
+        {
+          "line": 336,
+          "text": "  const createdAt = Date.now();"
+        },
+        {
+          "line": 337,
+          "text": "  idCounter += 1;"
+        },
+        {
+          "line": 338,
+          "text": "  const meta: InputAttachmentMeta = {"
+        },
+        {
+          "line": 339,
+          "text": "    id: `att_${sha16}_${idCounter.toString(36)}`,"
+        },
+        {
+          "line": 340,
+          "text": "    sessionId: input.sessionId,"
+        },
+        {
+          "line": 341,
+          "text": "    kind: \"file\","
+        },
+        {
+          "line": 342,
+          "text": "    origin: input.origin,"
+        },
+        {
+          "line": 343,
+          "text": "    path: relPath,"
+        },
+        {
+          "line": 344,
+          "text": "    absPath,"
+        },
+        {
+          "line": 345,
+          "text": "    relPath,"
+        },
+        {
+          "line": 346,
+          "text": "    mime: normalizeMime(input.mime) || \"application/octet-stream\","
+        },
+        {
+          "line": 347,
+          "text": "    size: buffer.byteLength,"
+        },
+        {
+          "line": 348,
+          "text": "    sha256,"
+        },
+        {
+          "line": 349,
+          "text": "    ...(input.name ? { originalName: basename(input.name) } : {}),"
+        },
+        {
+          "line": 350,
+          "text": "    createdAt,"
+        },
+        {
+          "line": 351,
+          "text": "  };"
+        },
+        {
+          "line": 352,
+          "text": "  await appendManifest(sessionDir, { event: \"staged\", status: \"draft\", ...meta });"
+        },
+        {
+          "line": 353,
+          "text": "  return meta;"
+        },
+        {
+          "line": 354,
+          "text": "}"
+        },
+        {
+          "line": 355,
+          "text": ""
+        },
+        {
+          "line": 356,
+          "text": "export async function markAttachmentsSent("
+        },
+        {
+          "line": 357,
+          "text": "  cwd: string,"
+        },
+        {
+          "line": 358,
+          "text": "  sessionId: string,"
+        },
+        {
+          "line": 359,
+          "text": "  attachments: InputAttachmentMeta[],"
+        },
+        {
+          "line": 360,
+          "text": "): Promise<void> {"
+        },
+        {
+          "line": 361,
+          "text": "  if (attachments.length === 0) return;"
+        },
+        {
+          "line": 362,
+          "text": "  const resolvedCwd = await resolveExistingDirectory(cwd, \"cwd\");"
+        },
+        {
+          "line": 363,
+          "text": "  assertSafeSessionId(sessionId);"
+        },
+        {
+          "line": 364,
+          "text": "  const sessionDir = await ensureSessionDir(await ensureAttachmentsRoot(resolvedCwd), sessionId);"
+        },
+        {
+          "line": 365,
+          "text": "  const sentAt = Date.now();"
+        },
+        {
+          "line": 366,
+          "text": "  for (const attachment of attachments) {"
+        },
+        {
+          "line": 367,
+          "text": "    if (attachment.sessionId !== sessionId) continue;"
+        },
+        {
+          "line": 368,
+          "text": "    await appendManifest(sessionDir, {"
+        },
+        {
+          "line": 369,
+          "text": "      event: \"sent\","
+        },
+        {
+          "line": 370,
+          "text": "      id: attachment.id,"
+        },
+        {
+          "line": 371,
+          "text": "      sessionId,"
+        },
+        {
+          "line": 372,
+          "text": "      kind: attachment.kind,"
+        },
+        {
+          "line": 373,
+          "text": "      origin: attachment.origin,"
+        },
+        {
+          "line": 374,
+          "text": "      path: attachment.path,"
+        },
+        {
+          "line": 375,
+          "text": "      absPath: attachment.absPath,"
+        },
+        {
+          "line": 376,
+          "text": "      relPath: attachment.relPath,"
+        },
+        {
+          "line": 377,
+          "text": "      mime: attachment.mime,"
+        },
+        {
+          "line": 378,
+          "text": "      size: attachment.size,"
+        },
+        {
+          "line": 379,
+          "text": "      sha256: attachment.sha256,"
+        },
+        {
+          "line": 380,
+          "text": "      originalName: attachment.originalName,"
+        },
+        {
+          "line": 381,
+          "text": "      sentAt,"
+        },
+        {
+          "line": 382,
+          "text": "      status: \"sent\","
+        },
+        {
+          "line": 383,
+          "text": "    });"
+        },
+        {
+          "line": 384,
+          "text": "  }"
+        },
+        {
+          "line": 385,
+          "text": "}"
+        },
+        {
+          "line": 386,
+          "text": ""
+        },
+        {
+          "line": 387,
+          "text": "export async function listRecentAttachments("
+        },
+        {
+          "line": 388,
+          "text": "  input: AttachmentInspectInput,"
+        },
+        {
+          "line": 389,
+          "text": "): Promise<InputAttachmentMeta[]> {"
+        },
+        {
+          "line": 390,
+          "text": "  const cwd = await resolveExistingDirectory(input.cwd, \"cwd\");"
+        },
+        {
+          "line": 391,
+          "text": "  const root = await resolveAttachmentsRoot(cwd);"
+        },
+        {
+          "line": 392,
+          "text": "  if (!root) return [];"
+        },
+        {
+          "line": 393,
+          "text": "  const sessionIds = input.sessionId ? [input.sessionId] : await listSafeSessionDirs(root);"
+        },
+        {
+          "line": 394,
+          "text": "  const staged = new Map<string, InputAttachmentMeta>();"
+        },
+        {
+          "line": 395,
+          "text": "  const sent = new Set<string>();"
+        },
+        {
+          "line": 396,
+          "text": "  for (const sessionId of sessionIds) {"
+        },
+        {
+          "line": 397,
+          "text": "    assertSafeSessionId(sessionId);"
+        },
+        {
+          "line": 398,
+          "text": "    const sessionDir = await safeJoin(root, sessionId, root).catch(() => null);"
+        },
+        {
+          "line": 399,
+          "text": "    if (!sessionDir) continue;"
+        },
+        {
+          "line": 400,
+          "text": "    const records = await readManifest(sessionDir);"
+        },
+        {
+          "line": 401,
+          "text": "    for (const record of records) {"
+        },
+        {
+          "line": 402,
+          "text": "      if (record.event === \"staged\") {"
+        },
+        {
+          "line": 403,
+          "text": "        const meta = recordToMeta(record);"
+        },
+        {
+          "line": 404,
+          "text": "        if (meta && (await pathExistsInside(meta.absPath, root))) {"
+        },
+        {
+          "line": 405,
+          "text": "          staged.set(meta.id, meta);"
+        },
+        {
+          "line": 406,
+          "text": "        }"
+        },
+        {
+          "line": 407,
+          "text": "      } else if (record.event === \"sent\" && record.id) {"
+        },
+        {
+          "line": 408,
+          "text": "        sent.add(record.id);"
+        },
+        {
+          "line": 409,
+          "text": "      } else if ((record.event === \"removedFromDraft\" || record.event === \"cleanup\") && record.id) {"
+        },
+        {
+          "line": 410,
+          "text": "        staged.delete(record.id);"
+        },
+        {
+          "line": 411,
+          "text": "      }"
+        },
+        {
+          "line": 412,
+          "text": "    }"
+        },
+        {
+          "line": 413,
+          "text": "  }"
+        },
+        {
+          "line": 414,
+          "text": "  return [...staged.values()]"
+        },
+        {
+          "line": 415,
+          "text": "    .filter((meta) => sent.has(meta.id) || meta.kind !== \"image\")"
+        },
+        {
+          "line": 416,
+          "text": "    .sort((a, b) => b.createdAt - a.createdAt)"
+        },
+        {
+          "line": 417,
+          "text": "    .slice(0, 50);"
+        },
+        {
+          "line": 418,
+          "text": "}"
+        },
+        {
+          "line": 419,
+          "text": ""
+        },
+        {
+          "line": 420,
+          "text": "export async function cleanupAttachments(input: AttachmentCleanupInput): Promise<{"
+        },
+        {
+          "line": 421,
+          "text": "  removed: string[];"
+        },
+        {
+          "line": 422,
+          "text": "  sessionsRemoved: string[];"
+        },
+        {
+          "line": 423,
+          "text": "}> {"
+        },
+        {
+          "line": 424,
+          "text": "  const cwd = await resolveExistingDirectory(input.cwd, \"cwd\");"
+        },
+        {
+          "line": 425,
+          "text": "  const root = await resolveAttachmentsRoot(cwd);"
+        },
+        {
+          "line": 426,
+          "text": "  if (!root) return { removed: [], sessionsRemoved: [] };"
+        },
+        {
+          "line": 427,
+          "text": "  const now = input.now ?? Date.now();"
+        },
+        {
+          "line": 428,
+          "text": "  const sessionIds = input.sessionId ? [input.sessionId] : await listSafeSessionDirs(root);"
+        },
+        {
+          "line": 429,
+          "text": "  const removed: string[] = [];"
+        },
+        {
+          "line": 430,
+          "text": "  const sessionsRemoved: string[] = [];"
+        },
+        {
+          "line": 431,
+          "text": ""
+        },
+        {
+          "line": 432,
+          "text": "  for (const sessionId of sessionIds) {"
+        },
+        {
+          "line": 433,
+          "text": "    assertSafeSessionId(sessionId);"
+        },
+        {
+          "line": 434,
+          "text": "    const sessionDir = await safeJoin(root, sessionId, root).catch(() => null);"
+        },
+        {
+          "line": 435,
+          "text": "    if (!sessionDir) continue;"
+        },
+        {
+          "line": 436,
+          "text": "    const records = await readManifest(sessionDir);"
+        },
+        {
+          "line": 437,
+          "text": "    if (input.sessionId) {"
+        },
+        {
+          "line": 438,
+          "text": "      const files = await manifestFilesInside(records, root);"
+        },
+        {
+          "line": 439,
+          "text": "      for (const file of files) {"
+        },
+        {
+          "line": 440,
+          "text": "        await rm(file, { force: true }).catch(() => undefined);"
+        },
+        {
+          "line": 441,
+          "text": "        removed.push(file);"
+        },
+        {
+          "line": 442,
+          "text": "      }"
+        },
+        {
+          "line": 443,
+          "text": "      await rm(sessionDir, { recursive: true, force: true }).catch(() => undefined);"
+        },
+        {
+          "line": 444,
+          "text": "      sessionsRemoved.push(sessionId);"
+        },
+        {
+          "line": 445,
+          "text": "      continue;"
+        },
+        {
+          "line": 446,
+          "text": "    }"
+        },
+        {
+          "line": 447,
+          "text": ""
+        },
+        {
+          "line": 448,
+          "text": "    const latest = latestAttachmentState(records);"
+        },
+        {
+          "line": 449,
+          "text": "    for (const state of latest.values()) {"
+        },
+        {
+          "line": 450,
+          "text": "      const createdAt = state.createdAt ?? 0;"
+        },
+        {
+          "line": 451,
+          "text": "      const sentAt = state.sentAt;"
+        },
+        {
+          "line": 452,
+          "text": "      const isSent = typeof sentAt === \"number\";"
+        },
+        {
+          "line": 453,
+          "text": "      const ttl = isSent ? SENT_ATTACHMENT_TTL_MS : DRAFT_ATTACHMENT_TTL_MS;"
+        },
+        {
+          "line": 454,
+          "text": "      const basis = isSent ? sentAt : createdAt;"
+        },
+        {
+          "line": 455,
+          "text": "      if (!basis || now - basis < ttl) continue;"
+        },
+        {
+          "line": 456,
+          "text": "      if (!state.absPath || !(await pathExistsInside(state.absPath, root))) continue;"
+        },
+        {
+          "line": 457,
+          "text": "      await rm(state.absPath, { force: true }).catch(() => undefined);"
+        },
+        {
+          "line": 458,
+          "text": "      removed.push(state.absPath);"
+        },
+        {
+          "line": 459,
+          "text": "      await appendManifest(sessionDir, {"
+        },
+        {
+          "line": 460,
+          "text": "        event: \"cleanup\","
+        },
+        {
+          "line": 461,
+          "text": "        id: state.id,"
+        },
+        {
+          "line": 462,
+          "text": "        sessionId,"
+        },
+        {
+          "line": 463,
+          "text": "        absPath: state.absPath,"
+        },
+        {
+          "line": 464,
+          "text": "        relPath: state.relPath,"
+        },
+        {
+          "line": 465,
+          "text": "        path: state.path,"
+        },
+        {
+          "line": 466,
+          "text": "        sha256: state.sha256,"
+        },
+        {
+          "line": 467,
+          "text": "        cleanedAt: now,"
+        },
+        {
+          "line": 468,
+          "text": "      });"
+        },
+        {
+          "line": 469,
+          "text": "    }"
+        },
+        {
+          "line": 470,
+          "text": "  }"
+        },
+        {
+          "line": 471,
+          "text": ""
+        },
+        {
+          "line": 472,
+          "text": "  return { removed, sessionsRemoved };"
+        },
+        {
+          "line": 473,
+          "text": "}"
+        },
+        {
+          "line": 474,
+          "text": ""
+        },
+        {
+          "line": 475,
+          "text": "export async function cleanupSessionAttachments(cwd: string, sessionId: string): Promise<void> {"
+        },
+        {
+          "line": 850,
+          "text": "    id: record.id,"
+        },
+        {
+          "line": 851,
+          "text": "    sessionId: record.sessionId,"
+        },
+        {
+          "line": 852,
+          "text": "    kind: record.kind,"
+        },
+        {
+          "line": 853,
+          "text": "    origin: record.origin,"
+        },
+        {
+          "line": 854,
+          "text": "    path: record.path,"
+        },
+        {
+          "line": 855,
+          "text": "    absPath: record.absPath,"
+        },
+        {
+          "line": 856,
+          "text": "    relPath: record.relPath,"
+        },
+        {
+          "line": 857,
+          "text": "    mime: record.mime,"
+        },
+        {
+          "line": 858,
+          "text": "    size: record.size,"
+        },
+        {
+          "line": 859,
+          "text": "    sha256: record.sha256,"
+        },
+        {
+          "line": 860,
+          "text": "    originalName: record.originalName,"
+        },
+        {
+          "line": 861,
+          "text": "    createdAt: record.createdAt,"
+        },
+        {
+          "line": 862,
+          "text": "    vision: record.kind === \"image\" ? { include: true } : undefined,"
+        },
+        {
+          "line": 863,
+          "text": "  };"
+        },
+        {
+          "line": 864,
+          "text": "}"
+        },
+        {
+          "line": 865,
+          "text": ""
+        },
+        {
+          "line": 866,
+          "text": "async function manifestFilesInside(records: ManifestRecord[], root: string): Promise<string[]> {"
+        },
+        {
+          "line": 867,
+          "text": "  const files = new Set<string>();"
+        },
+        {
+          "line": 868,
+          "text": "  for (const record of records) {"
+        },
+        {
+          "line": 869,
+          "text": "    if (!record.absPath) continue;"
+        },
+        {
+          "line": 870,
+          "text": "    if (await pathExistsInside(record.absPath, root)) files.add(record.absPath);"
+        },
+        {
+          "line": 871,
+          "text": "  }"
+        },
+        {
+          "line": 872,
+          "text": "  return [...files];"
+        },
+        {
+          "line": 873,
+          "text": "}"
+        },
+        {
+          "line": 874,
+          "text": ""
+        },
+        {
+          "line": 875,
+          "text": "function latestAttachmentState(records: ManifestRecord[]): Map<string, ManifestRecord> {"
+        },
+        {
+          "line": 876,
+          "text": "  const latest = new Map<string, ManifestRecord>();"
+        },
+        {
+          "line": 877,
+          "text": "  for (const record of records) {"
+        },
+        {
+          "line": 878,
+          "text": "    if (!record.id) continue;"
+        },
+        {
+          "line": 879,
+          "text": "    if (record.event === \"staged\") latest.set(record.id, record);"
+        },
+        {
+          "line": 880,
+          "text": "    if (record.event === \"sent\") {"
+        },
+        {
+          "line": 881,
+          "text": "      const prev = latest.get(record.id) ?? record;"
+        },
+        {
+          "line": 882,
+          "text": "      latest.set(record.id, { ...prev, ...record, status: \"sent\" });"
+        },
+        {
+          "line": 883,
+          "text": "    }"
+        },
+        {
+          "line": 884,
+          "text": "    if (record.event === \"removedFromDraft\" || record.event === \"cleanup\") latest.delete(record.id);"
+        },
+        {
+          "line": 885,
+          "text": "  }"
+        },
+        {
+          "line": 886,
+          "text": "  return latest;"
+        },
+        {
+          "line": 887,
+          "text": "}"
+        }
+      ]
+    }
+  ],
+  "timing": "Persistent source copy after actual Root bounded reads; not labeled first output. Earlier raw source capture retains its own actual timing."
+}

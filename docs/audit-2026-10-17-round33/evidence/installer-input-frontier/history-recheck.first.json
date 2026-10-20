@@ -1,0 +1,11 @@
+{
+  "toolChunk": "fbd166",
+  "operation": "focused CLI-await metadata query, current SHA verification before retaining all149 contexts",
+  "outerCommandExitCode": 0,
+  "innerPythonExitCode": null,
+  "diagnostic": "Traceback (most recent call last):\n  File \"<stdin>\", line 15, in <module>\nAssertionError\n",
+  "diagnosticCapture": "Manually preserved exact visible tool diagnostic; not a raw stderr capture. Python numeric status was not separately retained; outer result0 followed later rg command.",
+  "productExecution": false,
+  "productReruns": 0,
+  "classification": "metadata drift diagnostic; no product test/install/check/update failure and no alternate product validation"
+}

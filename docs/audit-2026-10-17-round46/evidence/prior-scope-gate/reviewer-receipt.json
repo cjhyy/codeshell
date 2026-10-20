@@ -1,0 +1,94 @@
+{
+  "frozenUTC": "2026-10-17T15:27:48.241980+00:00",
+  "directory": "/tmp/codeshell-audit-round56-session-search",
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 467,
+      "sha256": "ce3ed870da9f366a53dfbfeecab138dcd8c86ce76a6811a2eef9f2c84db279f0"
+    },
+    {
+      "path": "coverage-gate-detail.json",
+      "bytes": 5462,
+      "sha256": "07ac0020cdd4ff988dc25e8143750d8d68eee74a6e24f758b4658e69558dac68"
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 6602,
+      "sha256": "b67df1cec43ecdc2c94895cdd28188c9b254db74f06a16692c7d8daf6eb9bc13"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1172,
+      "sha256": "5a453d18122a93eb3ceece9950a47b1b11355ccba1e3b25c0a31596b8e93c8c0"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 112824,
+      "sha256": "119725254ca84e13586185424fd7921d4a66b273a71608ff31212c36a6afeb4a"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3800,
+      "sha256": "fd7c8c6e87189ec70680aa4626ada28b3e5879c519bb48796be83f4fc5a16b95"
+    },
+    {
+      "path": "history.json",
+      "bytes": 813960,
+      "sha256": "e4880c9c6c4e9d03be0310f33f082fb3b04252a2ade08d69161a58d20109806a"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 489,
+      "sha256": "230ee0ceb0e7dfd02a841613dbbd5706d24affa7a781b4e733ca26b70ed3bfb8"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 658,
+      "sha256": "b9196334fd1864ce6c9a596507782318429b0fee8e1da00fbaf976bf5dc84a47"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2548,
+      "sha256": "ed36f7d2e0caadbcde4041232f89255774b4ee262d625c309505651f09029c7b"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 4420,
+      "sha256": "2cd1a8e2e0cd46765588158ce9ecf267fbb0f052856fee74f6563fb49dbbff50"
+    }
+  ],
+  "selfExcluded": "reviewer-receipt.json",
+  "fileCountExcludingSelf": 11,
+  "totalFilesIncludingSelf": 12,
+  "reportLinks": {
+    "count": 11,
+    "missing": []
+  },
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0,
+    "sameSHAWholeFileGateExclusions": 1
+  },
+  "source": {
+    "filesRows": 0,
+    "hashOnlyRows": 1,
+    "productSemanticLines": 0,
+    "productDisplayedLines": 0,
+    "historicalMetadataFiles": 4,
+    "historicalMetadataObjects": 5,
+    "allPinsEndingSame": true
+  },
+  "history": {
+    "files": 4088,
+    "endingAdded": 0,
+    "endingRemoved": 0,
+    "endingChanged": 0,
+    "notSemanticExhaustiveness": true
+  },
+  "productExecutions": 0,
+  "testExecutions": 0,
+  "gitOperations": 0,
+  "limits": "Old explicit entire-file inspection with query producer/error consumer static purpose preserved. No all-behavior or runtime validation claim; original rank/counts unchanged."
+}

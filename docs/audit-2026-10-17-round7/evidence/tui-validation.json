@@ -1,0 +1,48 @@
+{
+  "sourceCommit": "1b04838474bcd57212f80f791d0e268a00d347e3",
+  "confirmedFindings": [],
+  "candidates": [
+    {
+      "id": "TUI-C1",
+      "status": "source-only; fixture failed before product import; skipped without repair/retry/alternate validation",
+      "file": "packages/tui/src/ui/components/DiffLine.tsx",
+      "line": 102
+    },
+    {
+      "id": "TUI-C2",
+      "status": "source-only; fixture failed before product import; skipped without repair/retry/alternate validation",
+      "file": "packages/tui/src/ui/components/DiffLine.tsx",
+      "line": 48
+    }
+  ],
+  "runs": [
+    {
+      "name": "tui-diff-display",
+      "kind": "failed audit fixture",
+      "log": "tui-diff-display.first.log",
+      "exitReceipt": "tui-diff-display.first.exit.json",
+      "exitCode": 1,
+      "pass": 0,
+      "fail": 1,
+      "errors": 1,
+      "expect": null,
+      "completed": false,
+      "failurePhase": "test module import; relative path over-traverses by one level; no product code or assertions executed",
+      "retry": false
+    },
+    {
+      "name": "tui-store-anchor-baseline",
+      "kind": "existing ordinary pure-function/store baseline; independent of failed Diff fixture",
+      "log": "tui-store-anchor-baseline.first.log",
+      "exitReceipt": "tui-store-anchor-baseline.first.exit.json",
+      "exitCode": 0,
+      "files": 5,
+      "pass": 27,
+      "fail": 0,
+      "expect": 264,
+      "skip": 0,
+      "completed": true,
+      "retry": false
+    }
+  ]
+}

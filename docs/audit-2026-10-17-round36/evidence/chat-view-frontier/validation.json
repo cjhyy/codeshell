@@ -1,0 +1,23 @@
+{
+  "kind": "source-only audit",
+  "productExecutions": 0,
+  "helperInvocations": 0,
+  "productImports": 0,
+  "testExecutions": 0,
+  "reactBrowserDOMScrollFixtures": 0,
+  "nativeCLIModelNetworkExecutions": 0,
+  "permissionIdentityExperiments": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round36-chat-view-frontier",
+  "existingTestDeclarationsRead": 17,
+  "borrowedHistoricalPasses": false,
+  "oldFailedDirectionsReopened": false,
+  "metadataNotes": [
+    "One focused metadata exec yielded before printed output; its session identifier was not retained by wrapper. The completed JSON artifact was subsequently read and all70 contexts inspected in bounded calls. No product was run and no focused metadata retry was performed; original shell completion exit is not claimed.",
+    "First history query matches34/142/42 with cap100. Broad142 is not semantically exhausted; a separate no-cap focused70 query is recorded with0 byte drift from same3137 inventory.",
+    "No new independent reviewer was spawned for this prep; no independent-review credit claimed."
+  ],
+  "focusedMetadataOriginalShellExitCode": null,
+  "sourceBeforeFinishStable": true
+}

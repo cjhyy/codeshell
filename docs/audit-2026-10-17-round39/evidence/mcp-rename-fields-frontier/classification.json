@@ -1,0 +1,29 @@
+{
+  "role": "source-author static opinion pending Root independent counterevidence review",
+  "rootProposedFindingId": "MCP-R39-01",
+  "supportedP3StaticOpinions": 1,
+  "suggestedSeverity": "P3",
+  "globalClassificationOwner": "Root",
+  "standaloneCandidateRecords": 0,
+  "newRelatedRecords": 0,
+  "ordinaryCondition": "Existing valid manually configured user-added editable stdio server in ordinary user scope, new name absent, rename without editing other fields. Manual settings are explicitly supported by schema-export file editor contract and actual data reader, not a malformed DTO.",
+  "affectedSupportedFields": [
+    "connectTimeoutMs",
+    "connectRetries",
+    "inlineImages"
+  ],
+  "notClaimed": [
+    "all saves lose fields",
+    "plugin override behavior has same issue",
+    "arbitrary unrecognized fields must be preserved",
+    "observed UI action or settings file write",
+    "actual startup timeout/retry/vision failure",
+    "identity/security/authority lifecycle flaw"
+  ],
+  "intentCounterevidence": [
+    "Helper explicitly authors a field whitelist; omitting noneditable fields is not itself erroneous and same-key recursive merge preserves them.",
+    "Rename comment explicitly intends one atomic patch and old-key deletion; existing rename fixture tests that atomicity, old:null, and command retention.",
+    "No inspected reset policy requires resetting these supported startup/result fields when only a user-added server display/map name changes."
+  ],
+  "dynamicValidation": false
+}

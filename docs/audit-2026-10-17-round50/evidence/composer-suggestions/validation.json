@@ -1,0 +1,45 @@
+{
+  "role": "Independent ordinary UI source/data reviewer; not runtime or browser validator",
+  "checks": {
+    "productFunctions": 0,
+    "productHelpers": 0,
+    "productImports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "DOM": 0,
+    "UI": 0,
+    "timers": 0,
+    "network": 0,
+    "native": 0,
+    "model": 0,
+    "Git": 0,
+    "realConfigOrUserDataReads": 0
+  },
+  "metadataProcessing": "Only own standard-library history/hash/range/receipt metadata processing. Source text display is not product execution.",
+  "initialPinBeforeEveryBodyAndLineNavigation": true,
+  "lateInitialPins": [],
+  "observedFatalErrors": [],
+  "observedStderr": [],
+  "truncations": [],
+  "nonfatalNoMatchSearch": {
+    "toolChunk": "22e623",
+    "search": "Filename-only rg -l ComposerSuggestions|aria-activedescendant|slashSelected in renderer *test*",
+    "observedOutput": "No matching filename; individual command exit not separately captured; containing tool exit0. Not a failed product/test run."
+  },
+  "testFilenameInventoryOnly": 5,
+  "testBodiesRead": 0,
+  "testDeclarationsRead": 0,
+  "firstPinToolChunk": "21c412",
+  "historyCompletionToolChunk": "aa05b1",
+  "gateReadToolChunk": "475ff4",
+  "sourceToolChunks": [
+    "d20b5a",
+    "d601f7",
+    "22e623",
+    "e1e63b",
+    "826d17"
+  ],
+  "sourceExcerptCaptureToolChunk": "764e87 after actual reading",
+  "capturedUTC": "2026-10-17T16:58:56.461702+00:00"
+}

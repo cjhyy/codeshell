@@ -1,0 +1,64 @@
+{
+  "kind": "declared manifest overlay only, no source content or new semantic reading",
+  "authorProjectOptionsLines": 385,
+  "independentProjectOptionsLines": 297,
+  "overlapLines": 296,
+  "independentAdditionalDeclaredLines": 1,
+  "additionalLineNatureFromReviewerMetadata": "pathMatch line37 comment boundary; no new producer/identity mechanism conclusion",
+  "projectOptionsDeclaredUnionLines": 386,
+  "utf8AuthorLines": 815,
+  "twoAuthorDistinctProductPaths": 10,
+  "twoAuthorDeclaredLineSum": 1200,
+  "authorPlusPeerDeclaredUnion": 1201,
+  "notNewAggregateSemanticRead": true,
+  "peerInstructionRepeatLines217Separate": true,
+  "declaredRangeRows": [
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+      "sameDeclaredBytesSha": true,
+      "authorLines": 101,
+      "independentLines": 101,
+      "overlapLines": 101,
+      "independentAdditionalDeclaredLines": [],
+      "unionLines": 101
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+      "sameDeclaredBytesSha": true,
+      "authorLines": 127,
+      "independentLines": 55,
+      "overlapLines": 55,
+      "independentAdditionalDeclaredLines": [],
+      "unionLines": 127
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "sameDeclaredBytesSha": true,
+      "authorLines": 107,
+      "independentLines": 107,
+      "overlapLines": 107,
+      "independentAdditionalDeclaredLines": [],
+      "unionLines": 107
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+      "sameDeclaredBytesSha": true,
+      "authorLines": 29,
+      "independentLines": 28,
+      "overlapLines": 27,
+      "independentAdditionalDeclaredLines": [
+        37
+      ],
+      "unionLines": 30
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+      "sameDeclaredBytesSha": true,
+      "authorLines": 21,
+      "independentLines": 6,
+      "overlapLines": 6,
+      "independentAdditionalDeclaredLines": [],
+      "unionLines": 21
+    }
+  ]
+}

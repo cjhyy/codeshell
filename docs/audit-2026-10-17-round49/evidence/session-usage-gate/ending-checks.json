@@ -1,0 +1,61 @@
+{
+  "capturedUTC": "2026-10-17T16:26:36.705748+00:00",
+  "sourceInstructionChecks": [
+    {
+      "path": "AGENTS.md",
+      "initialBytes": 206,
+      "initialSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "endingSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "same": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialBytes": 17639,
+      "initialSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "endingSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.test.tsx",
+      "initialBytes": 3330,
+      "initialSHA": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "endingBytes": 3330,
+      "endingSHA": "708f3a95d5aa9fef914aefd65e7ed1f0630b4f01125c8acc5e97633e88bef905",
+      "same": true
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "initialBytes": 2357,
+      "initialSHA": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "endingBytes": 2357,
+      "endingSHA": "58fb678f7d2377d0e162bb99ee2402a3fb76b18315d49a8557c64e4b57fb7b59",
+      "same": true
+    }
+  ],
+  "allSourceInstructionSame": true,
+  "canonicalMetadataChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+      "initialPinFromOwnHistory": {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-source-manifest.json",
+        "bytes": 8621,
+        "sha256": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835",
+        "kind": "json"
+      },
+      "endingBytes": 8621,
+      "endingSHA": "d366b13069c5dd23d65c8a0c125df71e801adce6e01837e0882f3252be8b6835",
+      "same": true
+    }
+  ],
+  "allCanonicalMetadataSame": true,
+  "historyInitialCount": 4492,
+  "historyEndingFilterCount": 4492,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "historyOriginalRewritten": false,
+  "Git": 0,
+  "productBodyRead": 0
+}

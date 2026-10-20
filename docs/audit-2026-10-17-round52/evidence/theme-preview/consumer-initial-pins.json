@@ -1,0 +1,25 @@
+{
+  "pins": [
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "lines": 245,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:31:44.829780+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-appearance.ts",
+      "bytes": 1412,
+      "lines": 35,
+      "sha256": "7a33b00e4a4b726495d638220c4eb42fa3f559d8c0d58d1b12c5bd091e071039",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:31:44.830652+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "bytes": 14267,
+      "lines": 362,
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:31:44.831013+00:00"
+    }
+  ]
+}

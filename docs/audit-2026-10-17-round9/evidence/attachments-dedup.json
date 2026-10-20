@@ -1,0 +1,1032 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "scope": "All .md and parsed .json under docs/ and bugs/, including archive/ and _archive/; current round excluded.",
+  "patterns": {
+    "target_paths": "tool-cards/attachments\\.ts|detectAttachments|AttachmentCard|input-attachments\\.ts|attachmentSession|buildPathAttachment",
+    "space_path": "(?:attachment|artifact|附件).{0,100}(?:spaces?|空格|backslash|Windows)|(?:spaces?|空格|backslash|Windows).{0,100}(?:attachment|artifact|附件)",
+    "tokenizer": "PATH_TOKEN_RE|path.{0,30}(?:tokeni[sz]|split|截断)|(?:路径|文件名).{0,30}(?:拆分|截断|正则)",
+    "directory_depth": "directoryTree|MAX_DIRECTORY_TREE_DEPTH|(?:目录树|directory tree).{0,70}(?:depth|深度|truncated|截断)"
+  },
+  "scanned": {
+    "markdownFiles": 1019,
+    "jsonFiles": 471,
+    "jsonStringLeaves": 109734
+  },
+  "parseErrors": [],
+  "matchCounts": {
+    "target_paths": 127,
+    "space_path": 81,
+    "tokenizer": 17,
+    "directory_depth": 0
+  },
+  "maxContextsPerPattern": 100,
+  "hits": {
+    "target_paths": [
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "nts.ts:37` 到 `packages/desktop/src/renderer/chat/attachments.ts:49`。\n- 文件面板拖入的 on-disk 图片已有半个路径化流程：`buildPathAttachment` 保留绝对路径作为 `name`，并要求调用方通过 `images:readDataUrl` 读 bytes，见 `packages/desktop/src/renderer/chat/attachments.ts:150` 到 `packages/desktop/src/renderer/chat/attachments.ts:190`。这不适用于普通粘贴/OS drop，因为 browser `File` 没有稳定工作区 path。\n- 当前发送 wire format"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "tsx:865`。\n- 文件面板图片路径由 `App.attachImageByPath` 通过 `window.codeshell.readImageDataUrl(absPath)` 读取，再 `buildPathAttachment` 放入 composer，见 `packages/desktop/src/renderer/App.tsx:379` 到 `packages/desktop/src/renderer/App.tsx:392`。\n- 忙碌时的「引导」按钮直接 `encodeAttachmentsForWire(draft.trim(), attachments)`，没有 anchor，也没有结构化附件参数，见 `packages/desktop/src/renderer/ChatView.t"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": " `acceptFiles` 在 `compressBatch` 后调用 Stage 1 preload API，把 paste/os-drop 图片先落盘，再 setAttachments。\n- `buildPathAttachment` 对 file-panel 图片保留原文件 path，同时补 sha/size/path metadata；MVP 可选择不复制已有工作区图片。\n- `encodeAttachmentsForWire` 在 `<codeshell-image>` 上增加 `path/hash/size/origin/sessionId` attrs，同时保留 data URL body，兼容旧 core。\n- `decodeWireForDisplay` 忽略未知 attrs，继续显示缩略"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "src/protocol/chat-session.ts`\n- `packages/core/src/engine/engine.ts`\n- 新增 `packages/core/src/engine/input-attachments.ts`\n- `packages/desktop/src/preload/index.ts`\n- `packages/desktop/src/preload/types.d.ts`\n- `packages/desktop/src/renderer/App.tsx`\n- `packages/desktop/src/renderer/ChatView.tsx`\n- `packages/desktop/src/renderer/chat/attachments.ts`\n\n改什么：\n\n- "
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "$[96].file",
+        "snippet": "packages/desktop/src/renderer/tool-cards/attachments.ts"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[71].file",
+        "snippet": "packages/desktop/src/renderer/tool-cards/attachments.ts"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "$[96].file",
+        "snippet": "packages/desktop/src/renderer/tool-cards/attachments.ts"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/findings.json",
+        "location": "$[287].file",
+        "snippet": "packages/desktop/src/renderer/tool-cards/attachments.ts"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "location": "$[40].file",
+        "snippet": "packages/desktop/src/renderer/tool-cards/attachments.ts"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/low_section.md",
+        "location": "$",
+        "snippet": "or update to only apply when filtered.length > 0, or clamp the res… |\n| ⬜ | 正确性 | `desktop/renderer/tool-cards/attachments.ts:74-76` | Write success detection relies on fragile result string heuristic | Add an explicit check for truthy result before adding the attachment: `const lc … |\n| ⬜ | 正确性 | `tui/bootstrap/setup.ts:65` | Missing try-catch on process.chdir()"
+      },
+      {
+        "file": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+        "location": "$",
+        "snippet": "-1 `RunParams.attachments` 是新读盘入口，未复用 path-policy 敏感规则，且先读字节再过 gate\n\n- 锚点：`packages/core/src/engine/input-attachments.ts:47`、`input-attachments.ts:104`、`packages/core/src/engine/engine.ts:1048`。\n- 问题：新入口只检查「inside cwd」，没有复用 `path-policy` 的敏感路径规则（如 `.code-shell` 内其它敏感文件）；图片在 vision gate 与 image-policy size gate 之前就直接 `readFile()` + base64。\n- 建议：先 `stat` → pat"
+      },
+      {
+        "file": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+        "location": "$",
+        "snippet": " 是新读盘入口，未复用 path-policy 敏感规则，且先读字节再过 gate\n\n- 锚点：`packages/core/src/engine/input-attachments.ts:47`、`input-attachments.ts:104`、`packages/core/src/engine/engine.ts:1048`。\n- 问题：新入口只检查「inside cwd」，没有复用 `path-policy` 的敏感路径规则（如 `.code-shell` 内其它敏感文件）；图片在 vision gate 与 image-policy size gate 之前就直接 `readFile()` + base64。\n- 建议：先 `stat` → path-policy/sensitive 判定 → si"
+      },
+      {
+        "file": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[242]",
+        "snippet": "packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[1334]",
+        "snippet": "packages/desktop/src/renderer/attachmentSession.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[1776]",
+        "snippet": "packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx"
+      },
+      {
+        "file": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[1789]",
+        "snippet": "packages/desktop/src/renderer/tool-cards/attachments.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.logs[1].text",
+        "snippet": ".min(c + 1, filtered.length - 1) : 0)`\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if t"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.logs[2].text",
+        "snippet": " filtered.length - 1) : 0)`\", \"pkg\": \"desktop\", \"_id\": 95}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if t"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.logs[3].text",
+        "snippet": "er/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if t"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[0].text",
+        "snippet": ".min(c + 1, filtered.length - 1) : 0)`\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if t"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[1].text",
+        "snippet": "s a genuine state invariant violation.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if the result string doesn't "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[2].text",
+        "snippet": " filtered.length - 1) : 0)`\", \"pkg\": \"desktop\", \"_id\": 95}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if t"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[3].text",
+        "snippet": "er/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if t"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[8].text",
+        "snippet": ".min(c + 1, filtered.length - 1) : 0)`\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if t"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[9].text",
+        "snippet": "s a genuine state invariant violation.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if the result string doesn't "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[10].text",
+        "snippet": " filtered.length - 1) : 0)`\", \"pkg\": \"desktop\", \"_id\": 95}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if t"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[11].text",
+        "snippet": "er/utils/formatRelative.ts) and import it in both files.\"}, {\"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if t"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[12].text",
+        "snippet": "s a genuine state invariant violation.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/tool-cards/attachments.ts\", \"line\": \"74-76\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Write success detection relies on fragile result string heuristic\", \"detail\": \"Lines 74-76 treat a Write/write_file call as successful if the result string doesn't "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "location": "$.sources[20].path",
+        "snippet": "packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round8/source-manifest.json",
+        "location": "$.files[21].path",
+        "snippet": "packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/nightly-2026-07-10/codeshell-capability-gap.md",
+        "location": "$",
+        "snippet": "vision gate/压缩/历史降级、文件和目录附件、`/files`、WebSearch、ViewImage、GenerateImage。锚点：`packages/core/src/engine/input-attachments.ts`、`packages/core/src/engine/image-policy.ts`、`packages/tui/src/cli/commands/builtin/image-command.ts`。\n- **部分有**：`resolveTaskFromArgOrStdin()` 在有 positional task 时直接忽略 stdin；`run` 没有 `--image`，导致 CI/脚本无法复用已成熟的图片处理链。\n- **对标结论**：这是最清晰的“小投入补齐一"
+      },
+      {
+        "file": "docs/nightly-2026-07-10/codeshell-capability-gap.md",
+        "location": "$",
+        "snippet": "令组合可直接脚本化；复用已有 vision 安全链。 | 低 | `read-stdin.ts` 当前 task 优先并忽略 pipe；`main.ts/run.ts` 无 image 参数。复用 `input-attachments.ts`、`image-policy.ts` 或 `/image` 的解析。 | `S`，3～4 人日，约 6～9 文件 |\n| 2 | **公开 session fork：core → protocol → TUI/desktop**<br>`C1-RUN-006`、`C1-SES-011`、`C1-SLASH-038` | **高**：安全试验方案、从旧 turn 分叉、并行探索，不污染原 transcript。 | 低 | `SessionManager.fork()` 已有"
+      },
+      {
+        "file": "docs/nightly-2026-07-10/connector-capability-plan.md",
+        "location": "$",
+        "snippet": "m/builtin/mcp-tools.ts`\n- `packages/core/src/credentials/cookie-jar.ts`\n- `packages/core/src/engine/input-attachments.ts`\n- `docs/todo/workspace-profile-讨论稿.md`\n\n**候选子阶段**\n\n1. Generic MCP connection pool 从 `serverName` 升级为 `server instance + connection/grant`，解决多 workspace 不同账号并发；同步解决 tool name collision 与生命周期回收。\n2. 完整 MCP resource templates/blob/prompts 支持，"
+      },
+      {
+        "file": "docs/review-2026-07-09/pre-beta-final-01-security-correctness.md",
+        "location": "$",
+        "snippet": "attachment 属于当前 session（建议阻塞附件功能）\n- 证据：`engine.ts:1052` 调用只传 attachments/cwd 不传 expected sessionId；`input-attachments.ts:56/75` 直接解析 metadata 路径并按 path-policy 放行读字节（`:147`）；sessionId 只带进结果 metadata（`:167`）。desktop `markAttachmentsSent` 跳过 mismatch（`attachment-service.ts:185`）是发送后 manifest 语义、非读取前授权。\n- 建议：`buildInputAttachmentContext` 接 expected session id，读取"
+      },
+      {
+        "file": "docs/review-2026-07-09/pre-beta-final-02-contract-regression.md",
+        "location": "$",
+        "snippet": "降级，绕过 vision 拒绝（阻塞 rc）\n- 证据：`engine.ts:1052` 用 `includeImageBytes: cap.supportsVision` 构建附件；非视觉模型下 `input-attachments.ts:108` 只塞 `<attached-file>` metadata、`images=[]`；`engine.ts:1073` 把 hasImages 置 false → `:1079` 非视觉拒绝分支不触发。新测试 `input-attachments.test.ts:139` 把该行为固化为期望。\n- 影响：用户以为发了图，模型实际只看到文件名/大小 → 输入契约回归。\n- 建议：保留\"非视觉不读 bytes\"，但 Engine 层把结构化图片计入 hasImages "
+      },
+      {
+        "file": "docs/review-2026-07-09/pre-beta-final-refix-review.md",
+        "location": "$",
+        "snippet": "、不带明文。\n- **B2** vision gate：`engine.ts:1067` legacy+structured 合并；`:1077` 非视觉遇图 image_error（LLM 前）；`input-attachments.ts:141` 只 `kind===\"image\"` 才设 hasStructuredImageAttachments（普通文件不误判）；测试断言不调 LLM + 视觉模型 legacy+structured 都进请求。\n- **B3** notice：THIRD_PARTY_NOTICES.md 覆盖 ApplyPatch/Apache + Yoga/MIT + browser-use/MIT；package.json:52 extraResources 路径正确；测试通过。\n"
+      },
+      {
+        "file": "docs/review-2026-07-09/pre-beta-final-refix-review.md",
+        "location": "$",
+        "snippet": "Apache + Yoga/MIT + browser-use/MIT；package.json:52 extraResources 路径正确；测试通过。\n- **M1** 附件绑 session：`input-attachments.ts:58` 先校验 expectedSessionId、`:82` stat/read 前拒 cross-session、`:219` staged realpath 限 `.code-shell/attachments/<sessionId>/`（拒 `..`/symlink）；`engine.ts:1052` 传当前 run sessionId；`chat-session.ts:220` protocol path 传 ChatSession.id。\n- **M2** mi"
+      },
+      {
+        "file": "docs/review-2026-10-12/desktop-quality-round10.md",
+        "location": "$",
+        "snippet": "nd structured attachment sessionId A. Strong counterevidence: actual Core `packages/core/src/engine/input-attachments.ts:131–143` rejects the mismatch and continues **before stat/read at :149+**. Therefore the demonstrated impact is path/metadata crossing and B's input being rejected, not A file contents read under B's authority. Existing R06 separately expl"
+      },
+      {
+        "file": "docs/review-2026-10-12/desktop-round1.md",
+        "location": "$",
+        "snippet": "ent with `sessionId: A`; canonical Core rejects it with session mismatch (`packages/core/src/engine/input-attachments.ts:131-143`), so unrelated B work cannot start. With native runs, D1 hides that reason. A 的路径进入 B 的提交文本；Core 在 stat/read 之前拒绝会话不匹配，未证明读取 A 文件内容或让模型接收到该内容。移除 B 中可见的残留文件 chip 后可以正常发送；这不等于按会话保留了 A 的附件草稿。\n\nVerification: `composer-session.test.tsx"
+      },
+      {
+        "file": "docs/review-2026-10-12/file-navigation-round14.md",
+        "location": "$",
+        "snippet": "dex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/Markdown.tsx:663)、附件卡 [AttachmentCard.tsx:126](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx:126) 同走该 Main 回调；[App.tsx:402](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desk"
+      },
+      {
+        "file": "docs/review-2026-10-12/file-navigation-round14.md",
+        "location": "$",
+        "snippet": "rs/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx:126) 同走该 Main 回调；[App.tsx:402](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/App.tsx:402) 虽传 `sessionId`，仍不能绕过先发生的 cwd gate。这里只静态核对其他调用，不增加未挂载组件的动态影响声明。现有“用其他应用打开”仍是用户可用操作，本轮未启动 OS 应用。\n\n证据"
+      },
+      {
+        "file": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+        "location": "$",
+        "snippet": " 已核 run-image-input.ts 的 prejournal parent 与84740 blob同为 `4a28a57c65b7748820c207b3ece2c7031687865f`；input-attachments.ts 同为 `c49f0dd6e9db2876111bd0473b9812af9af4478b`。当前 `run-image-input.ts:194–224` 确实用实际 staged path 生成 wrapper 与 image blocks。无需手造 XML。\n\n因此应限定**旧 paired native chat.send**，不扩为所有 Desktop、TUI、Room 或 external runtime 旧输入。fixture 的 `origin:\"mobile"
+      },
+      {
+        "file": "docs/review-2026-10-12/legacy-history-round24.md",
+        "location": "$",
+        "snippet": "69975ac47dba51be8`，其父为 `c9b1d95979a0ca12faedeba9fadf81e8ddda680f`。父提交与初始基线的 `run-image-input.ts` / `input-attachments.ts` Git blob 分别相同：`4a28a57c65b7748820c207b3ece2c7031687865f` / `c49f0dd6e9db2876111bd0473b9812af9af4478b`，见[来源收据](validation/original-legacy-history-round24/root-provenance-preflight.json)。实验调用真实 stageImageBytes、prepareRunImageInput、buildRunU"
+      },
+      {
+        "file": "docs/review-2026-10-12/reproductions/legacy-history-round24/observed.json",
+        "location": "$.sourceManifest[9].path",
+        "snippet": "packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/reproductions/modern-desktop-image-round25/observed.json",
+        "location": "$.sourceManifest[9].path",
+        "snippet": "packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$.observations[0].preStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$.observations[0].postStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$.observations[0].afterEnable.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$.observations[1].directSettled.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$.observations[2].normal.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$.observations[2].afterIdleStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "$.final.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[32].file",
+        "snippet": "packages/desktop/src/renderer/attachmentSession.test.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[32].log",
+        "snippet": "/tmp/codeshell-review-20261012/desktop-baseline/032-attachmentSession.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[257].file",
+        "snippet": "packages/desktop/src/renderer/tool-cards/AttachmentCard.media.test.tsx"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[257].log",
+        "snippet": "/tmp/codeshell-review-20261012/desktop-baseline/257-AttachmentCard.media.test.tsx.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$.observations[0].preStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$.observations[0].postStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$.observations[0].afterEnable.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$.observations[1].directSettled.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$.observations[2].normal.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$.observations[2].afterIdleStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "$.final.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/legacy-history-round24/observed.json",
+        "location": "$.sourceManifest[9].path",
+        "snippet": "packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/latest-a66f4ef2/modern-desktop-image-round25/observed.json",
+        "location": "$.sourceManifest[9].path",
+        "snippet": "packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$.groups[1].rawLogs[32].file",
+        "snippet": "packages/desktop/src/renderer/attachmentSession.test.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$.groups[1].rawLogs[32].log",
+        "snippet": "/tmp/codeshell-review-20261012/desktop-baseline/032-attachmentSession.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$.groups[1].rawLogs[32].resolvedLog",
+        "snippet": "/private/tmp/codeshell-review-20261012/desktop-baseline/032-attachmentSession.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$.groups[1].rawLogs[32].archiveMemberBasename",
+        "snippet": "032-attachmentSession.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$.groups[1].rawLogs[257].file",
+        "snippet": "packages/desktop/src/renderer/tool-cards/AttachmentCard.media.test.tsx"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$.groups[1].rawLogs[257].log",
+        "snippet": "/tmp/codeshell-review-20261012/desktop-baseline/257-AttachmentCard.media.test.tsx.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$.groups[1].rawLogs[257].resolvedLog",
+        "snippet": "/private/tmp/codeshell-review-20261012/desktop-baseline/257-AttachmentCard.media.test.tsx.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$.groups[1].rawLogs[257].archiveMemberBasename",
+        "snippet": "257-AttachmentCard.media.test.tsx.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$.logs[173].file",
+        "snippet": "packages/desktop/src/renderer/attachmentSession.test.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$.logs[173].originalLog",
+        "snippet": "/tmp/codeshell-review-20261012/desktop-baseline/032-attachmentSession.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$.logs[173].tarMember",
+        "snippet": "desktop-renderer/032-attachmentSession.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$.logs[398].file",
+        "snippet": "packages/desktop/src/renderer/tool-cards/AttachmentCard.media.test.tsx"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$.logs[398].originalLog",
+        "snippet": "/tmp/codeshell-review-20261012/desktop-baseline/257-AttachmentCard.media.test.tsx.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$.logs[398].tarMember",
+        "snippet": "desktop-renderer/257-AttachmentCard.media.test.tsx.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-blank-files-round28/author-static.raw.md",
+        "location": "$",
+        "snippet": "nd should avoid a throwaway first message (`:657–661`).\n2. App's materialize callback calls `prepareAttachmentSession` when the bucket has no session ID (`renderer/App.tsx:669–672`). That function obtains the current UI project's actual path (`:647–649`), calls real renderer `createSession`, adds the ID to locallyCreatedSessionIds, migrates drafts/overrid"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "location": "$.snapshot.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$.observations[0].preStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$.observations[0].postStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$.observations[0].afterEnable.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$.observations[1].directSettled.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$.observations[2].normal.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$.observations[2].afterIdleStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "$.final.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "location": "$.snapshot.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$.observations[0].preStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$.observations[0].postStop.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$.observations[0].afterEnable.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$.observations[1].directSettled.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "$.snapshot.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "location": "$.snapshot.loadedWorkspaceModules[312]",
+        "snippet": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-file-navigation-round14/original-report.md",
+        "location": "$",
+        "snippet": "dex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/Markdown.tsx:663)、附件卡 [AttachmentCard.tsx:126](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx:126) 同走该 Main 回调；[App.tsx:402](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desk"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-file-navigation-round14/original-report.md",
+        "location": "$",
+        "snippet": "rs/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx:126) 同走该 Main 回调；[App.tsx:402](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/App.tsx:402) 虽传 `sessionId`，仍不能绕过先发生的 cwd gate。这里只静态核对其他调用，不增加未挂载组件的动态影响声明。现有“用其他应用打开”仍是用户可用操作，本轮未启动 OS 应用。\n\n证据"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-legacy-history-round24/PLAN.md",
+        "location": "$",
+        "snippet": "ical Git blob `4a28a57c65b7748820c207b3ece2c7031687865f` before that introduction and at 84740d56. `input-attachments.ts` is likewise identical blob `c49f0dd6e9db2876111bd0473b9812af9af4478b`. Therefore the helper-generated payload is genuine pre-journal native input format, not an arbitrary XML wrapper invented for this review.\n- Actual Core sending is Engi"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.observed.json",
+        "location": "$.sourceManifest[9].path",
+        "snippet": "packages/core/src/engine/input-attachments.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+        "location": "$.sourceManifest[9].path",
+        "snippet": "packages/core/src/engine/input-attachments.ts"
+      }
+    ],
+    "space_path": [
+      {
+        "file": "docs/architecture/01-engine-and-turn-loop.md",
+        "location": "$",
+        "snippet": " blocks containing text plus base64 image blocks (`packages/core/src/engine/engine.ts:1329`). Image attachments that name real workspace files also get an `<attached-image-paths>` hint for tools such as `GenerateImage` (`packages/core/src/engine/engine.ts:1343`).\n- **Hooks can inject around the prompt.** `on_session_start` and `user_prompt_submit` run before the model turn;"
+      },
+      {
+        "file": "docs/architecture/05-presets-prompt-hooks-skills.md",
+        "location": "$",
+        "snippet": "context providers, an instruction boundary, capability-private tool services, file-history targets, artifact detectors, and session-workspace validation. Engine composes core plus installed modules per instance; TUI/Desktop also register the coding module at their process roots.\n\n**The tool whitelist is the first visibility gate.** Tool entries carry exhaustive `presetTags` meta"
+      },
+      {
+        "file": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+        "location": "$",
+        "snippet": "6. P0：Protocol v2\n\n### 6.1 当前问题\n\n当前协议是可用且经过大量测试的 JSON-RPC 2.0 协议，但仍带有明显的内部总线特征。\n\n`RunParams` 同时携带任务、附件、cwd、模型、权限、计划模式、工具/Skill 白名单、ephemeral、预算、Workspace Profile、Pet 兼容字段、Session kind 和 Goal（`packages/core/src/protocol/types.ts:102`）。这让一个基础 Turn 请求承担了过多宿主策略。\n\n`agent/query` 使用字符串 `type` 和宽 `QueryParams`，结果是 `{ type: string, data: unknown }`（`packages/core/src/protocol/types.ts:402`、`:434`）。服"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "名映射以 main 侧白名单为准；扩展名不可信时用 MIME 推导。\n- 同一 session 内同 hash 复用已有文件，只追加 manifest 事件，不重复写 bytes。\n- 同一 workspace 可选建立 `.code-shell/attachments/blob/<sha256>.<ext>` content-addressed store，再从 session 目录写 manifest 引用。MVP 先不做硬链接，降低跨平台复杂度。\n- `manifest.jsonl` 每行记录一次 stage/send/remove/cleanup 事件，便于清理和审计；不要记录 base64。\n- `sourcePath` 只在用户明确从工作区/文件面板选择时记录；paste/clipboard 不记录来源。\n\n### 3.4 清"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "定。\n- 对 file-panel/picker 的已有文件，默认不复制时必须保留原 path，并让后续工具 pathPolicy 决定是否可读。\n- 对复制到 `<cwd>/.code-shell/attachments` 的图片，项目 workspace 内读取应走现有 pathPolicy allow。\n- no-repo 例外：desktop no-repo cwd 在 `~/.code-shell/no-repo`，而 pathPolicy 把 `~/.code-shell` 视为敏感目录。若附件落在 `~/.code-shell/no-repo/.code-shell/attachments`，`Read/view_image` 会被敏感读 ask 拦截。推荐 MVP 同时给 pathPolicy 增加一个很窄的 a"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "$[44].detail",
+        "snippet": "/>\\s*(\\S+)\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \"my file.txt\"` will extract `\"my` instead of the full path. This leads to incorrect artifact recording."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[51].detail",
+        "snippet": "/>\\s*(\\S+)\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \"my file.txt\"` will extract `\"my` instead of the full path. This leads to incorrect artifact recording."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[51].verify_reason",
+        "snippet": "ly. For a command like `cmd > \"my file.txt\"`, the capturing group will match `\"my` (stopping at the space), not the complete quoted path. The extracted value `\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[51].verify_reason",
+        "snippet": "e extracted value `\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "$[44].detail",
+        "snippet": "/>\\s*(\\S+)\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \"my file.txt\"` will extract `\"my` instead of the full path. This leads to incorrect artifact recording."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "location": "$[44].reason",
+        "snippet": "ly. For a command like `cmd > \"my file.txt\"`, the capturing group will match `\"my` (stopping at the space), not the complete quoted path. The extracted value `\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "location": "$[44].reason",
+        "snippet": "e extracted value `\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/findings.json",
+        "location": "$[84].detail",
+        "snippet": "/>\\s*(\\S+)\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \"my file.txt\"` will extract `\"my` instead of the full path. This leads to incorrect artifact recording."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "location": "$[20].detail",
+        "snippet": "/>\\s*(\\S+)\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \"my file.txt\"` will extract `\"my` instead of the full path. This leads to incorrect artifact recording."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "location": "$[20].verify_reason",
+        "snippet": "ly. For a command like `cmd > \"my file.txt\"`, the capturing group will match `\"my` (stopping at the space), not the complete quoted path. The extracted value `\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly."
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "location": "$[20].verify_reason",
+        "snippet": "e extracted value `\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly."
+      },
+      {
+        "file": "docs/archive/todo/review-infra-2026-07-08.md",
+        "location": "$",
+        "snippet": "erialize from the root `node_modules` closure without registry resolution, or produce a packed core artifact from the workspace and install it from the lock-controlled workspace install. The packaging step should not hit the registry or solve semver ranges.\n\n### 3. Installed plugin hooks and plugin MCP servers execute local code without an explicit plugin trust boundary\n\n- File: `packages/core/src/plugins/loadPlug"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.logs[1].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"58-63\", \"cat"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.logs[2].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\", \"pkg\": \"core\", \"_id\": 44}, {\"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"5"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.logs[3].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"174\", \"category\": \"corre"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.logs[3].text",
+        "snippet": " or parse the command more carefully: `/^(?:cp|mv)\\\\s+.+?\\\\s+(\\\\S+)\\\\s*$/` (non-greedy) or split by spaces accounting for escapes.\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"145\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unused parameter in extractBashArtifacts\", \"detail\": \"The `_resultText` parameter on line 145 is prefixed with `_` but never used in the "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[0].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"58-63\", \"cat"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[1].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\", \"verify_note\": \"This is a real defect, but the severity is low because: (1) artifact tr"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[1].text",
+        "snippet": " For a command like `cmd > \\\"my file.txt\\\"`, the capturing group will match `\\\"my` (stopping at the space), not the complete quoted path. The extracted value `\\\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/run/FileRunStore.ts\""
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[1].text",
+        "snippet": " extracted value `\\\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"58-63\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Atomic write doesn't clean up temp file on failure\", \""
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[2].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\", \"pkg\": \"core\", \"_id\": 44}, {\"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"5"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[3].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"174\", \"category\": \"corre"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[3].text",
+        "snippet": " or parse the command more carefully: `/^(?:cp|mv)\\\\s+.+?\\\\s+(\\\\S+)\\\\s*$/` (non-greedy) or split by spaces accounting for escapes.\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"145\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unused parameter in extractBashArtifacts\", \"detail\": \"The `_resultText` parameter on line 145 is prefixed with `_` but never used in the "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[8].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"58-63\", \"cat"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[9].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\", \"verify_note\": \"This is a real defect, but the severity is low because: (1) artifact tr"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[9].text",
+        "snippet": " For a command like `cmd > \\\"my file.txt\\\"`, the capturing group will match `\\\"my` (stopping at the space), not the complete quoted path. The extracted value `\\\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/run/FileRunStore.ts\""
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[9].text",
+        "snippet": " extracted value `\\\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"58-63\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Atomic write doesn't clean up temp file on failure\", \""
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[10].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\", \"pkg\": \"core\", \"_id\": 44}, {\"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"5"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[11].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"174\", \"category\": \"corre"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[11].text",
+        "snippet": " or parse the command more carefully: `/^(?:cp|mv)\\\\s+.+?\\\\s+(\\\\S+)\\\\s*$/` (non-greedy) or split by spaces accounting for escapes.\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"145\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unused parameter in extractBashArtifacts\", \"detail\": \"The `_resultText` parameter on line 145 is prefixed with `_` but never used in the "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[12].text",
+        "snippet": "\\s*(\\\\S+)\\\\s*$/` matches the first non-whitespace sequence after `>` but fails on quoted paths with spaces: `cmd > \\\"my file.txt\\\"` will extract `\\\"my` instead of the full path. This leads to incorrect artifact recording.\", \"fix\": \"Enhance the regex to handle both quoted and unquoted paths: `/[>|]\\\\s*(['\\\"]?)([^'\\\"]*?)\\\\1\\\\s*$/` or use a proper shell parser.\", \"verify_note\": \"This is a real defect, but the severity is low because: (1) artifact tr"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[12].text",
+        "snippet": " For a command like `cmd > \\\"my file.txt\\\"`, the capturing group will match `\\\"my` (stopping at the space), not the complete quoted path. The extracted value `\\\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/run/FileRunStore.ts\""
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[12].text",
+        "snippet": " extracted value `\\\"my` is then passed to recordFileArtifact at line 169, where it's recorded as an artifact with an incorrect path. This is a genuine defect: quoted paths containing spaces will be truncated and recorded incorrectly.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/run/FileRunStore.ts\", \"line\": \"58-63\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Atomic write doesn't clean up temp file on failure\", \""
+      },
+      {
+        "file": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+        "location": "$.patterns.windows_attachment_name",
+        "snippet": "(attachmentName|content hash|哈希前缀|hash.{0,15}prefix|Windows.{0,40}(attachment|附件))"
+      },
+      {
+        "file": "docs/core-deep-dive/v2-01-core-as-agent-harness.md",
+        "location": "$",
+        "snippet": "ions: { coding },\n  dynamicContextProviders: [gitDynamicContextProvider],\n  // instruction boundary、artifact、workspace、tool service 等\n};\n```\n\n两者的区别可以概括为：\n\n- **Preset 是选择**：本次运行从已有能力中暴露哪些提示、工具和默认权限。\n- **Capability 是贡献**：向运行时加入哪些新工具、领域上下文和服务。\n\n### 5.2 Host 在组合根决定产品形态\n\nTUI 是一个产品组合根。它显式安装编程能力：\n\n```ts\nregisterCapability(CODING_CAPABILITY);\n```\n\nSDK 使用者则可以按 Engi"
+      },
+      {
+        "file": "docs/deployment.md",
+        "location": "$",
+        "snippet": "保护的文件接口打开。\n- 历史可按标题或会话 ID 查找、重命名、归档/恢复，并导出 Markdown 或 JSON。归档保留原始记录；正在运行的会话需结束后归档或导出。\n- 「文件」可浏览 Workspace、预览文本及常见图片、下载文件，也能从对话附件打开对应文件。该页面是只读浏览器；项目修改通过 Agent 工具完成。路径不能越出 Workspace，符号链接及敏感目录/文件会被过滤，例如 `.git`、`.env` 和本地配置；`.code-shell/attachments` 允许读取。\n- 浏览器读取或导出的完整对话上限为 32 MiB，会话状态文件上限为 1 MiB。超过上限会显示明确错误，完整记录仍保留在服务器，需从备份中获取。\n- 单附件上传上限 20 MiB，未发送的暂存附件 15 分钟后过期；文件下载上限"
+      },
+      {
+        "file": "docs/deployment.md",
+        "location": "$",
+        "snippet": "话需结束后归档或导出。\n- 「文件」可浏览 Workspace、预览文本及常见图片、下载文件，也能从对话附件打开对应文件。该页面是只读浏览器；项目修改通过 Agent 工具完成。路径不能越出 Workspace，符号链接及敏感目录/文件会被过滤，例如 `.git`、`.env` 和本地配置；`.code-shell/attachments` 允许读取。\n- 浏览器读取或导出的完整对话上限为 32 MiB，会话状态文件上限为 1 MiB。超过上限会显示明确错误，完整记录仍保留在服务器，需从备份中获取。\n- 单附件上传上限 20 MiB，未发送的暂存附件 15 分钟后过期；文件下载上限 100 MiB，文本预览显示前 512 KiB，每个目录最多展示 500 项，并且最多扫描 4,096 项；截断时会提示。HTML 和 SVG 仅下载，不作为可执行页面内嵌。\n- 切换会话保留本页面内尚未发送的草稿和附件，但它们"
+      },
+      {
+        "file": "docs/deployment.md",
+        "location": "$",
+        "snippet": "```\n\n备份时先停止服务，按实例的**实际路径**保存以下内容，再启动，保证它们来自一致时间点：\n\n- `--data-dir`：Hub 账号、设备登录、Worker 会话和运行数据。\n- Workspace：项目文件、项目 Skills、已发送附件和 `.code-shell/settings.local.json` 等项目配置。\n- 运行服务的系统用户的 `$HOME/.code-shell`：用户级 `settings.json`、Link `credentials.json`、Skills、插件及其登记信息。使用 CLI 连接时，还需按相应 CLI 的规则保存其用户配置。如果这些文件已位于 `--data-dir` 内，不必重复归档；额外配置的 `CODE_SHELL_HOME` 或插件资源目录也应按实际位置保留"
+      },
+      {
+        "file": "docs/docker-deployment.md",
+        "location": "$",
+        "snippet": "anel-bin`                           | `hub-data` 命名卷     | 面板使用的用户级可执行文件目录                |\n| `/workspace`                                 | `workspace` 命名卷    | 项目文件、项目 Skills 和已发送附件             |\n| `/workspace/downloads`                      | `workspace` 命名卷    | 面板受控下载目录中的输出文件                  |\n| `/data/home/.code-shell/settings.json`       | 宿主机文件，只读挂载  | 部署默认模型密钥和连接配置                     |\n| `/workspace/.code-she"
+      },
+      {
+        "file": "docs/nightly-2026-07-10/codex-capability-catalog.md",
+        "location": "$",
+        "snippet": "故未作为官方能力纳入主清单。 | <https://developers.openai.com/codex/developer-commands?surface=cli> |\n| 非图片文件 CLI attachment flag | 未找到官方 `--file` 或类似 flag；官方确认的是 image flag、stdin、workspace 路径、`/mention` 和 `@` path autocomplete。 | <https://developers.openai.com/codex/image-inputs> |\n| 完整内部 tool protocol | 官方公开了 JSONL item 类型和 hook 可拦截的 `Bash`、`apply_patch`、MCP tool；完整内部 tool 集合/参数不是稳定公开接口。 | <https://developers.openai.com/cod"
+      },
+      {
+        "file": "docs/nightly-2026-07-10/large-feature-breakdown.md",
+        "location": "$",
+        "snippet": "ghtly-2026-07-10/naming-consolidation-plan.md` | 否 |\n| AD-07 | **Desktop feature hooks 分批下沉**：按 workspace、attachments、automation、quick-chat 各选择一组抽 hook；每批单独 M，本文这一项以“先抽一组并立模板”为验收。 | AD-06 | M | `packages/desktop/src/renderer/App.tsx:915`、`:3419`；`renderer/topbar/WorkspaceIndicator.tsx` | 否 |\n| AD-08 | **TUI stream router/reducer**：把 Ink App 的 stream 事件、s"
+      },
+      {
+        "file": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+        "location": "$",
+        "snippet": "mposer、busy/stop、model controls 与受控 draft。\n- 建议新增 `variant=\"pet\"`，而不是套 `variant=\"quickChat\"`：隐藏 workspace picker、Goal、普通 permission scope 等与 Pet host-owned tool contract 不相符的控件；保留 model、stop、附件能力与 Desktop chat 的可达演进位。具体控件集合需 implementation spec 再冻结。\n- `PetChatHost` 持有固定 `petSessionId` / pet bucket；overview close、session navigation、Settings 覆盖都不触发 cleanup。\n- 简单的 `get_global_status` / `list_pending` 应走 deterministic data action，不必调"
+      },
+      {
+        "file": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+        "location": "$",
+        "snippet": "hat 与普通 session chat 的视觉区分程度。**  \n   推荐复用同一 `ChatView` 语言，只在 header/avatar、world-action chips、无 workspace/permission affordance 上区分；不要另造聊天视觉体系。需拍板 model control、附件、voice 在 MVP 是否全部露出。\n\n5. **15s grace 内 badge 是否即时出现。**  \n   本稿按任务指定流程把 L0 + L1 都放在 15s 后；若用户更重视零漏看，可改为 L0 即时、L1 延迟，数据与组件结构无需变化。\n\n## 12. 自检与不变量\n\n本文交付/后续实现必须同时满足：\n\n- [x] 形态锁定为 Sidebar 顶部常驻入口 + overview panel；未采用独立顶层页、悬浮气泡或列表状态条。\n- [x] Phase 1"
+      },
+      {
+        "file": "docs/nightly-2026-07-12/server-deployment-web-account-roadmap.md",
+        "location": "$",
+        "snippet": "es/desktop/src/main/mobile-remote/mobile-chat-turn.ts:46` | ticket 绑定 `deviceId`，staging 依赖 desktop attachment service/workspace resolver | Phase 1 可不做；Phase 2 将 owner 改为 authenticated `userId/sessionId` 后抽取 |\n| rooms/external CLI session | `packages/desktop/src/main/mobile-remote/room-manager.ts:220`；agent factory 在 `packages/desktop/src/main/index.ts:546` | room d"
+      },
+      {
+        "file": "docs/nightly-2026-07-12/server-deployment-web-account-roadmap.md",
+        "location": "$",
+        "snippet": "r gateway、worker supervisor、web login/data adapter、deployment CLI/docs。\n\n**明确不含**：多用户、invite、共享 workspace、attachments、rooms、tunnel、SaaS relay、browser panel、PTY、公开注册。\n\n**主要风险**：\n\n- stdio worker 与 server event hub 的 request/notification correlation 出错；应复用 JSON-RPC id、runAccepted 和 session envelope，而不是另造无 id stream。\n- history/index 与 core disk session 不一致；m"
+      },
+      {
+        "file": "docs/review-2026-07-09/pre-beta-02-desktop.md",
+        "location": "$",
+        "snippet": "露 `readImageDataUrl(absPath)`；`main/index.ts:2142-2150` 只校验 absolute/扩展名/lstat/大小后 `readFile`，无 workspace/attachment realpath 约束；`renderer/Markdown.tsx:447-470` 把 assistant markdown 绝对图片路径直接送进该 IPC。\n- 影响：XSS / renderer bug / 模型输出的绝对路径可把本地任意图片/SVG 转 data URL 暴露到 UI。\n- 建议：IPC 改 `{cwd,path}`，main 侧 realpath 限定 session workspace / staged / generated attachme"
+      },
+      {
+        "file": "docs/review-2026-07-09/pre-beta-02-desktop.md",
+        "location": "$",
+        "snippet": "g / 模型输出的绝对路径可把本地任意图片/SVG 转 data URL 暴露到 UI。\n- 建议：IPC 改 `{cwd,path}`，main 侧 realpath 限定 session workspace / staged / generated attachments allowlist。\n- 阻塞 beta：是。\n\n### M2 凭证和完整 cookie jar 明文 0o600 落盘（安全，确证）\n- 证据：`main/index.ts:1595-1604` SafeStorageCipher 未安装、默认 PlaintextCipher；`:1782-1786` 接收保存；`CookieTab.tsx:125-132` 存完整 cookie jar；`TokenTab.tsx:42-48` 存 token/link secret。"
+      },
+      {
+        "file": "docs/review-2026-07-09/pre-beta-03-release.md",
+        "location": "$",
+        "snippet": "dist-tag 正确（`:105-113` 带 `-` → next，不写 latest）✓\n- npm 发布顺序 core→tui→meta，cdp/desktop private 不发 ✓\n- Windows NSIS artifactName 无空格（`package.json:33/100`）✓\n- 三平台目标齐全（mac dmg+zip / win nsis / linux AppImage）✓\n- gh release 幂等（create-if-absent + upload --clobber）✓\n\n## 验证\n- typecheck 通过；version.test 1 pass。\n- node 推演：裸版本参数被过滤为空（B2）；`0.6.0-beta.1 < 0.6.0-rc.17`、`0.6"
+      },
+      {
+        "file": "docs/review-2026-07-09/pre-beta-final-03-release-readiness.md",
+        "location": "$",
+        "snippet": "\"，正则接受；静态 rewrite 后无 rc.17 残留。\n- dist-tag/prerelease 判定正确（release.yml:285-287 / 105-113）。\n- 三平台产物齐全；Windows artifactName 无空格。\n- root+desktop typecheck 通过；lint 0 errors；lint:engine-bypass 通过；release-workflow.test + version.test 4 pass。\n- 全量 bun test 沙箱不可判定（mkdtemp EPERM，非代码失败）。\n- 改动 markdown 相对链接缺失 0。\n\n## Minor/Nit\n- dirty worktree（TODO.md）须先处理。\n- release"
+      },
+      {
+        "file": "docs/review-2026-07-09/pre-beta-final-followup-notes.md",
+        "location": "$",
+        "snippet": "ut-attachments.test.ts`: added a staged attachment symlink case where the file\n  under `.code-shell/attachments/<sid>/` points outside the workspace. The test\n  asserts the realpath policy blocks it and no image bytes are loaded.\n- `engine-structured-image-vision-gate.test.ts`: added a non-vision model case with\n  only a structured text/file attachment. The test asserts the LLM is call"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-blank-files-round28/author-static.raw.md",
+        "location": "$",
+        "snippet": "se contract (`sessionUiAuthority.test.tsx:78–113,116–186`). This protects conversation settings and attachments, but its state is not passed into the panel workspace resolver. The Files normal result instead follows its own actual project fallback described above.\n\nExisting `usePanelWorkspaceRoot.test.tsx:29–66` verifies an ID-less draft's immediate root branch at hook level. Existing `FilesPanel.works"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-07-16-optimization-sweep.md",
+        "location": "$",
+        "snippet": "tep 3: 更新 TODO.md。** \"服务端部署 + Web Client\"条目:剩余阶段 ④(build 链)标记完成;\"web UI 打磨\"补记已完成的 transcript 渲染增强部分(attachment、多 workspace 切换仍是遗留)。本计划完成项按 TODO.md 顶部规则从待办中删除/更新。\n\n- [ ] **Step 4: 提交收尾。**\n\n```bash\ngit add TODO.md\ngit commit -m \"docs(todo): record optimization sweep completion (web closure + desktop UX + core debt)\"\n```\n"
+      },
+      {
+        "file": "docs/todo/2026-07-22-codex-tasks.md",
+        "location": "$",
+        "snippet": "2 · TrustedDeviceStore 接 serve 门禁(M)\n配对/受信设备层接到 passcode 门禁后面(包内已有 store)。\n\n### T13 · web SPA 打磨(M)\nattachment 支持、多 workspace 切换;锚点 `packages/web/src/`。\n\n## Phase 4 — 数据源绑定后续\n\n### T14 · 真实 OAuth provider adapter(L,需先方案)\n锚点 `packages/core/src/sources/`;沿 SourceDefinition→Binding→EffectiveAccess 三层模型。\n\n### T15 · Profile 求交接线(S)\nresolver `profile?` 参数已预留,接通数字人与数据源的求"
+      },
+      {
+        "file": "docs/todo/2026-07-22-overall-roadmap.md",
+        "location": "$",
+        "snippet": "(IM gateway) | ✅ 通道稳定 | 🚧 host 附件回推在途;约束:只做通道 |\n| server + web(无账号部署) | ✅ Phase 1' 闭环 | 公网入口、配对层接门禁、attachment/多 workspace |\n| 数据源绑定 | ✅ 只读 MVP | OAuth adapter、Profile 求交、写操作 |\n| 插件贡献点(沙箱面板/全屏页注册表) | ✅ 工作流 D 完成 | ⬜ 面板网络能力(`connect-src 'none'`,外部数据面板如股票行情做不了) |\n| 架构文档 14 章 | ⚠️ 与工作树脱节 | 缺 host-action / Pet 记忆层 / 状态聚合三节 |\n\n## 三、分阶段执行计划(Pet 优先)\n\n依赖关系:**Phase 0 是一"
+      },
+      {
+        "file": "docs/todo/2026-07-22-overall-roadmap.md",
+        "location": "$",
+        "snippet": "端部署剩余(无账号边界不变)\n\n公网入口(tunnel/反代 TLS,或复用 TunnelManager)→ TrustedDeviceStore 接到 serve 门禁后面 → web UI 打磨(attachment、多 workspace 切换)。\n\n### Phase 4 — 数据源绑定后续\n\n真实 OAuth provider adapter → Profile 求交接线(resolver `profile?` 参数已留)→ 写操作 → 上传文件解析/索引。\n\n### Phase 5 — 插件面板网络贡献点(外部数据面板,如股票行情)\n\n现状:沙箱面板 v1 已支持(manifest `panels`、`csplugin://` 独立 partition、7 种权限、bridge RPC:\nstorage"
+      },
+      {
+        "file": "docs/todo/agent-module-resolved-composition-design.md",
+        "location": "$",
+        "snippet": " 与长期 Session 等主要组合原语，但它们由两套模块接口和若干进程级 registry 分别装配：\n\n- `CapabilityModule` 贡献工具、preset、prompt、动态上下文、artifact、file history、workspace 校验和 engine hook。\n- `ExtensionModule` 贡献普通工具、catalog tool、behavior profile、protocol query/observer、run 参数校验和隐藏 Session kind。\n- `registerCapability()`、`registerPreset()`、`registerSection()` 等入口仍可修改进程级状态。\n- Engine、AgentServer 与 host 分别读取模块数据，"
+      },
+      {
+        "file": "docs/todo/agent-module-resolved-composition-design.md",
+        "location": "$",
+        "snippet": "ault preset；\n- prompt sections；\n- dynamic context providers；\n- engine hooks；\n- behavior profiles；\n- artifact/file-history/workspace contributions；\n- tool-selection adjusters；\n- module private-service declarations。\n\n`ResolvedProtocolComposition` 至少包含：\n\n- query handlers；\n- observer factories；\n- run validators；\n- hidden Session kinds。\n\n### 6.2 可序列化快照\n\n函数、class 和 service i"
+      },
+      {
+        "file": "docs/todo/bug-status-desktop-main.md",
+        "location": "$",
+        "snippet": "ckages/desktop/package.json:24-35` 已有 `build.publish`: github/cjhyy/codeshell。无额外覆盖配置。\n\n## 3. ✅已修 — Windows NSIS artifactName 含空格\n- `packages/desktop/package.json:26` `productName=\"code-shell\"`；`packages/desktop/package.json:92-93` `artifactName=\"${productName}-Setup-${version}.${ext}\"`，模板无空格。\n\n## 4. ✅已修 — MCP stdio PATH 根治\n- `packages/desktop/src/main/index."
+      },
+      {
+        "file": "docs/todo/bug-status-desktop-main.md",
+        "location": "$",
+        "snippet": "packages/desktop/package.json:26` `productName=\"code-shell\"`；`packages/desktop/package.json:92-93` `artifactName=\"${productName}-Setup-${version}.${ext}\"`，模板无空格。\n\n## 4. ✅已修 — MCP stdio PATH 根治\n- `packages/desktop/src/main/index.ts:1436-1441` app ready 早期 `await injectLoginShellPathAtStartup(...)`。\n- `packages/desktop/src/main/login-shell-path.ts:221-224` 用 login shell `-lic env` 探测；`:274-323` 合并 P"
+      },
+      {
+        "file": "docs/todo/mimi-im-session-bridge-design.md",
+        "location": "$",
+        "snippet": "提示词**；\n- Session 最终 assistant message 是唯一回复正文；host 不再额外生成 Mimi 转述；\n- 工具日志仍保存在 Session 中，但不逐条推送到微信。\n\n附件必须直接 stage 到目标 Session 的附件目录并接受目标 Workspace 权限校验，不能先写入 Mimi no-repo Session 后仅传路径。stage 前先过 §2.2.4 的 worktree 存在性检查。\n\n现有 `dispatchGatewayPetChat` 会把 IM 消息镜像到 renderer（`packages/desktop/src/main/index.ts:2879-2932`）。绑定模式下 Session 窗口通过 engine stream 自然看到这些消息，**不要再镜像一次**，否则同一条消息在 UI 中出"
+      },
+      {
+        "file": "docs/todo/mimi-im-session-bridge-review-2026-09-03.md",
+        "location": "$",
+        "snippet": "selector，host 只做强校验；确定性的 `/session 2` 路径才需要 host 记住上一次列表。把 snapshot 移到 Phase 2。\n\n### 3.5 附件\n\n草案 §5 说附件直接 stage 进目标 Session 附件目录并过目标 Workspace 权限，正确。补一句：目标 Session 的 cwd 可能是 worktree，stage 前要先过 §1 第 4 条的 worktree 存在性检查，避免写进一个已经被删的目录。\n\n## 4. 修订后的分期建议\n\n- **Phase 1**：`ConversationSessionRoute` 统一存储（迁移现有 completionTarget / watch）；`BindConversationSession` host action（gating 照抄 `sessi"
+      },
+      {
+        "file": "docs/todo/operation-ledger-retention-delivery.md",
+        "location": "$",
+        "snippet": "ename，最后原子提交\nledger manifest。新桶发布引用前有有界 regular-file 回读。原 key 保持不变；ledger 缺失但已有\ncold／recovery／stage artifact 时闭锁，不能生成新 namespace。旧 schema 1 reader 拒绝 schema 2，\n不提供降级为可发送空账本的迁移。\n\n每次目标 lookup 完整验证受影响前缀的 HMAC、严格 schema、canonical JSON、排序、身份、容量和\nrecovery summary；其余所有 manifest 引用桶只做 regular／私有权限／精确大小元数据核对。\n不声称每次重读验证全部 512 MiB 历史。目标桶缺失、损坏、错 key／prefix 时 prepare、claim、\nrevi"
+      },
+      {
+        "file": "docs/todo/project-cloud-runtime-v2-plan.md",
+        "location": "$",
+        "snippet": "fAttemptId, resumeRequestId, engineRunId, incarnation, state, outputCursor, terminalReason`    |\n| `Artifact`                    | `artifactId, workspaceId, attemptId, digest, bytes, mediaType, manifestRef, retention`；下载使用资源 handle                               |\n| `Operation`                   | 异步准备／启动／归档的持久步骤、重试次数和错误；不依赖客户端长连接存活                                                            "
+      },
+      {
+        "file": "docs/todo/project-cloud-runtime-v2-plan.md",
+        "location": "$",
+        "snippet": "chive`                | 工作区生命周期动作                                              |\n| `GET /api/v2/workspaces/:id/artifacts`                                    | 产物清单；下载另领受限资源 handle                               |\n\n新草稿首次发送时 Main 创建稳定 createRequestId 和 clientMessageId，并在网络请求前把目标 scope、规范化 payload/digest、输入资源引用和请求 ID 持久写入本机 pending-submit outbox。只有本机写入成功才发送。重载／"
+      },
+      {
+        "file": "docs/todo/project-cloud-runtime-v2-plan.md",
+        "location": "$",
+        "snippet": "ID；即使首次创建 ACK 丢失、客户端还不知道 conversationId，也先用项目级 conversation-request 查询恢复，不能生成新 ID 重新创建。\n\n服务端先校验并耐久封存附件／上传快照，再在事务中记录 Conversation、Workspace、准备 Operation 与首条输入，返回已持久接受的 operation/run receipt。接收事务将输入资源引用归属到 submission，不再依赖短期上传登录会话或其 TTL；未提交成功的孤儿输入延迟回收。准备器就绪后派发首条消息，客户端关闭也不丢失已接受的工作。准备失败时保留输入和错误，由用户修正或重试准备步骤。\n\n后续提交在 `(principal, project, conversation, clientMessageId)` 上唯一，记录 paylo"
+      },
+      {
+        "file": "docs/todo/project-cloud-runtime-v2-plan.md",
+        "location": "$",
+        "snippet": " terminal, artifacts, transfer`。服务端声明、Main 裁剪，缺失默认关闭。隐藏按钮只是体验措施，实际授权仍在 Main／Host 校验。\n\n远程 files/diff/artifacts 使用 workspace resource handle；本地文件、Git、undo、Panel API 不接收远端绝对路径。新 target 引入不自动开放 Goals、Cron、插件命令或远程终端，只有其生命周期和权限经对应验收后才 advertise。\n\n## 10 成果取回与显式继续\n\n任务结束后保留 Workspace，生成带 digest 和大小的 Artifact manifest。通用产物包括文件、文档、图像和受限日志；coding 产物额外包含基线 commit、当前 HEAD／b"
+      },
+      {
+        "file": "docs/todo/project-cloud-runtime-v2-plan.md",
+        "location": "$",
+        "snippet": "路径。新 target 引入不自动开放 Goals、Cron、插件命令或远程终端，只有其生命周期和权限经对应验收后才 advertise。\n\n## 10 成果取回与显式继续\n\n任务结束后保留 Workspace，生成带 digest 和大小的 Artifact manifest。通用产物包括文件、文档、图像和受限日志；coding 产物额外包含基线 commit、当前 HEAD／branch、staged/unstaged patch、选定的 untracked 文件和测试结果。\n\n取回本机默认落到新 worktree 或新目录，先显示变更预览与来源。使用基线 SHA 检查兼容性或做三方合并；冲突保留双方内容，不覆盖本地未提交改动。下载验证归属、大小、哈希、路径穿越和符号链接。\n\npush 和 PR 是 coding 的独立显式动"
+      },
+      {
+        "file": "docs/todo/project-cloud-runtime-v2-plan.md",
+        "location": "$",
+        "snippet": "rver/src/cloud-runtime/*`（新增）                                          | V2 schema、ControlStore、WorkspaceManager、RuntimeSupervisor、Operation/Attempt/Artifact API |\n| `server/src/project-runtime/*`                                                | 保留 legacy；抽取可复用的 Docker/备份机制，不扩张任意 cwd 接口                               |\n| `server/src/serve/*`                                                       "
+      },
+      {
+        "file": "docs/todo/release-real-operations-2026-10-16.md",
+        "location": "$",
+        "snippet": "ns. Linux preferences 6 and directory packaged UI 13 pass; updater makes zero requests because this artifact is a directory app without runtime-owned `APPIMAGE`. Windows clean-source build and packaging pass with fixed LF attributes and PowerShell 7 identity queries (472/487ms). Its three cold launches/reloads and second-window operations finish, then one shutdown custody query fails; the overall job fails"
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/mobile-remote-send-image.md",
+        "location": "$",
+        "snippet": "临时上传服务和 HTTP route\n\n建议新增 `packages/desktop/src/main/mobile-remote/mobile-upload-service.ts`，职责与 workspace attachment service 分离：\n\n- `begin(deviceId, metadata)`：验证 count-independent metadata，生成 128-bit 以上随机 uploadId/ticket，记录 deviceId、MIME、expected size、expiresAt。\n- `acceptPut(uploadId, req)`：\n  - ticket 必须存在、未过期、未完成；\n  - 只接受 PUT 和匹配的 image content-type；\n"
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/mobile-remote-send-image.md",
+        "location": "$",
+        "snippet": "ain/index.ts:833-868`：\n\n1. 按现有优先级解析 sessionId。\n2. 计算 fallback cwd 后，若 session 已存在，调用 `getSessionWorkspaceForUi(sessionId, fallbackCwd)` 并使用其 `root` 作为 run/stage cwd。这样 worktree session 的附件不会落在主仓库；新 mobile session 使用 fallback/no-repo cwd。\n3. 调用共享 `materializeMobileAttachments({ deviceId, sessionId, cwd, descriptors })`：\n   - 验证数量/总量/字段；\n   - inline 走 `stageImageDataUrl(..., origin: \"mobile\")`；\n   - upload descriptor 从 upload "
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/mobile-remote-send-image.md",
+        "location": "$",
+        "snippet": "测试。\n3. 实现 mobile upload service、一次性 ticket、HTTP PUT route、设备绑定和过期清理。\n4. 在 main 实现 `materializeMobileAttachments()`，接入 `chat.send` 的 workspace 解析、agent/run attachments 和 markSent。\n5. 扩展 RoomManager/RoomAgent 输入，先完成 path block，再为 Codex 接入能力探测后的 `-i`。\n6. 实现 mobile 侧图片选择/拍照/转换/预览/上传 helper，并修改 Composer/useRemoteApp 协议调用。\n7. 扩展用户消息附件 summary 展示和 i18n。\n8. 最后做 LAN/tunnel、session/room、i"
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/mobile-remote-send-image.md",
+        "location": "$",
+        "snippet": "Codex room。\n- LAN 明文模式与 Cloudflare tunnel 模式；弱网断开、手机后台恢复、ticket 过期后重试。\n- 发送后检查 desktop 实际文件位于目标 workspace 的 `.code-shell/attachments/<sessionId>/`，且临时 spool 被清理。\n\n## 6. 风险与兼容性注意\n\n- **不能信任手机路径或 metadata**：文件名只用于 display/safe slug；MIME、size、hash 全由 desktop 复核，最终路径由 server 生成。\n- **base64 膨胀**：base64 约增加 33% 体积。inline 阈值必须按 decoded bytes 与总量双重限制，大图强制 HTTP。\n- **内存与磁盘 DoS**："
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/mobile-remote-send-image.md",
+        "location": "$",
+        "snippet": "*：上传 ticket 只能由已认证 WS 签发并绑定 device。tunnel passcode gate 仍覆盖 PUT；ticket 不应 broadcast 或写日志全文。\n- **workspace 一致性**：stage cwd、agent/run cwd 和 `InputAttachmentMeta.sessionId` 必须来自同一次目标解析。否则 core 会以“outside expected session dir/session mismatch”拒绝。\n- **HEIC 与动画图**：现有 allowlist不含 HEIC。移动端需要转换或明确拒绝；GIF 压缩时不要不提示地丢动画语义。\n- **模型能力**：CodeShell engine 会按当前模型 vision capability 拒绝不支持图片的模型（`run-image-input.t"
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+        "location": "$",
+        "snippet": "no_project__` 会让全部 no-project 会话“消失”。\n4. **不要把 cwd 机械改为 projectPath。** Engine、ToolContext、git/shell/attachment、no-project sandbox 和 workspace resume 的 cwd 都是执行路径。\n   只有 scope 已经确定为 project 的 UI/main settings 局部变量可改。\n5. **不要把 workspace 文案消灭。** TopBar 的 WorkspaceIndicator 真实管理 main/worktree；只把它的 `repoPath` 输入改为 projectPath，组件概念保留。\n6. **state.json 不迁移。** `cwd` 和 `workspace.root` 是外"
+      },
+      {
+        "file": "docs/todo/unified-desktop-web-mobile-workbench-plan.md",
+        "location": "$",
+        "snippet": "仍回到来源控制器重新校验。Cloud 的索引可以重建，不迁移 Session、Run、Cron、Mimi 或后台 job 的权威存储。\n\n现有 `TaskInboxRecordV1` 仍含 `workspacePath`、内部错误及 artifact URI，不能原样上传或作为远端控制参数。需要单独的对外投影与版本化 Host DTO，过滤路径/内部字段，把产物转换成获授权资源引用。Host 动作接口也不能直接映射 renderer IPC。\n\n身份至少区分：个人空间账号、环境、逻辑项目、该环境内的原生项目/根目录、任务来源及 attempt。执行目标绑定已有 `environmentId + projectId + rootId?`；逻辑项目只是关联，不替代 Host 对实际目录的解析。\n\n账号登录负责发现和查看；执行"
+      }
+    ],
+    "tokenizer": [
+      {
+        "file": "docs/archive/architecture/14-engine-call-paths.md",
+        "location": "$",
+        "snippet": "all pattern.\"\n\n**Current enforcement gap (2026-05-25):** the script still scans the old root\n`src/` path from before the monorepo split. A passing\n`bun run lint:engine-bypass` result is therefore not proof that the package\ntrees are clean. Fix the script before relying on this gate.\n\nIf a future change needs a new construction site:\n\n1. Verify the new site really needs `ne"
+      },
+      {
+        "file": "docs/archive/architecture/16-core-overall-design-standard.md",
+        "location": "$",
+        "snippet": "ry; deep imports into `./engine/...` `./tool-system/...` etc. are explicitly listed as internal. Subpath-export split (`/internal/*`) is post-stability cleanup; the contract — which the README pins — is what embedders rely on.)*\n- [x] SDK smoke test imports only from package entrypoints. *(B3 — `tests/sdk-smoke.test.ts` constructs server+client+transport "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round3/README.md",
+        "location": "$",
+        "snippet": "](root.md) |\n| HL-01 | P3 | 精确GitHub文件路径被trim并合并引用 | [host-link.md](host-link.md) |\n| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |\n| CDP-R3-01 | P3 | 旋转quad点击/hover取到元素外的点 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-02 | P3 | Shift组合的logical key与text矛盾 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-03 | P2 | DOM hidden祖先剪枝漏掉"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round3/findings.json",
+        "location": "$.findings[5].title",
+        "snippet": "长路径默认标签截断Unicode代理对"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round3/host-link.md",
+        "location": "$",
+        "snippet": "ges/link/src/file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。\n- **预期契约**：路径可以包含 Unicode；默认展示标签应保持合法 Unicode 文本。显式普通 Unicode 标签的对照项完整保留。\n- **实际**：生产 resolver 接受且保留原始 `params.p"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round3/host-link.md",
+        "location": "$",
+        "snippet": "10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+        "location": "$.matches.known_text_findings[30].excerpt",
+        "snippet": "10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round7/root-metadata.md",
+        "location": "$",
+        "snippet": "s/documents/parse.ts` 和 `index-store.ts`、`sources/truncate-utf8.ts`，以及 `sources/collection-url.ts` 的文件名/纯 URL validation 入口；下载器输出有截断，不算完整审查。已有 Office 内部关系路径、namespace 前缀及单文件 JSON 数据转换问题不重复报告；CJK/Latin 词法边界与 phonetic 注音仍保持旧候选状态，没有重跑旧 fixture。未启动 parser worker、PDF/Office 应用、下载器或远端请求。\n\n完整读取 `packages/core/src/themes/manifest.ts`、`audio.ts`、`image.ts`、`paths.ts`，以及 renderer"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round8/evidence/cross-review-questions.md",
+        "location": "$",
+        "snippet": " Git 输出。影响仅限摘要多计，不能扩大为已验证的 Desktop UI、删除判断或原生 worktree 行为。\n\n去重复核：A03 是另一 Git status parser 首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplac"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-26-core-stabilization-followups.md",
+        "location": "$",
+        "snippet": "ub-items: MCP cleanup at session boundaries / costTracker single-path（等 C 阶段一起做）\n- 物理 `internal/*` 子路径拆分（contract 已稳定，文件布局微调可慢慢做）\n\n## 来源\n\n- 来自 [`/Users/admin/Documents/个人学习/core内核/`](file:///Users/admin/Documents/个人学习/core内核/) 的外部对比分析（codex 源码精读 + codeshell 现状评估）\n- 与 repo 内 [Core Stabilization Plan](./2026-05-26-core-stabilization.md) 校准过的真实状"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-26-core-stabilization.md",
+        "location": "$",
+        "snippet": "ity/internal exports. *(B3 — README \"Stable surface\" table pins the contract; full `/internal/*` subpath split deferred as post-stability cleanup since the contract — not the file layout — is what embedders depend on.)*\n- [x] Document supported construction paths: `Engine`, `AgentServer`, `AgentClient`, `ChatSessionManager`, transports, custom tool"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-06-24-drive-claude-code-orchestration.md",
+        "location": "$",
+        "snippet": "  const extra = [\"/opt/homebrew/bin\", \"/usr/local/bin\", \"/usr/bin\", \"/bin\"];\n  const current = (env.PATH ?? \"\").split(delimiter).filter(Boolean);\n  const merged: string[] = [];\n  for (const dir of [...extra, ...current]) if (!merged.includes(dir)) merged.push(dir);\n  return merged.join(delimiter);\n}\n\nexport type ProbeRunner = (command: string) => Promise<"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-06-07-permission-path-prefix-rules-design.md",
+        "location": "$",
+        "snippet": "件工具还没。\n\n## 决策(已确认)\n\n- **范围三档**:批准文件工具时,UI 给 `仅此文件 / 此目录(及子目录) / 该工具所有路径`,**默认选「此目录」**。\n- **匹配语义**:绝对路径前缀正则(`^<escaped-abs-prefix>`),与现有 `ruleMatches` 的 argsPattern 正则机制一致(底座现成,`ruleMatches` 已对任意 arg 跑正则)。\n- **repo 外**:首版不特殊处理(敏感路径有独立 `enforcePathPolicyWithApproval` 门兜底,本功能职责单一)。\n\n## 范围(YAGNI)\n\n**做**:文件工具(Write/Edit/ApplyPatch)批准时按路径粒度生成规则;UI 在范"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-06-07-permission-path-prefix-rules-design.md",
+        "location": "$",
+        "snippet": "度)。\n\n具体形态实现期定(子菜单 or 档位平铺);纯函数 `approveChoicesFor(toolName, filePath)` 决定给哪些选项,可单测。\n\n## 边界与正确性\n\n- **路径规范化**:必须 `resolve` 后再生成正则,否则 `src/../../../etc` 这类会绕过前缀意图。规范化在 core(backend 有 cwd)做,不信任 UI 传来的字符串。\n- **dir 前缀尾 `/`**:`^/repo/src/` 不能写成 `^/repo/src` —— 后者会匹配 `/repo/src-secret/x`。\n- **正则转义**:路径含正则元字符(`.` `(` 等)必须 escape(已有 `escapeRegex`)。\n- **回归**:pathScope 省略 → 旧工"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-06-07-permission-path-prefix-rules-design.md",
+        "location": "$",
+        "snippet": "传来的字符串。\n- **dir 前缀尾 `/`**:`^/repo/src/` 不能写成 `^/repo/src` —— 后者会匹配 `/repo/src-secret/x`。\n- **正则转义**:路径含正则元字符(`.` `(` 等)必须 escape(已有 `escapeRegex`)。\n- **回归**:pathScope 省略 → 旧工具粒度行为,现有 permission 测试不变。\n\n## 测试 / 验收\n\n- **单测** `pathRuleArgsPattern`(纯函数):file→`^abs$`;dir→`^absdir/`;tool→null;`../` 规范化后前缀正确;元字符转义。\n- **单测** buildProjectRule:Write + pa"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-06-07-permission-path-prefix-rules-design.md",
+        "location": "$",
+        "snippet": "\n- **单测** buildProjectRule:Write + pathScope dir → 正确 argsPattern;ApplyPatch + 任意 pathScope → 工具粒度(无路径正则);Bash 不受影响。\n- **单测** ruleMatches 回归:`{file_path:\"^/r/src/\"}` 规则匹配 `/r/src/a.ts`、不匹配 `/r/lib/a.ts` 和 `/r/src-x/a.ts`。\n- **单测**(desktop)`approveChoicesFor`:Write→file/dir/tool;ApplyPatch→仅 tool 档;Bash→原样。\n- **回归**:core permission 测试 + deskto"
+      },
+      {
+        "file": "docs/todo/github-link-local-first-tech-design.md",
+        "location": "$",
+        "snippet": "  contents 响应。\n\n### 13.4 Prompt injection 与数据外泄\n\n- README、Issue、PR 和文件内容全部视为不可信外部内容；\n- 返回值显式标记来源、仓库、路径和截断状态；\n- GitHub 内容中的“执行命令”“读取凭证”等文本不改变工具权限；\n- 后续向 GitHub 写回内容仍必须独立审批，不能因为内容来自同一仓库就自动信任。\n\n### 13.5 审批 TOCTOU\n\n- 审批展示规范化后的最终输入；\n- receipt 绑定 `inputHash + actionId + connectionId + revision`；\n- receipt 短期、单次使用；\n- executor 不接受审批后被修改的 body；\n- 重试写操作"
+      }
+    ],
+    "directory_depth": []
+  },
+  "assessment": {
+    "newCandidate": "Whitespace segmentation of complete artifact paths was not found as a matching historical finding in the searched contexts. This is a keyword/record search, not semantic proof of exhaustive deduplication.",
+    "knownExcluded": [
+      "Write undefined/empty result success heuristic: docs/archive/review-2026-05-30/low_confirmed.json and siblings.",
+      "Related whitespace category: Core run/ArtifactTracker.ts shell redirection parser in May findings/low_confirmed; independent consumer/input contract, not the renderer detector.",
+      "Input staged attachment hash/TOCTOU/session-policy issues: existing July records, excluded scope.",
+      "Legacy/modern history attachment presentation: docs/review-2026-10-12 rounds 24/25, excluded duplicate family.",
+      "Non-vision image downgrade: July review and current documented intentional downgrade, not promoted."
+    ]
+  }
+}

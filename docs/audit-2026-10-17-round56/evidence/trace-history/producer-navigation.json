@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "randomUUID|startedAt|store.write|record:|ModelTraceRecord|function start",
+    "packages/core/src/model-traces/context.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "2:import { randomUUID } from \"node:crypto\";\n17:  ModelTraceRecord,\n25:  record: ModelTraceRecord;\n136:function estimateRecord(record: ModelTraceRecord): void {\n209:        call.store.write(call.record);\n226:): { value?: T; state: ModelTraceRecord[\"inputState\"] } {\n236:  target: Pick<ModelTraceRecord, \"output\" | \"outputState\">,\n237:  captured: { value?: ModelTraceOutput; state: ModelTraceRecord[\"outputState\"] },\n290:  const id = options.requestBoundaryId ?? randomUUID();\n292:  const record: ModelTraceRecord = {\n305:    startedAt: Date.now(),\n353:          id: randomUUID(),\n355:          startedAt: record.startedAt,\n382:          id: randomUUID(),\n384:          startedAt: record.startedAt,\n493:      id: currentUsageAttempt()?.requestId ?? randomUUID(),\n495:      startedAt: Date.now(),\n712:    const id = input.id ?? randomUUID(),\n787:    if (!context.ephemeral || ephemeralAllowed(policy, settings)) target.store.writeEvent(event);\n794:export function recordExternalModelTrace(input: ExternalModelTraceInput): ModelTraceRecord | null {\n802:    const id = input.id ?? randomUUID(),\n808:    const record: ModelTraceRecord = {\n820:      startedAt: input.startedAt,\n864:      id: previous?.attempts[0]?.id ?? randomUUID(),\n866:      startedAt: record.startedAt,\n878:    if (!context.ephemeral || ephemeralAllowed(policy, settings)) target.store.write(record);\n886:export function recordExternalModelCall(input: ExternalModelCallInput): ModelTraceRecord | null {\n909:      startedAt: input.startedAt,\n942:    record: recordExternalModelTrace,\n",
+  "stderr": ""
+}

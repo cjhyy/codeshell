@@ -1,0 +1,34 @@
+[
+  {
+    "path": "packages/desktop/src/main/capabilities-service.ts",
+    "bytes": 4475,
+    "lines": 120,
+    "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+    "pinAt": "2026-10-17T20:10:53.934570+00:00",
+    "coverage": "hash-only before caller/settings body or line-navigation"
+  },
+  {
+    "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+    "bytes": 26939,
+    "lines": 623,
+    "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+    "pinAt": "2026-10-17T20:10:53.935264+00:00",
+    "coverage": "hash-only before caller/settings body or line-navigation"
+  },
+  {
+    "path": "packages/core/src/settings/manager.ts",
+    "bytes": 46928,
+    "lines": 1139,
+    "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+    "pinAt": "2026-10-17T20:10:53.935562+00:00",
+    "coverage": "hash-only before caller/settings body or line-navigation"
+  },
+  {
+    "path": "packages/core/src/capability-control/types.ts",
+    "bytes": 2864,
+    "lines": 76,
+    "sha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+    "pinAt": "2026-10-17T20:10:53.935787+00:00",
+    "coverage": "hash-only before caller/settings body or line-navigation"
+  }
+]

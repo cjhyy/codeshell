@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-10-17T17:18:17.900800+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40459,
+      "lines": 1033,
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "beforeCurrentLineNavigationOrBody": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/panelResize.test.ts",
+      "bytes": 4424,
+      "lines": 126,
+      "sha256": "49134fe3a0ac029610e72adce5bcbddc8bcb3066f5849a4026f6f9081ff674d4",
+      "beforeCurrentLineNavigationOrBody": true
+    }
+  ]
+}

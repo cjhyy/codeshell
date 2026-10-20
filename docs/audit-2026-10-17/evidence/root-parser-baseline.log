@@ -1,0 +1,93 @@
+bun test v1.3.11 (af24e281)
+
+tests/strip-markdown.test.ts:
+(pass) stripMarkdownToPlain > strips headings, bold, italic, inline code [3.37ms]
+(pass) stripMarkdownToPlain > keeps the body of fenced code blocks but drops the fences [0.04ms]
+(pass) stripMarkdownToPlain > renders [label](url) as label (url) when they differ [0.02ms]
+(pass) stripMarkdownToPlain > renders [url](url) as just url [0.01ms]
+(pass) stripMarkdownToPlain > keeps the alt text of images
+(pass) stripMarkdownToPlain > turns unordered list markers into bullets [0.05ms]
+(pass) stripMarkdownToPlain > drops blockquotes and horizontal rules
+(pass) stripMarkdownToPlain > collapses excessive blank lines
+(pass) stripMarkdownToPlain > strikethrough markers are removed
+
+tests/search-highlight.test.ts:
+(pass) search scan and overlay preserve case-insensitive non-overlapping ASCII matches [5.03ms]
+(pass) search scan and overlay preserve CJK wide-cell heads and their following text [0.07ms]
+(pass) search scan and overlay preserve emoji surrogate pairs without shifting following columns [0.04ms]
+(pass) search scan and overlay preserve combining characters stored in one grapheme cell [0.03ms]
+(pass) search scan and overlay preserve lowercase expansion of Turkish capital dotted I [0.06ms]
+(pass) search scan and overlay preserve excluded gutters inside a match remain unhighlighted [0.04ms]
+(pass) search scan and overlay preserve excluded text cannot itself match [0.01ms]
+(pass) search scan and overlay preserve spacer padding is excluded and matches remain row-local [0.02ms]
+(pass) search scan and overlay preserve empty query is a no-op
+
+packages/coding/src/cc-orchestrator/codex-session-discovery.test.ts:
+(pass) discoverCodexSessions > lists codex sessions for a cwd, reading id/firstMessage from rollout files [9.29ms]
+(pass) discoverCodexSessions > uses the real input part as the title instead of injected host context [5.36ms]
+(pass) discoverCodexSessions > uses the genuine title after Page context in sync and async discovery [7.73ms]
+(pass) discoverCodexSessions > filters out sessions whose session_meta.cwd differs [6.15ms]
+(pass) discoverCodexSessions > sorts by lastModified descending (newest first) [6.80ms]
+(pass) discoverCodexSessions > skips files with a broken/absent session_meta first line [5.32ms]
+(pass) discoverCodexSessions > returns [] when the sessions dir is absent [0.53ms]
+(pass) discoverCodexSessions > tolerates a session with no real user message (firstMessage empty) [3.28ms]
+(pass) listCodexSessionsForCwds > returns a bounded recent list and counts unique matching threads across all dates [150.66ms]
+(pass) listCodexSessionsForCwds > yields to host events while reading identities, and tolerates broken files and directory cycles [5.61ms]
+(pass) listCodexSessionsForCwds > handles absent history and an empty project scope [0.90ms]
+(pass) discoverRecentCodexSessions > returns recent sessions across all cwds with file path, newest first [7.01ms]
+(pass) discoverRecentCodexSessions > dedupes by sessionId keeping the newest rollout, honors sinceMs, skips broken files [6.59ms]
+(pass) discoverRecentCodexSessions > applies project scope before the result limit and maps nested cwd to its root [7.11ms]
+
+packages/coding/src/cc-orchestrator/session-history.test.ts:
+(pass) readRecentHistory > returns last N user/assistant messages with hasMore [3.45ms]
+(pass) readRecentHistory > captures assistant tool_use as a tool summary [3.31ms]
+(pass) readRecentHistory > returns full long assistant text without the old 4000-character truncation [3.55ms]
+(pass) readRecentHistory > captures the FULL tool input as args (e.g. a sub-agent prompt not in the summary whitelist) [3.61ms]
+(pass) readRecentHistory > skips caveat noise; returns empty when session absent [0.37ms]
+(pass) parseClaudeTranscriptLine > maps appended user, assistant, tool and result lines [0.16ms]
+
+packages/coding/src/cc-orchestrator/session-discovery.test.ts:
+(pass) encodeCwd > replaces each non-alphanumeric char with a dash (incl. leading slash)
+(pass) encodeCwd > turns CJK chars into one dash each [0.04ms]
+(pass) external session project scope > normalizes trailing slashes and uses the longest ancestor [0.02ms]
+(pass) external session project scope > rejects a disabled Claude root before its project directory is probed [0.06ms]
+(pass) external session project scope > treats lossy sibling/collision names as identity probes, not visibility decisions [0.02ms]
+(pass) discoverSessions > lists sessions for a cwd from <claudeHome>/projects/<encoded>/*.jsonl [3.47ms]
+(pass) discoverSessions > returns [] when the project dir is absent [0.41ms]
+(pass) selectRecentStats (shared window+limit) > sorts newest first [0.05ms]
+(pass) selectRecentStats (shared window+limit) > caps to limit after sorting [0.02ms]
+(pass) selectRecentStats (shared window+limit) > filters by recency window relative to now [0.02ms]
+(pass) selectRecentStats (shared window+limit) > applies window AND limit (the default intersection)
+(pass) discoverSessions bounding > caps the returned list to `limit`, newest first [39.38ms]
+(pass) discoverSessions bounding > countSessions reports the full total regardless of limit [19.76ms]
+(pass) discoverSessions bounding > no opts = unbounded (back-compat) [33.97ms]
+(pass) discoverRecentClaudeSessions > walks all project dirs, reads real cwd from the first line, newest first [6.21ms]
+(pass) discoverRecentClaudeSessions > reads the first real user message from a later line (first line is meta) [3.05ms]
+(pass) discoverRecentClaudeSessions > honors sinceMs and skips files whose first line lacks cwd [2.92ms]
+(pass) discoverRecentClaudeSessions > applies project scope before the result limit and excludes disabled roots [2.84ms]
+(pass) discoverRecentClaudeSessions > keeps an enabled sibling of a disabled prefix and never content-reads the disabled root [4.11ms]
+(pass) discoverRecentClaudeSessions > uses real cwd identity for exact encodeCwd collisions before reading content [3.40ms]
+
+packages/coding/src/cc-orchestrator/related-session-discovery.test.ts:
+(pass) discoverRelatedSessions > lists and counts Codex delegated threads without including unbound worktree history [7.60ms]
+(pass) discoverRelatedSessions > includes delegated Claude worktrees and retains their authoritative cwd [7.11ms]
+(pass) discoverRelatedSessions > finds related Codex cwd buckets in one project-visible list [7.82ms]
+
+packages/coding/src/cc-orchestrator/codex-session-history.test.ts:
+(pass) readCodexRecentHistory > returns last N user/assistant messages with hasMore [3.71ms]
+(pass) readCodexRecentHistory > keeps the real input when Codex stores it beside injected context parts [3.39ms]
+(pass) readCodexRecentHistory > hides Page context in history and live tails while preserving assistant text [3.69ms]
+(pass) readCodexRecentHistory > keeps user input beside repeated Page context in the same or separate parts [3.45ms]
+(pass) readCodexRecentHistory > preserves literal and incomplete Page markers and accepts string content [0.07ms]
+(pass) readCodexRecentHistory > captures function_call and custom_tool_call as tool summaries [4.35ms]
+(pass) readCodexRecentHistory > returns full long assistant text without the old 4000-character truncation [3.95ms]
+(pass) readCodexRecentHistory > matches the rollout by threadId even across date dirs; ignores other cwds [4.93ms]
+(pass) readCodexRecentHistory > returns empty when the thread is not found [0.54ms]
+(pass) readCodexRecentHistory > returns empty when the sessions dir is absent [0.29ms]
+(pass) parseCodexTranscriptLine > maps appended rollout messages, tools, results and turn completion
+
+ 72 pass
+ 0 fail
+ 186 expect() calls
+Ran 72 tests across 7 files. [1046.00ms]
+Completed Bun shard: 72 tests, 0 skipped; 0 failures.

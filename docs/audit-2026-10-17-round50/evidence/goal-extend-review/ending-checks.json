@@ -1,0 +1,143 @@
+{
+  "capturedUTC": "2026-10-17T17:08:52.081107+00:00",
+  "sourcePins": [
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "initialSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "endingBytes": 37921,
+      "endingSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "initialSha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "endingBytes": 4978,
+      "endingSha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "initialSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "endingBytes": 55140,
+      "endingSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "initialSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingBytes": 122863,
+      "endingSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "initialSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingBytes": 86436,
+      "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "initialSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "endingBytes": 102370,
+      "endingSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "initialSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "endingBytes": 195050,
+      "endingSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/protocol/dispatch.ts",
+      "initialSha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "endingBytes": 8824,
+      "endingSha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/protocol/types.ts",
+      "initialSha256": "01ed12b45ec6ac61688ab57659dfea9aff45f303ca064ef088f328bd48634b1f",
+      "endingBytes": 26529,
+      "endingSha256": "01ed12b45ec6ac61688ab57659dfea9aff45f303ca064ef088f328bd48634b1f",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "initialSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "endingBytes": 93752,
+      "endingSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+      "initialSha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "endingBytes": 29998,
+      "endingSha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "initialSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "endingBytes": 10530,
+      "endingSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "initialSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "endingBytes": 106169,
+      "endingSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "initialSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "endingBytes": 51788,
+      "endingSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "initialSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "endingBytes": 108774,
+      "endingSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "initialSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "endingBytes": 4292,
+      "endingSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "matchesInitial": true
+    }
+  ],
+  "allSourcePinsMatch": true,
+  "history": {
+    "originalCount": 4693,
+    "endingCount": 4693,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "sameFilter": "(^|/)audit-2026-10-17-round(?:[5-9][0-9]|[1-9][0-9]{2,})(/|$)",
+    "originalInventoryUnmodified": true
+  },
+  "ownGitOperations": 0,
+  "scope": "Metadata/source hashes only, not repeated source semantics or product execution."
+}

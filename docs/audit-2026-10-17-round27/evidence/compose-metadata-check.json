@@ -1,0 +1,99 @@
+{
+  "atUTC": "2026-10-17T11:06:14.339334+00:00",
+  "authorOnlyMetadata": true,
+  "productTestsExecutedByThisCheck": 0,
+  "sourceChecks": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "rangeBoundsValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/composeFileEdits.ts",
+      "bytes": 8020,
+      "sha256": "48a279cc6c2ebe3e4ee5333b3bea1e14d930180855b5f8518848419e0977edb8",
+      "rangeBoundsValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+      "bytes": 8578,
+      "sha256": "242400f40f6994f82af49270cdcbfb76f97851e378ccb92f20e5b139bf624c56",
+      "rangeBoundsValid": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/edit.ts",
+      "bytes": 5412,
+      "sha256": "4805f3667953f9f41cb81d98a010ead6318ed80595774ab9ab349591e0aa61ce",
+      "rangeBoundsValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "bytes": 13565,
+      "sha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d",
+      "rangeBoundsValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "bytes": 16212,
+      "sha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "rangeBoundsValid": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "rangeBoundsValid": true
+    }
+  ],
+  "sourcePinCount": 7,
+  "prepCopyChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/dedup.py",
+      "byteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history-supplement.json",
+      "byteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+      "byteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/inventory.json",
+      "byteIdentical": true
+    }
+  ],
+  "prepCopyCount": 4,
+  "reportLocalLinks": 19,
+  "localLinkTargets": [
+    "../../packages/desktop/src/renderer/diff/composeFileEdits.ts:139",
+    "../../packages/core/src/tool-system/builtin/edit.ts:19",
+    "../../packages/core/src/tool-system/builtin/edit.ts:82",
+    "../../packages/desktop/src/renderer/messages/fileChangeAggregator.ts:155",
+    "../../packages/desktop/src/renderer/messages/fileChangeAggregator.ts:375",
+    "../../packages/desktop/src/renderer/types.ts:290",
+    "../../packages/desktop/src/renderer/types.ts:629",
+    "../../packages/desktop/src/renderer/messages/FilesChangedCard.tsx:83",
+    "../../packages/desktop/src/renderer/diff/composeFileEdits.test.ts:57",
+    "evidence/root-containment-first.raw.log",
+    "evidence/root-containment-first.exit.json",
+    "evidence/compose-validation.json",
+    "evidence/compose-source-manifest.json",
+    "evidence/compose-dedup.json",
+    "../audit-2026-10-17-round13/groups.md",
+    "../audit-2026-10-17-round13/evidence/groups-validation.json",
+    "evidence/compose-history-decisions.json",
+    "evidence/compose-prep-copy-receipt.json",
+    "evidence/compose-metadata-notes.json"
+  ],
+  "assertedCounts": {
+    "formal": 0,
+    "candidate": 1,
+    "related": 0
+  },
+  "productReruns": 0,
+  "gitCommands": 0,
+  "limits": "File existence/hash/declared-range and local Markdown link checks only; not product behavior validation or Git blob binding."
+}

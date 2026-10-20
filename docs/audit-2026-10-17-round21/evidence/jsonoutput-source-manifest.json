@@ -1,0 +1,151 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "frozenSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "currentSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "matchesFrozen": true,
+      "bytes": 5744,
+      "lineCount": 163,
+      "ranges": [
+        "1-163 (full source)"
+      ],
+      "kind": "actual JSON class/factory import and calls; Text class and helpers never invoked"
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.test.ts",
+      "frozenSha256": "ef51ee33912b0d347ea7fdead6731bc417a9205061086c1bf1d98cd86665a1e4",
+      "currentSha256": "ef51ee33912b0d347ea7fdead6731bc417a9205061086c1bf1d98cd86665a1e4",
+      "matchesFrozen": true,
+      "bytes": 3781,
+      "lineCount": 111,
+      "ranges": [
+        "1-111 (full source)"
+      ],
+      "kind": "mixed existing JSON/Text test read only; not imported or executed"
+    },
+    {
+      "path": "packages/tui/src/ui/truncate.ts",
+      "frozenSha256": "a94eed8773b5e2f2f847ca2603df015a4e253bb1f748bca5e450768eda4a04b4",
+      "currentSha256": "a94eed8773b5e2f2f847ca2603df015a4e253bb1f748bca5e450768eda4a04b4",
+      "matchesFrozen": true,
+      "bytes": 5747,
+      "lineCount": 179,
+      "ranges": [
+        "1-85"
+      ],
+      "kind": "static import dependency only; exact preimport stub prohibits all function calls"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "frozenSha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "currentSha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "matchesFrozen": true,
+      "bytes": 13137,
+      "lineCount": 314,
+      "ranges": [
+        "230-275"
+      ],
+      "kind": "selected ordinary final metadata/callback wiring static only; no CLI run"
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "frozenSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matchesFrozen": true,
+      "bytes": 11626,
+      "lineCount": 265,
+      "ranges": [
+        "50-109"
+      ],
+      "kind": "selected output format CLI contract static only"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "frozenSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "matchesFrozen": true,
+      "bytes": 2110,
+      "lineCount": 73,
+      "ranges": [
+        "full metadata"
+      ],
+      "kind": "chalk declared real dependency; no guessed package path/resolver probe"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "currentSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "matchesFrozen": true,
+      "bytes": 50794,
+      "lineCount": 1306,
+      "ranges": [
+        "614-760"
+      ],
+      "kind": "selected TerminalReason/StreamEvent/completionKind contract type-only; not runtime imported"
+    },
+    {
+      "path": "packages/core/src/protocol/types.ts",
+      "frozenSha256": "01ed12b45ec6ac61688ab57659dfea9aff45f303ca064ef088f328bd48634b1f",
+      "currentSha256": "01ed12b45ec6ac61688ab57659dfea9aff45f303ca064ef088f328bd48634b1f",
+      "matchesFrozen": true,
+      "bytes": 26529,
+      "lineCount": 730,
+      "ranges": [
+        "251-267"
+      ],
+      "kind": "selected RunResult contract type-only static only"
+    },
+    {
+      "path": "packages/core/src/protocol/client.ts",
+      "frozenSha256": "5d52fd589f6904ef83cae9939efa8f3542403d83930346bad8048f97665b73b5",
+      "currentSha256": "5d52fd589f6904ef83cae9939efa8f3542403d83930346bad8048f97665b73b5",
+      "matchesFrozen": true,
+      "bytes": 22495,
+      "lineCount": 635,
+      "ranges": [
+        "130-176"
+      ],
+      "kind": "selected real RunResult pass-through static only"
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "frozenSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "currentSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "matchesFrozen": true,
+      "bytes": 195050,
+      "lineCount": 4949,
+      "ranges": [
+        "1848-1864",
+        "2019-2033"
+      ],
+      "kind": "selected RunResult producers static only"
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "frozenSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "currentSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "matchesFrozen": true,
+      "bytes": 19306,
+      "lineCount": 480,
+      "ranges": [
+        "340-430"
+      ],
+      "kind": "selected event/final result producer static only; no Engine/model imports or calls"
+    },
+    {
+      "path": "docs/architecture/09-tui.md",
+      "frozenSha256": "664152e1ef7eaea3d819e0692adc797b378ca25443a8c636672ec4a1e957b648",
+      "currentSha256": "664152e1ef7eaea3d819e0692adc797b378ca25443a8c636672ec4a1e957b648",
+      "matchesFrozen": true,
+      "bytes": 27089,
+      "lineCount": 113,
+      "ranges": [
+        "94-96"
+      ],
+      "kind": "headless format documentation static only"
+    }
+  ],
+  "limitations": "Actual JSON classes/factory only; Text/helper/Core/provider/CLI implementations remain static or mocked unused imports. Selected producer ranges are not whole subsystem coverage."
+}

@@ -1,0 +1,307 @@
+{
+  "selection": "All12 helper_names windows +all6 translator_revoke windows +12 of31 TUIwindows, not all31. Direct oldF01 doc source ranges separate.",
+  "contextWindowsRead": 30,
+  "rows": [
+    {
+      "group": "helper_names",
+      "index": 0,
+      "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+      "unit": "paragraph/6",
+      "valueChars": 1619,
+      "context": "### F-02 `stream_request_start` 用 `activeAgents` 推断归属，运行态一脏就压掉主回复槽\n- 位置：`packages/desktop/src/renderer/types.ts:443`、`packages/desktop/src/renderer/types.ts:944`、`packages/desktop/src/renderer/types.ts:1056`\n- 现状：desktop 收到 `stream_request_start` 时，只要 `state.activeAgents` 非空就直接 return，不创建主 assistant streaming slot。`agent_end` 会从 `activeAgents` 删除，但 `turn_complete` 的 orphan sweep 只把 agent message 标 done，`background_agent_completed` 也只更新 message 并追加 system 行，都没有清理 `activeAgents`。\n- 为什么不合理：A2 的端到端链路依赖 `stream_request_start` 创建稳定的 live assistant accumulator，后续主 `text_delta` 才有地方落。用“当前是否存在 active agent”反推事件归属，是把 renderer 的易脏运行态当作协议路由条件；一旦 agent_end 丢失、后台完成只走 `background_agent_completed`，或 orphan sweep 生效但 `activeAgents` 残留，后续顶层 run 的 `stream_request_start` 会被压掉，主 `text_delta` 因没有 `streamingAssistantId` 被忽略。\n- 影响面：desktop 多代理/后台代理之后的普通顶层流式回复；改动半径在 `StreamEvent.stream_request_start` agent 归属、desktop reducer 的 active agent 清理和 slot 创建逻辑。\n- 建议方向：不要用 `Object.keys(activeAgents).length` 判定 `stream_request_start` 归属。优先使用事件自带 `agentId`：子代理 request_start 路由到 agent card 或忽略，顶层 request_start 一律创建主 slot。并在 orphan sweep / `background_agent_completed` 中同步清理 `activeAgents`。\n- 严重度：P1\n- 证据：`stream_request_start` 非空 activeAgents 直接 return 见 `packages/desktop/src/renderer/types.ts:447`；主 `text_delta` 无 `",
+      "sourceSha256": "98fd44723ecd749b09cfbf60cfb0514b4b113dd5f9e1f04a5ee921ef28e8f043",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "helper_names",
+      "index": 1,
+      "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+      "unit": "paragraph/11",
+      "valueChars": 2202,
+      "context": "1. 在 `packages/core/src/types.ts` 扩展事件契约，保持向后兼容：\n   - `stream_request_start` 增加 `messageId?: string`。\n   - `assistant_message` 增加 `messageId?: string`。\n   - `tombstone` 保持 `messageId`，必要时增加 `agentId?: string` 以匹配子代理 wrapper 当前会在运行时 spread `agentId` 的事实，见 `packages/core/src/engine/engine.ts:1246`。\n2. 在 `packages/core/src/engine/turn-loop.ts` 的每个顶层 turn 开始处生成稳定 id，例如基于 `turnId` 而不是只基于 `turnCount`。`turnId` 已在 loop 内生成并用于日志，见 `packages/core/src/engine/turn-loop.ts:596`、`packages/core/src/engine/turn-loop.ts:597`。建议形如 `assistant_${turnId}`，避免同一 session resume 或子 Engine 的 `turn_1` 碰撞。\n3. `stream_request_start` emit 时带上 `messageId`，见当前 emit 点 `packages/core/src/engine/turn-loop.ts:605`。\n4. 将该 `messageId` 传入 `callModelWithFallback()`，fallback tombstone 使用同一 id，替换当前 `turn_${this.turnCount}`，见当前 tombstone 点 `packages/core/src/engine/turn-loop.ts:1335`。\n5. 所有本 turn 终态 `assistant_message` 尽量带同一 `messageId`，至少覆盖无工具正常结束和 fallback non-streaming 结束，见当前无工具终态 `packages/core/src/engine/turn-loop.ts:879`、`packages/core/src/engine/turn-loop.ts:881`。goal budget、max-turn summary 等特殊路径也可以带 id，但如果没有对应 `stream_request_start`，字段保持可选即可，见 `packages/core/src/engine/turn-loop.ts:866`、`packages/core/src/engine/turn-loop.ts:1262`。\n6. 在 `packages/desktop/src/renderer/types.ts`：\n   - `stream_request_start` 顶层 slot 的 id 优先使用 `event.messageId`，无字段时才回退 `freshId(\"assistant\")`，见当前生成点 `packages/desktop/src/renderer/types.ts:448`。\n   - `tombstone` 删除匹配 message 后，如果删除的是 `state",
+      "sourceSha256": "d469df1a5e32c44154d7b5c0cdf20a15694221e17b1b19aa8ebfe2747a46a66d",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "helper_names",
+      "index": 2,
+      "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+      "unit": "paragraph/18",
+      "valueChars": 2329,
+      "context": "1. `StreamEvent` 类型已经允许 `stream_request_start` 携带 `agentId?: string`，见 `packages/core/src/types.ts:444`。子 Engine 的事件会在 parent wrapper 中统一 spread `agentId: req.agentId`，见 `packages/core/src/engine/engine.ts:1226`、`packages/core/src/engine/engine.ts:1246`。\n2. desktop reducer 的 `stream_request_start` 分支没有看 `event.agentId`。它的注释说“event itself doesn't carry agentId”，并用 `Object.keys(state.activeAgents).length > 0` 判断这是子代理 request，见 `packages/desktop/src/renderer/types.ts:443`、`packages/desktop/src/renderer/types.ts:444`、`packages/desktop/src/renderer/types.ts:445`、`packages/desktop/src/renderer/types.ts:447`。这条注释已与当前类型和 wrapper 行为不一致。\n3. 顶层 `text_delta` 必须依赖 `streamingAssistantId` 已存在；没有 slot 时直接 return state，见 `packages/desktop/src/renderer/types.ts:500`。因此一个错误 return 的 `stream_request_start` 会让后续主回复 token 全部丢失。\n4. `activeAgents` 在 `agent_start` 时写入，见 `packages/desktop/src/renderer/types.ts:701`、`packages/desktop/src/renderer/types.ts:706`、`packages/desktop/src/renderer/types.ts:708`；正常 `agent_end` 会删除，见 `packages/desktop/src/renderer/types.ts:767`、`packages/desktop/src/renderer/types.ts:769`、`packages/desktop/src/renderer/types.ts:796`。\n5. 但 `turn_complete` 的 orphan sweep 只遍历 `state.activeAgents`、刷新/标记 agent message，没有从 `activeAgents` 删除被 clean sweep 的 orphan；return 里也没有写 `activeAgent",
+      "sourceSha256": "d469df1a5e32c44154d7b5c0cdf20a15694221e17b1b19aa8ebfe2747a46a66d",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "helper_names",
+      "index": 3,
+      "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+      "unit": "paragraph/24",
+      "valueChars": 1689,
+      "context": "1. 修改 `stream_request_start` 分支：\n   - 如果 `event.agentId` 存在，明确视为子代理 request，主 feed 不开 assistant slot。\n   - 如果 `event.agentId` 不存在，明确视为顶层 request，无论 `activeAgents` 当前是否为空，都创建/替换主 `streamingAssistantId`。\n   - 删除或改写当前“event itself doesn't carry agentId”的注释，见 `packages/desktop/src/renderer/types.ts:444`、`packages/desktop/src/renderer/types.ts:445`。\n2. 修改 `turn_complete` clean sweep：\n   - 进入分支时复制 `activeAgents` 为 `nextActiveAgents`。\n   - 对每个 `activeAgents` 条目，如果 clean completion 且 agent 不是 `backgrounded`，在标记 message done 的同时从 `nextActiveAgents` 删除。\n   - 如果 `agentMessageIndex[agentId]` 缺失、指向非 agent message，clean completion 下也删除该 `activeAgents` 条目；因为这个条目已经无法再被正常 card 更新，继续保留只会污染路由。\n   - 对 `backgrounded` agent 只 flush buffer，保留 active，等待 `agent_end` 或 `background_agent_completed`，这与现有注释一致，见 `packages/desktop/src/renderer/types.ts:951`、`packages/desktop/src/renderer/types.ts:954`。\n   - return 时带上 `activeAgents: nextActiveAgents`。\n3. 修改 `background_agent_completed`：\n   - 如果 payload 有 `agentId`，无论是否找到 card，都从 `activeAgents` 删除该 id。\n   - 保留当前 card resolve 与 system message 行为，见 `packages/desktop/src/renderer/types.ts:1063`、`packages/desktop/src/renderer/types.ts:1071`、`packages/desktop/src/renderer/types.ts:1084`。\n4. 保留 `agent_end` 的现有删除逻辑，见 `packages/desktop/src/renderer/types.ts:769`、`packa",
+      "sourceSha256": "d469df1a5e32c44154d7b5c0cdf20a15694221e17b1b19aa8ebfe2747a46a66d",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "helper_names",
+      "index": 4,
+      "path": "docs/archive/review-2026-07-09/26-small-features-review.md",
+      "unit": "paragraph/10",
+      "valueChars": 1241,
+      "context": "层 dirty `activeAgents` 仍开主 slot；clean orphan 清非 backgrounded active；backgrounded agent 保留；`background_agent_completed` 清 active；子代理文本/工具仍只进 card。\n- **F-01**：实现忠实。core 用 `assistant_${turnId}` 贯穿 start/tombstone/终态；desktop tombstone 删 active slot 时清 `streamingAssistantId`；带 `agentId` 的子代理终态被主 reducer 忽略；turnId 带时间+随机片段避免 resume/子 Engine `turn_1` 碰撞。\n- **F-06**：实现忠实。`pre_tool_use: ask` 不再短路 classifier；合并顺序 deny > ask > allow；hook 只能收紧；merged ask 只走一次 `handleAsk()`；未见 deny 被 ask 批准绕过的路径。\n- **F-04**：基本忠实。main 新增 `agent:streamEvent` 带可选 seq，legacy `agent:msg` fallback 保留；renderer batch 用 maxSeq 推进并持久化 `snapshotSeq`；hydrate 对非空 projection 也按 cursor replay tail。见上方 Minor（cursor 合并边角）。\n- **N-07**：执行语义正确，`permissionDefault` 未接入 classifier；新增测试覆盖 allow 不自动放行、deny 不覆盖 explicit allow。仅一处 preset 注释残留（见 Nit）。\n- **N-02**：只改注释，现描述与实际「完整 LLMResponse 后 enqueue，队列负责 post-response batch 并发/顺序」一致。\n- **N-09**：`resultsToMessages()` 已删；`rg` 无 source caller；架构文档改指向 TurnLoop `toolResultToBlock(...)`。",
+      "sourceSha256": "e620675e661c7b9f9d4b085fab4cf2c2aa533a752aaf7735ae298326437e79de",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "helper_names",
+      "index": 5,
+      "path": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation.md",
+      "unit": "paragraph/69",
+      "valueChars": 873,
+      "context": "```ts\ncase \"text_delta\": {\n  // Subagent text never enters the main feed — it accumulates in the\n  // owning AgentMessage's textBuffer and is flushed to `text` on\n  // turn_complete / agent_end. This is the hot path that froze the\n  // UI in session s-mpo7fju0-7d6942b7.\n  if (event.agentId) {\n    const idx = state.agentMessageIndex[event.agentId];\n    if (idx === undefined) return state;\n    const msgs = state.messages.slice();\n    const m = msgs[idx];\n    if (!m || m.kind !== \"agent\") return state;\n    msgs[idx] = { ...m, textBuffer: m.textBuffer + event.text };\n    return { ...state, messages: msgs };\n  }\n  if (!state.streamingAssistantId) return state;\n  return {\n    ...state,\n    messages: state.messages.map((m) =>\n      m.kind === \"assistant\" && m.id === state.streamingAssistantId\n        ? { ...m, text: m.text + event.text }\n        : m,\n    ),\n  };\n}\n```",
+      "sourceSha256": "f0e1939e66312645570d401bde9be54189c6d7c1e2144f02b1f0abd798072938",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "helper_names",
+      "index": 6,
+      "path": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation.md",
+      "unit": "paragraph/87",
+      "valueChars": 520,
+      "context": "```ts\ncase \"stream_request_start\": {\n  // If a subagent is active, this request_start belongs to it (the\n  // event itself doesn't carry agentId). Don't open a new main\n  // assistant message — that would create a phantom card in the feed.\n  if (Object.keys(state.activeAgents).length > 0) return state;\n  const id = freshId(\"assistant\");\n  return {\n    ...state,\n    messages: [...state.messages, { kind: \"assistant\", id, text: \"\", done: false }],\n    streamingAssistantId: id,\n    streamingThinkingId: null,\n  };\n}\n```",
+      "sourceSha256": "f0e1939e66312645570d401bde9be54189c6d7c1e2144f02b1f0abd798072938",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "helper_names",
+      "index": 7,
+      "path": "docs/superpowers/specs/2026-05-28-desktop-subagent-isolation-design.md",
+      "unit": "paragraph/4",
+      "valueChars": 665,
+      "context": "1. **Misattribution.** `applyStreamEvent` (`packages/desktop/src/renderer/types.ts:197-207`) handles `text_delta` without inspecting `event.agentId`. Subagent deltas are appended to whichever `AssistantMessage` `streamingAssistantId` points at, so 10566 subagent deltas were folded into the main assistant message.\n2. **Unbounded re-render cost.** Each delta runs `state.messages.map()` to rebuild the whole messages array, producing a fresh `messages` reference. `MessageStream`'s `useMemo(() => buildStreamItems(messages), [messages])` re-scans the full transcript per delta, and no `React.memo` exists on message components. Cost is roughly O(messages × deltas).",
+      "sourceSha256": "1013c8a4aee5be9d2094e099cacafc3ccce41d481c74b976d595e333a16be288",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "helper_names",
+      "index": 8,
+      "path": "docs/superpowers/specs/2026-05-28-desktop-subagent-isolation-design.md",
+      "unit": "paragraph/5",
+      "valueChars": 243,
+      "context": "Compare the TUI: `packages/tui/src/ui/App.tsx:543-561` drops `text_delta` events that carry an `agentId` from the main feed and routes them through `createTranscriptTranslator` into `asyncAgentRegistry`. The desktop renderer has no equivalent.",
+      "sourceSha256": "1013c8a4aee5be9d2094e099cacafc3ccce41d481c74b976d595e333a16be288",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "helper_names",
+      "index": 9,
+      "path": "docs/superpowers/specs/2026-05-28-desktop-subagent-isolation-design.md",
+      "unit": "paragraph/26",
+      "valueChars": 1203,
+      "context": "**`stream_request_start`**\n- This event does not carry `agentId`. Both main and subagent runtimes emit it. Currently the reducer unconditionally pushes a new `AssistantMessage` and sets `streamingAssistantId`, which means a subagent's request_start creates a phantom main-feed message.\n- Fix: only push when no agent is currently active. Concretely:\n  ```ts\n  case \"stream_request_start\": {\n    if (Object.keys(state.activeAgents).length > 0) return state;\n    // ...existing behavior...\n  }\n  ```\n- This relies on `activeAgents` being populated before the subagent's first `stream_request_start`. `agent_start` is dispatched on the same JSON-RPC channel and ordering within a session is preserved by the bridge. **Verification step during implementation:** confirm in the captured session log that `agent_start` for every agent precedes that agent's first `stream_request_start`. If any agent skips `agent_start` (the failing session had two such cases), the renderer fix alone cannot recover them — those events are dropped at step 2 above, which is acceptable: lost events are strictly better than misattributed events. The missing `agent_start` is a separate core-side bug tracked outside this spec.",
+      "sourceSha256": "1013c8a4aee5be9d2094e099cacafc3ccce41d481c74b976d595e333a16be288",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "helper_names",
+      "index": 10,
+      "path": "docs/superpowers/specs/2026-05-28-desktop-subagent-isolation-design.md",
+      "unit": "paragraph/40",
+      "valueChars": 1437,
+      "context": "1. **Isolation.** Given a streaming main `AssistantMessage` and an active subagent, dispatching a `text_delta` with `agentId` leaves the main message text unchanged and appends to the subagent's `textBuffer`.\n2. **Tool routing.** A sequence of `tool_use_start` → `tool_use_args_delta` → `tool_result` carrying the subagent's `agentId` produces one `ToolMessage` in that agent's `toolCalls`, fully populated, and zero top-level `ToolMessage`s.\n3. **Concurrent agents.** Two `agent_start` events followed by interleaved `text_delta`s from each agent produce two `AgentMessage`s whose `textBuffer`s contain only their own content.\n4. **Flush on turn_complete.** After streaming deltas into a subagent's `textBuffer`, dispatching `turn_complete` moves the buffer content to `text` and clears the buffer.\n5. **Out-of-order events.** A `text_delta` arriving with an `agentId` that has no corresponding `agent_start` is dropped; state is returned unchanged (`Object.is` on the input).\n6. **Phantom request_start guard.** With an active subagent, dispatching `stream_request_start` does not push a new `AssistantMessage` and does not change `streamingAssistantId`.\n7. **Reference stability under load.** Dispatch 10000 `text_delta` events for a single subagent; assert that the reference to every non-target ",
+      "sourceSha256": "1013c8a4aee5be9d2094e099cacafc3ccce41d481c74b976d595e333a16be288",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "helper_names",
+      "index": 11,
+      "path": "docs/todo/mobile-remote-optimizations.md",
+      "unit": "paragraph/70",
+      "valueChars": 2051,
+      "context": "- 桌面端真正的“会话正在跑”spinner 在会话侧边栏行内：`packages/desktop/src/renderer/Sidebar.tsx:589-593` 对 `status === \"running\"` 渲染 `Loader2` + `animate-spin`，文案 aria 是 `sidebar.sessionRunning`。\n- 这个 `status` 来自 `Sidebar` 的 `sessionStatuses`：`packages/desktop/src/renderer/Sidebar.tsx:31-39` 声明 prop，项目会话行在 `Sidebar.tsx:268` 用 `bucketKey(repo.id, sid)` 查状态，无项目会话在 `Sidebar.tsx:290` 查状态。\n- `sessionStatuses` 由 `App` 计算：`packages/desktop/src/renderer/App.tsx:238` 是 `busyKeys`，`App.tsx:245` 是 interrupt relay 用的 `relayingBuckets`，`App.tsx:473-519` 把 asking / running / unread 解析成每个 bucket 的状态。状态优先级在 `packages/desktop/src/renderer/sessionStatus.ts:10-25`：`asking > running > unread`。\n- `busyKeys` 的主要置位/清除点：\n  - 用户发送时先插入 user bubble 并 `setBusyForKey(bucket, true)`：`packages/desktop/src/renderer/App.tsx:2020-2028`。\n  - 收到 `session_started` 时也置 busy，覆盖 core 主动唤醒或重挂载路由场景：`App.tsx:1498-1510`。\n  - 顶层 `turn_complete` / `error` 清 busy，子代理事件因有 `agentId` 不清：`App.tsx:1544-1553`。\n  - run promise 兜底清 busy：`App.tsx:2100-2108`；异常 reject 也清：`App.tsx:2130-2139`；手动 stop 清：`App.tsx:2398-2405`。\n  - automation/mobile session announce 也会先点亮 running：`App.tsx:1655-1664`、`App.tsx:1737-1740`。\n- 桌面端消息流内不是 spinner 圈，而是 live activity line：`packages/desktop/src/renderer/MessageStream.tsx:291` 在 `liveTurnActive` 时渲染 `LiveActivityLine`；`pack",
+      "sourceSha256": "8e8b9b24ab502bb598853abcb986125271bba2b34a378ab0f3fe9a1c26df90df",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "translator_revoke",
+      "index": 0,
+      "path": "docs/archive/core-complete-review.md",
+      "unit": "paragraph/621",
+      "valueChars": 763,
+      "context": " | agentId → status/result/cancel/transcript | process-local，进程崩溃丢状态；上限 `MAX_BACKGROUND_AGENTS = 6` |\n| `agent-notifications.ts` | 后台 agent 完成通知 | 与 Agent 工具配合 | 通知和 transcript routing 需避免串流到主会话 |\n| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |\n| `arena.ts` / `Arena` | 多模型协作分析工具 | topic + participants/config | 会调用多个 LLM，成本高；见第 27 节 |\n| `task.ts` / `TodoWrite` | 管理任务列表 | todos 全量快照 | UI pinned panel 依赖；TaskGuard 会提醒 stale in_progress |\n| `brief.ts` | 简报/摘要类工具 | 由定义决定 | 通常只读/文本生成 |",
+      "sourceSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "translator_revoke",
+      "index": 1,
+      "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+      "unit": "paragraph/67",
+      "valueChars": 1805,
+      "context": "turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+      "sourceSha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "translator_revoke",
+      "index": 2,
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+      "unit": "/contexts/stream_revoke/4/context",
+      "valueChars": 128,
+      "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+      "sourceSha256": "ec9c35efee5c80ec69a6c5b33d273ef095133164b5e4e6b8a0f2669495c0f8a0",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "translator_revoke",
+      "index": 3,
+      "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+      "unit": "/contexts/history-mapping/2/context",
+      "valueChars": 778,
+      "context": "turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+      "sourceSha256": "b05b00b3b29e33efd9e53647cd6a130340450a343d31e63ab3ae14e33be4bc35",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "translator_revoke",
+      "index": 4,
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "unit": "/hits/23/matches/26/text",
+      "valueChars": 128,
+      "context": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+      "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "translator_revoke",
+      "index": 5,
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "unit": "/hits/49/matches/4/text",
+      "valueChars": 237,
+      "context": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+      "sourceSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "tui_revoke",
+      "index": 0,
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "unit": "paragraph/71",
+      "valueChars": 47,
+      "context": "### P1-28 纯新建文件的 turn 在 Desktop/TUI 看起来不可撤销（确认）",
+      "sourceSha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "tui_revoke",
+      "index": 2,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "unit": "paragraph/10",
+      "valueChars": 718,
+      "context": "Executor` 的 `pre_tool_use allow`、`on_permission_check` 升级钳制、`updatedInput` 重校验。这是最容易引入安全回归的主链路。\n2. 再补 TurnLoop 终态：`ContextLimitError` 恢复/失败、goal budget/stop hook/complete/cancel 清理、streaming fallback tombstone。它们直接影响“用户是否看到正确终态”和“消息是否残留/丢失”。\n3. 补 engine/protocol goal 控制：`Engine.clearGoal` live-run 分支和 `AgentServer.handleGoalExtend` 多 session/legacy/error code。\n4. 补 core protocol client：通用 response、notification、close pending rejection，避免 SDK/TUI 侧挂起。\n5. 补 renderer 边界：`tombstone` reindex、`stream_batch` 顺序/no-op 引用、`agent_start` 重复事件（该项先确认协议是否承诺 exactly-once）。\n6. 最后补工具执行收口：`ToolRegistry` timeout/abort/error normalization，以及 `ToolExecutor` 的 `ToolNotFoundError` 和 `post_tool_use.additionalContext`。\n",
+      "sourceSha256": "7b65e4e274c06c19509eeb57daf3073058536ff6057f1e1fee0363c282ae9098",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "tui_revoke",
+      "index": 4,
+      "path": "docs/audit-2026-10-16/root.md",
+      "unit": "paragraph/17",
+      "valueChars": 578,
+      "context": "78-3207`。\n- 触发：用户配置了非默认的 `session.storageDir`，对应 Engine `sessionStorageDir` 内有真实文件历史。\n- 实际：command 期望 config 查询返回 `sessionStorageDir`，但协议响应没有该字段；因此退到 `~/.code-shell/sessions/<id>`。真实自定义目录里有快照，界面却报“没有可撤销的文件修改”。若默认目录碰巧有同 ID 的旧历史，还可能选错恢复集（此分支未动态验证，不计扩大影响）。\n- 验证：`evidence/root-undo.test.ts` A08；实际 protocol/client/manager + 实际 FileHistory + 实际 /undo，Engine 配置 getter 为内存替身。确认字段丢失、命令未恢复、直接从自定义目录读取的同一 history 能恢复原文。\n- 查重：旧审查索引未列。建议按会话权威路径在服务端执行恢复，或返回经过审查的实际存储根并保持所有消费者一致。",
+      "sourceSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "tui_revoke",
+      "index": 5,
+      "path": "docs/audit-2026-10-16/root.md",
+      "unit": "paragraph/19",
+      "valueChars": 494,
+      "context": "ts:73-101`；`packages/core/src/session/file-history.ts:363-367`。\n- 触发：某一会话的工具创建新文件，FileHistory 已有 `recordCreated` 标记，用户选择 `/undo all confirm`。\n- 实际：全会话路径只用 snapshots，完全不看 created markers。仅新建文件的会话显示“没有可撤销”，新文件留存；普通 `/undo confirm` 能正确删除同一个新文件。新建后又被编辑的文件则会被错误视作会话前已存在（源码判断，未额外动态计数）。\n- 验证：`evidence/root-undo.test.ts` A09；真实临时 history、真实 command。正常对照为同一 fixture 的普通单轮 undo，不调用模型。\n- 查重：旧审查索引未列。建议全会话恢复计划纳入创建记录，保持 preview 与 confirm 目标集合一致。",
+      "sourceSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "tui_revoke",
+      "index": 6,
+      "path": "docs/audit-2026-10-16/root.md",
+      "unit": "paragraph/27",
+      "valueChars": 1427,
+      "context": "ect；权限命令专项：`evidence/root-permissions.log`，1 pass / 5 expect；均 0 fail/skip 且 Completed。独立质量复核发现初稿 A05 的替身 reason 使用了非法 `error` 值，已改为合法 `model_error` 并重新运行；初稿源码/日志保留为 `root-git-initial.*`，不计为额外独立测试。\n- 撤销专项：`evidence/root-undo.log`，2 pass / 10 expect；CLI seed 模型专项：`evidence/root-cli-model.log`，1 pass / 3 expect；均 0 fail/skip 且 Completed。\n- JSON renderer 专项：`evidence/root-json-output.log`，1 pass / 3 expect / 0 fail/skip / Completed。初稿使用非法 `aborted` 值，质量复核后改为合法 `aborted_streaming` 并重跑；初稿 `root-json-output-initial.*` 单独保留，不重复计数。\n- 首次较大 baseline shard 因新 worktree 缺 package 依赖软链产生 `Cannot find package zod`，完整保留 `root-baseline.log`。属于环境问题，不计产品 bug。补齐本地依赖链接后重跑，见 `root-baseline-retry.log`。\n- 重跑 coding Git/ApplyPatch、Arena、Optimization Lab 现有测试：42 files / 253 pass / 664 expect / 0 fail/skip / Completed。通过既有测试不代表全部分支正确；本报告新复现覆盖此前遗漏的场景。\n- TUI CLI、QueryGuard/input/pending question/store，以及 coding runtime shared/root path：24 files / 150 pass / 412 expect / 0 fail/skip / Completed。\n- 发布包帮助器、恢复、资源拷贝、meta build、覆盖统计及engine bypass guard：6 files / 42 pass / 171 expect / 0 fail/skip / Completed。没有执行真实发布。\n- `check-workflow-test-paths` 20条literal路径通过，`check-no-engine-bypass` 通过。没有全量build/typecheck/真实打包发布门禁，故不能宣称构建产物已验收。\n- 未运行真实外部 coding CLI、付费模型、用户凭据、真实平台账号或 Electron UI。\n",
+      "sourceSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "tui_revoke",
+      "index": 10,
+      "path": "docs/audit-2026-10-17-round20/streamattempt.md",
+      "unit": "paragraph/0",
+      "valueChars": 26,
+      "context": "# TUI StreamAttempt：请求撤销过滤",
+      "sourceSha256": "e6849d3df3a42dcd4aa4538a9148cecf7fc22465eb0403cbb3171cb759557126",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "tui_revoke",
+      "index": 11,
+      "path": "docs/audit-2026-10-17-round20/streamattempt.md",
+      "unit": "paragraph/5",
+      "valueChars": 301,
+      "context": "Core 仅静态阅读普通 producer 选段：`turn-loop.ts:1119–1123` 提供 `assistantMessageId`，`:2109–2115` 先撤销主消息和工具 placeholders，`:2219–2223` 在 fallback 返回后重开相同 correlation ID。实际 TurnLoop、Engine、ModelFacade、真实/伪 provider、transport/replay/accounting 都未运行。源代码顺序不能证明异步端到端时序、异常传输或真实 TUI 的效果；没有把人为乱序、重复 ID、基线行原地修改的构造变成产品 bug。",
+      "sourceSha256": "e6849d3df3a42dcd4aa4538a9148cecf7fc22465eb0403cbb3171cb759557126",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "tui_revoke",
+      "index": 16,
+      "path": "docs/audit-2026-10-17-round26/evidence/review-tui-branch.md",
+      "unit": "paragraph/2",
+      "valueChars": 563,
+      "context": ") 却对整个arg查`includes(\"-c\")`并全局replace。普通`/branch feature-cache`由源码必然推导`create=true`、`name=featureache`；这两个名称都不为空且不以横线开头，实际 [gitCheckout145–157](../../../packages/coding/src/git/utils.ts:145) 的校验不会补回原名或撤销create。",
+      "sourceSha256": "ad72b078f3046b150472bebb69fa6c1bc50c6f0e2c504c03edb44a2c117853b9",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "tui_revoke",
+      "index": 25,
+      "path": "docs/audit-2026-10-17-round7/evidence/cross-review-providers.md",
+      "unit": "paragraph/5",
+      "valueChars": 780,
+      "context": "error，无 expectations/completion**。exit JSON 为 1。report 与 validation 逐项吻合，两个 Diff 候选没有动态证据。\n- 独立既有 baseline raw/exit 确认 **5 files / 27 pass / 264 expect / 0 fail / 0 skipped / Completed**。它检查 store、失败流撤销、slice anchor 和 memo，对 Diff 候选没有验证作用；报告没有将其当成 27 个新复现或全部终端覆盖。\n- 选择性复核 `DiffLine.tsx:45`–54、100–111 与 `ToolCall.tsx:368`–402：`+const`/`-const` 无空白时按源码走 context，而不是增删样式；函数注释又有避免普通 `+x` 误判的意图。保留需要 hunk 上下文的 source-only 候选合理，没有要求盲目放宽全局正则。\n- CJK pad 算例是静态计算：无 gutter、80 列、20 个宽字符，UTF-16 `.length` 计 22，补 58 空格后预期列宽 100。报告没有冒充成功 renderer/终端测量，P3/P2 确认均未晋升。\n- 读取并按 bytes/SHA256 核验 TUI artifact receipt 的 **10 个文件，全部匹配**；最终两份报告里的所有本地 Markdown 链接都存在。新审查产物的存在/哈希不能替代失败方向的产品行为证据。",
+      "sourceSha256": "3606d1cd9fe0a05dead9fc2a9d28b5682d882d82e9159a0a6684447ba26edf48",
+      "allUnitTextCaptured": false
+    },
+    {
+      "group": "tui_revoke",
+      "index": 26,
+      "path": "docs/audit-2026-10-17-round7/tui.md",
+      "unit": "paragraph/4",
+      "valueChars": 310,
+      "context": "独立的消息 store / 失败流撤销 / slice anchor / memo comparator 既有 baseline 使用实际源文件完成：5 files、27 pass、264 expect、0 fail、0 skip、Completed。见 [raw log](evidence/tui-store-anchor-baseline.first.log) 与 [argv/exit](evidence/tui-store-anchor-baseline.first.exit.json)。这些是现有测试，不是 27 个新复现；它们不验证下面两个 Diff 候选，也不证明真实终端交互或整个虚拟滚动算法无缺陷。",
+      "sourceSha256": "fa13450f37f50c6d6f1aff1c2389657805e67de0878a33d00e40162daa94fba1",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "tui_revoke",
+      "index": 27,
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "unit": "paragraph/21",
+      "valueChars": 883,
+      "context": "Impact chain: TurnLoop only revokes partial output if facade.call throws; this internal retry returns success. Host reviewer statically confirmed `packages/web/src/lib/streamReducer.ts:209–220` appends text_delta and :457–473 final assistant_message seals without replacing, and `packages/tui/src/ui/App.tsx:781–819` accumulates the streaming buffer without an assistant_message replacement. Thus those surfaces retain the failed prefix in the completed bubble. Desktop pure text does replace with canonical final text in types.ts:1258–1303 per the host reviewer's source trace; do not generalize pure-text impact to Desktop. Streamed tool placeholders are independent, but ghost tool cards are only a static secondary implication. **No duplicate tool execution is claimed**: execution waits for the full response. UI behavior has static host evidence only, not executed UI reducers.",
+      "sourceSha256": "695848e99ff5a90b1005fbb0d816429b56962fa1bce490bfd5b00e1b288d06e2",
+      "allUnitTextCaptured": true
+    },
+    {
+      "group": "tui_revoke",
+      "index": 29,
+      "path": "docs/todo/bug-status-renderer-tui.md",
+      "unit": "paragraph/7",
+      "valueChars": 756,
+      "context": "allback。\n- REPL/状态栏仍正确：`packages/tui/src/ui/App.tsx:1615-1621` 应用 model configure 返回的 `maxContextTokens`；`packages/tui/src/ui/components/StatusLine.tsx:144-153` 用 active max 算 ctx 百分比。\n- **发版 blocker 撤销。**",
+      "sourceSha256": "2f050b4acf27ab500b84496d55b733c8085c01f685b9514592edd4333b49c802",
+      "allUnitTextCaptured": false
+    }
+  ],
+  "limits": "Captured windows, not necessarily full source paragraph/value; no claim whole doc semantic read. Old failed/native logs are not current body or runtime proof."
+}

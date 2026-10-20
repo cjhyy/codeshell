@@ -1,0 +1,466 @@
+{
+  "count": 15,
+  "rows": [
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/session-context-store/source-manifest.json",
+        "metadataSHA256": "1b37c178df1886adc9aa74c03b0e251c7cf966d3cfc89fbd4cb323b86952139a",
+        "jsonPointer": "/files/0"
+      },
+      "originalObject": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "lineCount": 217,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "pinnedAtUTC": "2026-10-17T20:08:43.964119+00:00",
+        "timing": "before any own body/nav prep156",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "semanticFull": false,
+        "category": "instruction-hash-reuse",
+        "coverage": "hash-only",
+        "scopeBoundary": "Same-SHA previously fully read instructions reused; no new instruction body prep156."
+      },
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/session-context-store/source-manifest.json",
+        "metadataSHA256": "1b37c178df1886adc9aa74c03b0e251c7cf966d3cfc89fbd4cb323b86952139a",
+        "jsonPointer": "/files/1"
+      },
+      "originalObject": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "lineCount": 5,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "pinnedAtUTC": "2026-10-17T20:08:43.966313+00:00",
+        "timing": "before any own body/nav prep156",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "semanticFull": false,
+        "category": "instruction-hash-reuse",
+        "coverage": "hash-only",
+        "scopeBoundary": "Same-SHA previously fully read instructions reused; no new instruction body prep156."
+      },
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/session-context-store/source-manifest.json",
+        "metadataSHA256": "1b37c178df1886adc9aa74c03b0e251c7cf966d3cfc89fbd4cb323b86952139a",
+        "jsonPointer": "/files/4"
+      },
+      "originalObject": {
+        "path": "packages/coding/src/external-runtimes/index.ts",
+        "bytes": 3131,
+        "lineCount": 69,
+        "sha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+        "pinnedAtUTC": "2026-10-17T20:08:55.848387+00:00",
+        "timing": "before own body/nav; confirmed filename-only import/reference inventory",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [
+          [
+            24,
+            24
+          ],
+          [
+            27,
+            28
+          ],
+          [
+            30,
+            30
+          ]
+        ],
+        "displayedLineRanges": [
+          [
+            24,
+            24
+          ],
+          [
+            27,
+            28
+          ],
+          [
+            30,
+            30
+          ]
+        ],
+        "displayedLineCount": 4,
+        "semanticFull": false,
+        "category": "navigation-only",
+        "coverage": "navigation-only",
+        "scopeBoundary": "Ordinary key/value mapping and option forwarding only. Source shows adjacent generation/host-dispatch/permissions or I/O, but this packet does not certify identity provenance, authorization, process lifetime, durable binding correctness or custody."
+      },
+      "path": "packages/coding/src/external-runtimes/index.ts",
+      "declaredCoverage": "navigation-only",
+      "reason": "explicit navigation-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/0"
+      },
+      "originalObject": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "lineCount": 217,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "pinnedAtUTC": "2026-10-17T20:13:28.267066+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "instruction-hash-reuse",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/1"
+      },
+      "originalObject": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "lineCount": 5,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "pinnedAtUTC": "2026-10-17T20:13:28.268621+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "instruction-hash-reuse",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/4"
+      },
+      "originalObject": {
+        "path": "packages/core/src/settings/manager.mutate-fail-closed.test.ts",
+        "bytes": 5721,
+        "lineCount": 134,
+        "sha256": "006178a65c67c99f2e3a969e0902a433a698ee5f7454447d014bb69213e52860",
+        "pinnedAtUTC": "2026-10-17T20:13:28.271621+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "unused-test-or-fixture-hash-only",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "packages/core/src/settings/manager.mutate-fail-closed.test.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/5"
+      },
+      "originalObject": {
+        "path": "packages/core/src/settings/manager.test.ts",
+        "bytes": 28456,
+        "lineCount": 734,
+        "sha256": "e8cf9d80a5209413f5410404ad323d037851c74eb20cbab1bf4050a5464a281a",
+        "pinnedAtUTC": "2026-10-17T20:13:28.272435+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "unused-test-or-fixture-hash-only",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "packages/core/src/settings/manager.test.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/7"
+      },
+      "originalObject": {
+        "path": "packages/core/src/settings/manager-concurrency.test.ts",
+        "bytes": 4642,
+        "lineCount": 112,
+        "sha256": "7f552f8e2d83a15f6f6e1020a6a437f1f7f1487b22f99a86680f19fd34403922",
+        "pinnedAtUTC": "2026-10-17T20:13:28.273732+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "unused-test-or-fixture-hash-only",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "packages/core/src/settings/manager-concurrency.test.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/8"
+      },
+      "originalObject": {
+        "path": "packages/core/src/settings/manager.custom-root.test.ts",
+        "bytes": 2736,
+        "lineCount": 65,
+        "sha256": "ff00442818a8742e6702440424a7fff5672b857894634e81d96b566b4a0a36c0",
+        "pinnedAtUTC": "2026-10-17T20:13:28.274308+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "unused-test-or-fixture-hash-only",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "packages/core/src/settings/manager.custom-root.test.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/9"
+      },
+      "originalObject": {
+        "path": "packages/core/src/settings/manager.local-tombstones.test.ts",
+        "bytes": 3274,
+        "lineCount": 76,
+        "sha256": "d965d86d0d1dae7fbb7bafda5237e57a8ee118d04185ceb2989fb5fd143579fa",
+        "pinnedAtUTC": "2026-10-17T20:13:28.274871+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "unused-test-or-fixture-hash-only",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "packages/core/src/settings/manager.local-tombstones.test.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/10"
+      },
+      "originalObject": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.plugin.test.ts",
+        "bytes": 5271,
+        "lineCount": 147,
+        "sha256": "af26bb90c77813989dc61ef8bd43a5866983c57be7efe13c2e962302a1f49a14",
+        "pinnedAtUTC": "2026-10-17T20:13:28.275623+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "unused-test-or-fixture-hash-only",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "packages/desktop/src/renderer/settings/McpSection.plugin.test.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/11"
+      },
+      "originalObject": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+        "bytes": 1519,
+        "lineCount": 54,
+        "sha256": "62a86c6e2dbb26b94739e00174eea84e5c2247b6d1e20881d88506164e07738b",
+        "pinnedAtUTC": "2026-10-17T20:13:28.276274+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "unused-test-or-fixture-hash-only",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+        "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+        "jsonPointer": "/files/12"
+      },
+      "originalObject": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx",
+        "bytes": 25328,
+        "lineCount": 646,
+        "sha256": "77047e6362239b7531500bdec1a07674d3b98aeaff1b39bea52fcd326ac4c2bc",
+        "pinnedAtUTC": "2026-10-17T20:13:28.276966+00:00",
+        "timing": "before any own prep158 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "unused-test-or-fixture-hash-only",
+        "scopeBoundary": "No body or test declaration read; hash is not semantic coverage."
+      },
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+        "metadataSHA256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+        "jsonPointer": "/files/0"
+      },
+      "originalObject": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "lineCount": 217,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "pinnedAtUTC": "2026-10-17T20:19:50.812896+00:00",
+        "timing": "before any own prep161 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "instruction-hash-reuse",
+        "scopeBoundary": "Same-SHA previously fully read instructions reused; no instruction body prep161."
+      },
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    },
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+        "metadataSHA256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+        "jsonPointer": "/files/1"
+      },
+      "originalObject": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "lineCount": 5,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "pinnedAtUTC": "2026-10-17T20:19:50.814784+00:00",
+        "timing": "before any own prep161 body/nav",
+        "selectedLineRanges": [],
+        "semanticLineCount": 0,
+        "bodyDisplayedLineRanges": [],
+        "bodyDisplayedLineCount": 0,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [],
+        "displayedLineCount": 0,
+        "coverage": "hash-only",
+        "semanticFull": false,
+        "category": "instruction-hash-reuse",
+        "scopeBoundary": "Same-SHA previously fully read instructions reused; no instruction body prep161."
+      },
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit hash-only is not semantic full/selected; no display, hash, navigation or instruction promotion"
+    }
+  ]
+}

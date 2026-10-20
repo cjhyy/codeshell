@@ -1,0 +1,8 @@
+{
+  "path": "packages/desktop/src/shared/external-runtime-models.ts",
+  "bytes": 6254,
+  "lines": 160,
+  "sha256": "727e006d443d74a7c763dfa76d438986600459e6f849b80c7c4a6e3d04aaa880",
+  "pinAt": "2026-10-17T18:27:49.977033+00:00",
+  "coverage": "hash-only before body/navigation"
+}

@@ -1,0 +1,71 @@
+{
+  "checkedUtc": "2026-10-17T12:14:27.207685+00:00",
+  "sourceCheckCount": 10,
+  "files": [
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "initialFilesystemSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "frozenFilesystemSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "initialFilesystemSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "frozenFilesystemSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.test.ts",
+      "initialFilesystemSha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "frozenFilesystemSha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.test.ts",
+      "initialFilesystemSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "frozenFilesystemSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/plugins/gitOps.ts",
+      "initialFilesystemSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "frozenFilesystemSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "initialFilesystemSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "frozenFilesystemSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/installFromSource.ts",
+      "initialFilesystemSha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "frozenFilesystemSha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+      "initialFilesystemSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "frozenFilesystemSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/plugin.ts",
+      "initialFilesystemSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "frozenFilesystemSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "initialFilesystemSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "frozenFilesystemSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "unchanged": true
+    }
+  ],
+  "historyCurrentByteRowsChecked": 2988,
+  "allUnchanged": true,
+  "meaning": "Filesystem byte/line-bound bookkeeping only; no product execution or Git binding.",
+  "productAttempts": 0,
+  "gitCommands": 0
+}

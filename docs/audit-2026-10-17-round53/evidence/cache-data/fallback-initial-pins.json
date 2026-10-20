@@ -1,0 +1,25 @@
+{
+  "replacementCount": 1,
+  "target": "model-cache only;memoize notread",
+  "filenameInventory": {
+    "command": [
+      "rg",
+      "--files",
+      "packages/core/src/llm"
+    ],
+    "exitCode": 0,
+    "stderr": "",
+    "matches": [
+      "packages/core/src/llm/model-cache.ts"
+    ]
+  },
+  "pins": [
+    {
+      "path": "packages/core/src/llm/model-cache.ts",
+      "bytes": 1996,
+      "lines": 65,
+      "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:49:51.110416+00:00"
+    }
+  ]
+}

@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   assertCliLinkAccount,
@@ -28,8 +31,40 @@ describe("CLI Link sessions", () => {
       installed: true,
       authenticated: true,
       account: "octocat",
+      accountId: "42",
     });
     expect(calls.some((call) => call.includes("token"))).toBe(false);
+  });
+
+  test("preserves stable account IDs across display-name changes and distinguishes reused names", async () => {
+    let id = 42;
+    let login = "same-display-name";
+    const run: CliLinkCommandRunner = async (_provider, _command, args) => ({
+      stdout: args[0] === "auth" ? "signed in" : JSON.stringify({ id, login }),
+      stderr: "",
+    });
+    const first = await getCliLinkStatus("github", {}, run);
+    login = "renamed-display-name";
+    expect(await getCliLinkStatus("github", {}, run)).toMatchObject({
+      account: "renamed-display-name",
+      accountId: "42",
+    });
+    await expect(
+      assertCliLinkAccount("github", first.accountId!, {}, run),
+    ).resolves.toBeUndefined();
+
+    id = 99;
+    login = "same-display-name";
+    const second = await getCliLinkStatus("github", {}, run);
+    expect(second.account).toBe(first.account);
+    expect(second.accountId).toBe("99");
+    expect(second.accountId).not.toBe(first.accountId);
+    await expect(assertCliLinkAccount("github", first.accountId!, {}, run)).rejects.toThrow(
+      "different account",
+    );
+    await expect(
+      assertCliLinkAccount("github", second.accountId!, {}, run),
+    ).resolves.toBeUndefined();
   });
 
   test("uses GitLab browser login and returns only safe validation metadata", async () => {
@@ -320,5 +355,39 @@ describe("CLI Link sessions", () => {
       "different account",
     );
     await expect(assertCliLinkAccount("github", "99", {}, run)).resolves.toBeUndefined();
+  });
+});
+
+test("CLI query parameters and deployment project IDs match the reviewed HTTP contract", async () => {
+  const calls: string[][] = [];
+  const run: CliLinkCommandRunner = async (_provider, _command, args) => {
+    calls.push(args);
+    return {
+      stdout: JSON.stringify(
+        args.some((value) => value.includes("deployments"))
+          ? { deployments: [{ uid: "deployment", projectId: "prj_selected", name: "other-label" }] }
+          : [],
+      ),
+      stderr: "",
+    };
+  };
+  await executeCliLinkAction(
+    "github",
+    "list_issues",
+    { owner: "owner", repo: "repo", limit: 4, page: 1500, state: "closed" },
+    {},
+    run,
+  );
+  expect(calls.at(-1)!.join(" ")).toContain("issues?per_page=4&page=1000&state=closed");
+  await executeCliLinkAction(
+    "github",
+    "list_pull_requests",
+    { owner: "owner", repo: "repo", page: 3 },
+    {},
+    run,
+  );
+  expect(calls.at(-1)!.join(" ")).toContain("pulls?per_page=30&page=3");
+  expect(await executeCliLinkAction("vercel", "list_deployments", {}, {}, run)).toMatchObject({
+    deployments: [{ projectId: "prj_selected" }],
   });
 });

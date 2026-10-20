@@ -1,0 +1,22 @@
+{
+  "newFormalFindings": 0,
+  "newCandidates": 0,
+  "newRelatedRecords": 0,
+  "result": "limited independent static negative for ordinary state/receipt/event DTO path read",
+  "ordinaryInputsOnly": "Normal service-created record init, bounded process.output text chunks, once-close terminal assignment/add, existing safe integer cursor/limit path. No illegal states, arbitrary huge/cyclic/function payloads or repeated fake receipt ids promoted.",
+  "sourceCounterevidence": [
+    "Source appends increasing sequence into both outer event and copied payload and retains suffix after bounded eviction.",
+    "Normal output path slices text by processLimits.maxEventChars before emitting; arbitrary single giant helper payload is not an established ordinary input.",
+    "Terminal receipt add call follows exited state/exit event inside native close callback source; actual native close ordering and completeness unobserved.",
+    "get source filters retained events after cursor, preserves order, reports record.sequence separately from nextSequence and exposes truncated/hasMore flags."
+  ],
+  "boundaries": [
+    "sameProcessOwner/caller identity and authority correctness",
+    "guest admission/revocation/custody/permission enforcement",
+    "native process exit, termination, OS timers or wall-clock scheduling",
+    "Buffer/encoding/chunk framing and actual output",
+    "model trace or network behavior",
+    "full Panel process lifecycle correctness"
+  ],
+  "dynamicValidation": false
+}

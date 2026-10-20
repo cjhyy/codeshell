@@ -1,0 +1,87 @@
+{
+  "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "runs": [
+    {
+      "name": "web-display-contracts",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round8/evidence/web-display-contracts.test.ts"
+      ],
+      "attempt": 1,
+      "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "fixtures": [
+        {
+          "path": "docs/audit-2026-10-17-round8/evidence/web-display-contracts.test.ts",
+          "sha256": "ccd9f934ceb3fbb1c047dbdc63f86b599220d0811449e8184aeff2080f9754ec"
+        }
+      ],
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round8/evidence/web-display-contracts.first.log",
+      "rawLogSha256": "919901ca6c338f6097b19689d677347876fbd12496c153ee0b98af23c4e022bc",
+      "exitFile": "docs/audit-2026-10-17-round8/evidence/web-display-contracts.first.exit.json",
+      "exitFileSha256": "5b0d300b3f2475a25e15e6a0e5e6212ee18821f44841d77834545d796fbb6999",
+      "exitCode": 0,
+      "tests": 6,
+      "expectCalls": 21,
+      "skipped": 0,
+      "failures": 0,
+      "guardedCompletionPresent": true,
+      "kind": "focused observations and controls"
+    },
+    {
+      "name": "web-existing-display-baseline",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/web/src/lib/format.test.ts",
+        "packages/web/src/lib/messageMappers.test.ts",
+        "packages/web/src/lib/mobileAttachments.test.ts"
+      ],
+      "attempt": 1,
+      "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "fixtures": [
+        {
+          "path": "packages/web/src/lib/format.test.ts",
+          "sha256": "2f7ba54686a414f8b0cc413d8a2822760df9cf7b3c68d817132cead8ea28529a"
+        },
+        {
+          "path": "packages/web/src/lib/messageMappers.test.ts",
+          "sha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e"
+        },
+        {
+          "path": "packages/web/src/lib/mobileAttachments.test.ts",
+          "sha256": "52c9013df6a6feb4b6ae5cb5b77057f8d952d1e02ea23b2fbd336b87dcb6ba7e"
+        }
+      ],
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round8/evidence/web-existing-display-baseline.first.log",
+      "rawLogSha256": "a3fe37cb7f4cbe2079677b29d0c19633e659cabe73cfaf7c3978270b1ba16ca0",
+      "exitFile": "docs/audit-2026-10-17-round8/evidence/web-existing-display-baseline.first.exit.json",
+      "exitFileSha256": "3f1ebad67375feec72d50b7ee3f9059456577ba6867d0cde012ebab00aa8ae51",
+      "exitCode": 0,
+      "tests": 25,
+      "expectCalls": 83,
+      "skipped": 0,
+      "failures": 0,
+      "guardedCompletionPresent": true,
+      "kind": "existing targeted baseline"
+    }
+  ],
+  "totals": {
+    "cleanFirstShards": 2,
+    "tests": 31,
+    "newFocusedTests": 6,
+    "baselineTests": 25,
+    "expectCalls": 104,
+    "failures": 0,
+    "skipped": 0,
+    "failedShards": 0,
+    "retries": 0
+  },
+  "scope": "Actual browser-safe source functions and owned synthetic in-memory metadata/File bytes; injected ticket/fetch callbacks; no browser, server, WebSocket, upload service, native/model/network/security experiment, shared dependency build, typecheck, lint or full suite.",
+  "firstRunPolicy": "Both combined stdout/stderr logs and exit JSON saved immediately before inspection. No failure or retry occurred.",
+  "currentMainDisposition": "WEB-R8-01 source condition eliminated by parallel fix 658b8c6fcdad0e9d4bfe8809c5adf6f95f19580d at main 34553b747f9a5b6acafe7ad1dd21905bcfa53cac. WEB-R8-02 source unchanged. No execution on this main; all counts remain from frozen source."
+}

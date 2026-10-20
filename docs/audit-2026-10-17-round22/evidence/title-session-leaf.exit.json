@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round22/evidence/title-session-leaf.test.ts"
+  ],
+  "exitCode": 0,
+  "raw": "docs/audit-2026-10-17-round22/evidence/title-session-leaf.raw.log",
+  "rawSha256": "bf460abb7c6763bfe68091dd2c555116c1ed32658a430ccb340c7c29b9b76557",
+  "rawBytes": 1816,
+  "wallSeconds": 0.26687097549438477,
+  "firstAttempt": true,
+  "retry": false,
+  "policy": "First raw and exit persisted before inspection. Any failure skips this dynamic direction without repair or rerun."
+}

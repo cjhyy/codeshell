@@ -1,0 +1,38 @@
+{
+  "baseline": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "count": 1,
+  "candidates": [
+    {
+      "id": "RUN-R10-C1",
+      "status": "observed-heuristic-semantics-contract-unproven",
+      "title": "否定测试状态文本被关键词检查点标成 tests_passing",
+      "file": "packages/core/src/run/CheckpointWriter.ts",
+      "line": 42,
+      "actual": "真实CheckpointWriter消费正常assistant_message \"The tests did not pass. More work is required.\"，输出phase=tests_passing；正向tests pass对照也输出同phase。summary原始否定文字完整保留。",
+      "contractGap": "模块与架构文档明确是keyword-based heuristic；未找到承诺通用否定语言理解或准确成功判定的更强契约。未验证生产UI/任务状态错误；不计formal。",
+      "evidence": [
+        "root-run-data.test.ts",
+        "root-run-data.first.log"
+      ],
+      "scope": "Only actual writer + fake RunStore saveCheckpoint seam, no Engine/RunManager/evaluator/tool execution/UI/native.",
+      "dedup": "May 30 CheckpointWriter finding is summary truncation edge case, different root cause; keyword matching itself documented and not new."
+    }
+  ],
+  "staticNotPromoted": [
+    {
+      "report": "catalog.md",
+      "subject": "inferred context-window cache provenance/refresh",
+      "reason": "Known design observation; caller lookup skipped and no stronger refresh contract."
+    },
+    {
+      "report": "runs.md",
+      "subject": "equal checkpoint timestamp ordering and per-execution model labels",
+      "reason": "No tie-order or verified historical identity producer/consumer contract; renderer lookup skipped."
+    },
+    {
+      "report": "diagnostics.md",
+      "subject": "performance latest/global time ordering",
+      "reason": "No promise of latest N or global chronological ordering found."
+    }
+  ]
+}

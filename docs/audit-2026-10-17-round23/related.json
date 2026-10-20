@@ -1,0 +1,16 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "count": 1,
+  "observations": [
+    {
+      "id": "PRODUCT-R23-R1",
+      "prior": "May30 backlog_ided _id36 / backlog_confirmed[46]",
+      "title": "Existing customPrompt vs sections precedence mechanism",
+      "source": "packages/core/src/product/types.ts:37",
+      "consumer": "packages/core/src/prompt/composer.ts:315,341",
+      "evidence": "Static only; custom_system and behavior both inserted. No prompt output or model call; no new finding/candidate/severity.",
+      "parentObjects": "evidence/product-selected-history.json"
+    }
+  ],
+  "note": "Old customPrompt/sections mechanism, no new severity or formal count."
+}

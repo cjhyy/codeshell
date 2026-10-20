@@ -1,0 +1,74 @@
+{
+  "checkedUTC": "2026-10-17T18:01:23.946073+00:00",
+  "sourceDocumentInstructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "lines": 209,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "bytes": 13567,
+      "lines": 407,
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "bytes": 5744,
+      "lines": 163,
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "matchesInitial": true
+    },
+    {
+      "path": "README.md",
+      "bytes": 18628,
+      "lines": 331,
+      "sha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read.ts",
+      "bytes": 8099,
+      "lines": 216,
+      "sha256": "2200440c32b2fff2f39fa7fcb808ac84bacb3a8719ab0842b56ca4017e2a9c4c",
+      "matchesInitial": true
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "bytes": 15885,
+      "lines": 368,
+      "sha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "matchesInitial": true
+    }
+  ],
+  "all8PinsUnchanged": true,
+  "history": {
+    "initial": 5150,
+    "ending": 5150,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "sameFilter": "docs/bugsMDJSONincl52/exclude53+",
+    "inventoryExitCode": 0,
+    "stderr": ""
+  },
+  "newSemanticReadDuringEnding": 0,
+  "Git": 0
+}

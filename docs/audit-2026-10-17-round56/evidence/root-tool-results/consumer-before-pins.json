@@ -1,0 +1,26 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "lines": 867,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "tests/tool-result-storage.test.ts",
+      "bytes": 19226,
+      "lines": 477,
+      "sha256": "981b173c003d48477547c69967d4a67f5f2cf376bbac98f89de1d81445419607",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.test.ts",
+      "bytes": 6024,
+      "lines": 134,
+      "sha256": "3ca5e4ce83fbcc8e4a2d86b17ab46d16b09d36505abed8eb89228c4f95a44b5c",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "productExecution": 0
+}

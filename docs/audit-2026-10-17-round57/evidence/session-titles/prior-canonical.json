@@ -1,0 +1,117 @@
+{
+  "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/source-manifest.json",
+  "bytes": 10530,
+  "sha256": "a44cc3dcb3ed9f6e622e3fe1736cec767a4c5a2e81ce46393403d70e8a6048dc",
+  "selected": [
+    {
+      "pointer": "/files/0",
+      "row": {
+        "path": "packages/server/src/session-titles-store.ts",
+        "bytes": 7379,
+        "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "lineCount": 189,
+        "kind": "product",
+        "coverage": "selected-static-ordinary-title-data; not-full semantic review",
+        "selectedLineRanges": [
+          [
+            9,
+            11
+          ],
+          [
+            13,
+            13
+          ],
+          [
+            15,
+            15
+          ],
+          [
+            36,
+            38
+          ],
+          [
+            40,
+            55
+          ],
+          [
+            133,
+            136
+          ],
+          [
+            138,
+            142
+          ],
+          [
+            144,
+            150
+          ],
+          [
+            169,
+            180
+          ],
+          [
+            188,
+            189
+          ]
+        ],
+        "selectedLineCount": 54,
+        "bodyDisplayedLineRanges": [
+          [
+            1,
+            57
+          ],
+          [
+            121,
+            189
+          ]
+        ],
+        "bodyDisplayedLineCount": 126,
+        "additionalNavigationSnippetLines": [
+          58,
+          91
+        ],
+        "displayedLineRanges": [
+          [
+            1,
+            58
+          ],
+          [
+            91,
+            91
+          ],
+          [
+            121,
+            189
+          ]
+        ],
+        "displayedLineCount": 128,
+        "initialSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "initialPinUTC": "2026-10-17T15:49:55.929641+00:00",
+        "initialPinTiming": "before65 product body read",
+        "endingSameSha256": true,
+        "scope": "Only ordinary title map parser/value/empty/expected-title/set/list DTO rules. ID/permission/namespace validation, mutation queue, fs/lock/atomic persistence stop at displayed boundary. load/save bodies58–120 not displayed apart from rg function headers58/91; no semantic full.",
+        "prepPinRow": {
+          "path": "packages/server/src/session-titles-store.ts",
+          "bytes": 7379,
+          "sha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+          "lineCount": 189,
+          "pinUTC": "2026-10-17T15:49:55.929641+00:00",
+          "timing": "before65 product body read"
+        }
+      }
+    }
+  ],
+  "topLimits": {
+    "historyScope": "Keyword/value traversal of4255 dated files is navigation, not semantic reading all history. Eight direct path+SHA rows, one nested version-pin object and bounded old review windows were selected.",
+    "rangeConvention": "One-based inclusive; canonical displayedLineRanges is union of body and additional rg navigation lines. Selected subset verified. Repeated display is not duplicate semantic coverage. Boundary exclusions prevent full promotion.",
+    "semanticScopeCounts": {
+      "productSelectedLines": 88,
+      "testDeclarationSelectedLines": 11,
+      "semanticSelectedLines": 99,
+      "displayedUniqueSourceLines": 251,
+      "selectedRows": 3,
+      "hashOnlyRows": 2,
+      "explicitSemanticFullRows": 0
+    }
+  }
+}

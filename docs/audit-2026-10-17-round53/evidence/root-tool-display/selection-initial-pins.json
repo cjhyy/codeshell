@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-10-17T17:50:08.817544+00:00",
+  "baseline": "524c0827a480132119b637aa87e16f0eab9895f3",
+  "files": [
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "lines": 209,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverReadClaim": null
+    }
+  ]
+}

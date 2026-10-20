@@ -1,0 +1,570 @@
+{
+  "searchTerms": "DiffLine|classifyDiffLine|padToWidth|truncateToWidth|truncateStartToWidth|slice-anchor|computeSliceStart|VirtualMessageList|wrapText|wrap-text|measure-text|CodeBlock|ToolCallResult|StructuredDiff",
+  "counts": {
+    "markdown": 993,
+    "json": 398,
+    "json_errors": 0
+  },
+  "matches": [
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "line": 48,
+      "text": "> - **bug-scan 第六批(tui-render/turn-loop/compaction/utils 纯逻辑)0 候选 — 全干净**:render-border/measure-text/token-budget/sliceAnsi/streamGroups/sanitize-messages 等 `.repeat()/.padStart()/slice/除法/数组下标/parse` 全已有 `Math.max(0,..)`/`>0` 守卫/try-catch。**至此 6 批 bug-scan 近全仓扫完,后两批 1 中 + 0 → 孤立可测 bug 面已饱和穷尽,不再开新扫。**"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "line": 312,
+      "text": "| **虚拟滚动消息列表** | 大 transcript 下虚拟化渲染消息 | `packages/tui/src/ui/components/VirtualMessageList.tsx:76`，`packages/tui/src/ui/hooks/useVirtualScroll.ts:142` | 长会话自动使用 |"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "line": 318,
+      "text": "| **消息内容渲染** | Markdown、代码块、错误、限流、上下文限制、thinking 等消息视图 | `packages/tui/src/ui/components/MessageContent.tsx:425`，`packages/tui/src/ui/components/CodeBlock.tsx:16` | transcript 自动渲染 |"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "line": 320,
+      "text": "| **Diff 视图** | 渲染 diff 行、结构化 diff 和普通 diff view | `packages/tui/src/ui/components/DiffView.tsx:18`，`packages/tui/src/ui/components/DiffLine.tsx:52`，`packages/tui/src/ui/components/StructuredDiff.tsx:17` | `/diff`、审批和文件编辑结果中使用 |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPath": "/source_inventory/2217",
+      "text": "packages/tui/src/render/measure-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPath": "/source_inventory/2255",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPath": "/source_inventory/2264",
+      "text": "packages/tui/src/ui/components/CodeBlock.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPath": "/source_inventory/2267",
+      "text": "packages/tui/src/ui/components/DiffLine.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPath": "/source_inventory/2286",
+      "text": "packages/tui/src/ui/components/StructuredDiff.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPath": "/source_inventory/2294",
+      "text": "packages/tui/src/ui/components/VirtualMessageList.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPath": "/source_inventory/2309",
+      "text": "packages/tui/src/ui/slice-anchor.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/logs/1/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\":"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/logs/2/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/logs/3/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"catego"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/settings-navigation/0/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\":"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/settings-navigation/1/text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is no"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/settings-navigation/2/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/settings-navigation/3/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"catego"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/sidebar-projection/8/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\":"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/sidebar-projection/9/text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/lsp/manager.ts\", \"line\": \"71\", \"category\": \"correctness\", \"severity\": \"high\", \"title\": \"Incorrect path handling with simple string replace\", \"detail\": \"The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported.\", \"fix\": \"Replace with `fileURLToPath(this.rootUri)`\", \"verify_note\": \"The finding correctly identifies a platform-specific path handling bug. While `fileURLToPath()` is no"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/sidebar-projection/10/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\", \"pkg\": \"core\", \"_id\": 0}, {\"file\": \"packages/core/src/arena/context-tools.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/sidebar-projection/11/text",
+      "text": "[{\"file\": \"packages/core/src/arena/arena.ts\", \"line\": \"242-247, 356-361\", \"category\": \"simplify\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Duplicate claimSummary construction logic\", \"detail\": \"The code that constructs claimSummary (filtering claims by status) is duplicated verbatim in runPlanningPath (lines 242-247) and runReviewDiscussionPath (lines 356-361). This violates DRY principle and creates maintenance risk.\", \"fix\": \"Extract claimSummary construction into a shared helper function: `function buildClaimSummary(allClaims: ClaimRecord[]): ClaimStatusSummary { ... }` and call it from both paths.\"}, {\"file\": \"packages/core/src/arena/context-tools.ts\", \"line\": \"126\", \"catego"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "jsonPath": "/hits/sidebar-projection/12/text",
+      "text": "[{\"pkg\": \"core\", \"file\": \"packages/core/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fi"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 298,
+      "text": "- Modify: `src/ui/components/VirtualMessageList.tsx`（renderEntry 用 MessageRow）"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 304,
+      "text": "Run: `grep -n \"renderEntry\\|renderItem\" src/ui/App.tsx src/ui/components/VirtualMessageList.tsx`"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 307,
+      "text": "如果 VirtualMessageList 自己渲染——直接在 VirtualMessageList 里包 memo。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 433,
+      "text": "- [ ] **Step 5: 在 VirtualMessageList 里用 MessageRow 替代直接 renderEntry**"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 435,
+      "text": "修改 `src/ui/components/VirtualMessageList.tsx`："
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 450,
+      "text": "调用方（App.tsx 里 `<VirtualMessageList ...>` 的那个 JSX）补传 `columns` 和 `streamingEntryId`。`columns` 用 `useTerminalSize` 或 codeshell 等价 hook（grep 一下 `useTerminalSize\\|columns` 在 App.tsx 里怎么拿）；`streamingEntryId` 来自 chatStore 里 `streaming: true` 的最后一条 assistant_text 的 id（写一个 selector）。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 469,
+      "text": "git add src/ui/components/MessageRow.tsx src/ui/components/VirtualMessageList.tsx src/ui/App.tsx tests/message-row-memo.test.tsx"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 491,
+      "text": "**注意：** P3 工作量比 P0+P1+P2 总和都大；CC 的 VirtualMessageList 是 1081 行。我们不需要照抄全部，只移植：(a) useVirtualScroll 核心 hook；(b) ScrollBox 接线；(c) measureRef + 索引算行偏移。不移植：搜索 incsearch、selection mode、jumpTo 等高级功能（后续可加）。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 496,
+      "text": "- Modify: `src/ui/components/VirtualMessageList.tsx`（接入 measureRef / 行偏移）"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 647,
+      "text": "- [ ] **Step 5: VirtualMessageList 接入 measureRef**"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 649,
+      "text": "修改 `src/ui/components/VirtualMessageList.tsx`："
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 709,
+      "text": "调用方（App.tsx 的 `<FullscreenLayout ... />`）创建并透传 `scrollRef`，VirtualMessageList 也接收同一个 `scrollRef`——hook 直接接管滚动。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-15-ui-render-restoration.md",
+      "line": 729,
+      "text": "git add src/ui/hooks/useVirtualScroll.ts src/ui/components/VirtualMessageList.tsx src/ui/components/FullscreenLayout.tsx src/ui/App.tsx tests/use-virtual-scroll.test.ts"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "line": 34,
+      "text": "- Commit (no edits): `src/ui/App.tsx`, `src/ui/components/VirtualMessageList.tsx` — currently-unstaged scroll baseline."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "line": 859,
+      "text": "**Why:** Spec §5.3. `src/ui/App.tsx` and `VirtualMessageList.tsx` have unstaged changes that are the baseline the M2 tests pin. M2 cannot start until they are committed (or reverted)."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "line": 863,
+      "text": "- Stage: `src/ui/components/VirtualMessageList.tsx`"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "line": 867,
+      "text": "Run: `git diff src/ui/App.tsx src/ui/components/VirtualMessageList.tsx`"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "line": 874,
+      "text": "git add src/ui/App.tsx src/ui/components/VirtualMessageList.tsx"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-16-tui-render-capability.md",
+      "line": 1222,
+      "text": "`VirtualMessageList`. Setup is the same for every case unless overridden:"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+      "line": 106,
+      "text": "- Modify: `src/ui/App.tsx` — add `viewMode` state, Ctrl-digit key handlers, switch transcript source rendered by `VirtualMessageList`."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+      "line": 1898,
+      "text": "- Modify: `src/ui/components/VirtualMessageList.tsx` (only if its data source needs to be parameterized)"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+      "line": 1912,
+      "text": "Find where the main transcript is passed to `VirtualMessageList`. The pattern looks like:"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+      "line": 1917,
+      "text": "<VirtualMessageList entries={entries} ... />"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+      "line": 1935,
+      "text": "// Pass `entries` to VirtualMessageList unchanged."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-16-tui-render-capability-design.md",
+      "line": 30,
+      "text": "| M2 | Scroll acceptance | scroll + virtual-scroll tests, manual checklist, 10k-transcript repro script, commit pending `App.tsx` / `VirtualMessageList.tsx` | After M1 |"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-16-tui-render-capability-design.md",
+      "line": 107,
+      "text": "The working tree currently has unstaged changes in `src/ui/App.tsx` and `src/ui/components/VirtualMessageList.tsx` that are part of the scroll work (built on top of commit `4de607a perf(ui): ScrollBox + useVirtualScroll for true viewport-windowed chat`). These are reviewed and committed at the start of M2 to form the baseline that the new tests pin."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-16-tui-render-capability-design.md",
+      "line": 113,
+      "text": "- `App.tsx` + `VirtualMessageList.tsx` changes are merged (or explicitly reverted) — no long-lived working-tree state."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md",
+      "line": 9,
+      "text": "The parent spec was implemented partway: the registry has `transcript`/`subscribe`/`getSnapshot`, `viewMode` exists on `App.tsx`, and `VirtualMessageList` already swaps its data source by `viewMode`. What landed differently from the spec, or never landed:"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+      "line": 150,
+      "text": "The current behaviour (sync sub-agents render as nested `AgentBlock` with every tool call inline) is intentionally removed. The summary row replaces it. Existing `AgentBlockStart` / `AgentBlockEnd` / `ToolCall` components are still used inside the full-screen transcript view (rendered from `entry.transcript`); they are no longer mounted as children of the main `VirtualMessageList` for sub-agent content."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+      "line": 154,
+      "text": "### 6.1 `AgentCallRow` (new, rendered in main `VirtualMessageList`)"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+      "line": 233,
+      "text": "`VirtualMessageList` selects its entry source by `viewMode`:"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+      "line": 304,
+      "text": "13. `viewMode='agent'` switches the `VirtualMessageList` data source to the agent transcript."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+      "line": 316,
+      "text": "- All existing nested `AgentBlock` rendering inside `VirtualMessageList` is gated off. Existing `AgentBlock*` components remain in place for use *inside* the agent transcript view."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-24-electron-codex-ui-full-design.md",
+      "line": 123,
+      "text": "      CodeBlock.tsx"
+    },
+    {
+      "path": "docs/archive/todo/final-signoff-2026-07-08.md",
+      "line": 19,
+      "text": "2. VirtualMessageList scroll-away regression: resolved."
+    },
+    {
+      "path": "docs/archive/todo/final-signoff-2026-07-08.md",
+      "line": 20,
+      "text": "   - The list subscribes to `ScrollBox` and calls `onScrollAway` when sticky-bottom is broken at `packages/tui/src/ui/components/VirtualMessageList.tsx:119` and `packages/tui/src/ui/components/VirtualMessageList.tsx:123`."
+    },
+    {
+      "path": "docs/archive/todo/final-signoff-2026-07-08.md",
+      "line": 21,
+      "text": "   - The stabilized test provides fullscreen context, waits for the handle, scrolls away, and checks one notification at `packages/tui/src/ui/components/VirtualMessageList.test.tsx:31`, `packages/tui/src/ui/components/VirtualMessageList.test.tsx:51`, and `packages/tui/src/ui/components/VirtualMessageList.test.tsx:56`."
+    },
+    {
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "line": 55,
+      "text": "    `pre`(每个 fenced block 包 `<CodeBlock>`,超 `CODE_COLLAPSE_LINES=24` 折叠)。"
+    },
+    {
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "line": 349,
+      "text": "| **CodeBlock 折叠/复制** | ❌ 流式不折叠不给复制按钮(纯 `<pre>`) | ✅ | 折叠阈值/复制属完成态交互 |"
+    },
+    {
+      "path": "docs/archive/todo/fix-batch-9-2026-07-08.md",
+      "line": 14,
+      "text": "| New-message pill/divider has no scroll-away source | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/ui/components/FullscreenLayout.tsx:170` | `a49c1b72a65871d72d55d4c7a173430deadf1ec1` | `packages/tui/src/ui/components/VirtualMessageList.test.tsx`: imperative list scroll breaks sticky-bottom and calls the scroll-away callback | Failing regression observed, then `bun test packages/tui/src/ui/components/VirtualMessageList.test.tsx` passed twice before commit. |"
+    },
+    {
+      "path": "docs/archive/todo/fix-batch-9-2026-07-08.md",
+      "line": 19,
+      "text": "`bun test packages/tui/src/ui/App.stream-routing.test.ts packages/tui/src/ui/components/VirtualMessageList.test.tsx packages/tui/src/ui/App.notifications.test.ts`"
+    },
+    {
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "line": 70,
+      "text": "| 🟡 | New-message pill/divider has no scroll-away source | `packages/tui/src/ui/components/FullscreenLayout.tsx:170` | `useUnseenDivider().onScrollAway` exists but is not wired from `VirtualMessageList`/`ScrollBox`. | Expose sticky/scroll-away changes and call `onScrollAway`; keep jump-to-bottom clearing. | `review-tui-cdp-2026-07-08.md` |"
+    },
+    {
+      "path": "docs/archive/todo/review-master-2026-07-08.md",
+      "line": 71,
+      "text": "| 🟡 | Compact tool-result flag is not rendered | `packages/tui/src/ui/App.tsx:2101` | Tool-result entries set `compact`, but `renderEntry` does not pass it to `ToolCallResult`. | Add `compact` to the entry type and pass it through to `ToolCallResult`. | `review-tui-cdp-2026-07-08.md` |"
+    },
+    {
+      "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+      "line": 121,
+      "text": "Problem: `useUnseenDivider()` exposes `onScrollAway`, but `App` destructures only `onScrollToBottom` at `packages/tui/src/ui/App.tsx:316`. `VirtualMessageList` receives only `dividerIndex`/`unseenCount` at lines 1691-1692, and `FullscreenLayout` receives `showPill`/`onJumpToNew` at lines 2052-2054."
+    },
+    {
+      "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+      "line": 125,
+      "text": "Fix: expose sticky/scroll-away changes from `ScrollBox`/`VirtualMessageList` and wire them to `useUnseenDivider().onScrollAway`; clear them through the existing jump-to-bottom path."
+    },
+    {
+      "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+      "line": 129,
+      "text": "Problem: Arena retry detection stores `compact: looksLikeArenaRetry` on a `tool_result` entry, and `ToolCallResult` supports a `compact` prop at `packages/tui/src/ui/components/ToolCall.tsx:95`, but `renderEntry()` does not pass that prop at lines 2101-2108."
+    },
+    {
+      "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+      "line": 133,
+      "text": "Fix: add `compact?: boolean` to the `ChatEntry` tool-result type and pass it through to `ToolCallResult`."
+    },
+    {
+      "path": "docs/archive/todo/review-uncommitted-quality-2026-07-08.md",
+      "line": 15,
+      "text": "  - `VirtualMessageList scroll-away notifications > notifies when user scrolling breaks sticky bottom` — batch regression/full-suite instability from `a49c1b72`."
+    },
+    {
+      "path": "docs/archive/todo/review-uncommitted-quality-2026-07-08.md",
+      "line": 26,
+      "text": "🔴 `a49c1b72` / `packages/tui/src/ui/components/VirtualMessageList.test.tsx:18` — new scroll-away regression test fails in the required full suite and is sensitive to process-global fullscreen state."
+    },
+    {
+      "path": "docs/archive/todo/review-uncommitted-quality-2026-07-08.md",
+      "line": 28,
+      "text": "The test mounts `VirtualMessageList` without a `FullscreenModeContext.Provider` at `packages/tui/src/ui/components/VirtualMessageList.test.tsx:21`. `VirtualMessageList` only wires `ScrollBox` in fullscreen mode; flow mode returns before the scrollable branch at `packages/tui/src/ui/components/VirtualMessageList.tsx:147`. Separately, `tests/ui/fullscreen-mode-env.test.ts:18` mutates `process.env.CODESHELL_FULLSCREEN` around dynamic imports. Under Bun's parallel file execution, this can cache the default fullscreen context as flow mode and make `handle!.scrollBy(-3)` at `packages/tui/src/ui/components/VirtualMessageList.test.tsx:40` a no-op. The isolated file passes, but the full suite failure"
+    },
+    {
+      "path": "docs/archive/todo/fix-review-followup-2026-07-08.md",
+      "line": 8,
+      "text": "2. VirtualMessageList scroll-away regression"
+    },
+    {
+      "path": "docs/archive/todo/fix-review-followup-2026-07-08.md",
+      "line": 10,
+      "text": "   - Test added/repaired: `packages/tui/src/ui/components/VirtualMessageList.test.tsx` explicitly provides fullscreen context and waits for the real list handle before calling `scrollBy(-3)`. `packages/tui/src/ui/index.test.tsx` no longer leaves a persistent render-root module mock behind."
+    },
+    {
+      "path": "docs/archive/todo/fix-review-followup-2026-07-08.md",
+      "line": 11,
+      "text": "   - Verification: `bun test packages/tui/src/ui/index.test.tsx packages/tui/src/ui/components/VirtualMessageList.test.tsx` passed; full `bun test` shows the scroll-away test passing."
+    },
+    {
+      "path": "docs/archive/todo/fix-review-followup-2026-07-08.md",
+      "line": 43,
+      "text": "Final line: full-suite pass/fail counts are `4902 pass / 1 fail / 6 skip`; the PTY ownership and VirtualMessageList scroll-away regressions are resolved in the full suite."
+    },
+    {
+      "path": "docs/archive/architecture/render-scroll-checklist.md",
+      "line": 4,
+      "text": "`VirtualMessageList`. Setup is the same for every case unless overridden:"
+    },
+    {
+      "path": "docs/archive/architecture/11-render-tui-capability-plan.md",
+      "line": 55,
+      "text": "| P0 | ScrollBox 已在 UI 关键路径，但验收不足 | `VirtualMessageList` 已使用 `ScrollBox` 和 `useVirtualScroll` | 做长 transcript、resize、wheel、PageUp/Down、sticky bottom 回归 |"
+    },
+    {
+      "path": "docs/archive/architecture/06-ui-protocol-rendering.md",
+      "line": 54,
+      "text": "  Store --> Views[\"VirtualMessageList / ToolCall / StatusLine\"]"
+    },
+    {
+      "path": "docs/archive/architecture/06-ui-protocol-rendering.md",
+      "line": 139,
+      "text": "- Streaming text rerenders too much: inspect `chatStore.update()` usage and `VirtualMessageList`."
+    },
+    {
+      "path": "docs/archive/core-modules/session.md",
+      "line": 17,
+      "text": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+    },
+    {
+      "path": "docs/archive/core-modules/session.md",
+      "line": 86,
+      "text": "function diffLines(from: string, to: string): DiffLine[];"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "jsonPath": "/52/file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "jsonPath": "/52/verify_reason",
+      "text": "The function `wrapText` at line 59 uses `wrapType!.startsWith('truncate')` with a non-null assertion on a parameter typed as `Styles['textWrap']`, which is optional. The `Styles['textWrap']` type definition (styles.ts:55-64) includes `?` making it optional, so the type is `string | undefined`. While current callers in render-node-to-output.ts use nullish coalescing (`node.style.textWrap ?? 'wrap'`) to ensure a value is always passed, the function signature itself permits `undefined` to be passed. If any code path passes `undefined` without the guard, the non-null assertion does not prevent a TypeError at runtime - it only suppresses the TypeScript error. The function's type signature is misl"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "jsonPath": "/55/file",
+      "text": "packages/tui/src/ui/components/CodeBlock.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "jsonPath": "/80/reason",
+      "text": "The CodeBlock component in Markdown.tsx sets a timer via window.setTimeout at line 112 without storing the timeout ID or implementing a useEffect cleanup function. If the component unmounts before the 1.5-second timer fires, React will warn about setting state on an unmounted component. The codebase's own TopBar.tsx demonstrates the correct pattern (useRef to store timeout ID + useEffect cleanup), which is absent here. This is not a rare edge case—code blocks in a markdown message can be unmounted if the user navigates away or closes the view while a copy operation is in flight."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "jsonPath": "/124/reason",
+      "text": "The function `wrapText` at line 59 uses `wrapType!.startsWith('truncate')` with a non-null assertion on a parameter typed as `Styles['textWrap']`, which is optional. The `Styles['textWrap']` type definition (styles.ts:55-64) includes `?` making it optional, so the type is `string | undefined`. While current callers in render-node-to-output.ts use nullish coalescing (`node.style.textWrap ?? 'wrap'`) to ensure a value is always passed, the function signature itself permits `undefined` to be passed. If any code path passes `undefined` without the guard, the non-null assertion does not prevent a TypeError at runtime - it only suppresses the TypeScript error. The function's type signature is misl"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "jsonPath": "/139/reason",
+      "text": "The reviewer misinterpreted the code's semantics. When a newline is found at line 144, the function extracts the prefix before the newline (line 145) and truncates the string at that newline. This is actual truncation—content (everything after the newline) is being removed. Line 147's condition checks whether the truncated prefix plus the ellipsis fits within maxWidth. If it does (condition false), line 150 correctly appends the ellipsis because truncation occurred (at the newline). If it doesn't fit (condition true), line 148 calls truncateToWidth() to ensure the result fits while maintaining the ellipsis. The ellipsis on line 150 correctly indicates \"there was more content that was removed"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/round2_section.md",
+      "line": 36,
+      "text": "| ⬜ | 🟡 中 | 正确性 | `tui/render/measure-text.ts:27` | Loop processes text one position past the end, creating spurious empty line | Change loop condition to 'while (start < text.length)' or add explicit check to break when… |"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "jsonPath": "/114/file",
+      "text": "packages/tui/src/render/measure-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "jsonPath": "/124/file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "jsonPath": "/128/file",
+      "text": "packages/tui/src/ui/components/CodeBlock.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "jsonPath": "/139/detail",
+      "text": "When singleLine=true and a newline is found at line 143-145, the code extracts the prefix. Line 147 checks if the prefix width plus 1 exceeds maxWidth. If it does NOT exceed (condition is false), line 150 unconditionally appends '…' via return `${result}…`. This adds an ellipsis even though the result fits within maxWidth, violating the pattern that ellipsis indicates actual truncation. The condition should only append ellipsis when truncateToWidth() is called (line 148), not unconditionally."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "jsonPath": "/16/verify_reason",
+      "text": "The CodeBlock component in Markdown.tsx sets a timer via window.setTimeout at line 112 without storing the timeout ID or implementing a useEffect cleanup function. If the component unmounts before the 1.5-second timer fires, React will warn about setting state on an unmounted component. The codebase's own TopBar.tsx demonstrates the correct pattern (useRef to store timeout ID + useEffect cleanup), which is absent here. This is not a rare edge case—code blocks in a markdown message can be unmounted if the user navigates away or closes the view while a copy operation is in flight."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "jsonPath": "/29/file",
+      "text": "packages/tui/src/render/measure-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "jsonPath": "/83/file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "jsonPath": "/83/verify_reason",
+      "text": "The function `wrapText` at line 59 uses `wrapType!.startsWith('truncate')` with a non-null assertion on a parameter typed as `Styles['textWrap']`, which is optional. The `Styles['textWrap']` type definition (styles.ts:55-64) includes `?` making it optional, so the type is `string | undefined`. While current callers in render-node-to-output.ts use nullish coalescing (`node.style.textWrap ?? 'wrap'`) to ensure a value is always passed, the function signature itself permits `undefined` to be passed. If any code path passes `undefined` without the guard, the non-null assertion does not prevent a TypeError at runtime - it only suppresses the TypeScript error. The function's type signature is misl"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "jsonPath": "/86/file",
+      "text": "packages/tui/src/ui/components/CodeBlock.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPath": "/179/file",
+      "text": "packages/tui/src/render/measure-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPath": "/201/file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPath": "/207/file",
+      "text": "packages/tui/src/ui/components/CodeBlock.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPath": "/219/file",
+      "text": "packages/tui/src/ui/components/StructuredDiff.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPath": "/227/detail",
+      "text": "When singleLine=true and a newline is found at line 143-145, the code extracts the prefix. Line 147 checks if the prefix width plus 1 exceeds maxWidth. If it does NOT exceed (condition is false), line 150 unconditionally appends '…' via return `${result}…`. This adds an ellipsis even though the result fits within maxWidth, violating the pattern that ellipsis indicates actual truncation. The condition should only append ellipsis when truncateToWidth() is called (line 148), not unconditionally."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/confirmed.json",
+      "jsonPath": "/21/verify_note",
+      "text": "Real bug with moderate severity. It only triggers in the edge case where text visual width exceeds border width (line 45 condition), but when it does occur, the output will be visually corrupted due to broken ANSI escape sequences. The codebase already has the correct solution available in truncateToWidthNoEllipsis; using that would fix this issue."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/confirmed.json",
+      "jsonPath": "/21/verify_reason",
+      "text": "At line 46, `text.substring(0, borderLength)` truncates by character count, not visual width. The text parameter can contain ANSI color codes (as documented in the BorderTextOptions type at line 10). When ANSI codes are present, taking the first N characters will likely: (1) cut mid-ANSI-sequence if codes are embedded throughout the text, producing invalid escape sequences; (2) result in truncated output that doesn't reach the intended borderLength visual width. The codebase has width-aware truncation utilities available (truncateToWidthNoEllipsis in packages/tui/src/ui/truncate.ts, lines 108-123) that properly handle ANSI codes using stringWidth and grapheme segmentation, but they are not u"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_section.md",
+      "line": 57,
+      "text": "| ⬜ | 正确性 | `tui/render/wrap-text.ts:59` | Unsafe non-null assertion on optional parameter | Either: (1) Add a check: `if (wrapType && wrapType.startsWith('truncate'))`, or … |"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_section.md",
+      "line": 60,
+      "text": "| ⬜ | 正确性 | `tui/ui/components/CodeBlock.tsx:28,41` | Inconsistent border width calculations in code block | Calculate a consistent border width. Use the same logic for both borders, or mea… |"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "jsonPath": "/114/file",
+      "text": "packages/tui/src/render/measure-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "jsonPath": "/124/file",
+      "text": "packages/tui/src/render/wrap-text.ts"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "jsonPath": "/128/file",
+      "text": "packages/tui/src/ui/components/CodeBlock.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "jsonPath": "/139/detail",
+      "text": "When singleLine=true and a newline is found at line 143-145, the code extracts the prefix. Line 147 checks if the prefix width plus 1 exceeds maxWidth. If it does NOT exceed (condition is false), line 150 unconditionally appends '…' via return `${result}…`. This adds an ellipsis even though the result fits within maxWidth, violating the pattern that ellipsis indicates actual truncation. The condition should only append ellipsis when truncateToWidth() is called (line 148), not unconditionally."
+    }
+  ]
+}

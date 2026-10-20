@@ -1,0 +1,42 @@
+{
+  "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "formalCount": 0,
+  "candidateCount": 2,
+  "relatedCount": 0,
+  "firstExecutions": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round16/evidence/bidi-predicate.test.ts"
+      ],
+      "rawLog": "docs/audit-2026-10-17-round16/evidence/bidi-predicate.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round16/evidence/bidi-predicate.first.exit.json",
+      "exitCode": 0,
+      "guardCompleted": true,
+      "testsPassed": 7,
+      "expectations": 21,
+      "testsFailed": 0,
+      "testsSkipped": 0,
+      "existingTests": 0,
+      "focusedTests": 7,
+      "attempts": 1,
+      "reruns": 0,
+      "scope": "Exact source-extracted hasRTLCharacters predicate; no actual module export/platform gate/library/terminal."
+    }
+  ],
+  "cleanShards": 1,
+  "failedBunShards": 0,
+  "successfulTests": 7,
+  "expectations": 21,
+  "existingTests": 0,
+  "focusedTests": 7,
+  "skippedDirections": [],
+  "metadataPreflightFailures": [],
+  "productReruns": 0,
+  "actualProductModuleImported": false,
+  "fullBidiAlgorithmExecuted": false,
+  "platformGateExecuted": false
+}

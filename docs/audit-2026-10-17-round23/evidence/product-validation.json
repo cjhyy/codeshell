@@ -1,0 +1,25 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "cleanRuns": 0,
+    "failedRuns": 0,
+    "pass": 0,
+    "fail": 0,
+    "skipped": 0,
+    "expect": 0,
+    "existingTests": 0,
+    "focusedTests": 0
+  },
+  "scope": "Static API contract and complete config source flow; no fixture, import, capture stub, constructor, actual task/Engine/RunManager/FileRunStore/SDK/provider/model/network/permissions/security/identity/native/userFS execution.",
+  "classificationEvidence": {
+    "PRODUCT-R23-01": "Static contract plus complete omission/default dataflow, no dynamic claim.",
+    "PRODUCT-R23-R1": "Old mechanism source context only."
+  },
+  "metadataOnlyNotes": [
+    "Initial combined broad source/history reference output truncated; complete relevant source subsequently read in bounded actual-path chunks. Unshown broad references are not full semantic coverage.",
+    "No product/import/test failure occurred; no retries or recovery of historical failed directions."
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "baseline": "00e47e070fdadd6e5882330ba3b0d3962a93a47f",
+  "mainHead": "ab3b801f00d18ceabe824c099c3bd4824bae32c3",
+  "formal": 1,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 26,
+  "activeSourceChecks": 28,
+  "incidentalSourceChecks": 0,
+  "hashOnlyChecks": 12,
+  "unboundNavigationReferences": 0,
+  "missingDeclaredByteCounts": 0,
+  "receiptChecks": 237,
+  "verbatimCopies": 122,
+  "frozenWhitespaceArtifacts": 0,
+  "datedCoverageReference": "Round47 adapter through frozen45 only:4643 TS/TSX,304full/169selected/4170unknown;46+ source reads not recomputed. No new overall remaining/unread/full percentage inferred.",
+  "historicalFormalRecords": 114,
+  "priorities": {
+    "P2": 44,
+    "P3": 70
+  },
+  "changedFromFrozenSourcePaths": [
+    "packages/desktop/src/renderer/MessageStream.tsx"
+  ],
+  "productRuns": 0,
+  "goalStillActive": true
+}

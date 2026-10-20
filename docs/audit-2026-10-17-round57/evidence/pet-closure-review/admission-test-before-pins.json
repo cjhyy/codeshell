@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "path": "packages/pet/src/registered-follow-ups.ts",
+      "bytes": 6245,
+      "lineCount": 199,
+      "sha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "pinnedAtUTC": "2026-10-17T19:04:52.595831+00:00",
+      "timing": "before this packet body/navigation"
+    },
+    {
+      "path": "packages/pet/src/topic-segment.test.ts",
+      "bytes": 2315,
+      "lineCount": 69,
+      "sha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "pinnedAtUTC": "2026-10-17T19:04:52.598154+00:00",
+      "timing": "before this packet body/navigation"
+    },
+    {
+      "path": "packages/pet/src/segment-closure.test.ts",
+      "bytes": 3238,
+      "lineCount": 86,
+      "sha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "pinnedAtUTC": "2026-10-17T19:04:52.598941+00:00",
+      "timing": "before this packet body/navigation"
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.test.ts",
+      "bytes": 8539,
+      "lineCount": 249,
+      "sha256": "c555bff5f27a2a3c360683658285df10ccb1e4106e2da3f04ce9d9c26d9688da",
+      "pinnedAtUTC": "2026-10-17T19:04:52.599689+00:00",
+      "timing": "before this packet body/navigation"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+57:export const CapabilityOverrideSchema = z.enum(["inherit", "on", "off"]);
+58:export type CapabilityOverride = z.infer<typeof CapabilityOverrideSchema>;
+60:export const CapabilityOverridesSchema = z
+62:    skills: z.record(CapabilityOverrideSchema).optional(),
+63:    plugins: z.record(CapabilityOverrideSchema).optional(),
+64:    agents: z.record(CapabilityOverrideSchema).optional(),
+65:    mcp: z.record(CapabilityOverrideSchema).optional(),
+66:    builtin: z.record(CapabilityOverrideSchema).optional(),
+68:    pet: z.record(CapabilityOverrideSchema).optional(),
+76:    pluginHooks: z.record(CapabilityOverrideSchema).optional(),
+79:export type CapabilityOverrides = z.infer<typeof CapabilityOverridesSchema>;
+461:    panelAppOverrides: z.record(CapabilityOverrideSchema).default({}),
+477:    capabilityOverrides: CapabilityOverridesSchema,
+490:        overrides: CapabilityOverridesSchema,

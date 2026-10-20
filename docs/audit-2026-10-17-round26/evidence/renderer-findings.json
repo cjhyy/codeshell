@@ -1,0 +1,123 @@
+[
+  {
+    "id": "RENDERER-R26-01",
+    "priority": "P3",
+    "title": "A root file named __all__ cannot be selected alone in a multi-file turn review",
+    "source": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+    "lineStart": 312,
+    "lineEnd": 318,
+    "classification": "formal static source finding; no dynamic UI validation",
+    "ordinaryTrigger": "A normal multi-file historical turn snapshot includes root-relative file __all__ and at least one other file. The existing review card sends its actual snapshot; parsed paths are reused directly as Select values. No malformed DTO, permissions or unusual OS behavior is required.",
+    "contract": "The turn file dropdown is a single-file filter, and the AI draft request is intended to review exactly the selected historical file. Its root-relative file-name domain does not reserve __all__.",
+    "cause": "ReviewPanel uses __all__ as the All-files sentinel and also emits every actual parsed path verbatim as an option value. Both choices therefore have the same string state. activeTurnFileSel===ALL_FILES converts that actual path to null before both viewer.onlyPath and selectReviewSnapshot.",
+    "staticValueFlow": [
+      {
+        "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+        "ranges": [
+          [
+            165,
+            183
+          ]
+        ],
+        "meaning": "Actual review click sends files.map(path) and sessionDiffText."
+      },
+      {
+        "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+        "ranges": [
+          [
+            827,
+            845
+          ]
+        ],
+        "meaning": "Actual event consumer stores reviewFiles/reviewDiff."
+      },
+      {
+        "path": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+        "ranges": [
+          [
+            48,
+            74
+          ],
+          [
+            153,
+            159
+          ],
+          [
+            206,
+            265
+          ]
+        ],
+        "meaning": "Normal a/__all__/b/__all__ and ---/+++ paths survive as root-relative __all__; no sentinel reservation."
+      },
+      {
+        "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+        "ranges": [
+          [
+            21,
+            21
+          ],
+          [
+            105,
+            121
+          ],
+          [
+            306,
+            318
+          ]
+        ],
+        "meaning": "Sentinel and actual file use identical option/state value."
+      },
+      {
+        "path": "packages/desktop/src/renderer/components/ui/simple-select.tsx",
+        "ranges": [
+          [
+            70,
+            72
+          ],
+          [
+            131,
+            143
+          ]
+        ],
+        "meaning": "Nonempty __all__ remains the same value through onChange; no filename encoding or separate option identity."
+      },
+      {
+        "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+        "ranges": [
+          [
+            189,
+            199
+          ],
+          [
+            404,
+            409
+          ]
+        ],
+        "meaning": "That state becomes null onlyPath and null snapshot filter, so both paths choose the entire snapshot."
+      },
+      {
+        "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+        "ranges": [
+          [
+            4,
+            5
+          ]
+        ],
+        "meaning": "null intentionally means whole snapshot; helper itself behaves as specified."
+      }
+    ],
+    "expectedStaticScope": "Only the __all__ file chunk when choosing that real file.",
+    "actualStaticScope": "The state has no representation distinct from All files; viewer receives null onlyPath and AI snapshot preparation receives the full turnDiff/undefined file label.",
+    "impact": "The exact root filename cannot be narrowed in a multi-file turn review; both displayed review scope and prepared draft scope remain All. This is one cause, not separate viewer/AI findings.",
+    "counterevidence": [
+      "Requires at least2 parsed files because the file dropdown is hidden for a single file. A lone __all__ file has no extra-file scope impact.",
+      "Normal distinct paths including nested dir/__all__ do not equal the sentinel. All-files selection itself is intended.",
+      "selectReviewSnapshot(diff,null) returning the entire diff is correct; no defect is assigned to the helper null branch.",
+      "Source is sufficient to show identical state values. No actual existing user repository containing this name, UI click, Radix exception, prompt delivery, model behavior or browser result was observed.",
+      "No cross-permission/security/custody/identity implication; no sensitive-data or auto-send claim."
+    ],
+    "validation": "Static only:0product/import/test/fixture/React/browser/native/network attempts. Existing tests are read, not passed evidence.",
+    "dedup": "Fresh recursive docs/bugs MD+JSON scalar search including archives excludes round26. Supplement across same2509paths has0__all__/ALL_FILES matches; old R59 root-commit range and wrong-cwd state mechanisms are different. Keyword search is not semantic exhaustion.",
+    "fixed": false
+  }
+]

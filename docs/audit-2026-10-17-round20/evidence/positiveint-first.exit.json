@@ -1,0 +1,19 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/tui/src/cli/parse-int-option.test.ts",
+    "docs/audit-2026-10-17-round20/evidence/positiveint-focused.test.ts"
+  ],
+  "attempt": 1,
+  "exitCode": 0,
+  "elapsedSeconds": 0.275,
+  "raw": "docs/audit-2026-10-17-round20/evidence/positiveint-first.raw.log",
+  "rawBytes": 1542,
+  "rawSha256": "7edb21d52f54d5ddbcd910612b3f18b9a7b8426b511e702546a8b00152305583",
+  "combinedStdoutStderr": true,
+  "rawAndExitSavedBeforeInspection": true,
+  "reruns": 0
+}

@@ -1,0 +1,63 @@
+{
+  "pins": [
+    {
+      "path": "packages/core/src/protocol/dispatch.ts",
+      "bytes": 8824,
+      "lines": 228,
+      "sha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "pinAt": "2026-10-17T18:59:16.742165+00:00",
+      "coverage": "hash-only before field forwarding navigation/body"
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session.ts",
+      "bytes": 23896,
+      "lines": 586,
+      "sha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "pinAt": "2026-10-17T18:59:16.756618+00:00",
+      "coverage": "hash-only before field forwarding navigation/body"
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lines": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "pinAt": "2026-10-17T18:59:16.764074+00:00",
+      "coverage": "hash-only before field forwarding navigation/body"
+    }
+  ],
+  "navigation": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "injected:.*injected|params.injected|params.clientMessageId",
+        "packages/core/src/protocol/dispatch.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "111:  if (params.injected !== undefined && typeof params.injected !== \"boolean\") {\n125:    if (typeof params.clientMessageId !== \"string\" || params.clientMessageId.length === 0) {\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "injected:.*injected|params.injected|params.clientMessageId",
+        "packages/core/src/protocol/chat-session.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "525:        injected: next.opts.injected,\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "injected:.*injected|params.injected|params.clientMessageId",
+        "packages/core/src/protocol/server.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "1801:            ...(typeof params.clientMessageId === \"string\"\n1802:              ? { clientMessageId: params.clientMessageId }\n1814:          injected: params.injected === true,\n1821:            typeof params.clientMessageId === \"string\" ? params.clientMessageId : undefined,\n1978:          ...(typeof params.clientMessageId === \"string\"\n1979:            ? { clientMessageId: params.clientMessageId }\n1995:        injected: params.injected === true,\n1999:          typeof params.clientMessageId === \"string\" ? params.clientMessageId : undefined,\n",
+      "stderr": ""
+    }
+  ]
+}

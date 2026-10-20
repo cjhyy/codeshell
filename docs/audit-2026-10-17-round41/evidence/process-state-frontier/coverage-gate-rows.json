@@ -1,0 +1,264 @@
+{
+  "rows": [
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/1323/path",
+      "row": {
+        "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+        "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76"
+      },
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "process-state",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3588/path",
+      "row": {
+        "path": "packages/server/src/panels/process-state.ts",
+        "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6"
+      },
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/80/matches/1/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/211/matches/1/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/211/matches/3/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/211/matches/5/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/211/matches/7/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/211/matches/9/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/211/matches/11/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/211/matches/13/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/214/matches/1/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/214/matches/3/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/214/matches/5/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/214/matches/7/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/214/matches/9/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/214/matches/11/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/214/matches/13/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/225/matches/1/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/226/matches/1/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/226/matches/3/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/226/matches/5/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/226/matches/7/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/226/matches/9/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/226/matches/11/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/226/matches/13/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/227/matches/1/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/228/matches/1/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/228/matches/3/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/228/matches/5/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/228/matches/7/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/228/matches/9/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "pointer": "/hits/229/matches/1/text",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/522/resolved",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "pointer": "/relativeImports/526/from",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/597/resolved",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    },
+    {
+      "candidate": "translator",
+      "historyPath": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "pointer": "/relativeImports/604/from",
+      "row": {},
+      "meaning": "Explicit row/value metadata only; full reading requires manual interpretation of coverage and current SHA"
+    }
+  ],
+  "count": 36,
+  "semanticInterpretationPending": true
+}

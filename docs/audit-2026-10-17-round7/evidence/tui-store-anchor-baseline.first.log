@@ -1,0 +1,44 @@
+bun test v1.3.11 (af24e281)
+
+tests/message-row-memo.test.ts:
+(pass) areMessageRowPropsEqual > same entry reference + same columns + not streaming + same selection → bail (true)
+(pass) areMessageRowPropsEqual > different entry reference → re-render (false) [0.17ms]
+(pass) areMessageRowPropsEqual > isStreaming=true on either side → re-render [0.01ms]
+(pass) areMessageRowPropsEqual > columns changed → re-render (width affects wrap) [0.02ms]
+(pass) areMessageRowPropsEqual > isSelected changed → re-render (cursor outline must update) [0.01ms]
+(pass) areMessageRowPropsEqual > expanded changed → re-render (transcript-mode toggle) [0.01ms]
+(pass) areMessageRowPropsEqual > render fn identity is intentionally NOT in the comparator [0.01ms]
+
+tests/slice-anchor.test.ts:
+(pass) computeSliceStart — basic > under cap: start at 0, anchor at first entry [0.10ms]
+(pass) computeSliceStart — basic > empty entries: start 0, anchor stays null [0.40ms]
+(pass) computeSliceStart — basic > exactly at cap: start at 0, no advance [0.05ms]
+(pass) computeSliceStart — basic > between cap and cap+step: still anchored at 0 [0.03ms]
+(pass) computeSliceStart — hysteresis (STEP quantization) > step boundary: window advances once at cap+step+1 [0.06ms]
+(pass) computeSliceStart — hysteresis (STEP quantization) > steady appends inside the [start, start+cap+step] band do not shift [0.12ms]
+(pass) computeSliceStart — hysteresis (STEP quantization) > second advance: another STEP appends triggers another shift [0.02ms]
+(pass) computeSliceStart — anchor recovery > anchored id removed: fall back to clamped stored idx, not 0 [0.04ms]
+(pass) computeSliceStart — anchor recovery > anchored id removed, stored idx out of range: clamp to tail-cap [0.03ms]
+(pass) computeSliceStart — defaults > DEFAULT_CAP=200, DEFAULT_STEP=50 [0.10ms]
+(pass) computeSliceStart — no-flicker invariant > anchor id sequence is step-quantized, not append-quantized [0.66ms]
+
+tests/ui/store-commit-interrupted.test.ts:
+(pass) non-empty partial → entry persisted, streaming flag cleared, suffix appended [0.65ms]
+(pass) empty partial → no entry mutation of text but streaming finalized [0.03ms]
+(pass) no streaming entry → no-op (does not throw) [0.40ms]
+(pass) thinking entries removed alongside commit [0.04ms]
+
+packages/tui/src/ui/store-notify.test.ts:
+(pass) chatStore.notify error isolation > a throwing listener does not prevent others from being notified [0.13ms]
+(pass) chatStore.notify error isolation > update returning the same entries reference does not notify [0.11ms]
+(pass) chatStore.notify error isolation > commitInterruptedStreaming is quiet when nothing changes [0.04ms]
+
+packages/tui/src/ui/stream-attempt.test.ts:
+(pass) revoking a failed model request removes its flushed prose and unexecuted tools while preserving unrelated messages [0.12ms]
+(pass) late or unrelated tombstones cannot remove the current or completed request [0.02ms]
+
+ 27 pass
+ 0 fail
+ 264 expect() calls
+Ran 27 tests across 5 files. [494.00ms]
+Completed Bun shard: 27 tests, 0 skipped; 0 failures.

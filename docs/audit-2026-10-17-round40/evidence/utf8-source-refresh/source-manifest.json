@@ -1,0 +1,313 @@
+{
+  "prepOnly": true,
+  "rootSuppliedAndActuallyReadBaseline": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+  "actualInitialHEADAndMain": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+  "actualOriginMainAtInitialRead": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "bytes": 26558,
+      "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "totalLines": 739,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          128
+        ],
+        [
+          340,
+          383
+        ],
+        [
+          454,
+          563
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        209,
+        316,
+        319,
+        331,
+        442,
+        588,
+        597,
+        631,
+        679
+      ],
+      "declaredReadLineCount": 291,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/runtime/background-shell.ts",
+        "bytes": 26558,
+        "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+        "totalLines": 739,
+        "pinTimeUTC": "2026-10-17T13:43:24.616172+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeCurrentPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 26558,
+        "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+        "timeUTC": "2026-10-17T13:46:25.196725+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "gitBlobBinding": {
+        "commit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "bytes": 26558,
+        "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+        "matchesFilesystem": true
+      },
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.utf8-frontier.test.ts",
+      "bytes": 12578,
+      "sha256": "d31cf9bf094f86e53d9ab9614eddcc5d2b5caf007dd66280d1fdfa5bcbe14879",
+      "totalLines": 334,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          334
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 334,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/runtime/background-shell.utf8-frontier.test.ts",
+        "bytes": 12578,
+        "sha256": "d31cf9bf094f86e53d9ab9614eddcc5d2b5caf007dd66280d1fdfa5bcbe14879",
+        "totalLines": 334,
+        "pinTimeUTC": "2026-10-17T13:43:24.616172+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeCurrentPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 12578,
+        "sha256": "d31cf9bf094f86e53d9ab9614eddcc5d2b5caf007dd66280d1fdfa5bcbe14879",
+        "timeUTC": "2026-10-17T13:46:25.196725+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "gitBlobBinding": {
+        "commit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "bytes": 12578,
+        "sha256": "d31cf9bf094f86e53d9ab9614eddcc5d2b5caf007dd66280d1fdfa5bcbe14879",
+        "matchesFilesystem": true
+      },
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "bytes": 5956,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "totalLines": 188,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          40
+        ],
+        [
+          91,
+          155
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        44,
+        60
+      ],
+      "declaredReadLineCount": 107,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/runtime/ring-file.ts",
+        "bytes": 5956,
+        "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+        "totalLines": 188,
+        "pinTimeUTC": "2026-10-17T13:44:25.621669+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeCurrentPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 5956,
+        "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+        "timeUTC": "2026-10-17T13:46:25.196725+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "gitBlobBinding": {
+        "commit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "bytes": 5956,
+        "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+        "matchesFilesystem": true
+      },
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "bytes": 927,
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "totalLines": 21,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 21,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/runtime/utf8-cut.ts",
+        "bytes": 927,
+        "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+        "totalLines": 21,
+        "pinTimeUTC": "2026-10-17T13:44:25.621669+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeCurrentPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 927,
+        "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+        "timeUTC": "2026-10-17T13:46:25.196725+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "gitBlobBinding": {
+        "commit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "bytes": 927,
+        "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+        "matchesFilesystem": true
+      },
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "totalLines": 130,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 62,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+        "bytes": 5335,
+        "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+        "totalLines": 130,
+        "pinTimeUTC": "2026-10-17T13:44:25.621669+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeCurrentPrepSemanticRead": true,
+      "finishFilesystemPin": {
+        "bytes": 5335,
+        "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+        "timeUTC": "2026-10-17T13:46:25.196725+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "gitBlobBinding": {
+        "commit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "bytes": 5335,
+        "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+        "matchesFilesystem": true
+      },
+      "firstEverSemanticReadClaim": false
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "totalLines": 15,
+      "coverage": "full-historical-report",
+      "selectedLineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "initialFilesystemPin": {
+        "path": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+        "bytes": 2749,
+        "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+        "totalLines": 15,
+        "pinTimeUTC": "2026-10-17T13:43:24.616172+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeCurrentPrepSemanticRead": true,
+      "finishTimeUTC": "2026-10-17T13:46:25.196725+00:00",
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "totalLines": 13,
+      "coverage": "full-historical-report",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "initialFilesystemPin": {
+        "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+        "bytes": 4315,
+        "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+        "totalLines": 13,
+        "pinTimeUTC": "2026-10-17T13:43:24.616172+00:00",
+        "coverage": "hash-only before current prep semantic read"
+      },
+      "initialBeforeCurrentPrepSemanticRead": true,
+      "finishTimeUTC": "2026-10-17T13:46:25.196725+00:00",
+      "unchangedFromInitialPin": true
+    }
+  ],
+  "instructionCarryForward": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "prior full instruction carry-forward, current finish hash-only",
+      "newSemanticReadLines": 0,
+      "currentPrepInitialBeforeSemanticPin": null,
+      "checkTimeUTC": "2026-10-17T13:46:25.196725+00:00",
+      "matchesPriorInstructionSha": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "prior full instruction carry-forward, current finish hash-only",
+      "newSemanticReadLines": 0,
+      "currentPrepInitialBeforeSemanticPin": null,
+      "checkTimeUTC": "2026-10-17T13:46:25.196725+00:00",
+      "matchesPriorInstructionSha": true
+    }
+  ],
+  "counts": {
+    "currentProductTestPins": 5,
+    "fullPins": 2,
+    "selectedPins": 3,
+    "currentProductAndTestReadLinesIncludingNavigation": 815,
+    "productReadLinesIncludingNavigation": 481,
+    "newTestFileReadLines": 334,
+    "historicalReportReadLines": 28,
+    "existingTestDeclarationSyntaxRead": 14,
+    "testsExecuted": 0,
+    "gitReadCommands": 7,
+    "gitWrites": 0,
+    "newInstructionSemanticReadLines": 0
+  },
+  "finishedAtUTC": "2026-10-17T13:46:25.196725+00:00",
+  "allInitialFinishStable": true,
+  "allFiveCurrentProductBlobsBoundAt037": true,
+  "scopeLimits": [
+    "Static text/DTO/byte offset reasoning only, no product/Buffer/helper/stream/read/decoder/test execution.",
+    "Current test fixture guard, FS writes, foreign-session gate, Bash tool, native process/network examples were read as source text only; no claims these ran or guards were verified.",
+    "Only old UTF8-R34-C1 retained small valid stream prefix scenario assessed; no ring wrap/eviction, stdout-stderr interleaving, snapshot surrogate slicing, cleaner CRLF or full shell lifecycle reassessment.",
+    "Old reports and actual source/test declarations are separate from runtime validation; external fix-thread passes and worktree names are not evidence of validated repair."
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "report": "docs/audit-2026-10-17-round23/cron-report.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round23/cron-report.md",
+      "bytes": 4617,
+      "sha256": "effb7e7025be96b82a073dbef8da517a3e53751fae286fc2018ec3b4cd3eae34"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup-decisions.json",
+      "bytes": 2059,
+      "sha256": "d89ea88b9cd2b9a4c5b658a26924f59d18b69e1853df28589a992b3be9a01724"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.json",
+      "bytes": 731833,
+      "sha256": "d31896a7455cb9334ea7b2a27f18c1e2435c244c23d4417fa543bd6566dfbd94"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-dedup.py",
+      "bytes": 2912,
+      "sha256": "a64ceed220103518bb3292fbdaa59aa3ca15479d685a6c0d33e149d74676e6b8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-first.exit.json",
+      "bytes": 550,
+      "sha256": "2e52c1b048d26313a47e43cacf6d6092e0a0033fe9fab7806fd48cb609de68f6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-first.raw.log",
+      "bytes": 1191,
+      "sha256": "1cee5cd1b50a32f0e349e1607b5a6eff73bba461d137d4477bfe22d79be678e0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-focused.test.ts",
+      "bytes": 2783,
+      "sha256": "b8d1ba0e2060ef22f6a5f1b439adcc66c4eab5eca4ec263efce911491c9fec11"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-history-selected.json",
+      "bytes": 56921,
+      "sha256": "9013e5cecf0fb4aef8e9f2ac8c49d86bf64c12caf45787cea95a24e1b2056d83"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-metadata-check.json",
+      "bytes": 3504,
+      "sha256": "38d8436990c0de57cb01de04c09b60bbea9bed540ca304471f587432a33ddcde"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-metadata-notes.json",
+      "bytes": 1537,
+      "sha256": "632bfba8eb5aa2bd299fd6b79b2bdab90c8bde5f948e24234b3b9ec9a1f5bccb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-preflight.json",
+      "bytes": 1198,
+      "sha256": "1abb9d7bc3c51394c127fb8616515bc8dfe9e0c3c01094aee586fd20136e1bf1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-receipt.py",
+      "bytes": 2872,
+      "sha256": "25d4d16fea73abab10c19910b56189f13335b89970567ff462cba607b681a89c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-run-first.py",
+      "bytes": 1053,
+      "sha256": "ae8b4c0e5f670e7ce9f0b207dd99a139c56d8d4205b4a3ed4812fdefd4d74d03"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-source-manifest.json",
+      "bytes": 4711,
+      "sha256": "e9e710267d50ca8fd650d068165dc745a767403d3280dae2beb994da43d5be40"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-source-status.json",
+      "bytes": 710,
+      "sha256": "fc0909b97bac4bb198080912d021ad0e04b7ee441d4fcca199afa648be5777c4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/cron-validation.json",
+      "bytes": 2633,
+      "sha256": "236219a83553b8b2a94856eb090cdbdadc47e8f988d8b9149f978e241ff52e3d"
+    }
+  ],
+  "productChanges": false,
+  "gitWrites": false,
+  "receiptExcludesItself": true,
+  "rawLogs": [
+    "docs/audit-2026-10-17-round23/evidence/cron-first.raw.log"
+  ],
+  "sourceChecks": 9,
+  "guardedRuns": 1,
+  "productReruns": 0
+}

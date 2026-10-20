@@ -379,6 +379,7 @@ export class ProtocolClient {
     uploadIds?: string[];
     clientMessageId?: string;
     displayText?: string;
+    modelTraceSource?: string;
   }): Promise<unknown> {
     return this.request("agent/run", params, 0);
   }

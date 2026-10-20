@@ -1,0 +1,68 @@
+{
+  "recordedUTC": "2026-10-17T12:51:10.181785+00:00",
+  "firstSelectedContextAttempt": {
+    "exitCode": 1,
+    "rawDiagnostic": "selected-contexts.first.stderr.txt",
+    "requestedFailingRange": {
+      "path": "docs/superpowers/plans/2026-05-29-plugin-runtime-and-commands.md",
+      "range": [
+        820,
+        830
+      ],
+      "actualLineCount": 828
+    },
+    "actualPrintedBeforeFailure": [
+      {
+        "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+        "ranges": [
+          [
+            1,
+            50
+          ]
+        ]
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+        "ranges": [
+          [
+            45,
+            118
+          ]
+        ]
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-29-plugin-runtime-and-commands.md",
+        "ranges": [
+          [
+            20,
+            70
+          ],
+          [
+            238,
+            263
+          ],
+          [
+            458,
+            485
+          ]
+        ]
+      }
+    ],
+    "notReachedAndNotClaimed": [
+      "docs/architecture/07-plugins-capabilities-credentials-memory.md",
+      "docs/superpowers/specs/2026-05-19-plugin-marketplace-design.md",
+      "docs/superpowers/plans/2026-06-04-beta-release-prep.md"
+    ],
+    "resolution": "Only final requested historical range bounded to its actual EOF820-828. No product read or execution."
+  },
+  "navigationTruncation": "Initial rg console inventory and first broad context console output were truncated. Full machine inventory / matches are stored; no claim all saved excerpts were semantically read. Explicit actual ranges are in selected-contexts.json.",
+  "productAttempts": 0,
+  "productRetries": 0,
+  "gitCommands": 0,
+  "firstFinishByteCheck": {
+    "exitCode": 1,
+    "rawDiagnostic": "finish-check.first.stderr.txt",
+    "cause": "A dated historical release TODO document changed after full corpus scan. The strict mismatch assertion stopped before any finish success claim or receipt creation.",
+    "resolution": "Preserve initial inventory and hit corpus; record current per-file bytes and all differences without treating a changed release doc as product failure. No history rescanning / product execution."
+  }
+}

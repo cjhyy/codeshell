@@ -1,9 +1,47 @@
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, mock, spyOn, test } from "bun:test";
+import { createRequire, syncBuiltinESMExports } from "node:module";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import type { ImageAttachment } from "./chat/attachments";
+
+const children = createRequire(import.meta.url)("node:child_process");
+const childDescriptors = new Map<string, PropertyDescriptor | undefined>(
+  ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"].map((name) => [
+    name,
+    Object.getOwnPropertyDescriptor(children, name),
+  ]),
+);
+const killDescriptor = Object.getOwnPropertyDescriptor(process, "kill");
+const transportDescriptors = new Map<string, PropertyDescriptor | undefined>(
+  ["fetch", "Worker", "WebSocket"].map((name) => [
+    name,
+    Object.getOwnPropertyDescriptor(globalThis, name),
+  ]),
+);
+for (const name of childDescriptors.keys()) {
+  children[name] = () => {
+    throw new Error(`Native transport denied: ${name}`);
+  };
+}
+process.kill = () => {
+  throw new Error("Native signal denied");
+};
+syncBuiltinESMExports();
+const denied = () => {
+  throw new Error("Unexpected renderer transport");
+};
+globalThis.fetch = denied;
+Object.defineProperty(globalThis, "Worker", { configurable: true, value: denied });
+Object.defineProperty(globalThis, "WebSocket", { configurable: true, value: denied });
+const denyQRCode = () => {
+  throw new Error("Unexpected QR code rendering");
+};
+mock.module("qrcode", () => ({
+  default: Object.assign(denyQRCode, { toDataURL: denyQRCode }),
+  toDataURL: denyQRCode,
+}));
 
 // Keep the real ChatView even when AppQuickChat.test installs its harness mock.
 // @ts-expect-error Bun supports query-suffixed TypeScript module imports.
@@ -154,6 +192,21 @@ async function mountChatView(options: {
   });
   return container;
 }
+
+afterAll(() => {
+  mock.restore();
+  for (const [name, descriptor] of childDescriptors) {
+    if (descriptor) Object.defineProperty(children, name, descriptor);
+    else Reflect.deleteProperty(children, name);
+  }
+  if (killDescriptor) Object.defineProperty(process, "kill", killDescriptor);
+  else Reflect.deleteProperty(process, "kill");
+  syncBuiltinESMExports();
+  for (const [name, descriptor] of transportDescriptors) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else Reflect.deleteProperty(globalThis, name);
+  }
+});
 
 afterEach(async () => {
   if (root) {

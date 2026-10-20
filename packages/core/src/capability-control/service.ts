@@ -39,7 +39,7 @@ export interface CapabilityServiceDeps {
   registry: Pick<ToolRegistry, "listToolsDetailed">;
   settings: Pick<
     SettingsManager,
-    "get" | "saveUserSetting" | "saveProjectSetting" | "deleteProjectSetting" | "getForScope"
+    "get" | "saveUserSetting" | "mutateSettingsForScope" | "getForScope"
   >;
   cwd: string;
   scanSkills: (
@@ -159,9 +159,30 @@ export class CapabilityService {
     if (!bucket) throw new Error(`Capability kind '${descriptor.kind}' has no project override`);
     if (!opts.cwd) throw new Error("project override requires cwd");
     const token = overrideTokenForId(id);
-    const path = `capabilityOverrides.${bucket}.${token}`;
-    if (state === "inherit") this.deps.settings.deleteProjectSetting(path, opts.cwd);
-    else this.deps.settings.saveProjectSetting(path, state, opts.cwd);
+    this.deps.settings.mutateSettingsForScope("project", opts.cwd, (current) => {
+      const rawOverrides = current.capabilityOverrides;
+      if (
+        rawOverrides != null &&
+        (typeof rawOverrides !== "object" || Array.isArray(rawOverrides))
+      ) {
+        throw new Error("capabilityOverrides must be an object");
+      }
+      const overrides = (rawOverrides ?? {}) as Record<string, unknown>;
+      const rawBucket = overrides[bucket];
+      if (rawBucket != null && (typeof rawBucket !== "object" || Array.isArray(rawBucket))) {
+        throw new Error(`capabilityOverrides.${bucket} must be an object`);
+      }
+      const entries = (rawBucket ?? {}) as Record<string, unknown>;
+      // Tokens are record keys: a server such as "team.docs" is one entry.
+      if (state === "inherit") {
+        if (!Object.hasOwn(entries, token)) return false;
+        const next = { ...entries };
+        delete next[token];
+        current.capabilityOverrides = { ...overrides, [bucket]: next };
+      } else {
+        current.capabilityOverrides = { ...overrides, [bucket]: { ...entries, [token]: state } };
+      }
+    });
   }
 
   /** Existing global write path — unchanged behavior, refactored out of setEnabled. */

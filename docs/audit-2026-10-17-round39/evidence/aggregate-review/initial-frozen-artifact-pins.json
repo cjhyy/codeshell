@@ -1,0 +1,181 @@
+{
+  "capturedUTC": "2026-10-17T13:33:15.392009+00:00",
+  "scope": "Aggregate metadata-only; no product source semantics; raw69objects bytes/hash only; independent review pending",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/artifact-receipt.json",
+      "relativePath": "artifact-receipt.json",
+      "bytes": 3736,
+      "sha256": "8c81b860179c47d38c0963097b047dde694b043c164641d47ea442662d5fd663",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/classification.json",
+      "relativePath": "classification.json",
+      "bytes": 1514,
+      "sha256": "49df7f0aa54beec16350e1143b6a29cc5b8ae850c52fbb511b97ae0920b72f23",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/field-reference-navigation.json",
+      "relativePath": "field-reference-navigation.json",
+      "bytes": 15853,
+      "sha256": "5dfb6c6d9f8937e4c81a9d1c6ecf29d53c47feda4330c8b138e38bf2b35f6eb5",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/final-source-check.json",
+      "relativePath": "final-source-check.json",
+      "bytes": 7714,
+      "sha256": "345f00f3d47a350f12add82386251b0a65267d3b0b314fc2cb51b5020aaef21b",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/focused-history.json",
+      "relativePath": "focused-history.json",
+      "bytes": 77390,
+      "sha256": "58eecb9cc815db10ec014641754b29ed75a585a574aed891b1277d895e2d44fa",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/forwarding-initial-pins.json",
+      "relativePath": "forwarding-initial-pins.json",
+      "bytes": 964,
+      "sha256": "8001d3505d9ec2a97a19d923d0ee6482949cdeb641e66a341133f56e1fb2391f",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-decisions.json",
+      "relativePath": "history-decisions.json",
+      "bytes": 2326,
+      "sha256": "d9a457da255220700f7124149be5ed8302a9cc71bf7504aa770306b95f2e770a",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-delta.json",
+      "relativePath": "history-delta.json",
+      "bytes": 20234,
+      "sha256": "37640a7b22e7e99648d39d5c1fc16069790c444661fd6dd0f3d0dedf954c57bf",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-method.py",
+      "relativePath": "history-method.py",
+      "bytes": 3473,
+      "sha256": "92a44ffa5610e3ae6a696decbc17cb55110b9f58b6be36524fd41b26df19479e",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history.json",
+      "relativePath": "history.json",
+      "bytes": 686708,
+      "sha256": "b6b576545df6a40893225cae752f9abb65a84144038999af1b937a9d02f431aa",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "relativePath": "initial-inventory-pins.json",
+      "bytes": 71599,
+      "sha256": "473a806b5c355b3ddd6209af125053df592d626d1cd70a7d8543e96111bde811",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/links-check.json",
+      "relativePath": "links-check.json",
+      "bytes": 7193,
+      "sha256": "4a5a2eceab03d51512e8b9699b46498893e9d588dbc1e5328f0e2832198c8148",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "relativePath": "matching-history-objects.first.json",
+      "bytes": 5530631,
+      "sha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/matching-history-objects.json",
+      "relativePath": "matching-history-objects.json",
+      "bytes": 12437,
+      "sha256": "2f27bd134743799147ce20818c0217bfea03baaddde6fbf542d7f4764c009cea",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/metadata-diagnostics.json",
+      "relativePath": "metadata-diagnostics.json",
+      "bytes": 1059,
+      "sha256": "c5bee2cf14ab62f7655880032f917d9582216ad3e905e2d2c8beb7ac5e34e644",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/report.md",
+      "relativePath": "report.md",
+      "bytes": 9783,
+      "sha256": "ba19c8152289e1c987031e1e7b6f691ac0b70313f062461bbf6bc2475b0612ec",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/scope.json",
+      "relativePath": "scope.json",
+      "bytes": 796,
+      "sha256": "9914aeae8175e84cb84e57a76a1ea3905c04404177f175a915d8d8f9c70f438f",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 99596,
+      "sha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/static-value-flow.json",
+      "relativePath": "static-value-flow.json",
+      "bytes": 2265,
+      "sha256": "29352cdafa93614c5fcf9f95bdf42f568cf3ee4c05d8458a43665d7bd1760e06",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 1147,
+      "sha256": "1bc6db729bd2e0786f2b1b8650f7fb9432666cb1efc68a9523471391e10c88f8",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-root-mcp-rename-frontier/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 646,
+      "sha256": "db11be52a36fc1103500a2b8f12b3af3a0e0d6d021ba597498e85e2b6a6950f8",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-root-mcp-rename-frontier/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 2177,
+      "sha256": "493ccdb43270dc0612e0b69798b36db494bdc1b0e09e5efbbcb84b262c56506d",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-root-mcp-rename-frontier/review.md",
+      "relativePath": "review.md",
+      "bytes": 2718,
+      "sha256": "ea171c893192fbbf9f5ab4cb12ba539d34343db509626f36594c2ed1dc332e2b",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-root-mcp-rename-frontier/source-excerpts.json",
+      "relativePath": "source-excerpts.json",
+      "bytes": 6651,
+      "sha256": "100c7b57fc19375dafe8b097360688a77ef69591d9e6d9e90e8ad3489ba54d97",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-root-mcp-rename-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 3729,
+      "sha256": "b45a6fcd89c39ec6d17cea27070ebc7348dd04e7f49af9542b5bf300ed9b21e9",
+      "freezeStatus": "Parent explicitly confirmed frozen before task dispatch"
+    }
+  ]
+}

@@ -1,0 +1,553 @@
+{
+  "scope": "Structured10 same-path/SHA rows and all27 filename/ordinary-list navigation contexts retained; actual full display assessed; no never-read inference from absence",
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/2684",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lines": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/authorSourceManifestChecks/0/rows/23",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "coverageClaimFromAuthor": "selected",
+        "selectedLineRangesFromAuthor": [
+          [
+            175,
+            194
+          ],
+          [
+            308,
+            330
+          ]
+        ],
+        "additionalNavigationSnippetLinesFromAuthor": [],
+        "declaredReadLineCount": 43,
+        "unionCountMatches": true,
+        "rangeBoundsValid": true,
+        "currentShaMatches": true,
+        "initialSemanticReadSha256Claim": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "initialBeforeThisPrepSemanticReadClaim": null,
+        "dedicatedInitialPin": {
+          "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+          "bytes": 20235,
+          "lineCount": 550,
+          "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "timingNote": "Path-only locator before pin."
+        },
+        "priorFullReadNote": null
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/authorSourceManifestChecks/0/rows/23/dedicatedInitialPin",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lineCount": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "timingNote": "Path-only locator before pin."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/finish-checks.json",
+      "jsonPointer": "/sourceFiles/23",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "unchangedSincePin": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/market-list-pin.json",
+      "jsonPointer": "/files/0",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lineCount": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "timingNote": "Path-only locator before pin."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "jsonPointer": "/files/23",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "lineCount": 550,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            175,
+            194
+          ],
+          [
+            308,
+            330
+          ]
+        ],
+        "semanticReadLines": 43,
+        "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "endingSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "prepPinRow": {
+          "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+          "bytes": 20235,
+          "lineCount": 550,
+          "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "timingNote": "Path-only locator before pin."
+        }
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "jsonPointer": "/files/23/prepPinRow",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lineCount": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "timingNote": "Path-only locator before pin."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/source-checks.json",
+      "jsonPointer": "/checks/23",
+      "row": {
+        "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "coverage": "selected"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "jsonPointer": "/files/21",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "currentBytes": 20235,
+        "currentSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "mainBytes": 20235,
+        "mainSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/19",
+      "row": {
+        "manifest": "marketplace-local-frontier/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "coverage": "selected",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "group": "source_filename",
+      "path": "docs/architecture/11-feature-inventory.md",
+      "jsonPointer": null,
+      "line": 164,
+      "needle": "marketlist",
+      "context": "ilModal.tsx:15` | Extensions -> Skills |\n| **MCP tab** | Extensions 管理页内直接复用 McpSection 管理 MCP server | `packages/desktop/src/renderer/extensions/ManagePage.tsx:119`，`packages/desktop/src/renderer/extensions/ManagePage.tsx:169` | Extensions -> MCP |\n| **市场 tab + 安装任务面板** | 浏览市场插件、安装、查看后台 install jobs 并重试 | `packages/desktop/src/renderer/extensions/MarketList.tsx:84`，`packages/desktop/src/renderer/extensions/MarketDetail.tsx:23`，`packages/desktop/src/renderer/extensions/PluginInstallJobsPanel.tsx:89` | Extensions -> Market |\n| **凭证页（Cookie/Token/Link）** | 三 tab 管理 cookie 登录态、permission token 和业务 link | `packages/desktop/src/renderer/credentials/CredentialsPage.tsx:11` | 设置菜单 → 凭证 |\n| **Cookie 登录态桥接** | 登录 URL、列域名、预览 cookie、捕获/恢复浏览器 cookie | `packages/desktop/src/renderer/credentials/CookieTab.tsx:55` | Credentials -> Cookie |\n| **Permission Token / Link** | 新增、保存、删除 token/link 凭证 | `packages/desktop/src/renderer/credentials/TokenTab.tsx:17`，`packages/desktop/src/renderer/credentials/LinkTab.tsx:16` | Credentials -> Token 或 Link |\n\n### 全屏视图（自动化/运",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/archive/local-install-and-hot-reload-plan-2026-06-18.md",
+      "jsonPointer": null,
+      "line": 102,
+      "needle": "marketlist",
+      "context": "赖后必重生成 lock(bun)。**\n  - 安全:解压要防 zip-slip(条目路径 `..` 逃逸)——校验每个 entry 落点在 tmp 目录内。\n  - 解压后目录可能多套一层(zip 里常含一个顶层文件夹)→ 探测:若 tmp 下只有一个目录且不含 plugin manifest,则下钻一层再 detectFormat。\n\n**3b. desktop:暴露 IPC + UI**\n- IPC:新增 `installPluginFromLocal({ kind: \"dir\" | \"zip\", path })` → main 调 core。\n  - 选目录:已有 core 能力,直接走 installPluginFromPath。\n  - 选 zip:走 3a。\n- UI:扩展页(MarketList 区 或 PluginsTab)加\"本地安装\"按钮:\n  - 系统文件选择对话框(Electron dialog):允许选 `.zip` 文件 或 选目录(两个按钮或一个带 filter 的对话框)。\n  - 安装成功 → 块 1b 热生效 + toast + 刷新已装列表。\n- 插件**只全局**,UI 不出现项目级选项(避免误导)。\n\n**验证 3:** 准备一个本地插件目录 + 一个 .zip,分别走\"本地安装\",装完出现在已装列表,且 hooks/skill 当前会话即时生效(块 1b)。\n\n---\n\n## 不做 / 边界\n\n- 插件项目级安装:用户明确不做,插件保持全局。\n- creator 升级(plugin-creator):后续单独一轮,本轮不动 mimi-plugins。\n- zip-slip 之外的供应链校验(签名等):本轮不做。\n\n## 块4 · skills + git status 移出 system prefix(prompt cache 优化,已做)\n\n用户追问\"skill 注入会不会失效缓存,CC 是不是注入到最下面\"引出。核实(claude-api skill + 读 anthropic.ts):\n- Anthropic 缓存是 prefix-match,整个 system 打**一个** cache_control(`anthropic.ts:183`),断点在 system 末尾。\n- system prefix 里有**两个动态污染源**:skills 清单(装/删 skill 变)+ **git status**(`buildSyste",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "6a522eaadaf8f77643cd40cf36aebe48389ddf9f1d3ce4aa659b77995911d5bd"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "jsonPointer": "/source_inventory/1487",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/2684/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lines": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9"
+      },
+      "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+      "jsonPointer": "/hits/local-install-await/14/context",
+      "line": 14,
+      "needle": "marketlist",
+      "context": "赖后必重生成 lock(bun)。**\n  - 安全:解压要防 zip-slip(条目路径 `..` 逃逸)——校验每个 entry 落点在 tmp 目录内。\n  - 解压后目录可能多套一层(zip 里常含一个顶层文件夹)→ 探测:若 tmp 下只有一个目录且不含 plugin manifest,则下钻一层再 detectFormat。\n\n**3b. desktop:暴露 IPC + UI**\n- IPC:新增 `installPluginFromLocal({ kind: \"dir\" | \"zip\", path })` → main 调 core。\n  - 选目录:已有 core 能力,直接走 installPluginFromPath。\n  - 选 zip:走 3a。\n- UI:扩展页(MarketList 区 或 PluginsTab)加\"本地安装\"按钮:\n  - 系统文件选择对话框(Electron dialog):允许选 `.zip` 文件 或 选目录(两个按钮或一个带 filter 的对话框)。\n  - 安装成功 → 块 1b",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9c735a815a6439f4d7f21ff9c5e03156e5bc01142042ba90efb7b36320f2f501"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+      "jsonPointer": "/hits/local-install-await/15/context",
+      "line": 7,
+      "needle": "marketlist",
+      "context": "下只有一个目录且不含 plugin manifest,则下钻一层再 detectFormat。\n\n**3b. desktop:暴露 IPC + UI**\n- IPC:新增 `installPluginFromLocal({ kind: \"dir\" | \"zip\", path })` → main 调 core。\n  - 选目录:已有 core 能力,直接走 installPluginFromPath。\n  - 选 zip:走 3a。\n- UI:扩展页(MarketList 区 或 PluginsTab)加\"本地安装\"按钮:\n  - 系统文件选择对话框(Electron dialog):允许选 `.zip` 文件 或 选目录(两个按钮或一个带 filter 的对话框)。\n  - 安装成功 → 块 1b 热生效 + toast + 刷新已装列表。\n- 插件**只全局**,UI 不出现项目级选项(避免误导)。\n\n**验证 3:** 准备一个本地插件目录 + 一个 .zip,分别走\"本地安装\",装完出现在已装列表,且 hooks/skill 当前会话即时生效(块 1b)。\n\n---\n\n## 不做 / 边界\n\n- 插件项目级安装:用户明确不做,插件保持全局。\n- creator 升级(plugin-creator):后续单独一轮,本轮不动 mimi-plugins。\n- zip-slip 之外的供应链校验(签名等):本轮不做。\n\n## 块4 · skills + git status 移出 system prefix(prompt cache 优化,已做)\n\n用户追问\"skill 注入会不会失效缓存,CC 是不是注入到最下面\"引出。核实(claude-api skill + 读 anthropic.ts):\n- Anthropic 缓存是 prefix-match,整个 system 打**一个** cache_control(`anthropic.ts:183`),断点在 syst",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "9c735a815a6439f4d7f21ff9c5e03156e5bc01142042ba90efb7b36320f2f501"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "jsonPointer": "/hits/source-normalization/68/context",
+      "line": 2,
+      "needle": "marketlist",
+      "context": "add`→`addMarketplace(name, source)`、`marketplace:remove`→`removeMarketplace(name)`、`plugins:install`→`installPlugin(pluginName, marketplaceName)`。\n- **MarketList.tsx**：列已添加市场（名称 + pluginCount + 来源）+「添加市场」入口（输入 git/github 源，调 `marketplace:add`）。\n- **MarketDetail.tsx**：`marketplace:load` 列该市场插件；每项「安装」按钮（`plugins:install`），安装中 disabled + \"安装中…\"，完成刷新插件 tab 计数；已安装项标记。\n- **接入 ManagePage**：加第四个 tab「市场」。\n- 错误/重试/空态同 P1 约定。\n\n---\n\n# Phase 3 — 发现首页（概要）\n\n- **DiscoverHome.tsx**：居中大标题「让 codeshell 按你的方式工作」+ 搜索框 + 「已安装概览」（插件 N · 技能 N · MCP N，点击跳对应 tab）。**不做** banner、不做 Featured 网格。\n- 搜索：输入后切到管理页并把关键词作为 query 下传跨 tab 过滤。\n- `ExtensionsPage` 加首页/管理页切换。\n- `featured.json`（仓库内置精选源）仅作为「市场」tab 的推荐入口，轻量、可后置。\n- 收尾：移除过渡保留的旧 `mcp`、`plugins-skills` 入口。\n\n---\n\n## Self-Review\n\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSec",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "4532310eda13c2e7f770fb61950737eb9251092ef446e7022ad11e5f348cbacb"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "jsonPointer": "/hits/local-await/18/context",
+      "line": 13,
+      "needle": "marketlist",
+      "context": "赖后必重生成 lock(bun)。**\n  - 安全:解压要防 zip-slip(条目路径 `..` 逃逸)——校验每个 entry 落点在 tmp 目录内。\n  - 解压后目录可能多套一层(zip 里常含一个顶层文件夹)→ 探测:若 tmp 下只有一个目录且不含 plugin manifest,则下钻一层再 detectFormat。\n\n**3b. desktop:暴露 IPC + UI**\n- IPC:新增 `installPluginFromLocal({ kind: \"dir\" | \"zip\", path })` → main 调 core。\n  - 选目录:已有 core 能力,直接走 installPluginFromPath。\n  - 选 zip:走 3a。\n- UI:扩展页(MarketList 区 或 PluginsTab)加\"本地安装\"按钮:",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "54791da7dffc7eb829c0c8afa3304f7449bedff268fe00a3e5fd172e5f2a03c3"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "jsonPointer": "/hits/local-await/19/context",
+      "line": 7,
+      "needle": "marketlist",
+      "context": "nifest,则下钻一层再 detectFormat。\n\n**3b. desktop:暴露 IPC + UI**\n- IPC:新增 `installPluginFromLocal({ kind: \"dir\" | \"zip\", path })` → main 调 core。\n  - 选目录:已有 core 能力,直接走 installPluginFromPath。\n  - 选 zip:走 3a。\n- UI:扩展页(MarketList 区 或 PluginsTab)加\"本地安装\"按钮:\n  - 系统文件选择对话框(Electron dialog):允许选 `.zip` 文件 或 选目录(两个按钮或一个带 filter 的对话框)。\n  - 安装成功 → 块 1b 热生效 + toast + 刷新已装列表。\n- 插件**只全局**,UI 不出现项目级选项(避免误导)。\n\n**验证 3:** 准备一个本地插件目录 + 一个 .zip,分别走\"本地安装\",装完出现在已装列表,且 hooks/skill 当前会话即时生效(块 1b)。\n\n---\n\n## 不做 / 边界\n\n- 插件项目级安装:用户明确不做,插件保持全局。\n- creator 升级(plugin-creator):后续单独一轮,本轮不动 mimi-plugins。\n- zip-slip 之外的供应链校验(签名等):本轮不做。\n\n## 块4 · skills + git status 移出 system prefix(prompt cache 优化,已做)\n\n用户追问\"skill 注入会不会失效缓存,CC 是不是注入到最下面\"引出。核实(claude-api skill + 读 anthropic.ts):",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "54791da7dffc7eb829c0c8afa3304f7449bedff268fe00a3e5fd172e5f2a03c3"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/authorSourceManifestChecks/0/rows/23/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "coverageClaimFromAuthor": "selected",
+        "selectedLineRangesFromAuthor": [
+          [
+            175,
+            194
+          ],
+          [
+            308,
+            330
+          ]
+        ],
+        "additionalNavigationSnippetLinesFromAuthor": [],
+        "declaredReadLineCount": 43,
+        "unionCountMatches": true,
+        "rangeBoundsValid": true,
+        "currentShaMatches": true,
+        "initialSemanticReadSha256Claim": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "initialBeforeThisPrepSemanticReadClaim": null,
+        "dedicatedInitialPin": {
+          "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+          "bytes": 20235,
+          "lineCount": 550,
+          "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "timingNote": "Path-only locator before pin."
+        },
+        "priorFullReadNote": null
+      },
+      "sourceSha256": "49febe7666803a53b0458b0df2adf15471f1d35f680f4139c18fe448720b7b68"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "jsonPointer": "/authorSourceManifestChecks/0/rows/23/dedicatedInitialPin/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lineCount": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "timingNote": "Path-only locator before pin."
+      },
+      "sourceSha256": "49febe7666803a53b0458b0df2adf15471f1d35f680f4139c18fe448720b7b68"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/finish-checks.json",
+      "jsonPointer": "/sourceFiles/23/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "unchangedSincePin": true
+      },
+      "sourceSha256": "19ca3626ba16af133e40b3e8b333bae17f39a4b2773590d5a9d74db45eb06a83"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/market-list-pin.json",
+      "jsonPointer": "/files/0/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lineCount": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "timingNote": "Path-only locator before pin."
+      },
+      "sourceSha256": "7e9e8db8972ba6266fb798350eda96ba0f01221138ec90429f414214541540ca"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/proposal.md",
+      "jsonPointer": null,
+      "line": 5,
+      "needle": "marketlist",
+      "context": "普通 marketplace 的 registry key 可以是 `local`，会被卸载路由当作直接本地安装的 marker。本 prep 保留 **0 formal / 1 拟 P3 静态候选 MARKETPLACE-LOCAL-R37-C1 / 0 related**；Root 最终正式 / 候选分类另定。条件是成功安装普通 marketplace 插件，且没有同名 direct-local 插件目录。未进行安装或卸载观察。\n\n普通入口与因果链已闭合：\n\n1. MarketList175–194、308–330 接收非空用户输入，preload1252 → main IPC4934 → marketplace-service343–358 调 parse / derive / add。合法仓库尾名 `local` 经 parseMarketplaceInput60–89 派生出 registry key `local`；此处讨论 registry key，与 marketplace.json 的展示 name 分开。knownMarketplaces14–25、145–148 和 installer/paths10–17 的名称条件允许该字面量，未见保留名拒绝。\n2. marketplace install 使用传入 marketplaceName 生成 `demo@local`。成功路径把 mat.cacheDir 写入 registry；普通相对路径源使用 cache/local/demo/local。catalog93–138 从 key 拆出 marketplace=`local`，listPlugins134–161 原样放入 summary；该接口43–72无来源种类字段。\n3. uninstallTarget31 因 marketplace=`local` 返回 kind=local，PluginsTab149–152 调 local IPC；main4807–4816 / plugins-service194–223 将其交给 uninstallPluginByName。后者仅定位 plugins/demo，目录不存在时在8–12抛错，未",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "7bb614ac0a8b623b976027e287a4dce1487ccf97cc9d2f5b3e72e0ed121c79cf"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "jsonPointer": "/files/23/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "lineCount": 550,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            175,
+            194
+          ],
+          [
+            308,
+            330
+          ]
+        ],
+        "semanticReadLines": 43,
+        "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "endingSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "prepPinRow": {
+          "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+          "bytes": 20235,
+          "lineCount": 550,
+          "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "timingNote": "Path-only locator before pin."
+        }
+      },
+      "sourceSha256": "26e0bc26af6c24c52b29f515877e6e69357b73bce2d64e3dd88e1397f81d6d2d"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "jsonPointer": "/files/23/prepPinRow/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lineCount": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "timingNote": "Path-only locator before pin."
+      },
+      "sourceSha256": "26e0bc26af6c24c52b29f515877e6e69357b73bce2d64e3dd88e1397f81d6d2d"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/source-checks.json",
+      "jsonPointer": "/checks/23/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "coverage": "selected"
+      },
+      "sourceSha256": "84cb4cca3a5c54a041f99eddd8cf6c5aac60309d64b7f2b1db21e5c00d7939d7"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "jsonPointer": "/files/21/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "currentBytes": 20235,
+        "currentSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "mainBytes": 20235,
+        "mainSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sourceSha256": "563952d5421a53ea5fbadea01fbc98808aa26fbd26fa27d3539325866feeb319"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/19/path",
+      "line": 1,
+      "needle": "marketlist",
+      "context": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "immediateParentForExactValue": {
+        "manifest": "marketplace-local-frontier/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "coverage": "selected",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "sourceSha256": "563952d5421a53ea5fbadea01fbc98808aa26fbd26fa27d3539325866feeb319"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round38/evidence/root-history.json",
+      "jsonPointer": "/hits/sources/2/context",
+      "line": 3,
+      "needle": "marketlist",
+      "context": "ilModal.tsx:15` | Extensions -> Skills |\n| **MCP tab** | Extensions 管理页内直接复用 McpSection 管理 MCP server | `packages/desktop/src/renderer/extensions/ManagePage.tsx:119`，`packages/desktop/src/renderer/extensions/ManagePage.tsx:169` | Extensions -> MCP |\n| **市场 tab + 安装任务面板** | 浏览市场插件、安装、查看后台 install jobs 并重试 | `packages/desktop/src/renderer/extensions/MarketList.tsx:84`，`packages/desktop/src/renderer/extensions/MarketDetail.tsx:23`，`packages/desktop/src/renderer/extensions/PluginInstallJobsPanel.tsx:89` | Extensions -> Market |\n| **凭证页（Cookie/Token/Link）** | 三 tab 管理 cookie 登录态、permission token 和业务 link | `packages/desktop/src/renderer/credent",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "940be8d907e56a30513521a0a3013da575071da4d367f0d75f9182e83145de31"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "jsonPointer": "/objects/44/object/context",
+      "line": 2,
+      "needle": "marketlist",
+      "context": "add`→`addMarketplace(name, source)`、`marketplace:remove`→`removeMarketplace(name)`、`plugins:install`→`installPlugin(pluginName, marketplaceName)`。\n- **MarketList.tsx**：列已添加市场（名称 + pluginCount + 来源）+「添加市场」入口（输入 git/github 源，调 `marketplace:add`）。\n- **MarketDetail.tsx**：`marketplace:load` 列该市场插件；每项「安装」按钮（`plugins:install`），安装中 disabled + \"安装中…\"，完成刷新插件 tab 计数；已安装项标记。\n- **接入 ManagePage**：加第四个 tab「市场」。\n- 错误/重试/空态同 P1 约定。\n\n---\n\n# Phase 3 — 发现首页（概要）\n\n- **DiscoverHome.tsx**：居中大标题「让 codeshell 按你的方式工作」+ 搜索框 + 「已安装概览」（插件 N · 技能 N · MCP N，点击跳对应 tab）。**不做** banner、不做 Featured 网格。\n- 搜索：输入后切到管理页并把关键词作为 query 下传跨 tab 过滤。\n- `ExtensionsPage` 加首页/管理页切换。\n- `featured.json`（仓库内置精选源）仅作为「市场」tab 的推荐入口，轻量、可后置。\n- 收尾：移除过渡保留的旧 `mcp`、`plugins-skills` 入口。\n\n---\n\n## Self-Review\n\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSec",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "jsonPointer": null,
+      "line": 690,
+      "needle": "marketlist",
+      "context": "b（概要，P1 完成后细化为完整任务）\n\nP1 验证通过后，把以下展开为与上面同粒度的 TDD 任务：\n\n- **新 IPC**（main/index.ts + preload，模式同 Task 2/3）：`marketplace:list`→`listMarketplaces()`、`marketplace:load`→`loadMarketplace(name)`、`marketplace:add`→`addMarketplace(name, source)`、`marketplace:remove`→`removeMarketplace(name)`、`plugins:install`→`installPlugin(pluginName, marketplaceName)`。\n- **MarketList.tsx**：列已添加市场（名称 + pluginCount + 来源）+「添加市场」入口（输入 git/github 源，调 `marketplace:add`）。\n- **MarketDetail.tsx**：`marketplace:load` 列该市场插件；每项「安装」按钮（`plugins:install`），安装中 disabled + \"安装中…\"，完成刷新插件 tab 计数；已安装项标记。\n- **接入 ManagePage**：加第四个 tab「市场」。\n- 错误/重试/空态同 P1 约定。\n\n---\n\n# Phase 3 — 发现首页（概要）\n\n- **DiscoverHome.tsx**：居中大标题「让 codeshell 按你的方式工作」+ 搜索框 + 「已安装概览」（插件 N · 技能 N · MCP N，点击跳对应 tab）。**不做** banner、不做 Featured 网格。\n- 搜索：输入后切到管理页并把关键词作为 query 下传跨 tab 过滤。\n- `ExtensionsPage` 加首页/管理页切换。\n- `featured.json`（仓库内置精选源）仅作为「市场」tab 的推荐入口，轻量、可后置。\n- 收尾：移除过渡保留的旧 `mcp`、`plugins-skills` 入口。\n\n---\n\n## Self-Review\n\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSec",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "jsonPointer": null,
+      "line": 62,
+      "needle": "marketlist",
+      "context": "tab + 当前 tab 内容\n    ├── TabBar              插件N / 技能N / MCP N / 市场N + 搜索框\n    ├── PluginsTab          单列：图标+名称+来源+开关+⋯卸载\n    ├── SkillsTab           单列：图标+名称+描述+来源+开关；点行 → SkillDetailModal\n    │   └── SkillDetailModal   弹出 SKILL.md（复用现有 readSkillBody + Markdown）\n    ├── McpTab              复用 McpSection 既有逻辑（增删改查+探测）\n    └── MarketTab           两层：MarketList → MarketDetail（插件列表+安装）\n        ├── MarketList      已添加市场 + 「添加市场」按钮\n        └── MarketDetail    某市场内插件列表 + 安装/已安装状态\n```\n\n**复用策略**：\n\n- `SkillsTab` / `PluginsTab` 抽取自现有 `PluginsAndSkillsSection.tsx` 的左/中栏逻辑，去掉常驻右栏，详情改 modal。\n- `McpTab` 直接挂载现有 `McpSection`（或抽其核心 hook），不重写探测逻辑。\n- `SkillDetailModal` 复用现有 `readSkillBody` IPC + `Markdown.tsx`。\n\n### 3.2 主进程 IPC\n\n**已有、直接复用**：`skills:list/read/uninstall/installLocal/inspectGithub/installFromGithub`、`plugins:list`、`mcp:probe`、`mcp:invalidate`、`getSettings`、`updateSettings`、`capabilities:*`。\n\n**新增 IPC**（薄包装，逻辑全在 core，已导出）：\n\n| IPC channel | 包装的 core 函数 | 用途 |\n|---|---|---|\n| `plugins:uninstall` | `uninstallPlugin(plugin, marketplace)` | 插件卸载（P1 缺口） |\n|",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "cbfcc26c2ebaab2e004a199e4ca2154aa4da876d5be7ddbccdc4ad879be34389"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "jsonPointer": null,
+      "line": 63,
+      "needle": "marketlist",
+      "context": " / 技能N / MCP N / 市场N + 搜索框\n    ├── PluginsTab          单列：图标+名称+来源+开关+⋯卸载\n    ├── SkillsTab           单列：图标+名称+描述+来源+开关；点行 → SkillDetailModal\n    │   └── SkillDetailModal   弹出 SKILL.md（复用现有 readSkillBody + Markdown）\n    ├── McpTab              复用 McpSection 既有逻辑（增删改查+探测）\n    └── MarketTab           两层：MarketList → MarketDetail（插件列表+安装）\n        ├── MarketList      已添加市场 + 「添加市场」按钮\n        └── MarketDetail    某市场内插件列表 + 安装/已安装状态\n```\n\n**复用策略**：\n\n- `SkillsTab` / `PluginsTab` 抽取自现有 `PluginsAndSkillsSection.tsx` 的左/中栏逻辑，去掉常驻右栏，详情改 modal。\n- `McpTab` 直接挂载现有 `McpSection`（或抽其核心 hook），不重写探测逻辑。\n- `SkillDetailModal` 复用现有 `readSkillBody` IPC + `Markdown.tsx`。\n\n### 3.2 主进程 IPC\n\n**已有、直接复用**：`skills:list/read/uninstall/installLocal/inspectGithub/installFromGithub`、`plugins:list`、`mcp:probe`、`mcp:invalidate`、`getSettings`、`updateSettings`、`capabilities:*`。\n\n**新增 IPC**（薄包装，逻辑全在 core，已导出）：\n\n| IPC channel | 包装的 core 函数 | 用途 |\n|---|---|---|\n| `plugins:uninstall` | `uninstallPlugin(plugin, marketplace)` | 插件卸载（P1 缺口） |\n| `marketplace:list` | `listMarketplaces()` | 市场",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "cbfcc26c2ebaab2e004a199e4ca2154aa4da876d5be7ddbccdc4ad879be34389"
+    },
+    {
+      "group": "source_filename",
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "jsonPointer": null,
+      "line": 132,
+      "needle": "marketlist",
+      "context": " / 骨架，避免假死（现状缺失）。\n- 列表加载失败显示错误 + 「重试」按钮。\n- 市场 / GitHub 安装失败显示错误 + 重试；安装中按钮 disabled + \"安装中…\"。\n- 各 tab 空态给明确引导文案 + 行动按钮（如市场空态 →「添加市场」）。\n- 卸载/删除前确认弹窗。\n\n---\n\n## 7. 分期\n\n- **P1 — 管理页骨架**：统一容器 + 分类 tab；接入插件/技能/MCP 三 tab（MCP 挂现有 McpSection）；skill 详情改 modal；补 `plugins:uninstall` IPC + 卸载 UI；加载/空/错态优化。\n- **P2 — 市场 tab**：6 个新 IPC（除 plugins:uninstall 已在 P1）→ MarketList / MarketDetail / 添加市场 / 安装流程。\n- **P3 — 发现首页**：DiscoverHome（标题 + 搜索 + 已安装概览），与管理页打通切换。`featured.json` 作为市场推荐源（轻量，可后置）。\n\n旧的两个 settings 模块入口（`mcp`、`plugins-skills`）在 P1 收敛为单一「扩展」入口；过渡期可保留旧入口直到新页验证通过。\n\n---\n\n## 8. 非目标（YAGNI）\n\n- 不做 Codex 的「应用」tab、banner 轮播、Featured 网格。\n- 不做插件评分/下载量/截图（marketplace.json 无此字段）。\n- 不做插件间依赖解析（core 明确 out of scope）。\n- 不做 MCP 批量开关、市场服务端搜索（前端 includes 足够）。\n- 不改动 core 的市场/安装逻辑，仅做 IPC 薄包装。\n",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "cbfcc26c2ebaab2e004a199e4ca2154aa4da876d5be7ddbccdc4ad879be34389"
+    },
+    {
+      "group": "market_list",
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "jsonPointer": null,
+      "line": 43,
+      "needle": "市场列表",
+      "context": "## 2. 设计决策（brainstorm 已确认）\n\n| 决策点 | 结论 |\n|---|---|\n| 顶层结构 | 发现首页 + 管理页两屏，首页可切到管理页（贴近 Codex） |\n| 分类 tab | `插件` / `技能` / `MCP` / `市场` 四个（不做「应用」） |\n| skill 详情 | 列表保持干净单列，**点行弹出** SKILL.md（模态/抽屉），不保留常驻右栏 |\n| 插件操作 | 行内开关启用/禁用 + `⋯` 菜单卸载（**新补 `plugins:uninstall` IPC**） |\n| MCP tab | **完整**并入：列表 + 开关 + 实时状态 + 添加/编辑/删除（整套复用 `McpSection`） |\n| 市场结构 | **两层**：市场列表 → 点进某市场看其插件 → 逐个安装；带「添加市场」入口 |\n| 发现首页 | **极简（解读②）**：标题 + 搜索 + 已安装概览；**不做 Featured 卡片网格**、不做 banner。内置精选清单 `featured.json` 仅作为「市场」tab 的推荐源 |\n\n---\n\n## 3. 架构\n\n### 3.1 组件树（渲染层）\n\n```\nExtensionsPage  (新的统一容器，替代原 plugins-skills + mcp 两个 settings 模块的入口)\n├── DiscoverHome            发现首页：标题 + 搜索框 + InstalledOverview\n│   └── InstalledOverview   \"插件 6 · 技能 18 · MCP 1\" 概览，点击跳到对应管理 tab\n└── ManagePage             管理页容器：顶部分类 tab + 当前 tab 内容\n    ├── TabBar              插件N / 技能N / MCP N / 市场N + 搜索框\n    ├── PluginsTab          单列：图标+名称+来源+开关+⋯卸载\n    ├── SkillsTab           单列：图标+名称+描述+来源+开关；点行 → SkillDetailModal\n    │   └── SkillDetailModal   弹出 SKILL.md（复用现有 readSkillBody + Markdown）\n    ├── McpTab         ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "cbfcc26c2ebaab2e004a199e4ca2154aa4da876d5be7ddbccdc4ad879be34389"
+    },
+    {
+      "group": "market_list",
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "jsonPointer": null,
+      "line": 82,
+      "needle": "市场列表",
+      "context": "all/installLocal/inspectGithub/installFromGithub`、`plugins:list`、`mcp:probe`、`mcp:invalidate`、`getSettings`、`updateSettings`、`capabilities:*`。\n\n**新增 IPC**（薄包装，逻辑全在 core，已导出）：\n\n| IPC channel | 包装的 core 函数 | 用途 |\n|---|---|---|\n| `plugins:uninstall` | `uninstallPlugin(plugin, marketplace)` | 插件卸载（P1 缺口） |\n| `marketplace:list` | `listMarketplaces()` | 市场列表 + 插件计数 |\n| `marketplace:load` | `loadMarketplace(name)` | 某市场内的可安装插件 |\n| `marketplace:add` | `addMarketplace(name, source)` | 添加市场 |\n| `marketplace:remove` | `removeMarketplace(name)` | 删除市场 |\n| `plugins:install` | `installPlugin(plugin, marketplace)` | 从市场安装插件 |\n\n对应 `preload/index.ts` + `preload/types.d.ts` 各加上述方法签名。\n\n### 3.3 数据流\n\n- **列表**：各 tab 挂载时调对应 `list` IPC → 渲染；启用/禁用走 `updateSettings`（disabled* 集合）或 capabilities，与现状一致。\n- **MCP 状态**：沿用 `mcp:probe`（8s 超时 / 60s 缓存）；编辑后 `mcp:invalidate`。\n- **市场**：`marketplace:list` → 选中 → `marketplace:load` → 列插件；安装走 `plugins:install`，完成后刷新插件 tab 计数。\n- **跨屏同步**：沿用现有 `codeshell:settings-changed` 广播，管理页各 tab 监听刷新。\n\n---\n\n## 4. 各 tab 行规格\n\n统一行：`[图标] 名称 / 描述（",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "cbfcc26c2ebaab2e004a199e4ca2154aa4da876d5be7ddbccdc4ad879be34389"
+    }
+  ]
+}

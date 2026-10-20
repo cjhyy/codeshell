@@ -1,0 +1,12 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "runs": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "productReruns": 0,
+  "findings": 0,
+  "candidates": 0,
+  "oldRelated": 1,
+  "rootFailedComposeRunSeparate": "root-validation.json"
+}

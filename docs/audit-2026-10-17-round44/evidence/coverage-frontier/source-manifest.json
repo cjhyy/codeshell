@@ -1,0 +1,31 @@
+{
+  "capturedUTC": "2026-10-17T14:59:56.383647+00:00",
+  "scope": "Metadata-only49:0 product source semantic rows. The separate dated TS/TSX byte inventory is not a semantic source manifest or runtime validation.",
+  "files": [],
+  "semanticLines": 0,
+  "hashOnlyInventory": {
+    "path": "package-inventory.json",
+    "bytes": 958678,
+    "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+    "files": 4642,
+    "capturedUTC": "2026-10-17T14:50:14.179171+00:00",
+    "coverage": "byte/hash/line metadata only"
+  },
+  "endingOverlay": {
+    "path": "ending-coverage-overlay.json",
+    "bytes": 13255,
+    "sha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020",
+    "changedPaths": 9,
+    "newPaths": 1,
+    "semanticReRead": false
+  },
+  "historyInventory": {
+    "path": "history-inventory.json",
+    "bytes": 851237,
+    "sha256": "87d354f8073cc07309f86accd5821c3533fd2553772662d534fc8a3366ca4d97",
+    "files": 3869
+  },
+  "candidateBodiesOpened": 0,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

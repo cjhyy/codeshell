@@ -1,0 +1,146 @@
+275:   const firstWhitespace = value.search(/\s/);
+276:   if (firstWhitespace !== -1 && caret > firstWhitespace) return null;
+277:   return { query: beforeCaret.slice(1).toLowerCase() };
+278: }
+279: 
+280: function toRunAttachments(images: ImageAttachment[]): InputAttachmentMeta[] {
+281:   return images
+282:     .filter((img) => !!img.path && !!img.absPath)
+283:     .map((img) => ({
+284:       id: img.id,
+285:       sessionId: img.sessionId ?? "",
+286:       kind: "image" as const,
+287:       origin: img.origin ?? "paste",
+288:       path: img.path!,
+289:       absPath: img.absPath!,
+290:       relPath: img.relPath,
+291:       mime: img.mime,
+292:       size: img.size,
+293:       sha256: img.sha256 ?? "",
+294:       originalName: img.name,
+295:       createdAt: img.createdAt ?? Date.now(),
+296:       sourcePath: img.sourcePath,
+297:       vision: { include: true },
+298:     }));
+299: }
+1190:     // Attachment paths, injected prompts, tool results and replayed messages cannot register one.
+1191:     const linkSubmission = rememberLinkSubmission(text);
+1192:     const routeOpts = { ...(sendBucket ? { bucket: sendBucket } : {}), ...linkSubmission };
+1193:     if (busy)
+1194:       onQueueInput?.(withAnchors, {
+1195:         ...routeOpts,
+1196:         attachments: runAttachments,
+1197:         displayText: displayPayload,
+1198:       });
+1199:     else
+1200:       onSend(withAnchors, {
+1201:         ...routeOpts,
+1202:         attachments: runAttachments,
+1203:         displayText: displayPayload,
+1204:         suppressGoal: loopInvocation !== null,
+1205:       });
+1206:     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
+1207:     setSendEpoch((n) => n + 1);
+1208:     // Reusing the main composer must not make ephemeral side prompts durable.
+1209:     if (localRuntime && withLocalFiles && variant === "main") {
+1210:       setHistory(pushHistory(activeProjectId, withLocalFiles));
+1211:     }
+1212:     setDraft("");
+1213:     closeMention();
+1214:     closeSlash();
+1215:     setAttachments([]);
+1216:     setInputReferences([]);
+1217:     setMentionReferences({ draft: "", bindings: [] });
+1218:     setLocalFilePaths([]);
+1219:     setAttachmentError(null);
+1220:     setHistoryCursor(-1);
+1221:     liveDraftStash.current = "";
+1222:     onClearAnchors?.();
+1223:   };
+1224: 
+1225:   const acceptFiles = async (files: File[], origin: "paste" | "os-drop" | "picker") => {
+1226:     if (composerDisabled || compacting) return;
+1227:     if (files.length === 0) return;
+1228:     if (!localRuntime) {
+1229:       await onSelectRemoteFiles?.(files);
+1230:       return;
+1231:     }
+1232:     setAttachmentError(null);
+1233:     const { accepted, errors } = await buildAttachments(files, attachments);
+1234:     if (!mountedRef.current) return;
+1235:     if (accepted.length > 0) {
+1236:       // Compress before staging so the chip thumbnail and the wire
+1237:       // payload share the same bytes — keeps the UI honest about what
+1238:       // will actually be sent. compressBatch never throws; it falls
+1239:       // back to the original if encoding fails (engine policy still
+1240:       // gates oversize bytes downstream).
+1241:       const compressed = await compressBatch(accepted, imageDetail);
+1242:       if (!mountedRef.current) return;
+1243:       const context = onPrepareAttachmentSession?.();
+1244:       if (!context) {
+1245:         errors.push({
+1246:           kind: "staging-failed",
+1247:           message: t("chat.attachment.stagingUnavailable"),
+1248:         });
+1249:       } else {
+1250:         try {
+1251:           const staged = await Promise.all(
+1252:             compressed.map(async (att) => {
+1253:               const meta = await window.codeshell.stageAttachmentImageDataUrl({
+1254:                 cwd: context.cwd,
+1255:                 sessionId: context.sessionId,
+1256:                 name: att.name,
+1257:                 mime: att.mime,
+1258:                 dataUrl: att.dataUrl,
+1259:                 origin,
+1260:                 quickChatClaimId: context.quickChatClaimId,
+1261:               });
+1262:               return {
+1263:                 ...att,
+1264:                 id: meta.id,
+1265:                 path: meta.path,
+1266:                 relPath: meta.relPath,
+1267:                 absPath: meta.absPath,
+1268:                 sha256: meta.sha256,
+1269:                 origin: meta.origin,
+1270:                 sessionId: meta.sessionId,
+1271:                 createdAt: meta.createdAt,
+1272:                 size: meta.size,
+1273:                 mime: meta.mime ?? att.mime,
+1274:               };
+1275:             }),
+1276:           );
+1277:           if (!mountedRef.current) return;
+1278:           setAttachments((cur) => [...cur, ...staged]);
+1279:         } catch (e) {
+1280:           if (!mountedRef.current) return;
+1281:           errors.push({
+1282:             kind: "staging-failed",
+1283:             message: t("chat.attachment.stagingFailed", {
+1284:               message: (e as Error).message,
+1285:             }),
+1286:           });
+1287:         }
+1288:       }
+1289:     }
+1290:     if (mountedRef.current && errors.length > 0) {
+1291:       setAttachmentError(errors.map((e) => e.message).join("；"));
+1292:     }
+1293:   };
+1294: 
+1295:   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+1296:     if (compacting) return;
+1297:     captureMentionEditSelection(e.currentTarget);
+1298:     const imageFiles = filesFromClipboard(e.clipboardData?.items ?? null);
+1299:     if (imageFiles.length === 0) return;
+1300:     e.preventDefault();
+1301:     await acceptFiles(imageFiles, "paste");
+1302:   };
+1303: 
+1304:   const removeAttachment = (id: string) => {
+1305:     setAttachments((cur) => cur.filter((a) => a.id !== id));
+1306:   };
+1307: 
+1308:   const acceptComposerFiles = async (
+1309:     files: File[],
+1310:     origin: "os-drop" | "picker",

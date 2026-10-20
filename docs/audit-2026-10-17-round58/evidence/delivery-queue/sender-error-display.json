@@ -1,0 +1,16 @@
+{
+  "path": "packages/chat/src/telegram.ts",
+  "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+  "displayedLineRanges": [
+    [
+      150,
+      170
+    ],
+    [
+      193,
+      222
+    ]
+  ],
+  "pinReference": "adjacent-initial-pins.json",
+  "displayAt": "2026-10-17T19:25:09.615679+00:00"
+}

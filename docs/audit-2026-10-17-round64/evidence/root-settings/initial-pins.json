@@ -1,0 +1,110 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/hub/auth-http.ts",
+      "bytes": 11306,
+      "sha256": "1d40bfef3a08bb5b463c48c91742d76fe9edfcbcdf9cae27153ae9ebfe91424a",
+      "lines": 290,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/server/src/hub/auth-store.ts",
+      "bytes": 13376,
+      "sha256": "7569816582e1d30e6ab9c17ce35ec96931b66a3d97a7f6a94f968f265baa65da",
+      "lines": 415,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-ref.ts",
+      "bytes": 5668,
+      "sha256": "67173aafa959c236b9098a4a13df8df155c8b383d3de00263f2bcfd90ade2b6f",
+      "lines": 134,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-manifest.ts",
+      "bytes": 7723,
+      "sha256": "aac1e98507fdf93bc3cb9ae9220dd431658060fdebd7543629907f81a56574af",
+      "lines": 210,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/core/src/panel-apps/github-request.ts",
+      "bytes": 501,
+      "sha256": "e04d0d3c264ed893814365e12fa757e0fea84cb1a1d7b9e459d706bb3f492df6",
+      "lines": 12,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/core/src/panel-apps/update-check.ts",
+      "bytes": 6600,
+      "sha256": "0b3b422633fc66fb22fb7203f4c6a02954d40e816e7a6429c021ed9f1019657b",
+      "lines": 171,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/core/src/panel-apps/source.ts",
+      "bytes": 3214,
+      "sha256": "4e1e7addf65af1ba7d28d813a80c3739e4614646f895ea3779d610a1b669600b",
+      "lines": 96,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/server/src/image-byte-probe.ts",
+      "bytes": 12022,
+      "sha256": "e744a050a06249ea20f04d6b0bdf37c00e9c317ec024341d1530214b8b0bd133",
+      "lines": 326,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "bytes": 27944,
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "lines": 887,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/server/src/client-message-id.ts",
+      "bytes": 257,
+      "sha256": "ed31c575dd7ee8c5b5cfa98d9476f39efa98b44bafc0df047e7aabc88f552f17",
+      "lines": 8,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/core/src/settings/feature-flags.ts",
+      "bytes": 6075,
+      "sha256": "f7c651347175eebe245977b2a4661a4409fd47690a497c88bb23ff55aa7e5eef",
+      "lines": 134,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/core/src/settings/personalization.ts",
+      "bytes": 736,
+      "sha256": "e3ff9e3dc6a89543794b73df00894e150d42da3be3c7a4f244b71c1571db74ea",
+      "lines": 20,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "packages/core/src/settings/hook-provenance.ts",
+      "bytes": 8082,
+      "sha256": "8dc3451a7f23c3ffbca707adc373746a8289d24bcac9eb68201afbbe14f2cd66",
+      "lines": 238,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "scope": "Query/source byte pin only; no product semantic reading."
+    }
+  ],
+  "productRuns": 0
+}

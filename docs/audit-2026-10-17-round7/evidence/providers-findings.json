@@ -1,0 +1,21 @@
+[
+  {
+    "id": "PROV-R7-01",
+    "priority": "P3",
+    "title": "Anthropic 成功流将后一工具参数挂到前一工具，首工具参数不实时送出",
+    "file": "packages/core/src/llm/providers/anthropic.ts",
+    "line": 347,
+    "secondaryLines": [
+      303,
+      358,
+      363
+    ],
+    "trigger": "Two sequential SDK-format tool_use blocks with start/input_json_delta/stop in one complete successful message; fixture borrows Read/Write labels and synthetic path/content fields with tools=[], not actual builtin schema validation. First-tool args disappear and second-tool args use previous id; declared real tool propagation uses the same source logic but is not executed here.",
+    "impact": "Real ModelFacade/Web reducer show first tool card with second tool input and second card with empty args. Final response and Transcript inputs remain correct.",
+    "evidenceLevel": "focused-dynamic-memory-installed-sdk-parser-provider-facade-web-reducer; TurnLoop fallback/repair limits source-only",
+    "evidence": "providers-stream-contract.test.ts",
+    "rawLog": "providers-stream-contract.first.log",
+    "limitations": "No real API, Engine, executed tools, native UI, or permanent history damage. No duplicate/wrong tool execution claimed.",
+    "dedup": "No matching root cause found in structured/text historical corpus scan and matched-source review; prior retry/auth/EOF findings excluded."
+  }
+]

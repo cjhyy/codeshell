@@ -1,0 +1,71 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round29/root-report.md",
+      "bytes": 3525,
+      "sha256": "70c60a8e2d4bc2117ff7ee637a9dce32cb23be606b71d007f872993f52b63aae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-initial-source-pins.json",
+      "bytes": 1656,
+      "sha256": "d41ded59501d4e1e7833a54bdfb9e43568222ccb90dc8e6df85f4ee05c47428d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-consumer-pins.json",
+      "bytes": 1385,
+      "sha256": "3f8c6e82617d67524bdfd4bb8fef05e8d2ed5f79e430e13298571d53a785d6dc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-metadata-notes.json",
+      "bytes": 1040,
+      "sha256": "879718ae8c2444df678e3f7d3ae6cbc37f71ee63debc7e240d8425d31fccc94d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.py",
+      "bytes": 3392,
+      "sha256": "9dd4996d03a17064b1622f2d23f4ffec1748e5deaacfbf54f43c6d5d17941e5a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-dedup.json",
+      "bytes": 649251,
+      "sha256": "f6a1d68e48cf38e4fbf53d154e9d26f8bebc83f19c110a9867db2b9bc5e74a31"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-source-manifest.json",
+      "bytes": 7245,
+      "sha256": "4a7da67b11c3d9f9ef57e363b2189e3745de8b3e3a3eafff70f1e68a7a6c48fb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-history-decisions.json",
+      "bytes": 1152,
+      "sha256": "d0ae9bf9c2623cebd7ad8603042581afffc6a0bab1c88b866846a3e6ae18f60f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/root-validation.json",
+      "bytes": 661,
+      "sha256": "4eb85ca926aa9b7d52f3e2b0a30fb7fa46154d4c1754c23586538dece75a2f85"
+    }
+  ],
+  "artifactCount": 12,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "productAttempts": 0,
+  "receiptSelfExcluded": true
+}

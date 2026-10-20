@@ -1,0 +1,882 @@
+{
+  "prepOnly": true,
+  "rootSuppliedFrozenContextShort": "99e9",
+  "formalBaseline": null,
+  "gitBindingPerformed": false,
+  "finishedAtUTC": "2026-10-17T12:52:59.842946+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 5601,
+      "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "totalLines": 157,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          157
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 157,
+      "purpose": "catalog key suffix decode + entry fields; adjacent manifest guard/template code read but no authority or runtime claim",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/pluginCatalog.ts",
+        "bytes": 5601,
+        "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+        "totalLines": 157,
+        "pinTimeUTC": "2026-10-17T12:43:49.161374+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 5601,
+        "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.test.ts",
+      "bytes": 5530,
+      "sha256": "ba7383c30272aca56cf9090d375f1c5ec2d17f997dcebfd56bcaeb934e4c321d",
+      "totalLines": 157,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          157
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 157,
+      "purpose": "four existing declarations including local marker metadata expectation; fixtures never invoked",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/pluginCatalog.test.ts",
+        "bytes": 5530,
+        "sha256": "ba7383c30272aca56cf9090d375f1c5ec2d17f997dcebfd56bcaeb934e4c321d",
+        "totalLines": 157,
+        "pinTimeUTC": "2026-10-17T12:43:49.162739+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 5530,
+        "sha256": "ba7383c30272aca56cf9090d375f1c5ec2d17f997dcebfd56bcaeb934e4c321d",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "bytes": 9314,
+      "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "totalLines": 265,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          158
+        ],
+        [
+          160,
+          210
+        ],
+        [
+          238,
+          265
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        215,
+        223,
+        225
+      ],
+      "declaredReadLineCount": 240,
+      "purpose": "registry DTO normalization, writer and literal key formatter; adjacent integrity/native IO text read only",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/installedPlugins.ts",
+        "bytes": 9314,
+        "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "totalLines": 265,
+        "pinTimeUTC": "2026-10-17T12:43:49.163247+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 9314,
+        "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/types.ts",
+      "bytes": 5106,
+      "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "totalLines": 154,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          134,
+          154
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 21,
+      "purpose": "CSMeta source field exists, not a catalog origin discriminator",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/installer/types.ts",
+        "bytes": 5106,
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "totalLines": 154,
+        "pinTimeUTC": "2026-10-17T12:43:49.163817+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 5106,
+        "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false,
+      "documentedPriorSameShaFullRead": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json; full1–154 / full1–74 respectively; excluded as new semantic coverage claim."
+    },
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "totalLines": 487,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          36
+        ],
+        [
+          40,
+          66
+        ],
+        [
+          330,
+          424
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        272,
+        292,
+        314,
+        442,
+        443,
+        462
+      ],
+      "declaredReadLineCount": 164,
+      "purpose": "normal marketplace install writes generic key/cache path record; no installer/materializer invoked",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/pluginInstaller.ts",
+        "bytes": 19962,
+        "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "totalLines": 487,
+        "pinTimeUTC": "2026-10-17T12:43:49.164323+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 19962,
+        "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "totalLines": 323,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          81
+        ],
+        [
+          129,
+          162
+        ],
+        [
+          218,
+          225
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 123,
+      "purpose": "catalog summary carries marketplace unchanged; local endpoint delegates by bare name",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/main/plugins-service.ts",
+        "bytes": 11267,
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "totalLines": 323,
+        "pinTimeUTC": "2026-10-17T12:43:49.164730+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 11267,
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false,
+      "ownFrozenFuture35PriorRead": {
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "sameWholeFileSha": true,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            57
+          ],
+          [
+            129,
+            169
+          ]
+        ],
+        "additionalNavigationSnippetLines": [
+          170,
+          171,
+          174,
+          183,
+          225,
+          252,
+          255
+        ],
+        "note": "Scope reuse not a novel unread-file claim; old future35 report remains frozen."
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "totalLines": 39,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 39,
+      "purpose": "source marker local branch ignores available installPath and has no origin discriminator",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+        "bytes": 1840,
+        "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+        "totalLines": 39,
+        "pinTimeUTC": "2026-10-17T12:43:49.165041+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 1840,
+        "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false,
+      "ownFrozenFuture35PriorRead": {
+        "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+        "sameWholeFileSha": true,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            39
+          ]
+        ],
+        "additionalNavigationSnippetLines": [],
+        "note": "Scope reuse not a novel unread-file claim; old future35 report remains frozen."
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "bytes": 2011,
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "totalLines": 39,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 39,
+      "purpose": "five existing missing/truthy-local regression declarations, no actual marketplace-named-local origin case",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+        "bytes": 2011,
+        "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+        "totalLines": 39,
+        "pinTimeUTC": "2026-10-17T12:43:49.165317+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 2011,
+        "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false,
+      "ownFrozenFuture35PriorRead": {
+        "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+        "sameWholeFileSha": true,
+        "coverage": "full",
+        "selectedLineRanges": [
+          [
+            1,
+            39
+          ]
+        ],
+        "additionalNavigationSnippetLines": [],
+        "note": "Scope reuse not a novel unread-file claim; old future35 report remains frozen."
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "totalLines": 530,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          131,
+          164
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 34,
+      "purpose": "actual target.kind dispatch and catch alert source only",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+        "bytes": 18987,
+        "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+        "totalLines": 530,
+        "pinTimeUTC": "2026-10-17T12:43:49.165661+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 18987,
+        "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false,
+      "ownFrozenFuture35PriorRead": {
+        "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+        "sameWholeFileSha": true,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            95,
+            166
+          ]
+        ],
+        "additionalNavigationSnippetLines": [
+          8
+        ],
+        "note": "Scope reuse not a novel unread-file claim; old future35 report remains frozen."
+      }
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "totalLines": 2982,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2009,
+          2017
+        ],
+        [
+          2797,
+          2829
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 42,
+      "purpose": "ordinary uninstall API and PluginSummary contract",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "totalLines": 2982,
+        "pinTimeUTC": "2026-10-17T12:43:49.166704+00:00",
+        "purpose": "before source content read for this independent namespace-contract review",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 102234,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false,
+      "ownFrozenFuture35PriorRead": {
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "sameWholeFileSha": true,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            44
+          ],
+          [
+            2790,
+            2820
+          ]
+        ],
+        "additionalNavigationSnippetLines": [
+          107,
+          1779,
+          2159,
+          2829
+        ],
+        "note": "Scope reuse not a novel unread-file claim; old future35 report remains frozen."
+      }
+    },
+    {
+      "path": "packages/core/src/plugins/types.ts",
+      "bytes": 3237,
+      "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+      "totalLines": 98,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          98
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 98,
+      "purpose": "KnownMarketplace / PluginInstallEntry shapes contain no origin kind",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/types.ts",
+        "bytes": 3237,
+        "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+        "totalLines": 98,
+        "pinTimeUTC": "2026-10-17T12:44:49.856653+00:00",
+        "purpose": "before selected ordinary key/schema writer and local marker record read; execution prohibited",
+        "pinArtifact": "writer-type-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 3237,
+        "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "bytes": 3010,
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "totalLines": 74,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 74,
+      "purpose": "actual local writer registers same @local marker; repeated already-covered source",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/installer/install.ts",
+        "bytes": 3010,
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "totalLines": 74,
+        "pinTimeUTC": "2026-10-17T12:44:49.857355+00:00",
+        "purpose": "before selected ordinary key/schema writer and local marker record read; execution prohibited",
+        "pinArtifact": "writer-type-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 3010,
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false,
+      "documentedPriorSameShaFullRead": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json; full1–154 / full1–74 respectively; excluded as new semantic coverage claim."
+    },
+    {
+      "path": "packages/core/src/plugins/installer/uninstall.ts",
+      "bytes": 907,
+      "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+      "totalLines": 19,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 19,
+      "purpose": "local callee chooses direct plugin dir and rejects absent path; source inference only",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/installer/uninstall.ts",
+        "bytes": 907,
+        "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+        "totalLines": 19,
+        "pinTimeUTC": "2026-10-17T12:44:49.857598+00:00",
+        "purpose": "before selected ordinary key/schema writer and local marker record read; execution prohibited",
+        "pinArtifact": "writer-type-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 907,
+        "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "totalLines": 236,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          45
+        ],
+        [
+          85,
+          155
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        64,
+        65,
+        161,
+        164,
+        166,
+        168,
+        170,
+        177,
+        178,
+        179,
+        191,
+        193,
+        194,
+        207,
+        223,
+        224,
+        226,
+        235
+      ],
+      "declaredReadLineCount": 134,
+      "purpose": "ordinary registration name admitted via guard and stored unchanged; no clone/refresh called",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "bytes": 7940,
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "totalLines": 236,
+        "pinTimeUTC": "2026-10-17T12:45:39.107243+00:00",
+        "purpose": "before narrow independent ordinary name admission / path-layout declaration read; no filesystem authority experiment",
+        "pinArtifact": "admission-path-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 7940,
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "totalLines": 30,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 30,
+      "purpose": "single segment guard and direct install path declaration; no path/helper evaluated",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/installer/paths.ts",
+        "bytes": 994,
+        "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+        "totalLines": 30,
+        "pinTimeUTC": "2026-10-17T12:45:39.108724+00:00",
+        "purpose": "before narrow independent ordinary name admission / path-layout declaration read; no filesystem authority experiment",
+        "pinArtifact": "admission-path-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 994,
+        "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "bytes": 6280,
+      "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "totalLines": 161,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ],
+        [
+          79,
+          101
+        ],
+        [
+          145,
+          149
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        33,
+        36,
+        103,
+        151,
+        152,
+        155,
+        157
+      ],
+      "declaredReadLineCount": 60,
+      "purpose": "name regex/current registry/upsert no reserved-local rule",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/knownMarketplaces.ts",
+        "bytes": 6280,
+        "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+        "totalLines": 161,
+        "pinTimeUTC": "2026-10-17T12:46:15.707584+00:00",
+        "purpose": "before selected plain name/registry admission read; no schema execution",
+        "pinArtifact": "registry-admission-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 6280,
+        "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/plugins/schemas.ts",
+      "bytes": 6630,
+      "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "totalLines": 183,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          146,
+          183
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        2,
+        46,
+        58,
+        59,
+        60,
+        63,
+        68,
+        112,
+        113,
+        123,
+        124,
+        127,
+        135
+      ],
+      "declaredReadLineCount": 51,
+      "purpose": "marketplace manifest name checks nonempty only; incidental entry-source matching snippets",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/schemas.ts",
+        "bytes": 6630,
+        "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+        "totalLines": 183,
+        "pinTimeUTC": "2026-10-17T12:46:15.708510+00:00",
+        "purpose": "before selected plain name/registry admission read; no schema execution",
+        "pinArtifact": "registry-admission-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 6630,
+        "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "totalLines": 1892,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1207,
+          1215
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 9,
+      "purpose": "IPC channel and name forwarding",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "totalLines": 1892,
+        "pinTimeUTC": "2026-10-17T12:47:33.287094+00:00",
+        "purpose": "before selected ordinary IPC name/parameter delegation boundary only",
+        "pinArtifact": "dispatch-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "totalLines": 7330,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          4808,
+          4820
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        452
+      ],
+      "declaredReadLineCount": 14,
+      "purpose": "local IPC delegates to local service function",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "totalLines": 7330,
+        "pinTimeUTC": "2026-10-17T12:47:33.289763+00:00",
+        "purpose": "before selected ordinary IPC name/parameter delegation boundary only",
+        "pinArtifact": "dispatch-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "timeUTC": "2026-10-17T12:52:59.842946+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round5/profile.md",
+      "bytes": 10402,
+      "sha256": "05f479af313df97df33f391d86d393ad3d851ba1f23615366482ef8d07fe59d4",
+      "coverage": "full-historical-report",
+      "selectedLineRanges": [
+        [
+          1,
+          65
+        ]
+      ],
+      "initialBeforeSemanticRead": null,
+      "dedicatedLaterPin": {
+        "path": "docs/audit-2026-10-17-round5/profile.md",
+        "bytes": 10402,
+        "sha256": "05f479af313df97df33f391d86d393ad3d851ba1f23615366482ef8d07fe59d4",
+        "totalLines": 65,
+        "pinTimeUTC": "2026-10-17T12:49:09.672936+00:00",
+        "initialBeforeSemanticRead": null,
+        "purpose": "dedicated historical pin after focused title/context; full source report read next to distinguish old collision"
+      },
+      "finishTimeUTC": "2026-10-17T12:52:59.842946+00:00",
+      "unchangedFromDedicatedPin": true,
+      "purpose": "separate old PROFILE-R5-01 lossy owner/repo cache key from current local marker origin collision; no historical test pass borrowed"
+    }
+  ],
+  "instructionsCarryForward": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "instruction-carry-forward",
+      "newSemanticReadLines": 0,
+      "note": "Full instructions read in preceding future35 work, identical byte pin checked only here."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "instruction-carry-forward",
+      "newSemanticReadLines": 0,
+      "note": "Full instructions read in preceding future35 work, identical byte pin checked only here."
+    }
+  ],
+  "counts": {
+    "productAndTestPins": 19,
+    "fullProductAndTestPins": 8,
+    "selectedProductAndTestPins": 11,
+    "productAndTestReadLinesIncludingNavigation": 1505,
+    "fullHistoricalReportReadLines": 65,
+    "existingTestDeclarationsRead": 9,
+    "existingTestsExecuted": 0,
+    "newInstructionSemanticReadLines": 0
+  },
+  "priorCoverageMethod": "prior-source-claims.json preserves465matching object rows locations,123same-SHA rows, explicit full/select/hash-only classification signals; own previous prep reuse separately noted. It is not a universal historical semantic coverage claim.",
+  "allProductInitialFinishStable": true,
+  "limits": [
+    "Ordinary successful-registration/install source path conditional on valid source/content is used; no fabricated malformed DTO or direct mutation was supplied.",
+    "Adjacent manifest/integrity/fs implementation text was statically read, not audited as a security/permission bypass or executed.",
+    "Root owns unified finding ID/classification; this is one independent P3 static support opinion, not a duplicate standalone finding."
+  ]
+}

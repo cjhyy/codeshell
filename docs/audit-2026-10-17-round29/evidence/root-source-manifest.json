@@ -1,0 +1,190 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "files": [
+    {
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "bytes": 5644,
+      "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "lineCount": 168,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          168
+        ]
+      ],
+      "coveredLineCount": 168,
+      "role": "product",
+      "initialFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "firstDurableSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "pinTiming": "Before semantic source reading; earlier wc/rg navigation only.",
+      "finishFilesystemSha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "matchesFirstDurablePin": true
+    },
+    {
+      "path": "packages/web/src/lib/mobileOutputRecovery.ts",
+      "bytes": 6817,
+      "sha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "lineCount": 161,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          161
+        ]
+      ],
+      "coveredLineCount": 161,
+      "role": "product",
+      "initialFilesystemSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "firstDurableSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "pinTiming": "Before semantic source reading; earlier wc/rg navigation only.",
+      "finishFilesystemSha256": "9a4218f0f6b2d869a8fbf801c6ba66f570b6fd65346ad02cd0a6287736af3f62",
+      "matchesFirstDurablePin": true
+    },
+    {
+      "path": "packages/desktop/src/shared/stream-envelope.ts",
+      "bytes": 936,
+      "sha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "lineCount": 22,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "coveredLineCount": 22,
+      "role": "product",
+      "initialFilesystemSha256": null,
+      "firstDurableSha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "pinTiming": "First durable hash after full22-line source read; initial stays null.",
+      "finishFilesystemSha256": "4b3332210881eadf04e9aaafa15ee8049011155f42d02fac1806bf30f971e353",
+      "matchesFirstDurablePin": true
+    },
+    {
+      "path": "packages/desktop/src/shared/stream-envelope.test.ts",
+      "bytes": 1602,
+      "sha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "lineCount": 49,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          49
+        ]
+      ],
+      "coveredLineCount": 49,
+      "role": "test-contract",
+      "initialFilesystemSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "firstDurableSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "pinTiming": "Before semantic source reading; earlier wc/rg navigation only.",
+      "finishFilesystemSha256": "c25e430c775aba34f47f525f1a5c8153a81cb0be1f4455b9d407a88da615749d",
+      "matchesFirstDurablePin": true
+    },
+    {
+      "path": "packages/desktop/src/main/parseStreamLine.ts",
+      "bytes": 2283,
+      "sha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "lineCount": 63,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          63
+        ]
+      ],
+      "coveredLineCount": 63,
+      "role": "product",
+      "initialFilesystemSha256": null,
+      "firstDurableSha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "pinTiming": "after full63 source read",
+      "finishFilesystemSha256": "0a9c1951be05a06aac89b298547a2472efadcec0ee139d91c97cfe6b2a176af5",
+      "matchesFirstDurablePin": true
+    },
+    {
+      "path": "packages/desktop/src/main/parseStreamLine.test.ts",
+      "bytes": 4946,
+      "sha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "lineCount": 152,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          152
+        ]
+      ],
+      "coveredLineCount": 152,
+      "role": "test-contract",
+      "initialFilesystemSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "firstDurableSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "pinTiming": "before full152 source read",
+      "finishFilesystemSha256": "3481a3eaaa338c06fcacfdc4bf37623107f0814548f148b3f9ba02d83867ee6f",
+      "matchesFirstDurablePin": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "lineCount": 1892,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          235,
+          310
+        ]
+      ],
+      "coveredLineCount": 76,
+      "role": "ordinary-consumer",
+      "initialFilesystemSha256": null,
+      "firstDurableSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "pinTiming": "after selected235-310 consumer read",
+      "finishFilesystemSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "matchesFirstDurablePin": true
+    },
+    {
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "bytes": 14977,
+      "sha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "lineCount": 396,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          150,
+          270
+        ]
+      ],
+      "coveredLineCount": 121,
+      "role": "ordinary-consumer",
+      "initialFilesystemSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "firstDurableSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "pinTiming": "before selected150-270 semantic read; earlier rg/wc navigation only",
+      "finishFilesystemSha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289",
+      "matchesFirstDurablePin": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCount": 217,
+      "role": "instruction",
+      "initialFilesystemSha256": null,
+      "firstDurableSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinTiming": "Instruction source fully read now; no fresh read-start pin, prior round instruction hash unchanged.",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFirstDurablePin": true
+    }
+  ],
+  "sourcePinCount": 9,
+  "ordinaryProductContractReadLines": 812,
+  "instructionReadLines": 217,
+  "totalDeclaredReadLines": 1029,
+  "note": "Full/selected source reading only. Identity/cursor checks are source boundaries, never executed. Pin timing preserves late first pins; Root final aggregate binds frozen/current/main separately."
+}

@@ -1,0 +1,838 @@
+{
+  "count": 60,
+  "actualPrintedRows": 16,
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round13/evidence/history-source-manifest.json",
+      "jsonPointer": "/files/6",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "scope": "selected interruption and bottom-content lines; static only; no engine or UI execution"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "jsonPointer": "/files/57",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/64",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round15/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/6",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "coverage": "selected64–76,93–105,125–134 and positiveIntOption references; not executed"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round15/source-manifest.json",
+      "jsonPointer": "/files/58",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round15/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/59",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round19/evidence/reviewprompt-source-manifest.json",
+      "jsonPointer": "/files/5",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round19/source-manifest.json",
+      "jsonPointer": "/files/36",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round19/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/5",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+      "jsonPointer": "/sources/2",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "readScope": "selected static option definition and action ranges",
+        "selectedLineRanges": [
+          [
+            1,
+            155
+          ]
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/streamattempt-source-manifest.json",
+      "jsonPointer": "/files/3",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "jsonPointer": "/files/32",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "jsonPointer": "/files/35",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/2",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/25",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round21/evidence/jsonoutput-source-manifest.json",
+      "jsonPointer": "/files/4",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round21/evidence/ndjson-source-manifest.json",
+      "jsonPointer": "/sources/2",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "readScope": "selected static CLI options/task route",
+        "selectedLineRanges": [
+          [
+            1,
+            18
+          ],
+          [
+            50,
+            115
+          ],
+          [
+            185,
+            210
+          ]
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round21/source-manifest.json",
+      "jsonPointer": "/files/33",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round21/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/4",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round21/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/14",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/25",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "scope": "Selected88-116 positional/piped caller only; no CLI import/run/process.stdin."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "jsonPointer": "/files/73",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/25",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/3",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            110,
+            144
+          ],
+          [
+            2052,
+            2078
+          ]
+        ],
+        "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/target-source-manifest.json",
+      "jsonPointer": "/files/9",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "readScope": "selected",
+        "selectedLineRanges": [
+          [
+            114,
+            129
+          ]
+        ],
+        "note": "Selected ordinary registration only: App constructs registry and registers gitCommands; no App/Ink/PTY import or render."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/source-manifest.json",
+      "jsonPointer": "/files/53",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/3",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "scope": "selected",
+        "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/27",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "scope": "selected",
+        "note": "Authorreadtimeflags unchanged;Rootblobvalidation not an authordynamic orfullcoverageclaim."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json",
+      "jsonPointer": "/files/11",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            145,
+            165
+          ]
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/evidence/local-install-review/source-manifest.json",
+      "jsonPointer": "/files/3",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            153,
+            159
+          ]
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonPointer": "/files/39",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/13",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "coverage": "selected",
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round33/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/39",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "coverage": "selected",
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json",
+      "jsonPointer": "/files/13",
+      "fields": {
+        "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+        "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round4/source-manifest.json",
+      "jsonPointer": "/files/57",
+      "fields": {
+        "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+        "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/root-transcript-review/source-manifest.json",
+      "jsonPointer": "/files/3",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            2145,
+            2149
+          ],
+          [
+            2166,
+            2169
+          ]
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-manifest.json",
+      "jsonPointer": "/files/6",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            94,
+            94
+          ],
+          [
+            101,
+            101
+          ],
+          [
+            2145,
+            2149
+          ],
+          [
+            2162,
+            2174
+          ]
+        ],
+        "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/source-manifest.json",
+      "jsonPointer": "/files/11",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            10,
+            10
+          ],
+          [
+            118,
+            124
+          ],
+          [
+            177,
+            188
+          ]
+        ],
+        "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-review/source-manifest.json",
+      "jsonPointer": "/files/5",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            94,
+            101
+          ],
+          [
+            754,
+            770
+          ],
+          [
+            2145,
+            2169
+          ]
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-review/source-manifest.json",
+      "jsonPointer": "/files/5/prepRow",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-review/source-manifest.json",
+      "jsonPointer": "/hashOnlyFiles/4",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "coverage": "hash-only/navigation; zero semantic body coverage",
+        "selectedLineRanges": []
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/evidence/transcript-review/source-manifest.json",
+      "jsonPointer": "/hashOnlyFiles/4/prepRow",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/source-manifest.json",
+      "jsonPointer": "/files/25",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/source-manifest.json",
+      "jsonPointer": "/files/27",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/6",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/11",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "coverage": "selected",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/21",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/29",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round42/source-manifest.json",
+      "jsonPointer": "/hashOnlyChecks/8",
+      "fields": {
+        "path": "packages/tui/src/cli/main.ts",
+        "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+        "coverage": "hash-only/navigation; zero semantic body coverage",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/source-manifest.json",
+      "jsonPointer": "/files/1",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            213,
+            218
+          ],
+          [
+            292,
+            293
+          ],
+          [
+            355,
+            363
+          ],
+          [
+            389,
+            393
+          ],
+          [
+            436,
+            439
+          ],
+          [
+            446,
+            446
+          ],
+          [
+            701,
+            705
+          ],
+          [
+            711,
+            711
+          ],
+          [
+            739,
+            741
+          ],
+          [
+            800,
+            803
+          ],
+          [
+            1063,
+            1063
+          ],
+          [
+            1066,
+            1066
+          ],
+          [
+            1070,
+            1073
+          ],
+          [
+            1078,
+            1082
+          ],
+          [
+            1543,
+            1544
+          ],
+          [
+            1547,
+            1547
+          ],
+          [
+            1559,
+            1564
+          ],
+          [
+            1626,
+            1629
+          ],
+          [
+            1636,
+            1652
+          ],
+          [
+            1666,
+            1681
+          ],
+          [
+            1717,
+            1721
+          ],
+          [
+            2286,
+            2297
+          ]
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/elapsed-review/source-manifest.json",
+      "jsonPointer": "/files/0",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            22,
+            22
+          ],
+          [
+            46,
+            46
+          ],
+          [
+            73,
+            73
+          ],
+          [
+            213,
+            218
+          ],
+          [
+            389,
+            394
+          ],
+          [
+            436,
+            446
+          ],
+          [
+            1543,
+            1544
+          ],
+          [
+            1558,
+            1564
+          ],
+          [
+            1626,
+            1629
+          ],
+          [
+            1643,
+            1652
+          ],
+          [
+            1666,
+            1681
+          ],
+          [
+            1716,
+            1720
+          ],
+          [
+            1814,
+            1819
+          ],
+          [
+            1829,
+            1857
+          ],
+          [
+            2227,
+            2227
+          ],
+          [
+            2262,
+            2272
+          ],
+          [
+            2286,
+            2297
+          ]
+        ],
+        "scope": "Ordinary query/bg flags, only timer-ref writer and elapsed consumers, real text submit gate and props. QueryGuard boundary calls only; its internals/cancel/permission/native mechanisms excluded."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/root-elapsed-review/source-manifest.json",
+      "jsonPointer": "/files/0",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            212,
+            218
+          ],
+          [
+            436,
+            446
+          ],
+          [
+            1543,
+            1544
+          ],
+          [
+            1559,
+            1560
+          ],
+          [
+            1643,
+            1652
+          ],
+          [
+            1669,
+            1681
+          ],
+          [
+            1716,
+            1719
+          ],
+          [
+            1814,
+            1817
+          ],
+          [
+            1829,
+            1849
+          ],
+          [
+            2264,
+            2269
+          ],
+          [
+            2294,
+            2296
+          ]
+        ],
+        "scope": "Selected ordinary interactive run/input/background terminal/elapsed consumers; no full-file or first-ever/unread coverage claim; no product execution."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/source-manifest.json",
+      "jsonPointer": "/files/27",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/17",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/24",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/34",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+        "coverage": "selected",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+      "jsonPointer": "/paths/16",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "jsonPointer": "/files/81",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round8/evidence/questions-source-manifest.json",
+      "jsonPointer": "/paths/14",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round8/source-manifest.json",
+      "jsonPointer": "/files/85",
+      "fields": {
+        "path": "packages/tui/src/ui/App.tsx",
+        "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8"
+      }
+    }
+  ],
+  "scope": "Known hypothesis selected recheck may revisit full sources; no new unread-frontier claim; first16boundedrows printed only."
+}

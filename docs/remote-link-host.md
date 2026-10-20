@@ -1,6 +1,6 @@
 # 远程 Link 的 Host 执行契约
 
-状态：Host 与独立 Link 已实现现有全部 10 个 provider、26 个动作的远程执行契约，
+状态：Host 与独立 Link 已实现现有 10 个 provider 的固定动作远程执行契约，
 包括授权、资源选择、下游令牌轮换、撤销与断开。Core／Server 和独立服务的 production
 模块已通过受控上游 HTTP 验证；Hub、配对 Web、Electron 云端窗口、原生 Desktop 和
 Docker 的既有 GitHub 授权流程已有实际程序验收。真实第三方账号、其他 provider 的
@@ -17,11 +17,15 @@ Docker 的既有 GitHub 授权流程已有实际程序验收。真实第三方�
 | Linear   | 分配给当前用户的 Issue、团队（2）                                    | 团队                           |
 | Todoist  | 项目、任务（2）                                                      | 项目                           |
 | Airtable | Base、表结构（2）                                                    | Base                           |
-| Figma    | 文件摘要、评论（2）                                                  | 用户输入并经上游验证的文件 key |
+| Figma    | 完整文件、节点子树、渲染图、图片填充、评论（5）                      | 用户输入并经上游验证的文件 key |
 
 服务仅发布已配置的 provider。Host 取远端 catalog 与编译内静态 adapter 的交集；未知
 provider、动作、额外 scope、含糊资源组或错误授权机制均不能扩大执行权限。旧 API v1
 的 GitHub 三个只读动作仍兼容，缺少 catalog 的 404／501 仅回退到这三个动作。
+
+Figma 按需读取的参数、大小限制及授权规则见 [Figma Link 完整读取](figma-link.md)。
+需要 Host 与独立 Link 服务的对应版本同时具备此实现；原部署的摘要接口不会因客户端
+更新自动获得完整节点数据。
 
 不同授权方式已接入首版通用 UI，见 [Link 授权 UI 通用化方案](todo/link-authorization-ui-unification.md)。
 Desktop 与 Hub Web 共用授权 controller 和步骤视图，Host 提供统一任务及步骤提交 API；
@@ -83,6 +87,107 @@ OAuth 请求使用 Node 单次 HTTP 发送，不使用可能在连接中断时�
 请求不跟随重定向，具有超时和响应大小限制；错误使用固定消息，服务端响应正文不进入
 错误提示。连接在刷新或数据读取期间被移除时不能复活或返回结果。Link 服务端撤销导致
 401 后，Host 将连接标记为需要重新授权。
+
+## 授权起始诊断
+
+共享 Host 为 `POST /api/v1/links/authorizations` 和原生 Desktop 直接调用
+`service.startAuthorization` 输出 `event: "link_authorization"` 的单行 JSON。
+默认写 stderr；部署可用 `onAuthorizationDiagnostic` 接入自己的日志收集器。
+日志收集器失败不会改变授权结果。`transport` 区分 `http` 与 `host`，后者的
+`httpStatus` 表示公开错误映射，不代表实际发送了 HTTP 请求。HTTP 客户端已断开时也
+可能只记录映射状态而无法送出响应。原生 Desktop 将诊断写入
+`~/.code-shell/logs/desktop/desktop-YYYY-MM-DD.log` 的 `link.authorization` 事件。
+
+每次起始操作自行生成 UUID，不采信入站 `X-Request-ID`。HTTP 响应头
+`X-Request-ID` 和失败 JSON 的 `requestId` 可关联同一次请求。日志包含阶段、耗时、
+固定内部错误码、公开错误码和状态；目录请求失败时保留经过白名单映射的原因及上游
+HTTP 状态。并发共享目录发现的请求仍各自保留独立的请求 ID。
+成功返回任务时还记录固定的 `authorizationState`；API 返回 200 且任务为 `failed`
+仍可能发生，不能把终结事件的 `outcome: "success"` 当作 OAuth 已完成。
+
+常见失败可以据此区分：
+
+| 阶段                   | 内部错误码示例                                              | 检查方向                             |
+| ---------------------- | ----------------------------------------------------------- | ------------------------------------ |
+| `host_store_read`      | `host_store_unreadable`                                     | Host 凭据文件读取或解密              |
+| `remote_configuration` | `remote_configuration_missing`                              | 当前 Host 的远端 Link 配置           |
+| `remote_catalog`       | `catalog_network`、`catalog_timeout`、`catalog_http_status` | Host 到独立 Link 的目录请求          |
+| `remote_catalog`       | `catalog_invalid_json`、`catalog_invalid_schema`            | 目录协议响应                         |
+| `mode_selection`       | `provider_capability_missing`                               | 目录是否提供指定 provider 的授权能力 |
+| `connection_review`    | `connection_review_failed`                                  | 已有连接的审阅版本、归属和状态       |
+| `job_creation`         | `remote_authorization_invalid`                              | 创建本地授权任务与跳转 URL           |
+
+`job_creation` 成功仅表示创建授权任务；此时尚未访问 Figma OAuth 端点，不能据此
+确认上游 Token 交换或账号验证成功。起始请求结束后，后台任务不再向该 trace 追加事件。
+后续回调和授权完成状态须结合任务结果继续检查。
+
+日志只记录编译目录认可的 provider／method／mode 标识，永不记录 Token、授权码、
+PKCE verifier、state、URL、请求头、请求正文、账号或连接 ID、标签，以及原始异常文本、
+异常栈或上游响应正文。不要为取证直接开启包含 OAuth 查询串的通用代理访问日志。
+
+systemd Host 可按事件名筛选，再按响应中的 UUID 关联：
+
+```sh
+journalctl --utc -u <host-unit> --since '<UTC start>' --until '<UTC end>' \
+  --no-pager -o short-iso --grep='link_authorization'
+```
+
+这里的 `<host-unit>` 是处理该管理 API 的 Hub／Host 服务。原生 Desktop 日志位于
+本地 Host 进程；独立 `codeshell-link.service` 不负责这条管理 API，不能仅在该 unit
+中查找这组事件。
+
+## 2026-10-16 生产只读核查
+
+通过腾讯云实例控制台的现有 OrcaTerm 免密会话检查 `115.159.45.55`：
+
+- `codeshell-link.service` 为 `active/running`，当前进程自 2026-10-12 06:33:36 UTC
+  启动，`NRestarts=0`。部署目录指向 services commit `c892b91b722390b037af3cc8588a897060eed006`。
+- 故障窗口 2026-10-15 17:06–17:12 UTC 的该 unit journal 没有记录；近期 journal
+  仅有服务启停和启动消息。8443 的 Nginx 配置为 `access_log off`，因此不能据此
+  判断历史 Reconnect 是否到达服务，也无法还原其 HTTP 状态。
+- 本机 `http://127.0.0.1:4101/health` 返回 `status: ok`、Link schema 3；当前 provider
+  目录包含 `github`、`figma`。经 Nginx 8443 TLS 路由的健康检查也返回 200。
+- 云防火墙当前允许 TCP 22、80、443、8443；系统 UFW 未启用。公开证书的有效期为
+  2026-10-15 03:39:35 UTC 至 2026-10-21 19:39:34 UTC，包含该 IP 的 SAN。
+- 本次执行主机默认网络路径访问 443／8443 的 Node 健康请求均在取得 HTTP 响应前
+  失败，错误为 `ECONNRESET`；curl 出现 TLS 握手失败或超时，Chrome 显示
+  `ERR_CONNECTION_CLOSED`。服务器自身访问公网健康地址返回 200。
+- 本机路由显示目标 IP 经过 `utun6` 隧道，FlClash 当前为全局模式，系统代理和虚拟
+  网卡均开启。使用 `curl --interface en0 --noproxy '*'` 对同一 HTTPS 健康地址做临时
+  直连测试，返回 200；没有关闭证书验证，也没有修改代理设置。这确认当前默认代理
+  路径与直连路径的行为存在差异，不能只归因于 Figma OAuth。
+
+这些证据缩小了当前排查范围，但不能证明历史故障的唯一根因。当前服务可用不等于
+故障窗口一直可用；执行主机的网络／TLS 失败也不能替代当时 Desktop 进程的证据。
+下一次复现需从实际发起授权的 Host 获取上述脱敏 trace，再决定是否继续查独立 Link
+的 OAuth 回调或 Token 交换。此次核查未修改生产配置或重启服务。
+
+### 02:40 UTC 内容读取故障的补充取证
+
+2026-10-16 的第二次只读核查确认，生产
+`apps/link-server/resource-providers.mjs` 的 SHA-256 为
+`79d373d59f2e09f886ad47d755ef5cb9e3e5d68e0115110bba93ae797f0e26eb`，
+与 services `c892b91b` 的对应文件一致。该版本尚不接受 `get_file` 的 `depth`
+参数。在拒绝真实网络的隔离夹具中，对这份代码调用 `get_file(depth=2)` 返回
+`400 / invalid_request`，且没有发起 Figma 请求；同一夹具的 `get_comments`
+可以通过参数校验。
+
+实际 Desktop 记录显示 02:40:56 UTC 的 `get_file` 携带 `depth: 2`，耗时 83ms；
+后续两次 `get_comments` 分别耗时 1ms、3ms。旧客户端将 action 的 HTTP 400 和
+401 一并映射成 reconnect，并且 Bridge 丢弃了 reconnect 错误码，也没有在执行
+结束后更新 Worker 的凭据快照。因此“授权失效”与仍显示 ready 可以由这条软件
+故障链解释；后续 comments 可能在本地被拦截。这些历史记录没有保留 HTTP 状态，
+不能将合成复现当作当时上游凭据有效或失效的证明。
+
+客户端现在区分 action 参数错误与授权失效，对终态使用相同记录的条件写入，并在
+remote Action 的回复中原子携带当前元数据快照。诊断事件 `link.remote.execution`
+按 `preflight`、`token_refresh`、`action`、`state_write` 分阶段，只包含固定枚举、
+HTTP 状态和审核过的 broker 错误码。错误正文有 4KiB／500ms 上限，不记录原文。
+不可解密的凭据保留原密文；更新一个连接不会再次加密或损坏其它不可解密的连接。
+
+独立 broker 的内容读取更新仍需单独部署。`/api/v1/data/authorization` 只验证
+下游 grant，并不重新请求 Figma；其成功与 `lastVerifiedAt` 不能替代实际内容读取
+验收。本次诊断没有重跑 OAuth，也没有读取真实设计内容。
 
 ## 共享 Host 授权管理
 
@@ -218,12 +323,18 @@ CODE_SHELL_REMOTE_LINK_CLIENT_ID=registered-desktop-web-client
 
 ## 原生桌面 Link 管理
 
-原生凭证页的 Link 标签将独立服务连接统一放在“服务器连接”中。GitHub 卡片点击
-“连接”即在系统浏览器进入 GitHub 网页授权，无需预先填写连接名称或登录 Link；随后选择允许访问的
-仓库，授权完成后自动保存并显示账号。
-“管理”弹窗提供添加账号、改名、重新授权和断开，服务地址收在“服务详情”中。
-本地 CLI／Token 连接继续可用；保存多个连接时必须明确选择，失效后不自动换账号。
-GitHub 原始凭据留在 Link，原生页面只收到脱敏快照及授权结果。
+原生凭证页以应用展示一个主连接入口；其他方式收在高级设置，账号的添加、改名和断开
+收在操作菜单。未登录 CodeShell 账号时仅展示本地连接，Token、CLI、本地 OAuth 和
+Figma MCP 仍可使用；登录后恢复云端入口和已保存的云端账号。退出不会删除既有授权。
+
+云端授权和执行由 Desktop 主进程检查 CodeShell 账号租约，覆盖原生页面、Worker、
+主进程外部运行时和桌面托管的配对 Web。退出、重新登录或账号授权过期后，旧请求与
+回调不能借新的登录继续完成；本地连接不受影响。共享 Link 服务通过可选的 Host 租约
+接口接入此规则，独立 Node Host 沿用自身身份策略。已保存授权的管理清理仍可执行。
+
+已登录时，GitHub 主连接入口直接进入系统浏览器授权，随后选择允许访问的仓库；
+授权完成后保存并显示账号，无需另外注册或登录独立 Link 服务。保存多个连接时必须
+明确选择，失效后不自动换账号。GitHub 原始凭据留在 Link，页面只收到脱敏结果。
 
 正式打包的 Desktop 默认使用 CodeShell 的公开 Link 部署（服务地址、公开 PKCE
 客户端 ID 和本机回调 origin），Windows、macOS 和 Linux 使用同一配置。第三方

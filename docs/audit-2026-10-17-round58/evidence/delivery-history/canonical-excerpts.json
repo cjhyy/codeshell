@@ -1,0 +1,288 @@
+{
+  "capturedUTC": "2026-10-17T19:31:06.040327+00:00",
+  "timing": "Selected historical metadata reproduction after actual bounded display, not product source excerpts",
+  "files": [
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "selected": [
+        {
+          "start": 83,
+          "end": 100,
+          "lines": [
+            "### 6. DeliveryQueue 全局单次 persist 重试会漏掉其他记录的 spool 清理",
+            "",
+            "- 位置：`packages/chat/src/delivery-queue.ts:279`",
+            "- 现状：`schedulePersistRetry` 用 `if (this.persistRetryTimer) return` 保证全局",
+            "  只有一个待重试，且 cleanup 闭包按记录捕获。若记录 X 失败已排程、记录 Y 随后",
+            "  失败，则 Y 的 `discardSpool` 永不重试；Y 此时已从内存 `pending` 摘除（`:252-253`），",
+            "  只能等下次 `start()` 的 `sweepOrphanedSpool`(`:116`) 回收。",
+            "- 非消息丢失（终态文件整体写入，恢复语义仍是 at-least-once），但长驻网关在",
+            "  一次瞬时磁盘错误后 spool 目录会持续增长。",
+            "- 建议：改为按记录排队重试，而非单一全局定时器。",
+            "",
+            "### 7. 附件下载在全局互斥锁内进行",
+            "",
+            "- 位置：`packages/chat/src/delivery-queue.ts:160`（`spoolAttachments` 在 `withMutation` 内）、`:322`",
+            "- 现状：`attachment.load()` 是无界网络拉取，却持有与 `process()` 记录终态",
+            "  （`:242`）相同的锁。一个慢附件会阻塞其他 enqueue 与终态持久化，",
+            "  `maxConcurrent` 实际达不到表面语义。",
+            "- 建议：把下载移到锁外，只在写入状态时短暂持锁。"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-16/findings.json",
+      "sha256": "6a4cf415ee6c3a4fb5c7fae5d97445838bd668fcbe6060a1c4656c51f5cd96b2",
+      "objects": [
+        {
+          "pointer": "/issues/20",
+          "value": {
+            "id": "SWC-02",
+            "priority": "P2",
+            "title": "不同账号的消息共用去重键，第二个账号被当作重复成功接收",
+            "file": "packages/chat/src/delivery-queue.ts",
+            "line": 595,
+            "report": "server-web-chat.md",
+            "reportLine": 17,
+            "evidenceLevel": "focused-dynamic-with-stated-boundaries",
+            "receipt": "conversation-stdout-excerpt",
+            "history": "no-matching-item-found-in-limited-deduplication",
+            "conditional": false,
+            "fixed": false
+          }
+        },
+        {
+          "pointer": "/issues/21",
+          "value": {
+            "id": "SWC-03",
+            "priority": "P2",
+            "title": "小附件 spool 发生 I/O 错误时仍返回接收成功，重启后消息消失",
+            "file": "packages/chat/src/delivery-queue.ts",
+            "line": 385,
+            "report": "server-web-chat.md",
+            "reportLine": 27,
+            "evidenceLevel": "focused-dynamic-with-stated-boundaries",
+            "receipt": "conversation-stdout-excerpt",
+            "history": "previous-static-candidate-now-validated",
+            "conditional": false,
+            "fixed": false
+          }
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-16/server-web-chat.md",
+      "sha256": "e12916c5a52bc6bee7ccb78acf25788fcc68a160283523fa32f52e2f74098de0",
+      "selected": [
+        {
+          "start": 7,
+          "end": 35,
+          "lines": [
+            "### SWC-01 [P2] 同渠道多账号排序改变后，持久消息会交给另一个账号",
+            "",
+            "- 位置：`packages/chat/src/chat-gateway.ts:140`（按 `channel:ordinal` 构建持久路由标识）、`:147`（按该标识恢复 adapter）；`packages/chat/src/channel.ts` 的 adapter 合约没有稳定账号标识。",
+            "- 触发：SDK 合法配置 `[账号 A, 账号 B]`，B 收到消息，队列已经持久接收但尚未投递；重启时配置顺序变成 `[B, A]`。同渠道多账号是现有 `chat-gateway.test.ts` 明确支持的功能。",
+            "- 预期：消息继续归属 B，或因无法确定原账号而拒绝恢复；实际：旧 `custom:1` 被解析为 A，middleware 与 `reply()` 都使用 A。",
+            "- 影响：跨账号错误回复、读取错误账号上下文；当不同账号使用局部 target 标识时，可能投给错误对话。这里实际证明的是路由错账号，没有声称验证真实 Telegram/Slack 的可达性或数据外泄。",
+            "- 验证：直接执行真实 `ChatGateway.run()` 与 `DeliveryQueue`，两轮真实磁盘队列，平台 adapter 为无网络回调替身。第一轮 B 持久记录 `adapterId=custom:1`，第二轮交换顺序，得到 `A:private account B content`，B 没有 send。证据：`evidence/server-chat-identity.test.ts` 第一个测试。",
+            "- 是否已知：对旧 `docs/review-*` 按 adapter identity / ordinal / account 查重，没有找到同一问题；旧修复注释仅考虑移除“不相关渠道”导致全局索引移动，仍未绑定同渠道账号身份。",
+            "- 建议：持久 adapter ID 绑定不可变账号身份，不使用列表位置；恢复时验证身份，无法匹配时明确处置，不能自动落到另一个账号。",
+            "",
+            "### SWC-02 [P2] 不同账号的消息共用去重键，第二个账号被当作重复成功接收",
+            "",
+            "- 位置：`packages/chat/src/delivery-queue.ts:150`、`:160`、`:595` 的 `deliveryDedupeKey`。键只包含 `channel,target,senderId,messageId`，不包含传入的 `adapterId`；completed 也共用同一 namespace。",
+            "- 触发：两个同渠道账号都收到相同 target/sender/message ID（例如同一个群消息到两个 bot，或自定义渠道的账号局部 ID）；消息正文/账号不同也不影响 dedupe。",
+            "- 预期：各账号具有独立 inbox 身份；实际：两个 adapter handler 都 resolve，但第二条没有持久记录、不会进入它自己的 middleware。",
+            "- 影响：多账号 SDK 会静默丢一条合法输入；第一账号先完成时，同样会被全局 completed 键抑制。",
+            "- 验证：真实 gateway、真实 durable queue，A、B 两个独立无网络 adapter 分别 emit；两个 handler 返回成功，磁盘 pending 只有 A 的一条。证据：`evidence/server-chat-identity.test.ts` 第二个测试。",
+            "- 是否已知：未找到旧已确认同根因条目。该问题与 SWC-01 同属账号身份缺失，但无需重启或重排即可触发，去重键的修复位置也不同。",
+            "- 建议：dedupe 与 completed 键加入稳定账号身份，并对旧格式迁移时采取保守策略。",
+            "",
+            "### SWC-03 [P2] 小附件 spool 发生 I/O 错误时仍返回接收成功，重启后消息消失",
+            "",
+            "- 位置：`packages/chat/src/delivery-queue.ts:183`、`:190`、`:238`、`:385` 的 `spoolAttachments` catch；`packages/chat/src/chat-gateway.ts:163` handler 丢弃 enqueue 状态并 resolve。",
+            "- 触发：已启动 durable queue 的 spool 目录暂时不可用（复现中目录位置被普通文件阻塞），收到合法、只有 1 byte 的附件；停止进程后恢复目录，再重启。",
+            "- 预期：普通小附件的持久化故障应明确告知调用者已降级，令其可以选择拒绝确认或可靠重试。当前 memory-only fallback 是代码有意的可用性策略，README 也承认媒体 loader 可留内存；本项不把所有后备策略本身判为 bug。实际：spool 的所有异常被吞成 `undefined`，记录设置 `persistent=false`，enqueue 返回 `queued`，平台 handler 会视为成功；下一次队列没有该消息。",
+            "- 影响：瞬时磁盘权限/容量/路径故障期间，已 ACK 的附件消息永久丢失。当前注释和测试明确保留“过大附件”内存后备，但普通有效附件的 I/O 故障也走同一无告警路径。",
+            "- 验证：真实 queue 的 filesystem 写入失败，enqueue=`queued`、内存 pending=1；恢复目录后构建新 queue，pending=0。正常 1 byte 附件对照可恢复 pending=1。证据：`evidence/server-chat-identity.test.ts` 第三、四个测试。没有真实平台 ACK；ACK 影响来自 gateway handler 的真实 resolve 接线和平台合同，不夸大为实际服务商重投实验。",
+            "- 是否已知：旧 `docs/review-remaining-2026-10-12/coding-tui-chat.md:229` 仅将 spooling 后备列为“未加独立恢复 fixture 的可见风险”；本轮新增小附件真实 I/O 故障与重启证据，不是复制旧已确认结论。",
+            "- 建议：区分显式超限策略与普通 I/O/materialization 故障，向调用者返回/记录降级状态，再由调用者选择拒绝确认或接受内存后备；避免“queued”掩盖本地不可恢复性。"
+          ]
+        },
+        {
+          "start": 47,
+          "end": 48,
+          "lines": [
+            "- 第一轮：Mobile `remote-host-manager` 的完整建立连接/认证/输出/撤销路径；Web `useRemoteSocket`、`mobileOutputClient`、`app/protocol`、approval reducer；Chat `delivery-queue`、`chat-gateway`、`lifecycle`、`ingress`、adapter factory；Browser diagnostics `inspector` 与 Desktop 使用接线；Link browser handoff、device OAuth broker、service 开头；Hub auth HTTP、Web auth/API scope。",
+            "- 查重后保留为已知待再验：Mobile broadcast/device 输出无背压；Chat 同 target retry 越序；Telegram allowlist 前下载。它们不会计入本轮新增条目。"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "selected": [
+        {
+          "start": 142,
+          "end": 150,
+          "lines": [
+            "### C8 [P2, generic SDK scope] Retried earlier same-target message is overtaken despite maxPerTarget=1",
+            "",
+            "Source: `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/delivery-queue.ts:247`.",
+            "",
+            "Trigger: per-target serial gateway, message a has a transient delivery failure, then b arrives for the same target. pump skips a while its nextAttemptAt is in the future and selects b; maxPerTarget only limits concurrent operations. It does not preserve the documented per-target ordering through retry, so stateful conversational middleware can apply b before a.",
+            "",
+            "Real DeliveryQueue maxConcurrent1/maxPerTarget1: control delivered[a,b]; transient a failure delivered[a,b,a]. Final guarded case fifo. Scope is exported generic ChatGateway/DeliveryQueue and configured serial consumers. Current product Chat CLI intentionally raises per-target concurrency to at least4 for Mimi steering; this finding does not claim that product path promises globally serial semantics.",
+            "",
+            "Recommendation: hold later same-target records behind the first outstanding record when serial ordering is selected, while allowing other targets to progress."
+          ]
+        },
+        {
+          "start": 213,
+          "end": 213,
+          "lines": [
+            "**chat — source-directed:** all12 adapter production files `telegram,discord,slack,lark,dingtalk,wecom,wechat,matrix,mattermost,line,whatsapp,teams`; `src/{channel,adapter-factory,chat-gateway,delivery-queue,cli,gateway,bound-session-chat,ingress,attachments,lifecycle,media,webhook,config,desktop-control-client,instance-lock,notification-relay,notification-progress,wechat-storage,wechat-login,service-manager,codeshell}.ts`. Actual pre-load sender filtering was checked at adapter construction and adapter handlers: allowlist middleware is gateway dispatch-time, not an adapter admission callback. Signed webhook/SDK sender parsing, queues/dedupe/retry, reconnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+          ]
+        },
+        {
+          "start": 228,
+          "end": 229,
+          "lines": [
+            "- Unbounded attachment.load signal/cancellation in queue can retain preparation capacity; only pre-allowlist order was dynamically established. No timeout/cancel finding claimed.",
+            "- Failed attachment spooling intentionally falls back to memory-only records; restart durability implications are visible in source but were not added as a new finding without a separate real recovery fixture."
+          ]
+        },
+        {
+          "start": 233,
+          "end": 233,
+          "lines": [
+            "Dedup sources read: `/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/README.md` and `priority-and-coverage.md` (86 findings at older84740/a66f). No confirmed finding here repeats an old issue's same source/root cause. R18 browser/server CLI busy handling is distinct from C1's coding runtime transport-to-turn contract; R63 notification priority queue is distinct from C8's per-target retry ordering."
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/findings.json",
+      "sha256": "b72da00f7b2f0a1e6fe1024dfc941c821fb649a5527e8f7c15d23f5fa5e6c7cc",
+      "objects": [
+        {
+          "pointer": "/issues/21",
+          "value": {
+            "id": "N22",
+            "priority": "P2",
+            "title": "Chat串行同目标队列重试被后消息越过",
+            "repository": "core",
+            "file": "/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/chat/src/delivery-queue.ts",
+            "line": 247,
+            "triggerAndImpact": "maxPerTarget=1时A失败backoff，B先发送，再retryA；仅generic serial SDK合同，当前Mimi并发路径不承诺串行。",
+            "report": "coding-tui-chat.md",
+            "originalId": "C8"
+          }
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "sha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "selected": [
+        {
+          "start": 3,
+          "end": 15,
+          "lines": [
+            "冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本批只写报告、fixture 与证据，没有产品代码或 Git mutation。范围为 shared splitter、普通 Markdown 投影、channel 能力、附件元数据与内存通知进度；适配器只定向读取普通数据转换。未向平台或任何人发消息。",
+            "",
+            "## CHAT-R11-01 — P3：通知进度首次读取失败被缓存，后续自动重试不再读取已恢复的 store",
+            "",
+            "**位置与正常入口。** [notification-progress.ts:187](../../packages/chat/src/notification-progress.ts#L187) 的 `ensureLoaded()` 用 `loadTask ??=` 缓存首次加载 Promise；拒绝后没有清除。每次 `begin()` 在 [116 行](../../packages/chat/src/notification-progress.ts#L116) 都先等待同一 Promise。长期存活的通知 handler 在 [notification-relay.ts:97](../../packages/chat/src/notification-relay.ts#L97) 创建一个 progress 实例、在 123 行开始事件。CLI 的 [cli.ts:116](../../packages/chat/src/cli.ts#L116) 和 Desktop [im-gateway-service.ts:565](../../packages/desktop/src/main/im-gateway-service.ts#L565) 都只构造一次 File store/handler 后交给 watcher；两处明确显示“Desktop 通知等待重试”。File store [69–71 行](../../packages/chat/src/notification-progress.ts#L69) 将非 ENOENT 读取错误上抛，正常的读取 API 失败可以进入这个分支。",
+            "",
+            "**契约与触发。** [DesktopControlClient.watchEvents:188](../../packages/chat/src/desktop-control-client.ts#L188) 顺序处理通知，只有 handler 成功才推进事件 cursor；[212–218 行](../../packages/chat/src/desktop-control-client.ts#L212) 在错误后等待并再次轮询。暂时读取错误消失后，该循环应能重新尝试加载进度，继续原事件。当前第一次 `store.load()` 拒绝会使后续重试一直等待那个已拒绝的 Promise，直到 handler 被重建。",
+            "",
+            "**实际证据。** [首次 fixture](evidence/chat-progress-load.test.ts) 执行真实 `NotificationDeliveryProgress`、`createDesktopNotificationHandler` 和 `DesktopControlClient.prototype.watchEvents` 方法，仅用内存 store、fake adapter 和 page/sleep 回调：store 的第一次 load 抛模拟暂时读取错误，之后任何实际 load 都能成功。实际 watcher 处理同一事件重试 3 次，得到同一错误对象，`load=1`、`send=0`、轮询 cursor 为 `[0,0,0]`。测试在第 3 次错误后主动 abort，不声称执行了无限重试。完全相同的 store 交给新 handler 后第二次 load 成功，原事件发送 1 次。",
+            "",
+            "**控制与影响边界。** 初次正常 load 的 watcher 控制只有 1 次 load/1 次 send、无 error；同一 progress 实例的 save 暂时失败可通过 `flush()` 恢复，表明问题限定首次读取 Promise。动态证据支持同一 handler 的自动恢复受阻；未诱发真实磁盘 EIO/EMFILE，不推断发生频率、OS 行为、账号平台接收或 UI。cursor 仍停在原事件，新 handler 能处理，因此不称永久丢失；同一 watcher 的后续通知会静态地排在该事件后面，未动态演练多个生产 outbox 事件。",
+            "",
+            "**查重。** [所有历史清单](evidence/chat-all-history-dedup.json) 枚举全部 1601 个旧 docs/bugs MD 与 parsed JSON，含 archive/_archive 和普通命名文档，35 个路径/精确 helper 相关文件，0 parse error；未找到通知首次 load rejected Promise 同根因记录。早先 [audit/review 命名子集](evidence/chat-dedup.json) 为 1111 个文件、94 个宽关键词相关文件，另有 [进度专项检索](evidence/chat-progress-dedup.json)；两次关键词范围不同，匹配数量不可相减当成新发现。新增匹配的普通设计/roadmap 只描述现有通知进度复用，没有这个初始化拒绝缓存的既有 finding。旧通知结果映射、DeliveryQueue FIFO/ACK、LINE 上限、Slack thread 与 Unicode 附件名不重复计入。检索/散列不是宣称逐行审查过全部旧文档。"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/findings.json",
+      "sha256": "623dceaf7d194fb747529ffdd59994416111d78f5ba43925a505c8a7d93a1aa8",
+      "objects": [
+        {
+          "pointer": "/findings/0",
+          "value": {
+            "id": "CHAT-R11-01",
+            "priority": "P3",
+            "title": "通知进度首次 load 失败的 rejected Promise 被缓存，同一 watcher 后续重试不再读取已恢复的 store",
+            "source": "packages/chat/src/notification-progress.ts",
+            "line": 187,
+            "report": "chat.md",
+            "reportLine": 5,
+            "log": "evidence/chat-progress-load.first.log",
+            "evidenceLevel": "真实 NotificationDeliveryProgress、createDesktopNotificationHandler、DesktopControlClient.prototype.watchEvents 方法；内存 store、fake adapter、page/sleep 回调替身。watcher 不构造 client，不走 request/descriptor/spawn/checkpoint。",
+            "staticScope": "CLI 和 Desktop host 生产构造接线、FileNotificationDeliveryProgressStore 的非 ENOENT 传播。",
+            "limitations": [
+              "未诱发真实磁盘/OS 读取故障，不验证具体 EIO/EMFILE 概率或平台恢复。",
+              "未运行 Desktop/CLI host、实际账号/平台/模型、网络/SDK连接、权限或 custody 行为。",
+              "未证明通知永久丢失；当前不推进 cursor，新 handler/process 重建可恢复。",
+              "结论限定初次 load 失败；已加载后的 save/flush 恢复控制通过。"
+            ],
+            "status": "confirmed-at-frozen-source-baseline",
+            "currentMainSourceDisposition": "direct-source-unchanged-at-reviewed-main",
+            "runtimeRetested": false
+          }
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-findings.json",
+      "sha256": "b5867052aeb00ce829b4ba4c2244d2abcebdf36f9acf669a6e255b5ec898f06b",
+      "objects": [
+        {
+          "pointer": "/findings/0",
+          "value": {
+            "id": "CHAT-R11-01",
+            "priority": "P3",
+            "title": "通知进度首次 load 失败的 rejected Promise 被缓存，同一 watcher 后续重试不再读取已恢复的 store",
+            "source": "packages/chat/src/notification-progress.ts",
+            "line": 187,
+            "lines": [
+              186,
+              191
+            ],
+            "trigger": "长期存活的 createDesktopNotificationHandler 初次 begin() 时，progressStore.load() 暂时失败；随后 store 已能正常读取，watchEvents 重试同一通知。",
+            "actual": "ensureLoaded 的 loadTask 保留原 rejected Promise；实际 watchEvents 循环连续 3 次失败、store.load 仅 1 次、fake adapter send 0 次、cursor 始终 0。",
+            "expected": "后续通知重试应有机会重新 load 正常状态，并在成功后继续原事件；错误不能仅因 cached rejected Promise 在同一 handler 生命周期反复出现。",
+            "normalProducerAndContract": "CLI cli.ts:116-138 与 Desktop im-gateway-service.ts:565-583 长期复用一个由 FileNotificationDeliveryProgressStore 支持的 handler，并把通知异常按等待重试处理。DesktopControlClient.watchEvents:188-218 顺序调用 handler、失败后退避重试。实际 File store:69-71 对非 ENOENT 读取错误向上传播。",
+            "controls": [
+              "初次正常 load：实际 watcher/page callbacks/fake adapter，1 load、1 send、无 error。",
+              "同一故障后的 healthy store 用新 handler 处理完全相同事件，第二次 load 成功并 send 1 次。",
+              "同一 progress 对暂时 save 失败可用 flush 恢复。",
+              "共享 splitter 在最大长度 2/17/1800/8000 下完整重建 Unicode/空白并保留 UTF-16 对。"
+            ],
+            "evidence": [
+              "evidence/chat-progress-load.test.ts",
+              "evidence/chat-progress-load.first.log",
+              "evidence/chat-progress-load.first.exit.json"
+            ],
+            "dynamicScope": "真实 NotificationDeliveryProgress、createDesktopNotificationHandler、DesktopControlClient.prototype.watchEvents 方法；内存 store、fake adapter、page/sleep 回调替身。watcher 不构造 client，不走 request/descriptor/spawn/checkpoint。",
+            "staticScope": "CLI 和 Desktop host 生产构造接线、FileNotificationDeliveryProgressStore 的非 ENOENT 传播。",
+            "limitations": [
+              "未诱发真实磁盘/OS 读取故障，不验证具体 EIO/EMFILE 概率或平台恢复。",
+              "未运行 Desktop/CLI host、实际账号/平台/模型、网络/SDK连接、权限或 custody 行为。",
+              "未证明通知永久丢失；当前不推进 cursor，新 handler/process 重建可恢复。",
+              "结论限定初次 load 失败；已加载后的 save/flush 恢复控制通过。"
+            ],
+            "dedup": "All 1601 prior docs/bugs Markdown and parsed JSON including archive/_archive and ordinary filenames scanned, 35 precise path/helper matches, 0 parse error; no same-root-cause finding. Earlier 1111-file named-audit subset and broader-keyword receipt retained."
+          }
+        }
+      ]
+    }
+  ],
+  "productFiles": []
+}

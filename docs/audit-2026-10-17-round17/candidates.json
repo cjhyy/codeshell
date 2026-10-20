@@ -1,0 +1,100 @@
+{
+  "baseline": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "count": 3,
+  "candidates": [
+    {
+      "id": "CATALOG-R17-C1",
+      "status": "candidate",
+      "title": "Panel catalog default omits Core first-connection fallback",
+      "source": {
+        "path": "packages/server/src/panels/agent-task-models.ts",
+        "start": 75,
+        "end": 82
+      },
+      "ordinaryTrigger": "Configured plain text connection with missing or stale defaults.text; settings schema permits an absent default.",
+      "observed": "Actual leaf returns a nonempty models list without defaultModel; an exact default control retains its id.",
+      "contract": "docs/panel-apps.md:373–377 says effective defaultModel and omitted start.model follows the effective CodeShell default; Engine/runtime static paths fall back to the first entry.",
+      "consumerStatic": "packages/server/src/panels/agent-task-host.ts:348–350 requires input.model or catalog.defaultModel.",
+      "reasonNotConfirmed": "Existing Desktop test deliberately expects invalid default omission. Ordinary UI addition fills a default. Host/Engine/settings loading/task execution were not run, so policy and complete task failure remain unverified.",
+      "evidence": [
+        "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts",
+        "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.raw.log"
+      ],
+      "runtimeBoundary": "Actual server leaf only for default; downstream and schema read statically."
+    },
+    {
+      "id": "CATALOG-R17-C2",
+      "status": "candidate",
+      "title": "Panel catalog trim rewrites configured connection identity",
+      "source": {
+        "path": "packages/server/src/panels/agent-task-models.ts",
+        "start": 27,
+        "end": 31
+      },
+      "additionalSource": {
+        "path": "packages/server/src/panels/agent-task-models.ts",
+        "start": 60,
+        "end": 72
+      },
+      "ordinaryTrigger": "Manual catalog editor can retain surrounding spaces in provider id or preset value; actual validateEntry/buildInstance/catalogModelOptions retain those ordinary in-memory records.",
+      "observed": "Actual catalog output changes connection id and default from \" local \" to \"local\". Distinct padded/unpadded ids collapse. Padded model value loses its exact preset label.",
+      "control": "Unpadded catalog id remains equal to actual buildInstance id and picker key.",
+      "contract": "Catalog leaf says connections are real engine pool keys; docs says returned id selects the Task connection. Core model-connections-pool uses raw inst.id, read statically.",
+      "reasonNotConfirmed": "No React editor, IPC persistence, schema.safeParse, Core pool selection or Panel worker execution. Task service separately trims model input, so intended cross-boundary restriction/policy remains unverified; no claim a live model accepts padded model ids.",
+      "evidence": [
+        "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts",
+        "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.raw.log"
+      ],
+      "runtimeBoundary": "Actual buildPanelAgentTaskModelCatalog, validateEntry, buildInstance and catalogModelOptions; downstream static only."
+    },
+    {
+      "id": "MAPPERS-R17-C1",
+      "status": "candidate",
+      "priority": null,
+      "title": "Snapshot tool start uses a positional id while later real-id room result retains original toolId",
+      "ordinaryTrigger": "Opening/re-subscribing to a followed external session while a tool call is in flight (static production wiring only; not executed).",
+      "sourceLocations": [
+        {
+          "path": "packages/web/src/lib/messageMappers.ts",
+          "lines": "112-123,54-59"
+        },
+        {
+          "path": "packages/coding/src/cc-orchestrator/session-history.ts",
+          "lines": "7-15"
+        },
+        {
+          "path": "packages/desktop/src/main/cc-room/transcript-subscriptions.ts",
+          "lines": "135-140,217-225,551-557"
+        },
+        {
+          "path": "packages/web/src/hooks/useRemoteApp.ts",
+          "lines": "1157-1177"
+        }
+      ],
+      "observed": "Actual mapper APIs on ordinary owned HistoryMessage and RoomMessage objects yield cc-hist-0-0 for the history tool start and toolu_owned_running for the result; direct live start/result both retain toolu_owned_running.",
+      "dynamicScope": "Pure mapper functions only; hand-built valid object shapes; no production parser/follower/RoomManager/reducer/consumer execution.",
+      "controls": [
+        "Normal RoomMessage start/result pairing retains real ids including out-of-order results.",
+        "Legacy starts retain sequence-based id and legacy results keep id-less event.",
+        "History tool positional ids are distinct and deterministic.",
+        "Prose, args and user attachments preserve documented mappings; frozen inputs remain unchanged."
+      ],
+      "missingEvidence": [
+        "Actual common in-flight call across snapshot/live boundary not reproduced.",
+        "Contract requiring id identity across a historical completed boundary and subsequent live result not independently established.",
+        "Consumer/reducer outcome not executed; no result loss, mispairing, stuck state, duplicate UI, or other display claim."
+      ],
+      "test": "evidence/mappers-pure.test.ts",
+      "rawLog": "evidence/mappers-pure.first.raw.log",
+      "baseCommit": "d86db33012dffd5d1849e76b869fa15eb260324f",
+      "relatedHistoricalRecordsExcluded": [
+        "old non-array room-history guard",
+        "old top-level Engine duplicate turn_complete",
+        "old parallel tool-id pairing",
+        "old Codex MCP summary",
+        "round14 failed userMessageDisplay dynamic direction"
+      ]
+    }
+  ],
+  "note": "Actual pure observations with incomplete cross-boundary policy/producer/consumer evidence; no formal severity."
+}

@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T16:06:22.368380+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lines": 5082,
+      "beforeRootCurrentBodyAndNavigation": true
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "frozenUTC": "2026-10-17T16:23:05.602222+00:00",
+  "directory": "/tmp/codeshell-audit-round75-trace-history",
+  "selfExcluded": "reviewer-receipt.json",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "files": [
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 2777,
+      "sha256": "a87cbd8973f43b7bc4b346fd34e3d8aded2ab38b1824e54efce649f331803a63"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 669,
+      "sha256": "028c20e4015f04a5894f3fe4f378dfc3af172e926b1b9d4b1cdcf514421489ec"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 6118,
+      "sha256": "b7148f09573f171ca64f359f77aa08dd73c0696d1b9a10c395e959304ebf5cce"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3817,
+      "sha256": "ebaef55ae7a361999f15b0192b460d838c74918f4dd529d57458c228b51d8966"
+    },
+    {
+      "path": "history.json",
+      "bytes": 898274,
+      "sha256": "3d14f36121787bf7b5386baf31dd88c2738221d7f7b76715c8a7e89fcbba209e"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 637,
+      "sha256": "a8c5cca7a20c079169179484574b600d13159089657a558004380f7f2c55a1e6"
+    },
+    {
+      "path": "metadata-first-error.json",
+      "bytes": 604,
+      "sha256": "5ced0f7df46e6c9c69f753be4f0c17872adf8e1c9c06e38b0b1ac34e9d3c7e0b"
+    },
+    {
+      "path": "metadata-first-error.txt",
+      "bytes": 149,
+      "sha256": "e7c338afbc67e8322dea2f581b3608e3eb585778d869adc36966b4ac6a7c3bdd"
+    },
+    {
+      "path": "parent-context-notes.json",
+      "bytes": 463,
+      "sha256": "f7dea8293d43206c76edddcbf74252cebfe84540b83143dc0eb8e05f13d4f70c"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3777,
+      "sha256": "d60969718045e0df9bc310b206d44ee7651c75ba49343ab156120e18b88e85d2"
+    },
+    {
+      "path": "source-display-pins.json",
+      "bytes": 2589,
+      "sha256": "32ccec4d97829cf40cd4eb3d1950f76b1d2533ebdb3252b77b7382610fe268a9"
+    },
+    {
+      "path": "source-excerpts.txt",
+      "bytes": 10026,
+      "sha256": "768b3e80df1f4b918a210e0487d17caee55f6a9dbf353fee5d90a94e6a06b061"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 8939,
+      "sha256": "5c69dc71f41e34690d648e1705734d9562bbd09099b23a34cc1ede8cd65a008a"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 868,
+      "sha256": "7d587aa1dc8501d39f3d7c4436952bc5c97e7df79ab14e524f2c291ad9ac4162"
+    }
+  ]
+}

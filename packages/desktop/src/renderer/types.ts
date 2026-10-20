@@ -5,7 +5,7 @@
  * Message; one tool call (start → result) is one Message.
  */
 
-import type { StreamEvent } from "@cjhyy/code-shell-core";
+import type { StreamEvent, TurnDiffSnapshot } from "@cjhyy/code-shell-core";
 import { projectOutputUserEvent } from "@cjhyy/code-shell-web";
 import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import type { ApprovalRequestEnvelope } from "../preload/types";
@@ -44,6 +44,8 @@ export interface UserMessage {
   steerId?: string;
   /** Stable submit-intent id used to merge duplicate local/server echoes. */
   clientMessageId?: string;
+  /** Original persisted user event when replayed from a transcript window. */
+  sourceEventId?: string;
   /** True until the engine echoes steer_injected for this steerId. */
   pending?: boolean;
   /** User-supplied Mimi attachments projected for chat rendering. */
@@ -137,6 +139,9 @@ export interface AgentMessage {
   toolCalls: ToolMessage[];
   /** Accumulating text_delta payload; flushed to `text` on turn_complete / agent_end. */
   textBuffer: string;
+  /** Current correlated child model request. The offset spans text + textBuffer
+   *  so a parent-turn flush cannot move its revocation frontier. */
+  streamingTextRequest?: { messageId: string; startOffset: number };
   /** Cheap counter for the folded header. Equals toolCalls.length. */
   toolCount: number;
 }
@@ -161,6 +166,10 @@ export interface SystemMessage {
   kind: "system";
   id: string;
   text: string;
+  /** Latest execution-owned aggregate; empty files are an authoritative net-zero result. */
+  turnDiff?: TurnDiffSnapshot;
+  /** Capture timestamp retained when late child events rebuild this turn's card. */
+  turnDiffCapturedAt?: number;
   /** Hidden attribution payload carried by a DriveAgent completion marker. */
   externalFileChanges?: {
     sourceId: string;
@@ -290,15 +299,14 @@ export interface SessionFileDiff {
   path: string;
   /** Tool call that produced this diff; used only as stable provenance. */
   toolCallId: string;
-  /** Synthetic unified diff generated from the tool's own edit payload. */
+  /** Execution-owned original-to-final diff, or a legacy tool-payload preview. */
   diff: string;
 }
 
 /**
  * Codex-style "files changed this turn" summary card, appended on
- * turn_complete when at least one successful Edit/Write/NotebookEdit
- * fired since the last user message. Renderer-computed — no engine
- * event for this; see fileChangeAggregator.ts.
+ * execution updates and turn_complete. New runs use authoritative turn_diff
+ * snapshots; older transcripts retain tool-payload previews.
  */
 export interface FilesChangedSummaryMessage {
   kind: "files_changed";
@@ -307,9 +315,9 @@ export interface FilesChangedSummaryMessage {
   totalAdded: number;
   totalRemoved: number;
   /**
-   * Session/turn-scoped diff snippets derived from the tool calls that
-   * produced this card. This deliberately avoids asking Git for the
-   * whole working tree, which can include changes from other sessions.
+   * Execution-owned original-to-final diffs, one per file. Older transcripts
+   * and unresolved child writes retain explicitly incomplete tool previews.
+   * Avoids including unrelated changes from the working tree.
    */
   sessionDiffs?: SessionFileDiff[];
 }
@@ -358,6 +366,7 @@ export interface MessagesReducerState {
   singleTurnCacheReadTokens: number;
   singleTurnCacheCreationTokens: number;
   /** Whole-session monotonic prompt-cache totals. */
+  cacheUsageVersion?: 1;
   cumulativePromptTokens: number;
   cumulativeCacheReadTokens: number;
   cumulativeCacheCreationTokens: number;
@@ -431,6 +440,30 @@ export const INITIAL_STATE: MessagesReducerState = {
   turnEpoch: 0,
   activeGoal: null,
 };
+
+/** Old snapshots include auxiliary usage; never merge those totals into main-call counts. */
+export function mergeCumulativeCacheUsage(left: MessagesReducerState, right: MessagesReducerState) {
+  const sameScope = left.cacheUsageVersion === right.cacheUsageVersion;
+  const primary = left.cacheUsageVersion === 1 ? left : right;
+  const prompt = sameScope
+    ? Math.max(left.cumulativePromptTokens, right.cumulativePromptTokens)
+    : primary.cumulativePromptTokens;
+  const read = sameScope
+    ? Math.max(left.cumulativeCacheReadTokens, right.cumulativeCacheReadTokens)
+    : primary.cumulativeCacheReadTokens;
+  const creation = sameScope
+    ? Math.max(left.cumulativeCacheCreationTokens, right.cumulativeCacheCreationTokens)
+    : primary.cumulativeCacheCreationTokens;
+  return {
+    cacheUsageVersion: primary.cacheUsageVersion,
+    cumulativePromptTokens: prompt,
+    cumulativeCacheReadTokens: read,
+    cumulativeCacheCreationTokens: creation,
+    sessionPromptTokens: prompt,
+    sessionCacheReadTokens: read,
+    sessionCacheCreationTokens: creation,
+  };
+}
 
 let _counter = 0;
 function freshId(prefix: string): string {
@@ -574,8 +607,143 @@ function withTurnTiming(
     };
   }
   const next = messages.slice();
-  next[index] = { ...user, turnTiming: timing };
+  next[index] = {
+    ...user,
+    ...(event.type === "session_started" && event.runId
+      ? { sourceEventId: user.sourceEventId ?? event.runId }
+      : {}),
+    turnTiming: timing,
+  };
   return next;
+}
+
+function turnDiffNotice(snapshot: TurnDiffSnapshot, unresolvedPaths: string[] = []): string {
+  return [
+    snapshot.complete
+      ? ""
+      : `${translate(loadUILanguage(), "msg.files.incompleteDiff")} ${snapshot.omissions
+          .map((omission) => `${omission.path}: ${omission.reason}`)
+          .join("; ")}`.trim(),
+    unresolvedPaths.length
+      ? `${translate(loadUILanguage(), "msg.files.lateChangesDiff")} ${unresolvedPaths.join("; ")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** Replace the aggregate inside its original user turn, including late/replayed updates. */
+function applyTurnDiff(
+  state: MessagesReducerState,
+  event: Extract<StreamEvent, { type: "turn_diff" }>,
+  capturedAt: number | undefined,
+): MessagesReducerState {
+  if (event.agentId) return state;
+  const run = Object.values(state.streamRuns ?? {}).find((item) => item.runId === event.turnId);
+  const start = state.messages.findIndex(
+    (message) =>
+      message.kind === "user" &&
+      !message.injected &&
+      (message.sourceEventId === event.turnId || message.id === run?.userMessageId),
+  );
+  // A paged history can omit the owner. Never attach its diff to a newer user turn.
+  if (start < 0) return state;
+  const offset = state.messages
+    .slice(start + 1)
+    .findIndex((message) => message.kind === "user" && !message.injected);
+  const end = offset < 0 ? state.messages.length : start + offset + 1;
+  const scoped = state.messages.slice(start, end);
+  const previousSnapshot = scoped.find(
+    (message) => message.kind === "system" && message.turnDiff?.turnId === event.turnId,
+  );
+  if (
+    capturedAt !== undefined &&
+    previousSnapshot?.kind === "system" &&
+    previousSnapshot.turnDiffCapturedAt !== undefined &&
+    capturedAt < previousSnapshot.turnDiffCapturedAt
+  )
+    return state;
+  const previous = scoped.find((message) => message.kind === "files_changed");
+  const snapshot: TurnDiffSnapshot = {
+    turnId: event.turnId,
+    cwd: event.cwd,
+    files: event.files,
+    trackedPaths: event.trackedPaths,
+    toolCallIds: event.toolCallIds,
+    complete: event.complete,
+    omissions: event.omissions,
+    ...(event.capturedAt !== undefined ? { capturedAt: event.capturedAt } : {}),
+  };
+  const marker: SystemMessage = {
+    kind: "system",
+    id: `turn-diff:${event.turnId}`,
+    text: turnDiffNotice(snapshot),
+    turnDiff: snapshot,
+    turnDiffCapturedAt: capturedAt,
+  };
+  const logicalTurn = [
+    ...scoped.filter(
+      (message) =>
+        message.kind !== "files_changed" &&
+        !(message.kind === "system" && message.turnDiff?.turnId === event.turnId),
+    ),
+    marker,
+  ];
+  const owner = scoped[0];
+  // Late completions are displayed after the newer turn, but their file
+  // evidence still belongs to this owner when an execution snapshot refreshes.
+  const priorLateMarkers =
+    owner.kind === "user" && owner.clientMessageId
+      ? state.messages
+          .slice(end)
+          .filter(
+            (message) =>
+              message.kind === "system" &&
+              message.externalFileChanges?.originClientMessageId === owner.clientMessageId,
+          )
+      : [];
+  const summary = aggregateFileChangeSummary([...logicalTurn, ...priorLateMarkers]);
+  marker.text = turnDiffNotice(snapshot, summary?.unresolvedPaths);
+  if (summary?.files.length) logicalTurn.push(filesChangedMessage(summary, previous?.id));
+  const messages = [
+    ...state.messages.slice(0, start),
+    ...logicalTurn,
+    ...state.messages.slice(end),
+  ];
+  return {
+    ...state,
+    messages,
+    agentMessageIndex: Object.fromEntries(
+      messages.flatMap((message, index) => (message.kind === "agent" ? [[message.id, index]] : [])),
+    ),
+  };
+}
+
+function refreshTurnDiffForAgent(
+  state: MessagesReducerState,
+  agentId: string,
+): MessagesReducerState {
+  const index = state.agentMessageIndex[agentId];
+  if (index === undefined) return state;
+  let start = index;
+  while (start >= 0) {
+    const message = state.messages[start];
+    if (message.kind === "user" && !message.injected) break;
+    start--;
+  }
+  if (start < 0) return state;
+  for (let i = start + 1; i < state.messages.length; i++) {
+    const message = state.messages[i];
+    if (message.kind === "user" && !message.injected) break;
+    if (message.kind === "system" && message.turnDiff) {
+      return applyTurnDiff(
+        state,
+        { type: "turn_diff", ...message.turnDiff },
+        message.turnDiffCapturedAt,
+      );
+    }
+  }
+  return state;
 }
 
 /** Shared text for a background-task completion (video etc.) — used by the
@@ -664,6 +832,15 @@ function attachExternalChangesToOriginTurn(
       : undefined,
   );
   const next = messages.slice();
+  for (let i = start + 1; i < end; i++) {
+    const message = next[i];
+    if (message.kind === "system" && message.turnDiff) {
+      next[i] = {
+        ...message,
+        text: turnDiffNotice(message.turnDiff, aggregate.unresolvedPaths),
+      };
+    }
+  }
   let insertedAt: number | undefined;
   if (existingCardIndex >= 0) {
     next[existingCardIndex] = summary;
@@ -767,13 +944,19 @@ export function applyStreamEvent(
     event.agentId
   )
     return state;
+  if (event.type === "turn_diff") return applyTurnDiff(state, event, event.capturedAt ?? eventTime);
   event = projectOutputUserEvent(event);
   if (
     ("agentId" in event && event.agentId !== undefined) ||
     event.type === "session_user_message" ||
     event.type === "steer_injected"
   ) {
-    return applyStreamEventToTurn(state, event, now);
+    const next = applyStreamEventToTurn(state, event, now);
+    return "agentId" in event &&
+      event.agentId &&
+      ["tool_use_start", "tool_result", "agent_end"].includes(event.type)
+      ? refreshTurnDiffForAgent(next, event.agentId)
+      : next;
   }
   const runs = state.streamRuns ?? {};
   const knownKey = Object.keys(runs).find((key) =>
@@ -940,21 +1123,7 @@ export function applyStreamEvent(
     agentMessageIndex: Object.fromEntries(
       messages.flatMap((message, index) => (message.kind === "agent" ? [[message.id, index]] : [])),
     ),
-    cumulativePromptTokens: Math.max(state.cumulativePromptTokens, next.cumulativePromptTokens),
-    cumulativeCacheReadTokens: Math.max(
-      state.cumulativeCacheReadTokens,
-      next.cumulativeCacheReadTokens,
-    ),
-    cumulativeCacheCreationTokens: Math.max(
-      state.cumulativeCacheCreationTokens,
-      next.cumulativeCacheCreationTokens,
-    ),
-    sessionPromptTokens: Math.max(state.sessionPromptTokens, next.sessionPromptTokens),
-    sessionCacheReadTokens: Math.max(state.sessionCacheReadTokens, next.sessionCacheReadTokens),
-    sessionCacheCreationTokens: Math.max(
-      state.sessionCacheCreationTokens,
-      next.sessionCacheCreationTokens,
-    ),
+    ...mergeCumulativeCacheUsage(state, next),
   };
 }
 
@@ -1067,7 +1236,25 @@ function applyStreamEventToTurn(
       // not open a main assistant slot. Top-level starts have no agentId and
       // must not be routed based on the activeAgents table, which can contain
       // stale/orphan cleanup state during replay and background handoffs.
-      if (event.agentId) return state;
+      if (event.agentId) {
+        const index = state.agentMessageIndex[event.agentId];
+        const agent = index === undefined ? undefined : state.messages[index];
+        if (agent?.kind !== "agent" || agent.done) return state;
+        if (event.messageId === agent.streamingTextRequest?.messageId) return state;
+        // Legacy starts without an id still leave displayed text untouched,
+        // but cannot let an older request claim later uncorrelated deltas.
+        const messages = [...state.messages];
+        messages[index!] = {
+          ...agent,
+          streamingTextRequest: event.messageId
+            ? {
+                messageId: event.messageId,
+                startOffset: (agent.text?.length ?? 0) + agent.textBuffer.length,
+              }
+            : undefined,
+        };
+        return { ...state, messages };
+      }
       const id = event.messageId ?? freshId("assistant");
       const startedAt = now();
       const previousId = state.streamingAssistantId;
@@ -1680,6 +1867,7 @@ function applyStreamEventToTurn(
     }
 
     case "usage_update": {
+      const acceptsCacheUsage = state.cacheUsageVersion !== 1 || event.cacheUsageVersion === 1;
       // Fields update independently and additively — a single event can carry
       // any combination of them. The turn-loop's per-response emit carries the
       // context reading + single-turn cache + cumulative cache all at once, so
@@ -1699,10 +1887,24 @@ function applyStreamEventToTurn(
       const hasLivePromptReading = Number.isFinite(event.promptTokens) && event.promptTokens > 0;
       return {
         ...state,
+        ...(event.cacheUsageVersion === 1 && state.cacheUsageVersion !== 1
+          ? {
+              singleTurnPromptTokens: 0,
+              singleTurnCacheReadTokens: 0,
+              singleTurnCacheCreationTokens: 0,
+              cumulativePromptTokens: 0,
+              cumulativeCacheReadTokens: 0,
+              cumulativeCacheCreationTokens: 0,
+              sessionPromptTokens: 0,
+              sessionCacheReadTokens: 0,
+              sessionCacheCreationTokens: 0,
+            }
+          : {}),
         ...(isCumulativeHeartbeat || !hasLivePromptReading
           ? {}
           : { promptTokens: event.promptTokens }),
-        ...(hasSingleTurn
+        ...(acceptsCacheUsage && event.cacheUsageVersion === 1 ? { cacheUsageVersion: 1 } : {}),
+        ...(hasSingleTurn && acceptsCacheUsage
           ? {
               singleTurnPromptTokens: event.singleTurnPromptTokens ?? event.promptTokens,
               singleTurnCacheReadTokens:
@@ -1711,7 +1913,7 @@ function applyStreamEventToTurn(
                 event.singleTurnCacheCreationTokens ?? event.cacheCreationTokens ?? 0,
             }
           : {}),
-        ...(hasCumulative
+        ...(hasCumulative && acceptsCacheUsage
           ? (() => {
               const cumulativePromptTokens =
                 event.cumulativePromptTokens ?? event.sessionPromptTokens ?? 0;
@@ -1736,15 +1938,31 @@ function applyStreamEventToTurn(
       if (event.agentId) {
         const index = state.agentMessageIndex[event.agentId];
         const agent = index === undefined ? undefined : state.messages[index];
-        if (
-          agent?.kind !== "agent" ||
-          !agent.toolCalls.some((tool) => tool.id === event.messageId)
-        ) {
-          return state;
-        }
+        if (agent?.kind !== "agent") return state;
+        const request =
+          !agent.done &&
+          agent.streamingTextRequest &&
+          agent.streamingTextRequest.messageId === event.messageId
+            ? agent.streamingTextRequest
+            : undefined;
+        if (!request && !agent.toolCalls.some((tool) => tool.id === event.messageId)) return state;
         const messages = [...state.messages];
         const toolCalls = agent.toolCalls.filter((tool) => tool.id !== event.messageId);
-        messages[index!] = { ...agent, toolCalls, toolCount: toolCalls.length };
+        messages[index!] = {
+          ...agent,
+          toolCalls,
+          toolCount: toolCalls.length,
+          ...(request
+            ? {
+                text: agent.text?.slice(0, request.startOffset),
+                textBuffer: agent.textBuffer.slice(
+                  0,
+                  Math.max(0, request.startOffset - (agent.text?.length ?? 0)),
+                ),
+                streamingTextRequest: undefined,
+              }
+            : {}),
+        };
         return { ...state, messages };
       }
       // Find the doomed message's index so we can adjust agentMessageIndex.
@@ -1867,7 +2085,7 @@ function applyStreamEventToTurn(
         finalized = finalized.filter((m, i) => !(i > lastUserIdx && m.kind === "files_changed"));
       }
       const summary = aggregateFileChangeSummary(finalized);
-      if (summary) {
+      if (summary?.files.length) {
         const card = filesChangedMessage(summary);
         const entries = card.files;
         finalized = [...finalized, card];
@@ -2062,6 +2280,7 @@ export function appendUserMessage(
   pending?: boolean,
   clientMessageId?: string,
   attachments?: PetChatAttachment[],
+  sourceEventId?: string,
 ): MessagesReducerState {
   if (clientMessageId) {
     let replaced = false;
@@ -2078,6 +2297,7 @@ export function appendUserMessage(
           pending: pending ?? m.pending,
           clientMessageId,
           attachments: attachments ?? m.attachments,
+          ...(sourceEventId ? { sourceEventId } : {}),
         };
       }
       return m;
@@ -2106,6 +2326,7 @@ export function appendUserMessage(
         pending,
         clientMessageId,
         attachments,
+        ...(sourceEventId ? { sourceEventId } : {}),
       },
     ],
   };

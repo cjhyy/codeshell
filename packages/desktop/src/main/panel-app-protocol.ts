@@ -10,11 +10,13 @@ import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 
 export const PANEL_APP_SCHEME = "cspanel";
 const CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
   // Local files explicitly selected in the guest can be previewed via object
   // URLs without granting filesystem URLs, network access, or blob scripts.
   "img-src 'self' data: blob:; media-src 'self' blob:; " +
-  "font-src 'self' data:; connect-src 'none'; object-src 'none'; " +
+  // Wasm loaders may fetch reviewed bytes from this guest's package origin.
+  // Other package origins and all HTTP(S) destinations remain denied.
+  "font-src 'self' data:; connect-src 'self'; object-src 'none'; " +
   "frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const MEDIA_CSP = "default-src 'none'; sandbox; frame-ancestors 'none'";
 const MEDIA_MIME_TYPES = new Set([
@@ -43,6 +45,7 @@ const MIME_TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
+  ".wasm": "application/wasm",
   ".md": "text/markdown; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
@@ -150,8 +153,8 @@ export function registerPanelAppSchemePrivileges(): void {
       privileges: {
         standard: true,
         secure: true,
-        supportFetchAPI: false,
-        corsEnabled: false,
+        supportFetchAPI: true,
+        corsEnabled: true,
         stream: true,
       },
     },

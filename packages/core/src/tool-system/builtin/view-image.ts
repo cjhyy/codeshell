@@ -17,8 +17,7 @@ import { extname, isAbsolute, resolve } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import type { BuiltinToolReturn } from "./index.js";
-import { capabilitiesFor } from "../../llm/capabilities/index.js";
-import type { ProviderKindName } from "../../llm/provider-kinds.js";
+import { capabilitiesForConfig } from "../../llm/capabilities/index.js";
 import { collectBase64Images, findImageByNumber } from "../../context/compaction.js";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB —— vision 模型按 tile 计 token,大图无益且撑大请求
@@ -144,9 +143,7 @@ export async function viewImageTool(
 }
 
 function supportsVision(ctx?: ToolContext): boolean {
-  if (!ctx?.llmConfig) return false;
-  const kind = (ctx.llmConfig.providerKind ?? ctx.llmConfig.provider) as ProviderKindName;
-  return capabilitiesFor(kind, ctx.llmConfig.model).supportsVision;
+  return capabilitiesForConfig(ctx?.llmConfig).supportsVision;
 }
 
 async function viewHistoricalImage(

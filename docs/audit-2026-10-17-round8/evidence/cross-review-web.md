@@ -1,0 +1,27 @@
+# Web lane: read-only cross-review of Root Git and Plugin metadata
+
+Reviewed frozen product base `ec0e16bf0068a458abcbaa28225a4c764c24f4de`, the two final lane reports, their fixtures, original first raw logs/exit receipts, relevant actual source, and selected metadata hashes. **New product tests/executions: 0.** No product or other lane file was edited by this reviewer.
+
+## Root Git: GIT-R8-01 is supported as conditional P3 summary data
+
+- The actual `WorktreeDiffSummary` contract requires unique changed files. The committed path set keeps surrounding Git quotes while the dirty path set runs `unquoteGitPath`; union at `diff.ts:61` therefore admits two strings for the same quoted file.
+- The owned fixture invokes real `getWorktreeDiff` and replaces only the Git-output module. Both quoted UTF-8 and quoted ASCII cases observe `changedFiles=2`, with same-file ASCII and distinct-file controls observing 1 and 2 respectively. Each case asserts zero calls at the throwing native-process boundary.
+- The first raw focused log is Completed: 4 pass / 12 expect / 0 failures / 0 skipped. The separate existing parser/slug baseline is Completed: 8 pass / 17 expect / 0 failures / 0 skipped. The report's total 12 tests / 29 expect is correct. Passing assertions reproduce a bug; they do not validate a fix.
+- The report correctly limits Git-output format to fixture data supported by linked primary Git documentation. This review did not capture real Git output or independently run a native command, real repository/worktree lifecycle, UI or model. Its static consumer claim is narrow enough.
+- Citation precision correction sent to root: frozen `query.ts` checks `includeDiffSummary` at line 173 and calls `getWorktreeDiff` at line 177; the report originally cited 179–194, overlapping the following `ownersForWorktree`. This requires a documentation line-reference correction only, without another test.
+- Root dedup receipts contain 1,486 corpus files and zero JSON parse errors. They exclude old A03/A04/A05/A06 rather than presenting them as new findings. No duplicate or unsupported impact was identified in the bounded material checked.
+
+## Plugins: three distinct P3 metadata defects are supported
+
+- **PLUGIN-R8-01:** actual tokenization explicitly recognizes both quote styles, but its `push` discards an empty `current`. Empty quoted positions are therefore lost while later positions shift. The quoted-token expectation is explicitly an inference from this supported grammar, not a claim of external Codex conformance. Both quote styles are one root cause. Nonempty quotes and named empty values are adequate normal controls.
+- **PLUGIN-R8-02:** the earlier unbounded `$ARGUMENTS` regex alternative consumes prefixes before the full uppercase named-placeholder alternative. The assigned `ARGUMENTS_FILE` and unassigned `ARGUMENTS_UNKNOWN` manifestations share this one missing boundary. Unrelated named values, unknown placeholders, exact raw aliases and one-pass replacement controls distinguish the defect.
+- The real owned-temp `copyCodexCommands` fixture preserves command bodies and explicit command collisions, then real expansion reproduces both cases. Actual source supports that chain. Desktop's expansion helper and Core protocol response statically return the expander output as prompt text. No host command, IPC/UI or model submission is established by this review.
+- **PLUGIN-R8-03:** the parser explicitly accepts drive paths with either slash, while the deriver splits only on slash/colon. The same actual name guard called by `marketplaceDir` rejects the backslash-bearing derived tail, and `addMarketplace` calls that helper before clone. The macOS pure string fixture and forward-slash/POSIX/GitHub/HTTPS controls support this contract mismatch. No Windows-native filesystem, marketplace acquisition or clone was run.
+- The command log is Completed with 6 pass / 13 expect; parser log Completed with 5 pass / 27 expect; both have zero failures/skips. Final total 11 new focused tests / 40 expect is correct. Four fixture/log validation hashes and all 15 `ownedPaths` artifact hashes matched at review time. The corpus records 943 files, and its recorded 550 Markdown + 393 JSON counts agree; zero JSON parse errors are recorded.
+- Core finding source files `pluginCommandsLoader.ts`, `parseMarketplaceInput.ts`, `installer/paths.ts`, and Root's `git/worktree/diff.ts` have no source diff from the frozen base to inspected main `34553b747f9a5b6acafe7ad1dd21905bcfa53cac`. This is a read-only source comparison, not new-main runtime validation.
+
+## Source navigation and review limits
+
+Some initial read-only navigation requests used absent guessed paths (`plugins/pluginPaths.ts`, a guessed TUI `repl/handlers/plugin-handler.ts`, and an as-yet-absent `evidence/root-findings.json`). These were source-navigation errors, not failed guarded product tests. The actual guard was read at the path explicitly imported by the existing fixture; the guessed TUI handler was not followed. Independent host propagation verification here is limited to known Desktop/Core source. The author's TUI source trace is not represented as independently checked in this review.
+
+The Root guessed Desktop caller is already explicitly skipped in `root-navigation-skip.md`; this review does not broaden that claim. Corpus counts and matching excerpts do not prove exhaustive historical semantic deduplication. No new finding, product change, runtime retest, build, full suite, lint or typecheck was added.

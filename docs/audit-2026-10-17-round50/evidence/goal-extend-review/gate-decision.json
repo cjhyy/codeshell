@@ -1,0 +1,20 @@
+{
+  "capturedUTC": "2026-10-17T17:02:12.210678+00:00",
+  "role": "Targeted hypothesis review; an old full claim would not be proof of correctness or an unread frontier.",
+  "targetExplicitSameSHAFullFound": false,
+  "exactPathSHAObjectsInspected": 7,
+  "canonicalQualifier": "Only inventories/derived incidental rows. Overnight audit two path occurrences are historical TODO provenance labels, not full source coverage.",
+  "initialBroadOldCause": {
+    "matches": 111,
+    "retained": 100,
+    "cap": 100,
+    "allWindowsRead": false
+  },
+  "followupQueries": {
+    "exactGoalExtend": 22,
+    "goalUIFalseSuccess": 33,
+    "cap": 100,
+    "actualRead": "All55 locator+bounded240-character displays in9877b2, not entire MD/JSON documents or every original context."
+  },
+  "historicalLimit": "Protocol test-gap and goal control optimistic update/delete notes are potential related history; exact same UI clicked latch failure cause not established before current producer check. No novelty claim from unknown/no-row."
+}

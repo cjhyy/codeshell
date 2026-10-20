@@ -5,7 +5,6 @@
 import type { SlashCommand } from "../registry.js";
 import {
   isGitRepo,
-  getCurrentBranch,
   getGitStatus,
   getGitDiff,
   getGitDiffStat,
@@ -17,7 +16,8 @@ import {
   ghAvailable,
   ghPrComments,
   buildReviewPrompt,
-  parseDimensions,
+  parseReviewArguments,
+  collectReviewTarget,
 } from "@cjhyy/code-shell-capability-coding/git";
 
 export const gitCommands: SlashCommand[] = [
@@ -119,8 +119,8 @@ export const gitCommands: SlashCommand[] = [
       }
 
       try {
-        const create = arg.includes("--create") || arg.includes("-c");
-        const name = arg.replace(/--create|-c/g, "").trim();
+        const create = /(^|\s)(?:--create|-c)(?=\s|$)/.test(arg);
+        const name = arg.replace(/(^|\s)(?:--create|-c)(?=\s|$)/g, "$1").trim();
         gitCheckout(ctx.cwd, name, create);
         ctx.addStatus(`Switched to branch: ${name}${create ? " (created)" : ""}`);
       } catch (err) {
@@ -133,21 +133,21 @@ export const gitCommands: SlashCommand[] = [
     name: "/review",
     group: "git",
     description: "Structured code review of the git diff (P0-P3 findings)",
-    usage: "/review [file] [--json] [--dimensions=security,perf,...] [--staged]",
+    usage:
+      "/review [file] [--json] [--dimensions=security,performance,...] [--all|--staged|--unstaged|--base=<ref>|--commit=<hash>]",
     execute: async (arg, ctx) => {
       if (!isGitRepo(ctx.cwd)) {
         ctx.addStatus("Not a git repository.");
         return;
       }
 
-      // Parse flags out of the argument string; the remaining bare token (if
-      // any) is treated as a file path to scope the diff to.
-      const tokens = arg.split(/\s+/).filter(Boolean);
-      const json = tokens.includes("--json");
-      const staged = tokens.includes("--staged");
-      const dimFlag = tokens.find((t) => t.startsWith("--dimensions="));
-      const dimensions = parseDimensions(dimFlag?.split("=")[1]);
-      const file = tokens.find((t) => !t.startsWith("--"));
+      let options: ReturnType<typeof parseReviewArguments>;
+      try {
+        options = parseReviewArguments(arg);
+      } catch (err) {
+        ctx.addStatus(`Review arguments: ${(err as Error).message}`);
+        return;
+      }
 
       const guardToken = ctx.queryGuard.reserve();
       if (guardToken === null) {
@@ -157,22 +157,25 @@ export const gitCommands: SlashCommand[] = [
       const ac = new AbortController();
       ctx.queryGuard.tryStart(ac, guardToken);
       try {
-        const diff = getGitDiff(ctx.cwd, {
-          ...(file ? { file } : {}),
-          ...(staged ? { staged: true } : {}),
-        });
+        const review = await collectReviewTarget(ctx.cwd, options.target);
+        // Collection now yields to Git/filesystem I/O. Esc may have released
+        // this query and allowed another turn to start while it was pending.
+        if (ac.signal.aborted) return;
 
-        if (!diff) {
-          ctx.addStatus(staged ? "No staged changes to review." : "No changes to review.");
+        if (!review.content) {
+          ctx.addStatus(`No ${review.label} to review.`);
           return;
         }
 
         const prompt = buildReviewPrompt({
-          content: diff,
-          dimensions,
+          content: review.content,
+          dimensions: options.dimensions,
           incremental: true,
-          json,
-          label: file,
+          json: options.json,
+          label: review.label,
+          // Collection already enforces a bounded complete scope. Never silently
+          // cut off a later file or half a hunk at the prompt's legacy limit.
+          maxChars: review.content.length,
         });
 
         const result = await ctx.client.run(prompt, ctx.sessionId);

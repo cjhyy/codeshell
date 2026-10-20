@@ -1,0 +1,131 @@
+{
+  "filesScanned": 1111,
+  "scope": "all previous audit/review/archive/_archive Markdown and parsed JSON, current round excluded",
+  "matches": [
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "hits": [
+        {
+          "location": "213",
+          "text": "**chat — source-directed:** all12 adapter production files `telegram,discord,slack,lark,dingtalk,wecom,wechat,matrix,mattermost,line,whatsapp,teams`; `src/{channel,adapter-factory,chat-gateway,delivery-queue,cli,gateway,bound-session-chat,ingress,attachments,lifecycle,media,webhook,config,desktop-control-client,instance-lock,notification-relay,notification-progress,wechat-storage,wechat-login,service-manager,codeshell}.ts`. Actual pre-load sender filtering was checked at adapter construction and adapter handlers: allowlist middleware is gateway dispatch-time, not an adapter admission callback. Signed webhook/SDK sender parsing, queues/dedupe/retry, reconnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "sha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+      "hits": [
+        {
+          "location": "$.files[17].path",
+          "text": "packages/chat/src/notification-relay.ts"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/README.md",
+      "sha256": "ad2c2dafdc3dfa33b3292e6d062254c91f44173cce41b2e8651eb3989c0983de",
+      "hits": [
+        {
+          "location": "19",
+          "text": "没有失败 guarded 产品 shard。WhatsApp 主源首次读取失败后跳过，DingTalk契约不足保留候选；Prompt一次材料数字解析失败有透明说明，未改测试或重跑。先前 CLI/recorder/summary/Discord 等失败方向未重试。见 [候选与跳过](candidates-and-skips.md)。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17/candidates-and-skips.md",
+      "sha256": "26c63836964c9d1a0b4a1c184830f9fd3cfbf8323395f30b10aa561753766b2e",
+      "hits": [
+        {
+          "location": "7",
+          "text": "| 摘要 JSON 多围栏 / 尾逗号修复 | 首次实验读取参数错误，正常对照也失败；不确认服务影响，不修参数或换法重试。临时 R2-12/13 未分配正式编号 | [Root 候选区](root.md)、root-summary-json.test.ts/.log，1 pass/2 fail/6 expect，无 Completed |"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17/chat-data.md",
+      "sha256": "1c9fcfb4606c4c3721f9e3d22459cff65604a0b24995a362f05108445207f773",
+      "hits": [
+        {
+          "location": "5",
+          "text": "本轮范围：普通消息文本/Markdown 投影、长消息切分、命令解析、conversation/session 定位与附件元数据。先读了 `channel/lifecycle/media/attachments`、`notification-relay`、`gateway`、`bound-session-chat` 及 Slack/Discord/Lark/Telegram/Teams 对应数据转换。旧 audit SWC-01/02/03/04 等账号身份、队列 spool、回环已知项不重复计入。"
+        }
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/automation-quality-round18.md",
+      "sha256": "867da87c7383b3aa7e5dd2deeb7e1773c9af7740412d2d9e2396deafecdc88d4",
+      "hits": [
+        {
+          "location": "46",
+          "text": "- direct sender `im-gateway-service.ts:724–775` 仅在 live watcher 未拥有流、有配置、目标仍授权、渠道支持 direct 且有必需上下文时发送；否则由正确 owner 后续消费或不发送。`chat/notification-relay.ts:106–134,161–162` 保留目标授权 / 进度去重并发送 event.text，不会重新推导自动化真实结果。"
+        }
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round5.md",
+      "sha256": "bc5defe7fc1355527e11f0d96ba3ed267bb772bc5a8190ae19877bf8cf566d32",
+      "hits": [
+        {
+          "location": "55",
+          "text": "这不是无人消费的 mapper：生产 Main `:3580–3583` 立即调用 publishGatewayControlEventBestEffort；`:1038–1068` 经 GatewayControlServer.publish 持久发布，再交给 imGatewayService.deliverPublishedNotification。Gateway event allowlist 接受 automation.completed；真实 `/v1/events` watcher 可读；配置过授权通知目标时，`im-gateway-service.ts:724–778` 及 `chat/notification-relay.ts:106–134` 将该 event.text 送到对应渠道。这里仅静态确认生产送达链，本审计未向任何外部用户或渠道发消息。"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "sha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+      "hits": [
+        {
+          "location": "$.source_inventory[81]",
+          "text": "packages/chat/src/notification-progress.ts"
+        },
+        {
+          "location": "$.source_inventory[82]",
+          "text": "packages/chat/src/notification-relay.ts"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md",
+      "sha256": "7bdc168137ef8248bbe9e5c0483fb7fb184a946da6256db9354841dbd21fdf61",
+      "hits": [
+        {
+          "location": "1",
+          "text": "# 首次静态读取失败转录"
+        }
+      ]
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-c.raw.json",
+      "sha256": "c85dc55f39440fe1324c78a52d539a2e5276f0ec13f1a436e76d66f7f2364522",
+      "hits": [
+        {
+          "location": "$.module_coverage[3].covered[0].claim",
+          "text": "notification-relay消费配置授权目标，未向渠道外发"
+        }
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-source-manifest.json",
+      "sha256": "e692ced1ae9e6fababd38dc22e4b3e2db8e59e9ae6258ef02e1870ab8ced3e35",
+      "hits": [
+        {
+          "location": "$.sources[4].path",
+          "text": "packages/chat/src/notification-relay.ts"
+        }
+      ]
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+      "sha256": "a4a54aad6a044d4caaff4a9fa0027cb76b943b3704264bcf396fadcaae606da5",
+      "hits": [
+        {
+          "location": "213",
+          "text": "**chat — source-directed:** all12 adapter production files `telegram,discord,slack,lark,dingtalk,wecom,wechat,matrix,mattermost,line,whatsapp,teams`; `src/{channel,adapter-factory,chat-gateway,delivery-queue,cli,gateway,bound-session-chat,ingress,attachments,lifecycle,media,webhook,config,desktop-control-client,instance-lock,notification-relay,notification-progress,wechat-storage,wechat-login,service-manager,codeshell}.ts`. Actual pre-load sender filtering was checked at adapter construction and adapter handlers: allowlist middleware is gateway dispatch-time, not an adapter admission callback. Signed webhook/SDK sender parsing, queues/dedupe/retry, reconnect supervising, credentials/context cursor storage and outbound notification checkpoints were followed statically. WeChat was reviewed through polling, media download/upload, stale context/tokenless fallback, account send serialization, QR/status requests and guarded state persistence."
+        }
+      ]
+    }
+  ],
+  "assessment": "No same-root-cause notification progress initial-load rejected-promise recovery finding found; generic loadTask in unrelated modules excluded."
+}

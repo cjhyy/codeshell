@@ -1,0 +1,781 @@
+{
+  "atUTC": "2026-10-17T20:57:34.022903+00:00",
+  "rootReportedBaseline": "9874f8abdfce0ade5bb058d26e026b10f173a129",
+  "gitCertified": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T20:49:53.528348+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "instruction-hash-reuse",
+      "scopeBoundary": "Same-SHA previously fully read instructions reused; no new instruction body169."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T20:49:53.530144+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "instruction-hash-reuse",
+      "scopeBoundary": "Same-SHA previously fully read instructions reused; no new instruction body169."
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-notification-routes.ts",
+      "bytes": 5240,
+      "lineCount": 172,
+      "sha256": "bde6eba16a8514ef40f9f4dca29d68e9a4a053f330fe8497899602a52c36a4ac",
+      "pinnedAtUTC": "2026-10-17T20:49:53.531238+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed",
+      "selectedLineRanges": [
+        [
+          14,
+          38
+        ],
+        [
+          96,
+          172
+        ]
+      ],
+      "semanticLineCount": 102,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          172
+        ]
+      ],
+      "bodyDisplayedLineCount": 172,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          1,
+          172
+        ]
+      ],
+      "displayedLineCount": 172,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Normal terminal result field/visible identity/click target forwarding only. Source shown is not actual OS delivery/click, Electron/React execution, durable receipt correctness, all windows/ownership/identity resolution or security-redaction certification. No historical unread/first-coverage claim."
+    },
+    {
+      "path": "packages/desktop/src/main/native-desktop-notification.ts",
+      "bytes": 1346,
+      "lineCount": 34,
+      "sha256": "2eba9b5fcead2bb54a2bdff9b05fba71a36b981b494b0c142715a6b76111827f",
+      "pinnedAtUTC": "2026-10-17T20:49:53.532660+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed",
+      "selectedLineRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "semanticLineCount": 34,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "bodyDisplayedLineCount": 34,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "displayedLineCount": 34,
+      "semanticFull": true,
+      "coverage": "full",
+      "category": "product-semantic",
+      "scopeBoundary": "Normal terminal result field/visible identity/click target forwarding only. Source shown is not actual OS delivery/click, Electron/React execution, durable receipt correctness, all windows/ownership/identity resolution or security-redaction certification. No historical unread/first-coverage claim."
+    },
+    {
+      "path": "packages/desktop/src/main/background-notification-content.ts",
+      "bytes": 6444,
+      "lineCount": 173,
+      "sha256": "6be10d303d6be956cc5ccd986fdab1708a25c9ce51cd326f954961d05cb65025",
+      "pinnedAtUTC": "2026-10-17T20:49:53.533619+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed",
+      "selectedLineRanges": [
+        [
+          3,
+          24
+        ],
+        [
+          38,
+          43
+        ],
+        [
+          48,
+          124
+        ],
+        [
+          127,
+          173
+        ]
+      ],
+      "semanticLineCount": 152,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "bodyDisplayedLineCount": 173,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "displayedLineCount": 173,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Normal terminal result field/visible identity/click target forwarding only. Source shown is not actual OS delivery/click, Electron/React execution, durable receipt correctness, all windows/ownership/identity resolution or security-redaction certification. No historical unread/first-coverage claim."
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-notification-routes.test.ts",
+      "bytes": 9759,
+      "lineCount": 288,
+      "sha256": "d9f1339d159124a9600718b577f78083e45e5536b1e7e8164ce0b92721492e1e",
+      "pinnedAtUTC": "2026-10-17T20:49:53.534338+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "unused-test-hash-only",
+      "scopeBoundary": "Only hash or exact navigation snippets, no full body/semantic coverage.",
+      "testDeclarationLines": 0,
+      "incidentalTestBodyNavigationLines": 0,
+      "testSemanticReviewLines": 0,
+      "testExecution": 0
+    },
+    {
+      "path": "packages/desktop/src/main/native-desktop-notification.test.ts",
+      "bytes": 2154,
+      "lineCount": 70,
+      "sha256": "73d78beda67d1378cb38c6e5718e4c8176a9de1601eca8e99944dd4b060e2817",
+      "pinnedAtUTC": "2026-10-17T20:49:53.535098+00:00",
+      "timing": "before any own prep169 body/nav; actual filename inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "semanticFull": false,
+      "coverage": "hash-only",
+      "category": "unused-test-hash-only",
+      "scopeBoundary": "Only hash or exact navigation snippets, no full body/semantic coverage.",
+      "testDeclarationLines": 0,
+      "incidentalTestBodyNavigationLines": 0,
+      "testSemanticReviewLines": 0,
+      "testExecution": 0
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lineCount": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "pinnedAtUTC": "2026-10-17T20:53:38.224337+00:00",
+      "timing": "before own body/nav; actual producer inventory or known import path confirmed",
+      "selectedLineRanges": [
+        [
+          3441,
+          3473
+        ],
+        [
+          3741,
+          3743
+        ]
+      ],
+      "semanticLineCount": 36,
+      "bodyDisplayedLineRanges": [
+        [
+          3438,
+          3485
+        ],
+        [
+          3738,
+          3747
+        ]
+      ],
+      "bodyDisplayedLineCount": 58,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          104,
+          104
+        ],
+        [
+          300,
+          301
+        ],
+        [
+          1748,
+          1748
+        ],
+        [
+          3750,
+          3750
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          104,
+          104
+        ],
+        [
+          300,
+          301
+        ],
+        [
+          1748,
+          1748
+        ],
+        [
+          3438,
+          3485
+        ],
+        [
+          3738,
+          3747
+        ],
+        [
+          3750,
+          3750
+        ]
+      ],
+      "displayedLineCount": 63,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Normal terminal result field/visible identity/click target forwarding only. Source shown is not actual OS delivery/click, Electron/React execution, durable receipt correctness, all windows/ownership/identity resolution or security-redaction certification. No historical unread/first-coverage claim."
+    },
+    {
+      "path": "packages/desktop/src/main/desktop-notifier.ts",
+      "bytes": 7928,
+      "lineCount": 224,
+      "sha256": "912a2e5ce5e9518a55e03f94334abb1d6c4c3ff408e660c6b479e22f23f619af",
+      "pinnedAtUTC": "2026-10-17T20:53:38.225720+00:00",
+      "timing": "before own body/nav; actual producer inventory or known import path confirmed",
+      "selectedLineRanges": [
+        [
+          8,
+          15
+        ],
+        [
+          29,
+          32
+        ],
+        [
+          121,
+          146
+        ],
+        [
+          190,
+          198
+        ]
+      ],
+      "semanticLineCount": 47,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          35
+        ],
+        [
+          121,
+          151
+        ],
+        [
+          186,
+          202
+        ]
+      ],
+      "bodyDisplayedLineCount": 83,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          58,
+          58
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          35
+        ],
+        [
+          58,
+          58
+        ],
+        [
+          121,
+          151
+        ],
+        [
+          186,
+          202
+        ]
+      ],
+      "displayedLineCount": 84,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Normal terminal result field/visible identity/click target forwarding only. Source shown is not actual OS delivery/click, Electron/React execution, durable receipt correctness, all windows/ownership/identity resolution or security-redaction certification. No historical unread/first-coverage claim."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-notifications.ts",
+      "bytes": 37250,
+      "lineCount": 1094,
+      "sha256": "d829f15f49905f39d590eed96aebe6e40bc758e1dbcf2a65e741aec163eeb56a",
+      "pinnedAtUTC": "2026-10-17T20:53:38.226462+00:00",
+      "timing": "before own body/nav; actual producer inventory or known import path confirmed",
+      "selectedLineRanges": [
+        [
+          63,
+          79
+        ],
+        [
+          383,
+          414
+        ],
+        [
+          560,
+          569
+        ],
+        [
+          637,
+          643
+        ],
+        [
+          928,
+          951
+        ]
+      ],
+      "semanticLineCount": 90,
+      "bodyDisplayedLineRanges": [
+        [
+          55,
+          88
+        ],
+        [
+          360,
+          425
+        ],
+        [
+          557,
+          574
+        ],
+        [
+          600,
+          628
+        ],
+        [
+          634,
+          644
+        ],
+        [
+          922,
+          951
+        ]
+      ],
+      "bodyDisplayedLineCount": 188,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          129,
+          129
+        ],
+        [
+          237,
+          237
+        ],
+        [
+          974,
+          974
+        ],
+        [
+          976,
+          976
+        ],
+        [
+          999,
+          999
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          55,
+          88
+        ],
+        [
+          129,
+          129
+        ],
+        [
+          237,
+          237
+        ],
+        [
+          360,
+          425
+        ],
+        [
+          557,
+          574
+        ],
+        [
+          600,
+          628
+        ],
+        [
+          634,
+          644
+        ],
+        [
+          922,
+          951
+        ],
+        [
+          974,
+          974
+        ],
+        [
+          976,
+          976
+        ],
+        [
+          999,
+          999
+        ]
+      ],
+      "displayedLineCount": 193,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Normal terminal result field/visible identity/click target forwarding only. Source shown is not actual OS delivery/click, Electron/React execution, durable receipt correctness, all windows/ownership/identity resolution or security-redaction certification. No historical unread/first-coverage claim."
+    },
+    {
+      "path": "packages/desktop/src/preload/notification-navigation-api.ts",
+      "bytes": 1490,
+      "lineCount": 38,
+      "sha256": "5ebe21aaf4a161422abe1bef54d7262ffc0504d856c075e9e37dff3f1bf976f0",
+      "pinnedAtUTC": "2026-10-17T20:54:12.512782+00:00",
+      "timing": "before own body/nav; click consumer filename inventory confirmed",
+      "selectedLineRanges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "semanticLineCount": 38,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "bodyDisplayedLineCount": 38,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "displayedLineCount": 38,
+      "semanticFull": true,
+      "coverage": "full",
+      "category": "product-semantic",
+      "scopeBoundary": "Normal terminal result field/visible identity/click target forwarding only. Source shown is not actual OS delivery/click, Electron/React execution, durable receipt correctness, all windows/ownership/identity resolution or security-redaction certification. No historical unread/first-coverage claim."
+    },
+    {
+      "path": "packages/desktop/src/preload/notification-navigation-api.test.ts",
+      "bytes": 2263,
+      "lineCount": 62,
+      "sha256": "357b5bd64d9ddf3613f1014590907839e4f7d225ce67c865ce6b3de0fbf24e7f",
+      "pinnedAtUTC": "2026-10-17T20:54:12.513438+00:00",
+      "timing": "before own body/nav; click consumer filename inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          19,
+          19
+        ],
+        [
+          24,
+          24
+        ],
+        [
+          40,
+          40
+        ],
+        [
+          43,
+          43
+        ],
+        [
+          58,
+          58
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          19,
+          19
+        ],
+        [
+          24,
+          24
+        ],
+        [
+          40,
+          40
+        ],
+        [
+          43,
+          43
+        ],
+        [
+          58,
+          58
+        ]
+      ],
+      "displayedLineCount": 5,
+      "semanticFull": false,
+      "coverage": "navigation-only",
+      "category": "test-navigation-only",
+      "scopeBoundary": "Only hash or exact navigation snippets, no full body/semantic coverage.",
+      "testDeclarationLines": 0,
+      "incidentalTestBodyNavigationLines": 5,
+      "testSemanticReviewLines": 0,
+      "testExecution": 0
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102370,
+      "lineCount": 2984,
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "pinnedAtUTC": "2026-10-17T20:54:12.513781+00:00",
+      "timing": "before own body/nav; click consumer filename inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          2337,
+          2337
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          2337,
+          2337
+        ]
+      ],
+      "displayedLineCount": 1,
+      "semanticFull": false,
+      "coverage": "navigation-only",
+      "category": "product-navigation-only",
+      "scopeBoundary": "Only hash or exact navigation snippets, no full body/semantic coverage."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useNotificationSessionNavigation.test.tsx",
+      "bytes": 13248,
+      "lineCount": 359,
+      "sha256": "d7bfbb6b9cb4270cd8472bd0d3bdc0a790c0b7d7478a50f6a266f87b83f92c7f",
+      "pinnedAtUTC": "2026-10-17T20:54:12.514011+00:00",
+      "timing": "before own body/nav; click consumer filename inventory confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          58,
+          58
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          58,
+          58
+        ]
+      ],
+      "displayedLineCount": 1,
+      "semanticFull": false,
+      "coverage": "navigation-only",
+      "category": "test-navigation-only",
+      "scopeBoundary": "Only hash or exact navigation snippets, no full body/semantic coverage.",
+      "testDeclarationLines": 0,
+      "incidentalTestBodyNavigationLines": 1,
+      "testSemanticReviewLines": 0,
+      "testExecution": 0
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useNotificationSessionNavigation.ts",
+      "bytes": 3411,
+      "lineCount": 84,
+      "sha256": "9c63d5e65a76315d5d5a45abf186ba24d6c4e77ecf978109f556924a40921a5e",
+      "pinnedAtUTC": "2026-10-17T20:54:12.514225+00:00",
+      "timing": "before own body/nav; click consumer filename inventory confirmed",
+      "selectedLineRanges": [
+        [
+          14,
+          19
+        ],
+        [
+          22,
+          84
+        ]
+      ],
+      "semanticLineCount": 69,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          84
+        ]
+      ],
+      "bodyDisplayedLineCount": 84,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          1,
+          84
+        ]
+      ],
+      "displayedLineCount": 84,
+      "semanticFull": false,
+      "coverage": "selected",
+      "category": "product-semantic",
+      "scopeBoundary": "Normal terminal result field/visible identity/click target forwarding only. Source shown is not actual OS delivery/click, Electron/React execution, durable receipt correctness, all windows/ownership/identity resolution or security-redaction certification. No historical unread/first-coverage claim."
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lineCount": 1892,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "pinnedAtUTC": "2026-10-17T20:55:06.212321+00:00",
+      "timing": "before own body/nav; actual mount/import filenames confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          28,
+          28
+        ],
+        [
+          513,
+          513
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          28,
+          28
+        ],
+        [
+          513,
+          513
+        ]
+      ],
+      "displayedLineCount": 2,
+      "semanticFull": false,
+      "coverage": "navigation-only",
+      "category": "product-navigation-only",
+      "scopeBoundary": "Only hash or exact navigation snippets, no full body/semantic coverage."
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lineCount": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "pinnedAtUTC": "2026-10-17T20:55:06.213880+00:00",
+      "timing": "before own body/nav; actual mount/import filenames confirmed",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          127,
+          127
+        ],
+        [
+          1326,
+          1326
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          127,
+          127
+        ],
+        [
+          1326,
+          1326
+        ]
+      ],
+      "displayedLineCount": 2,
+      "semanticFull": false,
+      "coverage": "navigation-only",
+      "category": "product-navigation-only",
+      "scopeBoundary": "Only hash or exact navigation snippets, no full body/semantic coverage."
+    }
+  ],
+  "summary": {
+    "sourceRows": 17,
+    "semanticProductRows": 8,
+    "semanticProductLines": 568,
+    "fullStaticAdapterRows": 2,
+    "otherSelectedProductRows": 6,
+    "bodyDisplayLines": 830,
+    "displayUnionLinesIncludingAllNavigation": 852,
+    "productNavigationOnlyRows": 3,
+    "testNavigationOnlyRows": 2,
+    "incidentalTestBodyNavigationLines": 6,
+    "unusedTestHashOnlyRows": 2,
+    "instructionHashOnlyRows": 2,
+    "testDeclarationLines": 0,
+    "testSemanticReviewLines": 0,
+    "testExecution": 0
+  },
+  "eofNote": "Bodies are recorded through actual EOF, not source command upper bounds. API was printed with upper100 but actualEOF38; hook upper110 but actualEOF84. No nonexistent rows counted."
+}

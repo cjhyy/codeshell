@@ -1,0 +1,27 @@
+{
+  "capturedUTC": "2026-10-17T14:25:26.596359+00:00",
+  "scope": "Ordinary stream callback and row rendering only; model/native/authority execution0.",
+  "files": [
+    {
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "bytes": 16481,
+      "lineCount": 441,
+      "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lineCount": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "lineCount": 344,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    }
+  ]
+}

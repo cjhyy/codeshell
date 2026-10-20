@@ -1,0 +1,97 @@
+{
+  "parentReportedPrepContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalBaseline": null,
+  "prepOnly": true,
+  "files": [
+    {
+      "name": "cli-await-grouped-contexts.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/cli-await-grouped-contexts.json",
+      "bytes": 39367,
+      "sha256": "c447da900b847bbfc02c6529f4a741b0fbe7869a07e561e62ee6cec6af0de2f4"
+    },
+    {
+      "name": "cli-await-history.current.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/cli-await-history.current.json",
+      "bytes": 756873,
+      "sha256": "18c56c4991d8356e6608e5db3bb6ed2c11a9da9ae824e3a1c13574feefbb915b"
+    },
+    {
+      "name": "decisions.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/decisions.json",
+      "bytes": 2856,
+      "sha256": "00b2dd5dd92167e15d508aeee807dd1de431ed982435c721674041e4efad3a49"
+    },
+    {
+      "name": "history-drift.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/history-drift.json",
+      "bytes": 754,
+      "sha256": "9bab7cfcdd6aec6b94aae34ac1646afe1ef9efe19848d5c8dcec05c5134c99e4"
+    },
+    {
+      "name": "history-method.py",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/history-method.py",
+      "bytes": 3595,
+      "sha256": "921e3c7b73cb9bdc1a075e580fad1b233c0a66ec00a9c294d65d790fa97fe0d0"
+    },
+    {
+      "name": "history-recheck.first.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/history-recheck.first.json",
+      "bytes": 688,
+      "sha256": "95501bdb59273eec0ba7a2f5ab3c8f19b6773c9af52c1a5459472474ca3170f7"
+    },
+    {
+      "name": "history.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/history.json",
+      "bytes": 746971,
+      "sha256": "9a1e2fa7a75eea23bcfb58c35717897ec8379f2d025ebe5f60f0eb6b17d81e42"
+    },
+    {
+      "name": "initial-pins.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/initial-pins.json",
+      "bytes": 9048,
+      "sha256": "0e85110cb41328768fc38a24652d642030578de0d9039501320ca2ad9f8fe311"
+    },
+    {
+      "name": "legacy-cli-await-record.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/legacy-cli-await-record.json",
+      "bytes": 1425,
+      "sha256": "1776ee9d8b459f8be844ef08bdb83c041c1968a2bd43bc92bf0be4cdee5f453d"
+    },
+    {
+      "name": "report.md",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/report.md",
+      "bytes": 4907,
+      "sha256": "f0c3cdaa8ef1b09bd5b3d5ca058835c5de5cb6cbcc5a1aea41496301f635677b"
+    },
+    {
+      "name": "source-manifest.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/source-manifest.json",
+      "bytes": 14312,
+      "sha256": "aca3d6ade669e6755f7284053aa621b0a4268c20a6dff54ab49e16bdbae8b2cc"
+    },
+    {
+      "name": "validation.json",
+      "path": "/tmp/codeshell-audit-round33-installer-input-frontier/validation.json",
+      "bytes": 860,
+      "sha256": "3e79c3071a7c4fb6bb9aaeeb34b39e8efbb5639843a2b3c425e4bc1f92e9d955"
+    }
+  ],
+  "artifactCount": 12,
+  "selfExcluded": true,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "legacySameCauseRawRecord": "docs/archive/review-2026-05-30/findings.json$[151]",
+  "legacyConfirmedStatusNotClaimed": true,
+  "productExecutions": 0,
+  "gitCommands": 0,
+  "sourcePins": 13,
+  "hashOnlyPins": 3,
+  "metadataFailures": 1,
+  "sourceCounts": {
+    "full": 8,
+    "selected": 5,
+    "declaredReadLines": 1300,
+    "hashOnlyLinesNotCounted": 836
+  }
+}

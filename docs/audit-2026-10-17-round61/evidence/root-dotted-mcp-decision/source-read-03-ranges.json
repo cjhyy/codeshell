@@ -1,0 +1,33 @@
+[
+  [
+    "packages/core/src/settings/manager.ts",
+    [
+      [
+        486,
+        508
+      ],
+      [
+        696,
+        741
+      ]
+    ]
+  ],
+  [
+    "packages/core/src/settings/schema.ts",
+    [
+      [
+        725,
+        731
+      ]
+    ]
+  ],
+  [
+    "packages/desktop/src/main/capabilities-service.ts",
+    [
+      [
+        1,
+        73
+      ]
+    ]
+  ]
+]

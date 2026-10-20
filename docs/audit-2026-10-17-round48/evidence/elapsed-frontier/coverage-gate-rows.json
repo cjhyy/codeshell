@@ -1,0 +1,83 @@
+{
+  "rows": [
+    {
+      "candidate": "statusline",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3904/path",
+      "row": {
+        "path": "packages/tui/src/ui/components/StatusLine.tsx",
+        "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+        "lines": 227
+      }
+    },
+    {
+      "candidate": "statusline",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/candidate-ranking.json",
+      "pointer": "/files/15/path",
+      "row": {
+        "path": "packages/tui/src/ui/components/StatusLine.tsx",
+        "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+        "lines": 227
+      }
+    },
+    {
+      "candidate": "statusline",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15674/path",
+      "row": {
+        "path": "packages/tui/src/ui/components/StatusLine.tsx",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "statusline",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/15675/path",
+      "row": {
+        "path": "packages/tui/src/ui/components/StatusLine.tsx",
+        "coverageKind": "incidental-path-or-pin-object"
+      }
+    },
+    {
+      "candidate": "statusline",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/4227/path",
+      "row": {
+        "path": "packages/tui/src/ui/components/StatusLine.tsx",
+        "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+        "lines": 227
+      }
+    },
+    {
+      "candidate": "statusline",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/ending-coverage-overlay.json",
+      "pointer": "/rankChecks/15/path",
+      "row": {
+        "path": "packages/tui/src/ui/components/StatusLine.tsx",
+        "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43"
+      }
+    },
+    {
+      "candidate": "statusline",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/4227/path",
+      "row": {
+        "path": "packages/tui/src/ui/components/StatusLine.tsx",
+        "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+        "lines": 227
+      }
+    },
+    {
+      "candidate": "statusline",
+      "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/4228/path",
+      "row": {
+        "path": "packages/tui/src/ui/components/StatusLine.tsx",
+        "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+        "lines": 227
+      }
+    }
+  ],
+  "count": 8,
+  "requiresManualFullOrSelectedInterpretation": true
+}

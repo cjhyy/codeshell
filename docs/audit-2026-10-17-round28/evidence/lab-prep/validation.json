@@ -1,0 +1,23 @@
+{
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "functionEvaluations": 0,
+  "fixturesExecuted": 0,
+  "vmAstEvaluations": 0,
+  "reactBrowserActions": 0,
+  "nativeBusinessActions": 0,
+  "gitCommands": 0,
+  "gitWrites": 0,
+  "networkRequests": 0,
+  "modelCalls": 0,
+  "productChanges": false,
+  "round27Changes": false,
+  "allWritesInside": "/tmp/codeshell-audit-round28-lab-frontier",
+  "runs": [],
+  "passCount": 0,
+  "expectations": 0,
+  "raw": null,
+  "exit": null,
+  "note": "Only rg inventory and Python standard-library filesystem/JSON/hash/search metadata scripts were executed. Existing tests/fixtures and function source were read only."
+}

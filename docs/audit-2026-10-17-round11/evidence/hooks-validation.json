@@ -1,0 +1,68 @@
+{
+  "frozenCommit": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "scope": "hooks pure data only",
+  "shards": [
+    {
+      "id": "hooks-pure-contracts",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round11/evidence/hooks-pure-contracts.test.ts"
+      ],
+      "exitCode": 0,
+      "cleanCompleted": true,
+      "pass": 8,
+      "fail": 0,
+      "skip": 0,
+      "expectCalls": 30,
+      "kind": "5 ordinary focused contracts + 3 candidate/control characterizations",
+      "log": "evidence/hooks-pure-contracts.first.log",
+      "exit": "evidence/hooks-pure-contracts.first.exit.json"
+    },
+    {
+      "id": "hooks-existing-pure",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "tests/hooks-inject.test.ts",
+        "packages/core/src/hooks/registry.unregister.test.ts"
+      ],
+      "exitCode": 0,
+      "cleanCompleted": true,
+      "pass": 13,
+      "fail": 0,
+      "skip": 0,
+      "expectCalls": 32,
+      "kind": "unchanged existing wrapper/unregister baseline",
+      "log": "evidence/hooks-existing-pure.first.log",
+      "exit": "evidence/hooks-existing-pure.first.exit.json"
+    }
+  ],
+  "totals": {
+    "cleanShards": 2,
+    "pass": 21,
+    "fail": 0,
+    "skip": 0,
+    "expectCalls": 62,
+    "existingTests": 13,
+    "focusedTests": 8,
+    "failedBunShards": 0
+  },
+  "failedStaticNavigation": {
+    "count": 1,
+    "note": "evidence/hooks-navigation-skip.md",
+    "productRuntime": false
+  },
+  "coverageLimits": [
+    "No Engine run or consumer injection",
+    "No shellHookMatches / matcherAccepts runtime (source + existing contract read only)",
+    "No shell or plugin hook runner, child-process calls, native processes or network",
+    "No permission/security/auth/custody/watchdog experiments",
+    "No product changes, Git writes, dependency/dist rebuild or broad-suite claim",
+    "No retry or alternate validation of failed static navigation"
+  ]
+}

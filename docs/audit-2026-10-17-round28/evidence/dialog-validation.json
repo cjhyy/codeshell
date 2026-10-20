@@ -1,0 +1,19 @@
+{
+  "baselineProvidedByRoot": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "runs": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "fixturesWritten": 0,
+  "reactBrowserRuns": 0,
+  "vmAstRuns": 0,
+  "nativeRuns": 0,
+  "networkRequests": 0,
+  "gitCommands": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "productReruns": 0,
+  "testsReadOnly": true,
+  "priorFailedDirectionsUnchanged": true,
+  "note": "Six dialogState unit test declarations and six interaction-wrapper scenario names are static source only. No Bun spawn/browser fixture or hook/modal/reducer invocation. Round27 compose first failure remains SKIP."
+}

@@ -1,0 +1,14 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "productReruns": 0,
+  "notes": [
+    {
+      "kind": "History display truncation",
+      "detail": "An initial attempt to print all saved history groups was truncated by tool display. It was not treated as complete inspection; the full saved recursive scan plus a bounded MD selection were then inspected. No product run involved."
+    },
+    {
+      "kind": "History metadata correction",
+      "detail": "Before any product execution the JSON location prefix was changed from an accidental full-width space after $ to $, and exact context cap raised 120→500 so all218 exact matches are preserved. Same scan only; no product retry."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "diagnostics": [
+    {
+      "toolChunk": "ba49cb",
+      "exitCode": 1,
+      "kind": "negative source navigation",
+      "detail": "Final rg for VirtualMessageList/agent.transcript/assistant_text in pinned Desktop App/MessageStream found no match; ambiguous App filename was initially guessed Desktop. Pins remain hash-only, no body read or product import/execution. Locate actual UI source before body rather than adopting parent generic filename."
+    }
+  ],
+  "productFailures": 0,
+  "oldFailedDirectionsReopened": false
+}

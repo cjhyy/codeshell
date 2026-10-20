@@ -67,6 +67,7 @@ export interface TurnOpts {
   skillAllowlist?: readonly string[];
   /** Host-owned Tasks must remain process-local when run through this queue. */
   ephemeral?: boolean;
+  modelTraceSource?: string;
   /** Generic per-run parameters consumed by the active behavior profile. */
   profileParams?: Record<string, unknown>;
   /** Digital human to bind durably to this Work Session. */
@@ -533,6 +534,7 @@ export class ChatSession {
         toolAllowlist: next.opts.toolAllowlist,
         skillAllowlist: next.opts.skillAllowlist,
         ephemeral: next.opts.ephemeral,
+        modelTraceSource: next.opts.modelTraceSource,
         profileParams: next.opts.profileParams,
         workspaceProfile: next.opts.workspaceProfile,
         sessionMessageTargets: next.opts.sessionMessageTargets,

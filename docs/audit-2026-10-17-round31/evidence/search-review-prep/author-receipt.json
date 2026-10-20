@@ -1,0 +1,69 @@
+{
+  "frozenUtc": "2026-10-17T11:56:59.023190+00:00",
+  "parentReportedContext": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "formalRound31Baseline": null,
+  "selfExcluded": true,
+  "artifactCount": 11,
+  "artifacts": [
+    {
+      "path": "additional-initial-pins.json",
+      "bytes": 1840,
+      "sha256": "157b9c6920f43d7fa998f0fde84d872b348e718b5d84fde9e3c9c8053fc249b8"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 3591,
+      "sha256": "8d69ef918b9d8ecbb80066d41c7b0f944239db564ed738cbd2ec193ab4eea806"
+    },
+    {
+      "path": "finish-hash-checks.json",
+      "bytes": 1807,
+      "sha256": "0f153544cb701c1e5187ad3bb0f9aec591560525300e59644d8de7d8e5f73054"
+    },
+    {
+      "path": "history.json",
+      "bytes": 612567,
+      "sha256": "e53d4fd0526848ecd499eb103dbedb62ef95e9b7ec23490d0aa700a51f108898"
+    },
+    {
+      "path": "history.py",
+      "bytes": 3112,
+      "sha256": "75279f2d495848ab6e27cfbe532ef16a6077d81e999ceacca5b61038ae5ff939"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1614,
+      "sha256": "c793be82ef98d69a3b2468ff51bc743f6e4566ab692fa5e9673e47a0245208a7"
+    },
+    {
+      "path": "producer-initial-pin.json",
+      "bytes": 546,
+      "sha256": "bc08bb11cb3cb03ee8451d4208ca8cef6e511f6f28b45d3fdcc4d31331827a07"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4351,
+      "sha256": "c5699ce3d7bd9b3295813dfc4b477923df8d69ca402f4febc1afe451510c4e65"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 8957,
+      "sha256": "06874fa919fd3a1bb08f2d787353b2d83cdb0983f113bbae8a81266a7f19fdd7"
+    },
+    {
+      "path": "source-reader.first.exit.json",
+      "bytes": 1205,
+      "sha256": "e263c70efdac6a07f9212a60531197eb6b42cb037dff278aeb76ccc65bdbe98a"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1168,
+      "sha256": "7eadb429c1062fc15d395471e89f1ebe289220d33eeb55517956ca4c2dbc642d"
+    }
+  ],
+  "reviewDisposition": "supports one new P3 static helper-contract defect; 0 runtime confirmation and no actual application command caller established",
+  "reportLinkCount": 7,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "metadataReaderFirstFailure": "source-reader.first.exit.json"
+}

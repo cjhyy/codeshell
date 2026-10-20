@@ -1,0 +1,44 @@
+{
+  "atUTC": "2026-10-17T16:30:56.047361+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "displayedRanges": [
+        [
+          182,
+          217
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            182,
+            217
+          ],
+          "text": " 182     mcpServers: mergePluginMcpServers(\n 183       settings.mcpServers ?? {},\n 184       (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],\n 185       settings.mcpServerOverrides ?? {},\n 186     ),\n 187     approvalBackend: getInteractiveApprovalBackend(),\n 188     // Host terminal entrypoint: read the full disk hierarchy (incl. user\n 189     // ~/.code-shell). The SDK default 'project' would skip the user's config.\n 190     settingsScope: \"full\" as const,\n 191   };\n 192 \n 193   // 1. Seed engine \u2014 calls populateModelPoolFromSettings() in ctor so the\n 194   //    model pool and tool registry are fully populated. Discarded after\n 195   //    resource extraction (never runs a task).\n 196   const seedEngine = new Engine({\n 197     llm: llmConfig,\n 198     clientDefaults,\n 199     cwd,\n 200     composition,\n 201     settingsScope: \"full\",\n 202   });\n 203 \n 204   // 2. Extract shared resources from seed engine\n 205   const modelPool = seedEngine.getModelPool();\n 206   const toolRegistry = seedEngine.getRuntimeToolRegistry();\n 207   const resolvedLlmConfig = seedEngine.getConfig().llm;\n 208   await seedEngine.dispose();\n 209   // settingsManager was hoisted to the top of replCommand; reused here.\n 210   // MCPManager: no-op holder satisfying EngineRuntime type; individual\n 211   // session engines connect to mcpServers from their config.\n 212   // TODO(future): aggregate MCP connections across sessions at the runtime level.\n 213   const mcpPool = new MCPManager(toolRegistry);\n 214   // CostTracker: fresh shared instance for this process.\n 215   const sessionCostTracker = costTracker;\n 216 \n 217   // 3. Build the shared EngineRuntime"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "displayedRanges": [
+        [
+          49,
+          62
+        ]
+      ],
+      "excerpts": [
+        {
+          "range": [
+            49,
+            62
+          ],
+          "text": "  49   constructor(opts: EngineRuntimeOptions) {\n  50     this.modelPool = opts.modelPool;\n  51     this.toolRegistry = opts.toolRegistry;\n  52     this.settings = opts.settings;\n  53     this.mcpPool = opts.mcpPool;\n  54     this.costTracker = opts.costTracker;\n  55     this.usageLedger =\n  56       opts.usageLedger ??\n  57       new UsageLedger({\n  58         storageDir: opts.usageStorageDir,\n  59       });\n  60     this.costTracker.bindLedger?.(this.usageLedger);\n  61     this.lifetime.own(() => this.modelPool.clear());\n  62     this.lifetime.own(() => this.toolRegistry.clear());"
+        }
+      ]
+    }
+  ],
+  "scope": "Actual local tracker alias and runtime bind assignment only; no constructing runtime or access to real store/config."
+}

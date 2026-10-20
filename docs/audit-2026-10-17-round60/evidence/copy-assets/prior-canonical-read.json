@@ -1,0 +1,65 @@
+[
+  {
+    "path": "docs/archive/todo/review-infra-2026-07-08.md",
+    "bytes": 17047,
+    "lines": 178,
+    "sha256": "f929c9ff61b342a1c2f55e6b8d8b960e082856374ae86b5734bbbd38a12321d2",
+    "pinAt": "2026-10-17T19:55:32.244086+00:00",
+    "readAt": "2026-10-17T19:55:32.245198+00:00",
+    "selectedLineRanges": [
+      [
+        140,
+        159
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 140,
+        "last": 159,
+        "text": "140: - Problem: direct plugin installs accept `http://`, `git://`, and `file://` remotes, and marketplace add accepts `http://...git`, with no warning or policy knob. Marketplace entries may pin SHA, but direct source parsing has no immutable pin concept.\n141: - Impact: users can install executable plugin code over unauthenticated transports, making MITM or local path confusion part of the plugin trust surface.\n142: - Concrete fix: default to `https`/SSH only, require an explicit unsafe flag for `http://` and `git://`, and encourage or require full SHA pins for remote plugin installs where possible.\n143: \n144: ### 11. `copy-assets.mjs` silently succeeds when a glob matches zero files\n145: \n146: - File: `scripts/copy-assets.mjs:43`\n147: - File: `scripts/copy-assets.mjs:49`\n148: - File: `scripts/copy-assets.mjs:54`\n149: - File: `packages/core/package.json:24`\n150: - File: `packages/core/package.json:25`\n151: - Problem: for glob inputs, `copy-assets.mjs` only checks that the source directory exists. If `src/prompt/sections/*.md` or `src/data/*.json` accidentally matches zero files, the build succeeds with missing runtime prompt/data assets.\n152: - Impact: packaging can ship a broken or reduced prompt/data bundle without an early failure.\n153: - Concrete fix: track matches per glob and exit non-zero when a glob argument matches zero files, unless a future caller explicitly marks the pattern optional.\n154: \n155: ### 12. Custom ESLint rules are declared but are no-op stubs\n156: \n157: - File: `eslint.config.js:22`\n158: - File: `eslint.config.js:25`\n159: - File: `eslint.config.js:30`"
+      }
+    ]
+  },
+  {
+    "path": "docs/archive/todo/review-master-2026-07-08.md",
+    "bytes": 17704,
+    "lines": 93,
+    "sha256": "9fbdbec1913e170e396a53574343c1592d6c08f98f44eacf26def8f12104fb61",
+    "pinAt": "2026-10-17T19:55:32.246350+00:00",
+    "readAt": "2026-10-17T19:55:32.246362+00:00",
+    "selectedLineRanges": [
+      [
+        74,
+        77
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 74,
+        "last": 77,
+        "text": "74: | 🟡 | `/image` reads whole file before size guard | `packages/tui/src/cli/commands/builtin/image-command.ts:77` | The command stats the file but immediately `readFileSync`s it before enforcing a byte cap. | Enforce a TUI-side max size before reading/base64 encoding. | `review-tui-cdp-2026-07-08.md` |\n75: | 🟡 | Insecure plugin transports allowed silently | `packages/core/src/plugins/installer/parseSource.ts:28` | Direct installs accept `http://`, `git://`, and `file://`; marketplace add accepts `http://...git` without policy/warning. | Default to HTTPS/SSH, require an explicit unsafe flag for cleartext transports, and prefer full SHA pins. | `review-infra-2026-07-08.md` |\n76: | 🟡 | `copy-assets.mjs` allows zero-match globs | `scripts/copy-assets.mjs:43` | Glob inputs only require the source directory to exist; zero matched files still succeed. | Track matches per glob and exit non-zero unless a pattern is explicitly optional. | `review-infra-2026-07-08.md` |\n77: "
+      }
+    ]
+  },
+  {
+    "path": "docs/archive/todo/fix-batch-4-2026-07-08.md",
+    "bytes": 4339,
+    "lines": 43,
+    "sha256": "fc2340490ffeaf9eeab334f58cebbf116619f0bbfc4bb7adc67fddf1a6e3ffae",
+    "pinAt": "2026-10-17T19:55:32.247277+00:00",
+    "readAt": "2026-10-17T19:55:32.247287+00:00",
+    "selectedLineRanges": [
+      [
+        10,
+        17
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 10,
+        "last": 17,
+        "text": "10: | Finding fixed | Master-file ref | Commit | Test added or extended | Verification |\n11: | --- | --- | --- | --- | --- |\n12: | `/config show/get` can print secrets | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/cli/commands/builtin/core-commands.ts:709` | `4e2f54546ef7a4ed06c9613f96e4eaff3df16c3d` | `packages/tui/src/cli/commands/builtin/core-commands.test.ts`: redacts saved secrets from `show` and `get` output | Failing regression observed, then `bun test packages/tui/src/cli/commands/builtin/core-commands.test.ts` passed twice before commit. |\n13: | Insecure plugin transports allowed silently | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/core/src/plugins/installer/parseSource.ts:28` | `0d175ef0268c7cfa3657e1497d43f7f91d47b86b` | `packages/core/src/plugins/installer/parseSource.test.ts` and `packages/core/src/plugins/parseMarketplaceInput.test.ts`: reject unsafe transports by default, allow only explicit opt-in | Failing regressions observed, then affected parser/install/update tests passed twice before commit. |\n14: | `/image` reads whole file before size guard | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/tui/src/cli/commands/builtin/image-command.ts:77` | `daebaccb3a1efb8a0263538554d674abf2982b9f` | `tests/ui/image-command.test.ts`: oversized unreadable image is rejected by size before `readFileSync` | Failing regression observed, then `bun test tests/ui/image-command.test.ts` passed twice before commit. |\n15: | `copy-assets.mjs` allows zero-match globs | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `scripts/copy-assets.mjs:43` | `1ea527ad30419b72757d7f070db88709e8fcadde` | `tests/copy-assets.test.ts`: existing source dir with zero glob matches exits non-zero; positive glob copy still works | Failing regression observed, then `bun test tests/copy-assets.test.ts` passed twice before commit. |\n16: | Replayed sub-agent timestamps use replay time | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/desktop/src/renderer/types.ts:702` | `8fb60acc7a46debbea732072e935caec7ec344ae` | `packages/desktop/src/renderer/types.test.ts`: `agent_start` and `agent_end` use the injected reducer replay clock | Failing regression observed, then `bun test packages/desktop/src/renderer/types.test.ts` passed twice before commit. |\n17: "
+      }
+    ]
+  }
+]

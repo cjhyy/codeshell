@@ -1,0 +1,311 @@
+packages/core/src/settings/manager.ts
+ 325:     if (readProject) {
+ 326:       const projectPath = this.tryProjectSettingsPath(this.cwd, "settings.json");
+ 327:       if (projectPath)
+ 328:         this.applyConfigMigration(projectPath, "project", options?.persistMigrations);
+ 329:     }
+ 330: 
+ 331:     // Workspace-trust gate: an untrusted project must not influence execution
+ 332:     // through dangerous fields committed into its own .code-shell/settings.*.
+ 333:     // Strip them from the project/local layers (after migration re-read the
+ 334:     // files, so we filter the final data) before merge. See
+ 335:     // DANGEROUS_PROJECT_FIELDS and the `projectTrusted` ctor arg.
+ 336:     if (!this.projectTrusted) {
+ 337:       for (const [index, source] of this.sources.entries()) {
+ 338:         if (source.name !== "project" && source.name !== "local") continue;
+ 339:         const data = { ...source.data };
+ 340:         for (const field of DANGEROUS_PROJECT_FIELDS) {
+ 341:           if (field in data) delete data[field];
+ 342:         }
+ 343:         this.sources[index] = Object.freeze({ ...source, data });
+ 344:       }
+ 345:     }
+ 346: 
+ 347:     // Deep merge
+ 348:     const raw = this.deepMerge();
+ 349: 
+ 350:     // Auto-migrate legacy models[] in the user settings file. Runs directly
+ 351:     // on the user-scope file (not the merged result), because the merge
+ 352:     // collapses provenance and the migration needs to write back to a
+ 353:     // single physical file. Gated on readUser: under non-full scope we must
+ 354:     // not read — let alone rewrite — the host's ~/.code-shell/settings.json.
+ 355:     const userPath = join(this.userConfigDir(), "settings.json");
+ 356:     if (readUser && resolveConfigPath(userPath) === userPath) {
+ 357:       try {
+ 358:         // Read-only loads must retain preceding in-memory version migrations.
+ 359:         // Ordinary loads preserve their existing disk reread before model migration.
+ 360:         if (options?.persistMigrations !== false) this.clearSourceOrigin("user");
+ 361:         const userSource = this.sources.find((source) => source.name === "user");
+ 362:         const userRaw =
+ 363:           options?.persistMigrations === false ? userSource?.data : parseConfigFile(userPath);
+ 364:         if (!userRaw) throw new Error("invalid user settings");
+ 365:         const result = migrateModels({
+ 366:           providers: (userRaw.providers as never) ?? [],
+ 367:           models: (userRaw.models as never) ?? [],
+ 368:         });
+ 369:         if (result.changed) {
+ 370:           const migrated = {
+ 371:             ...userRaw,
+ 372:             providers: result.providers,
+ 373:             models: result.models,
+ 374:           };
+ 375:           const sanitized = sanitizeSettingsObject(migrated);
+ 376:           // Atomic write (tmp+rename) — a concurrent load must not see a
+ 377:           // half-written file. File exists here (existsSync guard above).
+ 378:           if (options?.persistMigrations !== false) {
+ 379:             this.writeBackup(userPath);
+ 380:             this.atomicWriteJson(userPath, sanitized);
+ 381:           }
+ 382:           // Re-deep-merge with the migrated user data so the validate
+ 383:           // call sees the new shape rather than the legacy one.
+ 384:           this.replaceSource("user", sanitized, userSource?.origin);
+ 385:           const remerged = this.deepMerge();
+ 386:           return this.validateMerged(remerged);
+ 387:         }
+ 388:       } catch {
+ 389:         // Migration is best-effort — fall through to normal validate.
+ 390:       }
+ 391:     }
+ 392: 
+ 393:     return this.validateMerged(raw);
+ 394:   }
+ 395: 
+ 396:   /**
+ 397:    * Run the version-based migrations (migrate-config.ts MIGRATIONS) against a
+ 398:    * single physical settings file. Best-effort: any read/parse/write error
+ 399:    * falls through silently and the original source data is used as-is.
+ 400:    * Writes back (with a .bak, like the models[] migration above) ONLY when a
+ 401:    * step changed actual content — the configVersion stamp alone doesn't
+ 402:    * justify touching the file. On write-back the in-memory source is updated
+ 403:    * so this load() already sees the migrated shape.
+ 404:    */
+ 405:   private applyConfigMigration(path: string, sourceName: SettingsSourceName, persist = true): void {
+ 406:     if (resolveConfigPath(path) !== path) return;
+ 407:     try {
+ 408:       const source = this.sources.find((s) => s.name === sourceName);
+ 409:       // The opt-in read-only path migrates its actual same-buffer load. Ordinary
+ 410:       // loads retain their historical reread, but cannot retain the old origin.
+ 411:       const paired = !persist && source?.origin !== undefined;
+ 412:       if (!paired) this.clearSourceOrigin(sourceName);
+ 413:       const parsed = paired ? source.data : parseConfigFile(path);
+ 414:       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+ 415:       const raw = sanitizeSettingsObject(parsed as Record<string, unknown>);
+ 416:       const result = migrateConfig(raw);
+ 417:       if (!result.changed) return;
+ 418:       // Compare content with the version stamp normalized away — stamp-only
+ 419:       // changes are not persisted.
+ 420:       const stripStamp = (c: Record<string, unknown>): Record<string, unknown> => {
+ 421:         const { [CONFIG_VERSION_KEY]: _v, ...rest } = c;
+ 422:         return rest;
+ 423:       };
+ 424:       if (JSON.stringify(stripStamp(raw)) === JSON.stringify(stripStamp(result.config))) return;
+ 425:       // Atomic write (tmp+rename) so a concurrent load can't read a half-written
+ 426:       // migrated file — matches the normal save path (atomicWriteJson). The file
+ 427:       // exists here (existsSync guard above), so the recursive mkdir is a no-op.
+ 428:       const sanitized = sanitizeSettingsObject(result.config as Record<string, unknown>);
+ 429:       if (persist) {
+ 430:         this.writeBackup(path);
+ 431:         this.atomicWriteJson(path, sanitized);
+ 432:       }
+ 433:       this.replaceSource(sourceName, sanitized, paired ? source.origin : undefined);
+ 434:     } catch {
+ 435:       // Best-effort — fall through to normal merge/validate.
+ 436:     }
+ 437:   }
+ 438: 
+ 439:   /**
+ 915:             this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);
+ 916:             break;
+ 917:           }
+ 918:         }
+ 919:       }
+ 920:     }
+ 921:     // `path` is the canonical .json path for this layer. When it's absent but
+ 922:     // a sibling settings.yaml/.yml exists, read the YAML instead (JSON wins
+ 923:     // when both exist — JSON is the write-back format, YAML is hand-written).
+ 924:     const resolved = resolveConfigPath(path);
+ 925:     if (!resolved) return;
+ 926:     const data = parseConfigFile(resolved);
+ 927:     if (data) this.sources.push({ name, priority, data });
+ 928:   }
+ 929: 
+ 930:   private deepMerge(): Record<string, unknown> {
+ 931:     let result: Record<string, unknown> = {};
+ 932:     for (const source of this.sources) {
+ 933:       result = merge(result, source.data);
+ 934:     }
+packages/core/src/hooks/configured-tool-hooks.ts
+   1: import { lstatSync } from "node:fs";
+   2: import { join } from "node:path";
+   3: import type { SettingsManager } from "../settings/manager.js";
+   4: import { userHome, type SettingsScope } from "../settings/manager.js";
+   5: import { listPluginHooksForHost, matcherAccepts } from "../plugins/loadPluginHooks.js";
+   6: import type { PluginHookSource } from "../plugins/loadPluginHooks.js";
+   7: import type { SettingsHookOrigin } from "../settings/hook-provenance.js";
+   8: import { installedPluginsPath } from "../plugins/installedPlugins.js";
+   9: import { shellHookMatches } from "./shell-runner.js";
+  10: import type { HookEventName } from "./events.js";
+  11: import { sha256 } from "../runtime/constrained-process/resources.js";
+  12: 
+  13: export const TOOL_HOOK_EVENTS = [
+  14:   "pre_tool_use",
+  15:   "on_permission_check",
+  16:   "on_tool_start",
+  17:   "on_tool_end",
+  18:   "post_tool_use",
+  19: ] as const satisfies readonly HookEventName[];
+  20: 
+  21: export interface ConfiguredToolHook {
+  22:   id: string;
+  23:   event: HookEventName;
+  24:   protocol: "settings" | "plugin";
+  25:   priority: 50 | 80;
+  26:   command: string;
+  27:   timeoutMs: number;
+  28:   cwd?: string;
+  29:   pluginInstallPath?: string;
+  30:   source?: PluginHookSource | SettingsHookOrigin;
+  31: }
+  32: 
+  33: function fileIdentity(path: string): unknown {
+  34:   try {
+  35:     const info = lstatSync(path, { bigint: true });
+  36:     if (info.isSymbolicLink()) throw new Error("Hook authority cannot use a symlink");
+  37:     // A configuration directory's unrelated state children are not policy.
+  38:     // Pin traversal/replacement/permissions; the actual known config files
+  39:     // below retain their complete identity, including timestamps and size.
+  40:     if (info.isDirectory()) return [path, info.dev, info.ino, info.mode].map(String);
+  41:     return [path, info.dev, info.ino, info.mode, info.size, info.mtimeNs, info.ctimeNs].map(String);
+  42:   } catch (error) {
+  43:     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [path, "absent"];
+  44:     throw error;
+  45:   }
+  46: }
+  47: 
+  48: /**
+  49:  * Selection only. Never borrows Engine handlers or runs commands. Preserve the
+  50:  * existing settings/plugin matcher, disable, approval and priority contracts.
+  51:  */
+  52: export function prepareConfiguredToolHooks(options: {
+  53:   settings: SettingsManager;
+  54:   cwd: string;
+  55:   settingsScope: SettingsScope;
+  56:   disabledPlugins: string[];
+  57:   disabledPluginHooks: string[];
+  58:   toolName: string;
+  59: }) {
+  60:   const events = new Set<HookEventName>(TOOL_HOOK_EVENTS);
+  61:   const definitions = options.settings.get().hooks ?? [];
+  62:   const origins = options.settings.getHookOrigins();
+  63:   const plugins = listPluginHooksForHost(options.disabledPlugins);
+  64:   const descriptors: ConfiguredToolHook[] = [];
+  65:   for (const [index, hook] of definitions.entries()) {
+  66:     if (
+  67:       !hook.disabled &&
+  68:       events.has(hook.event as HookEventName) &&
+  69:       shellHookMatches(hook, {
+  70:         eventName: hook.event as HookEventName,
+  71:         data: { toolName: options.toolName },
+  72:       })
+  73:     )
+  74:       descriptors.push({
+  75:         id: `settings:${index}:${sha256(JSON.stringify(hook))}`,
+  76:         event: hook.event as HookEventName,
+  77:         protocol: "settings",
+  78:         priority: 50,
+  79:         command: hook.command,
+  80:         timeoutMs: Math.min(hook.timeout_ms ?? 60000, 60000),
+  81:         ...(hook.cwd === undefined ? {} : { cwd: hook.cwd }),
+  82:         ...(origins[index] === undefined ? {} : { source: origins[index] }),
+  83:       });
+  84:   }
+  85:   for (const [index, hook] of plugins.entries()) {
+  86:     if (
+  87:       hook.disabled ||
+  88:       options.disabledPluginHooks.includes(hook.key) ||
+  89:       !["approved", "legacy"].includes(hook.approval) ||
+  90:       !events.has(hook.event) ||
+  91:       !matcherAccepts(hook.event, hook.matcher, {
+  92:         eventName: hook.event,
+  93:         data: { toolName: options.toolName },
+  94:       })
+  95:     )
+packages/core/src/links/operation-reader.ts
+  25: /**
+  26:  * A user-triggered Host read, independent of any Engine's transient run mode.
+  27:  * It composes current user rules, profile resolution and builtin controls. No
+  28:  * Engine, model, Session mutation, arbitrary action or approval bypass exists.
+  29:  */
+  30: export function createGithubOperationReader(options: {
+  31:   cwd: string;
+  32:   sessionId: string;
+  33:   sessionProfile?: string;
+  34:   /** Trusted Host settings authority, including current global deny rules. */
+  35:   settingsScope: SettingsScope;
+  36:   /** Intersection with the proven original credential scope. */
+  37:   credentialScope?: SettingsScope;
+  38:   assertAuthorized(): void;
+  39:   approveRead(action: GithubReconcileRead, target: string): Promise<boolean>;
+  40:   signal: AbortSignal;
+  41:   hooks?: HookRegistry;
+  42:   /** Trusted native Host custody only; never supplied by model/renderer input. */
+  43:   hookProcesses?: OperationHookProcesses;
+  44: }) {
+  45:   const policy = () => {
+  46:     const settings = new SettingsManager(options.cwd, options.settingsScope, true);
+  47:     settings.load(undefined, { persistMigrations: false, hookOrigins: true });
+  48:     const profile = resolveRunProfileState({
+  49:       sessionWorkspaceProfile: options.sessionProfile,
+  50:       cwd: options.cwd,
+  51:       settings,
+  52:     });
+  53:     const builtinLists = effectiveBuiltinLists(
+  54:       settings.get().agent.enabledBuiltinTools ?? [],
+  55:       settings.get().agent.disabledBuiltinTools ?? [],
+  56:       effectiveProjectOverrides(settings, options.cwd, profile.sessionProfileOverrides)?.builtin,
+  57:     );
+  58:     const disabled = builtinLists.disabledBuiltinTools.includes("LinkAction");
+  59:     const disabledLists = computeEffectiveDisabledLists(
+  60:       settings,
+packages/core/src/links/operation-hook-host.ts
+ 140:             }
+ 141:           const plan = match(hook, context);
+ 142:           if (
+ 143:             !plan ||
+ 144:             (plan !== "inline" &&
+ 145:               (cache.get(plan) === "invalid" ||
+ 146:                 (typeof cache.get(plan) === "object" &&
+ 147:                   (cache.get(plan) as CapturedPlan).state === "invalid")))
+ 148:           )
+ 149:             throw new Error("Configured Hook plan unavailable");
+ 150:         }
+ 151:       },
+ 152:       resolveClosure(hook, context) {
+ 153:         const plan = match(hook, context);
+ 154:         if (!plan) return undefined;
+ 155:         if (plan === "inline") return {};
+ 156:         let record = cache.get(plan);
+ 157:         if (record === "invalid" || record === "capturing")
+ 158:           throw new Error("Hook plan custody unavailable");
+ 159:         if (!record) {
+ 160:           cache.set(plan, "capturing");
+ 161:           try {
+ 162:             const assertSourceCustody = createHookSourceCustody(hook);
+ 163:             const assertCustody = () => {
+ 164:               assertNativeState();
+ 165:               assertSourceCustody();
+ 166:             };
+ 167:             const grants = plan.files.map((file) => {
+ 168:               const path =
+ 169:                 plan.source.kind === "plugin"
+ 170:                   ? join(plan.source.installPath, file.source)
+ 171:                   : file.source;
+ 172:               if (!credentialPolicy) throw new Error("Native Hook state custody unavailable");
+ 173:               assertHookResourceNotCredential(path, credentialPolicy);
+ 174:               if (resolve(path) !== path || realpathSync(path) !== path)
+ 175:                 throw new Error("Hook resource path is not canonical");
+ 176:               return {
+ 177:                 path,
+ 178:                 name: file.name,
+ 179:                 expectedBytes: file.bytes,
+ 180:                 expectedSha256: file.sha256,

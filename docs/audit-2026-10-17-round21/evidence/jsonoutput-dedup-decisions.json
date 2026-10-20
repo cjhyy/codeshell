@@ -1,0 +1,38 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "newFormal": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "decisions": [
+    {
+      "topic": "A12 child delta / empty final JSON fallback",
+      "prior": "docs/audit-2026-10-16/root.md:99-107",
+      "decision": "Known exact mechanism. Read old finding and current actual renderer; no child-plus-empty-final JsonRenderer reproduction this batch, no duplicate formal/candidate/related entry. JSONL child event preservation is independent framing control only."
+    },
+    {
+      "topic": "JsonRenderer instance reuse",
+      "prior": "docs/archive/review-2026-05-30/backlog_verdicts.json:$[107]",
+      "priorVerdict": "false_positive",
+      "decision": "Current run.ts233 constructs renderer per one-shot invocation. No ordinary multi-run reuse producer; no repeated onComplete/reuse test and no revived bug."
+    },
+    {
+      "topic": "final meta key overwrite",
+      "decision": "Actual ordinary run.ts242–245 supplies only sessionId/turnCount. No fabricated result/text/type/reason collisions were tested or counted."
+    },
+    {
+      "topic": "completionKind in final envelopes",
+      "sources": [
+        "packages/core/src/types.ts:652-657",
+        "packages/core/src/engine/run-finalize.ts:396-417",
+        "packages/core/src/protocol/server.ts:1851-1857",
+        "packages/tui/src/cli/commands/run.ts:242-245"
+      ],
+      "decision": "Core RunResult and terminal event carry optional completionKind; CLI final meta selects sessionId/turnCount. JSONL/stream-json original event passthrough retained completionKind in actual renderer control. No explicit CLI final-envelope promise requires the entire RunResult, and no real normal headless async/goal scenario was run; static omission is documented as coverage boundary, not promoted as a new candidate."
+    },
+    {
+      "topic": "Text Read bytes / Unicode / old failed directions",
+      "decision": "TextRenderer and compactSummary are static only. Old UTF16/byte/unit mechanisms, FileToolCard and JSON-summary/sliceAnsi/TUI Diff/i18n failures remain excluded; no dependency rebuilding or alternate validation."
+    }
+  ],
+  "navigation": "Whole docs+bugs Markdown and recursive JSON scalar value leaves, archives included, current batch excluded. Pattern context cap100/textcap1200; aggregate matches133/488/148 exceed retained contexts. Keywords are navigation, not semantic exhaustion. Old A12 and reuse false-positive record read directly."
+}

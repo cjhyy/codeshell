@@ -57,6 +57,7 @@ describe("CredentialsPage navigation and search", () => {
   let root: Root;
   let container: HTMLElement;
   let listCalls: number;
+  let list: () => Promise<MaskedCredentialView[]>;
   let stored: Map<string, string>;
   let restore: Array<() => void>;
   const replace = (object: object, key: string, value: unknown) => {
@@ -73,6 +74,7 @@ describe("CredentialsPage navigation and search", () => {
     restore = [];
     stored = new Map();
     listCalls = 0;
+    list = async () => FIXTURES;
     replace(window, "localStorage", {
       getItem: (key: string) => stored.get(key) ?? null,
       setItem: (key: string, value: string) => stored.set(key, value),
@@ -81,7 +83,7 @@ describe("CredentialsPage navigation and search", () => {
       credentials: {
         list: async () => {
           listCalls += 1;
-          return FIXTURES;
+          return list();
         },
       },
       links: {
@@ -177,6 +179,22 @@ describe("CredentialsPage navigation and search", () => {
     expect(listCalls).toBe(1);
   });
 
+  test("category activation resets only the content scroll and leaves the page chrome in place", async () => {
+    await render();
+    const scroll = descendants(container).find(
+      (node) => propsOf(node)["data-credentials-scroll"] !== undefined,
+    ) as HTMLElement;
+    const tablist = descendants(container).find((node) => propsOf(node).role === "tablist");
+    scroll.scrollTop = 240;
+    await act(async () => {
+      propsOf(tab("token")).onClick();
+      await flushMicrotasks();
+    });
+    expect(scroll.scrollTop).toBe(0);
+    expect(descendants(container).find((node) => propsOf(node).role === "tablist")).toBe(tablist);
+    expect(scroll.contains(tablist!)).toBe(false);
+  });
+
   test("restores the saved Token category and finds a token by its environment variable", async () => {
     stored.set("codeshell:credentials:last-tab", "token");
     await render();
@@ -186,6 +204,41 @@ describe("CredentialsPage navigation and search", () => {
     expect(articles()).toEqual(["Build service"]);
     expect(listCalls).toBe(1);
   });
+
+  test.each(["cookie", "token"] as const)(
+    "%s load errors offer retry instead of an empty list",
+    async (category) => {
+      list = async () => {
+        throw new Error("Owned credential read failed");
+      };
+      await render(category);
+      const alert = descendants(container).find((node) => propsOf(node).role === "alert")!;
+      expect(propsOf(alert).children).toContain("Owned credential read failed");
+      expect(articles()).toEqual([]);
+      // The first-item action belongs only to a successfully loaded empty list.
+      expect(
+        descendants(container).some((node) => propsOf(node).children === "添加第一个账号"),
+      ).toBe(false);
+      expect(
+        descendants(container).some((node) => propsOf(node).children === "添加第一个 Token"),
+      ).toBe(false);
+      list = async () => FIXTURES;
+      const retry = descendants(container).find(
+        (node) => node.tagName === "BUTTON" && propsOf(node).children === "重试",
+      )!;
+      await act(async () => {
+        propsOf(retry).onClick();
+        await flushMicrotasks();
+      });
+      expect(listCalls).toBe(2);
+      expect(descendants(container).some((node) => propsOf(node).role === "alert")).toBe(false);
+      expect(articles()).toEqual(
+        category === "cookie"
+          ? ["Work account", "Personal account"]
+          : ["Build service", "Docs service"],
+      );
+    },
+  );
 
   test("explicit Link entry overrides the saved category only when entering the page", async () => {
     stored.set("codeshell:credentials:last-tab", "cookie");

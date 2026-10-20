@@ -1,0 +1,21 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round22/evidence/title-session-leaf.test.ts:
+(pass) round22 actual buildSessionTitle owned callback controls > caps each ASCII input separately and requests the small hidden title operation [3.15ms]
+(pass) round22 actual buildSessionTitle owned callback controls > retains both empty input fields without making a second callback [0.19ms]
+(pass) round22 actual buildSessionTitle owned callback controls > strips nested CJK and single quote wrappers [0.22ms]
+(pass) round22 actual buildSessionTitle owned callback controls > treats quote-only output as empty [0.24ms]
+(pass) round22 actual buildSessionTitle owned callback controls > treats absent text as empty while retaining the billed usage callback [0.01ms]
+(pass) round22 actual buildSessionTitle owned callback controls > does not call a collector when the response omits usage [0.05ms]
+(pass) round22 actual buildSessionTitle owned callback controls > accepts a usage-bearing response without a collector [0.04ms]
+(pass) round22 actual buildSessionTitle owned callback controls > records zero usage as an object rather than dropping it [0.06ms]
+(pass) round22 actual buildSessionTitle owned callback controls > keeps synchronous createMessage errors best effort [0.40ms]
+(pass) round22 actual buildSessionTitle owned callback controls > keeps non-Error promise rejection best effort [0.03ms]
+(pass) round22 actual buildSessionTitle owned callback controls > keeps a throwing synchronous collector inside the failure boundary [0.03ms]
+(pass) round22 actual buildSessionTitle owned callback controls > keeps two independently deferred calls and their collectors separate [0.14ms]
+
+ 12 pass
+ 0 fail
+ 34 expect() calls
+Ran 12 tests across 1 file. [165.00ms]
+Completed Bun shard: 12 tests, 0 skipped; 0 failures.

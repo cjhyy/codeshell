@@ -1,0 +1,82 @@
+{
+  "frozenBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "formalCount": 0,
+  "candidateCount": 2,
+  "relatedCount": 1,
+  "runs": [
+    {
+      "name": "utils-slice-columns",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round14/evidence/utils-slice-columns.test.ts"
+      ],
+      "rawLog": "docs/audit-2026-10-17-round14/evidence/utils-slice-columns.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round14/evidence/utils-slice-columns.first.exit.json",
+      "exitCode": 1,
+      "firstOnly": true,
+      "attempts": 1,
+      "reruns": 0,
+      "pass": 0,
+      "fail": 1,
+      "errors": 1,
+      "expect": null,
+      "testBodiesExecuted": 0,
+      "completed": false,
+      "status": "SKIP-first-fixture-import-failure"
+    },
+    {
+      "name": "utils-format-existing",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/utils/format.test.ts"
+      ],
+      "rawLog": "docs/audit-2026-10-17-round14/evidence/utils-format-existing.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round14/evidence/utils-format-existing.first.exit.json",
+      "exitCode": 0,
+      "firstOnly": true,
+      "attempts": 1,
+      "reruns": 0,
+      "pass": 6,
+      "fail": 0,
+      "errors": 0,
+      "expect": 6,
+      "testBodiesExecuted": 6,
+      "completed": true,
+      "status": "clean-first-run"
+    }
+  ],
+  "cleanTotals": {
+    "groups": 1,
+    "pass": 6,
+    "fail": 0,
+    "skipped": 0,
+    "expect": 6
+  },
+  "failedFirstTotals": {
+    "groups": 1,
+    "pass": 0,
+    "fail": 1,
+    "errors": 1,
+    "expect": null,
+    "testBodiesExecuted": 0
+  },
+  "unexecuted": [
+    {
+      "fixture": "docs/audit-2026-10-17-round14/evidence/utils-cache-format-controls.test.ts",
+      "attempts": 0,
+      "reason": "Retains same wrong relative import; preserved without repair or execution. No test assertions constitute runtime evidence."
+    }
+  ],
+  "limits": [
+    "No production Slice module was loaded; all Slice observations remain static candidates.",
+    "No replacement or retry execution occurred.",
+    "Existing baseline covers six sub-second formatDuration cases only.",
+    "No actual renderer, terminal, network, native process, user data, real scans, or tool was invoked."
+  ]
+}

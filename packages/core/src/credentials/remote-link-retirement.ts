@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createHash, randomUUID } from "node:crypto";
 import type { Credential } from "./types.js";
 import type { EncryptionCipher } from "./cipher.js";
@@ -38,11 +39,11 @@ function entry(value: unknown): value is Entry {
 function remote(value: Credential): boolean {
   return (
     value?.type === "oauth" &&
-    value.meta?.linkExecutionBackend === "remote" &&
-    value.meta.linkExecutionRuntime === "server" &&
+    linkConnectionMetadata(value.meta).linkExecutionBackend === "remote" &&
+    linkConnectionMetadata(value.meta).linkExecutionRuntime === "server" &&
     typeof value.secret === "string" &&
     !!value.secret &&
-    !!value.meta.linkRemoteIssuer
+    !!value.meta?.linkRemoteIssuer
   );
 }
 export function retirementId(credential: Credential): string {
@@ -100,6 +101,12 @@ export function claimRetirement(
       if (cipher.canDecrypt && !cipher.canDecrypt(value.secret)) continue;
       credential = JSON.parse(cipher.decrypt(value.secret));
       if (!remote(credential) || retirementId(credential) !== value.id) continue;
+      // Offline removal may preserve an encrypted token without the Desktop key.
+      // Validate the custody id before unwrapping that original ciphertext.
+      if (credential.secret?.startsWith("enc:")) {
+        if (cipher.canDecrypt && !cipher.canDecrypt(credential.secret)) continue;
+        credential = { ...credential, secret: cipher.decrypt(credential.secret) };
+      }
     } catch {
       continue;
     }
@@ -107,7 +114,9 @@ export function claimRetirement(
     if (
       active.some(
         (c) =>
-          remote(c) &&
+          // A future record format cannot execute on this Host, but its matching
+          // grant still protects custody from revocation by an older Host.
+          c.type === "oauth" &&
           c.meta?.linkRemoteIssuer === credential.meta?.linkRemoteIssuer &&
           (c.secret === credential.secret ||
             (!!credential.meta?.linkRemoteGrantId &&

@@ -4,7 +4,8 @@ import { Devices } from "./Devices.js";
 import { CloudAccountControls, type CloudAccountControlsProps } from "./CloudAccountControls.js";
 import { HubSettings, type HubSettingsSection } from "./HubSettings.js";
 import { HubFiles } from "./HubFiles.js";
-import { HubSessions } from "./HubSessions.js";
+import { HubModelTraces } from "./HubModelTraces.js";
+import { HubSessions, useHistoryActionFocus } from "./HubSessions.js";
 import { HubLinks } from "./HubLinks.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
@@ -13,13 +14,14 @@ import { MessageContent, ToolMessage, subagentStatusLabel } from "./MessageConte
 import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
 import { parseWorkbenchLocation } from "./website-routes.js";
+import { useLatestMessages } from "./useLatestMessages.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
 /** Both host controllers store drafts synchronously before send reads them. */
 export function submitWorkbenchPanelPrompt(
   controller: WorkbenchController,
-  request: { prompt: string; sessionId: string; workspaceKey: string },
+  request: { prompt: string; sessionId: string; workspaceKey: string; modelTraceSource?: string },
 ): { accepted: true } {
   if (request.workspaceKey !== controller.workspaceKey || request.sessionId !== controller.activeId)
     throw new Error("当前工作区或对话已经变化，请重新打开面板后发送。");
@@ -31,7 +33,8 @@ export function submitWorkbenchPanelPrompt(
     controller.chat.run === "running" ||
     controller.chat.run === "waiting" ||
     controller.approvals.some(
-      (approval) => !approval.sessionId || approval.sessionId === request.sessionId,
+      (approval) =>
+        !approval.asynchronous && (!approval.sessionId || approval.sessionId === request.sessionId),
     )
   )
     throw new Error("当前对话仍在处理任务，请完成后再发送面板任务。");
@@ -42,7 +45,11 @@ export function submitWorkbenchPanelPrompt(
   if (!request.prompt.trim() || request.prompt.length > 20000)
     throw new Error("面板任务内容无效。");
   controller.setDraft(request.prompt);
-  if (!controller.send()) {
+  if (
+    !controller.send(
+      request.modelTraceSource ? { modelTraceSource: request.modelTraceSource } : undefined,
+    )
+  ) {
     // The synchronous setter/send pair cannot interleave with another input
     // event. A declined sender has not consumed our just-inserted draft.
     controller.setDraft("");
@@ -92,10 +99,17 @@ export function Workbench({
   const hub = controller.workspaceApi;
   const hostLabel = controller.host === "desktop" ? "桌面" : "服务端";
   const [devicesOpen, setDevicesOpen] = React.useState(false);
+  const historyFocus = useHistoryActionFocus();
+  const historyHandoff = React.useRef<{
+    request: ReturnType<typeof historyFocus.capture>;
+    id: string;
+    workspace: string;
+  } | null>(null);
   const fileInput = React.useRef<HTMLInputElement>(null);
   const cameraInput = React.useRef<HTMLInputElement>(null);
+  const devicesOpener = React.useRef<HTMLButtonElement>(null);
   const [view, setView] = React.useState<
-    "chat" | "settings" | "files" | "history" | "links" | "panels" | "panel"
+    "chat" | "activity" | "settings" | "files" | "history" | "links" | "panels" | "panel"
   >(() => parseWorkbenchLocation(new URL(window.location.href)).view);
   const [openedPanel, setOpenedPanel] = React.useState<{
     panel: ManagedPanel;
@@ -131,31 +145,108 @@ export function Workbench({
     () => !window.matchMedia("(max-width: 760px)").matches,
   );
   const sidebarRef = React.useRef<HTMLElement>(null);
+  const sidebarBackdropRef = React.useRef<HTMLDivElement>(null);
   const sidebarToggleRef = React.useRef<HTMLButtonElement>(null);
-  const sidebarWasOpen = React.useRef(false);
-  const messageListRef = React.useRef<HTMLDivElement>(null);
+  const sidebarCloseFocus = React.useRef<{
+    source: HTMLElement;
+    workspace: string;
+    cancelled: boolean;
+  } | null>(null);
+  const messageListId = React.useId();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const followMessages = React.useRef(true);
+  const latest = useLatestMessages({
+    items: chat.items,
+    scope: JSON.stringify([controller.workspaceKey, activeId]),
+    connection,
+    loading: Boolean(controller.loading),
+    active: view === "chat",
+    approvalCount: controller.approvals.length,
+  });
+  React.useLayoutEffect(() => {
+    const handoff = historyHandoff.current;
+    if (!handoff) return;
+    if (view !== "chat" || narrow || handoff.workspace !== controller.workspaceKey) {
+      historyHandoff.current = null;
+      historyFocus.finish(handoff.request, null);
+    } else if (activeId === handoff.id) {
+      historyHandoff.current = null;
+      historyFocus.finish(handoff.request, latest.listRef.current);
+    }
+  }, [activeId, controller.workspaceKey, historyFocus, latest.listRef, narrow, view]);
   React.useEffect(() => {
     setOpenedPanel(undefined);
     setView((current) => (current === "panel" ? "panels" : current));
   }, [controller.workspaceKey]);
-  React.useEffect(() => {
-    if (narrow && !sidebarOpen && sidebarWasOpen.current && !devicesOpen) {
+  React.useLayoutEffect(() => {
+    if (sidebarOpen) return;
+    const intent = sidebarCloseFocus.current;
+    sidebarCloseFocus.current = null;
+    const active = document.activeElement;
+    if (
+      intent &&
+      !intent.cancelled &&
+      intent.workspace === controller.workspaceKey &&
+      narrow &&
+      !sidebarOpen &&
+      !devicesOpen &&
+      (active === intent.source || active === document.body || !active?.isConnected)
+    )
       sidebarToggleRef.current?.focus();
-    }
-    sidebarWasOpen.current = sidebarOpen;
-  }, [narrow, sidebarOpen, devicesOpen]);
+  }, [narrow, sidebarOpen, devicesOpen, controller.workspaceKey]);
 
   React.useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
     const change = () => {
+      const source = document.activeElement;
+      sidebarCloseFocus.current =
+        media.matches && source instanceof HTMLElement && sidebarRef.current?.contains(source)
+          ? { source, workspace: controller.workspaceKey, cancelled: false }
+          : null;
       setNarrow(media.matches);
       setSidebarOpen(!media.matches);
     };
+    const handoff = (event: Event) => {
+      const target =
+        event instanceof FocusEvent && event.type === "focusout"
+          ? event.relatedTarget
+          : event.target;
+      if (!(target instanceof Node) || (target === document.body && event.type !== "pointerdown"))
+        return;
+      if (event.type === "pointerdown" && target === sidebarBackdropRef.current) return;
+      // Closing a mobile rail makes the main area non-inert in the same commit.
+      // Retain its actual focused source until the toggle can accept focus again.
+      if (
+        event.type === "focusin" &&
+        target instanceof HTMLElement &&
+        sidebarRef.current?.contains(target)
+      ) {
+        sidebarCloseFocus.current = {
+          source: target,
+          workspace: controller.workspaceKey,
+          cancelled: false,
+        };
+        return;
+      }
+      const intent = sidebarCloseFocus.current;
+      if (intent && !intent.source.contains(target)) intent.cancelled = true;
+    };
+    const blur = () => {
+      if (sidebarCloseFocus.current) sidebarCloseFocus.current.cancelled = true;
+    };
     media.addEventListener("change", change);
-    return () => media.removeEventListener("change", change);
-  }, []);
+    document.addEventListener("pointerdown", handoff, true);
+    document.addEventListener("focusin", handoff, true);
+    document.addEventListener("focusout", handoff, true);
+    window.addEventListener("blur", blur);
+    return () => {
+      sidebarCloseFocus.current = null;
+      media.removeEventListener("change", change);
+      document.removeEventListener("pointerdown", handoff, true);
+      document.removeEventListener("focusin", handoff, true);
+      document.removeEventListener("focusout", handoff, true);
+      window.removeEventListener("blur", blur);
+    };
+  }, [controller.workspaceKey]);
 
   React.useEffect(() => {
     if (!narrow || !sidebarOpen) return;
@@ -196,13 +287,15 @@ export function Workbench({
     textarea.style.height = `${Math.min(180, Math.max(64, textarea.scrollHeight))}px`;
   }, [draft, view]);
 
-  React.useLayoutEffect(() => {
-    const list = messageListRef.current;
-    if (list && followMessages.current && view === "chat") list.scrollTop = list.scrollHeight;
-  }, [chat.items, controller.approvals.length, view]);
-
   const closeMobileSidebar = () => {
     if (narrow) {
+      const source = document.activeElement;
+      if (sidebarOpen && source instanceof HTMLElement && source !== document.body)
+        sidebarCloseFocus.current = {
+          source,
+          workspace: controller.workspaceKey,
+          cancelled: false,
+        };
       setSidebarOpen(false);
       sidebarToggleRef.current?.focus();
     }
@@ -250,17 +343,29 @@ export function Workbench({
     requestNavigation(() => {
       setView("chat");
       closeMobileSidebar();
-      followMessages.current = true;
+      latest.resume();
       action();
     });
-  const openSession = (id: string) => openConversation(() => void controller.selectSession(id));
+  const openSession = (id: string, intent?: ReturnType<typeof historyFocus.capture>) => {
+    if (historyHandoff.current) historyFocus.finish(historyHandoff.current.request, null);
+    historyHandoff.current = null;
+    // A keyboard-opened history row is removed by this navigation. Keep that
+    // actual intent through the selected-session commit, not later replay.
+    if (intent && !narrow)
+      historyHandoff.current = {
+        request: historyFocus.adopt(intent),
+        id,
+        workspace: controller.workspaceKey,
+      };
+    openConversation(() => void controller.selectSession(id));
+  };
   const startNewSession = () => openConversation(controller.newSession);
   const send = () => {
-    followMessages.current = true;
-    controller.send();
+    if (controller.send()) latest.resume();
   };
   const stop = controller.stop;
   const approvals = controller.approvals.filter((a) => !a.sessionId || a.sessionId === activeId);
+  const blockingApprovals = approvals.filter((approval) => !approval.asynchronous);
   const otherApprovals = controller.approvals.filter(
     (a) => a.sessionId && a.sessionId !== activeId,
   );
@@ -275,21 +380,24 @@ export function Workbench({
       ? title
       : view === "files"
         ? "工作区文件"
-        : view === "history"
-          ? "历史对话"
-          : view === "links"
-            ? "Link"
-            : view === "panels" || view === "panel"
-              ? openedPanel && view === "panel"
-                ? openedPanel.panel.title["zh-CN"] || openedPanel.panel.title.default
-                : "面板"
-              : settingsSection === "skills"
-                ? "Skills"
-                : "设置";
+        : view === "activity"
+          ? "执行观测"
+          : view === "history"
+            ? "历史对话"
+            : view === "links"
+              ? "Link"
+              : view === "panels" || view === "panel"
+                ? openedPanel && view === "panel"
+                  ? openedPanel.panel.title["zh-CN"] || openedPanel.panel.title.default
+                  : "面板"
+                : settingsSection === "skills"
+                  ? "Skills"
+                  : "设置";
   return (
     <div className={`shell${sidebarOpen ? " sidebar-open" : ""}`}>
       {narrow && sidebarOpen ? (
         <div
+          ref={sidebarBackdropRef}
           className="sidebar-backdrop"
           onClick={() => {
             setSidebarOpen(false);
@@ -332,193 +440,212 @@ export function Workbench({
             <WorkbenchIcon name="sidebar" />
           </button>
         </div>
-        <EnvironmentMenu
-          discover={controller.workspaceApi}
-          navigate={(address) => {
-            const go = () => window.location.assign(address);
-            if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
-              setPendingNavigation(() => go);
-            else go();
-          }}
-        />
-        <nav className="workbench-nav" aria-label="主要功能">
-          {onBackToProjects ? (
-            <button
-              className="nav-button"
-              title={projectName}
-              onClick={() => {
-                if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
-                  setPendingNavigation(() => onBackToProjects);
-                else onBackToProjects();
-              }}
-            >
-              <WorkbenchIcon name="folder" />
-              <span>返回项目列表</span>
-            </button>
-          ) : null}
-          <button className="nav-button new-chat-button" onClick={startNewSession}>
-            <WorkbenchIcon name="plus" />
-            <span>新对话</span>
-          </button>
-          <button
-            className={`nav-button${view === "chat" ? " active" : ""}`}
-            onClick={() => {
-              requestNavigation(() => {
-                setView("chat");
-                closeMobileSidebar();
-              });
+        <div className="rail-content" role="region" aria-label="功能与最近对话" tabIndex={0}>
+          <EnvironmentMenu
+            discover={controller.workspaceApi}
+            navigate={(address) => {
+              const go = () => window.location.assign(address);
+              if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
+                setPendingNavigation(() => go);
+              else go();
             }}
-            aria-current={view === "chat" ? "page" : undefined}
-          >
-            <WorkbenchIcon name="chat" />
-            <span>对话</span>
-          </button>
-          {hub ? (
-            <>
+          />
+          <nav className="workbench-nav" aria-label="主要功能">
+            {onBackToProjects ? (
               <button
-                className={`nav-button${view === "history" ? " active" : ""}`}
-                onClick={() =>
-                  requestNavigation(() => {
-                    setView("history");
-                    closeMobileSidebar();
-                  })
-                }
-                aria-current={view === "history" ? "page" : undefined}
-              >
-                <WorkbenchIcon name="history" />
-                <span>历史对话</span>
-              </button>
-              <button
-                className={`nav-button${view === "files" ? " active" : ""}`}
-                onClick={() => openFiles()}
-                aria-current={view === "files" ? "page" : undefined}
+                className="nav-button"
+                title={projectName}
+                onClick={() => {
+                  if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
+                    setPendingNavigation(() => onBackToProjects);
+                  else onBackToProjects();
+                }}
               >
                 <WorkbenchIcon name="folder" />
-                <span>文件</span>
+                <span>返回项目列表</span>
               </button>
-              <button
-                className={`nav-button${view === "settings" && settingsSection === "skills" ? " active" : ""}`}
-                onClick={() => openSettings("skills")}
-                aria-current={
-                  view === "settings" && settingsSection === "skills" ? "page" : undefined
-                }
-              >
-                <WorkbenchIcon name="skills" />
-                <span>Skills</span>
-              </button>
-              <button
-                className={`nav-button${view === "panels" || view === "panel" ? " active" : ""}`}
-                onClick={() =>
-                  requestNavigation(() => {
-                    setView("panels");
-                    closeMobileSidebar();
-                  })
-                }
-                aria-current={view === "panels" || view === "panel" ? "page" : undefined}
-              >
-                <WorkbenchIcon name="panels" />
-                <span>面板</span>
-              </button>
-              <button
-                className={`nav-button${view === "links" ? " active" : ""}`}
-                onClick={() =>
-                  requestNavigation(() => {
-                    setView("links");
-                    closeMobileSidebar();
-                  })
-                }
-                aria-current={view === "links" ? "page" : undefined}
-              >
-                <WorkbenchIcon name="links" />
-                <span>Link</span>
-              </button>
-              <button
-                className={`nav-button${view === "settings" && settingsSection !== "skills" ? " active" : ""}`}
-                onClick={() => openSettings("overview")}
-                aria-current={
-                  view === "settings" && settingsSection !== "skills" ? "page" : undefined
-                }
-              >
-                <WorkbenchIcon name="settings" />
-                <span>设置</span>
-              </button>
-            </>
-          ) : null}
-        </nav>
-        <div className="rail-section-label">工作区</div>
-        {hub ? (
-          <button
-            className="workspace-button"
-            title={workspaceCwd ?? undefined}
-            onClick={() => openFiles()}
-          >
-            <WorkbenchIcon name="folder" />
-            <span>{projectName ?? workspaceName}</span>
-            <WorkbenchIcon name="chevron" />
-          </button>
-        ) : (
-          <div className="workspace-button" title={workspaceCwd ?? undefined}>
-            <WorkbenchIcon name="folder" />
-            <span>{projectName ?? workspaceName}</span>
+            ) : null}
+            <button className="nav-button new-chat-button" onClick={startNewSession}>
+              <WorkbenchIcon name="plus" />
+              <span>新对话</span>
+            </button>
+            <button
+              className={`nav-button${view === "chat" ? " active" : ""}`}
+              onClick={() => {
+                requestNavigation(() => {
+                  setView("chat");
+                  closeMobileSidebar();
+                });
+              }}
+              aria-current={view === "chat" ? "page" : undefined}
+            >
+              <WorkbenchIcon name="chat" />
+              <span>对话</span>
+            </button>
+            {hub ? (
+              <>
+                <button
+                  className={`nav-button${view === "activity" ? " active" : ""}`}
+                  onClick={() =>
+                    requestNavigation(() => {
+                      setView("activity");
+                      closeMobileSidebar();
+                    })
+                  }
+                  aria-current={view === "activity" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="history" />
+                  <span>执行观测</span>
+                </button>
+                <button
+                  className={`nav-button${view === "history" ? " active" : ""}`}
+                  onClick={() =>
+                    requestNavigation(() => {
+                      setView("history");
+                      closeMobileSidebar();
+                    })
+                  }
+                  aria-current={view === "history" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="history" />
+                  <span>历史对话</span>
+                </button>
+                <button
+                  className={`nav-button${view === "files" ? " active" : ""}`}
+                  onClick={() => openFiles()}
+                  aria-current={view === "files" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="folder" />
+                  <span>文件</span>
+                </button>
+                <button
+                  className={`nav-button${view === "settings" && settingsSection === "skills" ? " active" : ""}`}
+                  onClick={() => openSettings("skills")}
+                  aria-current={
+                    view === "settings" && settingsSection === "skills" ? "page" : undefined
+                  }
+                >
+                  <WorkbenchIcon name="skills" />
+                  <span>Skills</span>
+                </button>
+                <button
+                  className={`nav-button${view === "panels" || view === "panel" ? " active" : ""}`}
+                  onClick={() =>
+                    requestNavigation(() => {
+                      setView("panels");
+                      closeMobileSidebar();
+                    })
+                  }
+                  aria-current={view === "panels" || view === "panel" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="panels" />
+                  <span>面板</span>
+                </button>
+                <button
+                  className={`nav-button${view === "links" ? " active" : ""}`}
+                  onClick={() =>
+                    requestNavigation(() => {
+                      setView("links");
+                      closeMobileSidebar();
+                    })
+                  }
+                  aria-current={view === "links" ? "page" : undefined}
+                >
+                  <WorkbenchIcon name="links" />
+                  <span>Link</span>
+                </button>
+                <button
+                  className={`nav-button${view === "settings" && settingsSection !== "skills" ? " active" : ""}`}
+                  onClick={() => openSettings("overview")}
+                  aria-current={
+                    view === "settings" && settingsSection !== "skills" ? "page" : undefined
+                  }
+                >
+                  <WorkbenchIcon name="settings" />
+                  <span>设置</span>
+                </button>
+              </>
+            ) : null}
+          </nav>
+          <div className="rail-section-label">工作区</div>
+          {hub ? (
+            <button
+              className="workspace-button"
+              title={workspaceCwd ?? undefined}
+              onClick={() => openFiles()}
+            >
+              <WorkbenchIcon name="folder" />
+              <span>{projectName ?? workspaceName}</span>
+              <WorkbenchIcon name="chevron" />
+            </button>
+          ) : (
+            <div className="workspace-button" title={workspaceCwd ?? undefined}>
+              <WorkbenchIcon name="folder" />
+              <span>{projectName ?? workspaceName}</span>
+            </div>
+          )}
+          <div className="rail-section-label history-label">
+            <span>最近对话</span>
+            <span>{sessions.length}</span>
           </div>
-        )}
-        <div className="rail-section-label history-label">
-          <span>最近对话</span>
-          <span>{sessions.length}</span>
+          {controller.renderSidebar?.({ guard: requestNavigation, conversation: openConversation })}
+          <ul className="sessions" aria-label="最近对话">
+            {localDrafts.map(({ sessionId, draft: pendingDraft }) => (
+              <li key={`draft-${sessionId}`}>
+                <button
+                  className={
+                    sessionId === activeId && view === "chat" ? "session active" : "session"
+                  }
+                  onClick={() => void openSession(sessionId)}
+                >
+                  <span className="session-title">
+                    {pendingDraft.text.trim() || `附件：${pendingDraft.files[0]?.name ?? "新对话"}`}
+                  </span>
+                  <span className="session-meta">草稿</span>
+                </button>
+              </li>
+            ))}
+            {sessions.map((item) => (
+              <li key={item.sessionId}>
+                <button
+                  className={
+                    item.sessionId === activeId && view === "chat" ? "session active" : "session"
+                  }
+                  onClick={() => void openSession(item.sessionId)}
+                  aria-current={item.sessionId === activeId && view === "chat" ? "page" : undefined}
+                >
+                  <span className="session-title">
+                    {item.sessionId === activeId
+                      ? item.customTitle ||
+                        chat.title ||
+                        item.title ||
+                        sessionTitle(chat, item.sessionId)
+                      : item.title || item.preview?.trim() || item.sessionId.slice(0, 8)}
+                  </span>
+                  <span className="session-meta">
+                    {controller.unreadSessionIds?.has(item.sessionId) &&
+                    item.sessionId !== activeId ? (
+                      <span className="session-unread" aria-label="有新消息">
+                        ●{" "}
+                      </span>
+                    ) : null}
+                    {approvalCount(item.sessionId)
+                      ? `${approvalCount(item.sessionId)} 项待审批`
+                      : item.running
+                        ? "进行中"
+                        : sessionStatusLabel(item.status)}
+                    {controller.showTurnCounts !== false ? (
+                      <span> · {item.turnCount} 轮</span>
+                    ) : null}
+                  </span>
+                </button>
+              </li>
+            ))}
+            {sessions.length === 0 && localDrafts.length === 0 ? (
+              <li className="empty">开始对话后，记录会保存在这里。</li>
+            ) : null}
+          </ul>
         </div>
-        {controller.renderSidebar?.({ guard: requestNavigation, conversation: openConversation })}
-        <ul className="sessions" aria-label="最近对话">
-          {localDrafts.map(({ sessionId, draft: pendingDraft }) => (
-            <li key={`draft-${sessionId}`}>
-              <button
-                className={sessionId === activeId && view === "chat" ? "session active" : "session"}
-                onClick={() => void openSession(sessionId)}
-              >
-                <span className="session-title">
-                  {pendingDraft.text.trim() || `附件：${pendingDraft.files[0]?.name ?? "新对话"}`}
-                </span>
-                <span className="session-meta">草稿</span>
-              </button>
-            </li>
-          ))}
-          {sessions.map((item) => (
-            <li key={item.sessionId}>
-              <button
-                className={
-                  item.sessionId === activeId && view === "chat" ? "session active" : "session"
-                }
-                onClick={() => void openSession(item.sessionId)}
-                aria-current={item.sessionId === activeId && view === "chat" ? "page" : undefined}
-              >
-                <span className="session-title">
-                  {item.sessionId === activeId
-                    ? item.customTitle ||
-                      chat.title ||
-                      item.title ||
-                      sessionTitle(chat, item.sessionId)
-                    : item.title || item.preview?.trim() || item.sessionId.slice(0, 8)}
-                </span>
-                <span className="session-meta">
-                  {controller.unreadSessionIds?.has(item.sessionId) &&
-                  item.sessionId !== activeId ? (
-                    <span className="session-unread" aria-label="有新消息">
-                      ●{" "}
-                    </span>
-                  ) : null}
-                  {approvalCount(item.sessionId)
-                    ? `${approvalCount(item.sessionId)} 项待审批`
-                    : item.running
-                      ? "进行中"
-                      : sessionStatusLabel(item.status)}
-                  {controller.showTurnCounts !== false ? <span> · {item.turnCount} 轮</span> : null}
-                </span>
-              </button>
-            </li>
-          ))}
-          {sessions.length === 0 && localDrafts.length === 0 ? (
-            <li className="empty">开始对话后，记录会保存在这里。</li>
-          ) : null}
-        </ul>
         <div className="rail-footer">
           <div className="host-label">
             <span className={`dot ${connection}`} />
@@ -535,7 +662,8 @@ export function Workbench({
           {controller.host === "hub" && !cloudAccount ? (
             <button
               className="account-button"
-              onClick={() => {
+              onClick={(event) => {
+                devicesOpener.current = event.currentTarget;
                 closeMobileSidebar();
                 setDevicesOpen(true);
               }}
@@ -618,7 +746,7 @@ export function Workbench({
         ) : null}
         {view !== "chat" && approvals.length > 0 ? (
           <div className="banner">
-            当前对话需要你的确认。
+            {blockingApprovals.length ? "当前对话需要你的确认。" : "当前对话有可稍后回答的问题。"}
             <button className="ghost" onClick={() => requestNavigation(() => setView("chat"))}>
               返回对话
             </button>
@@ -629,106 +757,140 @@ export function Workbench({
           hidden={view !== "chat"}
           aria-label="对话"
         >
-          <div
-            className="messages"
-            ref={messageListRef}
-            onScroll={(event) => {
-              const list = event.currentTarget;
-              followMessages.current = list.scrollHeight - list.scrollTop - list.clientHeight < 100;
-            }}
-          >
-            <div className="transcript">
-              {controller.chatControls}
-              {controller.loading ? (
-                <div className="banner" role="status">
-                  正在恢复会话记录…
-                </div>
-              ) : null}
-              {chat.goal ? (
-                <div className="banner goal">
-                  <span>{chat.goal}</span>
-                  {controller.goalActions}
-                </div>
-              ) : null}
-              {chat.items.map((item) => {
-                switch (item.kind) {
-                  case "user":
-                    return (
-                      <div key={item.id} className="msg user">
-                        {item.text}
-                        {item.attachments?.map((attachment, index) =>
-                          hub && attachment.path ? (
-                            <button
-                              className="attachment attachment-open"
-                              key={index}
-                              onClick={() => openFiles(attachment.path)}
-                            >
-                              📎 {attachment.name}
-                            </button>
-                          ) : (
-                            <span className="attachment" key={index}>
-                              📎 {attachment.name}
-                            </span>
-                          ),
-                        )}
-                      </div>
-                    );
-                  case "assistant":
-                    if (item.done && !item.text && !item.reasoning) return null;
-                    return (
-                      <div key={item.id} className="msg assistant">
-                        <MessageContent
-                          text={item.text}
-                          reasoning={item.reasoning}
-                          streaming={!item.done}
-                          onOpenFile={hub ? openMessageFile : undefined}
-                        />
-                      </div>
-                    );
-                  case "tool":
-                    return (
-                      <div key={item.id} className={`msg tool${item.error ? " tool-error" : ""}`}>
-                        <ToolMessage item={item} running={running} />
-                      </div>
-                    );
-                  case "subagent":
-                    return (
-                      <div key={item.id} className="msg info">
-                        ↳ {item.label} · {subagentStatusLabel(item.status)}
-                      </div>
-                    );
-                  case "system":
-                    return (
-                      <div key={item.id} className="msg info">
-                        {item.text}
-                      </div>
-                    );
-                  case "system_error":
-                    return (
-                      <div key={item.id} className="msg error">
-                        {item.text}
-                      </div>
-                    );
-                  default:
-                    return null;
-                }
-              })}
-              {controller.approvalContent}
+          <div className="message-viewport">
+            <div
+              className="messages"
+              id={messageListId}
+              role="region"
+              aria-label="消息列表"
+              tabIndex={0}
+              ref={latest.listRef}
+              onScroll={latest.onScroll}
+            >
+              <div className="transcript" ref={latest.contentRef}>
+                {controller.chatControls}
+                {controller.loading ? (
+                  <div className="banner" role="status">
+                    正在恢复会话记录…
+                  </div>
+                ) : null}
+                {chat.goal ? (
+                  <div className="banner goal">
+                    <span>{chat.goal}</span>
+                    {controller.goalActions}
+                  </div>
+                ) : null}
+                {chat.items.map((item) => {
+                  switch (item.kind) {
+                    case "user":
+                      return (
+                        <div key={item.id} className="msg user">
+                          {item.text}
+                          {item.attachments?.map((attachment, index) =>
+                            hub && attachment.path ? (
+                              <button
+                                className="attachment attachment-open"
+                                key={index}
+                                onClick={() => openFiles(attachment.path)}
+                              >
+                                📎 {attachment.name}
+                              </button>
+                            ) : (
+                              <span className="attachment" key={index}>
+                                📎 {attachment.name}
+                              </span>
+                            ),
+                          )}
+                        </div>
+                      );
+                    case "assistant":
+                      if (item.done && !item.text && !item.reasoning) return null;
+                      return (
+                        <div key={item.id} className="msg assistant">
+                          <MessageContent
+                            text={item.text}
+                            reasoning={item.reasoning}
+                            streaming={!item.done}
+                            onOpenFile={hub ? openMessageFile : undefined}
+                          />
+                        </div>
+                      );
+                    case "tool":
+                      return (
+                        <div key={item.id} className={`msg tool${item.error ? " tool-error" : ""}`}>
+                          <ToolMessage item={item} running={running} />
+                        </div>
+                      );
+                    case "subagent":
+                      return (
+                        <div key={item.id} className="msg info">
+                          ↳ {item.label} · {subagentStatusLabel(item.status)}
+                        </div>
+                      );
+                    case "system":
+                      return (
+                        <div key={item.id} className="msg info">
+                          {item.text}
+                        </div>
+                      );
+                    case "system_error":
+                      return (
+                        <div key={item.id} className="msg error">
+                          {item.text}
+                        </div>
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+                {controller.approvalContent}
 
-              {empty ? (
-                <div className="empty-chat">
-                  <span className="welcome-mark">
-                    <WorkbenchIcon name="brand" />
-                  </span>
-                  <h1>今天想完成什么？</h1>
-                  <p>从一个问题或想法开始，让 CodeShell 帮你一步步完成。</p>
-                  <span className="welcome-workspace">
-                    <WorkbenchIcon name="folder" />
-                    {projectName ?? workspaceName}
-                  </span>
-                </div>
-              ) : null}
+                {empty ? (
+                  <div className="empty-chat">
+                    <span className="welcome-mark">
+                      <WorkbenchIcon name="brand" />
+                    </span>
+                    <h1>今天想完成什么？</h1>
+                    <p>从一个问题或想法开始，让 CodeShell 帮你一步步完成。</p>
+                    <span className="welcome-workspace">
+                      <WorkbenchIcon name="folder" />
+                      {projectName ?? workspaceName}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
             </div>
+            {latest.showJump && (
+              <button
+                type="button"
+                className="latest-messages"
+                aria-controls={messageListId}
+                aria-label={
+                  latest.newOutputCount
+                    ? `回到最新消息，${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出`
+                    : "回到最新消息"
+                }
+                onClick={latest.jumpToLatest}
+              >
+                <span aria-hidden="true">↓</span>
+                回到最新消息
+                {latest.newOutputCount > 0 && (
+                  <span className="latest-count" aria-hidden="true">
+                    {latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出
+                  </span>
+                )}
+              </button>
+            )}
+            <span
+              className="latest-announcement"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {latest.newOutputCount > 0
+                ? `${latest.newOutputCount > 99 ? "99+" : latest.newOutputCount} 条新输出，可回到最新消息。`
+                : ""}
+            </span>
           </div>
           {controller.readOnlyNote ? <div className="banner">{controller.readOnlyNote}</div> : null}
           <div className="composer-wrap">
@@ -764,7 +926,12 @@ export function Workbench({
                   controller.setDraft(event.target.value);
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  if (
+                    !window.matchMedia("(max-width: 760px)").matches &&
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.nativeEvent.isComposing
+                  ) {
                     event.preventDefault();
                     send();
                   }
@@ -842,11 +1009,13 @@ export function Workbench({
                       ? controller.host === "desktop"
                         ? "正在发送…"
                         : "正在上传附件…"
-                      : approvals.length
+                      : blockingApprovals.length
                         ? "等待你的确认"
                         : running
                           ? "正在处理…"
-                          : ""}
+                          : approvals.length
+                            ? "有可稍后回答的问题"
+                            : ""}
                 </span>
                 {running ? (
                   <button
@@ -866,6 +1035,7 @@ export function Workbench({
                     onClick={send}
                     disabled={
                       connection !== "open" ||
+                      controller.loading ||
                       uploading ||
                       controller.uncertain ||
                       controller.readOnly ||
@@ -903,11 +1073,27 @@ export function Workbench({
             onAuthLost={onAuthLost}
           />
         ) : null}
+        {view === "activity" && hub ? (
+          <HubModelTraces
+            key={`${controller.workspaceKey}:activity`}
+            sessionTitles={Object.fromEntries(
+              sessions.map((item) => [
+                item.sessionId,
+                item.customTitle ||
+                  item.title ||
+                  item.preview?.trim() ||
+                  item.sessionId.slice(0, 8),
+              ]),
+            )}
+            onAuthLost={onAuthLost}
+            onOpenSession={(id) => void openSession(id)}
+          />
+        ) : null}
         {view === "history" && hub ? (
           <HubSessions
             key={`${controller.workspaceKey}:history`}
             onAuthLost={onAuthLost}
-            onOpen={(id) => void openSession(id)}
+            onOpen={(id, intent) => void openSession(id, intent)}
             onChanged={() => void refreshSessions()}
             version={sessionsVersion}
             onDirtyChange={setNavigationDirty}
@@ -959,6 +1145,8 @@ export function Workbench({
       </main>
       {pendingNavigation ? (
         <NavigationPrompt
+          identity={pendingNavigation}
+          workspaceKey={controller.workspaceKey}
           onStay={() => setPendingNavigation(null)}
           onLeave={() => {
             const action = pendingNavigation;
@@ -969,22 +1157,108 @@ export function Workbench({
         />
       ) : null}
       {devicesOpen && controller.host === "hub" && !cloudAccount ? (
-        <Devices session={session} onClose={() => setDevicesOpen(false)} onAuthLost={onAuthLost} />
+        <Devices
+          session={session}
+          onClose={() => setDevicesOpen(false)}
+          onAuthLost={onAuthLost}
+          opener={devicesOpener.current}
+          fallbackOpener={sidebarToggleRef.current}
+        />
       ) : null}
     </div>
   );
 }
 
-function NavigationPrompt({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
+function NavigationPrompt({
+  onStay,
+  onLeave,
+  identity,
+  workspaceKey,
+}: {
+  onStay: () => void;
+  onLeave: () => void;
+  identity: () => void;
+  workspaceKey: string;
+}) {
   const dialog = React.useRef<HTMLDialogElement>(null);
-  React.useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    dialog.current?.showModal();
-    return () => {
-      dialog.current?.close();
-      previous?.focus();
+  const current = React.useRef<{
+    identity: () => void;
+    workspace: string;
+    source: HTMLElement | null;
+    cancelled: boolean;
+    returning: boolean;
+  } | null>(null);
+  if (!current.current || current.current.identity !== identity) {
+    const source = document.activeElement;
+    current.current = {
+      identity,
+      workspace: workspaceKey,
+      source: source instanceof HTMLElement && source !== document.body ? source : null,
+      cancelled: false,
+      returning: false,
     };
-  }, []);
+  }
+  const session = current.current;
+  const workspace = React.useRef(workspaceKey);
+  workspace.current = workspaceKey;
+  React.useLayoutEffect(() => {
+    if (session.workspace !== workspaceKey) session.cancelled = true;
+  }, [session, workspaceKey]);
+  React.useEffect(() => {
+    const modal = dialog.current;
+    if (!modal) return;
+    const handoff = (event: Event) => {
+      const target =
+        event instanceof FocusEvent && event.type === "focusout"
+          ? event.relatedTarget
+          : event.target;
+      if (!(target instanceof Node) || (target === document.body && event.type !== "pointerdown"))
+        return;
+      if (!modal.contains(target)) session.cancelled = true;
+      if (event instanceof PointerEvent && target === modal) {
+        const bounds = modal.getBoundingClientRect();
+        if (
+          event.clientX < bounds.left ||
+          event.clientX > bounds.right ||
+          event.clientY < bounds.top ||
+          event.clientY > bounds.bottom
+        )
+          session.cancelled = true;
+      }
+    };
+    const blur = () => {
+      session.cancelled = true;
+    };
+    document.addEventListener("pointerdown", handoff, true);
+    document.addEventListener("focusin", handoff, true);
+    document.addEventListener("focusout", handoff, true);
+    window.addEventListener("blur", blur);
+    modal.showModal();
+    return () => {
+      document.removeEventListener("pointerdown", handoff, true);
+      document.removeEventListener("focusin", handoff, true);
+      document.removeEventListener("focusout", handoff, true);
+      window.removeEventListener("blur", blur);
+      // StrictMode replays effects while this exact native modal remains mounted.
+      // A real unmount must not let native close restore an unrelated old opener.
+      if (modal.isConnected && current.current === session) modal.close();
+      const active = document.activeElement;
+      if (
+        session.returning &&
+        !session.cancelled &&
+        current.current === session &&
+        workspace.current === session.workspace &&
+        session.source?.isConnected &&
+        !session.source.matches(":disabled") &&
+        (active === document.body || active === session.source || !active?.isConnected)
+      )
+        session.source.focus();
+    };
+  }, [session]);
+  const stay = () => {
+    session.returning = true;
+    onStay();
+  };
   return (
     <dialog
       className="navigation-prompt"
@@ -992,7 +1266,7 @@ function NavigationPrompt({ onStay, onLeave }: { onStay: () => void; onLeave: ()
       aria-labelledby="navigation-prompt-title"
       onCancel={(event) => {
         event.preventDefault();
-        onStay();
+        stay();
       }}
     >
       <h2 id="navigation-prompt-title">还有未保存的修改</h2>
@@ -1000,7 +1274,7 @@ function NavigationPrompt({ onStay, onLeave }: { onStay: () => void; onLeave: ()
         离开会丢弃未提交的修改；切换项目还会清除未发送的草稿和附件。已经提交的操作可能仍会完成，请等待结果后再离开。
       </p>
       <div className="library-actions">
-        <button className="library-button primary" onClick={onStay} autoFocus>
+        <button className="library-button primary" onClick={stay} autoFocus>
           留在此页
         </button>
         <button className="library-button" onClick={onLeave}>

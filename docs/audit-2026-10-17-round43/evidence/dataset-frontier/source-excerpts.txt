@@ -1,0 +1,1036 @@
+packages/desktop/src/renderer/optimization-lab/dataset-editor.ts
+1: import type {
+2:   DatasetInput,
+3:   EvalCase,
+4:   HardAssertion,
+5:   RubricItem,
+6: } from "@cjhyy/code-shell-capability-optimization-lab";
+7: 
+8: // Optional defaulted fields stay absent until edited. The form must not silently
+9: // normalize a user's JSON, especially when switching between editing modes.
+10: type DefaultedCaseKey = "fixtureRefs" | "rubric" | "hardAssertions" | "missingEvidence";
+11: export type EditableCase = Omit<EvalCase, DefaultedCaseKey> &
+12:   Partial<Pick<EvalCase, DefaultedCaseKey>>;
+13: export type EditableDataset = Omit<DatasetInput, "cases"> & { cases: EditableCase[] };
+14: export type EditorParseResult =
+15:   | { ok: true; dataset: EditableDataset }
+16:   | { ok: false; reason: "json" | "shape" | "unknown" | "size"; path: string };
+17: 
+18: const DATASET_FIELDS = ["schemaVersion", "title", "taskFamily", "cases"];
+19: const CASE_FIELDS = [
+20:   "id",
+21:   "version",
+22:   "sourceGroupId",
+23:   "provenance",
+24:   "caseRole",
+25:   "split",
+26:   "input",
+27:   "fixtureRefs",
+28:   "expected",
+29:   "rubric",
+30:   "hardAssertions",
+31:   "readiness",
+32:   "missingEvidence",
+33:   "evidence",
+34: ];
+35: const MAX_EDITOR_BYTES = 16 * 1024 * 1024;
+36: 
+37: class UnsupportedShape extends Error {
+38:   constructor(
+39:     readonly path: string,
+40:     readonly reason: "shape" | "unknown" = "shape",
+41:   ) {
+42:     super(path);
+43:   }
+44: }
+45: function object(value: unknown, fields: string[], path: string): Record<string, unknown> {
+46:   if (!value || typeof value !== "object" || Array.isArray(value)) throw new UnsupportedShape(path);
+47:   const record = value as Record<string, unknown>;
+48:   for (const field of Object.keys(record))
+49:     if (!fields.includes(field)) throw new UnsupportedShape(`${path}.${field}`, "unknown");
+50:   return record;
+51: }
+52: function requireType(condition: boolean, path: string): asserts condition {
+53:   if (!condition) throw new UnsupportedShape(path);
+54: }
+55: function strings(value: unknown, path: string, limit: number): void {
+56:   requireType(Array.isArray(value), path);
+57:   requireType(value.length <= limit, path);
+58:   value.forEach((item, index) => requireType(typeof item === "string", `${path}.${index}`));
+59: }
+60: function assertion(value: unknown, path: string): void {
+61:   const item = object(value, ["id", "kind", "value", "path"], path);
+62:   requireType(typeof item.id === "string", `${path}.id`);
+63:   if (item.kind === "contains" || item.kind === "not_contains") {
+64:     requireType(!Object.hasOwn(item, "path"), `${path}.path`);
+65:     requireType(typeof item.value === "string", `${path}.value`);
+66:   } else {
+67:     requireType(item.kind === "json_field_equals", `${path}.kind`);
+68:     strings(item.path, `${path}.path`, 8);
+69:     requireType(
+70:       item.value === null ||
+71:         typeof item.value === "string" ||
+72:         typeof item.value === "boolean" ||
+73:         (typeof item.value === "number" && Number.isFinite(item.value)),
+74:       `${path}.value`,
+75:     );
+76:   }
+77: }
+78: 
+79: /** Shape checking only: the worker remains authoritative for dataset validity. */
+80: export function parseEditableDataset(text: string): EditorParseResult {
+81:   if (new TextEncoder().encode(text).byteLength > MAX_EDITOR_BYTES)
+82:     return { ok: false, reason: "size", path: "$" };
+83:   let raw: unknown;
+84:   try {
+85:     raw = JSON.parse(text);
+86:   } catch {
+87:     return { ok: false, reason: "json", path: "$" };
+88:   }
+89:   try {
+90:     const dataset = object(raw, DATASET_FIELDS, "$");
+91:     requireType(dataset.schemaVersion === 1, "$.schemaVersion");
+92:     requireType(typeof dataset.title === "string", "$.title");
+93:     requireType(typeof dataset.taskFamily === "string", "$.taskFamily");
+94:     requireType(Array.isArray(dataset.cases), "$.cases");
+95:     requireType(dataset.cases.length <= 200, "$.cases");
+96:     dataset.cases.forEach((rawCase, index) => {
+97:       const path = `$.cases.${index}`;
+98:       const item = object(rawCase, CASE_FIELDS, path);
+99:       for (const key of ["id", "sourceGroupId", "input"])
+100:         requireType(typeof item[key] === "string", `${path}.${key}`);
+101:       requireType(
+102:         typeof item.version === "number" && Number.isFinite(item.version),
+103:         `${path}.version`,
+104:       );
+105:       requireType(["real", "synthetic"].includes(String(item.provenance)), `${path}.provenance`);
+106:       requireType(
+107:         ["target_failure", "regression"].includes(String(item.caseRole)),
+108:         `${path}.caseRole`,
+109:       );
+110:       requireType(["dev", "holdout"].includes(String(item.split)), `${path}.split`);
+111:       requireType(
+112:         ["analysis_only", "runnable"].includes(String(item.readiness)),
+113:         `${path}.readiness`,
+114:       );
+115:       if (Object.hasOwn(item, "expected"))
+116:         requireType(typeof item.expected === "string", `${path}.expected`);
+117:       if (Object.hasOwn(item, "evidence")) {
+118:         const evidence = object(
+119:           item.evidence,
+120:           ["bundleHash", "runId", "purpose", "blockHashes"],
+121:           `${path}.evidence`,
+122:         );
+123:         requireType(
+124:           typeof evidence.bundleHash === "string" &&
+125:             typeof evidence.runId === "string" &&
+126:             evidence.purpose === "problem_source_only",
+127:           `${path}.evidence`,
+128:         );
+129:         strings(evidence.blockHashes, `${path}.evidence.blockHashes`, 50);
+130:       }
+131:       for (const key of ["fixtureRefs", "missingEvidence"])
+132:         if (Object.hasOwn(item, key)) strings(item[key], `${path}.${key}`, 32);
+133:       if (Object.hasOwn(item, "rubric")) {
+134:         requireType(Array.isArray(item.rubric), `${path}.rubric`);
+135:         requireType(item.rubric.length <= 16, `${path}.rubric`);
+136:         item.rubric.forEach((value, rubricIndex) => {
+137:           const rubricPath = `${path}.rubric.${rubricIndex}`;
+138:           const rubric = object(value, ["id", "text", "requiresHumanGrading"], rubricPath);
+139:           requireType(typeof rubric.id === "string", `${rubricPath}.id`);
+140:           requireType(typeof rubric.text === "string", `${rubricPath}.text`);
+141:           requireType(
+142:             typeof rubric.requiresHumanGrading === "boolean",
+143:             `${rubricPath}.requiresHumanGrading`,
+144:           );
+145:         });
+146:       }
+147:       if (Object.hasOwn(item, "hardAssertions")) {
+148:         requireType(Array.isArray(item.hardAssertions), `${path}.hardAssertions`);
+149:         requireType(item.hardAssertions.length <= 16, `${path}.hardAssertions`);
+150:         item.hardAssertions.forEach((value, assertionIndex) =>
+151:           assertion(value, `${path}.hardAssertions.${assertionIndex}`),
+152:         );
+153:       }
+154:     });
+155:     return { ok: true, dataset: raw as EditableDataset };
+156:   } catch (error) {
+157:     if (error instanceof UnsupportedShape)
+158:       return { ok: false, reason: error.reason, path: error.path };
+159:     throw error;
+160:   }
+161: }
+162: 
+163: export function serializeEditableDataset(dataset: EditableDataset): string {
+164:   return JSON.stringify(dataset, null, 2);
+165: }
+166: 
+167: function unusedId(existing: string[], base: string): string {
+168:   const ids = new Set(existing);
+169:   const prefix = base.slice(0, 53);
+170:   let index = 1;
+171:   while (ids.has(`${prefix}-${index}`)) index++;
+172:   return `${prefix}-${index}`;
+173: }
+174: 
+175: export function createEditableCase(dataset: EditableDataset): EditableCase {
+176:   return {
+177:     id: unusedId(
+178:       dataset.cases.map((item) => item.id),
+179:       "case",
+180:     ),
+181:     version: 1,
+182:     sourceGroupId: unusedId(
+183:       dataset.cases.map((item) => item.sourceGroupId),
+184:       "source",
+185:     ),
+186:     provenance: "synthetic",
+187:     caseRole: "target_failure",
+188:     split: "dev",
+189:     input: "",
+190:     readiness: "analysis_only",
+191:     fixtureRefs: [],
+192:     rubric: [],
+193:     hardAssertions: [],
+194:     missingEvidence: [],
+195:   };
+196: }
+197: 
+198: /** Copies remain in the same source group and split to avoid invented independence. */
+199: export function duplicateEditableCase(dataset: EditableDataset, index: number): EditableCase {
+200:   const source = dataset.cases[index];
+201:   if (!source) throw new Error("Unknown case");
+202:   const copied = structuredClone(source);
+203:   const safeBase = /^[a-z0-9][a-z0-9._-]*$/.test(source.id) ? source.id : "case";
+204:   copied.id = unusedId(
+205:     dataset.cases.map((item) => item.id),
+206:     `${safeBase}-copy`,
+207:   );
+208:   return copied;
+209: }
+210: 
+211: export function newRubric(item: EditableCase): RubricItem {
+212:   return {
+213:     id: unusedId(
+214:       [...(item.rubric ?? []), ...(item.hardAssertions ?? [])].map((rule) => rule.id),
+215:       "quality",
+216:     ),
+217:     text: "",
+218:     requiresHumanGrading: true,
+219:   };
+220: }
+221: export function newAssertion(item: EditableCase): HardAssertion {
+222:   return {
+223:     id: unusedId(
+224:       [...(item.rubric ?? []), ...(item.hardAssertions ?? [])].map((rule) => rule.id),
+225:       "assertion",
+226:     ),
+227:     kind: "contains",
+228:     value: "",
+229:   };
+230: }
+231: export function changeAssertionKind(
+232:   item: HardAssertion,
+233:   kind: HardAssertion["kind"],
+234: ): HardAssertion {
+235:   if (kind === item.kind) return item;
+236:   return kind === "json_field_equals"
+237:     ? { id: item.id, kind, path: ["field"], value: item.value }
+238:     : { id: item.id, kind, value: item.value === null ? "null" : String(item.value) };
+239: }
+240: 
+241: export function summarizeEditableDataset(dataset: EditableDataset) {
+242:   const runnableHoldout = dataset.cases.filter(
+243:     (item) => item.split === "holdout" && item.readiness === "runnable",
+244:   );
+245:   return {
+246:     dev: dataset.cases.filter((item) => item.split === "dev").length,
+247:     holdout: dataset.cases.filter((item) => item.split === "holdout").length,
+248:     sourceGroups: new Set(dataset.cases.map((item) => item.sourceGroupId)).size,
+249:     runnableHoldoutGroups: new Set(runnableHoldout.map((item) => item.sourceGroupId)).size,
+250:   };
+251: }
+
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx
+1: import { useState } from "react";
+2: import type {
+3:   DatasetValidation,
+4:   HardAssertion,
+5: } from "@cjhyy/code-shell-capability-optimization-lab";
+6: import { Button } from "@/components/ui/button";
+7: import { SimpleSelect } from "@/components/ui/simple-select";
+8: import { useT } from "../i18n";
+9: import {
+10:   changeAssertionKind,
+11:   createEditableCase,
+12:   duplicateEditableCase,
+13:   newAssertion,
+14:   newRubric,
+15:   parseEditableDataset,
+16:   serializeEditableDataset,
+17:   summarizeEditableDataset,
+18:   type EditableCase,
+19: } from "./dataset-editor";
+20: 
+21: const inputClass = "w-full rounded-md border bg-background px-3 py-2 text-sm";
+22: const testId = (id: string) => `optimization-lab-${id}`;
+23: 
+24: function TextList({
+201: export function DatasetEditor({
+202:   value,
+203:   onChange,
+204:   validation,
+205:   disabled = false,
+206: }: {
+207:   value: string;
+208:   onChange(text: string): void;
+209:   validation?: DatasetValidation | null;
+210:   disabled?: boolean;
+211: }) {
+212:   const { t } = useT();
+213:   const [mode, setMode] = useState<"form" | "json">("form");
+214:   const [expandedCase, setExpandedCase] = useState(0);
+215:   const parsed = parseEditableDataset(value);
+216:   const dataset = parsed.ok ? parsed.dataset : null;
+217:   const summary = dataset ? summarizeEditableDataset(dataset) : null;
+218:   const emit = (next: NonNullable<typeof dataset>) => onChange(serializeEditableDataset(next));
+219:   const updateCase = (index: number, patch: Partial<EditableCase>) => {
+220:     if (dataset)
+221:       emit({
+222:         ...dataset,
+223:         cases: dataset.cases.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+224:       });
+225:   };
+226:   const caseIssues = (index: number) =>
+227:     validation?.issues.filter((issue) =>
+228:       issue.caseId
+229:         ? issue.caseId === dataset?.cases[index]?.id
+230:         : issue.message.startsWith(`cases.${index}.`),
+231:     ) ?? [];
+232:   const issues =
+233:     validation?.issues.filter((issue) => {
+234:       if (mode === "json" || !dataset) return true;
+235:       if (issue.caseId) return !dataset.cases.some((item) => item.id === issue.caseId);
+236:       const index = /^cases\.(\d+)\./.exec(issue.message)?.[1];
+237:       return index === undefined || !dataset.cases[Number(index)];
+238:     }) ?? [];
+239:   const textField = (
+240:     index: number,
+241:     key: "id" | "sourceGroupId" | "input" | "expected",
+242:     label: string,
+243:     multiline = false,
+244:   ) => {
+245:     const attributes = {
+246:       className: `${inputClass}${multiline ? " min-h-24" : ""}`,
+247:       "data-testid": testId(`case-${index}-${key}`),
+248:       value: dataset!.cases[index]![key] ?? "",
+249:       onChange: (event: { target: { value: string } }) =>
+250:         updateCase(index, { [key]: event.target.value }),
+251:     };
+252:     return (
+253:       <label className="block space-y-1 text-sm">
+254:         <span>{label}</span>
+255:         {multiline || key === "sourceGroupId" ? (
+256:           <textarea rows={multiline ? 3 : 1} {...attributes} />
+257:         ) : (
+258:           <input {...attributes} />
+259:         )}
+260:       </label>
+261:     );
+262:   };
+263:   const choice = (
+264:     index: number,
+265:     key: "provenance" | "caseRole" | "split" | "readiness",
+266:     label: string,
+267:     options: Array<[string, string]>,
+268:   ) => (
+269:     <label className="space-y-1 text-sm">
+270:       <span>{label}</span>
+271:       <SimpleSelect
+272:         ariaLabel={label}
+273:         triggerProps={{ "data-testid": testId(`case-${index}-${key}`) }}
+274:         value={dataset!.cases[index]![key]}
+275:         disabled={disabled}
+276:         onChange={(next) => updateCase(index, { [key]: next })}
+277:         options={options.map(([value, label]) => ({ value, label }))}
+278:       />
+279:     </label>
+282:     <div className="space-y-3" data-testid={testId("dataset-editor")}>
+283:       <div
+284:         className="flex flex-wrap items-center gap-2"
+285:         role="group"
+286:         aria-label={t("optimizationLab.editor.mode")}
+287:       >
+288:         <Button
+289:           type="button"
+290:           variant={mode === "form" ? "default" : "outline"}
+291:           data-testid={testId("dataset-form")}
+292:           disabled={disabled}
+293:           aria-pressed={mode === "form"}
+294:           onClick={() => setMode("form")}
+295:         >
+296:           {t("optimizationLab.editor.form")}
+297:         </Button>
+298:         <Button
+299:           type="button"
+300:           variant={mode === "json" ? "default" : "outline"}
+301:           data-testid={testId("dataset-json")}
+302:           disabled={disabled}
+303:           aria-pressed={mode === "json"}
+304:           onClick={() => setMode("json")}
+305:         >
+306:           {t("optimizationLab.editor.json")}
+307:         </Button>
+308:       </div>
+309:       {!parsed.ok && (
+310:         <p
+311:           role="alert"
+312:           data-testid={testId("dataset-unsupported")}
+313:           className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm"
+314:         >
+315:           {t(`optimizationLab.editor.unsupported.${parsed.reason}`)} ({parsed.path}){" "}
+316:           {t("optimizationLab.editor.fixJson")}
+317:         </p>
+318:       )}
+319:       {mode === "json" || !dataset ? (
+320:         <textarea
+321:           data-testid={testId("dataset")}
+322:           aria-label={t("optimizationLab.dataset")}
+323:           className={`${inputClass} min-h-64 font-mono text-xs`}
+324:           disabled={disabled}
+325:           value={value}
+326:           onChange={(event) => onChange(event.target.value)}
+327:         />
+328:       ) : (
+329:         <fieldset disabled={disabled} className="space-y-4" data-testid={testId("dataset-fields")}>
+330:           <div className="grid gap-3 sm:grid-cols-2">
+331:             <label className="space-y-1 text-sm">
+332:               <span>{t("optimizationLab.editor.title")}</span>
+333:               <textarea
+334:                 rows={1}
+335:                 className={inputClass}
+336:                 data-testid={testId("dataset-title")}
+337:                 value={dataset.title}
+338:                 onChange={(event) => emit({ ...dataset, title: event.target.value })}
+339:               />
+340:             </label>
+341:             <label className="space-y-1 text-sm">
+342:               <span>{t("optimizationLab.editor.taskFamily")}</span>
+343:               <textarea
+344:                 rows={1}
+345:                 className={inputClass}
+346:                 data-testid={testId("dataset-task-family")}
+347:                 value={dataset.taskFamily}
+348:                 onChange={(event) => emit({ ...dataset, taskFamily: event.target.value })}
+349:               />
+350:             </label>
+351:           </div>
+379:                 className="cursor-pointer text-sm font-medium"
+380:                 data-testid={testId(`case-${index}-summary`)}
+381:               >
+382:                 {t("optimizationLab.editor.case")} {index + 1}: {item.id}
+383:                 {caseIssues(index).length > 0 && (
+384:                   <span className="ml-2 text-destructive">({caseIssues(index).length})</span>
+385:                 )}
+386:               </summary>
+387:               {index === expandedCase && (
+388:                 <div className="mt-3 space-y-3">
+389:                   <div className="flex flex-wrap items-center justify-between gap-2">
+390:                     <h3 className="font-medium">
+391:                       {t("optimizationLab.editor.case")} {index + 1}: {item.id}
+392:                     </h3>
+393:                     <div className="flex gap-2">
+394:                       <Button
+395:                         type="button"
+396:                         variant="outline"
+397:                         data-testid={testId(`case-${index}-duplicate`)}
+398:                         disabled={dataset.cases.length >= 200}
+399:                         onClick={() => {
+400:                           setExpandedCase(dataset.cases.length);
+401:                           emit({
+402:                             ...dataset,
+403:                             cases: [...dataset.cases, duplicateEditableCase(dataset, index)],
+404:                           });
+405:                         }}
+406:                       >
+407:                         {t("optimizationLab.editor.duplicate")}
+408:                       </Button>
+409:                       <Button
+410:                         type="button"
+411:                         variant="outline"
+412:                         data-testid={testId(`case-${index}-remove`)}
+413:                         onClick={() => {
+414:                           setExpandedCase(Math.max(0, index - 1));
+415:                           emit({ ...dataset, cases: dataset.cases.filter((_, i) => i !== index) });
+416:                         }}
+417:                       >
+418:                         {t("optimizationLab.editor.remove")}
+419:                       </Button>
+420:                     </div>
+421:                   </div>
+422:                   {caseIssues(index).length > 0 && (
+423:                     <ul className="space-y-1 text-sm" data-testid={testId(`case-${index}-issues`)}>
+638:                       }
+639:                     >
+640:                       {t("optimizationLab.editor.addAssertion")}
+641:                     </Button>
+642:                   </fieldset>
+643:                 </div>
+644:               )}
+645:             </details>
+646:           ))}
+647:           <Button
+648:             type="button"
+649:             variant="outline"
+650:             data-testid={testId("case-add")}
+651:             disabled={dataset.cases.length >= 200}
+652:             onClick={() => {
+653:               setExpandedCase(dataset.cases.length);
+654:               emit({ ...dataset, cases: [...dataset.cases, createEditableCase(dataset)] });
+655:             }}
+656:           >
+657:             {t("optimizationLab.editor.addCase")}
+658:           </Button>
+659:         </fieldset>
+660:       )}
+661:       {issues.length > 0 && (
+662:         <ul className="space-y-1 text-sm" data-testid={testId("dataset-issues")}>
+663:           {issues.map((issue, i) => (
+664:             <li key={i} className={issue.level === "error" ? "text-destructive" : "text-amber-600"}>
+665:               {issue.message}
+666:             </li>
+667:           ))}
+668:         </ul>
+669:       )}
+670:     </div>
+671:   );
+672: }
+
+packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts
+1: import { describe, expect, test } from "bun:test";
+2: import {
+3:   changeAssertionKind,
+4:   createEditableCase,
+5:   duplicateEditableCase,
+6:   newAssertion,
+7:   newRubric,
+8:   parseEditableDataset,
+9:   serializeEditableDataset,
+10:   summarizeEditableDataset,
+11:   type EditableDataset,
+12: } from "./dataset-editor";
+13: 
+14: function dataset(): EditableDataset {
+15:   return {
+16:     schemaVersion: 1,
+17:     title: "Reviewed tasks",
+18:     taskFamily: "summarize",
+19:     cases: [
+20:       {
+21:         id: "first",
+22:         version: 1,
+23:         sourceGroupId: "source-1",
+24:         provenance: "real",
+25:         caseRole: "target_failure",
+26:         split: "dev",
+27:         input: "Input",
+28:         readiness: "analysis_only",
+29:       },
+30:     ],
+31:   };
+32: }
+33: describe("Optimization Lab dataset form representation", () => {
+34:   test("preserves absent defaults and absent vs explicitly empty expected", () => {
+35:     const raw = dataset();
+36:     const parsed = parseEditableDataset(JSON.stringify(raw));
+37:     expect(parsed).toEqual({ ok: true, dataset: raw });
+38:     if (!parsed.ok) throw new Error("Unexpected shape");
+39:     parsed.dataset.title = "Changed";
+40:     const item = JSON.parse(serializeEditableDataset(parsed.dataset)).cases[0];
+41:     for (const key of ["expected", "rubric", "hardAssertions", "fixtureRefs", "missingEvidence"])
+42:       expect(Object.hasOwn(item, key)).toBe(false);
+43:     raw.cases[0]!.expected = "";
+44:     expect(parseEditableDataset(JSON.stringify(raw))).toEqual({ ok: true, dataset: raw });
+45:   });
+46:   test("round-trips every assertion scalar and path segment without splitting text", () => {
+47:     const raw = dataset();
+48:     raw.cases[0]!.fixtureRefs = ["a\nb", "c"];
+49:     raw.cases[0]!.missingEvidence = ["Line 1\nLine 2"];
+50:     raw.cases[0]!.hardAssertions = [
+51:       { id: "contains", kind: "contains", value: "yes" },
+52:       { id: "excluded", kind: "not_contains", value: "no" },
+53:       ...["", "1", 1.5, true, false, null].map((value, index) => ({
+54:         id: `json-${index}`,
+55:         kind: "json_field_equals" as const,
+56:         path: ["nested", "1"],
+57:         value,
+58:       })),
+59:     ];
+60:     raw.cases[0]!.rubric = [{ id: "human", text: "Faithful", requiresHumanGrading: false }];
+61:     const parsed = parseEditableDataset(serializeEditableDataset(raw));
+62:     expect(parsed).toEqual({ ok: true, dataset: raw });
+63:   });
+64:   test("does not normalize away unsupported or unknown fields at any depth", () => {
+65:     const variants: Array<[unknown, string]> = [
+66:       [{ ...dataset(), metadata: "future" }, "$.metadata"],
+67:       [{ ...dataset(), cases: [{ ...dataset().cases[0], future: 2 }] }, "$.cases.0.future"],
+68:       [
+69:         {
+70:           ...dataset(),
+71:           cases: [
+72:             {
+73:               ...dataset().cases[0],
+74:               rubric: [{ id: "r", text: "x", requiresHumanGrading: true, future: 2 }],
+75:             },
+76:           ],
+77:         },
+78:         "$.cases.0.rubric.0.future",
+79:       ],
+80:       [
+81:         {
+82:           ...dataset(),
+83:           cases: [
+84:             {
+85:               ...dataset().cases[0],
+86:               hardAssertions: [{ id: "r", kind: "contains", value: "x", future: 2 }],
+87:             },
+88:           ],
+89:         },
+90:         "$.cases.0.hardAssertions.0.future",
+91:       ],
+92:     ];
+93:     for (const [raw, path] of variants)
+94:       expect(parseEditableDataset(JSON.stringify(raw))).toEqual({
+95:         ok: false,
+96:         reason: "unknown",
+97:         path,
+98:       });
+99:     expect(parseEditableDataset("{broken")).toEqual({ ok: false, reason: "json", path: "$" });
+100:     expect(
+101:       parseEditableDataset(
+102:         JSON.stringify({ ...dataset(), cases: [{ ...dataset().cases[0], expected: null }] }),
+103:       ),
+104:     ).toEqual({ ok: false, reason: "shape", path: "$.cases.0.expected" });
+105:   });
+106:   test("accepts editable invalid values for authoritative worker validation", () => {
+107:     const raw = dataset();
+108:     raw.title = "";
+109:     raw.cases[0]!.id = "INVALID ID";
+110:     raw.cases[0]!.version = 0;
+111:     raw.cases[0]!.readiness = "runnable";
+112:     expect(parseEditableDataset(JSON.stringify(raw))).toEqual({ ok: true, dataset: raw });
+113:   });
+114:   test("bounds mounted form collections without rewriting oversized JSON", () => {
+115:     const raw = dataset();
+116:     raw.cases = Array.from({ length: 201 }, () => ({ ...raw.cases[0]! }));
+117:     expect(parseEditableDataset(JSON.stringify(raw))).toEqual({
+118:       ok: false,
+119:       reason: "shape",
+120:       path: "$.cases",
+121:     });
+122:   });
+123:   test("new cases start analysis-only; copies retain group, split and independent arrays", () => {
+124:     const raw = dataset();
+125:     raw.cases[0]!.split = "holdout";
+126:     raw.cases[0]!.rubric = [{ id: "quality-1", text: "Score", requiresHumanGrading: true }];
+127:     raw.cases[0]!.hardAssertions = [{ id: "assertion-1", kind: "contains", value: "yes" }];
+128:     const added = createEditableCase(raw);
+129:     expect(added).toMatchObject({
+130:       id: "case-1",
+131:       sourceGroupId: "source-2",
+132:       provenance: "synthetic",
+133:       readiness: "analysis_only",
+134:     });
+135:     const copied = duplicateEditableCase(raw, 0);
+136:     expect(copied).toMatchObject({
+137:       id: "first-copy-1",
+138:       sourceGroupId: "source-1",
+139:       split: "holdout",
+140:     });
+141:     copied.rubric![0]!.text = "Changed";
+142:     expect(raw.cases[0]!.rubric![0]!.text).toBe("Score");
+143:     raw.cases.push(copied);
+144:     expect(duplicateEditableCase(raw, 0).id).toBe("first-copy-2");
+145:     expect(newRubric(raw.cases[0]!)).toMatchObject({ id: "quality-2", requiresHumanGrading: true });
+146:     expect(newAssertion(raw.cases[0]!).id).toBe("assertion-2");
+147:     expect(summarizeEditableDataset(raw)).toMatchObject({ holdout: 2, sourceGroups: 1 });
+148:   });
+149:   test("assertion kind changes are explicit and retain the criterion identity", () => {
+150:     expect(
+151:       changeAssertionKind({ id: "rule", kind: "contains", value: "true" }, "json_field_equals"),
+152:     ).toEqual({ id: "rule", kind: "json_field_equals", path: ["field"], value: "true" });
+153:     expect(
+154:       changeAssertionKind(
+155:         { id: "rule", kind: "json_field_equals", path: ["field"], value: false },
+156:         "not_contains",
+157:       ),
+158:     ).toEqual({ id: "rule", kind: "not_contains", value: "false" });
+159:   });
+160: });
+
+packages/optimization-lab/src/contracts/dataset.ts
+1: import { join } from "node:path";
+2: import { lstatSync } from "node:fs";
+3: import { readBoundedFile } from "../store.js";
+4: import { z } from "zod";
+5: import { mutateJsonFile } from "@cjhyy/code-shell-core/extension";
+6: import { VERDICT_POLICY_SUITE_VERSION } from "./verdict-policy.js";
+7: import { canonicalJson, sha256Hex } from "./canonical-json.js";
+8: import { DatasetInputSchema, type DatasetInput, type EvalCase } from "./eval-case.js";
+9: 
+10: export interface DatasetIssue {
+11:   level: "error" | "warning";
+12:   code: string;
+13:   message: string;
+14:   caseId?: string;
+15: }
+16: 
+17: export interface DatasetSummary {
+18:   dev: number;
+19:   holdout: number;
+20:   runnableDev: number;
+21:   runnableHoldout: number;
+22:   sourceGroups: number;
+23: }
+24: 
+25: export interface DatasetValidation {
+26:   ok: boolean;
+27:   issues: DatasetIssue[];
+28:   dataset?: DatasetInput;
+29:   summary?: DatasetSummary;
+30: }
+31: 
+32: /** Holdout source groups below this give an exploratory report, never "verified". */
+33: export const MIN_HOLDOUT_SOURCE_GROUPS = 3;
+34: 
+35: /** Matches the bounded JSON storage contract; includes all dataset text. */
+36: export const MAX_DATASET_BYTES = 16 * 1024 * 1024;
+37: const datasetTooLarge = (): DatasetIssue => ({
+38:   level: "error",
+39:   code: "dataset_too_large",
+40:   message: `dataset manifest exceeds ${MAX_DATASET_BYTES} bytes`,
+41: });
+42: 
+43: export function validateDataset(raw: unknown): DatasetValidation {
+44:   try {
+45:     if (Buffer.byteLength(canonicalJson(raw), "utf8") > MAX_DATASET_BYTES) {
+46:       return { ok: false, issues: [datasetTooLarge()] };
+47:     }
+48:   } catch (error) {
+49:     return {
+50:       ok: false,
+51:       issues: [{ level: "error", code: "schema", message: String(error) }],
+52:     };
+53:   }
+54:   const parsed = DatasetInputSchema.safeParse(raw);
+55:   if (!parsed.success) {
+56:     return {
+57:       ok: false,
+58:       issues: parsed.error.issues.map((issue) => {
+59:         const cases = (raw as { cases?: unknown } | null)?.cases;
+60:         const item =
+61:           issue.path[0] === "cases" && typeof issue.path[1] === "number" && Array.isArray(cases)
+62:             ? cases[issue.path[1]]
+63:             : undefined;
+64:         return {
+65:           level: "error" as const,
+66:           code: "schema",
+67:           message: `${issue.path.join(".") || "(root)"}: ${issue.message}`,
+68:           ...(typeof item?.id === "string" ? { caseId: item.id } : {}),
+69:         };
+70:       }),
+71:     };
+72:   }
+73:   const dataset = parsed.data;
+74:   if (Buffer.byteLength(canonicalJson(dataset), "utf8") > MAX_DATASET_BYTES) {
+75:     return { ok: false, issues: [datasetTooLarge()] };
+76:   }
+77:   const issues: DatasetIssue[] = [];
+78:   const error = (code: string, message: string, caseId?: string) =>
+79:     issues.push({ level: "error", code, message, caseId });
+80:   const warning = (code: string, message: string) =>
+81:     issues.push({ level: "warning", code, message });
+82: 
+83:   const ids = new Set<string>();
+84:   const inputs = new Map<string, string>();
+85:   const groupSplits = new Map<string, Set<string>>();
+86:   for (const item of dataset.cases) {
+87:     if (ids.has(item.id))
+88:       error("duplicate_case_id", `case id ${item.id} appears more than once`, item.id);
+89:     ids.add(item.id);
+90: 
+91:     const inputHash = sha256Hex(
+92:       canonicalJson({ input: item.input, fixtureRefs: item.fixtureRefs }),
+93:     );
+94:     const first = inputs.get(inputHash);
+95:     if (first !== undefined) {
+96:       error("duplicate_input", `case ${item.id} repeats the input of ${first}`, item.id);
+97:     } else {
+98:       inputs.set(inputHash, item.id);
+99:     }
+100: 
+101:     // Each criterion has one stable identity, including across hard and human
+102:     // grading. A later grading record must never ambiguously target two rules.
+103:     const criterionIds = new Set<string>();
+104:     for (const criterion of [...item.hardAssertions, ...item.rubric]) {
+105:       if (criterionIds.has(criterion.id)) {
+106:         error(
+107:           "duplicate_criterion_id",
+108:           `case ${item.id} repeats criterion ${criterion.id}`,
+109:           item.id,
+110:         );
+111:       }
+112:       criterionIds.add(criterion.id);
+113:     }
+114:     // P0 freezes text only. A path or URL does not freeze its referenced bytes.
+115:     if (item.readiness === "runnable" && item.fixtureRefs.length > 0) {
+116:       error(
+117:         "unfrozen_fixture_refs",
+118:         `case ${item.id} references unfrozen fixtures; inline the material in input`,
+119:         item.id,
+120:       );
+121:     }
+122: 
+123:     const splits = groupSplits.get(item.sourceGroupId) ?? new Set<string>();
+124:     splits.add(item.split);
+125:     groupSplits.set(item.sourceGroupId, splits);
+126: 
+127:     if (
+128:       item.readiness === "runnable" &&
+129:       item.hardAssertions.length === 0 &&
+130:       item.rubric.length === 0
+131:     ) {
+132:       error(
+133:         "runnable_without_criteria",
+134:         `runnable case ${item.id} has no assertion or rubric`,
+135:         item.id,
+136:       );
+137:     }
+138:     if (item.readiness === "runnable" && item.missingEvidence.length > 0) {
+139:       error(
+140:         "runnable_with_missing_evidence",
+141:         `case ${item.id} lists missing evidence; mark it analysis_only`,
+142:         item.id,
+143:       );
+144:     }
+145:   }
+146:   for (const [group, splits] of groupSplits) {
+147:     if (splits.size > 1)
+148:       error("source_group_split_leak", `source group ${group} appears in both dev and holdout`);
+149:   }
+150: 
+151:   const dev = dataset.cases.filter((item) => item.split === "dev");
+152:   const holdout = dataset.cases.filter((item) => item.split === "holdout");
+153:   const runnableDev = dev.filter((item) => item.readiness === "runnable").length;
+154:   const runnableHoldout = holdout.filter((item) => item.readiness === "runnable").length;
+155:   if (runnableDev === 0) error("no_runnable_dev", "the dev split has no runnable case");
+156:   if (runnableHoldout === 0) error("no_runnable_holdout", "the holdout split has no runnable case");
+157: 
+158:   const holdoutGroups = new Set(
+159:     holdout.filter((item) => item.readiness === "runnable").map((item) => item.sourceGroupId),
+160:   );
+161:   if (runnableHoldout > 0 && holdoutGroups.size < MIN_HOLDOUT_SOURCE_GROUPS) {
+162:     warning(
+163:       "exploratory_only",
+164:       `holdout has ${holdoutGroups.size} independent source group(s); results can only be exploratory`,
+165:     );
+166:   }
+167:   if (!dataset.cases.some((item) => item.caseRole === "regression")) {
+168:     warning("no_regression_cases", "no regression case covers tasks that already succeed");
+169:   }
+170: 
+171:   return {
+172:     ok: !issues.some((issue) => issue.level === "error"),
+173:     issues,
+174:     dataset,
+175:     summary: {
+176:       dev: dev.length,
+177:       holdout: holdout.length,
+178:       runnableDev,
+179:       runnableHoldout,
+180:       sourceGroups: groupSplits.size,
+181:     },
+
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.interaction.test.tsx
+136:     expect(find("dataset-unsupported")).toBeDefined();
+137:     expect(props(find("dataset")!).value).toBe(original);
+138:     expect(find("dataset-title")).toBeUndefined();
+139:     await click("dataset-form");
+140:     expect(value).toBe(original);
+141:     expect(changes).toHaveLength(0);
+142:     await change("dataset", JSON.stringify(initial()));
+143:     expect(find("dataset-title")).toBeDefined();
+144:   });
+145:   test("optional expected toggles preserve absent versus empty and edits are immediate", async () => {
+146:     await render();
+147:     await change("case-0-expected-enabled", true);
+148:     expect(JSON.parse(value).cases[0].expected).toBe("");
+149:     await change("case-0-expected", "Expected result");
+150:     expect(JSON.parse(value).cases[0].expected).toBe("Expected result");
+151:     await change("case-0-expected-enabled", false);
+152:     expect(Object.hasOwn(JSON.parse(value).cases[0], "expected")).toBe(false);
+153:     await change("case-0-input", "Changed input");
+154:     expect(JSON.parse(changes.at(-1)!).cases[0].input).toBe("Changed input");
+155:   });
+156:   test("case copy retains source group, new case is independent, and both are editable", async () => {
+157:     await render();
+158:     await click("case-0-duplicate");
+159:     expect(JSON.parse(value).cases[2]).toMatchObject({
+160:       id: "dev-copy-1",
+161:       sourceGroupId: "one",
+162:       split: "dev",
+163:     });
+164:     expect(find("case-2-input")).toBeDefined();
+165:     await click("case-2-remove");
+166:     await click("case-add");
+167:     expect(JSON.parse(value).cases[2]).toMatchObject({
+168:       id: "case-1",
+169:       sourceGroupId: "source-1",
+170:       readiness: "analysis_only",
+171:     });
+172:     await change("case-2-input", "New input");
+173:     expect(JSON.parse(value).cases[2].input).toBe("New input");
+174:   });
+175:   test("all rubric, hard assertion scalar types and path segments remain distinct", async () => {
+176:     await render();
+177:     await click("case-0-rubric-add");
+178:     await change("case-0-rubric-0-text", "Faithful");
+179:     await change("case-0-rubric-0-human", false);
+180:     expect(JSON.parse(value).cases[0].rubric[0]).toMatchObject({
+181:       text: "Faithful",
+182:       requiresHumanGrading: false,
+183:     });
+184:     await click("case-0-assertion-add");
+185:     await change("case-0-assertion-0-kind", "not_contains");
+186:     await change("case-0-assertion-0-value", "secret");
+187:     expect(JSON.parse(value).cases[0].hardAssertions[0]).toMatchObject({
+188:       kind: "not_contains",
+189:       value: "secret",
+190:     });
+191:     await change("case-0-assertion-0-kind", "json_field_equals");
+192:     await change("case-0-assertion-0-path-0", "result");
+193:     await click("case-0-assertion-0-path-add");
+194:     await change("case-0-assertion-0-path-1", "score");
+195:     await change("case-0-assertion-0-value-type", "number");
+196:     await change("case-0-assertion-0-value", "1.5");
+197:     expect(JSON.parse(value).cases[0].hardAssertions[0]).toMatchObject({
+198:       path: ["result", "score"],
+199:       value: 1.5,
+200:     });
+201:     await change("case-0-assertion-0-value-type", "boolean");
+202:     await change("case-0-assertion-0-value", "true");
+203:     expect(JSON.parse(value).cases[0].hardAssertions[0].value).toBe(true);
+204:     await change("case-0-assertion-0-value-type", "null");
+205:     expect(JSON.parse(value).cases[0].hardAssertions[0].value).toBeNull();
+206:     await change("case-0-assertion-0-value-type", "string");
+207:     await change("case-0-assertion-0-value", "true");
+208:     expect(JSON.parse(value).cases[0].hardAssertions[0].value).toBe("true");
+209:     await click("case-0-assertion-0-remove");
+210:     await click("case-0-rubric-0-remove");
+211:     expect(JSON.parse(value).cases[0]).toMatchObject({ rubric: [], hardAssertions: [] });
+212:   });
+213:   test("fixture and missing-evidence rows preserve newlines and do not auto-enable runs", async () => {
+214:     await render();
+215:     await change("case-0-readiness", "analysis_only");
+216:     await click("case-0-fixtureRefs-add");
+217:     await change("case-0-fixtureRefs-0", "first\nsecond");
+218:     await click("case-0-missingEvidence-add");
+219:     await change("case-0-missingEvidence-0", "Need source");
+220:     expect(JSON.parse(value).cases[0]).toMatchObject({
+221:       fixtureRefs: ["first\nsecond"],
+222:       missingEvidence: ["Need source"],
+223:       readiness: "analysis_only",
+224:     });
+225:     await click("case-0-fixtureRefs-0-remove");
+226:     expect(JSON.parse(value).cases[0].fixtureRefs).toEqual([]);
+227:   });
+228:   test("fields permitting line breaks use textareas and preserve imported multiline values", async () => {
+229:     const imported = initial();
+230:     imported.title = "Title\ncontinued";
+231:     imported.taskFamily = "Family\ncontinued";
+232:     imported.cases[0]!.sourceGroupId = "Group\ncontinued";
+233:     imported.cases[0]!.fixtureRefs = ["Reference\ncontinued"];
+234:     imported.cases[0]!.missingEvidence = ["Evidence\ncontinued"];
+235:     imported.cases[0]!.hardAssertions = [
+236:       {
+237:         id: "json",
+238:         kind: "json_field_equals",
+239:         path: ["Field\ncontinued"],
+240:         value: null,
+241:       },
+242:     ];
+243:     value = JSON.stringify(imported);
+244:     await render();
+245:     const fields = [
+246:       ["dataset-title", imported.title],
+247:       ["dataset-task-family", imported.taskFamily],
+248:       ["case-0-sourceGroupId", imported.cases[0]!.sourceGroupId],
+249:       ["case-0-fixtureRefs-0", imported.cases[0]!.fixtureRefs[0]],
+250:       ["case-0-missingEvidence-0", imported.cases[0]!.missingEvidence[0]],
+251:       ["case-0-assertion-0-path-0", imported.cases[0]!.hardAssertions[0]!.path[0]],
+252:     ];
+253:     for (const [id, text] of fields) {
+254:       expect(find(id!)!.tagName).toBe("TEXTAREA");
+255:       expect(props(find(id!)!).value).toBe(text);
+256:     }
+257:     await change("dataset-title", "Edited\ncontinued");
+258:     expect(JSON.parse(value)).toEqual({ ...imported, title: "Edited\ncontinued" });
+
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx
+1: import { useEffect, useRef, useState } from "react";
+2: import { FlaskConical, RefreshCw } from "lucide-react";
+3: import { Button } from "@/components/ui/button";
+4: import { SimpleSelect } from "@/components/ui/simple-select";
+5: import type { LabQueryType } from "../../shared/optimization-lab";
+6: import { useT } from "../i18n";
+7: import { OptimizationLabSummary } from "./OptimizationLabSummary";
+8: import { DatasetEditor } from "./DatasetEditor";
+9: import { datasetDrafts } from "./dataset-drafts";
+10: import type { EvidenceBundle } from "@cjhyy/code-shell-capability-optimization-lab";
+74:   const [skillName, setSkillName] = useState("");
+75:   const [targetId, setTargetId] = useState("");
+76:   const [optimizerId, setOptimizerId] = useState("");
+77:   const [datasetText, setDatasetText] = useState(
+78:     () => (activeProjectId && datasetDrafts.get(activeProjectId)) ?? sampleDataset,
+79:   );
+80:   const [validation, setValidation] = useState<any>(null);
+81:   const [evidenceIds, setEvidenceIds] = useState("");
+82:   const [evidencePreview, setEvidencePreview] = useState<{
+83:     previewId: string;
+84:     bundle: EvidenceBundle;
+118:   const [error, setError] = useState("");
+119:   const epoch = useRef(0);
+120:   const datasetRevision = useRef(0);
+121:   const editDataset = (text: string) => {
+122:     datasetRevision.current++;
+123:     setDatasetText(text);
+124:     setValidation(null);
+125:     if (activeProjectId) datasetDrafts.set(activeProjectId, text);
+126:   };
+127:   const errorMessage = (failure: unknown) => {
+128:     const message = String(failure);
+570:                 data-testid="optimization-lab-export-dataset"
+571:                 variant="outline"
+572:                 disabled={pending}
+573:                 onClick={() =>
+574:                   void run(async () => {
+575:                     await window.codeshell.optimizationLab.exportDataset({
+576:                       target,
+577:                       text: datasetText,
+578:                     });
+579:                   })
+580:                 }
+581:               >
+582:                 {t("optimizationLab.exportDataset")}
+583:               </Button>
+584:             </div>
+585:             <p className="text-xs text-muted-foreground">{t("optimizationLab.draftHelp")}</p>
+586:             <DatasetEditor
+587:               value={datasetText}
+588:               onChange={editDataset}
+589:               validation={validation}
+590:               disabled={pending}
+591:             />
+592:             <Button
+593:               data-testid="optimization-lab-validate"
+594:               variant="outline"

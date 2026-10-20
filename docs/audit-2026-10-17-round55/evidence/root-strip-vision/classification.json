@@ -1,0 +1,20 @@
+{
+  "formal": [],
+  "candidates": [],
+  "related": [],
+  "counterevidence": [
+    "Target returns original messages on supported/no-image cases; replaces images through fresh content arrays/new affected messages, leaves original block content intact.",
+    "Immediate nested tool_result image removal spreads original block properties and preserves nonimage child text/tool-use id/error metadata.",
+    "Both current provider buildMessages boundaries call strip with capability flag on outgoing local parameter.",
+    "Single placeholder per message/content list is explicit contract; no unsupported nonconsecutive-position bug inferred."
+  ],
+  "excludedOldCauses": [
+    "Archived view-image providerKind fallback disagreement",
+    "Legacy forced image_url cast compatibility",
+    "Archived data-URL collector/converter incompatibility"
+  ],
+  "unknown": [
+    "No arbitrary deeper nested tool_result DTO used as actual production counterexample",
+    "Full providers, capability rules and account/network behavior not reviewed here"
+  ]
+}

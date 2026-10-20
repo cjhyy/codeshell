@@ -1,0 +1,44 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+    "bytes": 5155,
+    "sha256": "81bc4165917263af60b19d5cc46912ca35c82bbf1642cbe58420beb8b08bf64b",
+    "pinAt": "2026-10-17T19:46:49.777543+00:00",
+    "readAt": "2026-10-17T19:46:49.777574+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/files/5",
+        "value": {
+          "path": "packages/core/src/session/subagent-continuation.ts",
+          "bytes": 2345,
+          "sha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+          "scope": "Full static leaf; no authority metadata experiment/import.",
+          "frozenBlobVerified": true,
+          "currentMatchesFrozen": true
+        }
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round19/source-manifest.json",
+    "bytes": 29411,
+    "sha256": "ca08c8f60ca5afc1286adc5f1b54289a25c00489f495594c609efa68d5d25f59",
+    "pinAt": "2026-10-17T19:46:49.778245+00:00",
+    "readAt": "2026-10-17T19:46:49.778316+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/files/24",
+        "value": {
+          "path": "packages/core/src/session/subagent-continuation.ts",
+          "bytes": 2345,
+          "sha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+          "frozenBlobVerified": true,
+          "currentWorkingTreeMatchesFrozenBlob": true,
+          "mainMatchesFrozenBlob": true,
+          "currentSha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+          "mainSha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a"
+        }
+      }
+    ]
+  }
+]

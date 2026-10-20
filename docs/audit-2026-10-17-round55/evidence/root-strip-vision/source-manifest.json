@@ -1,0 +1,141 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/llm/strip-vision.ts",
+      "bytes": 4054,
+      "lines": 107,
+      "sha256": "d4c2b0f230941c255daefc838f893c8c10137d32595e0ccf6e1d5a7b74ed50c0",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          107
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          107
+        ]
+      ],
+      "semanticLines": 107,
+      "bodyDisplayedLines": 107,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Pure ordinary direct image and immediate tool_result block replacement, identity-preserving contract and exact buildMessages call boundary. Not all provider serialization, capability resolution or runtime behavior. Test declarations only0execution.",
+      "overlap": "Archive already describes normal same-function path. Current read not first/unread or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "bytes": 64200,
+      "lines": 1524,
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1036,
+          1040
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1028,
+          1055
+        ]
+      ],
+      "semanticLines": 5,
+      "bodyDisplayedLines": 28,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Pure ordinary direct image and immediate tool_result block replacement, identity-preserving contract and exact buildMessages call boundary. Not all provider serialization, capability resolution or runtime behavior. Test declarations only0execution.",
+      "overlap": "Archive already describes normal same-function path. Current read not first/unread or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "bytes": 22737,
+      "lines": 593,
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          420,
+          426
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          414,
+          442
+        ]
+      ],
+      "semanticLines": 7,
+      "bodyDisplayedLines": 29,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Pure ordinary direct image and immediate tool_result block replacement, identity-preserving contract and exact buildMessages call boundary. Not all provider serialization, capability resolution or runtime behavior. Test declarations only0execution.",
+      "overlap": "Archive already describes normal same-function path. Current read not first/unread or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lines": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          27,
+          50
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          24,
+          50
+        ]
+      ],
+      "semanticLines": 24,
+      "bodyDisplayedLines": 27,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Pure ordinary direct image and immediate tool_result block replacement, identity-preserving contract and exact buildMessages call boundary. Not all provider serialization, capability resolution or runtime behavior. Test declarations only0execution.",
+      "overlap": "Archive already describes normal same-function path. Current read not first/unread or unique new coverage."
+    },
+    {
+      "path": "packages/core/src/llm/strip-vision.test.ts",
+      "bytes": 5228,
+      "lines": 135,
+      "sha256": "52b0ddbc2bc1d72a26becbba638832957a1c10824a8c7c8a6b0a6525d649fc7a",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          13,
+          36
+        ],
+        [
+          51,
+          111
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          13,
+          36
+        ],
+        [
+          51,
+          111
+        ]
+      ],
+      "semanticLines": 85,
+      "bodyDisplayedLines": 85,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Pure ordinary direct image and immediate tool_result block replacement, identity-preserving contract and exact buildMessages call boundary. Not all provider serialization, capability resolution or runtime behavior. Test declarations only0execution.",
+      "overlap": "Archive already describes normal same-function path. Current read not first/unread or unique new coverage."
+    }
+  ],
+  "totals": {
+    "fullFiles": 1,
+    "selectedFiles": 4,
+    "productSemanticLines": 143,
+    "testDeclarationLines": 85,
+    "bodyDisplayedLines": 276
+  },
+  "rootReportedBaseline": "00c046367769349c1f5413e74c993b2c19ce8337",
+  "productExecution": 0
+}

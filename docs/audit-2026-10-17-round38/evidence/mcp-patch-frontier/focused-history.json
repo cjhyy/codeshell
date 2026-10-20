@@ -1,0 +1,510 @@
+{
+  "readAtUTC": "2026-10-17T13:11:37.428414+00:00",
+  "searchedFiles": 3318,
+  "basedOnInventoryCanonicalSha256": "c5e2c0bec2f174e8d132a1de1a7b644d72ca573aa1f4f41f3c489b0738f58b8f",
+  "patterns": {
+    "exact-helper": "mcpSettingsPatch|buildMcpSettingsPatch",
+    "args-roundtrip": "(?:splitArgs|args.{0,80}(?:join|quot|space|空格|引号)|(?:argument|参数).{0,100}(?:round.?trip|quot|split|join|空格|引号))",
+    "rename-extra-fields": "(?:rename|重命名).{0,140}(?:connectTimeoutMs|connectRetries|inlineImages|MCP|mcp)|(?:connectTimeoutMs|connectRetries|inlineImages).{0,100}(?:rename|重命名)"
+  },
+  "matchCounts": {
+    "exact-helper": 13,
+    "args-roundtrip": 84,
+    "rename-extra-fields": 0
+  },
+  "contextCap": null,
+  "hits": {
+    "exact-helper": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$[\"source_inventory\"][1733]",
+        "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "$[\"rankedCandidates\"][104][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][3074][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "$[\"files\"][3075][\"path\"]",
+        "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[234][\"file\"]",
+        "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$[234][\"log\"]",
+        "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/234-mcpSettingsPatch.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][234][\"file\"]",
+        "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][234][\"log\"]",
+        "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/234-mcpSettingsPatch.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][234][\"resolvedLog\"]",
+        "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/234-mcpSettingsPatch.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$[\"groups\"][1][\"rawLogs\"][234][\"archiveMemberBasename\"]",
+        "excerpt": "234-mcpSettingsPatch.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$[\"logs\"][375][\"file\"]",
+        "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$[\"logs\"][375][\"originalLog\"]",
+        "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/234-mcpSettingsPatch.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$[\"logs\"][375][\"tarMember\"]",
+        "excerpt": "desktop-renderer/234-mcpSettingsPatch.test.ts.log"
+      }
+    ],
+    "args-roundtrip": [
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "location": "100",
+        "excerpt": "ages/core/src/external-agents/config.ts:6`). Claude defaults are `command:\"claude\"`, `defaultMode:\"safe\"`, no dangerous args, no trusted workspaces, and no trusted auto-start; Codex defaults are `command:\"codex\"` and empty extra args (`packages/core/src/external-agents/config.ts:10`, `packages/core/src/external-agents/config.ts:17`). The types make `trustedWorkspaces` and `autoStartInTrustedWorkspaces` Claude-specific, while Codex only has command/args config today (`packages/core/src/external-agents/types.ts:3`, `packages/core/src/external-agents/types.ts:11`, `packages/core/src/external-agents/types.ts:21`, `packages/core/src/external-agents/types.ts:29`)."
+      },
+      {
+        "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+        "location": "36",
+        "excerpt": "     | `prompts/*.md` and `commands/*.md` become bounded CodeShell plugin commands with `$1`–`$9`, named `KEY=value`, `$ARGUMENTS`, `{args}`, quoting, and `$$` expansion. TUI and Desktop surface them; Desktop expands into a reviewable draft and never auto-sends. `pluginCommands/list` + `pluginCommands/expand` provide the same trusted-server discovery seam to headless/server/Web/SDK hosts, while each host still chooses its UI.                                                                                                                                                                                                                             |"
+      },
+      {
+        "path": "docs/archive/core-modules/external-agents.md",
+        "location": "36",
+        "excerpt": "  claudeCode: ResolvedClaudeCodeSettings; // { command, defaultMode, dangerousArgs[], trustedWorkspaces[], autoStartInTrustedWorkspaces }"
+      },
+      {
+        "path": "docs/archive/core-modules/external-agents.md",
+        "location": "41",
+        "excerpt": "Defaults applied by `resolveExternalAgentConfig`: `claudeCode.command=\"claude\"`, `defaultMode=\"safe\"`, `dangerousArgs=[]`, `trustedWorkspaces=[]`, `autoStartInTrustedWorkspaces=false`; `codex.command=\"codex\"`, `codex.args=[]`."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "$[42][\"fix\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$[9][\"fix\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "$[42][\"fix\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "location": "$[82][\"fix\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "location": "$[156][\"fix\"]",
+        "excerpt": "Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation."
+      },
+      {
+        "path": "docs/archive/todo/review-core-v2.md",
+        "location": "27",
+        "excerpt": "e new implementation crosses a trust boundary by reading hidden `__sessionId`/`__cwd` values from model-controlled tool args. Those are release-blocking because they enable cross-session workspace mutation and out-of-workspace settings writes. After stripping/trusting internal fields correctly, also fix the shared-worktree removal guard and resume validation before tagging."
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "location": "64",
+        "excerpt": "op-services.ts:78–85`原样execFile(\"git\",args)，未注入-c/config env；`:598–605`、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"diff_parser\"][5][\"snippet\"]",
+        "excerpt": "、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。\n- **R2-11fixture与默认配置须分清。** 脚本明确 `-c core.quotePath=true` 构造escaped路径、再 `false`对照，并非依靠operator全局Git配置。官方[core.quotePath](https://git-"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"diff_parser\"][19][\"snippet\"]",
+        "excerpt": "、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$[\"records\"][5][\"matches\"][0][\"match\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$[\"records\"][5][\"matches\"][0][\"context\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$[\"records\"][9][\"matches\"][0][\"match\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$[\"records\"][9][\"matches\"][0][\"context\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$[\"records\"][13][\"matches\"][0][\"match\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$[\"records\"][13][\"matches\"][0][\"context\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round20/media-kind.md",
+        "location": "11",
+        "excerpt": "iakind.first.exit.json) 先保存再检查：**7 pass / 21 expect / 0 fail / 0 skip，Completed、exit 0**，全部 focused，0 重跑。包括 MIME 大小写/空白/参数、无 MIME 的大写扩展名、短中文/空格/emoji 名称、普通非媒体 fallback、空 MIME、最后扩展名及仅 MIME 值。文件名仅作内存标签。夹具在动态导入实际 module 之前安装 deny-fetch，并在 afterAll 恢复及检查；raw 的 expect 总数直接采用首次输出，不另推算 hook 计数。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][77][\"excerpt\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][78][\"excerpt\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][79][\"excerpt\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][80][\"excerpt\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][81][\"excerpt\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][82][\"excerpt\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][147][\"excerpt\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][148][\"excerpt\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\", \"_id\": 42}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][149][\"excerpt\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate it is within t"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][149][\"excerpt\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][150][\"excerpt\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][152][\"excerpt\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\", \"_id\": 42}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][153][\"excerpt\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate it is within t"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][153][\"excerpt\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][154][\"excerpt\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][156][\"excerpt\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\", \"_id\": 42}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][157][\"excerpt\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate it is within t"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "location": "$[\"matches\"][\"user-display\"][157][\"excerpt\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/renderer-dedup.json",
+        "location": "$[\"matches\"][\"review-draft\"][2][\"excerpt\"]",
+        "excerpt": "come bounded CodeShell plugin commands with `$1`–`$9`, named `KEY=value`, `$ARGUMENTS`, `{args}`, quoting, and `$$` expansion. TUI and Desktop surface them; Desktop expands into a reviewable draft and never auto-sends. `pluginCommands/list` + `pluginCommands/expand` provide the same trusted-server discovery seam to headless/server/Web/SDK hosts, while each host still chooses its UI.                                                                                                                                                                                                                             |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+        "location": "$[\"contexts\"][\"exact\"][4][\"excerpt\"]",
+        "excerpt": "op-services.ts:78–85`原样execFile(\"git\",args)，未注入-c/config env；`:598–605`、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+        "location": "$[\"contexts\"][\"exact\"][28][\"excerpt\"]",
+        "excerpt": "op-services.ts:78–85`原样execFile(\"git\",args)，未注入-c/config env；`:598–605`、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/service-history-selected.json",
+        "location": "$[\"selectedSavedContexts\"][1][\"excerpt\"]",
+        "excerpt": "op-services.ts:78–85`原样execFile(\"git\",args)，未注入-c/config env；`:598–605`、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/target-related.json",
+        "location": "$[0][\"contract\"]",
+        "excerpt": "parseReviewArguments quote branch preserves interior whitespace and exposes a file path; its existing tests declare quoted paths. App statically registers gitCommands into this registry."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/related.json",
+        "location": "$[\"observations\"][0][\"contract\"]",
+        "excerpt": "parseReviewArguments quote branch preserves interior whitespace and exposes a file path; its existing tests declare quoted paths. App statically registers gitCommands into this registry."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/review-target-report.md",
+        "location": "16",
+        "excerpt": "ands 交实际 CommandRegistry；[dispatch133–141](../../packages/tui/src/cli/commands/registry.ts:132) 对整个输入先 `split(/\\s+/)` 再将参数 `join(\" \")`，才 `cmd.execute(arg, ctx)`。普通 `/review \"src/a  b.ts\"` 的两个内部空格因此在 quote-aware parser 之前被压成一个；新 parser 的 quote 分支本来会保留内部空格。这里仅推导参数文字，未调用 dispatch/parser/collect、未创建同名文件或证明实际错选了文件。路径不存在可显式报错；另一单空格路径存在且也在scope内时可能选择它，均仅静态条件影响。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/review-target-report.md",
+        "location": "16",
+        "excerpt": "d.execute(arg, ctx)`。普通 `/review \"src/a  b.ts\"` 的两个内部空格因此在 quote-aware parser 之前被压成一个；新 parser 的 quote 分支本来会保留内部空格。这里仅推导参数文字，未调用 dispatch/parser/collect、未创建同名文件或证明实际错选了文件。路径不存在可显式报错；另一单空格路径存在且也在scope内时可能选择它，均仅静态条件影响。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "location": "$[\"matches\"][\"old-cli\"][27][\"excerpt\"]",
+        "excerpt": "ands 交实际 CommandRegistry；[dispatch133–141](../../packages/tui/src/cli/commands/registry.ts:132) 对整个输入先 `split(/\\s+/)` 再将参数 `join(\" \")`，才 `cmd.execute(arg, ctx)`。普通 `/review \"src/a  b.ts\"` 的两个内部空格因此在 quote-aware parser 之前被压成一个；新 parser 的 quote 分支本来会保留内部空格。这里仅推导参数文字，未调用 dispatch/parser/collect、未创建同名文件或证明实际错选了文件。路径不存在可显式报错；另一单空格路径存在且也在scope内时可能选择它，均仅静态条件影响。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+        "location": "$[\"matches\"][\"old-cli\"][27][\"excerpt\"]",
+        "excerpt": "d.execute(arg, ctx)`。普通 `/review \"src/a  b.ts\"` 的两个内部空格因此在 quote-aware parser 之前被压成一个；新 parser 的 quote 分支本来会保留内部空格。这里仅推导参数文字，未调用 dispatch/parser/collect、未创建同名文件或证明实际错选了文件。路径不存在可显式报错；另一单空格路径存在且也在scope内时可能选择它，均仅静态条件影响。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+        "location": "$[\"hits\"][\"old-boundaries\"][17][\"context\"]",
+        "excerpt": "op-services.ts:78–85`原样execFile(\"git\",args)，未注入-c/config env；`:598–605`、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history-supplement.json",
+        "location": "$[\"hits\"][\"old-boundaries\"][17][\"excerpt\"]",
+        "excerpt": "op-services.ts:78–85`原样execFile(\"git\",args)，未注入-c/config env；`:598–605`、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "location": "$[\"contexts\"][\"worktreeFileOpen\"][37][\"context\"]",
+        "excerpt": "e new implementation crosses a trust boundary by reading hidden `__sessionId`/`__cwd` values from model-controlled tool args. Those are release-blocking because they enable cross-session workspace mutation and out-of-workspace settings writes. After stripping/trusting internal fields correctly, also fix the shared-worktree removal guard and resume validation before tagging.\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-dedup.json",
+        "location": "$[\"contexts\"][\"worktreeFileOpen\"][45][\"context\"]",
+        "excerpt": "mit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。\n- **R2-11fixture与默认配置须分清。** 脚本明确 `-c core.quotePath=true` 构造escaped路径、再 `false`对照，并非依靠operator全局Git配置。官方[core.quotePath](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath)确认默认true；false仅不把高字节作为unusual，双引号/反斜杠/控制字符仍需escape。官方[patch格式](https://git-scm.com/docs/diff-format#_generating_patch_text_with_p)也明确路径引用规则及rename from/to。报告“默认quotePath=true”语义正确，不应扩大为所有配置、所有特殊路径均"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+        "location": "$[\"hits\"][\"source-normalization\"][11][\"context\"]",
+        "excerpt": "e new implementation crosses a trust boundary by reading hidden `__sessionId`/`__cwd` values from model-controlled tool args. Those are release-blocking because they enable cross-session workspace mutation and out-of-workspace settings writes. After stripping/trusting internal fields correctly, also fix "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"logs\"][1][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"logs\"][2][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\", \"_id\": 42}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"logs\"][3][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate it is within t"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"logs\"][3][\"text\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"settings-navigation\"][0][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"settings-navigation\"][1][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"verify_note\": \"This is unused code with a real vulnerability if/when activated. The reviewer correctly identified that spawn() is safer than exec() locally, but missed that SSH remote command interpretation is still a problem. The vulnerability is conditional on: (1) BridgeConfig being instantiated from untrusted input, (2) RemoteBridge actually being used. The proposed fix of using '--' and proper quoting is reasonable, though a better approach might be to avoid arbitrary remote commands entirely or use SSH options to restrict command e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"settings-navigation\"][2][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\", \"_id\": 42}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"settings-navigation\"][3][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate it is within t"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"settings-navigation\"][3][\"text\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"sidebar-projection\"][8][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"sidebar-projection\"][9][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"verify_note\": \"This is unused code with a real vulnerability if/when activated. The reviewer correctly identified that spawn() is safer than exec() locally, but missed that SSH remote command interpretation is still a problem. The vulnerability is conditional on: (1) BridgeConfig being instantiated from untrusted input, (2) RemoteBridge actually being used. The proposed fix of using '--' and proper quoting is reasonable, though a better approach might be to avoid arbitrary remote commands entirely or use SSH options to restrict command e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"sidebar-projection\"][10][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\", \"pkg\": \"core\", \"_id\": 42}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path a"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"sidebar-projection\"][11][\"text\"]",
+        "excerpt": "..' sequences). For remoteCommand, avoid passing it as a single string; instead parse it into argv and pass as separate arguments, or use spawn('ssh', [...sshArgs, '--', remoteCmd]) with proper quoting\"}, {\"file\": \"packages/core/src/run/ArtifactTracker.ts\", \"line\": \"119-120\", \"category\": \"security\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Incomplete path traversal validation\", \"detail\": \"The check `if (filePath.includes(\\\"..\\\")) return;` only blocks directory traversal via `..` but does not prevent absolute paths (e.g., `/etc/passwd`), tilde-expansion (`~/sensitive`), or symlink attacks. An attacker or buggy caller could record artifacts outside the intended directory.\", \"fix\": \"Normalize the path and validate it is within t"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$[\"hits\"][\"sidebar-projection\"][11][\"text\"]",
+        "excerpt": "= \\\\`--mode ${opts.mode} ${arg}\\\\``. A malicious user can inject shell commands via these options.\", \"fix\": \"Use proper argument escaping (e.g., via shell-escape library or manually quote and escape) or pass arguments as an array to avoid shell interpretation.\"}, {\"file\": \"packages/tui/src/cli/main.ts\", \"line\": \"91\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing validation on parseInt for --limit option\", \"detail\": \"Line 91 calls `parseInt(opts.limit)` without validation. If the user passes a non-numeric value, `parseInt()` returns `NaN`, which is then passed to `sm.list(NaN)`, causing undefined behavior.\", \"fix\": \"Validate the parsed integer with Number.isNaN() or use parseInt with r"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/cross-review-tui.md",
+        "location": "9",
+        "excerpt": "- **FILES-R7-01，P2：支持。** `edit.ts:22–23` 的 exact replacement 合同与唯一 old_string 检查清楚；`:94` 默认分支使用字符串替换参数，而 replace_all 使用 split/join。真实 Edit 持久化的 `$&` / `$$` / `` $` `` / `$'` 与入参不同，真实 Read 回读验证，成功 diff 却来自原 `newLf`。普通字符、无匹配捕获的 `$1`、相同入参 replace_all 控制均通过。这是普通文本正确性问题，未推出模型、UI、完整 executor 或实际代码执行影响。四个 token 是同一根因，保持一项。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/files-dedup.json",
+        "location": "$[\"hits\"][\"edit-literal\"][0][\"snippet\"]",
+        "excerpt": "`prompts/*.md` and `commands/*.md` become bounded CodeShell plugin commands with `$1`–`$9`, named `KEY=value`, `$ARGUMENTS`, `{args}`, quoting, and `$$` expansion. TUI and Desktop surface them; Desktop expands into a reviewable draft and never auto-sends. `pluginCommands/list` + `pluginCommands/expand` provide the same trusted-server discovery seam to headless/server/Web/SDK hosts, while each host still chooses its UI.                                                                                                                                                                                                                             |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-diff-semantic.json",
+        "location": "$[\"matches\"][20][\"text\"]",
+        "excerpt": "op-services.ts:78–85`原样execFile(\"git\",args)，未注入-c/config env；`:598–605`、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/cross-review-questions.md",
+        "location": "7",
+        "excerpt": "oader.ts:230` 丢弃 current 为空的 token，虽然前面已消费完整的引号对。`\"\" next last` 和 `left '' right` 两例都由真实 expander 得到位置左移；非空引号、命名空值和原始 `$ARGUMENTS` 是有意义的控制。现有 `pluginCommandsLoader.expand.test.ts` 要求 quoted positional/named expansion，模块也明确 `$1`…`$9` 语法；将显式空引号解释成一个位置参数是该支持语法的合理推断，报告已标为推断，没有声称验证了上游 Codex 实现。Converter 证据只覆盖自有目录的真实复制→展开，不等于完整安装/宿主调用。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/plugins-findings.json",
+        "location": "$[\"confirmed\"][0][\"contract\"]",
+        "excerpt": "Module advertises quoted positional/named argument expansion; its tokenizer explicitly recognizes single/double quoted tokens. Preserving an explicitly empty quoted token is inferred from this supported token grammar, rather than from a separately executed upstream Codex implementation."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/plugins.md",
+        "location": "7",
+        "excerpt": "Location: `packages/core/src/plugins/pluginCommandsLoader.ts:230` (`parsePluginCommandArguments`; quoting at 245–252, positional lookup at 300). The module advertises positional/named placeholder expansion, recognizes single and double quotes, and its existing expansion test requires quoted argument values with spaces to work. Preserving an explicitly empty quoted token is inferred from that advertised tokenizer grammar and ordinary quoted positional argument meaning; this is not a claim about a separately executed upstream Codex implementation."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/plugins.md",
+        "location": "7",
+        "excerpt": "ional/named placeholder expansion, recognizes single and double quotes, and its existing expansion test requires quoted argument values with spaces to work. Preserving an explicitly empty quoted token is inferred from that advertised tokenizer grammar and ordinary quoted positional argument meaning; this is not a claim about a separately executed upstream Codex implementation."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/quality-review.md",
+        "location": "11",
+        "excerpt": "Git 的 1→2 文件计数差异有明确 unique files 合同、普通/不同文件对照和官方 Git quote 格式支持；进程 guard 的四个测试均证明 nativeCalls=0。Plugins 的空参数合同是模块本身声明的 quoted tokenizer/placeholder 语法，不声称已测上游 Codex；named grammar/未知变量保留合同支持第二项；Windows 路径只作为字符串，guard 接线在 clone 前静态确认。Web MIME/大小只测客户端转换和 fake upload，不将回调接受当真实服务接受。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/attachments.md",
+        "location": "11",
+        "excerpt": "idence/attachments-path-projection.test.ts) 的前三项直接运行生产 `detectAttachments`，用自有临时文件验证正确原路径存在、错误投影不存在。完整 CJK 路径、Write 结构化 args 中的完整空格路径，以及无目录的普通文件名提及构成对照。最后两项直接运行 Core `buildInputAttachmentContext`，验证普通文本文件大小来自实际文件、正文不被注入，普通目录元数据按现有规则输出并过滤 `.git`/`node_modules`。[原始日志](evidence/attachments-path-projection.first.log)：5 pass / 24 expect / Completed。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/cross-review-attachments.md",
+        "location": "9",
+        "excerpt": "ed_images/1782-audit.png`；同 cwd resolve 后不存在。该差异在实际数据函数层确定，不依赖图像解码器或假定的 native open 返回。完整 CJK/no-space 路径与 Write 结构化含空格 args 正常，足以定位 prose token 根因。路径名内含空格导致遗漏是同根因变体，不应另计 finding。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-file-root-round27/independent-fixture-preflight.final.raw.md",
+        "location": "80",
+        "excerpt": "receipt包含phase/failure/scope/guardattempts/sourceManifest/resolveonly/ASTblocks/gitadapters/APIargs+results/errors/workspace+DOM/cleanup，既有first/second/root各次必须独立保存不覆盖。作者第一次如失败应停并保存精确source/log/observed，由root决定修正，不能将支架失败当产品失败或将未Completed阶段计通过。"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-file-root-round27/independent-fixture-preflight.raw.md",
+        "location": "57",
+        "excerpt": "receipt包含phase/failure/scope/guardattempts/sourceManifest/resolveonly/ASTblocks/gitadapters/APIargs+results/errors/workspace+DOM/cleanup，既有first/second/root各次必须独立保存不覆盖。作者第一次如失败应停并保存精确source/log/observed，由root决定修正，不能将支架失败当产品失败或将未Completed阶段计通过。"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-23-electron-mvp-broker.md",
+        "location": "94",
+        "excerpt": "  console.log = (...args) => process.stderr.write(args.map(String).join(\" \") + \"\\n\");"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-26-core-stabilization-followups.md",
+        "location": "72",
+        "excerpt": "  const decision = await ctx.permission.classify(opts.permissionToolName, { command: `${cmd} ${args.join(\" \")}` });"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation-followup.md",
+        "location": "715",
+        "excerpt": "  - \"two tool_use_args_delta with disjoint keys\" → covered by test 14 (shallow merge unions them)."
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-28-desktop-subagent-isolation-followup-design.md",
+        "location": "124",
+        "excerpt": "- **Two `tool_use_args_delta` events for the same tool but with disjoint keys.** Shallow merge unions them. Same behavior as if dispatched separately."
+      },
+      {
+        "path": "bugs/2026-07-13-repo-audit.md",
+        "location": "443",
+        "excerpt": "- **潜在影响**：项目可能影响外部 Codex/Claude command、args、defaultMode、trustedWorkspaces 或 auto-start 语义。"
+      }
+    ],
+    "rename-extra-fields": []
+  },
+  "driftFromFirstInventory": [],
+  "method": "all MD lines / recursive JSON value scalars over first complete inventory; no source algorithm evaluated"
+}

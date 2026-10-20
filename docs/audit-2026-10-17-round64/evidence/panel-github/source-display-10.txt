@@ -1,0 +1,138 @@
+1: import {
+2:   assertSafePanelAppId,
+3:   checkInstalledPanelAppUpdate,
+4:   checkSelectedPanelAppUpdate,
+5:   inspectProjectPanelApps,
+6:   resolvePanelAppBindingProjectPath,
+7:   getInstalledPanelAppUpdateIdentity,
+8:   type InstalledPanelApp,
+9:   type PanelAppUpdateCheck,
+10: } from "@cjhyy/code-shell-core";
+11: 
+12: const CACHE_TTL_MS = 5 * 60_000;
+13: const ERROR_TTL_MS = 30_000;
+14: const MAX_CACHE_ENTRIES = 256;
+15: 
+16: type Installation = Pick<InstalledPanelApp, "id" | "version" | "source" | "lastUpdated">;
+17: 
+18: function fingerprint(app: Installation): string {
+19:   return JSON.stringify([app.id, app.version, app.source, app.lastUpdated]);
+20: }
+21: 
+22: /** Cache only discovery results. Installation still requires a fresh full package review. */
+23: export function createPanelAppUpdateService(deps: {
+24:   getInstalled: (id: string) => Promise<Installation | undefined>;
+25:   check: (id: string) => Promise<PanelAppUpdateCheck>;
+26:   now?: () => number;
+27: }) {
+28:   const now = deps.now ?? Date.now;
+29:   const cache = new Map<string, { key: string; expires: number; result: PanelAppUpdateCheck }>();
+30:   const pending = new Map<string, { key: string; promise: Promise<PanelAppUpdateCheck> }>();
+31: 
+32:   function errorResult(
+33:     id: string,
+34:     app: Installation | undefined,
+35:     message: string,
+36:   ): PanelAppUpdateCheck {
+37:     return {
+38:       id,
+39:       currentVersion: app?.version ?? "",
+40:       status: "error",
+41:       sourceKind:
+42:         typeof app?.source === "object"
+43:           ? "git"
+44:           : app?.source?.toLowerCase().endsWith(".zip")
+45:             ? "zip"
+46:             : "dir",
+47:       checkedAt: new Date(now()).toISOString(),
+48:       message,
+49:     };
+50:   }
+51: 
+52:   return {
+53:     invalidate(id: string) {
+54:       cache.delete(id);
+55:       // The old promise may finish, but may no longer populate the cache.
+56:       pending.delete(id);
+57:     },
+58:     async check(id: string, force = false): Promise<PanelAppUpdateCheck> {
+59:       assertSafePanelAppId(id);
+60:       let app: Installation | undefined;
+61:       try {
+62:         app = await deps.getInstalled(id);
+63:       } catch (error) {
+64:         return errorResult(id, app, error instanceof Error ? error.message : String(error));
+65:       }
+66:       if (!app) {
+67:         cache.delete(id);
+68:         pending.delete(id);
+69:         return errorResult(id, undefined, "Panel App is no longer installed");
+70:       }
+71:       const installed = app;
+72:       const key = fingerprint(installed);
+73:       const cached = cache.get(id);
+74:       if (!force && cached?.key === key && cached.expires > now()) return cached.result;
+75:       const active = pending.get(id);
+76:       if (active?.key === key) return active.promise;
+77:       const entry: { key: string; promise: Promise<PanelAppUpdateCheck> } = {
+78:         key,
+79:         promise: Promise.resolve()
+80:           .then(async (): Promise<PanelAppUpdateCheck> => {
+81:             let result: PanelAppUpdateCheck;
+82:             try {
+83:               result = await deps.check(id);
+84:               const current = await deps.getInstalled(id);
+85:               if (
+86:                 !current ||
+87:                 fingerprint(current) !== key ||
+88:                 result.currentVersion !== installed.version
+89:               ) {
+90:                 return errorResult(id, current, "Panel App changed during the check; check again");
+91:               }
+92:             } catch (error) {
+93:               result = errorResult(
+94:                 id,
+95:                 installed,
+96:                 error instanceof Error ? error.message : String(error),
+97:               );
+98:             }
+99:             if (pending.get(id) === entry) {
+100:               cache.delete(id);
+101:               cache.set(id, {
+102:                 key,
+103:                 expires: now() + (result.status === "error" ? ERROR_TTL_MS : CACHE_TTL_MS),
+104:                 result,
+105:               });
+106:               while (cache.size > MAX_CACHE_ENTRIES) cache.delete(cache.keys().next().value!);
+107:             }
+108:             return result;
+109:           })
+110:           .finally(() => {
+111:             if (pending.get(id) === entry) pending.delete(id);
+112:           }),
+113:       };
+114:       pending.set(id, entry);
+115:       return entry.promise;
+116:     },
+117:   };
+118: }
+119: 
+120: export const panelAppUpdateService = createPanelAppUpdateService({
+121:   getInstalled: getInstalledPanelAppUpdateIdentity,
+122:   check: checkInstalledPanelAppUpdate,
+123: });
+124: 
+125: export function createProjectPanelAppUpdateService(cwd: string) {
+126:   const getInstalled = async (id: string) =>
+127:     (await inspectProjectPanelApps(resolvePanelAppBindingProjectPath(cwd))).apps.find(
+128:       (app) => app.id === id,
+129:     );
+130:   return createPanelAppUpdateService({
+131:     getInstalled,
+132:     check: async (id) => {
+133:       const selected = await getInstalled(id);
+134:       if (!selected) throw new Error("Panel App is no longer installed");
+135:       return checkSelectedPanelAppUpdate(selected);
+136:     },
+137:   });
+138: }

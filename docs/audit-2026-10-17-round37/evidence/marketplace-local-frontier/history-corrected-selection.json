@@ -1,0 +1,132 @@
+{
+  "scope": "Actual main reviewer reading of corrected scan artifacts; no product or historical test execution.",
+  "readAllEightQuotedContexts": [
+    {
+      "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+      "jsonPointer": null,
+      "line": 36,
+      "matched": "\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace",
+      "context": "oEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `{ uninstallable:true, kind:\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace\"`)。\n- `packages/desktop/src/renderer/extensions/uninstallTarget.test.ts` — 新测试。\n- `packages/desktop/src/renderer/extensions/PluginsTab.tsx:86` — uninstall 按 kind 分派:local 调新 IPC `uninstallLocalPlugin(name)`,marketplace 走原路径。\n- preload + marketplace-service + main:加 `plugins:uninstallLocal` → core `uninstallPluginByName`。\n\n**TDD steps:**\n- [ ] RED: uninstallTarget.test.ts 加测试:本地插件(marketplace=null)→ 期望 `uninstallable:true, kind:\"local\", pluginName` (当前返回 false,失败)。marketplace 插件仍 `kind:\"marketplace\"`。\n- [ ] 跑测试看失败。\n- [ ] GREEN: 改 uninstallTarget 返回带 kind 的判别联合。\n- [ ] 跑测试看通过。\n- [ ] commit。\n- [ ] UI/IPC 接线 + desktop tsc。\n- [ ] commit。\n\n## Task C:卸载清理 settings 孤立条目(disabledSkills/disabledPlugin",
+      "sourceSha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5"
+    },
+    {
+      "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+      "jsonPointer": null,
+      "line": 42,
+      "matched": "marketplace=null)→ 期望 `uninstallable:true, kind:\"local\"",
+      "context": "rer/extensions/uninstallTarget.test.ts` — 新测试。\n- `packages/desktop/src/renderer/extensions/PluginsTab.tsx:86` — uninstall 按 kind 分派:local 调新 IPC `uninstallLocalPlugin(name)`,marketplace 走原路径。\n- preload + marketplace-service + main:加 `plugins:uninstallLocal` → core `uninstallPluginByName`。\n\n**TDD steps:**\n- [ ] RED: uninstallTarget.test.ts 加测试:本地插件(marketplace=null)→ 期望 `uninstallable:true, kind:\"local\", pluginName` (当前返回 false,失败)。marketplace 插件仍 `kind:\"marketplace\"`。\n- [ ] 跑测试看失败。\n- [ ] GREEN: 改 uninstallTarget 返回带 kind 的判别联合。\n- [ ] 跑测试看通过。\n- [ ] commit。\n- [ ] UI/IPC 接线 + desktop tsc。\n- [ ] commit。\n\n## Task C:卸载清理 settings 孤立条目(disabledSkills/disabledPlugins)\n\n**真相:** `uninstallPlugin`/`uninstallPluginByName` 只删目录 + installed_plugins.json,不碰 settings 里的 `disabledSkills`(形如 `name:skill`)和 `disabledPlugins`(形如 `name`)。卸载后孤立残留。\n\n**Files:**\n- `packages/core/src/plugins/installer/uninstall.ts`(本地)和 `pluginInstaller.ts` uninstallPlugin(marketplace) — 卸载后清 settings 该插件条目。\n- 新建纯函数 `pruneDisabledEntriesForPlugin(settings, pluginName)`(放 disabled-lists.ts 旁或 uninstall 旁),便于 TDD。\n- 对应 .test.ts。\n\n**",
+      "sourceSha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "jsonPointer": "/hits/mime_classification/1/context",
+      "line": 4,
+      "matched": "\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace",
+      "context": "allable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `{ uninstallable:true, kind:\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace\"`)。\n- `packages/desktop/src/renderer/extensions/uninstallTarget.test.ts` — 新测试。\n- `packages/desktop/src/renderer/extensions/PluginsTab.tsx:86` — uninstall 按 kind 分派:local 调新 IPC `uninstallLocalPlugin(name)`,marketplace 走原路径。\n- preload + ma",
+      "sourceSha256": "b3f57a6cb0da02aeca6c8477e5569043a2620efaac4dd216d3a02ac28948b3fb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "jsonPointer": "/hits/mime_classification/2/context",
+      "line": 7,
+      "matched": "marketplace=null)→ 期望 `uninstallable:true, kind:\"local\"",
+      "context": "rer/extensions/uninstallTarget.test.ts` — 新测试。\n- `packages/desktop/src/renderer/extensions/PluginsTab.tsx:86` — uninstall 按 kind 分派:local 调新 IPC `uninstallLocalPlugin(name)`,marketplace 走原路径。\n- preload + marketplace-service + main:加 `plugins:uninstallLocal` → core `uninstallPluginByName`。\n\n**TDD steps:**\n- [ ] RED: uninstallTarget.test.ts 加测试:本地插件(marketplace=null)→ 期望 `uninstallable:true, kind:\"local\", pluginName` (当前返回 fal",
+      "sourceSha256": "b3f57a6cb0da02aeca6c8477e5569043a2620efaac4dd216d3a02ac28948b3fb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/history.json",
+      "jsonPointer": "/hits/old-failed/49/excerpt",
+      "line": 1,
+      "matched": "`local` cache path，且 marketplace",
+      "context": "范围与恢复：** 限定市场相对路径源使用恒定 `local` cache path，且 marketplace refresh 成功、随后插件新内容校验失败。不推广为所有 Git 新 SHA cache 或 direct/local atomic update 都删除旧版本。旧 Skill 文件确实消失，新的 catalog 读取不再提供插件；不据此推断所有既有 MCP 子进程/内存 hook 会立即停止。当前 mounted PluginsTab failure path 不 reload，所以 stale row 仍在；新 catalog 与后续 update 却无法找到它。正式报告已明确这些差异。",
+      "sourceSha256": "9a1e2fa7a75eea23bcfb58c35717897ec8379f2d025ebe5f60f0eb6b17d81e42"
+    },
+    {
+      "path": "docs/review-2026-10-12/plugin-quality-round9.md",
+      "jsonPointer": null,
+      "line": 27,
+      "matched": "`local` cache path，且 marketplace",
+      "context": "94` 再删这个 final。registry 替换在校验成功后的 `:403–405` 才发生，故旧 registry row 留下指向不存在的路径。`pluginCatalog.ts:117–122` 跳过不存在/不安全路径是正常读取保护，导致重新加载 catalog 不含插件。因果与 fixture 的真实文件/registry/catalog 断言吻合。\n\nfixture 的原始安装直接使用 Core marketplace install，代表在当前 Main 尚无 retained job 的既有安装。这是有效隔离，不是人为避开正常 gate：插件跨进程保留、job map 不保留。它证明 R52 无需 R51 同时存在。\n\n**准确范围与恢复：** 限定市场相对路径源使用恒定 `local` cache path，且 marketplace refresh 成功、随后插件新内容校验失败。不推广为所有 Git 新 SHA cache 或 direct/local atomic update 都删除旧版本。旧 Skill 文件确实消失，新的 catalog 读取不再提供插件；不据此推断所有既有 MCP 子进程/内存 hook 会立即停止。当前 mounted PluginsTab failure path 不 reload，所以 stale row 仍在；新 catalog 与后续 update 却无法找到它。正式报告已明确这些差异。\n\n源修正后刷新并重新安装的控制恢复文件、catalog，且 registry 仅一条；不需要手改注册表。若同一 Main 另有 R51 的 completed job，重装入口可能还受其独立阻塞。这是两缺陷可组合，不是重复。有效 v2 update、无效 direct/local update 保留旧版本两个控制均直接支持收窄范围。\n\n**分级：P2 合理。** 普通手动更新遇到上游无效内容，本应保留的已工作插件被移除，影响后续可用性；不宣称用户原始 source 或任意工作文件丢失，也没有 P1 的未提交工作丢失证据。\n\n## R53 / W20：预览安装把已删除的私有快照记为更新源\n\n**入口与 provenance 因果成立。** fixture 调用真实 PluginsTab “从文件夹”，file chooser double 返回原目录；真实 preview 与 review-dialog 的 onInstall callback 保留原路径和 review token，实",
+      "sourceSha256": "d95a7591feb90602afbd339fc10c896e4fb7e119c545c625cf64e7e804e4598b"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-29-plugin-runtime-and-commands.md",
+      "jsonPointer": null,
+      "line": 29,
+      "matched": "Marketplace tag = `\"local\"",
+      "context": "erver-stdio.ts:140` (all `mcpServers: settings.mcpServers`).\n\n---\n\n### Task 1: install registers into installed_plugins.json\n\n**Files:**\n- Modify: `packages/core/src/plugins/installer/install.ts`\n- Modify: `packages/core/src/plugins/installer/install.test.ts`\n\nAfter the successful `renameSync`, register the install so existing loaders discover it. Marketplace tag = `\"local\"`.\n\n- [ ] **Step 1: Add failing test** (append to install.test.ts)\n\n```typescript\nimport { readInstalledPlugins } from \"../installedPlugins.js\";\n\ntest(\"registers the install in installed_plugins.json\", () => {\n  mkdirSync(join(src, \"skills\", \"s\"), { recursive: true });\n  writeFileSync(join(src, \"skills\", \"s\", \"SKILL.md\"), \"---\\nname: s\\ndescription: d\\n---\\nb\");\n  const dir = installPluginFromPath(src, \"regplug\", STAMP);\n  const reg = readInstalledPlugins();\n  const entry = reg.plugins[\"regplug@local\"]?.[0];\n  expect(entry?.installPath).toBe(dir);\n  expect(entry?.version).toBeDefined();\n});\n```\n\n- [ ] **Step 2: Run, expect FAIL**\n\nRun: `cd packages/core && bun test src/plugins/installer/inst",
+      "sourceSha256": "96101e758161f76cdd92ccf5961d2f76f6643b16681c9d7a7ee6b1cb38d702e4"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-29-plugin-runtime-and-commands.md",
+      "jsonPointer": null,
+      "line": 828,
+      "matched": "Marketplace tag `\"local\"",
+      "context": "stallPluginByName(name)`, `listInstalledPlugins()`, `updatePluginByName(name, installedAt, force)` — stable across tasks. `installedAt`/timestamp passed in (Date.now unavailable in core); CLI stamps.\n- **source union widened** to `\"project\"|\"user\"|\"plugin\"` in both agent-definition.ts and agent-definition-registry.ts — used consistently in T2.\n- **Marketplace tag `\"local\"`** for all local installs — used in T1 register, T5 uninstall key, consistent.\n",
+      "sourceSha256": "96101e758161f76cdd92ccf5961d2f76f6643b16681c9d7a7ee6b1cb38d702e4"
+    }
+  ],
+  "readAllLocatorGroups": [
+    "literal_namespace",
+    "old_branch",
+    "source_name",
+    "name_local_literal",
+    "local_collision",
+    "chinese_market_local"
+  ],
+  "otherLocatorComparisons": {
+    "helper": {
+      "oldRetained": 55,
+      "newRetained": 55,
+      "addedMatchingLocatorSignatures": 0,
+      "removedMatchingLocatorSignatures": 0
+    },
+    "literal_namespace": {
+      "oldRetained": 13,
+      "newRetained": 13,
+      "addedMatchingLocatorSignatures": 0,
+      "removedMatchingLocatorSignatures": 0
+    },
+    "old_branch": {
+      "oldRetained": 2,
+      "newRetained": 2,
+      "addedMatchingLocatorSignatures": 0,
+      "removedMatchingLocatorSignatures": 0
+    },
+    "source_name": {
+      "oldRetained": 0,
+      "newRetained": 0,
+      "addedMatchingLocatorSignatures": 0,
+      "removedMatchingLocatorSignatures": 0
+    },
+    "unquoted_marketplace_local": {
+      "oldRetained": 68,
+      "newRetained": 68,
+      "addedMatchingLocatorSignatures": 0,
+      "removedMatchingLocatorSignatures": 0
+    },
+    "name_local_literal": {
+      "oldRetained": 4,
+      "newRetained": 4,
+      "addedMatchingLocatorSignatures": 0,
+      "removedMatchingLocatorSignatures": 0
+    },
+    "local_collision": {
+      "oldRetained": 32,
+      "newRetained": 32,
+      "addedMatchingLocatorSignatures": 0,
+      "removedMatchingLocatorSignatures": 0
+    },
+    "chinese_market_local": {
+      "oldRetained": 5,
+      "newRetained": 5,
+      "addedMatchingLocatorSignatures": 0,
+      "removedMatchingLocatorSignatures": 0
+    }
+  },
+  "assessment": "No exact same-cause report found in these contexts. R52 concerns constant cache version local and failed update validation, not a known-marketplace registry name local routed to direct-local uninstall. Three explicitly selected old documents238lines remain the source for legacy marker / missing-null / opposite truthy-routing counterevidence.",
+  "capPerPattern": 400,
+  "noSavedGroupTruncated": true,
+  "notSemanticExhaustion": true,
+  "productAttempts": 0
+}

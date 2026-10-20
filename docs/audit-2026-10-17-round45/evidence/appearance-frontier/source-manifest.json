@@ -1,0 +1,449 @@
+{
+  "createdAtUTC": "2026-10-17T15:20:56.929799+00:00",
+  "rootReportedReadBaseline": "4d5e81a27ac0481113bc523bfbf588d10672ef38",
+  "gitVerified": false,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "bytes": 14267,
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "lineCount": 362,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          24,
+          50
+        ],
+        [
+          53,
+          55
+        ],
+        [
+          64,
+          94
+        ],
+        [
+          112,
+          125
+        ],
+        [
+          211,
+          211
+        ],
+        [
+          214,
+          249
+        ],
+        [
+          281,
+          328
+        ],
+        [
+          356,
+          358
+        ],
+        [
+          360,
+          362
+        ]
+      ],
+      "coveredLineCount": 166,
+      "displayedLineRanges": [
+        [
+          1,
+          180
+        ],
+        [
+          189,
+          189
+        ],
+        [
+          211,
+          362
+        ]
+      ],
+      "displayedLineCount": 333,
+      "additionalNavigationSnippetLines": [
+        189
+      ],
+      "firstPinArtifact": "initial-pins.json",
+      "firstPinUTC": "2026-10-17T15:13:49.362599+00:00",
+      "firstDisplayToolChunks": "08ab25/f4ba57/4c3572",
+      "exactFirstDisplayWallClockUTC": null,
+      "snapshotCapturedAtUTC": "2026-10-17T15:20:56.929799+00:00",
+      "snapshotTiming": "After first source displays; SHA still equals before-content pin, not a new semantic read.",
+      "scope": "Ordinary names, light/dark/system values, state/load/save and pressed display. Import/remove bodies, focus restoration, ThemeAudio/system implementation are outside semantic ranges."
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "bytes": 6626,
+      "sha256": "4dca26ba938b58d7681fa12ba734df03b95200b21d660d3960f0588c08411f0a",
+      "lineCount": 155,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          5,
+          20
+        ],
+        [
+          33,
+          49
+        ]
+      ],
+      "coveredLineCount": 33,
+      "displayedLineRanges": [
+        [
+          1,
+          22
+        ],
+        [
+          33,
+          64
+        ],
+        [
+          128,
+          128
+        ],
+        [
+          140,
+          140
+        ]
+      ],
+      "displayedLineCount": 56,
+      "additionalNavigationSnippetLines": [
+        1,
+        5,
+        12,
+        13,
+        18,
+        19,
+        22,
+        33,
+        37,
+        43,
+        47,
+        48,
+        64,
+        128,
+        140
+      ],
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstPinUTC": "2026-10-17T15:16:25.869535+00:00",
+      "firstDisplayToolChunks": "4c3572",
+      "exactFirstDisplayWallClockUTC": null,
+      "snapshotCapturedAtUTC": "2026-10-17T15:20:56.929799+00:00",
+      "snapshotTiming": "After first source displays; SHA still equals before-content pin, not a new semantic read.",
+      "scope": "LocalStorage key/type/load/save only. applyTheme/applyThemePack/initTheme entry names are navigation, system/DOM/surface machinery not followed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/installedThemes.ts",
+      "bytes": 2787,
+      "sha256": "8df377284acfeaa9ce1fefce71e883a78daac3d65bcbfc4d6547d0423c7a58cc",
+      "lineCount": 75,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          4,
+          17
+        ],
+        [
+          31,
+          35
+        ],
+        [
+          42,
+          55
+        ]
+      ],
+      "coveredLineCount": 33,
+      "displayedLineRanges": [
+        [
+          1,
+          25
+        ],
+        [
+          31,
+          69
+        ],
+        [
+          72,
+          72
+        ]
+      ],
+      "displayedLineCount": 65,
+      "additionalNavigationSnippetLines": [
+        25,
+        47,
+        53,
+        72
+      ],
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstPinUTC": "2026-10-17T15:16:25.869535+00:00",
+      "firstDisplayToolChunks": "4c3572/2cf9d6",
+      "exactFirstDisplayWallClockUTC": null,
+      "snapshotCapturedAtUTC": "2026-10-17T15:20:56.929799+00:00",
+      "snapshotTiming": "After first source displays; SHA still equals before-content pin, not a new semantic read.",
+      "scope": "Ordinary cached ThemePack id/name/source adapter and lookup/list. API refresh wrapper only displayed, Host/Ipc/installation implementation not followed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "lineCount": 245,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          118,
+          128
+        ],
+        [
+          141,
+          142
+        ],
+        [
+          165,
+          180
+        ],
+        [
+          243,
+          245
+        ]
+      ],
+      "coveredLineCount": 32,
+      "displayedLineRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          53,
+          54
+        ],
+        [
+          61,
+          61
+        ],
+        [
+          76,
+          76
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          100,
+          100
+        ],
+        [
+          116,
+          142
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          165,
+          191
+        ],
+        [
+          243,
+          245
+        ]
+      ],
+      "displayedLineCount": 65,
+      "additionalNavigationSnippetLines": [
+        16,
+        53,
+        54,
+        61,
+        76,
+        91,
+        100,
+        119,
+        151,
+        165,
+        174,
+        243,
+        244
+      ],
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstPinUTC": "2026-10-17T15:16:25.869535+00:00",
+      "firstDisplayToolChunks": "4c3572",
+      "exactFirstDisplayWallClockUTC": null,
+      "snapshotCapturedAtUTC": "2026-10-17T15:20:56.929799+00:00",
+      "snapshotTiming": "After first source displays; SHA still equals before-content pin, not a new semantic read.",
+      "scope": "Stable ID/plain-or-i18n name/source and builtin/default lookup. Audio/frame/surface definitions only display/navigation, not mechanism audit."
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "bytes": 35851,
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "lineCount": 931,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          781,
+          781
+        ]
+      ],
+      "coveredLineCount": 1,
+      "displayedLineRanges": [
+        [
+          47,
+          47
+        ],
+        [
+          77,
+          77
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          169,
+          169
+        ],
+        [
+          176,
+          176
+        ],
+        [
+          193,
+          194
+        ],
+        [
+          201,
+          201
+        ],
+        [
+          214,
+          214
+        ],
+        [
+          382,
+          382
+        ],
+        [
+          486,
+          486
+        ],
+        [
+          774,
+          785
+        ]
+      ],
+      "displayedLineCount": 23,
+      "additionalNavigationSnippetLines": [
+        47,
+        77,
+        106,
+        169,
+        176,
+        193,
+        194,
+        201,
+        214,
+        382,
+        486,
+        781
+      ],
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstPinUTC": "2026-10-17T15:16:25.869535+00:00",
+      "firstDisplayToolChunks": "4c3572",
+      "exactFirstDisplayWallClockUTC": null,
+      "snapshotCapturedAtUTC": "2026-10-17T15:20:56.929799+00:00",
+      "snapshotTiming": "After first source displays; SHA still equals before-content pin, not a new semantic read.",
+      "scope": "Actual selected appearance route only. Other scopes/accounts/native settings are navigation or neighboring display."
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.test.tsx",
+      "bytes": 5719,
+      "sha256": "8e4215d5becf549c8cd647bcc1fc3a3c025813f1ed998b50831bd7d61b02322a",
+      "lineCount": 171,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          78,
+          115
+        ],
+        [
+          117,
+          123
+        ],
+        [
+          134,
+          159
+        ]
+      ],
+      "coveredLineCount": 71,
+      "displayedLineRanges": [
+        [
+          1,
+          171
+        ]
+      ],
+      "displayedLineCount": 171,
+      "additionalNavigationSnippetLines": [],
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "firstPinUTC": "2026-10-17T15:16:25.869535+00:00",
+      "firstDisplayToolChunks": "4a7aa8",
+      "exactFirstDisplayWallClockUTC": null,
+      "snapshotCapturedAtUTC": "2026-10-17T15:20:56.929799+00:00",
+      "snapshotTiming": "After first source displays; SHA still equals before-content pin, not a new semantic read.",
+      "scope": "Two existing test declarations as intent; only builtin persistence/card-list cases semantic. Generic DOM helpers, asset fixture and uninstall assertions display-only; nothing executed."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "bytes": 4694,
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "unchanged": true,
+      "firstPinArtifact": "consumer-initial-pins.json",
+      "coverage": "hash-only; no source body read",
+      "reason": "Preview component not followed beyond leaf prop boundary"
+    },
+    {
+      "path": "packages/desktop/src/renderer/logs/LogsView.tsx",
+      "bytes": 12912,
+      "sha256": "4799aa28eaef52b4d59aef1cfd04b57e862401001c6ba91d4df4713c603fd21a",
+      "unchanged": true,
+      "firstPinArtifact": "fallback-pin.json",
+      "coverage": "hash-only; no source body read",
+      "reason": "LogsView old same-SHA R6 full excluded before body"
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true,
+      "firstPinArtifact": "initial-pins.json",
+      "coverage": "instruction hash only this prep; prior instruction read carried, not new semantic coverage"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true,
+      "firstPinArtifact": "initial-pins.json",
+      "coverage": "instruction hash only this prep; prior instruction read carried, not new semantic coverage"
+    }
+  ],
+  "counts": {
+    "semanticFiles": 6,
+    "selectedFiles": 6,
+    "fullFiles": 0,
+    "productSemanticLines": 265,
+    "testSemanticLines": 71,
+    "allSemanticLines": 336,
+    "allDisplayedLines": 713,
+    "hashOnlyFiles": 2,
+    "instructionHashPins": 2
+  },
+  "policy": "Only stated ordinary semantic ranges audited; wider display/nav excluded mechanisms not promoted to coverage. No source function, React, test, API or fixture invoked."
+}

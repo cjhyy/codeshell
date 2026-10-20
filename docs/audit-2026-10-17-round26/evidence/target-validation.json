@@ -1,0 +1,40 @@
+{
+  "base": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "baseProvenance": "Parent reported; no author Git invocation/blob verification.",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 1,
+  "productRuns": 0,
+  "testRuns": 0,
+  "productImports": 0,
+  "fixtures": 0,
+  "vmAstEval": 0,
+  "nativePtyProcessGitCommands": 0,
+  "network": 0,
+  "securityAuthCustodyIdentityExperiments": 0,
+  "gitWrites": 0,
+  "productChanges": false,
+  "scope": "Static source/contracts and read-only filesystem hash/JSON metadata only. No passing/failing test claims or fixture outcomes.",
+  "sources": {
+    "pins": 10,
+    "full": 6,
+    "selected": 4,
+    "productContractReadLines": 1140,
+    "instructionReadLines": 217
+  },
+  "limits": [
+    "The module has Core extension and Node child_process/fs runtime imports; parse function is not treated as a zero-dependency leaf import.",
+    "Existing review-target.test.ts has real Git/temp filesystem hooks even for parser tests; file was never run.",
+    "A test declaration is contract counterevidence only, not a pass.",
+    "No normal independent contradiction established; no baseline controls scheduled to create activity.",
+    "Historical PERF/fence/UTF16 records are deduplicated source status only, no duplicate finding or old execution recovery.",
+    "Current quoted-review consumer reaches the old global registry whitespace compression. It is old-related only; no new formal/candidate or product run."
+  ],
+  "oldRelated": {
+    "id": "TARGET-R26-R1",
+    "priorId": "CLI-R4-01",
+    "originalCandidatePromoted": false,
+    "oldFailedGroupRecovered": false,
+    "runtime": false
+  }
+}

@@ -335,7 +335,7 @@ describe("MCPManager inline image results", () => {
 
   async function runImageTool(
     config: Partial<MCPServerConfig>,
-    llm?: { provider: string; providerKind?: string; model: string },
+    llm?: { provider: string; providerKind?: string; model: string; supportsVision?: boolean },
     response = {
       content: [
         { type: "text", text: "window state" },
@@ -344,6 +344,7 @@ describe("MCPManager inline image results", () => {
       isError: false,
     },
     invocation: "registered" | "generic" | "legacy" = "registered",
+    connectionLlm = llm,
   ): Promise<ToolResult> {
     const registry = new ToolRegistry({ builtinTools: ["MCPTool"] });
     const client = {
@@ -376,7 +377,7 @@ describe("MCPManager inline image results", () => {
     })(registry);
     const ctx = {
       cwd: "/tmp",
-      ...(llm ? { llmConfig: llm } : {}),
+      ...(connectionLlm ? { llmConfig: connectionLlm } : {}),
     };
     try {
       await manager.connectAll(
@@ -385,6 +386,8 @@ describe("MCPManager inline image results", () => {
         undefined,
         ctx as any,
       );
+      if (llm) ctx.llmConfig = llm;
+      else delete ctx.llmConfig;
       if (invocation === "legacy") {
         return {
           id: "legacy",
@@ -414,6 +417,79 @@ describe("MCPManager inline image results", () => {
     expect(result.contentBlocks?.[1]?.source?.data).toBe(PNG);
     expect(result.result).toContain('trust="untrusted"');
     expect(result.result).not.toContain(PNG);
+  });
+
+  test.each([
+    ["openai/gpt-6.1-sol", true, true],
+    ["future/unknown-model", true, true],
+    ["openai/gpt-5.6-sol", false, false],
+    ["openai/gpt-5.6-sol", undefined, true],
+    ["future/unknown-model", undefined, false],
+  ] as const)(
+    "registered and generic calls use current model capability for %s",
+    async (model, supportsVision, allowed) => {
+      for (const invocation of ["registered", "generic"] as const) {
+        const result = await runImageTool(
+          { inlineImages: true },
+          { provider: "openrouter", providerKind: "openrouter", model, supportsVision },
+          undefined,
+          invocation,
+        );
+        expect(result.isError).toBe(false);
+        if (allowed) expect(result.contentBlocks?.[1]?.source?.data).toBe(PNG);
+        else {
+          expect(result.contentBlocks).toBeUndefined();
+          expect(result.result).toContain("saved=");
+        }
+      }
+    },
+  );
+
+  test("registered and generic calls use the invocation model rather than the connection model", async () => {
+    const vision = {
+      provider: "openrouter",
+      model: "openai/gpt-6.1-sol",
+      supportsVision: true,
+    };
+    const nonVision = {
+      provider: "openrouter",
+      model: "openai/gpt-5.6-sol",
+      supportsVision: false,
+    };
+    for (const invocation of ["registered", "generic"] as const) {
+      const enabled = await runImageTool(
+        { inlineImages: true },
+        vision,
+        undefined,
+        invocation,
+        nonVision,
+      );
+      expect(enabled.contentBlocks?.[1]?.source?.data).toBe(PNG);
+      const disabled = await runImageTool(
+        { inlineImages: true },
+        nonVision,
+        undefined,
+        invocation,
+        vision,
+      );
+      expect(disabled.contentBlocks).toBeUndefined();
+      expect(disabled.result).toContain("saved=");
+    }
+  });
+
+  test("configured model vision never overrides the MCP server's inline opt-in", async () => {
+    for (const invocation of ["registered", "generic"] as const) {
+      for (const config of [{}, { inlineImages: false }]) {
+        const result = await runImageTool(
+          config,
+          { provider: "openrouter", model: "openai/gpt-6.1-sol", supportsVision: true },
+          undefined,
+          invocation,
+        );
+        expect(result.contentBlocks).toBeUndefined();
+        expect(result.result).toContain("saved=");
+      }
+    }
   });
 
   test("generic MCPTool retains image file references when inline delivery is unavailable", async () => {
@@ -489,13 +565,17 @@ describe("MCPManager inline image results", () => {
   });
 
   test("fails closed without a vision-capable model", async () => {
-    const noVision = await runImageTool(
-      { inlineImages: true },
-      { provider: "deepseek", model: "deepseek-chat" },
-    );
-    expect(noVision.contentBlocks).toBeUndefined();
-    const noConfig = await runImageTool({ inlineImages: true });
-    expect(noConfig.contentBlocks).toBeUndefined();
+    for (const invocation of ["registered", "generic"] as const) {
+      const noVision = await runImageTool(
+        { inlineImages: true },
+        { provider: "deepseek", model: "deepseek-chat" },
+        undefined,
+        invocation,
+      );
+      expect(noVision.contentBlocks).toBeUndefined();
+      const noConfig = await runImageTool({ inlineImages: true }, undefined, undefined, invocation);
+      expect(noConfig.contentBlocks).toBeUndefined();
+    }
   });
 
   test("uses providerKind for a custom provider's vision capability", async () => {
@@ -995,6 +1075,11 @@ describe("createMcpAuthenticatedFetch", () => {
         type: "oauth" as const,
         label: "OAuth",
         hasSecret: true,
+        meta: {
+          mcpServerUrl: oauthConfig.url,
+          resource: "https://mcp.example/",
+          issuer: "https://auth.example/",
+        },
       }),
       envExposures: () => ({}),
       resolveOAuthAccess: async (req: { forceRefresh?: boolean }) => ({
@@ -1102,9 +1187,9 @@ describe("createMcpAuthenticatedFetch", () => {
       }) as unknown as typeof fetch,
     );
 
-    expect(
-      (await authenticatedFetch("https://mcp.example/rpc", { signal: controller.signal })).status,
-    ).toBe(401);
+    await expect(
+      authenticatedFetch("https://mcp.example/rpc", { signal: controller.signal }),
+    ).rejects.toThrow();
     expect(resolved).toEqual([false]);
     expect(sends).toBe(1);
   });
@@ -1124,11 +1209,24 @@ describe("createMcpAuthenticatedFetch", () => {
     try {
       const authenticatedFetch = createMcpAuthenticatedFetch(
         "srv",
-        oauthConfig,
-        access(async (force) => {
-          resolved.push(force);
-          return "access";
-        }),
+        { ...oauthConfig, url: "https://mcp.example/unreplayable" },
+        {
+          ...access(async (force) => {
+            resolved.push(force);
+            return "access";
+          }),
+          resolveMeta: () => ({
+            id: "oauth-account",
+            type: "oauth",
+            label: "OAuth",
+            hasSecret: true,
+            meta: {
+              mcpServerUrl: "https://mcp.example/unreplayable",
+              resource: "https://mcp.example/",
+              issuer: "https://auth.example/",
+            },
+          }),
+        },
         (async () => {
           sends++;
           return new Response("", { status: 401 });

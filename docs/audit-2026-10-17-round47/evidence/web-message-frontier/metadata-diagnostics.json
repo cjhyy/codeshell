@@ -1,0 +1,25 @@
+{
+  "capturedUTC": "2026-10-17T15:39:27.499609+00:00",
+  "productFailures": [],
+  "metadataFailures": [],
+  "consoleTruncations": [
+    {
+      "toolChunk": "dbfaf2",
+      "exitCode": 0,
+      "originalTokenCount": 10144,
+      "maxOutputTokens": 6000,
+      "diagnostic": "Warning: truncated output",
+      "impact": "35 retained filename contexts were stored but this first console output was not counted as all read. Missing/relevant index16–26 contexts were later re-displayed boundedly; generic TUI/design references remain navigation."
+    },
+    {
+      "toolChunk": "cf7fb4",
+      "exitCode": 0,
+      "originalTokenCount": 5764,
+      "maxOutputTokens": 5500,
+      "diagnostic": "Warning: truncated output (original token count: 5764)",
+      "impact": "Context24 and an irrelevant long inventory tail were clipped; context24 re-displayed completely in f01f89. Full history inventory is metadata, not semantic scope."
+    }
+  ],
+  "rawDiagnosticPreservation": "Exact observed warning strings and tool IDs retained; no claim to reconstruct tool-suppressed text. Original structured context inputs remain saved.",
+  "otherDiagnostics": []
+}

@@ -1,0 +1,47 @@
+{
+  "kind": "frozen metadata supplement receipt, self excluded",
+  "ownedDirectory": "/tmp/codeshell-audit-round40-supplement-review",
+  "frozenAtUTC": "2026-10-17T14:02:18.459610+00:00",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 17007,
+      "sha256": "20c88d30c60a686569aa45cde6e07665af62472208e6b7fa4eea4c464f29827a"
+    },
+    {
+      "path": "final-input-checks.json",
+      "bytes": 7700,
+      "sha256": "c27d3f4523c8fcddb7928317d3a5db8b7a33fdc1ed1cc68e72963fea82cb7d5d"
+    },
+    {
+      "path": "input-artifact-pins.json",
+      "bytes": 6006,
+      "sha256": "719fe6a757e5b21250b33eaea6dfe9c74ca40d90509515c068e3510d9c19848c"
+    },
+    {
+      "path": "review.md",
+      "bytes": 2453,
+      "sha256": "cab4d8e4d0859bb06b591910fa3d9c06ba990d834043d85630cd05da1b18e49f"
+    }
+  ],
+  "fileCountExcludingSelf": 4,
+  "totalFilesIncludingSelf": 5,
+  "inputFilesChecked": 29,
+  "receiptRowsChecked": 27,
+  "reportedFreezeShaChecks": 6,
+  "newProductSemanticReadLines": 0,
+  "currentProductSourceFileReads": 0,
+  "gitCommandsThisSupplement": 0,
+  "productRuns": 0,
+  "repoWrites": 0,
+  "oldAggregateModified": false,
+  "existingCandidate": "UTF8-R34-C1 source-addressed/runtime not revalidated only; no removal/newID/related",
+  "proposedFormalRound": 40,
+  "originalPreps": [
+    40,
+    41,
+    42
+  ],
+  "formalBaseline": null,
+  "futureFormalStateCertified": false
+}

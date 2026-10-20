@@ -1,0 +1,1846 @@
+{
+  "formalBaselineReportedByRoot": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "formalBranchReportedByRoot": "codex/audit/search-case-round31-20261017",
+  "capturedUTC": "2026-10-17T11:59:09.210564+00:00",
+  "prepPinsTiming": "Root reported prep frozen; all11 artifacts pinned before reviewer semantic reads",
+  "prepArtifactInitialPins": [
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/author-receipt.json",
+      "bytes": 1664,
+      "lineCount": 60,
+      "sha256": "261b97669864705ab582bc42d0f9eef9a9b68427e0b46d2357cb05919223eb29",
+      "finishSha256": "261b97669864705ab582bc42d0f9eef9a9b68427e0b46d2357cb05919223eb29",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/classification.json",
+      "bytes": 1245,
+      "lineCount": 30,
+      "sha256": "52d6b7561bcb737149f7484b295560f4f72f2f2d2a94fdb625ae990273b40d07",
+      "finishSha256": "52d6b7561bcb737149f7484b295560f4f72f2f2d2a94fdb625ae990273b40d07",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/consumer-pins.json",
+      "bytes": 772,
+      "lineCount": 26,
+      "sha256": "713e2f37abb49f877ccb32a46765f912f33374aeb51c293137554640bcbe05c2",
+      "finishSha256": "713e2f37abb49f877ccb32a46765f912f33374aeb51c293137554640bcbe05c2",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/external-sources.json",
+      "bytes": 1077,
+      "lineCount": 25,
+      "sha256": "76fa65ed7cf936ea9f96dec78522840a3941d45402ca5071e18d289af5188f33",
+      "finishSha256": "76fa65ed7cf936ea9f96dec78522840a3941d45402ca5071e18d289af5188f33",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/history-method.py",
+      "bytes": 3299,
+      "lineCount": 32,
+      "sha256": "ba982defb5a6503ef8e7eaf3329fe09d034c655b0d7227ddc132cc12da9e3d6f",
+      "finishSha256": "ba982defb5a6503ef8e7eaf3329fe09d034c655b0d7227ddc132cc12da9e3d6f",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/history.json",
+      "bytes": 592310,
+      "lineCount": 14839,
+      "sha256": "4e290303c6663dd7633b33353b50234cde73d5d28c994d22097623ffd3f72bc8",
+      "finishSha256": "4e290303c6663dd7633b33353b50234cde73d5d28c994d22097623ffd3f72bc8",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/initial-pins.json",
+      "bytes": 810,
+      "lineCount": 23,
+      "sha256": "405cc1a4569e4d1fb7105306758f8508702626d87e3347f5bbc192c7223fdacd",
+      "finishSha256": "405cc1a4569e4d1fb7105306758f8508702626d87e3347f5bbc192c7223fdacd",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/proposal.md",
+      "bytes": 2388,
+      "lineCount": 13,
+      "sha256": "a009637080e840a659a9419144599b920b89b8d6ff2891609f8d996a957a52a0",
+      "finishSha256": "a009637080e840a659a9419144599b920b89b8d6ff2891609f8d996a957a52a0",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/source-manifest.json",
+      "bytes": 4977,
+      "lineCount": 136,
+      "sha256": "5ac9361250436100932d54e9256d057de576f4317fd0c215c367e5526bb3a5df",
+      "finishSha256": "5ac9361250436100932d54e9256d057de576f4317fd0c215c367e5526bb3a5df",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/test-source-pin.json",
+      "bytes": 197,
+      "lineCount": 7,
+      "sha256": "ceca17f33db9a6c4d402735bedc638b09ce0286b677d68b8783b0d9ab97692ad",
+      "finishSha256": "ceca17f33db9a6c4d402735bedc638b09ce0286b677d68b8783b0d9ab97692ad",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round31-search-frontier/validation.json",
+      "bytes": 395,
+      "lineCount": 16,
+      "sha256": "910920cff5d4af716c30138e6925ef4a470db4aaf617b2b871ec99297ca4df8c",
+      "finishSha256": "910920cff5d4af716c30138e6925ef4a470db4aaf617b2b871ec99297ca4df8c",
+      "initialEqualsFinish": true
+    }
+  ],
+  "sourceInitialPins": [
+    {
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "bytes": 1738,
+      "lineCount": 52,
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "coverage": "hash-only before reviewer source semantic selection"
+    },
+    {
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "bytes": 1895,
+      "lineCount": 56,
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "coverage": "hash-only before reviewer source semantic selection"
+    },
+    {
+      "path": "packages/tui/src/render/screen.ts",
+      "bytes": 49323,
+      "lineCount": 1486,
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "coverage": "hash-only before reviewer source semantic selection"
+    },
+    {
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "bytes": 7445,
+      "lineCount": 198,
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "coverage": "hash-only before reviewer source semantic selection"
+    },
+    {
+      "path": "packages/tui/src/render/ink.tsx",
+      "bytes": 89185,
+      "lineCount": 1968,
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "coverage": "hash-only before reviewer source semantic selection"
+    },
+    {
+      "path": "tests/search-highlight.test.ts",
+      "bytes": 4161,
+      "lineCount": 143,
+      "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "coverage": "hash-only before reviewer source semantic selection"
+    },
+    {
+      "path": "packages/tui/src/render/warn.ts",
+      "bytes": 309,
+      "lineCount": 9,
+      "sha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "coverage": "hash-only before reviewer source semantic selection"
+    }
+  ],
+  "pending": false,
+  "productAttempts": 0,
+  "languageFixtures": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0,
+  "extraSourceInitialPinsUTC": "2026-10-17T12:00:12.006172+00:00",
+  "extraSourceInitialPins": [
+    {
+      "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "bytes": 2158,
+      "lineCount": 53,
+      "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "timing": "Before direct full read; earlier rg exposed lines18/48/49, so no pre-excerpt semantic SHA claimed",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "packages/tui/src/render/root.ts",
+      "bytes": 4613,
+      "lineCount": 184,
+      "sha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "timing": "Before direct source range read; earlier rg filename inventory only",
+      "initialSemanticReadSha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2"
+    },
+    {
+      "path": "packages/tui/src/render/index.ts",
+      "bytes": 2454,
+      "lineCount": 66,
+      "sha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "timing": "Before direct source range read; earlier rg filename inventory only",
+      "initialSemanticReadSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c"
+    },
+    {
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "lineCount": 9,
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "timing": "Before direct source range read; earlier rg filename inventory only",
+      "initialSemanticReadSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "lineCount": 73,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "timing": "Before direct source range read; earlier rg filename inventory only",
+      "initialSemanticReadSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21"
+    }
+  ],
+  "rootFormalArtifactInitialPinsUTC": "2026-10-17T12:00:12.019927+00:00",
+  "rootFormalArtifactInitialPins": [
+    {
+      "path": "docs/audit-2026-10-17-round31/root-report.md",
+      "bytes": 2904,
+      "lineCount": 17,
+      "sha256": "d20b00dc294d2150dce447cf37fcabf39dbdd7b8722c1a6974b1f6b9fa2838cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.json",
+      "bytes": 1901,
+      "lineCount": 55,
+      "sha256": "c114d721078cf32c2e351e2840400dc65465044bcd6e19aa40d7e37875f6a971"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-source-manifest.json",
+      "bytes": 5188,
+      "lineCount": 136,
+      "sha256": "30de5252256b0449d1b9feb8b4ec806132ef525a99fe779af60c46148ee9260f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-findings.json",
+      "bytes": 3,
+      "lineCount": 1,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+      "bytes": 973,
+      "lineCount": 23,
+      "sha256": "d3bf28700983aa51cb42a6838f9b34753f639f144164554c805fde34096d163e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-related.json",
+      "bytes": 3,
+      "lineCount": 1,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-validation.json",
+      "bytes": 384,
+      "lineCount": 13,
+      "sha256": "80b80996478ae0e4d1abb6d51a00e507c818e4b31fb21ffc80eeffc9ac15bb7c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.py",
+      "bytes": 3267,
+      "lineCount": 32,
+      "sha256": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+      "bytes": 606088,
+      "lineCount": 15188,
+      "sha256": "2f9ccc201a31cde7a769a996b72433f29fb3f571127dc2105ddebf7948b042e9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-prep-copy-receipt.json",
+      "bytes": 3402,
+      "lineCount": 74,
+      "sha256": "dcebc328d479741b0642791660a0429baff80832096199ad2fbbd6f7319f3283"
+    }
+  ],
+  "rootFormalArtifactPinTiming": "Root reported formal freeze; before reviewer formal report/metadata reads",
+  "finalCurrent31ArtifactInitialPinsUTC": "2026-10-17T12:02:01.942011+00:00",
+  "finalCurrent31ArtifactInitialPins": [
+    {
+      "path": "docs/audit-2026-10-17-round31/root-report.md",
+      "bytes": 2945,
+      "lineCount": 17,
+      "sha256": "6576dbb28ca74a6752a544bbefbf7867f69825e673eea648a828b1f096fd9071",
+      "matchesAuthorReportedFreeze": true,
+      "finishSha256": "6576dbb28ca74a6752a544bbefbf7867f69825e673eea648a828b1f096fd9071",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/entry-report.md",
+      "bytes": 3257,
+      "lineCount": 15,
+      "sha256": "e439443e4cbf5159e61d03005eed1831745a3c5f7cea27649b32d0e81af5d830",
+      "matchesAuthorReportedFreeze": true,
+      "finishSha256": "e439443e4cbf5159e61d03005eed1831745a3c5f7cea27649b32d0e81af5d830",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-artifact-receipt.json",
+      "bytes": 1260,
+      "lineCount": 37,
+      "sha256": "583d548c3efcd7a1d6bc70482d55454eb706b14a43eff80e3338246d1b13d04e",
+      "finishSha256": "583d548c3efcd7a1d6bc70482d55454eb706b14a43eff80e3338246d1b13d04e",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-prep-copy-receipt.json",
+      "bytes": 2085,
+      "lineCount": 47,
+      "sha256": "e0b69efc2f505b2aa9e7e6394e11dda27e8c752a650c71e4e1cdd4d9ddfa7ea5",
+      "finishSha256": "e0b69efc2f505b2aa9e7e6394e11dda27e8c752a650c71e4e1cdd4d9ddfa7ea5",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-source-manifest.json",
+      "bytes": 14803,
+      "lineCount": 394,
+      "sha256": "d4fc68369370f5cc536f247838406c883a629134acdfbd48434b3dd78bd4e644",
+      "finishSha256": "d4fc68369370f5cc536f247838406c883a629134acdfbd48434b3dd78bd4e644",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-validation.json",
+      "bytes": 771,
+      "lineCount": 26,
+      "sha256": "d26bef8ee705f355e34b82acc398e86c4435e93ba98da58627b6dca28b059965",
+      "finishSha256": "d26bef8ee705f355e34b82acc398e86c4435e93ba98da58627b6dca28b059965",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/review-search-byte-checks.json",
+      "bytes": 2674,
+      "lineCount": 65,
+      "sha256": "710b38dc4b69653478ce57f1d29e8645155afc0c75d19b59506203fd351a0ae6",
+      "finishSha256": "710b38dc4b69653478ce57f1d29e8645155afc0c75d19b59506203fd351a0ae6",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/review-search-copy-receipt.json",
+      "bytes": 10055,
+      "lineCount": 191,
+      "sha256": "3281594b8f0015ba656100a3bacca5fb515c719383ecaaa9c88cded4026c4f75",
+      "finishSha256": "3281594b8f0015ba656100a3bacca5fb515c719383ecaaa9c88cded4026c4f75",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/review-search-finalizer.first.exit.json",
+      "bytes": 856,
+      "lineCount": 13,
+      "sha256": "d095f825d502ad5ae0e29fdded93f6a4b1f691649c316eb06b0b47c20b2ba557",
+      "finishSha256": "d095f825d502ad5ae0e29fdded93f6a4b1f691649c316eb06b0b47c20b2ba557",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/review-search-history-checks.json",
+      "bytes": 6315,
+      "lineCount": 111,
+      "sha256": "ad6d8493571357c33b260341f55f2858cfded230e2ba1bffa466137195040028",
+      "finishSha256": "ad6d8493571357c33b260341f55f2858cfded230e2ba1bffa466137195040028",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/review-search-receipt.json",
+      "bytes": 2452,
+      "lineCount": 59,
+      "sha256": "b34bed6d2d4b6f1f8dd32c32df8f1509813fae0929ea8d8c1f85ce126c07218d",
+      "matchesAuthorReportedFreeze": true,
+      "finishSha256": "b34bed6d2d4b6f1f8dd32c32df8f1509813fae0929ea8d8c1f85ce126c07218d",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/review-search-source-manifest.json",
+      "bytes": 16401,
+      "lineCount": 504,
+      "sha256": "fd18d6c5d5aa234115d354afbba220a63953cf437a8ceb49c928bdd0e150a518",
+      "matchesAuthorReportedFreeze": true,
+      "finishSha256": "fd18d6c5d5aa234115d354afbba220a63953cf437a8ceb49c928bdd0e150a518",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/review-search-validation.json",
+      "bytes": 2486,
+      "lineCount": 58,
+      "sha256": "31b743495f0ac6b0dbb0a470c154f2901f2d5ae278e95ef9e47711a5c5497c58",
+      "finishSha256": "31b743495f0ac6b0dbb0a470c154f2901f2d5ae278e95ef9e47711a5c5497c58",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/review-search.md",
+      "bytes": 4500,
+      "lineCount": 13,
+      "sha256": "82dddd71d6bfb850179c4a198f2558e1bd00c2486e3be9bd5f0390c56e6ec9a4",
+      "matchesAuthorReportedFreeze": true,
+      "finishSha256": "82dddd71d6bfb850179c4a198f2558e1bd00c2486e3be9bd5f0390c56e6ec9a4",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.first.json",
+      "bytes": 1901,
+      "lineCount": 55,
+      "sha256": "c114d721078cf32c2e351e2840400dc65465044bcd6e19aa40d7e37875f6a971",
+      "finishSha256": "c114d721078cf32c2e351e2840400dc65465044bcd6e19aa40d7e37875f6a971",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.json",
+      "bytes": 2192,
+      "lineCount": 62,
+      "sha256": "dd9bbf86f9ce18f25bcfb686f73dd806c37f0c485cac7d4049b6f0a712c19153",
+      "matchesAuthorReportedFreeze": true,
+      "finishSha256": "dd9bbf86f9ce18f25bcfb686f73dd806c37f0c485cac7d4049b6f0a712c19153",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+      "bytes": 973,
+      "lineCount": 23,
+      "sha256": "d3bf28700983aa51cb42a6838f9b34753f639f144164554c805fde34096d163e",
+      "finishSha256": "d3bf28700983aa51cb42a6838f9b34753f639f144164554c805fde34096d163e",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+      "bytes": 1033,
+      "lineCount": 23,
+      "sha256": "dd3740d6b7fc4f61d47a38be21d33cdcfff2ebe105a280c63093b180199f7800",
+      "finishSha256": "dd3740d6b7fc4f61d47a38be21d33cdcfff2ebe105a280c63093b180199f7800",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+      "bytes": 606088,
+      "lineCount": 15188,
+      "sha256": "2f9ccc201a31cde7a769a996b72433f29fb3f571127dc2105ddebf7948b042e9",
+      "finishSha256": "2f9ccc201a31cde7a769a996b72433f29fb3f571127dc2105ddebf7948b042e9",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.py",
+      "bytes": 3267,
+      "lineCount": 32,
+      "sha256": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932",
+      "finishSha256": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-findings.json",
+      "bytes": 3,
+      "lineCount": 1,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "finishSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-formal-metadata-notes.json",
+      "bytes": 643,
+      "lineCount": 17,
+      "sha256": "2cb9611052c86f2e60ad9b1c5843ecc93956b52e7e6cdb421ac76cd349350c2d",
+      "finishSha256": "2cb9611052c86f2e60ad9b1c5843ecc93956b52e7e6cdb421ac76cd349350c2d",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-prep-copy-receipt.json",
+      "bytes": 3402,
+      "lineCount": 74,
+      "sha256": "dcebc328d479741b0642791660a0429baff80832096199ad2fbbd6f7319f3283",
+      "finishSha256": "dcebc328d479741b0642791660a0429baff80832096199ad2fbbd6f7319f3283",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-related.json",
+      "bytes": 3,
+      "lineCount": 1,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "finishSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-report.first.raw.txt",
+      "bytes": 2904,
+      "lineCount": 17,
+      "sha256": "d20b00dc294d2150dce447cf37fcabf39dbdd7b8722c1a6974b1f6b9fa2838cb",
+      "finishSha256": "d20b00dc294d2150dce447cf37fcabf39dbdd7b8722c1a6974b1f6b9fa2838cb",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-source-manifest.json",
+      "bytes": 5188,
+      "lineCount": 136,
+      "sha256": "30de5252256b0449d1b9feb8b4ec806132ef525a99fe779af60c46148ee9260f",
+      "finishSha256": "30de5252256b0449d1b9feb8b4ec806132ef525a99fe779af60c46148ee9260f",
+      "initialEqualsFinish": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-validation.json",
+      "bytes": 384,
+      "lineCount": 13,
+      "sha256": "80b80996478ae0e4d1abb6d51a00e507c818e4b31fb21ffc80eeffc9ac15bb7c",
+      "finishSha256": "80b80996478ae0e4d1abb6d51a00e507c818e4b31fb21ffc80eeffc9ac15bb7c",
+      "initialEqualsFinish": true
+    }
+  ],
+  "finalCurrent31ArtifactPinTiming": "After all authors reported current formal freeze, before reviewer final metadata reads. Earlier Root9-row version stays separately pinned and was superseded by explicit metadata correction.",
+  "finishedUTC": "2026-10-17T12:03:18.999228+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "bytes": 1738,
+      "lineCount": 52,
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "initialFilesystemSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "finishFilesystemSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          52
+        ]
+      ],
+      "coveredLineCount": 52,
+      "initialSemanticReadSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "pinTiming": "Before independent direct semantic reads; Root prep source pins were captured separately from Root author reads.",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "bytes": 1895,
+      "lineCount": 56,
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "initialFilesystemSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "finishFilesystemSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "coveredLineCount": 56,
+      "initialSemanticReadSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "pinTiming": "Before independent direct semantic reads; Root prep source pins were captured separately from Root author reads.",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/tui/src/render/screen.ts",
+      "bytes": 49323,
+      "lineCount": 1486,
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "initialFilesystemSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "finishFilesystemSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          130
+        ]
+      ],
+      "coveredLineCount": 130,
+      "initialSemanticReadSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "pinTiming": "Before independent direct semantic reads; Root prep source pins were captured separately from Root author reads.",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "bytes": 7445,
+      "lineCount": 198,
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "initialFilesystemSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "finishFilesystemSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          125,
+          198
+        ]
+      ],
+      "coveredLineCount": 74,
+      "initialSemanticReadSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "pinTiming": "Before independent direct semantic reads; Root prep source pins were captured separately from Root author reads.",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/tui/src/render/ink.tsx",
+      "bytes": 89185,
+      "lineCount": 1968,
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "initialFilesystemSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "finishFilesystemSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "initialEqualsFinish": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          180,
+          205
+        ],
+        [
+          700,
+          730
+        ],
+        [
+          1280,
+          1345
+        ]
+      ],
+      "coveredLineCount": 123,
+      "initialSemanticReadSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "pinTiming": "Before independent direct semantic reads; Root prep source pins were captured separately from Root author reads.",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "tests/search-highlight.test.ts",
+      "bytes": 4161,
+      "lineCount": 143,
+      "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "initialFilesystemSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "finishFilesystemSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          143
+        ]
+      ],
+      "coveredLineCount": 143,
+      "initialSemanticReadSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "pinTiming": "Before independent direct semantic reads; Root prep source pins were captured separately from Root author reads.",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "bytes": 2158,
+      "lineCount": 53,
+      "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "initialFilesystemSha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "finishFilesystemSha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "coveredLineCount": 53,
+      "initialSemanticReadSha256": null,
+      "pinTiming": "Before direct full read; earlier rg exposed lines18/48/49, so no pre-excerpt semantic SHA claimed",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/tui/src/render/root.ts",
+      "bytes": 4613,
+      "lineCount": 184,
+      "sha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "initialFilesystemSha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "finishFilesystemSha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          184
+        ]
+      ],
+      "coveredLineCount": 184,
+      "initialSemanticReadSha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+      "pinTiming": "Before direct source range read; earlier rg filename inventory only",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/tui/src/render/index.ts",
+      "bytes": 2454,
+      "lineCount": 66,
+      "sha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "initialFilesystemSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "finishFilesystemSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          66
+        ]
+      ],
+      "coveredLineCount": 66,
+      "initialSemanticReadSha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+      "pinTiming": "Before direct source range read; earlier rg filename inventory only",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "lineCount": 9,
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "initialFilesystemSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "finishFilesystemSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "coveredLineCount": 9,
+      "initialSemanticReadSha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "pinTiming": "Before direct source range read; earlier rg filename inventory only",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "lineCount": 73,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "initialFilesystemSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "finishFilesystemSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "initialEqualsFinish": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          73
+        ]
+      ],
+      "coveredLineCount": 73,
+      "initialSemanticReadSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "pinTiming": "Before direct source range read; earlier rg filename inventory only",
+      "productExecuted": false,
+      "gitBlobComparedByReviewer": false
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/tui/src/render/warn.ts",
+      "bytes": 309,
+      "lineCount": 9,
+      "sha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "initialFilesystemSha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "finishFilesystemSha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "initialEqualsFinish": true,
+      "coverage": "hash-only; not semantically read by this reviewer"
+    }
+  ],
+  "reviewerSourceScope": {
+    "sourceFiles": 11,
+    "declaredReadLines": 963,
+    "counting": "Independent reviewer reading separate from Root formalization0newreads. Overlapping author/reviewer coverage must be unioned rather than summed as unique source coverage."
+  },
+  "activeReceiptChecks": [
+    {
+      "receipt": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.json",
+      "receiptPin": {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.json",
+        "bytes": 2192,
+        "lineCount": 62,
+        "sha256": "dd9bbf86f9ce18f25bcfb686f73dd806c37f0c485cac7d4049b6f0a712c19153"
+      },
+      "selfExcluded": true,
+      "activeArtifactCount": 10,
+      "files": [
+        {
+          "path": "docs/audit-2026-10-17-round31/root-report.md",
+          "bytes": 2945,
+          "lineCount": 17,
+          "sha256": "6576dbb28ca74a6752a544bbefbf7867f69825e673eea648a828b1f096fd9071",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/root-source-manifest.json",
+          "bytes": 5188,
+          "lineCount": 136,
+          "sha256": "30de5252256b0449d1b9feb8b4ec806132ef525a99fe779af60c46148ee9260f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/root-findings.json",
+          "bytes": 3,
+          "lineCount": 1,
+          "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+          "bytes": 1033,
+          "lineCount": 23,
+          "sha256": "dd3740d6b7fc4f61d47a38be21d33cdcfff2ebe105a280c63093b180199f7800",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/root-related.json",
+          "bytes": 3,
+          "lineCount": 1,
+          "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/root-validation.json",
+          "bytes": 384,
+          "lineCount": 13,
+          "sha256": "80b80996478ae0e4d1abb6d51a00e507c818e4b31fb21ffc80eeffc9ac15bb7c",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.py",
+          "bytes": 3267,
+          "lineCount": 32,
+          "sha256": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+          "bytes": 606088,
+          "lineCount": 15188,
+          "sha256": "2f9ccc201a31cde7a769a996b72433f29fb3f571127dc2105ddebf7948b042e9",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/root-prep-copy-receipt.json",
+          "bytes": 3402,
+          "lineCount": 74,
+          "sha256": "dcebc328d479741b0642791660a0429baff80832096199ad2fbbd6f7319f3283",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/root-formal-metadata-notes.json",
+          "bytes": 643,
+          "lineCount": 17,
+          "sha256": "2cb9611052c86f2e60ad9b1c5843ecc93956b52e7e6cdb421ac76cd349350c2d",
+          "matchesReceipt": true
+        }
+      ]
+    },
+    {
+      "receipt": "docs/audit-2026-10-17-round31/evidence/entry-artifact-receipt.json",
+      "receiptPin": {
+        "path": "docs/audit-2026-10-17-round31/evidence/entry-artifact-receipt.json",
+        "bytes": 1260,
+        "lineCount": 37,
+        "sha256": "583d548c3efcd7a1d6bc70482d55454eb706b14a43eff80e3338246d1b13d04e"
+      },
+      "selfExcluded": true,
+      "activeArtifactCount": 4,
+      "files": [
+        {
+          "path": "docs/audit-2026-10-17-round31/entry-report.md",
+          "bytes": 3257,
+          "lineCount": 15,
+          "sha256": "e439443e4cbf5159e61d03005eed1831745a3c5f7cea27649b32d0e81af5d830",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/entry-source-manifest.json",
+          "bytes": 14803,
+          "lineCount": 394,
+          "sha256": "d4fc68369370f5cc536f247838406c883a629134acdfbd48434b3dd78bd4e644",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/entry-validation.json",
+          "bytes": 771,
+          "lineCount": 26,
+          "sha256": "d26bef8ee705f355e34b82acc398e86c4435e93ba98da58627b6dca28b059965",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/entry-prep-copy-receipt.json",
+          "bytes": 2085,
+          "lineCount": 47,
+          "sha256": "e0b69efc2f505b2aa9e7e6394e11dda27e8c752a650c71e4e1cdd4d9ddfa7ea5",
+          "matchesReceipt": true
+        }
+      ]
+    },
+    {
+      "receipt": "docs/audit-2026-10-17-round31/evidence/review-search-receipt.json",
+      "receiptPin": {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-search-receipt.json",
+        "bytes": 2452,
+        "lineCount": 59,
+        "sha256": "b34bed6d2d4b6f1f8dd32c32df8f1509813fae0929ea8d8c1f85ce126c07218d"
+      },
+      "selfExcluded": true,
+      "activeArtifactCount": 7,
+      "files": [
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/review-search.md",
+          "bytes": 4500,
+          "lineCount": 13,
+          "sha256": "82dddd71d6bfb850179c4a198f2558e1bd00c2486e3be9bd5f0390c56e6ec9a4",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/review-search-source-manifest.json",
+          "bytes": 16401,
+          "lineCount": 504,
+          "sha256": "fd18d6c5d5aa234115d354afbba220a63953cf437a8ceb49c928bdd0e150a518",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/review-search-copy-receipt.json",
+          "bytes": 10055,
+          "lineCount": 191,
+          "sha256": "3281594b8f0015ba656100a3bacca5fb515c719383ecaaa9c88cded4026c4f75",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/review-search-byte-checks.json",
+          "bytes": 2674,
+          "lineCount": 65,
+          "sha256": "710b38dc4b69653478ce57f1d29e8645155afc0c75d19b59506203fd351a0ae6",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/review-search-validation.json",
+          "bytes": 2486,
+          "lineCount": 58,
+          "sha256": "31b743495f0ac6b0dbb0a470c154f2901f2d5ae278e95ef9e47711a5c5497c58",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/review-search-finalizer.first.exit.json",
+          "bytes": 856,
+          "lineCount": 13,
+          "sha256": "d095f825d502ad5ae0e29fdded93f6a4b1f691649c316eb06b0b47c20b2ba557",
+          "matchesReceipt": true
+        },
+        {
+          "path": "docs/audit-2026-10-17-round31/evidence/review-search-history-checks.json",
+          "bytes": 6315,
+          "lineCount": 111,
+          "sha256": "ad6d8493571357c33b260341f55f2858cfded230e2ba1bffa466137195040028",
+          "matchesReceipt": true
+        }
+      ]
+    }
+  ],
+  "verbatimCopyChecks": [
+    {
+      "receipt": "root-prep-copy-receipt.json",
+      "copyCount": 11,
+      "files": [
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/author-receipt.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/author-receipt.json",
+          "bytes": 1664,
+          "sha256": "261b97669864705ab582bc42d0f9eef9a9b68427e0b46d2357cb05919223eb29",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/classification.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/classification.json",
+          "bytes": 1245,
+          "sha256": "52d6b7561bcb737149f7484b295560f4f72f2f2d2a94fdb625ae990273b40d07",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/consumer-pins.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/consumer-pins.json",
+          "bytes": 772,
+          "sha256": "713e2f37abb49f877ccb32a46765f912f33374aeb51c293137554640bcbe05c2",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/external-sources.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/external-sources.json",
+          "bytes": 1077,
+          "sha256": "76fa65ed7cf936ea9f96dec78522840a3941d45402ca5071e18d289af5188f33",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/history-method.py",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/history-method.py",
+          "bytes": 3299,
+          "sha256": "ba982defb5a6503ef8e7eaf3329fe09d034c655b0d7227ddc132cc12da9e3d6f",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/history.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+          "bytes": 592310,
+          "sha256": "4e290303c6663dd7633b33353b50234cde73d5d28c994d22097623ffd3f72bc8",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/initial-pins.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/initial-pins.json",
+          "bytes": 810,
+          "sha256": "405cc1a4569e4d1fb7105306758f8508702626d87e3347f5bbc192c7223fdacd",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/proposal.md",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+          "bytes": 2388,
+          "sha256": "a009637080e840a659a9419144599b920b89b8d6ff2891609f8d996a957a52a0",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/source-manifest.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/source-manifest.json",
+          "bytes": 4977,
+          "sha256": "5ac9361250436100932d54e9256d057de576f4317fd0c215c367e5526bb3a5df",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/test-source-pin.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/test-source-pin.json",
+          "bytes": 197,
+          "sha256": "ceca17f33db9a6c4d402735bedc638b09ce0286b677d68b8783b0d9ab97692ad",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-frontier/validation.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/root-prep/validation.json",
+          "bytes": 395,
+          "sha256": "910920cff5d4af716c30138e6925ef4a470db4aaf617b2b871ec99297ca4df8c",
+          "verbatimEqual": true
+        }
+      ]
+    },
+    {
+      "receipt": "entry-prep-copy-receipt.json",
+      "copyCount": 5,
+      "files": [
+        {
+          "source": "/tmp/codeshell-audit-round31-search-entry/artifact-receipt.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/artifact-receipt.json",
+          "bytes": 1284,
+          "sha256": "6f8d556a0980cff14f0c65d7a7f2b9ae6075da75d441cab033fedf1645f54a18",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-entry/entry-decision.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/entry-decision.json",
+          "bytes": 2215,
+          "sha256": "2156b9006f9ee0f0088d0649e16aa783645928ee466b2d80e02ee401d9658a10",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-entry/reference-navigation.txt",
+          "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/reference-navigation.txt",
+          "bytes": 3473,
+          "sha256": "ade381cb4b572830f546b7bd983e1da82e92ead56bb7c0861fb2e01c2e07f237",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-entry/report.md",
+          "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/report.md",
+          "bytes": 3570,
+          "sha256": "2f188286b824e6c7f6a508389cf397d4d01493a8e8b8d24cc7a1e5dc72703c3c",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-entry/source-manifest.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/entry-prep/source-manifest.json",
+          "bytes": 10096,
+          "sha256": "05364da766fb5bf218a11d16e2bd47db16c4564a6a1e9bac62c914af40a64626",
+          "verbatimEqual": true
+        }
+      ]
+    },
+    {
+      "receipt": "review-search-copy-receipt.json",
+      "copyCount": 12,
+      "files": [
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/additional-initial-pins.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/additional-initial-pins.json",
+          "bytes": 1840,
+          "sha256": "157b9c6920f43d7fa998f0fde84d872b348e718b5d84fde9e3c9c8053fc249b8",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/author-receipt.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/author-receipt.json",
+          "bytes": 2200,
+          "sha256": "4157446fa5e159cadc423993aeb427b62cda1fc527d4cc08c3d34bbd8c02f5eb",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/decisions.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+          "bytes": 3591,
+          "sha256": "8d69ef918b9d8ecbb80066d41c7b0f944239db564ed738cbd2ec193ab4eea806",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/finish-hash-checks.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/finish-hash-checks.json",
+          "bytes": 1807,
+          "sha256": "0f153544cb701c1e5187ad3bb0f9aec591560525300e59644d8de7d8e5f73054",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/history.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+          "bytes": 612567,
+          "sha256": "e53d4fd0526848ecd499eb103dbedb62ef95e9b7ec23490d0aa700a51f108898",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/history.py",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.py",
+          "bytes": 3112,
+          "sha256": "75279f2d495848ab6e27cfbe532ef16a6077d81e999ceacca5b61038ae5ff939",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/initial-pins.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/initial-pins.json",
+          "bytes": 1614,
+          "sha256": "c793be82ef98d69a3b2468ff51bc743f6e4566ab692fa5e9673e47a0245208a7",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/producer-initial-pin.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/producer-initial-pin.json",
+          "bytes": 546,
+          "sha256": "bc08bb11cb3cb03ee8451d4208ca8cef6e511f6f28b45d3fdcc4d31331827a07",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/review.md",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/review.md",
+          "bytes": 4351,
+          "sha256": "c5699ce3d7bd9b3295813dfc4b477923df8d69ca402f4febc1afe451510c4e65",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/source-manifest.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/source-manifest.json",
+          "bytes": 8957,
+          "sha256": "06874fa919fd3a1bb08f2d787353b2d83cdb0983f113bbae8a81266a7f19fdd7",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/source-reader.first.exit.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/source-reader.first.exit.json",
+          "bytes": 1205,
+          "sha256": "e263c70efdac6a07f9212a60531197eb6b42cb037dff278aeb76ccc65bdbe98a",
+          "verbatimEqual": true
+        },
+        {
+          "source": "/tmp/codeshell-audit-round31-search-review/validation.json",
+          "destination": "docs/audit-2026-10-17-round31/evidence/search-review-prep/validation.json",
+          "bytes": 1168,
+          "sha256": "7eadb429c1062fc15d395471e89f1ebe289220d33eeb55517956ca4c2dbc642d",
+          "verbatimEqual": true
+        }
+      ]
+    }
+  ],
+  "authorSourceMetadataChecks": [
+    {
+      "manifest": "root-source-manifest.json",
+      "sourceRows": 7,
+      "checks": [
+        {
+          "path": "packages/tui/src/render/searchHighlight.ts",
+          "bytes": 1738,
+          "lineCount": 52,
+          "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              52
+            ]
+          ],
+          "coveredLineCount": 52,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/searchMatches.ts",
+          "bytes": 1895,
+          "lineCount": 56,
+          "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              56
+            ]
+          ],
+          "coveredLineCount": 56,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/screen.ts",
+          "bytes": 49323,
+          "lineCount": 1486,
+          "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              1,
+              130
+            ]
+          ],
+          "coveredLineCount": 130,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/render-to-screen.ts",
+          "bytes": 7445,
+          "lineCount": 198,
+          "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              125,
+              198
+            ]
+          ],
+          "coveredLineCount": 74,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/ink.tsx",
+          "bytes": 89185,
+          "lineCount": 1968,
+          "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              1280,
+              1345
+            ]
+          ],
+          "coveredLineCount": 66,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "tests/search-highlight.test.ts",
+          "bytes": 4161,
+          "lineCount": 143,
+          "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              143
+            ]
+          ],
+          "coveredLineCount": 143,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/warn.ts",
+          "bytes": 309,
+          "lineCount": 9,
+          "sha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              9
+            ]
+          ],
+          "coveredLineCount": 9,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        }
+      ]
+    },
+    {
+      "manifest": "entry-source-manifest.json",
+      "sourceRows": 12,
+      "checks": [
+        {
+          "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+          "bytes": 2158,
+          "lineCount": 53,
+          "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              53
+            ]
+          ],
+          "coveredLineCount": 53,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/searchHighlight.ts",
+          "bytes": 1738,
+          "lineCount": 52,
+          "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              52
+            ]
+          ],
+          "coveredLineCount": 52,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/searchMatches.ts",
+          "bytes": 1895,
+          "lineCount": 56,
+          "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              56
+            ]
+          ],
+          "coveredLineCount": 56,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/ink.tsx",
+          "bytes": 89185,
+          "lineCount": 1968,
+          "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              123,
+              205
+            ],
+            [
+              700,
+              727
+            ],
+            [
+              1280,
+              1365
+            ]
+          ],
+          "coveredLineCount": 197,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/render-to-screen.ts",
+          "bytes": 7445,
+          "lineCount": 198,
+          "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              198
+            ]
+          ],
+          "coveredLineCount": 198,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/index.ts",
+          "bytes": 2454,
+          "lineCount": 66,
+          "sha256": "0f08c434aac9c82e66d00d023d66eca9efe821d4f4c57a047ef753cbbfd3179c",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              66
+            ]
+          ],
+          "coveredLineCount": 66,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/index.ts",
+          "bytes": 297,
+          "lineCount": 9,
+          "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              9
+            ]
+          ],
+          "coveredLineCount": 9,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/package.json",
+          "bytes": 2110,
+          "lineCount": 73,
+          "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              73
+            ]
+          ],
+          "coveredLineCount": 73,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "tests/search-highlight.test.ts",
+          "bytes": 4161,
+          "lineCount": 143,
+          "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              143
+            ]
+          ],
+          "coveredLineCount": 143,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "package.json",
+          "bytes": 7063,
+          "lineCount": 129,
+          "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              129
+            ]
+          ],
+          "coveredLineCount": 129,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/root.ts",
+          "bytes": 4613,
+          "lineCount": 184,
+          "sha256": "aafede77c454333520e3a706632ca8952d743eb239c6c2b4eaf250cb1b52fca2",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              184
+            ]
+          ],
+          "coveredLineCount": 184,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "scripts/build-meta.ts",
+          "bytes": 1712,
+          "lineCount": 38,
+          "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              38
+            ]
+          ],
+          "coveredLineCount": 38,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        }
+      ]
+    },
+    {
+      "manifest": "review-search-source-manifest.json",
+      "sourceRows": 8,
+      "checks": [
+        {
+          "path": "packages/tui/src/render/searchMatches.ts",
+          "bytes": 1895,
+          "lineCount": 56,
+          "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              56
+            ]
+          ],
+          "coveredLineCount": 56,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/searchHighlight.ts",
+          "bytes": 1738,
+          "lineCount": 52,
+          "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              52
+            ]
+          ],
+          "coveredLineCount": 52,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+          "bytes": 2158,
+          "lineCount": 53,
+          "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              53
+            ]
+          ],
+          "coveredLineCount": 53,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "tests/search-highlight.test.ts",
+          "bytes": 4161,
+          "lineCount": 143,
+          "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+          "coverage": "full",
+          "selectedLineRanges": [
+            [
+              1,
+              143
+            ]
+          ],
+          "coveredLineCount": 143,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/render-to-screen.ts",
+          "bytes": 7445,
+          "lineCount": 198,
+          "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              1,
+              30
+            ],
+            [
+              140,
+              170
+            ]
+          ],
+          "coveredLineCount": 61,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/ink.tsx",
+          "bytes": 89185,
+          "lineCount": 1968,
+          "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              713,
+              727
+            ],
+            [
+              1290,
+              1340
+            ]
+          ],
+          "coveredLineCount": 66,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/screen.ts",
+          "bytes": 49323,
+          "lineCount": 1486,
+          "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              279,
+              319
+            ],
+            [
+              600,
+              613
+            ],
+            [
+              693,
+              725
+            ],
+            [
+              730,
+              751
+            ],
+            [
+              845,
+              857
+            ]
+          ],
+          "coveredLineCount": 123,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        },
+        {
+          "path": "packages/tui/src/render/output.ts",
+          "bytes": 27146,
+          "lineCount": 814,
+          "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              563,
+              637
+            ],
+            [
+              640,
+              675
+            ],
+            [
+              776,
+              814
+            ]
+          ],
+          "coveredLineCount": 150,
+          "prepRowFieldsPreserved": true,
+          "matchesDeclaredCurrentBytesAndRanges": true
+        }
+      ]
+    }
+  ],
+  "supersededRootMetadataChecks": [
+    {
+      "original": "docs/audit-2026-10-17-round31/root-report.md",
+      "preservedFirst": "docs/audit-2026-10-17-round31/evidence/root-report.first.raw.txt",
+      "sha256": "d20b00dc294d2150dce447cf37fcabf39dbdd7b8722c1a6974b1f6b9fa2838cb",
+      "matchesReviewerInitialVersion": true
+    },
+    {
+      "original": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+      "preservedFirst": "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+      "sha256": "d3bf28700983aa51cb42a6838f9b34753f639f144164554c805fde34096d163e",
+      "matchesReviewerInitialVersion": true
+    },
+    {
+      "original": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.json",
+      "preservedFirst": "docs/audit-2026-10-17-round31/evidence/root-artifact-receipt.first.json",
+      "sha256": "c114d721078cf32c2e351e2840400dc65465044bcd6e19aa40d7e37875f6a971",
+      "matchesReviewerInitialVersion": true
+    }
+  ],
+  "rootCorrectionDisposition": "Precision issue reported by reviewer: hook has module export. Root preserved first report/candidate/receipt and corrected active wording to public barrel/package entry; classification unchanged.",
+  "formalHistoryDeltaCheck": {
+    "prepFiles": 2851,
+    "formalFiles": 2921,
+    "unchangedPrepRows": 2851,
+    "addedFrozenRound30Files": 70,
+    "addedPaths": [
+      "docs/audit-2026-10-17-round30/README.md",
+      "docs/audit-2026-10-17-round30/candidates.json",
+      "docs/audit-2026-10-17-round30/coverage.json",
+      "docs/audit-2026-10-17-round30/data-report.md",
+      "docs/audit-2026-10-17-round30/evidence-index.json",
+      "docs/audit-2026-10-17-round30/evidence/data-author-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/data-copy-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/data-decisions.json",
+      "docs/audit-2026-10-17-round30/evidence/data-hash-checks.json",
+      "docs/audit-2026-10-17-round30/evidence/data-history.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/author-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/consumer-additional-initial-pins.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/consumer-initial-pins.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/decisions.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/finish-hash-checks.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/history.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/proposal.md",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/selection.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/validation.json",
+      "docs/audit-2026-10-17-round30/evidence/data-review-prep/author-freeze-pins.json",
+      "docs/audit-2026-10-17-round30/evidence/data-review-prep/consumer-initial-pins.json",
+      "docs/audit-2026-10-17-round30/evidence/data-review-prep/initial-pins.json",
+      "docs/audit-2026-10-17-round30/evidence/data-review-prep/review.md",
+      "docs/audit-2026-10-17-round30/evidence/data-review-prep/reviewer-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/data-review-prep/source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/data-validation.json",
+      "docs/audit-2026-10-17-round30/evidence/freeze-checks.json",
+      "docs/audit-2026-10-17-round30/evidence/integration-before.json",
+      "docs/audit-2026-10-17-round30/evidence/integration-plan.json",
+      "docs/audit-2026-10-17-round30/evidence/integration-premerge.json",
+      "docs/audit-2026-10-17-round30/evidence/review-aggregate.md",
+      "docs/audit-2026-10-17-round30/evidence/review-data-copy-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/review-data-source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/review-data.md",
+      "docs/audit-2026-10-17-round30/evidence/review-root-artifact-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/review-root-prep-copy-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/review-root-source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/review-root.md",
+      "docs/audit-2026-10-17-round30/evidence/root-artifact-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/root-candidates.json",
+      "docs/audit-2026-10-17-round30/evidence/root-dedup.json",
+      "docs/audit-2026-10-17-round30/evidence/root-findings.json",
+      "docs/audit-2026-10-17-round30/evidence/root-history-decisions.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep-copy-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/author-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/consumer-pins.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/decisions.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/history-source-pin.first.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/history-source-pin.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/history.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/initial-pins.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/metadata-notes.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/proposal.md",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/root-prep/validation.json",
+      "docs/audit-2026-10-17-round30/evidence/root-receipt-checks.json",
+      "docs/audit-2026-10-17-round30/evidence/root-related.json",
+      "docs/audit-2026-10-17-round30/evidence/root-review-prep/artifact-receipt.json",
+      "docs/audit-2026-10-17-round30/evidence/root-review-prep/review.md",
+      "docs/audit-2026-10-17-round30/evidence/root-review-prep/source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/root-source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/root-validation.json",
+      "docs/audit-2026-10-17-round30/evidence/worktrees-before.json",
+      "docs/audit-2026-10-17-round30/findings.json",
+      "docs/audit-2026-10-17-round30/related.json",
+      "docs/audit-2026-10-17-round30/root-report.md",
+      "docs/audit-2026-10-17-round30/source-manifest.json",
+      "docs/audit-2026-10-17-round30/validation.json"
+    ],
+    "removedPaths": [],
+    "changedPriorPaths": [],
+    "allAdditionsRound30": true,
+    "excludesCurrent31": true,
+    "reportedStats": null,
+    "reportedOccurrenceCounts": null,
+    "parseErrorsReported": [],
+    "verificationScope": "Inventory metadata/subset/exclusion comparison only. Root and source reviewer own current byte/full scan verification; no duplicated regex/scalar scan by this reviewer."
+  },
+  "reportLinkChecks": [
+    {
+      "report": "docs/audit-2026-10-17-round31/root-report.md",
+      "localLinks": 11,
+      "externalLinks": 2,
+      "missing": []
+    },
+    {
+      "report": "docs/audit-2026-10-17-round31/entry-report.md",
+      "localLinks": 5,
+      "externalLinks": 0,
+      "missing": []
+    },
+    {
+      "report": "docs/audit-2026-10-17-round31/evidence/review-search.md",
+      "localLinks": 10,
+      "externalLinks": 0,
+      "missing": []
+    }
+  ],
+  "primarySpecificationChecks": [
+    {
+      "url": "https://tc39.es/ecma262/multipage/text-processing.html#sec-string.prototype.tolowercase",
+      "observedTitle": "ECMAScript 2027 draft",
+      "selectedWebLines": [
+        [
+          3061,
+          3076
+        ]
+      ],
+      "conclusion": "toLowerCase uses Unicode Default Case Conversion with locale-insensitive SpecialCasing; contextual mapping applies."
+    },
+    {
+      "url": "https://www.unicode.org/Public/UCD/latest/ucd/SpecialCasing.txt",
+      "observedHeader": "SpecialCasing-18.0.0.txt",
+      "selectedWebLines": [
+        [
+          29,
+          50
+        ],
+        [
+          199,
+          216
+        ]
+      ],
+      "conclusion": "Final sigma conditional mapping to03C2; nonfinal03C3; context belongs to original input string."
+    },
+    {
+      "url": "https://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-3/",
+      "selectedWebLines": [
+        [
+          1613,
+          1649
+        ]
+      ],
+      "conclusion": "Table3-17 defines Final_Sigma using a preceding cased letter and no following cased letter (ignoring case-ignorable sequences). Single Σ lacks preceding letter; whole ΟΣ includes one."
+    }
+  ],
+  "entryNavigation": {
+    "commands": [
+      "rg -n useSearchHighlight/setSearchHighlight/scanElementSubtree packages/tui/src",
+      "rg -n use-search-highlight/useSearchHighlight/setSearchHighlight/scanElementSubtree packages tests --glob *.{ts,tsx,json}"
+    ],
+    "result": "Only definitions, comments and internal hook-to-Ink calls found in searched default rg source/test inventory. This is not proof no generated/dynamic/external consumer can exist.",
+    "hookModuleExportPresent": true,
+    "publicBarrelPackageSearchExportEstablished": false,
+    "ordinaryApplicationNonemptyQueryProducerEstablished": false
+  },
+  "classificationAssessment": {
+    "rootFinal": {
+      "formal": 0,
+      "candidates": 1,
+      "related": 0,
+      "candidate": "SEARCH-R31-C1"
+    },
+    "sourceReviewerOriginalOpinionPreserved": "P3 static helper-contract defect; no actual application query caller established",
+    "independentAggregateOpinion": "Strong static helper-contract cause supported by source and primary specifications. Root candidate classification is appropriate while ordinary production/public nonempty query producer remains unestablished; no confirmed UI-failure claim."
+  },
+  "metadataFailures": [],
+  "validation": {
+    "runs": [],
+    "productAttempts": 0,
+    "productImports": 0,
+    "productFunctions": 0,
+    "languageFixtures": 0,
+    "testsExecuted": 0,
+    "tty": 0,
+    "native": 0,
+    "gitCommands": 0,
+    "runtimePasses": 0,
+    "runtimeExpectations": 0,
+    "primarySpecificationBrowsing": true
+  },
+  "limits": [
+    "Current31 artifacts are separate from source files and not claimed as original baseline blobs. Root independently binds source files to4dad999.",
+    "No installed runtime, Unicode/ICU version, actual lowercasing output or UI rendering observed. Static spec/code derivation only.",
+    "Hook initial semantic SHA remains null because locator excerpts preceded its direct-read pin; no timestamp reconstruction.",
+    "Metadata source-reader EOF815 overrun and later missing-re finalizer failure are separate author bookkeeping events, transparently retained; no product failure, test retry or alternate runtime."
+  ]
+}

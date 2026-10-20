@@ -1,0 +1,33 @@
+{
+  "startedUTC": "2026-10-17T16:54:56.049474+00:00",
+  "finishedUTC": "2026-10-17T16:55:04.806016+00:00",
+  "counts": {
+    "markdownFiles": 1457,
+    "jsonFiles": 3236,
+    "jsonScalarValues": 3168045,
+    "jsonStringValues": 2129441,
+    "files": 4693,
+    "archiveExactDirectoryFiles": 162,
+    "archiveSubstringFiles": 174
+  },
+  "excludedAudit50PlusCount": 0,
+  "parseErrors": [],
+  "sourceObjectRows": 34,
+  "manifestHintRows": 7,
+  "totalMatches": {
+    "parameter-control-old-cause": 167,
+    "exact-path": 22,
+    "basename": 59,
+    "current-sha": 18
+  },
+  "retainedCap": 80,
+  "retainedCounts": {
+    "exact-path": 22,
+    "basename": 59,
+    "current-sha": 18,
+    "parameter-control-old-cause": 80
+  },
+  "productExecutions": 0,
+  "GitOperations": 0,
+  "testsExecuted": 0
+}

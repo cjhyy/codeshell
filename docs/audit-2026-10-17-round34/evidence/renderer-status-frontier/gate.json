@@ -1,0 +1,48 @@
+{
+  "parentReportedPrepContext": "646f9243",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "noveltyGate": "Do not promote these leaves as never-read frontier. Current scoped static negative; no new ordinary contract counterexample.",
+  "decisions": [
+    {
+      "target": "sessionStatus.ts",
+      "status": "old current-sha full semantic coverage",
+      "evidence": "R28 source row full1–26 and test1–41 hashes identical; current asking>running>unread>none Set checks exactly match contract. Actual selected App builds map and Sidebar consumes bucket marks, without a new priority mismatch."
+    },
+    {
+      "target": "settingsCache.ts",
+      "status": "scoped negative with historical static-read declaration",
+      "evidence": "Pure Map by-reference immutable-snapshot contract. useSettingsResource seed/current-request guards/reseed and selected model cache key(tag,scope,projectPath)/fresh filtered arrays provide ordinary consumers. Original Desktop data report already names static reading; current versus prior cache SHA unknown, so no never-read or unchanged-old-source claim."
+    },
+    {
+      "target": "loader-only identity change",
+      "status": "old excluded boundary, not reopened",
+      "evidence": "Oct16 already notes absent real consumer. No new production caller established for that isolated helper variation."
+    }
+  ],
+  "historyTotals": {
+    "files": 3063,
+    "archivePaths": 169,
+    "markdown": 1313,
+    "json": 1750,
+    "stringLeaves": 674397,
+    "scalarLeaves": 1000414,
+    "parseErrors": 0
+  },
+  "matchCounts": {
+    "targets": 54,
+    "cache-contract": 10,
+    "old-failed": 105
+  },
+  "retainedContextCounts": {
+    "targets": 54,
+    "cache-contract": 10,
+    "old-failed": 100
+  },
+  "contextCap": 100,
+  "inspection": "All54 targets and10 cache-contract retained contexts inspected. old-failed105 occurrences capped at100; no full historical failure-semantic exhaustion claim.",
+  "oldFailedDirectionsRemainSkipped": true
+}

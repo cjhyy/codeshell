@@ -1,0 +1,137 @@
+{
+  "baseline": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "sources": [
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "sha256": "3b3245e5be1a4c66fccb5f3494dca9b94bb81d01ebc0bbc9200773a30b02b1a5",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "sha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/lib/userMessageDisplay.ts",
+      "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "sha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "sha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/lib/mobileAttachments.ts",
+      "sha256": "58f22a8212072b9fa7dce830b008d464d0ef112c733dc0433e326c3d0c5045b1",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/lib/environment.ts",
+      "sha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/lib/storage.ts",
+      "sha256": "86312680d2363fc3b69945527aeaa24130bfddbfff620404c99e189fea87237d",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/src/hooks/remoteAppSync.ts",
+      "sha256": "e2d445686f64876b3a855a8c7c64505ed34d8b3436409b0a422aa26760bba971",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/web/app/chat.ts",
+      "sha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "whole-file"
+    },
+    {
+      "path": "packages/web/app/DesktopApp.tsx",
+      "sha256": "30d3656434f2d2409e91ec51465be8bb35fb1b6643fa6fef29d006269e5fa318",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/desktop/src/mobile/App.tsx",
+      "sha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/desktop/src/mobile/components/MessageStream.tsx",
+      "sha256": "93a577ddfd1e793dc1dda211a430bb198f8ab026473a75545fe041fe141493e4",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-notifications.ts",
+      "sha256": "d829f15f49905f39d590eed96aebe6e40bc758e1dbcf2a65e741aec163eeb56a",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/web/app/public/sw.js",
+      "sha256": "3566b7ecf5db7811c6916a09651ca7f82a2ad86694fdb87243af4628c92b7319",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    },
+    {
+      "path": "packages/web/app/register-service-worker.ts",
+      "sha256": "1a2a975a9d214489ba1991673d60ffaca0509ab74f524a1931a86c5cfbb9d0f5",
+      "matchesFrozenGitBlobAtAudit": true,
+      "review": "selected ranges or imported dependency; no whole-file review claim"
+    }
+  ]
+}

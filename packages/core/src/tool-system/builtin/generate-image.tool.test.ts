@@ -14,6 +14,10 @@ import {
   isGenerateImageAvailable,
 } from "./generate-image.js";
 import type { ToolContext } from "../context.js";
+import {
+  clearModelTracingConfiguration,
+  configureModelTracing,
+} from "../../model-traces/context.js";
 
 let ws: string;
 const realFetch = globalThis.fetch;
@@ -52,6 +56,7 @@ beforeEach(() => {
   lastBody = null;
 });
 afterEach(() => {
+  clearModelTracingConfiguration();
   globalThis.fetch = realFetch;
   if (prevHome === undefined) delete process.env.HOME;
   else process.env.HOME = prevHome;
@@ -62,6 +67,47 @@ afterEach(() => {
 function ctx(): ToolContext {
   return { cwd: ws } as unknown as ToolContext;
 }
+
+test("image calls record the submitted prompt and final JSON while omitting image output bytes", async () => {
+  const store = configureModelTracing({ storageDir: join(ws, "traces") });
+  store.setConfig({ captureContent: true });
+  globalThis.fetch = (async (url, init) => {
+    expect(new URL(String(url)).origin).toBe("https://api.example.com");
+    expect(JSON.parse(String(init?.body)).prompt).toBe("Actual image prompt");
+    return Response.json({ data: [{ b64_json: "private-image-payload" }] });
+  }) as typeof fetch;
+  await generateImageTool({ prompt: "Actual image prompt" }, ctx());
+  const [summary] = store.list().items;
+  const record = store.get(summary.id)!;
+  expect(record).toMatchObject({
+    purpose: "image_generation",
+    workspacePath: ws,
+    model: "gpt-image-2",
+    status: "completed",
+  });
+  expect(record.input?.messages).toEqual([{ role: "user", content: "Actual image prompt" }]);
+  expect(record.attempts[0]).toMatchObject({
+    coverage: "provider-wire",
+    input: { prompt: "Actual image prompt", model: "gpt-image-2" },
+  });
+  expect(JSON.stringify(record)).not.toContain("private-image-payload");
+});
+
+test("multipart image edits explicitly retain logical-input coverage", async () => {
+  const store = configureModelTracing({ storageDir: join(ws, "traces") });
+  store.setConfig({ captureContent: true });
+  writeFileSync(join(ws, "ref.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  globalThis.fetch = (async (url, init) => {
+    expect(new URL(String(url)).origin).toBe("https://api.example.com");
+    expect(init?.body).toBeInstanceOf(FormData);
+    return Response.json({ data: [{ b64_json: "QUJD" }] });
+  }) as typeof fetch;
+  await generateImageTool({ prompt: "Actual edit prompt", referenceImages: ["ref.png"] }, ctx());
+  const record = store.get(store.list().items[0].id)!;
+  expect(record.attempts[0].coverage).toBe("logical-input");
+  expect(record.input?.parameters.referenceImageCount).toBe(1);
+  expect(JSON.stringify(record)).not.toContain("iVBORw");
+});
 
 describe("GenerateImage provider/model resolution", () => {
   test("defaults to openai gpt-image-2 and saves a PNG", async () => {

@@ -125,10 +125,13 @@ describe("SettingsPage responsive search", () => {
     expect(searchInputs().map((input) => props(input).value)).toEqual(["外观", "外观"]);
 
     await act(async () => {
-      props(buttons[0]).onClick();
+      buttons[0].focus();
+      props(buttons[0]).onClick({ currentTarget: buttons[0] });
       await flushMicrotasks();
     });
-    expect(textOf(descendants(container).find((node) => node.tagName === "H1"))).toBe("外观");
+    const heading = descendants(container).find((node) => node.tagName === "H1");
+    expect(textOf(heading)).toBe("外观");
+    expect(document.activeElement).toBe(heading);
     expect(searchInputs().map((input) => props(input).value)).toEqual(["", ""]);
     expect(narrowResults()).toBeUndefined();
   });

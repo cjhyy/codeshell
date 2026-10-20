@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T18:11:41.738707+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/links/remote-adapters.ts",
+      "bytes": 20634,
+      "lines": 571,
+      "sha256": "fa0efd76239cd3194dda45a840231818ed042d513cdd72dea907e5f5ccae4606",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

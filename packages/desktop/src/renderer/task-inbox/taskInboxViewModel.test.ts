@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { TaskInboxRecordV1 } from "../../preload/task-inbox-api";
 import {
   groupTaskInboxRecords,
+  isBackgroundWork,
   taskInboxOpenTarget,
   TASK_INBOX_GROUPS,
 } from "./taskInboxViewModel";
@@ -240,6 +241,34 @@ describe("task inbox original detail routing", () => {
     expect(seen).toEqual([{ limit: 200 }, { limit: 200, cursor: "page-2" }]);
     expect(calls).toEqual([["disk", disk]]);
   });
+  test("an asynchronous session selection failure reaches the caller instead of reporting success", async () => {
+    const { value } = adapter({
+      sessionIndices: {
+        project: {
+          activeSessionId: "ui-a",
+          sessions: [
+            { id: "ui-a", engineSessionId: "engine-a", title: "a", createdAt: 1, updatedAt: 2 },
+          ],
+        },
+      },
+      selectSession: async () => {
+        throw new Error("Workspace unavailable");
+      },
+    });
+    await expect(
+      openTaskInboxRecord(record("a", { sessionId: "engine-a" }), value),
+    ).rejects.toThrow("Workspace unavailable");
+  });
+  test("a superseded history opening stops without falling back to another page", async () => {
+    const { value, calls } = adapter({ openHistorySession: async () => "cancelled" });
+    expect(
+      await openTaskInboxRecord(
+        record("old-run", { source: "legacy-run", sessionId: "old-session" }),
+        value,
+      ),
+    ).toBe(true);
+    expect(calls).toEqual([]);
+  });
   test("Mimi, automation, Runs preserve selected source identity and missing sessions fail closed", async () => {
     const { value, calls } = adapter();
     for (const [source, id] of [
@@ -258,4 +287,29 @@ describe("task inbox original detail routing", () => {
     );
     expect(calls).toHaveLength(3);
   });
+});
+
+test("background work excludes ordinary sessions and schedules while retaining actionable operations", () => {
+  const records = [
+    record("ordinary"),
+    record("external", { source: "external-runtime" }),
+    record("definition", { source: "automation", automationId: "cron" }),
+    record("legacy", { source: "legacy-run" }),
+    record("verify", { capabilities: ["open", "verify"] }),
+    record("cron-run", { automationId: "cron" }),
+    record("child", { parentSessionId: "parent" }),
+    record("delegated", { source: "mimi-delegation" }),
+    record("worker", { source: "subagent" }),
+    record("shell", { source: "background-shell" }),
+    record("job", { source: "background-job" }),
+  ];
+  expect(records.filter(isBackgroundWork).map((record) => record.sourceId)).toEqual([
+    "verify",
+    "cron-run",
+    "child",
+    "delegated",
+    "worker",
+    "shell",
+    "job",
+  ]);
 });

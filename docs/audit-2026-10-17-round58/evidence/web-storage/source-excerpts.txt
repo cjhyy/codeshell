@@ -1,0 +1,917 @@
+packages/web/src/lib/storage.ts
+1: /**
+2:  * Thin typed wrapper over localStorage for the mobile remote's persisted
+3:  * device identity. Keys keep the historical `cs.*` names so an already-paired
+4:  * phone (paired against the old inline UI) keeps working after the rebuild.
+5:  */
+6: import { translate } from "../i18n/translate.js";
+7: import { loadUILanguage } from "./uiLanguage.js";
+8: 
+9: const K = {
+10:   deviceId: "cs.deviceId",
+11:   deviceSecret: "cs.deviceSecret",
+12:   deviceName: "cs.deviceName",
+13: } as const;
+14: 
+15: /**
+16:  * Best-effort localStorage write. On a quota-constrained mobile browser
+17:  * (iOS/Android default ~5MB) setItem throws QuotaExceededError; since these
+18:  * calls run synchronously inside ws.onopen (the auth handshake), an uncaught
+19:  * throw aborts onopen mid-flight → handshake never sent → blank app, no retry.
+20:  * Swallow the write failure and let the caller proceed with the in-memory value;
+21:  * losing persistence only means a fresh secret/name next session.
+22:  */
+23: function safeSet(key: string, value: string): void {
+24:   try {
+25:     localStorage.setItem(key, value);
+26:   } catch {
+27:     /* quota / disabled storage — best-effort, value still returned to caller */
+28:   }
+29: }
+30: 
+31: export const deviceStore = {
+32:   getId: (): string => localStorage.getItem(K.deviceId) ?? "",
+33:   setId: (v: string): void => safeSet(K.deviceId, v),
+34:   clearId: (): void => localStorage.removeItem(K.deviceId),
+35: 
+36:   /** Get the stable per-browser secret, minting+persisting one on first use.
+37:    *  Mirrors the old getSecret() so existing devices keep the same secret. */
+38:   getOrCreateSecret: (mint: () => string): string => {
+39:     let s = localStorage.getItem(K.deviceSecret);
+40:     if (!s) {
+41:       s = mint();
+42:       safeSet(K.deviceSecret, s);
+43:     }
+44:     return s;
+45:   },
+46: 
+47:   /** Device display name, defaulting to a platform-derived label on first use. */
+48:   getOrCreateName: (): string => {
+49:     let n = localStorage.getItem(K.deviceName);
+50:     if (!n) {
+51:       const platform = (typeof navigator !== "undefined" && navigator.platform) || "Phone";
+52:       n = translate(loadUILanguage(), "mobile.storage.browserDevice", { platform });
+53:       safeSet(K.deviceName, n);
+54:     }
+55:     return n;
+56:   },
+57: } as const;
+
+packages/web/src/lib/deviceCredential.ts
+1: /**
+2:  * Device credential for the mobile remote.
+3:  *
+4:  * CONTRACT (do not "improve" by hashing): the main process
+5:  * (trusted-device-store.ts) stores and compares the `secretHash` field
+6:  * VERBATIM — `d.secretHash === input.secretHash`. There is no SHA-256 on
+7:  * either side. The field is named "secretHash" historically but is really an
+8:  * opaque shared secret. The phone therefore generates a stable random secret
+9:  * per browser and sends it raw as `secretHash` for both pair.complete and
+10:  * auth.device. Hashing it here would send main a value it never recorded →
+11:  * auth.failed. (See also [[project_beta1_feedback_batch_fixes]]: addDevice
+12:  * is get-or-create BY secretHash, so the secret must be stable per browser.)
+13:  */
+14: export function generateSecret(
+15:   randomBytes: (n: number) => Uint8Array = (n) =>
+16:     crypto.getRandomValues(new Uint8Array(n)),
+17: ): string {
+18:   const b = randomBytes(32);
+19:   return Array.from(b)
+20:     .map((x) => x.toString(16).padStart(2, "0"))
+21:     .join("");
+22: }
+
+packages/web/src/lib/environment.ts
+1: /** Browser-safe discovery contract. A project identifier is only unique inside its host. */
+2: export interface EnvironmentDescriptor {
+3:   version: 1;
+4:   id: string;
+5:   name: string;
+6:   kind: "desktop" | "hub" | "project-host";
+7:   entryPath: "/" | "/mobile";
+8: }
+9: 
+10: export interface ProjectReference {
+11:   environmentId: string;
+12:   projectId: string;
+13:   rootId?: string;
+14: }
+15: 
+16: const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+17: 
+18: export function isEnvironmentDescriptor(value: unknown): value is EnvironmentDescriptor {
+19:   if (!value || typeof value !== "object") return false;
+20:   const record = value as EnvironmentDescriptor;
+21:   return (
+22:     record.version === 1 &&
+23:     typeof record.id === "string" &&
+24:     UUID.test(record.id) &&
+25:     typeof record.name === "string" &&
+26:     record.name.trim().length > 0 &&
+27:     record.name.length <= 128 &&
+28:     !/[\u0000-\u001f\u007f]/.test(record.name) &&
+29:     ["desktop", "hub", "project-host"].includes(record.kind) &&
+30:     record.entryPath === (record.kind === "desktop" ? "/mobile" : "/")
+31:   );
+32: }
+33: 
+34: /** Tuple encoding avoids collisions without exposing or interpreting filesystem paths. */
+35: export function projectReferenceKey(reference: ProjectReference): string {
+36:   for (const value of [reference.environmentId, reference.projectId, reference.rootId]) {
+37:     if (value !== undefined && (typeof value !== "string" || !UUID.test(value)))
+38:       throw new Error("Invalid project reference");
+39:   }
+40:   if (!reference.environmentId || !reference.projectId)
+41:     throw new Error("Incomplete project reference");
+42:   return JSON.stringify([reference.environmentId, reference.projectId, reference.rootId ?? null]);
+43: }
+
+packages/web/src/hooks/useRemoteSocket.ts
+1: import { useCallback, useEffect, useRef, useState } from "react";
+2: import type { MobileClientEvent, MobileServerEvent } from "@cjhyy/code-shell-core";
+3: import { deviceStore } from "../lib/storage.js";
+4: import { generateSecret } from "../lib/deviceCredential.js";
+5: import { parsePairingToken } from "../lib/pairing.js";
+6: import { ConnectionLiveness, connectionPageHidden } from "../lib/connectionLiveness.js";
+7: 
+8: export type ConnStatus =
+9:   | "connecting" // socket opening
+10:   | "authenticating" // socket open, handshake sent
+11:   | "unpaired" // no deviceId and no pairing token → must scan QR
+12:   | "online" // authenticated
+13:   | "offline"; // socket closed, will retry
+14: 
+15: export type ResyncReason = "online" | "visible" | "focus" | "pageshow";
+16: 
+17: /** A parsed server event (typed) OR a raw worker→renderer JSON-RPC line that the
+18:  *  caller folds through streamReducer. We surface both: typed events drive UI
+19:  *  state; raw lines drive the chat reducer. */
+20: export interface RemoteSocket {
+21:   status: ConnStatus;
+22:   deviceName: string;
+23:   /** Monotonic id of the currently authenticated socket. */
+24:   connectionGeneration: number;
+25:   /** Send only on an authenticated socket, optionally requiring the captured generation. */
+26:   send: (event: MobileClientEvent, expectedGeneration?: number) => boolean;
+27:   /** Manually drop credentials and return to the pairing screen. */
+28:   logout: () => void;
+29: }
+30: 
+31: export interface RemoteSocketHandlers {
+32:   /** A typed server event (auth/session/approval/room/…). */
+33:   onServerEvent?: (event: MobileServerEvent) => void;
+34:   /** Any raw line (used to fold agent/streamEvent through streamReducer). */
+35:   onRawLine?: (raw: unknown) => void;
+36:   /** The transport is usable again, or the page returned from background. */
+37:   onResyncNeeded?: (reason: ResyncReason) => void;
+38: }
+39: 
+40: const RECONNECT_BASE_MS = 800;
+41: const RECONNECT_MAX_MS = 8000;
+42: 
+43: export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
+44:   const [status, setStatus] = useState<ConnStatus>("connecting");
+45:   const [deviceName, setDeviceName] = useState<string>("");
+46:   const [connectionGeneration, setConnectionGeneration] = useState(0);
+47:   const wsRef = useRef<WebSocket | null>(null);
+48:   const connectionGenerationRef = useRef(0);
+49:   const retryRef = useRef(0);
+50:   const closedByUs = useRef(false);
+51:   const stopSocket = useRef<(() => void) | undefined>(undefined);
+52:   const statusRef = useRef<ConnStatus>(status);
+53:   statusRef.current = status;
+54:   // Keep latest handlers without retriggering the connect effect.
+55:   const handlersRef = useRef(handlers);
+56:   handlersRef.current = handlers;
+57: 
+58:   const send = useCallback((event: MobileClientEvent, expectedGeneration?: number): boolean => {
+59:     const ws = wsRef.current;
+60:     if (
+61:       !ws ||
+62:       ws.readyState !== WebSocket.OPEN ||
+63:       statusRef.current !== "online" ||
+64:       (expectedGeneration !== undefined && expectedGeneration !== connectionGenerationRef.current)
+65:     ) {
+66:       return false;
+67:     }
+68:     try {
+69:       ws.send(JSON.stringify(event));
+70:       return true;
+71:     } catch {
+72:       return false;
+73:     }
+74:   }, []);
+75: 
+76:   const logout = useCallback(() => {
+77:     deviceStore.clearId();
+78:     closedByUs.current = true;
+79:     stopSocket.current?.();
+80:     // Drop the pairing token from the URL and reload into the unpaired state.
+81:     window.history.replaceState(null, "", window.location.pathname);
+82:     statusRef.current = "unpaired";
+83:     setStatus("unpaired");
+84:   }, []);
+85: 
+86:   useEffect(() => {
+87:     closedByUs.current = false;
+88:     let retryTimer: ReturnType<typeof setTimeout> | undefined;
+89:     let health: ConnectionLiveness | undefined;
+90: 
+137:       if (closedByUs.current) return;
+138:       retryTimer = undefined;
+139:       const wsUrl = window.location.origin.replace(/^http/, "ws") + "/ws";
+140:       const ws = new WebSocket(wsUrl);
+141:       wsRef.current = ws;
+142:       statusRef.current = "connecting";
+143:       setStatus("connecting");
+144:       const socketHealth = new ConnectionLiveness(
+145:         // Existing read-only protocol, answered by the Host's disk index. Never
+146:         // manufacture a ping, repeat a chat send or retry an approval decision.
+147:         () => ws.send(JSON.stringify({ type: "session.list" })),
+148:         () => retire(ws),
+149:         connectionPageHidden(),
+150:       );
+151:       health = socketHealth;
+152: 
+153:       ws.onopen = () => {
+154:         if (wsRef.current !== ws || closedByUs.current) return;
+155:         socketHealth.authenticating();
+156:         retryRef.current = 0;
+157:         const pairingToken = parsePairingToken(window.location.search);
+158:         const secret = deviceStore.getOrCreateSecret(() => generateSecret());
+159:         const name = deviceStore.getOrCreateName();
+160:         setDeviceName(name);
+161:         if (pairingToken) {
+162:           statusRef.current = "authenticating";
+163:           setStatus("authenticating");
+164:           ws.send(
+165:             JSON.stringify({
+166:               type: "pair.complete",
+167:               token: pairingToken,
+168:               name,
+169:               secretHash: secret,
+170:             }),
+171:           );
+172:         } else if (deviceStore.getId()) {
+173:           statusRef.current = "authenticating";
+174:           setStatus("authenticating");
+175:           ws.send(
+176:             JSON.stringify({
+177:               type: "auth.device",
+178:               deviceId: deviceStore.getId(),
+179:               secretHash: secret,
+180:             }),
+181:           );
+182:         } else {
+183:           socketHealth.stop();
+184:           statusRef.current = "unpaired";
+185:           setStatus("unpaired");
+199:         // This legacy protocol has no request id on session.list. Only its
+200:         // concrete response (or an uncorrelated control rejection) can answer
+201:         // a health check; stream/approval notifications cannot clear a deadline.
+202:         if (
+203:           obj.type === "session.list.ok" ||
+204:           (obj.type === "error" &&
+205:             !obj.approvalId &&
+206:             !obj.clientMessageId &&
+207:             !obj.clientRequestId &&
+208:             !obj.sessionId &&
+209:             !obj.roomId)
+210:         )
+211:           socketHealth.received();
+212:         // Auth/pair lifecycle is handled here so the hook owns the state machine.
+213:         if (obj.type === "pair.ok") {
+214:           const device = obj.device as { id: string; name: string };
+215:           deviceStore.setId(device.id);
+216:           setDeviceName(device.name);
+217:           // Re-auth with the freshly-minted device id, then clean the URL.
+218:           const secret = deviceStore.getOrCreateSecret(() => generateSecret());
+219:           ws.send(JSON.stringify({ type: "auth.device", deviceId: device.id, secretHash: secret }));
+220:           window.history.replaceState(null, "", window.location.pathname);
+221:           return;
+222:         }
+223:         if (obj.type === "auth.ok") {
+224:           socketHealth.connected();
+225:           const device = obj.device as { name?: string } | undefined;
+226:           if (device?.name) setDeviceName(device.name);
+227:           statusRef.current = "online";
+228:           setStatus("online");
+229:           connectionGenerationRef.current += 1;
+230:           setConnectionGeneration(connectionGenerationRef.current);
+231:           handlersRef.current.onServerEvent?.(msg as MobileServerEvent);
+232:           handlersRef.current.onResyncNeeded?.("online");
+233:           return;
+234:         }
+235:         if (obj.type === "auth.failed" || obj.type === "pair.failed") {
+236:           closedByUs.current = true;
+237:           if (obj.type === "auth.failed") deviceStore.clearId();
+238:           statusRef.current = "unpaired";
+239:           setStatus("unpaired");
+
+packages/web/app/environments.ts
+1: import { isEnvironmentDescriptor, type EnvironmentDescriptor } from "../src/lib/environment.js";
+2: 
+3: export interface SavedEnvironment {
+4:   address: string;
+5:   name: string;
+6:   environmentId?: string;
+7: }
+8: 
+9: const KEY = "codeshell.environments.v1";
+10: const LIMIT = 32;
+11: type StorageAccess = Pick<Storage, "getItem" | "setItem">;
+12: 
+13: /** Navigation only: never forwards this host's cookies or credentials to another origin. */
+14: export function environmentAddress(value: string): string {
+15:   if (value.length > 2048 || /[\\\u0000-\u0020\u007f]/.test(value))
+16:     throw new Error("请输入完整的工作台地址。");
+17:   const url = new URL(value);
+18:   if (
+19:     !["https:", "http:"].includes(url.protocol) ||
+20:     url.username ||
+21:     url.password ||
+22:     url.search ||
+23:     url.hash
+24:   )
+25:     throw new Error("请使用不含密码、配对令牌或查询参数的工作台地址。");
+26:   if (!["/", "/mobile", "/mobile/"].includes(url.pathname))
+27:     throw new Error("请填写工作台首页或桌面 /mobile 地址。");
+28:   return url.origin + (url.pathname.startsWith("/mobile") ? "/mobile" : "/");
+29: }
+30: 
+31: function savedEnvironment(value: unknown): SavedEnvironment {
+32:   if (!value || typeof value !== "object") throw new Error("无效的连接记录。");
+33:   const item = value as SavedEnvironment;
+34:   if (
+35:     typeof item.address !== "string" ||
+36:     typeof item.name !== "string" ||
+37:     !item.name.trim() ||
+38:     item.name.length > 80 ||
+39:     /[\u0000-\u001f\u007f]/.test(item.name)
+40:   )
+41:     throw new Error("连接名称需为 1–80 个字符。");
+42:   if (
+43:     item.environmentId !== undefined &&
+44:     !isEnvironmentDescriptor({
+45:       version: 1,
+46:       id: item.environmentId,
+47:       name: "Host",
+48:       kind: "hub",
+49:       entryPath: "/",
+50:     })
+51:   )
+52:     throw new Error("无效的环境身份。");
+53:   return {
+54:     address: environmentAddress(item.address),
+55:     name: item.name.trim(),
+56:     ...(item.environmentId ? { environmentId: item.environmentId } : {}),
+57:   };
+58: }
+59: 
+60: export function readEnvironments(storage: StorageAccess): SavedEnvironment[] {
+61:   const raw = storage.getItem(KEY);
+62:   if (raw === null) return [];
+63:   if (raw.length > 100_000) throw new Error("连接记录过大，请清理当前工作台的连接记录。");
+64:   const value: unknown = JSON.parse(raw);
+65:   if (!Array.isArray(value) || value.length > LIMIT) throw new Error("连接记录格式无效。");
+66:   return value.map(savedEnvironment);
+67: }
+68: 
+69: export function saveEnvironment(
+70:   storage: StorageAccess,
+71:   input: SavedEnvironment,
+72: ): SavedEnvironment[] {
+73:   const item = savedEnvironment(input);
+74:   const current = readEnvironments(storage);
+75:   const existing = current.find((entry) => entry.address === item.address);
+76:   if (
+77:     existing?.environmentId &&
+78:     item.environmentId &&
+79:     existing.environmentId !== item.environmentId
+80:   )
+81:     throw new Error("这个地址的环境身份已变化。请确认目标后，删除旧连接再添加。");
+82:   const next = [
+83:     ...current.filter((entry) => entry.address !== item.address),
+84:     {
+85:       ...item,
+86:       ...(existing?.environmentId ? { environmentId: existing.environmentId } : {}),
+87:     },
+88:   ];
+89:   if (next.length > LIMIT) throw new Error("最多保存 32 个环境，请先移除不再使用的连接。");
+90:   storage.setItem(KEY, JSON.stringify(next));
+91:   return next;
+92: }
+93: 
+94: export function removeEnvironment(storage: StorageAccess, address: string): SavedEnvironment[] {
+95:   const next = readEnvironments(storage).filter(
+96:     (item) => item.address !== environmentAddress(address),
+97:   );
+98:   storage.setItem(KEY, JSON.stringify(next));
+99:   return next;
+100: }
+101: 
+102: export function verifyCurrentEnvironment(
+103:   saved: readonly SavedEnvironment[],
+104:   origin: string,
+105:   environment: EnvironmentDescriptor,
+106: ): void {
+107:   const item = saved.find((entry) => entry.address === origin + environment.entryPath);
+108:   if (item?.environmentId && item.environmentId !== environment.id)
+109:     throw new Error("当前地址对应的环境已变化，请核对项目后重新保存连接。");
+110: }
+
+packages/web/app/api-context.ts
+1: // Delayed operations capture scope before starting; keyed workbenches discard
+2: // the previous project's drafts and connections when selection changes.
+3: let workspace: string | undefined;
+4: let project: string | null = null;
+5: const PROJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+6: const PROJECT_PATH = /^\/p\/([0-9a-f-]{36})(\/.*)$/;
+7: 
+8: export interface ApiScope {
+9:   workspace: string;
+10:   projectId: string | null;
+11: }
+12: 
+13: export function validProjectId(value: unknown): value is string {
+14:   return typeof value === "string" && PROJECT_ID.test(value);
+15: }
+16: 
+17: export function setApiProject(id: string | null): void {
+18:   if (id !== null && !validProjectId(id)) throw new Error("项目标识无效。");
+19:   project = id;
+20: }
+21: 
+22: export function getApiProject(): string | null {
+23:   return project;
+24: }
+25: 
+26: export function captureApiScope(): ApiScope {
+27:   return { workspace: workspace ?? "", projectId: project };
+28: }
+29: 
+30: export function setApiWorkspace(cwd?: string): void {
+31:   workspace = cwd || undefined;
+32: }
+33: 
+34: export function getApiWorkspace(): string | undefined {
+35:   return workspace;
+36: }
+37: 
+38: export function apiWorkspaceHeaders(cwd = workspace): Record<string, string> {
+39:   return cwd ? { "X-CodeShell-Workspace": encodeURIComponent(cwd) } : {};
+40: }
+41: 
+42: export function isControlPlaneUrl(path: string): boolean {
+43:   return (
+44:     /^\/api\/v1\/(?:auth|projects|environment)(?:\/|\?|$)/.test(path) ||
+45:     /^\/api\/v1\/cloud-browser\/environment(?:\?|$)/.test(path) ||
+46:     /^\/api\/v1\/desktop\/session(?:\?|$)/.test(path)
+47:   );
+48: }
+49: 
+50: export function isProjectUrl(path: string): boolean {
+51:   const match = PROJECT_PATH.exec(path);
+52:   return !!match && validProjectId(match[1]);
+53: }
+54: 
+55: /** Cookie-authenticated assets/downloads and HTTP/WS share the same project. */
+56: export function apiUrl(path: string, cwd = workspace, projectId = project): string {
+57:   const match = PROJECT_PATH.exec(path);
+58:   const localPath = match ? match[2] : path;
+59:   if (
+60:     (match && !validProjectId(match[1])) ||
+61:     (!localPath.startsWith("/api/v1/") && localPath !== "/ws") ||
+62:     /[\\\r\n]/.test(path)
+63:   )
+64:     throw new Error("Workspace URLs must use the local API");
+65:   const url = new URL(localPath, "http://codeshell.invalid");
+66:   if (url.pathname !== localPath.split(/[?#]/, 1)[0])
+67:     throw new Error("Workspace URLs must use the local API");
+68:   if (isControlPlaneUrl(localPath)) return localPath;
+69:   // A fully scoped URL is immutable, including its original workspace query.
+70:   if (match) return path;
+71:   if (projectId !== null && !validProjectId(projectId)) throw new Error("项目标识无效。");
+72:   if (cwd && localPath.startsWith("/api/v1/")) url.searchParams.set("workspace", cwd);
+73:   return `${projectId ? `/p/${projectId}` : ""}${url.pathname}${url.search}${url.hash}`;
+74: }
+
+packages/web/app/EnvironmentMenu.tsx
+1: import React from "react";
+2: import { api, ApiError } from "./auth.js";
+3: import { isEnvironmentDescriptor, type EnvironmentDescriptor } from "../src/lib/environment.js";
+4: import {
+5:   environmentAddress,
+6:   readEnvironments,
+7:   removeEnvironment,
+8:   saveEnvironment,
+9:   verifyCurrentEnvironment,
+10:   type SavedEnvironment,
+11: } from "./environments.js";
+12: import "./environments.css";
+13: 
+14: type EnvironmentApiPath = "/api/v1/environment" | "/api/v1/cloud-browser/environment";
+15: 
+16: /** A website may share its origin with an independently authenticated legacy Hub. */
+17: export const EnvironmentApiContext = React.createContext<EnvironmentApiPath>("/api/v1/environment");
+18: 
+19: /** Each destination authenticates independently; switching never changes a running job's host. */
+20: export function EnvironmentMenu({
+21:   discover = true,
+22:   navigate,
+23: }: {
+24:   discover?: boolean;
+25:   navigate?: (address: string) => void;
+26: }) {
+27:   const environmentApi = React.useContext(EnvironmentApiContext);
+28:   const [open, setOpen] = React.useState(false);
+29:   const [environment, setEnvironment] = React.useState<EnvironmentDescriptor>();
+30:   const [saved, setSaved] = React.useState<SavedEnvironment[]>([]);
+31:   const [name, setName] = React.useState("");
+32:   const [address, setAddress] = React.useState("");
+33:   const [error, setError] = React.useState("");
+34:   const trigger = React.useRef<HTMLButtonElement>(null);
+35:   const dialog = React.useRef<HTMLDialogElement>(null);
+36:   const closeButton = React.useRef<HTMLButtonElement>(null);
+37: 
+38:   React.useEffect(() => {
+39:     try {
+40:       setSaved(readEnvironments(window.localStorage));
+41:     } catch {
+42:       setError("无法读取连接记录。当前项目仍可使用。");
+43:     }
+44:   }, []);
+45: 
+46:   React.useEffect(() => {
+47:     if (!discover) return;
+48:     const controller = new AbortController();
+49:     void api<unknown>(environmentApi, { signal: controller.signal })
+50:       .then((value) => {
+51:         if (controller.signal.aborted) return;
+52:         if (!isEnvironmentDescriptor(value)) throw new Error("环境信息无效，请更新工作台后重试。");
+53:         setEnvironment(value);
+54:         verifyCurrentEnvironment(
+55:           readEnvironments(window.localStorage),
+56:           window.location.origin,
+57:           value,
+58:         );
+59:       })
+60:       .catch((cause) => {
+61:         if (
+62:           controller.signal.aborted ||
+63:           (cause instanceof ApiError && [401, 404].includes(cause.status))
+64:         )
+65:           return;
+66:         setError(cause instanceof Error ? cause.message : "无法读取环境信息。");
+67:       });
+68:     return () => controller.abort();
+69:   }, [discover, environmentApi]);
+70: 
+71:   React.useEffect(() => {
+72:     if (!open) return;
+73:     dialog.current?.showModal();
+74:     closeButton.current?.focus();
+75:     // Restore explicitly because closing unmounts the native dialog.
+76:     return () => trigger.current?.focus();
+77:   }, [open]);
+78: 
+79:   const edit = (operation: () => SavedEnvironment[]) => {
+80:     try {
+81:       setSaved(operation());
+82:       setError("");
+83:     } catch (cause) {
+84:       setError(cause instanceof Error ? cause.message : "保存连接失败。");
+85:     }
+86:   };
+87:   const go = (value: string) => {
+88:     const target = environmentAddress(value);
+89:     setOpen(false);
+90:     if (navigate) navigate(target);
+91:     else window.location.assign(target);
+92:   };
+93: 
+94:   return (
+95:     <div className="environment-switcher">
+96:       <button
+97:         ref={trigger}
+98:         type="button"
+99:         className="ghost environment-trigger"
+100:         onClick={() => setOpen(true)}
+101:       >
+124:           <p>打开目标环境后选择项目。切换入口不会移动文件或正在运行的任务。</p>
+125:           <p className="environment-location">当前地址：{window.location.origin}</p>
+126:           {error ? (
+127:             <p role="alert" className="form-error">
+128:               {error}
+129:             </p>
+130:           ) : null}
+131:           {environment ? (
+132:             <button
+133:               type="button"
+134:               className="library-button"
+135:               onClick={() =>
+136:                 edit(() =>
+137:                   saveEnvironment(window.localStorage, {
+138:                     name: environment.name,
+139:                     address: window.location.origin + environment.entryPath,
+140:                     environmentId: environment.id,
+141:                   }),
+142:                 )
+143:               }
+144:             >
+145:               保存当前环境
+146:             </button>
+147:           ) : null}
+148:           <ul className="environment-list">
+149:             {saved.map((item) => (
+150:               <li key={item.address}>
+151:                 <div>
+152:                   <strong>{item.name}</strong>
+153:                   <small>{item.address}</small>
+154:                 </div>
+155:                 <button type="button" className="library-button" onClick={() => go(item.address)}>
+156:                   打开
+157:                 </button>
+158:                 <button
+159:                   type="button"
+160:                   className="ghost"
+161:                   aria-label={`移除 ${item.name}`}
+162:                   onClick={() => edit(() => removeEnvironment(window.localStorage, item.address))}
+163:                 >
+164:                   移除
+165:                 </button>
+166:               </li>
+167:             ))}
+168:           </ul>
+169:           <form
+170:             onSubmit={(event) => {
+171:               event.preventDefault();
+172:               edit(() => saveEnvironment(window.localStorage, { name, address: address.trim() }));
+173:             }}
+174:           >
+175:             <label>
+176:               连接名称
+177:               <input
+178:                 required
+179:                 maxLength={80}
+
+packages/web/app/WebsiteShell.tsx
+5: import { EnvironmentApiContext } from "./EnvironmentMenu.js";
+113:   const [route, setRoute] = React.useState(() => parseWebsiteRoute(new URL(window.location.href)));
+129:     window.history.pushState(null, "", websiteRouteUrl(next, new URL(window.location.href)));
+136:       setRoute(parseWebsiteRoute(new URL(window.location.href)));
+
+packages/web/app/DesktopApp.tsx
+1: import { EnvironmentMenu } from "./EnvironmentMenu.js";
+4:   useRemoteApp,
+7: } from "../src/hooks/useRemoteApp.js";
+24: /** The Desktop adapter drives the already resident Desktop worker through its
+25:  * paired-device protocol. It never starts a Hub ProtocolClient or another WS. */
+26: export function DesktopApp() {
+27:   const notificationRef = React.useRef<(method: string, params: Record<string, unknown>) => void>(
+28:     () => {},
+29:   );
+30:   const app = useRemoteApp({
+31:     onNotification: (method, params) => notificationRef.current(method, params),
+32:   });
+33:   const [session, setSession] = React.useState<AuthSession>();
+34:   const [authError, setAuthError] = React.useState("");
+35:   const [authRevision, setAuthRevision] = React.useState(0);
+36:   const retryAuth = React.useCallback(() => {
+37:     setAuthError("");
+38:     setAuthRevision((value) => value + 1);
+39:   }, []);
+40:   React.useEffect(() => {
+41:     if (app.status !== "online") return;
+42:     let current = true;
+43:     setAuthError("");
+44:     const deviceId = deviceStore.getId();
+65:   }, [app.status]);
+66:   const controller = useDesktopController(app, session, retryAuth);
+67:   notificationRef.current = controller.onHostNotification;
+68:   if (!session) {
+69:     const unpaired = app.status === "unpaired";
+70:     return (
+71:       <main className="desktop-connection">
+72:         <div className="desktop-connection-card">
+73:           <EnvironmentMenu discover={false} />
+74:           <h1>
+75:             {unpaired ? "连接 CodeShell 桌面" : authError ? "桌面连接需要重试" : "正在连接桌面…"}
+76:           </h1>
+
+packages/web/src/hooks/useRemoteApp.ts
+30: import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket.js";
+231: export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
+1365:       sessionId,
+1366:       sinceSeq: cursor.awaitingSnapshot ? 0 : cursor.appliedSeq,
+1367:       ...(cursor.epoch ? { epoch: cursor.epoch } : {}),
+1368:     });
+1369:   }, [setLoadingKey, sessionCursor, requestRoomCatchup]);
+1370: 
+1371:   const socket = useRemoteSocket({
+1372:     onServerEvent,
+1373:     onRawLine,
+1374:     onResyncNeeded: requestActiveResync,
+1375:   });
+1376:   sendRef.current = socket.send;
+1377:   connectionGenerationRef.current = socket.connectionGeneration;
+1378: 
+1379:   useEffect(() => {
+1380:     if (socket.status === "online") return;
+1381:     outputClient.cancel(false);
+1382:     submittingAsyncApprovalsRef.current.clear();
+1383:     const error = new Error("Remote connection was lost");
+1384:     for (const waiter of uploadWaitersRef.current.values()) {
+1385:       clearTimeout(waiter.timer);
+1386:       waiter.reject(error);
+1387:     }
+1388:     uploadWaitersRef.current.clear();
+1389:     for (const waiter of messageAckWaitersRef.current.values()) {
+1390:       clearTimeout(waiter.timer);
+1391:       waiter.reject(error);
+1392:     }
+1393:     messageAckWaitersRef.current.clear();
+1394:   }, [socket.status]);
+1395: 
+1396:   // ── actions ────────────────────────────────────────────────────────────
+1397:   const sendChat = useCallback(
+
+packages/web/src/index.ts
+10:  */
+11: 
+12: // ── Hooks: remote-app state machine + reconnecting socket ───────────────────
+13: export {
+14:   useRemoteApp,
+15:   type CcCliKind,
+16:   type PendingApproval,
+17:   type RemoteApp,
+18:   type RemoteAppOptions,
+19:   type MobileSessionCreateTarget,
+20: } from "./hooks/useRemoteApp.js";
+21: export {
+22:   useRemoteSocket,
+23:   type ConnStatus,
+24:   type ResyncReason,
+25:   type RemoteSocket,
+26:   type RemoteSocketHandlers,
+27: } from "./hooks/useRemoteSocket.js";
+28: export * from "./hooks/remoteAppSync.js";
+29: 
+
+packages/desktop/src/mobile/App.tsx
+1: import { useEffect, useState } from "react";
+2: import { DoorOpen, LogOut, Menu, Shield } from "lucide-react";
+3: import { cn } from "@/lib/utils";
+4: import { Button } from "@ui/button";
+5: import { useT } from "@/i18n";
+6: import { useRemoteApp } from "@cjhyy/code-shell-web";
+7: import { ConnectionGate } from "@mobile/components/ConnectionGate";
+8: import { StatusBar } from "@mobile/components/StatusBar";
+9: import { MessageStream } from "@mobile/components/MessageStream";
+10: import { ApprovalCard } from "@mobile/components/ApprovalCard";
+11: import { Composer } from "@mobile/components/Composer";
+12: import { SessionList } from "@mobile/components/SessionList";
+13: import { CcSessionList } from "@mobile/components/CcSessionList";
+14: import { PermissionModeControl } from "@mobile/components/PermissionModeControl";
+15: import { MobileSessionSwitcher } from "@mobile/components/MobileSessionSwitcher";
+16: 
+17: const WIDE = "(min-width: 820px)";
+18: 
+19: export function App() {
+20:   const app = useRemoteApp();
+21:   const { t } = useT();
+22:   const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
+23:   // The side pane stacks the project's chat sessions + external CC sessions. On a
+138:   app: ReturnType<typeof useRemoteApp>;
+208: function SidePane({ app, onDone }: { app: ReturnType<typeof useRemoteApp>; onDone: () => void }) {
+275: function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
+
+packages/server/src/environment-identity.ts
+5: import type { EnvironmentDescriptor } from "@cjhyy/code-shell-web";
+57: 
+58: export function describeEnvironment(
+59:   id: string,
+60:   kind: EnvironmentDescriptor["kind"],
+61: ): EnvironmentDescriptor {
+62:   return {
+63:     version: 1,
+64:     id,
+65:     name: kind === "desktop" ? "我的电脑" : kind === "project-host" ? "云端项目" : "Hub 工作台",
+66:     kind,
+67:     entryPath: kind === "desktop" ? "/mobile" : "/",
+68:   };
+69: }
+
+packages/web/src/lib/deviceCredential.test.ts
+1: import { test, expect } from "bun:test";
+2: import { generateSecret } from "./deviceCredential";
+3: 
+4: test("generateSecret 产出 64 位小写 hex(32 字节)", () => {
+5:   // 注入确定性随机源便于断言。
+6:   const s = generateSecret(() => new Uint8Array(32).fill(0xab));
+7:   expect(s).toBe("ab".repeat(32));
+8:   expect(s).toMatch(/^[0-9a-f]{64}$/);
+9: });
+10: 
+11: test("不同随机源 → 不同 secret", () => {
+12:   const a = generateSecret(() => new Uint8Array(32).fill(0x01));
+13:   const b = generateSecret(() => new Uint8Array(32).fill(0x02));
+14:   expect(a).not.toBe(b);
+15: });
+16: 
+17: test("默认用 crypto.getRandomValues,长度 64 hex", () => {
+18:   const s = generateSecret();
+19:   expect(s).toMatch(/^[0-9a-f]{64}$/);
+20: });
+
+packages/web/app/environments.test.ts
+1: import { expect, test } from "bun:test";
+2: import {
+3:   environmentAddress,
+4:   readEnvironments,
+5:   saveEnvironment,
+6:   removeEnvironment,
+7:   verifyCurrentEnvironment,
+8: } from "./environments.js";
+9: import { isEnvironmentDescriptor, projectReferenceKey } from "../src/lib/environment.js";
+10: 
+11: const first = "00000000-0000-4000-8000-000000000001";
+12: const second = "00000000-0000-4000-8000-000000000002";
+13: const environment = {
+14:   version: 1,
+15:   id: first,
+16:   name: "电脑",
+17:   kind: "desktop",
+18:   entryPath: "/mobile",
+19: } as const;
+20: function storage() {
+21:   const values = new Map<string, string>();
+22:   return {
+23:     getItem: (key: string) => values.get(key) ?? null,
+24:     setItem: (key: string, value: string) => {
+25:       values.set(key, value);
+26:     },
+27:   };
+28: }
+29: 
+30: test("bookmarks roundtrip without credentials; verified host identity cannot silently change", () => {
+31:   const disk = storage();
+32:   saveEnvironment(disk, {
+33:     name: "电脑",
+34:     address: "https://computer.example/mobile/",
+35:     environmentId: first,
+36:   });
+37:   saveEnvironment(disk, { name: "工作电脑", address: "https://computer.example/mobile" });
+38:   expect(readEnvironments(disk)).toEqual([
+39:     { name: "工作电脑", address: "https://computer.example/mobile", environmentId: first },
+40:   ]);
+41:   expect(() =>
+42:     saveEnvironment(disk, {
+43:       name: "冒名环境",
+44:       address: "https://computer.example/mobile",
+45:       environmentId: second,
+46:     }),
+47:   ).toThrow("身份已变化");
+48:   expect(() =>
+49:     verifyCurrentEnvironment(readEnvironments(disk), "https://computer.example", {
+50:       ...environment,
+51:       id: second,
+52:     }),
+53:   ).toThrow();
+54:   expect(removeEnvironment(disk, "https://computer.example/mobile")).toEqual([]);
+55: });
+56: 
+57: test.each([
+58:   "javascript:alert(1)",
+59:   "file:///etc/passwd",
+60:   "https://user:secret@example.com/",
+61:   "https://computer.example/mobile?pairing=secret",
+62:   "https://hub.example/#setup=secret",
+63:   "https://hub.example/api/v1/auth/logout",
+64:   "https://example.com/\\evil",
+65:   " https://example.com",
+66: ])("refuses secret-bearing or non-workbench address %s", (value) => {
+67:   expect(() => environmentAddress(value)).toThrow();
+68: });
+69: 
+70: test("one project id in two hosts has different identity; filesystem paths are not project ids", () => {
+71:   expect(projectReferenceKey({ environmentId: first, projectId: first })).not.toBe(
+72:     projectReferenceKey({ environmentId: second, projectId: first }),
+73:   );
+74:   expect(() => projectReferenceKey({ environmentId: first, projectId: "/etc" })).toThrow();
+75:   expect(isEnvironmentDescriptor(environment)).toBe(true);
+76:   expect(isEnvironmentDescriptor({ ...environment, entryPath: "https://other.example" })).toBe(
+77:     false,
+78:   );
+79: });
+80: 
+81: test("malformed browser data is not trusted or silently overwritten", () => {
+82:   const broken = {
+83:     getItem: () => '[{"name":"X","address":"javascript:alert(1)"}]',
+84:     setItem: () => {
+85:       throw new Error("must not write");
+86:     },
+87:   };
+88:   expect(() => readEnvironments(broken)).toThrow();
+89:   expect(() => saveEnvironment(broken, { name: "Hub", address: "https://hub.example/" })).toThrow();
+90: });

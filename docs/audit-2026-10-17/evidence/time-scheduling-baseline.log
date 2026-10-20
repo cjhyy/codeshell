@@ -1,0 +1,59 @@
+bun test v1.3.11 (af24e281)
+
+packages/core/src/automation/parse-schedule.test.ts:
+(pass) parseSchedule > parses unit suffixes to milliseconds [0.21ms]
+(pass) parseSchedule > parses raw positive milliseconds [0.01ms]
+(pass) parseSchedule > rejects zero intervals (no 0ms → no setInterval spin) [0.07ms]
+(pass) parseSchedule > throws on malformed schedules (typo surfaces, not silent default) [0.03ms]
+
+packages/core/src/automation/scheduler-timer-overflow.test.ts:
+(pass) CronScheduler long-delay timers > a 30d interval does not fire early and fires exactly once on time [88.46ms]
+(pass) CronScheduler long-delay timers > a monthly cron whose next slot is >24.8 days out does not fire early [858.60ms]
+(pass) CronScheduler long-delay timers > a sub-ceiling interval is unaffected [15.07ms]
+(pass) parseSchedule range guards > accepts long-but-sane intervals [0.66ms]
+(pass) parseSchedule range guards > rejects values that cannot survive schedule arithmetic [1.31ms]
+
+packages/core/src/automation/cron-expr.test.ts:
+(pass) isCronExpression > recognizes 5-field cron expressions [0.07ms]
+(pass) isCronExpression > rejects interval strings and garbage [0.04ms]
+(pass) parseCronExpression — field parsing > parses wildcards [0.03ms]
+(pass) parseCronExpression — field parsing > parses a single value [0.02ms]
+(pass) parseCronExpression — field parsing > parses ranges [0.06ms]
+(pass) parseCronExpression — field parsing > parses lists [0.03ms]
+(pass) parseCronExpression — field parsing > parses step values [0.03ms]
+(pass) parseCronExpression — field parsing > parses range with step [0.03ms]
+(pass) parseCronExpression — field parsing > throws on invalid field count [0.03ms]
+(pass) parseCronExpression — field parsing > throws on out-of-range values [0.08ms]
+(pass) nextCronTime — timezone-aware next trigger > daily 09:00 in UTC from midnight UTC → same day 09:00 UTC [0.78ms]
+(pass) nextCronTime — timezone-aware next trigger > daily 09:00 Asia/Shanghai (UTC+8) → 01:00 UTC same day [0.24ms]
+(pass) nextCronTime — timezone-aware next trigger > if the matching time today already passed, rolls to next day [1.66ms]
+(pass) nextCronTime — timezone-aware next trigger > weekday-only (Mon-Fri) skips the weekend [5.26ms]
+(pass) nextCronTime — timezone-aware next trigger > returns a strictly future time (never the reference instant itself) [1.91ms]
+(pass) nextCronTime — DST and calendar boundaries > skips a nonexistent spring-forward wall-clock minute [2.19ms]
+(pass) nextCronTime — DST and calendar boundaries > returns the second repeated wall-clock minute after fall-back [0.08ms]
+(pass) nextCronTime — DST and calendar boundaries > finds February 29 across a non-leap year boundary [642.70ms]
+(pass) dayOfMonth + dayOfWeek — Vixie/POSIX OR semantics > both restricted → fires on EITHER the day-of-month OR the day-of-week (Monday comes first) [7.22ms]
+(pass) dayOfMonth + dayOfWeek — Vixie/POSIX OR semantics > both restricted → fires on the 15th when it precedes the next matching weekday [4.70ms]
+(pass) dayOfMonth + dayOfWeek — Vixie/POSIX OR semantics > only day-of-month restricted (dow=*) → dow is ignored [25.01ms]
+(pass) dayOfMonth + dayOfWeek — Vixie/POSIX OR semantics > only day-of-week restricted (dom=*) → dom is ignored [8.27ms]
+(pass) dayOfMonth + dayOfWeek — Vixie/POSIX OR semantics > parser records which day fields are restricted [0.07ms]
+
+packages/core/src/automation/scheduler-absolute-once.test.ts:
+(pass) absolute one-shot scheduling > restart/reload keeps the absolute target, executes once, and deletes the record [14.10ms]
+(pass) absolute one-shot scheduling > skip disables a missed restart occurrence once, even within live timer grace [7.59ms]
+(pass) absolute one-shot scheduling > fire-once catches up through the inclusive deadline without overlapping on reload [12.75ms]
+(pass) absolute one-shot scheduling > expired catch-up never executes after restart and does not move the target [5.41ms]
+(pass) absolute one-shot scheduling > live sleep/wake applies skip or one bounded catch-up instead of recurring [0.52ms]
+(pass) absolute one-shot scheduling > updates re-arm the new absolute instant; pause/resume and no-arm never shift it [20.56ms]
+(pass) absolute one-shot scheduling > worker/no-arm loads preserve overdue jobs for the execution host [3.96ms]
+(pass) absolute one-shot scheduling > far-future targets use safe timer chunks without early execution [0.57ms]
+(pass) absolute one-shot scheduling > creation identity includes the absolute time and recovery definition [7.71ms]
+(pass) absolute one-shot scheduling > undefined update fields leave both absolute and recurring definitions intact [14.82ms]
+(pass) absolute one-shot scheduling > interrupted effects may replay inside the explicit window for Host idempotency [16.27ms]
+(pass) absolute one-shot scheduling > create/update/store reject invalid absolute definitions without partial changes [15.24ms]
+
+ 44 pass
+ 0 fail
+ 143 expect() calls
+Ran 44 tests across 4 files. [1.93s]
+Completed Bun shard: 44 tests, 0 skipped; 0 failures.

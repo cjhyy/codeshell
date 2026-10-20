@@ -1,0 +1,92 @@
+{
+  "frozenAtUTC": "2026-10-17T12:36:00.148433+00:00",
+  "prepOnly": true,
+  "rootSuppliedParentShort": "40d79ff",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/actual-producer-initial-pins.json",
+      "bytes": 692,
+      "sha256": "e9ca7062058f3a79c3e04a99659d6431bd9be06cb8d40ce82e1b5e0b408260fd"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/classification.json",
+      "bytes": 773,
+      "sha256": "484c9c401ea2f32e7d3e821db8af19871b982fb6f9a6ccd8975f0310232be1c0"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/consumer-history-initial-pins.json",
+      "bytes": 2148,
+      "sha256": "6b6676dee3a75819d5566d91f70cc8509180c2545f192803c6dbcc964ff64d4e"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/dto-display-initial-pins.json",
+      "bytes": 692,
+      "sha256": "7c534bb1d63c31719256d2f8c8cf38a3428abf85a5bf4f84104d1d9ab7550664"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/focused-history.json",
+      "bytes": 9934,
+      "sha256": "86703fa5f7f8b340f071b1c5b8768936b27dd5c5facb69c32553878b015d5260"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/history-delta.json",
+      "bytes": 6245,
+      "sha256": "1caed567502f2898ba43aefdb64395400f73dcccf6bd21bb15ea76660941ada5"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/history-method.py",
+      "bytes": 3407,
+      "sha256": "50b74c6e5067481b1c124356a10439d9c28b5da7bfc2786cf0d5d7782cd80d9d"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/history.json",
+      "bytes": 729503,
+      "sha256": "ae66e4a7c04fb88bf3da11c0e280c90530039d8ae3efb2190e9b0797b105a37d"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/initial-pins.json",
+      "bytes": 1796,
+      "sha256": "d2c26381732d8759230f1f7a50a374bc3448681ca4219e9bb0f053609d6d8aed"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/links-check.json",
+      "bytes": 1932,
+      "sha256": "a422b8514c8c71b04340006f4016c092ffd52cd865e40185e951c6b26cdd6de1"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/prior-coverage.json",
+      "bytes": 2286,
+      "sha256": "594581ae95c9bbeb0100edcf4bc4417b66fac11052731b146b759864dc5c12fc"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/producer-initial-pins.json",
+      "bytes": 754,
+      "sha256": "18def5e18322297a38b6d84072cdf85c076d49dba805b1b02e8495102d4138bb"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/report.md",
+      "bytes": 5725,
+      "sha256": "31b89d1fe5df5a43a5d8525aa6f7a211b41250004333d1abcde522882edda070"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/source-manifest.json",
+      "bytes": 21325,
+      "sha256": "eb2b52b21f7a9402be3a879a3cfd5a168e5eaf2ebb09ad33c25b25793e7eebed"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round35-extensions-data-frontier/validation.json",
+      "bytes": 2130,
+      "sha256": "f701f8fda1df0af25a4723b67b13472f79456662a5fb6d8ea0e4ad16bbdf1e14"
+    }
+  ],
+  "selfExcluded": true,
+  "sourcePinFinishUnchanged": true,
+  "classification": {
+    "newFormal": 0,
+    "newCandidates": 0,
+    "newRelated": 0
+  },
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round35-extensions-data-frontier",
+  "productOrGitExecuted": false
+}

@@ -1,0 +1,129 @@
+{
+  "kind": "Frozen independent static project-options prep; receipt self excluded",
+  "ownedDirectory": "/tmp/codeshell-audit-round40-project-options-review",
+  "frozenAtUTC": "2026-10-17T13:49:32.926434+00:00",
+  "prepOnly": true,
+  "rootParentContextSupplied": "42683054 short from author artifact, not verified Git baseline",
+  "formalBaseline": null,
+  "gitBindingPerformed": false,
+  "newFormalFindings": 0,
+  "newCandidates": 0,
+  "newRelatedRecords": 0,
+  "semanticSourcePins": 5,
+  "fullPins": 2,
+  "selectedPins": 3,
+  "productAndTestLines": 297,
+  "productLines": 190,
+  "testDeclarationLines": 107,
+  "existingTestsDeclarationCount": 13,
+  "instructionPins": 2,
+  "repeatedInstructionReadLinesThisReview": 217,
+  "all7PinsMatch": true,
+  "authorReceiptRowsChecked": 16,
+  "authorArtifactsIncludingReceiptChecked": 17,
+  "authorActiveSourceByteChecks": 5,
+  "historyInitialFiles": 3509,
+  "parentToReviewSharedByteChanges": 1,
+  "ownHistoryFinishChanges": 0,
+  "oldStripMarkdownBodyReads": 0,
+  "oldStripMarkdownSeparateSourceByteChecks": 0,
+  "productExecutions": 0,
+  "testsExecuted": 0,
+  "languageFixturesEvaluated": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "files": [
+    {
+      "path": "author-input-pins.json",
+      "bytes": 3588,
+      "sha256": "e22e7ca8f804fb83b9f1e45fd2c91c1d865a46fe23e5d6f74344f2cb7ad01b46"
+    },
+    {
+      "path": "author-metadata-checks.json",
+      "bytes": 7661,
+      "sha256": "6943b5a64b6ea3ae45d45aefc285cb3141ea25fcb7a9535b860db0f2f8711ce4"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1580,
+      "sha256": "1faad0e4ecae28609ea14fc5b62f49010bad8f15b301edfe9bf37371a4aa5187"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 1462,
+      "sha256": "2565923ce1b7ed0ba47a0dece48b2bdebf1f4643025ebfdb3683082f2724e0f5"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 37677,
+      "sha256": "1b21af555ddf00c250e33eeaffb15732ed04c4fce9b6e2995cdb53f27a1e9959"
+    },
+    {
+      "path": "history-decisions.json",
+      "bytes": 2170,
+      "sha256": "537cfa5976c333b6c9ebb2bdb1e2354ac312f52969e287bdce8158178c63e41f"
+    },
+    {
+      "path": "history-finish-check.json",
+      "bytes": 1240908,
+      "sha256": "be0d3ec50a3d09f1535caed423ec9677c2efa4bfa3795b6586a25f192f1e19f7"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 768250,
+      "sha256": "c1ca07319cb85062d04f516d015a56b1807bbb38cba63b38554ea551dead9145"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 222904,
+      "sha256": "c301cbaeea88cc0da879d25f84cda747bd7d5392a58ca87a8510eaa50e20806d"
+    },
+    {
+      "path": "history-selected-contexts.json",
+      "bytes": 28776,
+      "sha256": "b39c07e06b6db29dcfa7ce9c1ed6fcbf77c40fadd81fe481b60e9fc0731ec582"
+    },
+    {
+      "path": "history.json",
+      "bytes": 768596,
+      "sha256": "6815d7faeb1132ee7341ce07a81d55ec26d632b414cb5e927f2e5fd7b0203df5"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 931,
+      "sha256": "9e487c686b4cdea45f70a87b2af323801771e5e073b4dd4f5c304243ae7b1a4b"
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 2394,
+      "sha256": "cb827f1c2032ca3f232fc5dbcb7b9fb250a901dbae9604fae9bde6b5123865cf"
+    },
+    {
+      "path": "resource-initial-pins.json",
+      "bytes": 327,
+      "sha256": "beded07e4f08bc0b773a27b0cdc9ed5fac218efa8baa148923d4a7592293b7b8"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4884,
+      "sha256": "a511cfab04adaaa67cc5ad2e2b6faf733ad81918e19a216187665dd97fd2c977"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5580,
+      "sha256": "fd6f05c2d7afd8a61ef4736d4b732bcacd0116afbb9d5613e7d2877f43b5d7af"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 10345,
+      "sha256": "474b96584df13db82c0b85add6fdf9d6757bb2454a573179939ce8a3208f38e9"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1431,
+      "sha256": "cab08d3a9e04144abd207ae78cccd4aa85f018384210eff065d2a92ccab775aa"
+    }
+  ],
+  "fileCountExcludingSelf": 18,
+  "totalFilesIncludingSelf": 19
+}

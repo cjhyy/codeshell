@@ -1,0 +1,3226 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/context/tool-result-storage.ts",
+      "sha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+      "captureTiming": "After actual display, not a second semantic read",
+      "blocks": [
+        {
+          "start": 1,
+          "end": 493,
+          "lines": [
+            {
+              "line": 1,
+              "text": "/**"
+            },
+            {
+              "line": 2,
+              "text": " * Tool-result persistence — write large tool_result content to disk and"
+            },
+            {
+              "line": 3,
+              "text": " * replace the in-context message with a reference + preview."
+            },
+            {
+              "line": 4,
+              "text": " *"
+            },
+            {
+              "line": 5,
+              "text": " * Mirrors Claude Code's services/compact/microcompact.ts + utils/toolResultStorage.ts"
+            },
+            {
+              "line": 6,
+              "text": " * approach, simplified for codeshell:"
+            },
+            {
+              "line": 7,
+              "text": " *"
+            },
+            {
+              "line": 8,
+              "text": " *   • One file per tool_use_id (UUID), so the same id always maps to the"
+            },
+            {
+              "line": 9,
+              "text": " *     same file — guarantees byte-identical preview on every turn."
+            },
+            {
+              "line": 10,
+              "text": " *   • Decision state (ContentReplacementState) is held by the caller and"
+            },
+            {
+              "line": 11,
+              "text": " *     mutated in place. Once a result is \"seen\", its fate is frozen for"
+            },
+            {
+              "line": 12,
+              "text": " *     the rest of the session (prevents flapping replacement choices that"
+            },
+            {
+              "line": 13,
+              "text": " *     would constantly invalidate the prompt prefix)."
+            },
+            {
+              "line": 14,
+              "text": " *   • Raw transcripts stay unchanged. A versioned text-only sidecar freezes"
+            },
+            {
+              "line": 15,
+              "text": " *     each saved preview, including text-slot positions, for cold replay."
+            },
+            {
+              "line": 16,
+              "text": " *"
+            },
+            {
+              "line": 17,
+              "text": " * Strategy:"
+            },
+            {
+              "line": 18,
+              "text": " *   • Per-result cap (DEFAULT_PERSIST_THRESHOLD): when a single tool_result"
+            },
+            {
+              "line": 19,
+              "text": " *     exceeds it, persist + replace."
+            },
+            {
+              "line": 20,
+              "text": " *   • Per-message aggregate cap (PER_MESSAGE_AGGREGATE_CAP): when a single"
+            },
+            {
+              "line": 21,
+              "text": " *     user message's tool_results together exceed it (e.g. a batch of"
+            },
+            {
+              "line": 22,
+              "text": " *     parallel Read results), persist the largest ones first until under."
+            },
+            {
+              "line": 23,
+              "text": " */"
+            },
+            {
+              "line": 24,
+              "text": ""
+            },
+            {
+              "line": 25,
+              "text": "import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from \"node:fs\";"
+            },
+            {
+              "line": 26,
+              "text": "import { createHash, randomUUID } from \"node:crypto\";"
+            },
+            {
+              "line": 27,
+              "text": "import { dirname, isAbsolute, join, relative, resolve, sep, win32 } from \"node:path\";"
+            },
+            {
+              "line": 28,
+              "text": "import type { ContentBlock, Message } from \"../types.js\";"
+            },
+            {
+              "line": 29,
+              "text": "import { logger } from \"../logging/logger.js\";"
+            },
+            {
+              "line": 30,
+              "text": "import { estimateStringTokens } from \"./token-counter.js\";"
+            },
+            {
+              "line": 31,
+              "text": "import {"
+            },
+            {
+              "line": 32,
+              "text": "  DEFAULT_TOOL_OUTPUT_TOKEN_LIMIT,"
+            },
+            {
+              "line": 33,
+              "text": "  DEFAULT_TOOL_MESSAGE_TOKEN_LIMIT,"
+            },
+            {
+              "line": 34,
+              "text": "  createToolTextReplacement,"
+            },
+            {
+              "line": 35,
+              "text": "  replaceToolResultText,"
+            },
+            {
+              "line": 36,
+              "text": "  toolResultText,"
+            },
+            {
+              "line": 37,
+              "text": "} from \"./tool-output-budget.js\";"
+            },
+            {
+              "line": 38,
+              "text": ""
+            },
+            {
+              "line": 39,
+              "text": "// ─── Tunables ───────────────────────────────────────────────────────"
+            },
+            {
+              "line": 40,
+              "text": ""
+            },
+            {
+              "line": 41,
+              "text": "/** Per-result threshold. Larger than this → persist + replace. */"
+            },
+            {
+              "line": 42,
+              "text": "export const DEFAULT_PERSIST_THRESHOLD = 30_000;"
+            },
+            {
+              "line": 43,
+              "text": ""
+            },
+            {
+              "line": 44,
+              "text": "/** Per-message aggregate cap (sum of tool_result content sizes in one user msg). */"
+            },
+            {
+              "line": 45,
+              "text": "export const PER_MESSAGE_AGGREGATE_CAP = 100_000;"
+            },
+            {
+              "line": 46,
+              "text": ""
+            },
+            {
+              "line": 47,
+              "text": "/** Preview length included in the replacement string. */"
+            },
+            {
+              "line": 48,
+              "text": "export const PREVIEW_SIZE = 2_000;"
+            },
+            {
+              "line": 49,
+              "text": ""
+            },
+            {
+              "line": 50,
+              "text": "/** Sentinel tags so re-runs detect \"already-persisted\" content. */"
+            },
+            {
+              "line": 51,
+              "text": "const PERSISTED_OPEN = \"<persisted-output>\";"
+            },
+            {
+              "line": 52,
+              "text": "const PERSISTED_CLOSE = \"</persisted-output>\";"
+            },
+            {
+              "line": 53,
+              "text": "const CLEARED_PREFIX = \"[Old tool result cleared\";"
+            },
+            {
+              "line": 54,
+              "text": ""
+            },
+            {
+              "line": 55,
+              "text": "// ─── State ───────────────────────────────────────────────────────────"
+            },
+            {
+              "line": 56,
+              "text": ""
+            },
+            {
+              "line": 57,
+              "text": "/**"
+            },
+            {
+              "line": 58,
+              "text": " * Per-session decision state for tool-result persistence."
+            },
+            {
+              "line": 59,
+              "text": " *"
+            },
+            {
+              "line": 60,
+              "text": " *  seenIds       — every tool_use_id we've evaluated; once seen, its fate"
+            },
+            {
+              "line": 61,
+              "text": " *                  (persisted or not) is fixed for the rest of the session."
+            },
+            {
+              "line": 62,
+              "text": " *  replacements  — subset of seenIds that were persisted, mapped to the"
+            },
+            {
+              "line": 63,
+              "text": " *                  EXACT replacement string sent to the model. Re-applying"
+            },
+            {
+              "line": 64,
+              "text": " *                  is a Map lookup, never re-reads the file, guarantees"
+            },
+            {
+              "line": 65,
+              "text": " *                  byte-identical output."
+            },
+            {
+              "line": 66,
+              "text": " */"
+            },
+            {
+              "line": 67,
+              "text": "export interface ContentReplacementState {"
+            },
+            {
+              "line": 68,
+              "text": "  seenIds: Set<string>;"
+            },
+            {
+              "line": 69,
+              "text": "  replacements: Map<string, string>;"
+            },
+            {
+              "line": 70,
+              "text": "  /** Text slots are retained for multimodal results; media never enter sidecars. */"
+            },
+            {
+              "line": 71,
+              "text": "  textReplacements?: Map<string, string[]>;"
+            },
+            {
+              "line": 72,
+              "text": "}"
+            },
+            {
+              "line": 73,
+              "text": ""
+            },
+            {
+              "line": 74,
+              "text": "export function createContentReplacementState(): ContentReplacementState {"
+            },
+            {
+              "line": 75,
+              "text": "  return { seenIds: new Set(), replacements: new Map(), textReplacements: new Map() };"
+            },
+            {
+              "line": 76,
+              "text": "}"
+            },
+            {
+              "line": 77,
+              "text": ""
+            },
+            {
+              "line": 78,
+              "text": "/**"
+            },
+            {
+              "line": 79,
+              "text": " * Rebuild a state object by walking the loaded message history."
+            },
+            {
+              "line": 80,
+              "text": " * Used on resume so the budget makes the same decisions it made before."
+            },
+            {
+              "line": 81,
+              "text": " * Replacements come from already-reduced messages or the saved model view"
+            },
+            {
+              "line": 82,
+              "text": " * beside an intact original output when the transcript still contains raw text."
+            },
+            {
+              "line": 83,
+              "text": " */"
+            },
+            {
+              "line": 84,
+              "text": "export function reconstructContentReplacementState("
+            },
+            {
+              "line": 85,
+              "text": "  messages: Message[],"
+            },
+            {
+              "line": 86,
+              "text": "  toolResultsDir?: string,"
+            },
+            {
+              "line": 87,
+              "text": "): ContentReplacementState {"
+            },
+            {
+              "line": 88,
+              "text": "  const state = createContentReplacementState();"
+            },
+            {
+              "line": 89,
+              "text": "  for (const msg of messages) {"
+            },
+            {
+              "line": 90,
+              "text": "    if (!Array.isArray(msg.content)) continue;"
+            },
+            {
+              "line": 91,
+              "text": "    for (const block of msg.content) {"
+            },
+            {
+              "line": 92,
+              "text": "      if (block.type !== \"tool_result\" || !block.tool_use_id) continue;"
+            },
+            {
+              "line": 93,
+              "text": "      state.seenIds.add(block.tool_use_id);"
+            },
+            {
+              "line": 94,
+              "text": "      const text = toolResultText(block.content);"
+            },
+            {
+              "line": 95,
+              "text": "      if (text?.startsWith(PERSISTED_OPEN)) {"
+            },
+            {
+              "line": 96,
+              "text": "        state.replacements.set(block.tool_use_id, text);"
+            },
+            {
+              "line": 97,
+              "text": "        if (Array.isArray(block.content)) {"
+            },
+            {
+              "line": 98,
+              "text": "          state.textReplacements!.set(block.tool_use_id, textParts(block.content));"
+            },
+            {
+              "line": 99,
+              "text": "        }"
+            },
+            {
+              "line": 100,
+              "text": "      } else if (toolResultsDir && text !== undefined) {"
+            },
+            {
+              "line": 101,
+              "text": "        const saved = readSavedReplacement(toolResultsDir, block.tool_use_id, block.content);"
+            },
+            {
+              "line": 102,
+              "text": "        if (saved) {"
+            },
+            {
+              "line": 103,
+              "text": "          state.replacements.set(block.tool_use_id, saved.replacement);"
+            },
+            {
+              "line": 104,
+              "text": "          if (saved.parts) state.textReplacements!.set(block.tool_use_id, saved.parts);"
+            },
+            {
+              "line": 105,
+              "text": "        }"
+            },
+            {
+              "line": 106,
+              "text": "      }"
+            },
+            {
+              "line": 107,
+              "text": "    }"
+            },
+            {
+              "line": 108,
+              "text": "  }"
+            },
+            {
+              "line": 109,
+              "text": "  return state;"
+            },
+            {
+              "line": 110,
+              "text": "}"
+            },
+            {
+              "line": 111,
+              "text": ""
+            },
+            {
+              "line": 112,
+              "text": "// ─── Persistence ─────────────────────────────────────────────────────"
+            },
+            {
+              "line": 113,
+              "text": ""
+            },
+            {
+              "line": 114,
+              "text": "/**"
+            },
+            {
+              "line": 115,
+              "text": " * Resolve the directory tool results are written to, given the engine's"
+            },
+            {
+              "line": 116,
+              "text": " * transcript path. Layout:  <transcriptDir>/tool-results/"
+            },
+            {
+              "line": 117,
+              "text": " */"
+            },
+            {
+              "line": 118,
+              "text": "export function resolveToolResultsDir(transcriptPath: string): string {"
+            },
+            {
+              "line": 119,
+              "text": "  return join(dirname(transcriptPath), \"tool-results\");"
+            },
+            {
+              "line": 120,
+              "text": "}"
+            },
+            {
+              "line": 121,
+              "text": ""
+            },
+            {
+              "line": 122,
+              "text": "function ensureDir(dir: string): void {"
+            },
+            {
+              "line": 123,
+              "text": "  try {"
+            },
+            {
+              "line": 124,
+              "text": "    mkdirSync(dir, { recursive: true });"
+            },
+            {
+              "line": 125,
+              "text": "  } catch {"
+            },
+            {
+              "line": 126,
+              "text": "    // Existing directory is fine."
+            },
+            {
+              "line": 127,
+              "text": "  }"
+            },
+            {
+              "line": 128,
+              "text": "}"
+            },
+            {
+              "line": 129,
+              "text": ""
+            },
+            {
+              "line": 130,
+              "text": "/**"
+            },
+            {
+              "line": 131,
+              "text": " * Convert an externally supplied tool_use_id to a bounded internal filename."
+            },
+            {
+              "line": 132,
+              "text": " * The original id remains the key in ContentReplacementState/onPersist; it is"
+            },
+            {
+              "line": 133,
+              "text": " * never used as a path component."
+            },
+            {
+              "line": 134,
+              "text": " */"
+            },
+            {
+              "line": 135,
+              "text": "export function safeToolResultFilename(toolUseId: string): string {"
+            },
+            {
+              "line": 136,
+              "text": "  if (toolUseId.length > 256) {"
+            },
+            {
+              "line": 137,
+              "text": "    throw new RangeError(\"tool_use_id exceeds the 256 character limit\");"
+            },
+            {
+              "line": 138,
+              "text": "  }"
+            },
+            {
+              "line": 139,
+              "text": "  if ("
+            },
+            {
+              "line": 140,
+              "text": "    isAbsolute(toolUseId) ||"
+            },
+            {
+              "line": 141,
+              "text": "    win32.isAbsolute(toolUseId) ||"
+            },
+            {
+              "line": 142,
+              "text": "    toolUseId.includes(\"/\") ||"
+            },
+            {
+              "line": 143,
+              "text": "    toolUseId.includes(\"\\\\\")"
+            },
+            {
+              "line": 144,
+              "text": "  ) {"
+            },
+            {
+              "line": 145,
+              "text": "    throw new Error(\"tool_use_id must not contain a path\");"
+            },
+            {
+              "line": 146,
+              "text": "  }"
+            },
+            {
+              "line": 147,
+              "text": "  return `${createHash(\"sha256\").update(toolUseId, \"utf8\").digest(\"hex\")}.txt`;"
+            },
+            {
+              "line": 148,
+              "text": "}"
+            },
+            {
+              "line": 149,
+              "text": ""
+            },
+            {
+              "line": 150,
+              "text": "/** Write content to the contained hashed path. Idempotent by original id. */"
+            },
+            {
+              "line": 151,
+              "text": "function persistToFile(dir: string, toolUseId: string, content: string): string {"
+            },
+            {
+              "line": 152,
+              "text": "  const root = resolve(dir);"
+            },
+            {
+              "line": 153,
+              "text": "  const filename = safeToolResultFilename(toolUseId);"
+            },
+            {
+              "line": 154,
+              "text": "  const filepath = resolve(root, filename);"
+            },
+            {
+              "line": 155,
+              "text": "  const rel = relative(root, filepath);"
+            },
+            {
+              "line": 156,
+              "text": "  if (rel === \"..\" || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {"
+            },
+            {
+              "line": 157,
+              "text": "    throw new Error(\"tool_result path escaped its storage root\");"
+            },
+            {
+              "line": 158,
+              "text": "  }"
+            },
+            {
+              "line": 159,
+              "text": "  ensureDir(dir);"
+            },
+            {
+              "line": 160,
+              "text": "  try {"
+            },
+            {
+              "line": 161,
+              "text": "    // 'wx' = fail if exists. Only reuse an existing original if it is complete"
+            },
+            {
+              "line": 162,
+              "text": "    // and identical; an interrupted prior write must not yield a false receipt."
+            },
+            {
+              "line": 163,
+              "text": "    writeFileSync(filepath, content, { encoding: \"utf-8\", flag: \"wx\", mode: 0o600 });"
+            },
+            {
+              "line": 164,
+              "text": "  } catch (err) {"
+            },
+            {
+              "line": 165,
+              "text": "    const code = (err as NodeJS.ErrnoException).code;"
+            },
+            {
+              "line": 166,
+              "text": "    if (code === \"EEXIST\" && readFileSync(filepath, \"utf8\") !== content) {"
+            },
+            {
+              "line": 167,
+              "text": "      throw new Error(\"Saved tool output does not match this result\", { cause: err });"
+            },
+            {
+              "line": 168,
+              "text": "    }"
+            },
+            {
+              "line": 169,
+              "text": "    if (code !== \"EEXIST\") {"
+            },
+            {
+              "line": 170,
+              "text": "      // Read-only FS (CI containers, ephemeral runtimes) hits EROFS/EACCES/"
+            },
+            {
+              "line": 171,
+              "text": "      // ENOENT here on every large tool_result. The caller already catches"
+            },
+            {
+              "line": 172,
+              "text": "      // and marks the id as seen so we don't re-attempt; degrade to debug"
+            },
+            {
+              "line": 173,
+              "text": "      // so a headless run on a read-only FS doesn't flood the log with"
+            },
+            {
+              "line": 174,
+              "text": "      // warnings. The block is left in-place untouched, which is the"
+            },
+            {
+              "line": 175,
+              "text": "      // correct user-facing behavior."
+            },
+            {
+              "line": 176,
+              "text": "      logger.debug(\"tool_result.persist_failed\", {"
+            },
+            {
+              "line": 177,
+              "text": "        toolUseId,"
+            },
+            {
+              "line": 178,
+              "text": "        code,"
+            },
+            {
+              "line": 179,
+              "text": "        error: (err as Error).message,"
+            },
+            {
+              "line": 180,
+              "text": "      });"
+            },
+            {
+              "line": 181,
+              "text": "      throw err;"
+            },
+            {
+              "line": 182,
+              "text": "    }"
+            },
+            {
+              "line": 183,
+              "text": "  }"
+            },
+            {
+              "line": 184,
+              "text": "  return filepath;"
+            },
+            {
+              "line": 185,
+              "text": "}"
+            },
+            {
+              "line": 186,
+              "text": ""
+            },
+            {
+              "line": 187,
+              "text": "interface SavedReplacement {"
+            },
+            {
+              "line": 188,
+              "text": "  replacement: string;"
+            },
+            {
+              "line": 189,
+              "text": "  parts?: string[];"
+            },
+            {
+              "line": 190,
+              "text": "}"
+            },
+            {
+              "line": 191,
+              "text": ""
+            },
+            {
+              "line": 192,
+              "text": "function textParts(content: ContentBlock[]): string[] {"
+            },
+            {
+              "line": 193,
+              "text": "  return content"
+            },
+            {
+              "line": 194,
+              "text": "    .filter((part) => part.type === \"text\" && typeof part.text === \"string\")"
+            },
+            {
+              "line": 195,
+              "text": "    .map((part) => part.text!);"
+            },
+            {
+              "line": 196,
+              "text": "}"
+            },
+            {
+              "line": 197,
+              "text": ""
+            },
+            {
+              "line": 198,
+              "text": "function buildReplacement("
+            },
+            {
+              "line": 199,
+              "text": "  filepath: string,"
+            },
+            {
+              "line": 200,
+              "text": "  originalSize: number,"
+            },
+            {
+              "line": 201,
+              "text": "  content: ContentBlock[\"content\"],"
+            },
+            {
+              "line": 202,
+              "text": "): SavedReplacement {"
+            },
+            {
+              "line": 203,
+              "text": "  const preview = createToolTextReplacement(content, { maxChars: PREVIEW_SIZE });"
+            },
+            {
+              "line": 204,
+              "text": "  const header ="
+            },
+            {
+              "line": 205,
+              "text": "    `${PERSISTED_OPEN}\\n` +"
+            },
+            {
+              "line": 206,
+              "text": "    `Text output too large (${originalSize} chars). Full output saved to: ${filepath}\\n` +"
+            },
+            {
+              "line": 207,
+              "text": "    (Array.isArray(content) ? \"Non-text attachments remain in their original positions.\\n\" : \"\") +"
+            },
+            {
+              "line": 208,
+              "text": "    `Use Read with offset/limit or Grep on this file for omitted details; do not repeat a write operation to retrieve output.\\n\\n` +"
+            },
+            {
+              "line": 209,
+              "text": "    `Preview (head and tail):\\n`;"
+            },
+            {
+              "line": 210,
+              "text": "  const footer = `\\n${PERSISTED_CLOSE}`;"
+            },
+            {
+              "line": 211,
+              "text": "  if (preview.parts?.length) {"
+            },
+            {
+              "line": 212,
+              "text": "    const parts = [...preview.parts];"
+            },
+            {
+              "line": 213,
+              "text": "    parts[0] = header + parts[0];"
+            },
+            {
+              "line": 214,
+              "text": "    parts[parts.length - 1] += footer;"
+            },
+            {
+              "line": 215,
+              "text": "    return { replacement: parts.join(\"\\n\\n\"), parts };"
+            },
+            {
+              "line": 216,
+              "text": "  }"
+            },
+            {
+              "line": 217,
+              "text": "  return { replacement: header + preview.text + footer };"
+            },
+            {
+              "line": 218,
+              "text": "}"
+            },
+            {
+              "line": 219,
+              "text": ""
+            },
+            {
+              "line": 220,
+              "text": "function contentHash(content: string): string {"
+            },
+            {
+              "line": 221,
+              "text": "  return createHash(\"sha256\").update(content, \"utf8\").digest(\"hex\");"
+            },
+            {
+              "line": 222,
+              "text": "}"
+            },
+            {
+              "line": 223,
+              "text": ""
+            },
+            {
+              "line": 224,
+              "text": "/** Store the exact model view beside the raw output, without changing the transcript. */"
+            },
+            {
+              "line": 225,
+              "text": "function saveReplacement(filepath: string, content: string, saved: SavedReplacement): void {"
+            },
+            {
+              "line": 226,
+              "text": "  const record = JSON.stringify({ version: 1, hash: contentHash(content), ...saved });"
+            },
+            {
+              "line": 227,
+              "text": "  const previewPath = `${filepath}.preview.json`;"
+            },
+            {
+              "line": 228,
+              "text": "  try {"
+            },
+            {
+              "line": 229,
+              "text": "    if (readFileSync(previewPath, \"utf8\") === record) return;"
+            },
+            {
+              "line": 230,
+              "text": "  } catch {"
+            },
+            {
+              "line": 231,
+              "text": "    // Missing or interrupted previews are replaced below."
+            },
+            {
+              "line": 232,
+              "text": "  }"
+            },
+            {
+              "line": 233,
+              "text": "  const temporaryPath = `${previewPath}.${randomUUID()}.tmp`;"
+            },
+            {
+              "line": 234,
+              "text": "  try {"
+            },
+            {
+              "line": 235,
+              "text": "    writeFileSync(temporaryPath, record, { flag: \"wx\", mode: 0o600 });"
+            },
+            {
+              "line": 236,
+              "text": "    // Commit the complete record at once, also repairing a corrupt sidecar."
+            },
+            {
+              "line": 237,
+              "text": "    renameSync(temporaryPath, previewPath);"
+            },
+            {
+              "line": 238,
+              "text": "  } finally {"
+            },
+            {
+              "line": 239,
+              "text": "    rmSync(temporaryPath, { force: true });"
+            },
+            {
+              "line": 240,
+              "text": "  }"
+            },
+            {
+              "line": 241,
+              "text": "}"
+            },
+            {
+              "line": 242,
+              "text": ""
+            },
+            {
+              "line": 243,
+              "text": "function readSavedReplacement("
+            },
+            {
+              "line": 244,
+              "text": "  dir: string,"
+            },
+            {
+              "line": 245,
+              "text": "  toolUseId: string,"
+            },
+            {
+              "line": 246,
+              "text": "  original: ContentBlock[\"content\"],"
+            },
+            {
+              "line": 247,
+              "text": "): SavedReplacement | undefined {"
+            },
+            {
+              "line": 248,
+              "text": "  try {"
+            },
+            {
+              "line": 249,
+              "text": "    const content = toolResultText(original);"
+            },
+            {
+              "line": 250,
+              "text": "    if (content === undefined) return undefined;"
+            },
+            {
+              "line": 251,
+              "text": "    const filepath = join(resolve(dir), safeToolResultFilename(toolUseId));"
+            },
+            {
+              "line": 252,
+              "text": "    const previewPath = `${filepath}.preview.json`;"
+            },
+            {
+              "line": 253,
+              "text": "    if (statSync(previewPath).size > 32_768 || !statSync(filepath).isFile()) return undefined;"
+            },
+            {
+              "line": 254,
+              "text": "    const record = JSON.parse(readFileSync(previewPath, \"utf8\"));"
+            },
+            {
+              "line": 255,
+              "text": "    const validParts = Array.isArray(original)"
+            },
+            {
+              "line": 256,
+              "text": "      ? Array.isArray(record.parts) &&"
+            },
+            {
+              "line": 257,
+              "text": "        record.parts.length === textParts(original).length &&"
+            },
+            {
+              "line": 258,
+              "text": "        record.parts.every((part: unknown) => typeof part === \"string\") &&"
+            },
+            {
+              "line": 259,
+              "text": "        record.parts.join(\"\\n\\n\") === record.replacement"
+            },
+            {
+              "line": 260,
+              "text": "      : record.parts === undefined;"
+            },
+            {
+              "line": 261,
+              "text": "    if ("
+            },
+            {
+              "line": 262,
+              "text": "      record.version === 1 &&"
+            },
+            {
+              "line": 263,
+              "text": "      record.hash === contentHash(content) &&"
+            },
+            {
+              "line": 264,
+              "text": "      validParts &&"
+            },
+            {
+              "line": 265,
+              "text": "      typeof record.replacement === \"string\" &&"
+            },
+            {
+              "line": 266,
+              "text": "      record.replacement.startsWith(PERSISTED_OPEN) &&"
+            },
+            {
+              "line": 267,
+              "text": "      record.replacement.includes(`Full output saved to: ${filepath}\\n`) &&"
+            },
+            {
+              "line": 268,
+              "text": "      readFileSync(filepath, \"utf8\") === content"
+            },
+            {
+              "line": 269,
+              "text": "    )"
+            },
+            {
+              "line": 270,
+              "text": "      return { replacement: record.replacement, ...(record.parts ? { parts: record.parts } : {}) };"
+            },
+            {
+              "line": 271,
+              "text": "  } catch {"
+            },
+            {
+              "line": 272,
+              "text": "    // Legacy sessions, deleted output files, or interrupted sidecar writes."
+            },
+            {
+              "line": 273,
+              "text": "  }"
+            },
+            {
+              "line": 274,
+              "text": "  return undefined;"
+            },
+            {
+              "line": 275,
+              "text": "}"
+            },
+            {
+              "line": 276,
+              "text": ""
+            },
+            {
+              "line": 277,
+              "text": "// ─── Application ─────────────────────────────────────────────────────"
+            },
+            {
+              "line": 278,
+              "text": ""
+            },
+            {
+              "line": 279,
+              "text": "interface ToolResultCandidate {"
+            },
+            {
+              "line": 280,
+              "text": "  toolUseId: string;"
+            },
+            {
+              "line": 281,
+              "text": "  block: ContentBlock;"
+            },
+            {
+              "line": 282,
+              "text": "  content: string;"
+            },
+            {
+              "line": 283,
+              "text": "  size: number;"
+            },
+            {
+              "line": 284,
+              "text": "  tokens: number;"
+            },
+            {
+              "line": 285,
+              "text": "}"
+            },
+            {
+              "line": 286,
+              "text": ""
+            },
+            {
+              "line": 287,
+              "text": "function collectCandidates(msg: Message): ToolResultCandidate[] {"
+            },
+            {
+              "line": 288,
+              "text": "  if (!Array.isArray(msg.content)) return [];"
+            },
+            {
+              "line": 289,
+              "text": "  const out: ToolResultCandidate[] = [];"
+            },
+            {
+              "line": 290,
+              "text": "  for (const block of msg.content) {"
+            },
+            {
+              "line": 291,
+              "text": "    if (block.type !== \"tool_result\" || !block.tool_use_id) continue;"
+            },
+            {
+              "line": 292,
+              "text": "    const content = toolResultText(block.content);"
+            },
+            {
+              "line": 293,
+              "text": "    if (content === undefined) continue;"
+            },
+            {
+              "line": 294,
+              "text": "    // Skip blocks already in a persisted/cleared sentinel — nothing to do"
+            },
+            {
+              "line": 295,
+              "text": "    // and we must not re-persist (would change replacement strings →"
+            },
+            {
+              "line": 296,
+              "text": "    // prompt cache miss)."
+            },
+            {
+              "line": 297,
+              "text": "    if (content.startsWith(PERSISTED_OPEN) || content.startsWith(CLEARED_PREFIX)) continue;"
+            },
+            {
+              "line": 298,
+              "text": "    out.push({"
+            },
+            {
+              "line": 299,
+              "text": "      toolUseId: block.tool_use_id,"
+            },
+            {
+              "line": 300,
+              "text": "      block,"
+            },
+            {
+              "line": 301,
+              "text": "      content,"
+            },
+            {
+              "line": 302,
+              "text": "      size: content.length,"
+            },
+            {
+              "line": 303,
+              "text": "      tokens: estimateStringTokens(content),"
+            },
+            {
+              "line": 304,
+              "text": "    });"
+            },
+            {
+              "line": 305,
+              "text": "  }"
+            },
+            {
+              "line": 306,
+              "text": "  return out;"
+            },
+            {
+              "line": 307,
+              "text": "}"
+            },
+            {
+              "line": 308,
+              "text": ""
+            },
+            {
+              "line": 309,
+              "text": "interface PersistOptions {"
+            },
+            {
+              "line": 310,
+              "text": "  /** Per-result threshold; default DEFAULT_PERSIST_THRESHOLD. */"
+            },
+            {
+              "line": 311,
+              "text": "  perResultThreshold?: number;"
+            },
+            {
+              "line": 312,
+              "text": "  /** Per-message aggregate cap; default PER_MESSAGE_AGGREGATE_CAP. */"
+            },
+            {
+              "line": 313,
+              "text": "  perMessageCap?: number;"
+            },
+            {
+              "line": 314,
+              "text": "  /** Estimated text token budgets, shared by all text parts of a result/batch. */"
+            },
+            {
+              "line": 315,
+              "text": "  perResultTokenLimit?: number;"
+            },
+            {
+              "line": 316,
+              "text": "  perMessageTokenLimit?: number;"
+            },
+            {
+              "line": 317,
+              "text": "  /** Directory to write tool-result files to. Required. */"
+            },
+            {
+              "line": 318,
+              "text": "  toolResultsDir: string;"
+            },
+            {
+              "line": 319,
+              "text": "  /** Decision state, mutated in place. */"
+            },
+            {
+              "line": 320,
+              "text": "  state: ContentReplacementState;"
+            },
+            {
+              "line": 321,
+              "text": "  /** Optional callback fired when a result is freshly persisted. */"
+            },
+            {
+              "line": 322,
+              "text": "  onPersist?: (info: {"
+            },
+            {
+              "line": 323,
+              "text": "    toolUseId: string;"
+            },
+            {
+              "line": 324,
+              "text": "    filepath: string;"
+            },
+            {
+              "line": 325,
+              "text": "    originalSize: number;"
+            },
+            {
+              "line": 326,
+              "text": "    reason: \"per-result-cap\" | \"per-message-budget\";"
+            },
+            {
+              "line": 327,
+              "text": "  }) => void;"
+            },
+            {
+              "line": 328,
+              "text": "}"
+            },
+            {
+              "line": 329,
+              "text": ""
+            },
+            {
+              "line": 330,
+              "text": "/**"
+            },
+            {
+              "line": 331,
+              "text": " * Walk each user message, decide which tool_result blocks should be"
+            },
+            {
+              "line": 332,
+              "text": " * persisted (per-result cap OR per-message aggregate), persist them,"
+            },
+            {
+              "line": 333,
+              "text": " * and return a new message array with those blocks replaced."
+            },
+            {
+              "line": 334,
+              "text": " *"
+            },
+            {
+              "line": 335,
+              "text": " * Frozen decisions:"
+            },
+            {
+              "line": 336,
+              "text": " *  - If a tool_use_id is already in state.replacements, that exact"
+            },
+            {
+              "line": 337,
+              "text": " *    replacement is re-applied (no I/O)."
+            },
+            {
+              "line": 338,
+              "text": " *  - If it's in state.seenIds but NOT replacements, it was decided"
+            },
+            {
+              "line": 339,
+              "text": " *    \"don't persist\" on an earlier pass — leave it unreplaced even if"
+            },
+            {
+              "line": 340,
+              "text": " *    it now exceeds the threshold (changing the decision mid-session"
+            },
+            {
+              "line": 341,
+              "text": " *    would invalidate any model state built on the prior content)."
+            },
+            {
+              "line": 342,
+              "text": " *"
+            },
+            {
+              "line": 343,
+              "text": " * @returns the new messages array, with replacements applied."
+            },
+            {
+              "line": 344,
+              "text": " */"
+            },
+            {
+              "line": 345,
+              "text": "export function applyToolResultPersistence("
+            },
+            {
+              "line": 346,
+              "text": "  messages: Message[],"
+            },
+            {
+              "line": 347,
+              "text": "  options: PersistOptions,"
+            },
+            {
+              "line": 348,
+              "text": "): Message[] {"
+            },
+            {
+              "line": 349,
+              "text": "  const {"
+            },
+            {
+              "line": 350,
+              "text": "    perResultThreshold = DEFAULT_PERSIST_THRESHOLD,"
+            },
+            {
+              "line": 351,
+              "text": "    perMessageCap = PER_MESSAGE_AGGREGATE_CAP,"
+            },
+            {
+              "line": 352,
+              "text": "    perResultTokenLimit = DEFAULT_TOOL_OUTPUT_TOKEN_LIMIT,"
+            },
+            {
+              "line": 353,
+              "text": "    perMessageTokenLimit = DEFAULT_TOOL_MESSAGE_TOKEN_LIMIT,"
+            },
+            {
+              "line": 354,
+              "text": "    toolResultsDir,"
+            },
+            {
+              "line": 355,
+              "text": "    state,"
+            },
+            {
+              "line": 356,
+              "text": "    onPersist,"
+            },
+            {
+              "line": 357,
+              "text": "  } = options;"
+            },
+            {
+              "line": 358,
+              "text": ""
+            },
+            {
+              "line": 359,
+              "text": "  // Pass 1: figure out the replacement string for every block we need"
+            },
+            {
+              "line": 360,
+              "text": "  // to change in this call. Walks each user msg independently — parallel"
+            },
+            {
+              "line": 361,
+              "text": "  // tool results in different msgs don't combine for the aggregate cap."
+            },
+            {
+              "line": 362,
+              "text": "  const newReplacements = new Map<string, string>();"
+            },
+            {
+              "line": 363,
+              "text": ""
+            },
+            {
+              "line": 364,
+              "text": "  for (const msg of messages) {"
+            },
+            {
+              "line": 365,
+              "text": "    if (msg.role !== \"user\") continue;"
+            },
+            {
+              "line": 366,
+              "text": "    const candidates = collectCandidates(msg);"
+            },
+            {
+              "line": 367,
+              "text": "    if (candidates.length === 0) continue;"
+            },
+            {
+              "line": 368,
+              "text": ""
+            },
+            {
+              "line": 369,
+              "text": "    // Partition by prior decision."
+            },
+            {
+              "line": 370,
+              "text": "    const fresh: ToolResultCandidate[] = [];"
+            },
+            {
+              "line": 371,
+              "text": "    for (const c of candidates) {"
+            },
+            {
+              "line": 372,
+              "text": "      if (state.replacements.has(c.toolUseId)) {"
+            },
+            {
+              "line": 373,
+              "text": "        // Already replaced — re-apply the cached string. (The block in"
+            },
+            {
+              "line": 374,
+              "text": "        // `msg` might still hold the original content if we're seeing"
+            },
+            {
+              "line": 375,
+              "text": "        // these messages for the first time this turn; the rewrite"
+            },
+            {
+              "line": 376,
+              "text": "        // pass below picks up the cached replacement either way.)"
+            },
+            {
+              "line": 377,
+              "text": "        continue;"
+            },
+            {
+              "line": 378,
+              "text": "      }"
+            },
+            {
+              "line": 379,
+              "text": "      if (state.seenIds.has(c.toolUseId)) {"
+            },
+            {
+              "line": 380,
+              "text": "        // Seen and explicitly left alone before — frozen."
+            },
+            {
+              "line": 381,
+              "text": "        continue;"
+            },
+            {
+              "line": 382,
+              "text": "      }"
+            },
+            {
+              "line": 383,
+              "text": "      fresh.push(c);"
+            },
+            {
+              "line": 384,
+              "text": "    }"
+            },
+            {
+              "line": 385,
+              "text": ""
+            },
+            {
+              "line": 386,
+              "text": "    if (fresh.length === 0) continue;"
+            },
+            {
+              "line": 387,
+              "text": ""
+            },
+            {
+              "line": 388,
+              "text": "    // Include the ACTUAL size of existing previews, not only fresh candidates."
+            },
+            {
+              "line": 389,
+              "text": "    let projectedChars = 0;"
+            },
+            {
+              "line": 390,
+              "text": "    let projectedTokens = 0;"
+            },
+            {
+              "line": 391,
+              "text": "    for (const block of msg.content as ContentBlock[]) {"
+            },
+            {
+              "line": 392,
+              "text": "      if (block.type !== \"tool_result\") continue;"
+            },
+            {
+              "line": 393,
+              "text": "      const current = toolResultText(block.content);"
+            },
+            {
+              "line": 394,
+              "text": "      const text = current?.startsWith(CLEARED_PREFIX)"
+            },
+            {
+              "line": 395,
+              "text": "        ? current"
+            },
+            {
+              "line": 396,
+              "text": "        : ((block.tool_use_id ? state.replacements.get(block.tool_use_id) : undefined) ?? current);"
+            },
+            {
+              "line": 397,
+              "text": "      if (text === undefined) continue;"
+            },
+            {
+              "line": 398,
+              "text": "      projectedChars += text.length;"
+            },
+            {
+              "line": 399,
+              "text": "      projectedTokens += estimateStringTokens(text);"
+            },
+            {
+              "line": 400,
+              "text": "    }"
+            },
+            {
+              "line": 401,
+              "text": "    const oversized = (c: ToolResultCandidate) =>"
+            },
+            {
+              "line": 402,
+              "text": "      c.size > perResultThreshold || c.tokens > perResultTokenLimit;"
+            },
+            {
+              "line": 403,
+              "text": "    const persist = (c: ToolResultCandidate, reason: \"per-result-cap\" | \"per-message-budget\") => {"
+            },
+            {
+              "line": 404,
+              "text": "      try {"
+            },
+            {
+              "line": 405,
+              "text": "        const filepath = persistToFile(toolResultsDir, c.toolUseId, c.content);"
+            },
+            {
+              "line": 406,
+              "text": "        const saved ="
+            },
+            {
+              "line": 407,
+              "text": "          readSavedReplacement(toolResultsDir, c.toolUseId, c.block.content) ??"
+            },
+            {
+              "line": 408,
+              "text": "          buildReplacement(filepath, c.size, c.block.content);"
+            },
+            {
+              "line": 409,
+              "text": "        const { replacement, parts } = saved;"
+            },
+            {
+              "line": 410,
+              "text": "        // Very small results must not grow just because a batch is over budget."
+            },
+            {
+              "line": 411,
+              "text": "        if (reason === \"per-message-budget\" && replacement.length >= c.size) return;"
+            },
+            {
+              "line": 412,
+              "text": "        saveReplacement(filepath, c.content, saved);"
+            },
+            {
+              "line": 413,
+              "text": "        state.replacements.set(c.toolUseId, replacement);"
+            },
+            {
+              "line": 414,
+              "text": "        if (parts) (state.textReplacements ??= new Map()).set(c.toolUseId, parts);"
+            },
+            {
+              "line": 415,
+              "text": "        newReplacements.set(c.toolUseId, replacement);"
+            },
+            {
+              "line": 416,
+              "text": "        projectedChars -= c.size - replacement.length;"
+            },
+            {
+              "line": 417,
+              "text": "        projectedTokens -= c.tokens - estimateStringTokens(replacement);"
+            },
+            {
+              "line": 418,
+              "text": "        onPersist?.({ toolUseId: c.toolUseId, filepath, originalSize: c.size, reason });"
+            },
+            {
+              "line": 419,
+              "text": "      } catch {"
+            },
+            {
+              "line": 420,
+              "text": "        // The in-context backstop still applies if saving the original fails."
+            },
+            {
+              "line": 421,
+              "text": "      } finally {"
+            },
+            {
+              "line": 422,
+              "text": "        state.seenIds.add(c.toolUseId);"
+            },
+            {
+              "line": 423,
+              "text": "      }"
+            },
+            {
+              "line": 424,
+              "text": "    };"
+            },
+            {
+              "line": 425,
+              "text": "    for (const c of fresh.filter(oversized)) persist(c, \"per-result-cap\");"
+            },
+            {
+              "line": 426,
+              "text": "    const remaining = fresh"
+            },
+            {
+              "line": 427,
+              "text": "      .filter((c) => !oversized(c))"
+            },
+            {
+              "line": 428,
+              "text": "      .sort("
+            },
+            {
+              "line": 429,
+              "text": "        (a, b) =>"
+            },
+            {
+              "line": 430,
+              "text": "          Math.max(b.size / perMessageCap, b.tokens / perMessageTokenLimit) -"
+            },
+            {
+              "line": 431,
+              "text": "          Math.max(a.size / perMessageCap, a.tokens / perMessageTokenLimit),"
+            },
+            {
+              "line": 432,
+              "text": "      );"
+            },
+            {
+              "line": 433,
+              "text": "    for (const c of remaining) {"
+            },
+            {
+              "line": 434,
+              "text": "      if (projectedChars <= perMessageCap && projectedTokens <= perMessageTokenLimit) break;"
+            },
+            {
+              "line": 435,
+              "text": "      persist(c, \"per-message-budget\");"
+            },
+            {
+              "line": 436,
+              "text": "    }"
+            },
+            {
+              "line": 437,
+              "text": "    for (const c of fresh) state.seenIds.add(c.toolUseId);"
+            },
+            {
+              "line": 438,
+              "text": "  }"
+            },
+            {
+              "line": 439,
+              "text": ""
+            },
+            {
+              "line": 440,
+              "text": "  // Pass 2: rewrite messages. For every tool_result whose id is in"
+            },
+            {
+              "line": 441,
+              "text": "  // state.replacements, swap content for the cached replacement string."
+            },
+            {
+              "line": 442,
+              "text": "  if (state.replacements.size === 0) return messages;"
+            },
+            {
+              "line": 443,
+              "text": ""
+            },
+            {
+              "line": 444,
+              "text": "  let mutated = false;"
+            },
+            {
+              "line": 445,
+              "text": "  const out = messages.map((msg) => {"
+            },
+            {
+              "line": 446,
+              "text": "    if (msg.role !== \"user\" || !Array.isArray(msg.content)) return msg;"
+            },
+            {
+              "line": 447,
+              "text": "    let blockChanged = false;"
+            },
+            {
+              "line": 448,
+              "text": "    const newContent = msg.content.map((block) => {"
+            },
+            {
+              "line": 449,
+              "text": "      if (block.type !== \"tool_result\" || !block.tool_use_id) return block;"
+            },
+            {
+              "line": 450,
+              "text": "      const replacement = state.replacements.get(block.tool_use_id);"
+            },
+            {
+              "line": 451,
+              "text": "      if (replacement === undefined) return block;"
+            },
+            {
+              "line": 452,
+              "text": "      const text = toolResultText(block.content);"
+            },
+            {
+              "line": 453,
+              "text": "      if (text === replacement) return block;"
+            },
+            {
+              "line": 454,
+              "text": "      // microcompact may have already cleared this block to a fingerprint."
+            },
+            {
+              "line": 455,
+              "text": "      // Don't roll it back — that would cause persistence and microcompact"
+            },
+            {
+              "line": 456,
+              "text": "      // to overwrite each other every turn, doing 2 redundant rewrites on"
+            },
+            {
+              "line": 457,
+              "text": "      // a stable end-state. The cleared fingerprint is the legitimate"
+            },
+            {
+              "line": 458,
+              "text": "      // downstream form; leave it alone."
+            },
+            {
+              "line": 459,
+              "text": "      if (text?.startsWith(CLEARED_PREFIX)) {"
+            },
+            {
+              "line": 460,
+              "text": "        return block;"
+            },
+            {
+              "line": 461,
+              "text": "      }"
+            },
+            {
+              "line": 462,
+              "text": "      blockChanged = true;"
+            },
+            {
+              "line": 463,
+              "text": "      return {"
+            },
+            {
+              "line": 464,
+              "text": "        ...block,"
+            },
+            {
+              "line": 465,
+              "text": "        content: replaceToolResultText("
+            },
+            {
+              "line": 466,
+              "text": "          block.content,"
+            },
+            {
+              "line": 467,
+              "text": "          replacement,"
+            },
+            {
+              "line": 468,
+              "text": "          state.textReplacements?.get(block.tool_use_id),"
+            },
+            {
+              "line": 469,
+              "text": "        ),"
+            },
+            {
+              "line": 470,
+              "text": "      };"
+            },
+            {
+              "line": 471,
+              "text": "    });"
+            },
+            {
+              "line": 472,
+              "text": "    if (!blockChanged) return msg;"
+            },
+            {
+              "line": 473,
+              "text": "    mutated = true;"
+            },
+            {
+              "line": 474,
+              "text": "    return { ...msg, content: newContent };"
+            },
+            {
+              "line": 475,
+              "text": "  });"
+            },
+            {
+              "line": 476,
+              "text": ""
+            },
+            {
+              "line": 477,
+              "text": "  if (mutated && newReplacements.size > 0) {"
+            },
+            {
+              "line": 478,
+              "text": "    logger.info(\"tool_result.persisted\", {"
+            },
+            {
+              "line": 479,
+              "text": "      count: newReplacements.size,"
+            },
+            {
+              "line": 480,
+              "text": "      ids: [...newReplacements.keys()],"
+            },
+            {
+              "line": 481,
+              "text": "    });"
+            },
+            {
+              "line": 482,
+              "text": "  }"
+            },
+            {
+              "line": 483,
+              "text": ""
+            },
+            {
+              "line": 484,
+              "text": "  return mutated ? out : messages;"
+            },
+            {
+              "line": 485,
+              "text": "}"
+            },
+            {
+              "line": 486,
+              "text": ""
+            },
+            {
+              "line": 487,
+              "text": "/**"
+            },
+            {
+              "line": 488,
+              "text": " * Public test helper: check whether content already wears the persisted"
+            },
+            {
+              "line": 489,
+              "text": " * sentinel. Used by tests to assert idempotency."
+            },
+            {
+              "line": 490,
+              "text": " */"
+            },
+            {
+              "line": 491,
+              "text": "export function isPersistedReplacement(s: string): boolean {"
+            },
+            {
+              "line": 492,
+              "text": "  return s.startsWith(PERSISTED_OPEN);"
+            },
+            {
+              "line": 493,
+              "text": "}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "captureTiming": "After actual display, not a second semantic read",
+      "blocks": [
+        {
+          "start": 1,
+          "end": 106,
+          "lines": [
+            {
+              "line": 1,
+              "text": "import type { ContentBlock } from \"../types.js\";"
+            },
+            {
+              "line": 2,
+              "text": "import { estimateStringTokens } from \"./token-counter.js\";"
+            },
+            {
+              "line": 3,
+              "text": ""
+            },
+            {
+              "line": 4,
+              "text": "/** Estimates, not a provider tokenizer contract. Character limits still apply. */"
+            },
+            {
+              "line": 5,
+              "text": "export const DEFAULT_TOOL_OUTPUT_TOKEN_LIMIT = 10_000;"
+            },
+            {
+              "line": 6,
+              "text": "export const DEFAULT_TOOL_MESSAGE_TOKEN_LIMIT = 20_000;"
+            },
+            {
+              "line": 7,
+              "text": "export const TOOL_OUTPUT_TRUNCATED = \"[... tool output truncated ...]\";"
+            },
+            {
+              "line": 8,
+              "text": ""
+            },
+            {
+              "line": 9,
+              "text": "export interface ToolOutputBudget {"
+            },
+            {
+              "line": 10,
+              "text": "  maxChars: number;"
+            },
+            {
+              "line": 11,
+              "text": "  maxTokens?: number;"
+            },
+            {
+              "line": 12,
+              "text": "}"
+            },
+            {
+              "line": 13,
+              "text": ""
+            },
+            {
+              "line": 14,
+              "text": "export interface ToolTextReplacement {"
+            },
+            {
+              "line": 15,
+              "text": "  text: string;"
+            },
+            {
+              "line": 16,
+              "text": "  /** One string for each original text slot, in its original position. */"
+            },
+            {
+              "line": 17,
+              "text": "  parts?: string[];"
+            },
+            {
+              "line": 18,
+              "text": "}"
+            },
+            {
+              "line": 19,
+              "text": ""
+            },
+            {
+              "line": 20,
+              "text": "/** Text parts share one budget; images and other typed blocks are not text. */"
+            },
+            {
+              "line": 21,
+              "text": "export function toolResultText(content: ContentBlock[\"content\"]): string | undefined {"
+            },
+            {
+              "line": 22,
+              "text": "  if (typeof content === \"string\") return content;"
+            },
+            {
+              "line": 23,
+              "text": "  if (!Array.isArray(content)) return undefined;"
+            },
+            {
+              "line": 24,
+              "text": "  const texts = content.filter((part) => part.type === \"text\" && typeof part.text === \"string\");"
+            },
+            {
+              "line": 25,
+              "text": "  return texts.length ? texts.map((part) => part.text).join(\"\\n\\n\") : undefined;"
+            },
+            {
+              "line": 26,
+              "text": "}"
+            },
+            {
+              "line": 27,
+              "text": ""
+            },
+            {
+              "line": 28,
+              "text": "/** Keep non-text blocks, including their order and identity, when text is reduced. */"
+            },
+            {
+              "line": 29,
+              "text": "export function replaceToolResultText("
+            },
+            {
+              "line": 30,
+              "text": "  content: ContentBlock[\"content\"],"
+            },
+            {
+              "line": 31,
+              "text": "  replacement: string,"
+            },
+            {
+              "line": 32,
+              "text": "  parts?: string[],"
+            },
+            {
+              "line": 33,
+              "text": "): ContentBlock[\"content\"] {"
+            },
+            {
+              "line": 34,
+              "text": "  if (!Array.isArray(content)) return replacement;"
+            },
+            {
+              "line": 35,
+              "text": "  const slots = content.filter((part) => part.type === \"text\" && typeof part.text === \"string\");"
+            },
+            {
+              "line": 36,
+              "text": "  // A legacy scalar replacement is unambiguous only for one text slot. Never"
+            },
+            {
+              "line": 37,
+              "text": "  // move a later image caption into an earlier slot to guess a multi-part view."
+            },
+            {
+              "line": 38,
+              "text": "  const replacements = parts ?? (slots.length === 1 ? [replacement] : undefined);"
+            },
+            {
+              "line": 39,
+              "text": "  if (!replacements || replacements.length !== slots.length) return content;"
+            },
+            {
+              "line": 40,
+              "text": "  let textIndex = 0;"
+            },
+            {
+              "line": 41,
+              "text": "  return content.map((part) => {"
+            },
+            {
+              "line": 42,
+              "text": "    if (part.type !== \"text\" || typeof part.text !== \"string\") return part;"
+            },
+            {
+              "line": 43,
+              "text": "    const text = replacements[textIndex++]!;"
+            },
+            {
+              "line": 44,
+              "text": "    return part.text === text ? part : { ...part, text };"
+            },
+            {
+              "line": 45,
+              "text": "  });"
+            },
+            {
+              "line": 46,
+              "text": "}"
+            },
+            {
+              "line": 47,
+              "text": ""
+            },
+            {
+              "line": 48,
+              "text": "/** Share a bounded allowance, retaining short slots before splitting the remainder. */"
+            },
+            {
+              "line": 49,
+              "text": "function allocateBudget(sizes: number[], total: number): number[] {"
+            },
+            {
+              "line": 50,
+              "text": "  if (!Number.isFinite(total)) return sizes.slice();"
+            },
+            {
+              "line": 51,
+              "text": "  let remaining = Math.max(0, Math.floor(total));"
+            },
+            {
+              "line": 52,
+              "text": "  const order = sizes.map((size, index) => ({ size, index })).sort((a, b) => a.size - b.size);"
+            },
+            {
+              "line": 53,
+              "text": "  const allocations = sizes.map(() => 0);"
+            },
+            {
+              "line": 54,
+              "text": "  for (let i = 0; i < order.length; i++) {"
+            },
+            {
+              "line": 55,
+              "text": "    const slot = order[i]!;"
+            },
+            {
+              "line": 56,
+              "text": "    const allowance = Math.min(slot.size, Math.floor(remaining / (order.length - i)));"
+            },
+            {
+              "line": 57,
+              "text": "    allocations[slot.index] = allowance;"
+            },
+            {
+              "line": 58,
+              "text": "    remaining -= allowance;"
+            },
+            {
+              "line": 59,
+              "text": "  }"
+            },
+            {
+              "line": 60,
+              "text": "  return allocations;"
+            },
+            {
+              "line": 61,
+              "text": "}"
+            },
+            {
+              "line": 62,
+              "text": ""
+            },
+            {
+              "line": 63,
+              "text": "/** Reduce text in place across its existing slots; media never changes position. */"
+            },
+            {
+              "line": 64,
+              "text": "export function createToolTextReplacement("
+            },
+            {
+              "line": 65,
+              "text": "  content: ContentBlock[\"content\"],"
+            },
+            {
+              "line": 66,
+              "text": "  budget: ToolOutputBudget,"
+            },
+            {
+              "line": 67,
+              "text": "): ToolTextReplacement {"
+            },
+            {
+              "line": 68,
+              "text": "  if (!Array.isArray(content)) {"
+            },
+            {
+              "line": 69,
+              "text": "    return { text: truncateToolOutput(typeof content === \"string\" ? content : \"\", budget) };"
+            },
+            {
+              "line": 70,
+              "text": "  }"
+            },
+            {
+              "line": 71,
+              "text": "  const originalParts = content"
+            },
+            {
+              "line": 72,
+              "text": "    .filter((part) => part.type === \"text\" && typeof part.text === \"string\")"
+            },
+            {
+              "line": 73,
+              "text": "    .map((part) => part.text!);"
+            },
+            {
+              "line": 74,
+              "text": "  const originalText = originalParts.join(\"\\n\\n\");"
+            },
+            {
+              "line": 75,
+              "text": "  if (!exceedsToolOutputBudget(originalText, budget)) {"
+            },
+            {
+              "line": 76,
+              "text": "    return { text: originalText, parts: originalParts };"
+            },
+            {
+              "line": 77,
+              "text": "  }"
+            },
+            {
+              "line": 78,
+              "text": "  const separatorChars = Math.max(0, originalParts.length - 1) * 2;"
+            },
+            {
+              "line": 79,
+              "text": "  const separatorTokens = estimateStringTokens(\"\\n\".repeat(separatorChars));"
+            },
+            {
+              "line": 80,
+              "text": "  const availableTokens ="
+            },
+            {
+              "line": 81,
+              "text": "    budget.maxTokens === undefined"
+            },
+            {
+              "line": 82,
+              "text": "      ? Number.POSITIVE_INFINITY"
+            },
+            {
+              "line": 83,
+              "text": "      : Math.max(0, budget.maxTokens - separatorTokens);"
+            },
+            {
+              "line": 84,
+              "text": "  const originalDensity = estimateStringTokens(originalText) / Math.max(1, originalText.length);"
+            },
+            {
+              "line": 85,
+              "text": "  let availableChars = Math.max("
+            },
+            {
+              "line": 86,
+              "text": "    0,"
+            },
+            {
+              "line": 87,
+              "text": "    Math.floor("
+            },
+            {
+              "line": 88,
+              "text": "      Math.min("
+            },
+            {
+              "line": 89,
+              "text": "        budget.maxChars - separatorChars,"
+            },
+            {
+              "line": 90,
+              "text": "        availableTokens / Math.max(originalDensity, Number.EPSILON),"
+            },
+            {
+              "line": 91,
+              "text": "      ),"
+            },
+            {
+              "line": 92,
+              "text": "    ),"
+            },
+            {
+              "line": 93,
+              "text": "  );"
+            },
+            {
+              "line": 94,
+              "text": "  if (!Number.isFinite(availableChars)) availableChars = 0;"
+            },
+            {
+              "line": 95,
+              "text": "  const sizes = originalParts.map((part) => part.length);"
+            },
+            {
+              "line": 96,
+              "text": "  const tokenAllocations = allocateBudget(originalParts.map(estimateStringTokens), availableTokens);"
+            },
+            {
+              "line": 97,
+              "text": "  for (;;) {"
+            },
+            {
+              "line": 98,
+              "text": "    const charAllocations = allocateBudget(sizes, availableChars);"
+            },
+            {
+              "line": 99,
+              "text": "    const parts = originalParts.map((part, index) =>"
+            },
+            {
+              "line": 100,
+              "text": "      truncateToolOutput(part, {"
+            },
+            {
+              "line": 101,
+              "text": "        maxChars: charAllocations[index]!,"
+            },
+            {
+              "line": 102,
+              "text": "        maxTokens: tokenAllocations[index]!,"
+            },
+            {
+              "line": 103,
+              "text": "      }),"
+            },
+            {
+              "line": 104,
+              "text": "    );"
+            },
+            {
+              "line": 105,
+              "text": "    const text = parts.join(\"\\n\\n\");"
+            },
+            {
+              "line": 106,
+              "text": "    if (!exceedsToolOutputBudget(text, budget) || availableChars === 0) return { text, parts };"
+            }
+          ]
+        },
+        {
+          "start": 128,
+          "end": 173,
+          "lines": [
+            {
+              "line": 128,
+              "text": "  const tailNewline = text.indexOf(\"\\n\", tailStart);"
+            },
+            {
+              "line": 129,
+              "text": "  if (tailNewline >= tailStart && tailNewline < (tailStart + text.length) / 2) {"
+            },
+            {
+              "line": 130,
+              "text": "    tailStart = tailNewline + 1;"
+            },
+            {
+              "line": 131,
+              "text": "  }"
+            },
+            {
+              "line": 132,
+              "text": "  return [text.slice(0, headEnd), text.slice(tailStart)];"
+            },
+            {
+              "line": 133,
+              "text": "}"
+            },
+            {
+              "line": 134,
+              "text": ""
+            },
+            {
+              "line": 135,
+              "text": "/** Deterministic head/tail view: reserve the notice inside both output budgets. */"
+            },
+            {
+              "line": 136,
+              "text": "export function truncateToolOutput(text: string, budget: ToolOutputBudget): string {"
+            },
+            {
+              "line": 137,
+              "text": "  if (!exceedsToolOutputBudget(text, budget)) return text;"
+            },
+            {
+              "line": 138,
+              "text": "  const marker = `\\n${TOOL_OUTPUT_TRUNCATED}\\n`;"
+            },
+            {
+              "line": 139,
+              "text": "  if (text.length <= marker.length || exceedsToolOutputBudget(marker, budget)) return \"\";"
+            },
+            {
+              "line": 140,
+              "text": "  const originalDensity = estimateStringTokens(text) / text.length;"
+            },
+            {
+              "line": 141,
+              "text": "  const tokenCharLimit ="
+            },
+            {
+              "line": 142,
+              "text": "    budget.maxTokens === undefined"
+            },
+            {
+              "line": 143,
+              "text": "      ? Number.POSITIVE_INFINITY"
+            },
+            {
+              "line": 144,
+              "text": "      : Math.max("
+            },
+            {
+              "line": 145,
+              "text": "          0,"
+            },
+            {
+              "line": 146,
+              "text": "          Math.floor("
+            },
+            {
+              "line": 147,
+              "text": "            (budget.maxTokens - estimateStringTokens(marker)) /"
+            },
+            {
+              "line": 148,
+              "text": "              Math.max(originalDensity, Number.EPSILON),"
+            },
+            {
+              "line": 149,
+              "text": "          ),"
+            },
+            {
+              "line": 150,
+              "text": "        );"
+            },
+            {
+              "line": 151,
+              "text": "  let low = 0;"
+            },
+            {
+              "line": 152,
+              "text": "  let high = Math.max("
+            },
+            {
+              "line": 153,
+              "text": "    0,"
+            },
+            {
+              "line": 154,
+              "text": "    Math.min("
+            },
+            {
+              "line": 155,
+              "text": "      text.length - marker.length - 1,"
+            },
+            {
+              "line": 156,
+              "text": "      Math.floor(budget.maxChars) - marker.length,"
+            },
+            {
+              "line": 157,
+              "text": "      tokenCharLimit,"
+            },
+            {
+              "line": 158,
+              "text": "    ),"
+            },
+            {
+              "line": 159,
+              "text": "  );"
+            },
+            {
+              "line": 160,
+              "text": "  let best = marker;"
+            },
+            {
+              "line": 161,
+              "text": "  while (low <= high) {"
+            },
+            {
+              "line": 162,
+              "text": "    const keepChars = Math.floor((low + high) / 2);"
+            },
+            {
+              "line": 163,
+              "text": "    const [head, tail] = headTail(text, keepChars);"
+            },
+            {
+              "line": 164,
+              "text": "    const candidate = head + marker + tail;"
+            },
+            {
+              "line": 165,
+              "text": "    if (exceedsToolOutputBudget(candidate, budget)) {"
+            },
+            {
+              "line": 166,
+              "text": "      high = keepChars - 1;"
+            },
+            {
+              "line": 167,
+              "text": "    } else {"
+            },
+            {
+              "line": 168,
+              "text": "      best = candidate;"
+            },
+            {
+              "line": 169,
+              "text": "      low = keepChars + 1;"
+            },
+            {
+              "line": 170,
+              "text": "    }"
+            },
+            {
+              "line": 171,
+              "text": "  }"
+            },
+            {
+              "line": 172,
+              "text": "  return best;"
+            },
+            {
+              "line": 173,
+              "text": "}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "captureTiming": "After actual display, not a second semantic read",
+      "blocks": [
+        {
+          "start": 375,
+          "end": 391,
+          "lines": [
+            {
+              "line": 375,
+              "text": "  }"
+            },
+            {
+              "line": 376,
+              "text": ""
+            },
+            {
+              "line": 377,
+              "text": "  /**"
+            },
+            {
+              "line": 378,
+              "text": "   * Initialize tool-result-persistence state from already-loaded messages."
+            },
+            {
+              "line": 379,
+              "text": "   * Call this once per session, after setTranscriptPath, when resuming so"
+            },
+            {
+              "line": 380,
+              "text": "   * the manager re-enters the same \"frozen decision\" state it had on the"
+            },
+            {
+              "line": 381,
+              "text": "   * previous run. Without this, a resumed session would re-evaluate"
+            },
+            {
+              "line": 382,
+              "text": "   * every result against the current threshold and might flip choices."
+            },
+            {
+              "line": 383,
+              "text": "   */"
+            },
+            {
+              "line": 384,
+              "text": "  initReplacementStateFromMessages(messages: Message[]): void {"
+            },
+            {
+              "line": 385,
+              "text": "    this.replacementState = reconstructContentReplacementState(messages, this.toolResultsDir);"
+            },
+            {
+              "line": 386,
+              "text": "  }"
+            },
+            {
+              "line": 387,
+              "text": ""
+            },
+            {
+              "line": 388,
+              "text": "  /**"
+            },
+            {
+              "line": 389,
+              "text": "   * Apply progressive context management (sync path)."
+            },
+            {
+              "line": 390,
+              "text": "   * For Tier 2 (LLM summary), call manageAsync instead."
+            },
+            {
+              "line": 391,
+              "text": "   */"
+            }
+          ]
+        },
+        {
+          "start": 775,
+          "end": 801,
+          "lines": [
+            {
+              "line": 775,
+              "text": "  /**"
+            },
+            {
+              "line": 776,
+              "text": "   * Persist large tool_result blocks to disk and replace them with a"
+            },
+            {
+              "line": 777,
+              "text": "   * preview + filepath. No-op when transcript path hasn't been set"
+            },
+            {
+              "line": 778,
+              "text": "   * (e.g. unit tests that exercise compaction directly without a session)."
+            },
+            {
+              "line": 779,
+              "text": "   */"
+            },
+            {
+              "line": 780,
+              "text": "  private persistLargeToolResults(messages: Message[]): Message[] {"
+            },
+            {
+              "line": 781,
+              "text": "    if (!this.toolResultsDir) return messages;"
+            },
+            {
+              "line": 782,
+              "text": "    if (!this.replacementState) {"
+            },
+            {
+              "line": 783,
+              "text": "      this.replacementState = createContentReplacementState();"
+            },
+            {
+              "line": 784,
+              "text": "    }"
+            },
+            {
+              "line": 785,
+              "text": "    return applyToolResultPersistence(messages, {"
+            },
+            {
+              "line": 786,
+              "text": "      perResultThreshold: this.config.maxToolResultChars,"
+            },
+            {
+              "line": 787,
+              "text": "      perResultTokenLimit: this.config.toolOutputTokenLimit,"
+            },
+            {
+              "line": 788,
+              "text": "      perMessageTokenLimit: this.config.toolMessageTokenLimit,"
+            },
+            {
+              "line": 789,
+              "text": "      toolResultsDir: this.toolResultsDir,"
+            },
+            {
+              "line": 790,
+              "text": "      state: this.replacementState,"
+            },
+            {
+              "line": 791,
+              "text": "      onPersist: (info) => {"
+            },
+            {
+              "line": 792,
+              "text": "        logger.info(\"context.tool_result_persisted\", info);"
+            },
+            {
+              "line": 793,
+              "text": "      },"
+            },
+            {
+              "line": 794,
+              "text": "    });"
+            },
+            {
+              "line": 795,
+              "text": "  }"
+            },
+            {
+              "line": 796,
+              "text": ""
+            },
+            {
+              "line": 797,
+              "text": "  /**"
+            },
+            {
+              "line": 798,
+              "text": "   * Truncate oversized tool results in messages."
+            },
+            {
+              "line": 799,
+              "text": "   */"
+            },
+            {
+              "line": 800,
+              "text": "  private truncateToolResults(messages: Message[]): Message[] {"
+            },
+            {
+              "line": 801,
+              "text": "    const budget = {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/tool-result-storage.test.ts",
+      "sha256": "981b173c003d48477547c69967d4a67f5f2cf376bbac98f89de1d81445419607",
+      "captureTiming": "After actual display, not a second semantic read",
+      "blocks": [
+        {
+          "start": 98,
+          "end": 117,
+          "lines": [
+            {
+              "line": 98,
+              "text": "  it(\"re-applies cached replacement byte-identically on repeat calls\", () => {"
+            },
+            {
+              "line": 99,
+              "text": "    const content = bigContent(DEFAULT_PERSIST_THRESHOLD + 100);"
+            },
+            {
+              "line": 100,
+              "text": "    const state = createContentReplacementState();"
+            },
+            {
+              "line": 101,
+              "text": ""
+            },
+            {
+              "line": 102,
+              "text": "    const first = applyToolResultPersistence([userToolResult(\"id-1\", content)], {"
+            },
+            {
+              "line": 103,
+              "text": "      toolResultsDir: dir,"
+            },
+            {
+              "line": 104,
+              "text": "      state,"
+            },
+            {
+              "line": 105,
+              "text": "    });"
+            },
+            {
+              "line": 106,
+              "text": "    const firstReplacement = (first[0].content as any)[0].content;"
+            },
+            {
+              "line": 107,
+              "text": ""
+            },
+            {
+              "line": 108,
+              "text": "    // Call again with the ORIGINAL content (simulating manager.manage()"
+            },
+            {
+              "line": 109,
+              "text": "    // being invoked again with fresh messages from the session loader)."
+            },
+            {
+              "line": 110,
+              "text": "    const second = applyToolResultPersistence([userToolResult(\"id-1\", content)], {"
+            },
+            {
+              "line": 111,
+              "text": "      toolResultsDir: dir,"
+            },
+            {
+              "line": 112,
+              "text": "      state,"
+            },
+            {
+              "line": 113,
+              "text": "    });"
+            },
+            {
+              "line": 114,
+              "text": "    const secondReplacement = (second[0].content as any)[0].content;"
+            },
+            {
+              "line": 115,
+              "text": "    expect(secondReplacement).toBe(firstReplacement);"
+            },
+            {
+              "line": 116,
+              "text": "  });"
+            },
+            {
+              "line": 117,
+              "text": ""
+            }
+          ]
+        },
+        {
+          "start": 266,
+          "end": 282,
+          "lines": [
+            {
+              "line": 266,
+              "text": "  it(\"reconstructs state from messages containing existing persisted replacements\", () => {"
+            },
+            {
+              "line": 267,
+              "text": "    const huge = bigContent(DEFAULT_PERSIST_THRESHOLD + 100);"
+            },
+            {
+              "line": 268,
+              "text": "    const stateA = createContentReplacementState();"
+            },
+            {
+              "line": 269,
+              "text": "    const persistedMessages = applyToolResultPersistence("
+            },
+            {
+              "line": 270,
+              "text": "      [userToolResult(\"id-1\", huge), userToolResult(\"id-2\", \"small\")],"
+            },
+            {
+              "line": 271,
+              "text": "      { toolResultsDir: dir, state: stateA },"
+            },
+            {
+              "line": 272,
+              "text": "    );"
+            },
+            {
+              "line": 273,
+              "text": ""
+            },
+            {
+              "line": 274,
+              "text": "    const replayedState = reconstructContentReplacementState(persistedMessages);"
+            },
+            {
+              "line": 275,
+              "text": "    expect(replayedState.seenIds.has(\"id-1\")).toBe(true);"
+            },
+            {
+              "line": 276,
+              "text": "    expect(replayedState.seenIds.has(\"id-2\")).toBe(true);"
+            },
+            {
+              "line": 277,
+              "text": "    expect(replayedState.replacements.has(\"id-1\")).toBe(true);"
+            },
+            {
+              "line": 278,
+              "text": "    expect(replayedState.replacements.has(\"id-2\")).toBe(false);"
+            },
+            {
+              "line": 279,
+              "text": "    // The reconstructed replacement string should match the live one."
+            },
+            {
+              "line": 280,
+              "text": "    expect(replayedState.replacements.get(\"id-1\")).toBe(stateA.replacements.get(\"id-1\"));"
+            },
+            {
+              "line": 281,
+              "text": "  });"
+            },
+            {
+              "line": 282,
+              "text": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.test.ts",
+      "sha256": "3ca5e4ce83fbcc8e4a2d86b17ab46d16b09d36505abed8eb89228c4f95a44b5c",
+      "captureTiming": "After actual display, not a second semantic read",
+      "blocks": [
+        {
+          "start": 48,
+          "end": 91,
+          "lines": [
+            {
+              "line": 48,
+              "text": "  test(\"media and every text slot retain order, identity and their own head/tail\", () => {"
+            },
+            {
+              "line": 49,
+              "text": "    const imageA: ContentBlock = {"
+            },
+            {
+              "line": 50,
+              "text": "      type: \"image\","
+            },
+            {
+              "line": 51,
+              "text": "      source: { type: \"base64\", media_type: \"image/png\", data: \"A\" },"
+            },
+            {
+              "line": 52,
+              "text": "    };"
+            },
+            {
+              "line": 53,
+              "text": "    const imageB: ContentBlock = {"
+            },
+            {
+              "line": 54,
+              "text": "      type: \"image\","
+            },
+            {
+              "line": 55,
+              "text": "      source: { type: \"base64\", media_type: \"image/png\", data: \"B\" },"
+            },
+            {
+              "line": 56,
+              "text": "    };"
+            },
+            {
+              "line": 57,
+              "text": "    const first = \"FIRST HEAD\\n\" + \"a\".repeat(3000) + \"\\nFIRST TAIL\";"
+            },
+            {
+              "line": 58,
+              "text": "    const second = \"SECOND HEAD\\n\" + \"中\".repeat(3000) + \"\\nSECOND ERROR TAIL\";"
+            },
+            {
+              "line": 59,
+              "text": "    const content: ContentBlock[] = ["
+            },
+            {
+              "line": 60,
+              "text": "      imageA,"
+            },
+            {
+              "line": 61,
+              "text": "      { type: \"text\", text: first },"
+            },
+            {
+              "line": 62,
+              "text": "      imageB,"
+            },
+            {
+              "line": 63,
+              "text": "      { type: \"text\", text: second },"
+            },
+            {
+              "line": 64,
+              "text": "    ];"
+            },
+            {
+              "line": 65,
+              "text": "    const original = structuredClone(content);"
+            },
+            {
+              "line": 66,
+              "text": "    for (const part of content) Object.freeze(part);"
+            },
+            {
+              "line": 67,
+              "text": "    Object.freeze(content);"
+            },
+            {
+              "line": 68,
+              "text": "    const replacement = createToolTextReplacement(content, { maxChars: 1000, maxTokens: 350 });"
+            },
+            {
+              "line": 69,
+              "text": "    const out = replaceToolResultText("
+            },
+            {
+              "line": 70,
+              "text": "      content,"
+            },
+            {
+              "line": 71,
+              "text": "      replacement.text,"
+            },
+            {
+              "line": 72,
+              "text": "      replacement.parts,"
+            },
+            {
+              "line": 73,
+              "text": "    ) as ContentBlock[];"
+            },
+            {
+              "line": 74,
+              "text": "    expect(out.map((part) => part.type)).toEqual([\"image\", \"text\", \"image\", \"text\"]);"
+            },
+            {
+              "line": 75,
+              "text": "    expect(out[0]).toBe(imageA);"
+            },
+            {
+              "line": 76,
+              "text": "    expect(out[2]).toBe(imageB);"
+            },
+            {
+              "line": 77,
+              "text": "    expect(out[1].text).toStartWith(\"FIRST HEAD\\n\");"
+            },
+            {
+              "line": 78,
+              "text": "    expect(out[1].text).toEndWith(\"FIRST TAIL\");"
+            },
+            {
+              "line": 79,
+              "text": "    expect(out[3].text).toStartWith(\"SECOND HEAD\\n\");"
+            },
+            {
+              "line": 80,
+              "text": "    expect(out[3].text).toEndWith(\"SECOND ERROR TAIL\");"
+            },
+            {
+              "line": 81,
+              "text": "    expect(out[1].text).toContain(TOOL_OUTPUT_TRUNCATED);"
+            },
+            {
+              "line": 82,
+              "text": "    expect(out[3].text).toContain(TOOL_OUTPUT_TRUNCATED);"
+            },
+            {
+              "line": 83,
+              "text": "    expect(replacement.parts).toHaveLength(2);"
+            },
+            {
+              "line": 84,
+              "text": "    expect(replacement.text).toBe(replacement.parts!.join(\"\\n\\n\"));"
+            },
+            {
+              "line": 85,
+              "text": "    expect(toolResultText(out)).toBe(replacement.text);"
+            },
+            {
+              "line": 86,
+              "text": "    expect(replacement.text.length).toBeLessThanOrEqual(1000);"
+            },
+            {
+              "line": 87,
+              "text": "    expect(estimateStringTokens(replacement.text)).toBeLessThanOrEqual(350);"
+            },
+            {
+              "line": 88,
+              "text": "    expect(content).toEqual(original);"
+            },
+            {
+              "line": 89,
+              "text": "    expect(createToolTextReplacement(out, { maxChars: 1000, maxTokens: 350 })).toEqual(replacement);"
+            },
+            {
+              "line": 90,
+              "text": "  });"
+            },
+            {
+              "line": 91,
+              "text": ""
+            }
+          ]
+        },
+        {
+          "start": 106,
+          "end": 118,
+          "lines": [
+            {
+              "line": 106,
+              "text": "  test(\"legacy scalar replacements cannot collapse multiple text slots\", () => {"
+            },
+            {
+              "line": 107,
+              "text": "    const content: ContentBlock[] = ["
+            },
+            {
+              "line": 108,
+              "text": "      { type: \"text\", text: \"before image\" },"
+            },
+            {
+              "line": 109,
+              "text": "      { type: \"image\" },"
+            },
+            {
+              "line": 110,
+              "text": "      { type: \"text\", text: \"after image\" },"
+            },
+            {
+              "line": 111,
+              "text": "    ];"
+            },
+            {
+              "line": 112,
+              "text": "    expect(replaceToolResultText(content, \"ambiguous combined replacement\")).toBe(content);"
+            },
+            {
+              "line": 113,
+              "text": "    expect(replaceToolResultText(content, \"bad slot count\", [\"only one\"])).toBe(content);"
+            },
+            {
+              "line": 114,
+              "text": "    expect(replaceToolResultText([{ type: \"text\", text: \"old\" }], \"new\")).toEqual(["
+            },
+            {
+              "line": 115,
+              "text": "      { type: \"text\", text: \"new\" },"
+            },
+            {
+              "line": 116,
+              "text": "    ]);"
+            },
+            {
+              "line": 117,
+              "text": "  });"
+            },
+            {
+              "line": 118,
+              "text": ""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "productExecution": 0
+}

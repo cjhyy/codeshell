@@ -1,0 +1,562 @@
+{
+  "prepOnly": true,
+  "rootSuppliedFrozenContextShort": "40d79ff",
+  "formalBaseline": null,
+  "gitBindingPerformed": false,
+  "finishedAtUTC": "2026-10-17T12:41:54.183253+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/anchorBuckets.ts",
+      "bytes": 2961,
+      "sha256": "d81fae043047c2de19141184a9f02c80ff2ff429e991004668fbef75d0cfca46",
+      "totalLines": 80,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          80
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 80,
+      "purpose": "ordinary immutable bucket list read/add/remove/update/clear/subset helpers",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/chat/anchorBuckets.ts",
+        "bytes": 2961,
+        "sha256": "d81fae043047c2de19141184a9f02c80ff2ff429e991004668fbef75d0cfca46",
+        "totalLines": 80,
+        "pinTimeUTC": "2026-10-17T12:37:42.156551+00:00",
+        "purpose": "first filesystem pin before current source reading",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 2961,
+        "sha256": "d81fae043047c2de19141184a9f02c80ff2ff429e991004668fbef75d0cfca46",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/anchorBuckets.test.ts",
+      "bytes": 3028,
+      "sha256": "fad5194d523d55614b482b2b891ffdad83330bd2bf5454e6f01647ea82e202c5",
+      "totalLines": 76,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 76,
+      "purpose": "six existing test declarations; no fixture construction invoked",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/chat/anchorBuckets.test.ts",
+        "bytes": 3028,
+        "sha256": "fad5194d523d55614b482b2b891ffdad83330bd2bf5454e6f01647ea82e202c5",
+        "totalLines": 76,
+        "pinTimeUTC": "2026-10-17T12:37:42.158222+00:00",
+        "purpose": "first filesystem pin before current source reading",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 3028,
+        "sha256": "fad5194d523d55614b482b2b891ffdad83330bd2bf5454e6f01647ea82e202c5",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/followState.ts",
+      "bytes": 3454,
+      "sha256": "aa9ddaf79e2cbf85c554bce7e04d94f1e16fde1887f3afb4604e2aa27fad1615",
+      "totalLines": 85,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          85
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 85,
+      "purpose": "pure scroll transition DTO and jump visibility; actual hook boundary read separately",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/chat/followState.ts",
+        "bytes": 3454,
+        "sha256": "aa9ddaf79e2cbf85c554bce7e04d94f1e16fde1887f3afb4604e2aa27fad1615",
+        "totalLines": 85,
+        "pinTimeUTC": "2026-10-17T12:37:42.158994+00:00",
+        "purpose": "first filesystem pin before current source reading",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 3454,
+        "sha256": "aa9ddaf79e2cbf85c554bce7e04d94f1e16fde1887f3afb4604e2aa27fad1615",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/followState.test.ts",
+      "bytes": 3713,
+      "sha256": "4c90ffd1e902800e839c40285549b551299286e9a73c02b0101697ef569fc45b",
+      "totalLines": 119,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          119
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 119,
+      "purpose": "eleven textual test declarations including one for-loop template for three kinds; zero executed",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/chat/followState.test.ts",
+        "bytes": 3713,
+        "sha256": "4c90ffd1e902800e839c40285549b551299286e9a73c02b0101697ef569fc45b",
+        "totalLines": 119,
+        "pinTimeUTC": "2026-10-17T12:37:42.159575+00:00",
+        "purpose": "first filesystem pin before current source reading",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 3713,
+        "sha256": "4c90ffd1e902800e839c40285549b551299286e9a73c02b0101697ef569fc45b",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/stickToBottom.ts",
+      "bytes": 12523,
+      "sha256": "9f28d5937e453eee1a69c209c8983b9245970ad2f2f8cbcb097b2626af35748e",
+      "totalLines": 329,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          329
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 329,
+      "purpose": "actual static consumer, user-intent and programmatic guards, direct rearm sync; no React/DOM/scroll function invoked",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/chat/stickToBottom.ts",
+        "bytes": 12523,
+        "sha256": "9f28d5937e453eee1a69c209c8983b9245970ad2f2f8cbcb097b2626af35748e",
+        "totalLines": 329,
+        "pinTimeUTC": "2026-10-17T12:38:04.375048+00:00",
+        "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 12523,
+        "sha256": "9f28d5937e453eee1a69c209c8983b9245970ad2f2f8cbcb097b2626af35748e",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40459,
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "totalLines": 1033,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          150,
+          199
+        ],
+        [
+          935,
+          1004
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        1027
+      ],
+      "declaredReadLineCount": 127,
+      "purpose": "actual list-helper consumers and current active-ref callbacks; origin-bucket popout issue already historical",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+        "bytes": 40459,
+        "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+        "totalLines": 1033,
+        "pinTimeUTC": "2026-10-17T12:38:04.373887+00:00",
+        "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 40459,
+        "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "totalLines": 242,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          165,
+          216
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        10,
+        48
+      ],
+      "declaredReadLineCount": 54,
+      "purpose": "per-panel anchorsIn argument and callback boundary; adjacent permission projection text not audited",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+        "bytes": 10859,
+        "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+        "totalLines": 242,
+        "pinTimeUTC": "2026-10-17T12:38:04.374767+00:00",
+        "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 10859,
+        "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/anchors.ts",
+      "bytes": 9002,
+      "sha256": "384f1c9c80432dfe2418074692b7b045651b5ef3cbad44a629a7277be3bf2978",
+      "totalLines": 228,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          49
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 49,
+      "purpose": "ordinary Anchor and browser echo DTO declarations",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/chat/anchors.ts",
+        "bytes": 9002,
+        "sha256": "384f1c9c80432dfe2418074692b7b045651b5ef3cbad44a629a7277be3bf2978",
+        "totalLines": 228,
+        "pinTimeUTC": "2026-10-17T12:38:04.375347+00:00",
+        "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 9002,
+        "sha256": "384f1c9c80432dfe2418074692b7b045651b5ef3cbad44a629a7277be3bf2978",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "totalLines": 928,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          208,
+          232
+        ],
+        [
+          888,
+          928
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        21,
+        132,
+        158
+      ],
+      "declaredReadLineCount": 69,
+      "purpose": "actual hook arguments and jump button/provider source",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/MessageStream.tsx",
+        "bytes": 37921,
+        "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+        "totalLines": 928,
+        "pinTimeUTC": "2026-10-17T12:38:41.336919+00:00",
+        "purpose": "before actual hook caller selected read",
+        "pinArtifact": "message-stream-initial-pin.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 37921,
+        "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "totalLines": 2622,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1568,
+          1591
+        ],
+        [
+          1753,
+          1779
+        ],
+        [
+          1792,
+          1825
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        129,
+        236,
+        238,
+        240,
+        401,
+        446,
+        447,
+        448,
+        542,
+        646,
+        651,
+        661,
+        671,
+        697,
+        1007,
+        1047,
+        1192,
+        1487,
+        1511,
+        1522,
+        1525,
+        1544,
+        1564,
+        1567,
+        1836,
+        1844,
+        1947,
+        2002,
+        2045,
+        2078,
+        2153,
+        2154,
+        2187,
+        2309,
+        2503,
+        2589
+      ],
+      "declaredReadLineCount": 121,
+      "purpose": "ordinary parent passes engineSessionId/sendEpoch; stream conditional on hydration/new-chat, keyed ChatLinkResources is a different child",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "totalLines": 2622,
+        "pinTimeUTC": "2026-10-17T12:40:52.178803+00:00",
+        "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked",
+        "pinArtifact": "parent-caller-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "totalLines": 2924,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2557,
+          2594
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 38,
+      "purpose": "actual main ChatView prop forwarding; no identity/authority runtime work",
+      "initialBeforeSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/App.tsx",
+        "bytes": 122863,
+        "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+        "totalLines": 2924,
+        "pinTimeUTC": "2026-10-17T12:40:52.180728+00:00",
+        "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked",
+        "pinArtifact": "parent-caller-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 122863,
+        "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromInitialPin": true
+    }
+  ],
+  "historicalSelectedFiles": [
+    {
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "bytes": 29720,
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "totalLines": 334,
+      "coverage": "selected-history",
+      "selectedLineRanges": [
+        [
+          87,
+          103
+        ]
+      ],
+      "declaredFocusedReadLineCount": 17,
+      "initialBeforeSemanticRead": null,
+      "initialTimingNote": "Dedicated historical pin follows initial/focused history excerpt interpretation; not backdated. First inventory retains its independent captured SHA.",
+      "dedicatedLaterPin": {
+        "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+        "bytes": 29720,
+        "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+        "totalLines": 334,
+        "pinTimeUTC": "2026-10-17T12:38:04.375999+00:00",
+        "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 29720,
+        "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromDedicatedPin": true
+    },
+    {
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "bytes": 38155,
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "totalLines": 667,
+      "coverage": "selected-history",
+      "selectedLineRanges": [
+        [
+          638,
+          660
+        ]
+      ],
+      "declaredFocusedReadLineCount": 23,
+      "initialBeforeSemanticRead": null,
+      "initialTimingNote": "Dedicated historical pin follows initial/focused history excerpt interpretation; not backdated. First inventory retains its independent captured SHA.",
+      "dedicatedLaterPin": {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "bytes": 38155,
+        "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+        "totalLines": 667,
+        "pinTimeUTC": "2026-10-17T12:38:04.376549+00:00",
+        "purpose": "before current consumer source read; historical dedicated pins may be later than initial history excerpt contexts",
+        "pinArtifact": "consumer-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 38155,
+        "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromDedicatedPin": true
+    },
+    {
+      "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+      "bytes": 12291,
+      "sha256": "9c46ca9b1c398daad86cc300059f417e9a9cab787213ade80dfe5b9fcd85c12d",
+      "totalLines": 92,
+      "coverage": "selected-history",
+      "selectedLineRanges": [
+        [
+          65,
+          77
+        ]
+      ],
+      "declaredFocusedReadLineCount": 13,
+      "initialBeforeSemanticRead": null,
+      "initialTimingNote": "Dedicated historical pin follows initial/focused history excerpt interpretation; not backdated. First inventory retains its independent captured SHA.",
+      "dedicatedLaterPin": {
+        "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+        "bytes": 12291,
+        "sha256": "9c46ca9b1c398daad86cc300059f417e9a9cab787213ade80dfe5b9fcd85c12d",
+        "totalLines": 92,
+        "pinTimeUTC": "2026-10-17T12:40:19.477561+00:00",
+        "initialBeforeSemanticRead": null,
+        "purpose": "dedicated pin after focused history excerpts; not backdated",
+        "pinArtifact": "known-cause-late-pin.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 12291,
+        "sha256": "9c46ca9b1c398daad86cc300059f417e9a9cab787213ade80dfe5b9fcd85c12d",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "unchangedFromDedicatedPin": true
+    }
+  ],
+  "instructionsCarryForward": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "instruction-carry-forward",
+      "newSemanticReadLines": 0,
+      "note": "Read full during immediately preceding future35 work; current byte hash checked only, not counted again."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "instruction-carry-forward",
+      "newSemanticReadLines": 0,
+      "note": "Read full during immediately preceding future35 work; current byte hash checked only, not counted again."
+    }
+  ],
+  "otherMetadataReading": "Two Round28 ranking JSON rows; all34 target/all42 old-failed contexts; all70 focused contexts. Broad142 ordinary-contract matches are navigation only, cap100, no semantic exhaustion claim.",
+  "counts": {
+    "productAndTestPins": 11,
+    "fullProductAndTestPins": 5,
+    "selectedProductPins": 6,
+    "productAndTestReadLinesIncludingNavigation": 1147,
+    "focusedHistoricalMDLines": 53,
+    "existingTestDeclarationsRead": 17,
+    "existingTestDeclarationsExecuted": 0,
+    "newInstructionSemanticReadLines": 0
+  },
+  "allProductSourceBeforeFinishStable": true,
+  "limits": [
+    "Whole source hashes do not mean unselected source ranges were semantically read.",
+    "Selected navigation single lines are listed and counted separately from detailed ranges.",
+    "DOM/scroll/listener/ResizeObserver/React/flushSync/IPC/native/model effects exist as source text only; none was invoked.",
+    "The ChatView key observed at1581 belongs to ChatLinkResources, not MessageStream; no invented stream remount proof.",
+    "Old popout origin-vs-active-bucket issue is recorded as prior cause only; no current main/native multiwindow proof or new ID."
+  ]
+}

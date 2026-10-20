@@ -1,0 +1,62 @@
+{
+  "baseline": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round31/root-report.md",
+      "bytes": 2945,
+      "sha256": "6576dbb28ca74a6752a544bbefbf7867f69825e673eea648a828b1f096fd9071"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-source-manifest.json",
+      "bytes": 5188,
+      "sha256": "30de5252256b0449d1b9feb8b4ec806132ef525a99fe779af60c46148ee9260f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+      "bytes": 1033,
+      "sha256": "dd3740d6b7fc4f61d47a38be21d33cdcfff2ebe105a280c63093b180199f7800"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-validation.json",
+      "bytes": 384,
+      "sha256": "80b80996478ae0e4d1abb6d51a00e507c818e4b31fb21ffc80eeffc9ac15bb7c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.py",
+      "bytes": 3267,
+      "sha256": "c630342aa3415340f7162211d34096ac58fd5adc618d4ed8a5ee4f8174df9932"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+      "bytes": 606088,
+      "sha256": "2f9ccc201a31cde7a769a996b72433f29fb3f571127dc2105ddebf7948b042e9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-prep-copy-receipt.json",
+      "bytes": 3402,
+      "sha256": "dcebc328d479741b0642791660a0429baff80832096199ad2fbbd6f7319f3283"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/root-formal-metadata-notes.json",
+      "bytes": 643,
+      "sha256": "2cb9611052c86f2e60ad9b1c5843ecc93956b52e7e6cdb421ac76cd349350c2d"
+    }
+  ],
+  "selfExcluded": true,
+  "formal": 0,
+  "candidates": 1,
+  "related": 0,
+  "productExecution": false,
+  "metadataCorrectionNote": "root-formal-metadata-notes.json",
+  "artifactCount": 10
+}

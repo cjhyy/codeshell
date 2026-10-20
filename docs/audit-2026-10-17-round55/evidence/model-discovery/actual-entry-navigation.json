@@ -1,0 +1,24 @@
+[
+  {
+    "command": [
+      "rg",
+      "-n",
+      "externalRuntimeModelService",
+      "packages/desktop/src/main/index.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "6099:const externalRuntimeModelService = new ExternalRuntimeModelService({\n6102:ipcMain.handle(\"externalRuntime:models\", () => externalRuntimeModelService.list());\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "externalRuntimeModels",
+      "packages/desktop/src/renderer/App.tsx"
+    ],
+    "exitCode": 0,
+    "stdout": "353:  const externalRuntimeModels = useExternalRuntimeModels(\n369:    () => [...configuredModelOptions, ...externalRuntimeModels],\n370:    [configuredModelOptions, externalRuntimeModels],\n",
+    "stderr": ""
+  }
+]

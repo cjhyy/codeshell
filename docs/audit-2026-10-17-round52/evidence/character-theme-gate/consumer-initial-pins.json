@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "lines": 245,
+      "pinnedUTC": "2026-10-17T17:31:21.919979+00:00",
+      "timing": "Before current102 contentlocator/selected read; actual filename-only importer inventory preceded"
+    }
+  ]
+}

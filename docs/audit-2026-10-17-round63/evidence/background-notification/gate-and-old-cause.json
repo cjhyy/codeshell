@@ -1,0 +1,44 @@
+{
+  "sharedHistoryProjection": "history-projection.json",
+  "canonicalJsonRead": "canonical-read.json",
+  "originalMetadataReads": [
+    {
+      "path": "docs/review-2026-10-12/notification-round14.md",
+      "lineRanges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "meaning": "Original R63/N1 priority/rate-wait queue cause and prior test/OS boundaries. No historical fixture/log executed or pass borrowed."
+    },
+    {
+      "path": "docs/review-2026-10-12/notification-quality-round14.md",
+      "lineRanges": [
+        [
+          1,
+          51
+        ]
+      ],
+      "meaning": "Original selected routes/Main producer support and urgent queue counterevidence; no old Git/native/fixture operations repeated."
+    }
+  ],
+  "inspectedCoverageDecision": "R44 original claims7405/7406,7760/7761,8291/8292 are inventory/pin objects with no scope/ranges. Old R14 prose is selected route/caller coverage without a current same-SHA full binding here. No inspected explicit same-SHA full gate, but unknown is never unread or first-read proof.",
+  "oldReferences": [
+    {
+      "id": "R63/N1",
+      "cause": "Ordinary waitForRateSlot holds notifier mutation queue ahead of later urgent route.",
+      "countedAsNewRelated": false,
+      "limit": "Notifier queue/rate scheduler not audited anew or executed; route content/flags alone do not refute or reconfirm this old queue bug."
+    },
+    {
+      "id": "R11 notification click capability exclusion",
+      "sourceOfReference": "R14 original report26 and quality47 only",
+      "directR11OriginalRead": false,
+      "countedAsNewRelated": false,
+      "limit": "Do not claim original R11 was directly read. Current own source has immutable click target closure; prior absence is historical context, not a new bug or native acceptance result."
+    }
+  ],
+  "fullHistorySemanticClaim": false,
+  "oldRuntimeLogsOrMethodsExecuted": false
+}

@@ -1,0 +1,340 @@
+{
+  "schema": "static-source-manifest-v1",
+  "rootReportedContextOnly": "524c0827a480132119b637aa87e16f0eab9895f3",
+  "GitIndependentlyVerified": false,
+  "files": [
+    {
+      "path": "packages/core/src/llm/model-cache.ts",
+      "bytes": 1996,
+      "lines": 65,
+      "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:49:51.110416+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          7
+        ],
+        [
+          13,
+          23
+        ],
+        [
+          27,
+          28
+        ],
+        [
+          32,
+          38
+        ],
+        [
+          40,
+          44
+        ],
+        [
+          46,
+          46
+        ],
+        [
+          48,
+          50
+        ],
+        [
+          52,
+          53
+        ]
+      ],
+      "semanticLineCount": 38,
+      "displayedLineRanges": [
+        [
+          1,
+          65
+        ]
+      ],
+      "bodyDisplayedLineCount": 65,
+      "navigationLineRanges": [],
+      "displayedUnionIncludingNavigationLineCount": 65,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          8,
+          12
+        ],
+        [
+          24,
+          26
+        ],
+        [
+          29,
+          31
+        ],
+        [
+          39,
+          39
+        ],
+        [
+          45,
+          45
+        ],
+        [
+          47,
+          47
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          54,
+          65
+        ]
+      ],
+      "sourceKind": "product",
+      "initialSemanticReadSha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+      "endingBytes": 1996,
+      "unchanged": true,
+      "firstEverReadClaimed": false,
+      "purpose": "Ordinarymodel DTO/cachefile shape,per-provider key-to-filename declaration,parsedmodels-array/undefined projection and returnedproviderKey/models payload. read/writefs calls, Date timestamp47,isStale55–59,defaultCacheDir61–65/native/identity/custody are display/navigation boundaries only. PriorR10sameSHAordinaryread known; notfull/firstever/newunique."
+    },
+    {
+      "path": "packages/core/src/llm/model-fetcher.ts",
+      "bytes": 12186,
+      "lines": 348,
+      "sha256": "8d3ae009ba99976e30df911a58138a6923600f43dddabe8563d0418e61dc216b",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:51:20.153747+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          76,
+          85
+        ],
+        [
+          123,
+          124
+        ]
+      ],
+      "semanticLineCount": 12,
+      "displayedLineRanges": [
+        [
+          53,
+          86
+        ],
+        [
+          119,
+          128
+        ]
+      ],
+      "bodyDisplayedLineCount": 44,
+      "navigationLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          23,
+          23
+        ],
+        [
+          24,
+          24
+        ],
+        [
+          83,
+          83
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          92,
+          92
+        ],
+        [
+          123,
+          123
+        ],
+        [
+          141,
+          141
+        ],
+        [
+          146,
+          146
+        ],
+        [
+          193,
+          193
+        ],
+        [
+          232,
+          232
+        ],
+        [
+          248,
+          248
+        ],
+        [
+          257,
+          257
+        ],
+        [
+          261,
+          261
+        ],
+        [
+          273,
+          273
+        ],
+        [
+          301,
+          301
+        ],
+        [
+          306,
+          306
+        ],
+        [
+          318,
+          318
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 61,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          4,
+          4
+        ],
+        [
+          21,
+          24
+        ],
+        [
+          53,
+          75
+        ],
+        [
+          86,
+          86
+        ],
+        [
+          92,
+          92
+        ],
+        [
+          119,
+          122
+        ],
+        [
+          125,
+          128
+        ],
+        [
+          141,
+          141
+        ],
+        [
+          146,
+          146
+        ],
+        [
+          193,
+          193
+        ],
+        [
+          232,
+          232
+        ],
+        [
+          248,
+          248
+        ],
+        [
+          257,
+          257
+        ],
+        [
+          261,
+          261
+        ],
+        [
+          273,
+          273
+        ],
+        [
+          301,
+          301
+        ],
+        [
+          306,
+          306
+        ],
+        [
+          318,
+          318
+        ]
+      ],
+      "sourceKind": "product",
+      "initialSemanticReadSha256": "8d3ae009ba99976e30df911a58138a6923600f43dddabe8563d0418e61dc216b",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "8d3ae009ba99976e30df911a58138a6923600f43dddabe8563d0418e61dc216b",
+      "endingBytes": 12186,
+      "unchanged": true,
+      "firstEverReadClaimed": false,
+      "purpose": "Actualordinary cacheDir/provider.key caller,refresh bypass,readCache to cached/fromCache return,writeCache then samefile return. isStale iscallboundary only;transport/fetch/auth/provider normalization/staticcatalog/enrichment/ModelPool.reload/fs/clock implementations notreadorcertified. Noentireconsumerclaim."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/prompt/section-cache.ts",
+      "bytes": 970,
+      "lines": 43,
+      "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:48:28.395301+00:00",
+      "coverage": "hash-only;primaryselectiondeferredbeforebody",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "definitiveOldFullActivated": false,
+      "reason": "R25readScopefull/readRanges1–43 conflictswithancestor navigation/no-finalnewcoverageclaim. R5sameSHA boundedcontractknown; do notconvert todefinitivecurrentfull."
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:48:28.392558+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:48:28.394650+00:00"
+    }
+  ],
+  "instructionReading": "SameSHA instructions readin94; currenthashonly/no repeatedbodylinecount.",
+  "counts": {
+    "full": 0,
+    "selected": 2,
+    "productSemanticLines": 50,
+    "bodyDisplayedLines": 109,
+    "displayIncludingNavigationLines": 126,
+    "testBodyOrDeclarationLines": 0,
+    "testsExecuted": 0
+  },
+  "scope": "Ordinarycache key/value/returnDTOonly. FS/clock/usercache/native/identity/permission/ModelPool.reload directions notexpandedorcertified.",
+  "priorCoverageLimit": "R10sameSHAmodelcache ordinaryread/oldbaselines known; thisnecessarycurrentselectedread isnotfirstever orwhole/newuniquecoverage. No globalindex/countchange.",
+  "sourceExcerptTiming": "Afteractualdisplay;durableinitialpins precededbody/nav."
+}

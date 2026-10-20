@@ -1,0 +1,38 @@
+{
+  "mode": "Pure static ordinary option/label/select DTO review plus filesystem metadata",
+  "productExecutions": 0,
+  "productImports": 0,
+  "helperOrLanguageFixturesEvaluated": 0,
+  "testsExecuted": 0,
+  "existingTestDeclarationsRead": 13,
+  "ReactBrowserActions": 0,
+  "actualProjectRegistryOrAutomationActions": 0,
+  "identityAdmissionRuntimePermissionNativeNetworkExperiments": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round40-project-options-review",
+  "productRuns": [],
+  "oldFailedDirectionsReopened": false,
+  "historicalPassesBorrowed": false,
+  "metadataHistoryScan": {
+    "sessionId": 31098,
+    "sameHandleExitCode": 0
+  },
+  "ownSourcePins": 5,
+  "ownInstructionPins": 2,
+  "ownAllPinsMatch": true,
+  "sourceCoverageCounts": {
+    "semanticFiles": 5,
+    "fullFiles": 2,
+    "selectedFiles": 3,
+    "productAndTestLines": 297,
+    "productLines": 190,
+    "testDeclarationLines": 107,
+    "testCasesRead": 13,
+    "instructionPins": 2,
+    "repeatedInstructionReadLinesThisReview": 217
+  },
+  "authorReceiptRowsChecked": 16,
+  "authorActiveSemanticSourceHashChecks": 5,
+  "metadataDiagnostics": "No failed metadata command or truncated output occurred in this reviewer task. Source inventory duplicates are navigation only. Late-pin navigation timing for AutomationView/test preserved; printed out-of-scope source neighbors are not semantic mechanism review."
+}

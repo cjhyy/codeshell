@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/sources-search.test.ts:
+{"case":"mixed-script-keyword","text":"使用Redis保存会话","query":"Redis","actualCompactMatches":0,"spacedControlMatches":1}
+{"case":"mixed-script-keyword","text":"2026年预算","query":"2026","actualCompactMatches":0,"spacedControlMatches":1}
+{"case":"mixed-script-keyword","text":"OAuth2登录流程","query":"OAuth2","actualCompactMatches":0,"spacedControlMatches":1}
+(pass) candidate observation: Latin and numeric keywords adjacent to Han do not match [2.27ms]
+{"case":"mixed-script-corpus","actualResources":["spaced.txt"]}
+(pass) the mixed script observation propagates to corpus lexical ranking [0.30ms]
+(pass) overlapping chunks reconstruct an unchanged Unicode original without duplicated overlap [0.77ms]
+
+ 3 pass
+ 0 fail
+ 10 expect() calls
+Ran 3 tests across 1 file. [38.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

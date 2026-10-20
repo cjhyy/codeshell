@@ -1,0 +1,125 @@
+{
+  "frozenUTC": "2026-10-17T16:27:15.797759+00:00",
+  "directory": "/tmp/codeshell-audit-round79-session-usage",
+  "files": [
+    {
+      "path": "artifact-checks.json",
+      "bytes": 1312,
+      "sha256": "7d5550c0a1dab6437e18b1331989e7f297239a4dc9d6778ea106858c66176c50"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 403,
+      "sha256": "8262dd1390ad8d345245c0acf41366e093399ed419bd895743e380b7f6382712"
+    },
+    {
+      "path": "coverage-gate-detail.json",
+      "bytes": 1802,
+      "sha256": "867e993348facdd7dd07534fb1688e3711f236cb96bb5297ea4e6e815cb89c1e"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 18337,
+      "sha256": "ca466e461cb4e24d96aab4629783aae57317b6707eb909aa3a8911289a9c77a1"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2107,
+      "sha256": "074ca734d23565f03275e305f9fef75bb8d378977d3d834e7cae483cc0692063"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 100769,
+      "sha256": "fbb0ac83656e30528c25c45a9f32e827bc10ca18405a2503d5a3c41864dc8ce4"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3887,
+      "sha256": "aa0de5e807e6656790c6e418d46a4509030f6f12edb061b805cbaea884d82f9c"
+    },
+    {
+      "path": "history.json",
+      "bytes": 994367,
+      "sha256": "c86168ef4fa45ff911517458b4acf11fbe2304de8aed1f69c6c15d7632c85a44"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1344,
+      "sha256": "a775e2452cd88f4ee47aee04df2f7882b7183ff34900a845d1f880ddd8e6ac38"
+    },
+    {
+      "path": "old-scope-selected.json",
+      "bytes": 1681,
+      "sha256": "5faa6183d2d31a469a6a22c19999512c2beeb2c5b7d817364cd1852924056ead"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3212,
+      "sha256": "0b5d24c5fbacbf2eba433ed98cda07877ab2d461be26363d7dd8147e2b87ae37"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 2157,
+      "sha256": "cba47b441fccf5381e3b016732cd6b7f24a5b7bb93c4dd10464481eebe7c99b9"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 727,
+      "sha256": "9f6d5c2e506c8d73a0de470328a58cde94b7049b9fd78ed0b06ed4ce8d9275a2"
+    }
+  ],
+  "selfExcluded": true,
+  "fileCountExcludingSelf": 13,
+  "totalFilesIncludingSelf": 14,
+  "reportRelativeLinks": 10,
+  "role": "Canonical old-full coverage gate only; no new product source reading",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0,
+    "sameSHAFullPrimaryGateExclusions": 1,
+    "supportingOldFullTestRecordNotSecondFrontier": 1
+  },
+  "originalEvidence": "R7 evidence/tui-source-manifest.json /sources/15 useSessionUsage.ts readScope full; /sources/20 test full supporting only.",
+  "source": {
+    "semanticFiles": 0,
+    "semanticProductLines": 0,
+    "newFullProductReads": 0,
+    "newSelectedProductReads": 0,
+    "productBodyNavDisplay": 0,
+    "hashOnlyProducts": 2,
+    "filenameOnlyNavigation": 2,
+    "testDeclarationsRead": 0,
+    "testExecutions": 0,
+    "instructionRepeatedHashOnly": 2
+  },
+  "history": {
+    "datedFiles": 4492,
+    "md": 1442,
+    "json": 3050,
+    "strings": 1953735,
+    "scalars": 2921270,
+    "exactArchivePaths": 169,
+    "parseErrors": 0,
+    "includedFrozen48ExcludedNumeric49Plus": true,
+    "matchCounts": {
+      "hookPath": 21,
+      "hookFilename": 21,
+      "hookSHA": 11,
+      "testPath": 18,
+      "testFilename": 18,
+      "testSHA": 11,
+      "oldCause": 229
+    },
+    "cap": 100,
+    "notAllRetainedContextsSemanticallyRead": true,
+    "endingSetOrBytesDrift": 0
+  },
+  "sourceInstructionPinsSame": 4,
+  "canonicalMetadataPinsSame": 1,
+  "metadataFirstErrorsOrTruncations": 0,
+  "productHelperImportReactTimerClientQueryFixtureTestModelNativeNetworkGitExecutions": 0,
+  "realConfigsUserSessionsRead": 0,
+  "productWrites": 0,
+  "noNewProductCorrectnessOrAllBehaviorClaim": true
+}

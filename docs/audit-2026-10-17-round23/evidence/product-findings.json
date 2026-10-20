@@ -1,0 +1,21 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "findings": [
+    {
+      "id": "PRODUCT-R23-01",
+      "priority": "P3",
+      "title": "Public product/run factory cwd is never consumed as the submitted run default",
+      "source": "packages/core/src/product/define.ts",
+      "line": 54,
+      "relatedSource": "packages/core/src/run/factory.ts:34",
+      "consumer": "packages/core/src/run/RunManager.ts:165",
+      "trigger": "Normal public SDK factory options set cwd differing from launcher cwd, and later submit supplies objective without repeating cwd. No actual invocation performed.",
+      "contract": "Explicit ProductRuntimeOptions.cwd and CreateRunManagerOptions.cwd working directory comments with process.cwd fallback imply honoring a specified directory.",
+      "actual": "Both factories omit cwd entirely; manager has no defaultCwd slot and submit uses input.cwd ?? process.cwd; EngineRunner forwards snapshot cwd.",
+      "impact": "Wrong configured default cwd in run snapshot/downstream configuration only; no tool, model, filesystem or security impact executed/claimed.",
+      "validation": "Static complete source dataflow only; 0 product imports, constructor calls or tests.",
+      "evidence": "product-report.md",
+      "dedup": "evidence/product-dedup-decisions.json"
+    }
+  ]
+}

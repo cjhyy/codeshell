@@ -1,0 +1,74 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "originalPrepReadHead": "7e5570210d7e9336cbe9d6a90ed375832e7e3329",
+  "originalPrepCompletionHead": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "checks": [
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "sha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    },
+    {
+      "path": "packages/core/src/utils/json.ts",
+      "sha256": "afbd3affb109a4a2bbfc1e55cdb47a3f91aca03a7a987264a29928410243e129",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    },
+    {
+      "path": "packages/core/src/utils/envUtils.ts",
+      "sha256": "9c21d839fbaf03af782597eb3720f3b644eed7080d038ef33878b57fa9170798",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    },
+    {
+      "path": "packages/core/src/utils/cwd-normalize.ts",
+      "sha256": "f7dbeb74f60c4d3c7381c7787ba34a32239efb89fd25c49f766951be324eaabe",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.test.ts",
+      "sha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    },
+    {
+      "path": "packages/core/src/services/session-memory.ts",
+      "sha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    },
+    {
+      "path": "packages/core/src/engine/turn-state.ts",
+      "sha256": "ac7e234070b197f3ffe7e1c667b158eeb54077a91f9a5ecd13e0553dec0617d4",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    },
+    {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    }
+  ],
+  "prepArtifactsVerified": 5,
+  "sourceReadByRoot": false,
+  "dynamicAttempts": 0,
+  "notes": [
+    "Copies preserve5author artifact bytes plus original artifact receipt; its absolute/tmp paths are provenance, not a new execution recipe.",
+    "Proposal inventory2301 files335488strings472088scalars predates final round22metadata; current Root dedup2301/335490/472091 is a separate read-time snapshot."
+  ]
+}

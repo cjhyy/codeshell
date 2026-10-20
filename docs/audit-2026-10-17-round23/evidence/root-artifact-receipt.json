@@ -1,0 +1,83 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "files": [
+    {
+      "path": "frontier-selection.md",
+      "bytes": 4156,
+      "sha256": "480122a7ff4572d6d6e0d56cda1ed46e5cd46a393afb385a42f58d76019793f8"
+    },
+    {
+      "path": "evidence/root-candidates.json",
+      "bytes": 81,
+      "sha256": "71a78d1d694b9ab7d64139fb4961a80ea0323a2545d9fb0061c1063fa028a04a"
+    },
+    {
+      "path": "evidence/root-dedup-decisions.json",
+      "bytes": 1494,
+      "sha256": "3d7adc83a78d37a4cdadd9407cec4df434741ab80c971e9bd627ee89d42862d8"
+    },
+    {
+      "path": "evidence/root-dedup.json",
+      "bytes": 568119,
+      "sha256": "03a2820c1946fb898c37d9cf885e4eb2176eb5acb1ed9e32f59324e1b84c1a5c"
+    },
+    {
+      "path": "evidence/root-dedup.py",
+      "bytes": 3087,
+      "sha256": "94767ae9a9b895c2c8549f545d2255de25490ce142219ca3013eeffd1b5b7261"
+    },
+    {
+      "path": "evidence/root-findings.json",
+      "bytes": 79,
+      "sha256": "1fac6c1ef14ed9ed0dd3719e4fef8b3a96678f206674206c9fee4f903bb0a393"
+    },
+    {
+      "path": "evidence/root-prep-current.json",
+      "bytes": 3786,
+      "sha256": "6fe83e02193ebebbca90f74ece6026c4a39cc94d0a2fe5f4c91f7fced731d69f"
+    },
+    {
+      "path": "evidence/root-related.json",
+      "bytes": 83,
+      "sha256": "f2092410e50970bc023febb7e565b58ac05082329faef658cca90571f8002fe8"
+    },
+    {
+      "path": "evidence/root-source-manifest.json",
+      "bytes": 12586,
+      "sha256": "25cde34c621c86dbe1f4b7f1ff40934e09fd47a864b6f4d3b59c24c36c443dae"
+    },
+    {
+      "path": "evidence/root-prep/artifacts.json",
+      "bytes": 1098,
+      "sha256": "8bcc20c5d9d01802207af3abfae3e67fb0ef1bb05bedec61e4ae485d5a5a0c3f"
+    },
+    {
+      "path": "evidence/root-prep/dedup.py",
+      "bytes": 3009,
+      "sha256": "29e2ee5d0913ce32091a68a22af1b97da37d072722a314d22e6c6258174ff33c"
+    },
+    {
+      "path": "evidence/root-prep/history.json",
+      "bytes": 531634,
+      "sha256": "8c8fef1017b5aa29be7c78fcea3b821adcc040e7d7d43cd688854a0883e02ddc"
+    },
+    {
+      "path": "evidence/root-prep/proposal.json",
+      "bytes": 3808,
+      "sha256": "1a2c9ebed00d654741af83e3ccb631e8999dc4b7753be21d811f60bc193fc5cf"
+    },
+    {
+      "path": "evidence/root-prep/source-manifest.json",
+      "bytes": 5012,
+      "sha256": "993bf07b5e4eb6754f62e9e9d8a56698c81cb099b241f76979216ef6a5280b90"
+    },
+    {
+      "path": "evidence/root-prep/utils-inventory.txt",
+      "bytes": 1118,
+      "sha256": "a542855963a5f0c19f8782023fa6d3f76efad4d61c96c8da361226b0fdb2cf26"
+    }
+  ],
+  "productRuntimeAttempts": 0,
+  "tests": 0,
+  "note": "Root static selection and verified prep-copy artifacts, not product logs. Self excluded."
+}

@@ -1,0 +1,17 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "existingCauseExclusions": [
+    {
+      "reference": "R68",
+      "disposition": "Different paired Host live ws backlog gate, not retested or cleared; relay stream write chunk/backpressure comment is no global slow-reader safety proof."
+    }
+  ],
+  "boundedConclusion": "No new ordinary stream defect established in exact selected source contracts; no all-relay correctness claim."
+}

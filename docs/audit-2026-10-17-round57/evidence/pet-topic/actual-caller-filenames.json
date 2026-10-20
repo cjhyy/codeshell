@@ -1,0 +1,67 @@
+[
+  {
+    "query": ".beginTurn(",
+    "command": [
+      "rg",
+      "-l",
+      "-F",
+      ".beginTurn(",
+      "packages/desktop/src/main"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/desktop/src/main/external-runtime-state.test.ts\npackages/desktop/src/main/pet/pet-segment-controller.test.ts\npackages/desktop/src/main/pet/pet-dispatch-service.ts\npackages/desktop/src/main/external-runtime-service.ts\npackages/desktop/src/main/index.ts\n",
+    "stderr": ""
+  },
+  {
+    "query": ".completeSegmentClosure(",
+    "command": [
+      "rg",
+      "-l",
+      "-F",
+      ".completeSegmentClosure(",
+      "packages/desktop/src/main"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/desktop/src/main/index.ts\npackages/desktop/src/main/pet/pet-segment-controller.test.ts\npackages/desktop/src/main/pet/pet-dispatch-service.ts\n",
+    "stderr": ""
+  },
+  {
+    "query": "consumeStalePrompt(",
+    "command": [
+      "rg",
+      "-l",
+      "-F",
+      "consumeStalePrompt(",
+      "packages/desktop/src/main"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/desktop/src/main/pet/conversation-session-route-store.ts\npackages/desktop/src/main/pet/conversation-session-route-store.test.ts\npackages/desktop/src/main/pet/session-conversation-bridge.ts\n",
+    "stderr": ""
+  },
+  {
+    "query": "recordInbound(",
+    "command": [
+      "rg",
+      "-l",
+      "-F",
+      "recordInbound(",
+      "packages/desktop/src/main"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/desktop/src/main/pet/conversation-session-route-store.test.ts\npackages/desktop/src/main/pet/session-conversation-bridge.ts\npackages/desktop/src/main/pet/conversation-session-route-store.ts\n",
+    "stderr": ""
+  },
+  {
+    "query": "PetSegmentController",
+    "command": [
+      "rg",
+      "-l",
+      "-F",
+      "PetSegmentController",
+      "packages/desktop/src/main"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/desktop/src/main/pet/pet-state-aggregator.ts\npackages/desktop/src/main/pet/pet-segment-controller.test.ts\npackages/desktop/src/main/index.ts\npackages/desktop/src/main/pet/pet-dispatch-service.ts\npackages/desktop/src/main/pet/pet-segment-controller.ts\n",
+    "stderr": ""
+  }
+]

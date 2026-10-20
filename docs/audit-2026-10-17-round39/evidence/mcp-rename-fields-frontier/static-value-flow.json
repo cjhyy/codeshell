@@ -1,0 +1,43 @@
+{
+  "kind": "manual source inference only, no evaluated language fixture",
+  "findingIdFromRoot": "MCP-R39-01",
+  "ordinaryProducerContract": [
+    "schema-export1–11 supports manual user/project config with generated schema",
+    "schema393–396 accepts supported fields; schema.test5–31 declares bounded policy retention",
+    "settings-service35–50 and224–233 retain valid object fields; no actual user config accessed"
+  ],
+  "startingRelevantSettings": {
+    "mcpServers": {
+      "old": {
+        "command": "tool",
+        "connectTimeoutMs": 90000,
+        "connectRetries": 0,
+        "inlineImages": true
+      }
+    }
+  },
+  "stages": [
+    {
+      "source": "McpSection245–271; Main5447–5485; mergePluginMcp350/360; host-mcp-servers89–98; McpSection1756–1769",
+      "claim": "Existing base server fields survive read/merge and become source=settings editable=true."
+    },
+    {
+      "source": "McpSection877–887/661/700–714/1436–1442/1303–1311/1375–1395",
+      "claim": "Ordinary full editor permits a new unique name and emits a newly built next with only authorable fields; these three fields are omitted."
+    },
+    {
+      "source": "McpSection429–436; mcpSettingsPatch20–34/43–60",
+      "claim": "New name receives only whitelist patch; old key is null in same atomic update. Previous server is used only to generate deleted env/header subkeys, not to copy extra supported fields."
+    },
+    {
+      "source": "settings-service181–203/205–214 and131–156",
+      "claim": "For absent new key stripNulls inserts only supplied authorable fields; old:null removes complete original. No source of the three omitted supported fields remains under new key."
+    },
+    {
+      "source": "same key alternative, settings-service185–197",
+      "claim": "If name stays old, recursive merge starts from existing record; absent extra fields remain. This counterexample limits the issue specifically to rename, not all save operations."
+    }
+  ],
+  "downstreamBoundary": "types1165–1176 describes timeout/retry defaults and inlineImages opt-in; manager1137–1146 reads configured startup values or defaults. No connection, process, vision/model or lifecycle behavior executed.",
+  "runtimeObservations": []
+}

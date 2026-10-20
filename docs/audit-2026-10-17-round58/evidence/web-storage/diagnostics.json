@@ -1,0 +1,27 @@
+{
+  "metadataFailures": [],
+  "productFailures": [],
+  "runtimeAttempts": 0,
+  "testsExecuted": 0,
+  "gitCalls": 0,
+  "networkCalls": 0,
+  "firstInventoryRaw": "inventory.first.stdout/stderr/exit.json contain actual first filename command bytes, exit0.",
+  "normalNavigationNoMatch": [
+    {
+      "chunkId": "4b7563",
+      "combinedExit": 1,
+      "command": "rg -l useRemoteSocket packages/desktop/src packages/web/app -g*.tsx -g*.ts",
+      "meaning": "No direct socket caller in these two trees; no failed product run. Then filename inventory across packages found useRemoteApp wrapper. The preceding source excerpt command shared shell; its separate exit was not captured.",
+      "rawBytesArchived": false,
+      "limitation": "Tool transcript remains original record; this description is not a synthetic raw stdout archive."
+    }
+  ],
+  "presentationToolTruncations": [],
+  "intentionalMetadataPreviewCaps": {
+    "firstHistoryProvenanceCharactersPerHit": 1100,
+    "laterDeviceProvenanceCharactersPerHit": 180,
+    "fullTargetHitsSaved": "history-projection.json",
+    "meaning": "Preview caps not semantic reading of all retained values; canonical actual originals selected separately."
+  },
+  "executionPolicy": "All Python is own stdlib filename/hash/range/JSON metadata. No old author method, product/helper/test module, crypto/Intl/URL/React/browser/localStorage/network operation executed. Failed historical mobile/i18n directions not retried."
+}

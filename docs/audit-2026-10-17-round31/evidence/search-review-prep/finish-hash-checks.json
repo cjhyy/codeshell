@@ -1,0 +1,58 @@
+{
+  "checkedUtc": "2026-10-17T11:56:59.023190+00:00",
+  "sourceChecks": [
+    {
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "bytes": 1895,
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "bytes": 1738,
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/render/hooks/use-search-highlight.ts",
+      "sha256": "91e5c06ff3fed915198e5b0f2312c82ea51a6ccf8455a3710758fc77354d33a4",
+      "bytes": 2158,
+      "unchanged": true
+    },
+    {
+      "path": "tests/search-highlight.test.ts",
+      "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "bytes": 4161,
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "bytes": 7445,
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/render/ink.tsx",
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "bytes": 89185,
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/render/screen.ts",
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "bytes": 49323,
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "bytes": 27146,
+      "unchanged": true
+    }
+  ],
+  "sourceCheckCount": 8,
+  "historyInventoryCurrentBytesChecked": 2851,
+  "allUnchanged": true,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

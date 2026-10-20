@@ -1,0 +1,12 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "notes": [
+    "CODESHELL previously fully read in this conversation; current bytes hash unchanged56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2 before edits.",
+    "Source displays split into complete contiguous chunks listed in manifest; no truncated output treated as full read.",
+    "Only Python standard-library metadata collectors, rg inventory/search and read-only Git blob checks executed. No product/test code evaluated or extracted.",
+    "Metadata scanner combined output and exit saved before inspection; its .txt is not product stdout or a passing guarded shard."
+  ],
+  "productFailures": 0,
+  "productRetries": 0,
+  "metadataErrors": []
+}

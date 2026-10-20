@@ -1,0 +1,32 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "relatedFindings": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "existingCauseExclusions": [
+    {
+      "id": "W10",
+      "document": "docs/review-2026-10-12/web-round3.md",
+      "lines": [
+        [
+          15,
+          20
+        ]
+      ],
+      "cause": "safeSet failure leaves no cached secret; normal pair then auth reread may mint different secrets.",
+      "status": "Old cause only; no fix or actual browser observation in140."
+    }
+  ],
+  "notPromoted": [
+    {
+      "lead": "bookmark name cap80 vs descriptor cap128",
+      "evidence": "isEnvironmentDescriptor accepts up to128; saveEnvironment validates<=80. Actual selected server describeEnvironment58–69 uses short fixed names.",
+      "decision": "No ordinary long-name producer or current required failing consumer established in finite scope. Not promoted, not a proof every external descriptor producer is short or every save correct. No arbitrary injected DTO or language/browser fixture used."
+    }
+  ],
+  "limits": "Finite ordinary get/set/encoding/address/list/navigation-source review, not complete auth/credential security, storage failure recovery, all connection lifecycle or external environment contract verification."
+}

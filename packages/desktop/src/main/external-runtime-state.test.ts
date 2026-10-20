@@ -334,11 +334,16 @@ describe("external runtime durable state", () => {
       "codex",
     );
     second.beginTurn({ text: "second" });
-    second.onEvent({
+    const published = second.onEvent({
       type: "usage_update",
       promptTokens: 5,
       cumulativePromptTokens: 5,
       promptTokensSource: "provider_usage",
+    });
+    expect(published).toMatchObject({
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 105,
+      singleTurnPromptTokens: 5,
     });
     second.onEvent({ type: "turn_complete", reason: "completed" });
 
@@ -553,7 +558,7 @@ test("provider usage merges with latest auxiliary accounting and preserves domai
     summary: "latest summary",
     costState: { marker: "latest" },
     tokenUsage: { promptTokens: 40, completionTokens: 6, totalTokens: 46 },
-    cumulativePromptTokens: 40,
+    cumulativePromptTokens: 10,
   });
 });
 
@@ -573,7 +578,10 @@ test("owned run CAS recomputes its delta after an actual competing durable updat
     return { cumulativePromptTokens: (state.cumulativePromptTokens ?? 0) + 10 };
   });
   expect(reads).toBe(2);
-  expect(manager.readSessionState("run-cas")?.cumulativePromptTokens).toBe(40);
+  expect(manager.readSessionState("run-cas")).toMatchObject({
+    cumulativePromptTokens: 10,
+    tokenUsage: { promptTokens: 30, totalTokens: 32 },
+  });
   expect(() =>
     manager.updateSessionRunState("run-cas", "old-run", () => ({ title: "stale" })),
   ).toThrow(/identity conflict/);
@@ -643,6 +651,8 @@ test("cold provider cumulative history never subtracts or recounts auxiliary Ses
     completionTokens: 10,
     cumulativePromptTokens: 100,
     cumulativeCompletionTokens: 10,
+    cacheReadTokens: 20,
+    cumulativeCacheReadTokens: 20,
   });
   first.onEvent({ type: "turn_complete", reason: "completed" });
   const manager = new SessionManager();
@@ -650,6 +660,21 @@ test("cold provider cumulative history never subtracts or recounts auxiliary Ses
     promptTokens: 30,
     completionTokens: 3,
     totalTokens: 33,
+    cacheReadTokens: 27,
+    cacheCreationTokens: 1,
+  });
+  expect(manager.readSessionState("cold-provider-usage")).toMatchObject({
+    tokenUsage: {
+      promptTokens: 130,
+      completionTokens: 13,
+      totalTokens: 143,
+      cacheReadTokens: 47,
+      cacheCreationTokens: 1,
+    },
+    cacheUsageVersion: 1,
+    cumulativePromptTokens: 100,
+    cumulativeCacheReadTokens: 20,
+    cumulativeCacheCreationTokens: 0,
   });
   const resumed = new ExternalRuntimeSessionRecorder(
     "cold-provider-usage",
@@ -663,23 +688,46 @@ test("cold provider cumulative history never subtracts or recounts auxiliary Ses
     cumulativePromptTokens,
     completionTokens,
     cumulativeCompletionTokens,
+    cacheReadTokens,
+    cumulativeCacheReadTokens,
   ] of [
-    [20, 120, 2, 12],
-    [20, 120, 2, 12],
-    [10, 110, 1, 11],
+    [20, 120, 2, 12, 4, 24],
+    [20, 120, 2, 12, 4, 24],
+    [10, 110, 1, 11, 2, 22],
   ]) {
-    resumed.onEvent({
+    const published = resumed.onEvent({
       type: "usage_update",
       promptTokens,
       completionTokens,
       cumulativePromptTokens,
       cumulativeCompletionTokens,
+      cacheReadTokens,
+      cumulativeCacheReadTokens,
+    });
+    expect(published).toMatchObject({
+      type: "usage_update",
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 120,
+      cumulativeCacheReadTokens: 24,
+      cumulativeCacheCreationTokens: 0,
+      singleTurnPromptTokens: 20,
+      singleTurnCacheReadTokens: 4,
+      singleTurnCacheCreationTokens: 0,
     });
   }
   resumed.onEvent({ type: "turn_complete", reason: "completed" });
   expect(manager.readSessionState("cold-provider-usage")).toMatchObject({
-    tokenUsage: { promptTokens: 150, completionTokens: 15, totalTokens: 165 },
-    cumulativePromptTokens: 150,
+    tokenUsage: {
+      promptTokens: 150,
+      completionTokens: 15,
+      totalTokens: 165,
+      cacheReadTokens: 51,
+      cacheCreationTokens: 1,
+    },
+    cacheUsageVersion: 1,
+    cumulativePromptTokens: 120,
+    cumulativeCacheReadTokens: 24,
+    cumulativeCacheCreationTokens: 0,
   });
   resumed.beginTurn({ text: "live next" });
   resumed.onEvent({
@@ -688,11 +736,22 @@ test("cold provider cumulative history never subtracts or recounts auxiliary Ses
     completionTokens: 1,
     cumulativePromptTokens: 125,
     cumulativeCompletionTokens: 13,
+    cacheReadTokens: 1,
+    cumulativeCacheReadTokens: 25,
   });
   resumed.onEvent({ type: "turn_complete", reason: "completed" });
   expect(manager.readSessionState("cold-provider-usage")).toMatchObject({
-    tokenUsage: { promptTokens: 155, completionTokens: 16, totalTokens: 171 },
-    cumulativePromptTokens: 155,
+    tokenUsage: {
+      promptTokens: 155,
+      completionTokens: 16,
+      totalTokens: 171,
+      cacheReadTokens: 52,
+      cacheCreationTokens: 1,
+    },
+    cacheUsageVersion: 1,
+    cumulativePromptTokens: 125,
+    cumulativeCacheReadTokens: 25,
+    cumulativeCacheCreationTokens: 0,
   });
 });
 

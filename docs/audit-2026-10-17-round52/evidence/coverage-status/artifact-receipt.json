@@ -1,0 +1,38 @@
+{
+  "frozenUTC": "2026-10-17T17:42:43.479237+00:00",
+  "root": "/tmp/codeshell-audit-round106-coverage-status",
+  "type": "User coverage-status metadata verification only; not independent whole-repository review",
+  "files": [
+    {
+      "path": "input-before-pins.json",
+      "bytes": 1869,
+      "sha256": "c959a9e2ac413a8c564ddee6e7ad7a60c7077e0d55f7bb03fbc9ef69cea464a8"
+    },
+    {
+      "path": "report.md",
+      "bytes": 1865,
+      "sha256": "f4d8412433fd7ba5d2f38353d1afd5d3bad3a16f8ac230fde77830def533dc3a"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 5726,
+      "sha256": "8cd254e29e9d2db379dd8a5d9517376c3269afdc8108189cf7526d3c28ecf81e"
+    }
+  ],
+  "fileCountExcludingSelf": 3,
+  "selfExcluded": true,
+  "metadataInputs": 5,
+  "metadataLines": 207,
+  "allFiveMetadataInputsEndingSame": true,
+  "productBodyLines": 0,
+  "productSourceShaRechecks": 0,
+  "newWholeRepositoryOrHistoryScans": 0,
+  "authorMethodsExecuted": 0,
+  "productRuns": 0,
+  "GitOperations": 0,
+  "oldReportsModified": false,
+  "globalCoverageUpdated": false,
+  "exactUnreadOrUnfixedClaim": false,
+  "metadataErrors": 0,
+  "metadataTruncations": 0
+}

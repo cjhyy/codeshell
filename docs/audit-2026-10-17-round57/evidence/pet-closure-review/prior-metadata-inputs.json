@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17/pet-data.md",
+      "bytes": 4254,
+      "sha256": "2c8df717e0725dc7179dcdfa9a7f64a4f34ff2723689cb956f2985d5a9917ee8",
+      "lineCount": 34,
+      "timing": "Exact UTC of first metadata byte read not separately recorded. Hash was calculated before bounded output in b8616b; record saved later in same invocation. No product source pin is backfilled.",
+      "metadataRecordSavedAtUTC": "2026-10-17T19:04:52.604764+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/pet.md",
+      "bytes": 7487,
+      "sha256": "1b97c1b43cbf600c3b590a9162b0f4005ed374b8f6d7754635d06f6406d0b5ab",
+      "lineCount": 36,
+      "timing": "Exact UTC of first metadata byte read not separately recorded. Hash was calculated before bounded output in b8616b; record saved later in same invocation. No product source pin is backfilled.",
+      "metadataRecordSavedAtUTC": "2026-10-17T19:04:52.605332+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "bytes": 9153,
+      "sha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208",
+      "lineCount": 198,
+      "timing": "Exact UTC of first metadata byte read not separately recorded. Hash was calculated before bounded output in b8616b; record saved later in same invocation. No product source pin is backfilled.",
+      "metadataRecordSavedAtUTC": "2026-10-17T19:04:52.605920+00:00"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+      "bytes": 38591,
+      "sha256": "53ea123bdcff5ad6bc7a41f63a4d27ea3f578d48ff13a9abc45a7668bc6a62f6",
+      "lineCount": 876,
+      "timing": "Exact UTC of first metadata byte read not separately recorded. Hash was calculated before bounded output in b8616b; record saved later in same invocation. No product source pin is backfilled.",
+      "metadataRecordSavedAtUTC": "2026-10-17T19:04:52.606603+00:00"
+    }
+  ]
+}

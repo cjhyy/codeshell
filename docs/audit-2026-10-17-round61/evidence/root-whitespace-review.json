@@ -1,0 +1,134 @@
+{
+  "exactTrailingWhitespaceLines": {
+    "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-read-01.txt": [
+      9,
+      14,
+      21,
+      25,
+      32,
+      38,
+      42,
+      84,
+      109,
+      122,
+      137,
+      170
+    ],
+    "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-read-02.txt": [
+      21,
+      68,
+      72,
+      87,
+      110,
+      166,
+      183,
+      192,
+      213
+    ],
+    "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-read-03.txt": [
+      8,
+      12,
+      21,
+      41,
+      101
+    ],
+    "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-read-01.txt": [
+      9,
+      25,
+      48,
+      55,
+      70,
+      76,
+      88,
+      134,
+      143,
+      146,
+      150,
+      161,
+      179,
+      192,
+      203,
+      205,
+      226,
+      229,
+      250,
+      293,
+      326,
+      373,
+      393,
+      397,
+      403,
+      405,
+      411,
+      414,
+      416,
+      418,
+      420,
+      430,
+      432,
+      441,
+      443
+    ],
+    "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-read-02.txt": [
+      38,
+      46,
+      69,
+      78,
+      92,
+      113,
+      177,
+      218,
+      226,
+      294,
+      297,
+      310,
+      339,
+      344
+    ],
+    "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-read-03.txt": [
+      4,
+      16,
+      42,
+      76,
+      78,
+      100,
+      115,
+      118,
+      133,
+      156
+    ],
+    "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-read-04.txt": [
+      11,
+      14,
+      57,
+      60,
+      103,
+      116,
+      121,
+      139,
+      163
+    ],
+    "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/broader-original-windows.first.stdout.txt": [
+      17,
+      20
+    ],
+    "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/original-and-catalog.first.stdout.txt": [
+      3,
+      9,
+      11,
+      17,
+      20,
+      23
+    ],
+    "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/precise-windows-1.first.stdout.txt": [
+      3
+    ],
+    "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/precise-windows-2.first.stdout.txt": [
+      11
+    ],
+    "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/precise-windows-3.first.stdout.txt": [
+      64
+    ]
+  },
+  "scope": "Exact frozen copied provenance whitespace only; no new nonfrozen exemption."
+}

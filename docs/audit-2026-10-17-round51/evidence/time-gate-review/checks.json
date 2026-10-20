@@ -1,0 +1,656 @@
+{
+  "checkedUTC": "2026-10-17T17:22:47.709805+00:00",
+  "files": [],
+  "metadataOnly": true,
+  "receipt": {
+    "packetActualFiles": 17,
+    "selfExcludedRows": 16,
+    "exactFileSet": true,
+    "duplicatePaths": false,
+    "rows": [
+      {
+        "path": "canonical-gate-read.json",
+        "bytes": 8297,
+        "sha256": "607dcd3cf7333c47abde4acad33c99d35658ea990e653ba671d4e61f00198f88",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "checks.json",
+        "bytes": 775,
+        "sha256": "044cf346cec5a78173387c6da9c1f47bc2abe9370b6d334d642f269622a05f46",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "consumer-initial-pins.json",
+        "bytes": 770,
+        "sha256": "690c67fe0cba81b151d0f8679cb81ae4dd469caa4dd4b2eada53564b5cb255e1",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "ending-checks.json",
+        "bytes": 2172,
+        "sha256": "7724e183946bf82518d94a868f9e21e3f252180e40d72e035ad58c145654a863",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "finalize-metadata.py",
+        "bytes": 11459,
+        "sha256": "dbe6275a6294984825969b75074d85e760ff7dd582364569562326fa08f09d12",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "history-command.json",
+        "bytes": 207,
+        "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "history-contexts.json",
+        "bytes": 110808,
+        "sha256": "36a7faad44efd3c5af826beeab862c565a6c3b1ec80e98068e9ceb026053e076",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "history-initial-inventory.json",
+        "bytes": 982323,
+        "sha256": "99f6ad7440a5c8d5d239fd042b259c68195279a3b77f23a59ad4cad601073768",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "history-source-rows.json",
+        "bytes": 44541,
+        "sha256": "6eac811ee4be657bc31c042c2d726ec4cccebf5232e353d26af0c402154593b2",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "history-summary.json",
+        "bytes": 805,
+        "sha256": "d9c08ea547606b545c4c5dd241970d04b746ed1915bd647b326426d3fc331181",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "initial-pins.json",
+        "bytes": 1375,
+        "sha256": "f4744de0224783f7112ec6daba4149c102086ee9b7886108bb871ee03a328d0f",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "report.md",
+        "bytes": 4399,
+        "sha256": "af93ea7a3d782c541a2bbf3d3fbb01220b0aa231745951d339b867783fd35ae1",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "scan-history.py",
+        "bytes": 5040,
+        "sha256": "61333b88cfcd58add62ab29cec4153535386cee249c4145dbd041bdd2a50a59b",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "scope-decision.json",
+        "bytes": 5228,
+        "sha256": "ce7fb8719eca96b67a7007d60df5d22f8abbf1966967e6206348838749ed6962",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "source-manifest.json",
+        "bytes": 6614,
+        "sha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      },
+      {
+        "path": "validation.json",
+        "bytes": 1622,
+        "sha256": "e6cb6b13157d72cb4f65c0db169224c009efbcbeaebed5a005fa10e95adeb60f",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "relativeWithinExactPacket": true
+      }
+    ]
+  },
+  "reportLinks": [
+    {
+      "label": "Scope decision and original R13 lines",
+      "href": "scope-decision.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "canonical gate",
+      "href": "canonical-gate-read.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "fresh history summary",
+      "href": "history-summary.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "history inventory",
+      "href": "history-initial-inventory.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "retained contexts",
+      "href": "history-contexts.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "initial pins",
+      "href": "initial-pins.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "unused consumer before-pins",
+      "href": "consumer-initial-pins.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "source manifest",
+      "href": "source-manifest.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "validation",
+      "href": "validation.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "ending checks",
+      "href": "ending-checks.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "checks",
+      "href": "checks.json",
+      "withinExactPacket": true,
+      "exists": true
+    },
+    {
+      "label": "artifact receipt",
+      "href": "artifact-receipt.json",
+      "withinExactPacket": true,
+      "exists": true
+    }
+  ],
+  "originalBindings": {
+    "originalReportPath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/groups.md",
+    "reportSha256": "f476375c2755ae844859fdc3b047bc271cf33b11cf4b5f60c9afb98208d8922d",
+    "originalManifestPath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+    "manifestSha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+    "sameFrozenSourceContext": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+    "manifestScope": "Inspected selected source and baseline runtime inputs. Pins do not imply full-file behavioural coverage; source-only versus executed scope is in groups.md.",
+    "rowChecks": [
+      {
+        "canonicalPointer": "/files/11",
+        "originalRow": {
+          "path": "packages/desktop/src/renderer/messages/time.ts",
+          "frozenSha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+          "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+          "frozenBytes": 3874,
+          "currentEqualsFrozen": true
+        },
+        "uniqueExactSourcePathRows": 1,
+        "distinctShaValuesInOriginalRow": [
+          "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435"
+        ],
+        "currentHashOnly": {
+          "path": "packages/desktop/src/renderer/messages/time.ts",
+          "bytes": 3874,
+          "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+          "lines": 107,
+          "checkedUTC": "2026-10-17T17:21:08.891035+00:00",
+          "coverage": "hash-only",
+          "semanticLines": 0,
+          "displayedLineRanges": [],
+          "matchesCanonicalSha256": true,
+          "canonicalRow": 11,
+          "canonicalBytesField": "frozenBytes",
+          "canonicalFrozenBytes": 3874,
+          "matchesCanonicalFrozenBytes": true
+        },
+        "matches96HashOnlyRow": true
+      },
+      {
+        "canonicalPointer": "/files/12",
+        "originalRow": {
+          "path": "packages/desktop/src/renderer/messages/time.test.ts",
+          "frozenSha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+          "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+          "frozenBytes": 2342,
+          "currentEqualsFrozen": true
+        },
+        "uniqueExactSourcePathRows": 1,
+        "distinctShaValuesInOriginalRow": [
+          "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41"
+        ],
+        "currentHashOnly": {
+          "path": "packages/desktop/src/renderer/messages/time.test.ts",
+          "bytes": 2342,
+          "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+          "lines": 64,
+          "checkedUTC": "2026-10-17T17:21:08.892161+00:00",
+          "coverage": "hash-only",
+          "semanticLines": 0,
+          "displayedLineRanges": [],
+          "matchesCanonicalSha256": true,
+          "canonicalRow": 12,
+          "canonicalBytesField": "frozenBytes",
+          "canonicalFrozenBytes": 2342,
+          "matchesCanonicalFrozenBytes": true
+        },
+        "matches96HashOnlyRow": true
+      }
+    ]
+  },
+  "canonicalMarkdownRead": {
+    "selectedLineRanges": [
+      [
+        1,
+        9
+      ],
+      [
+        32,
+        43
+      ]
+    ],
+    "selectedLineCount": 21,
+    "lines": [
+      {
+        "line": 1,
+        "text": "# Desktop 消息分组与文件摘要纯数据审查"
+      },
+      {
+        "line": 2,
+        "text": ""
+      },
+      {
+        "line": 3,
+        "text": "冻结源码：`7927a7c8b80b4aec710dee1f6d831ad1982bb466`。本子任务 **0 正式发现、2 静态候选、1 旧家族关联**。仅写本报告及 `evidence/groups-*`，没有改产品、Git、依赖或共享构建产物。"
+      },
+      {
+        "line": 4,
+        "text": ""
+      },
+      {
+        "line": 5,
+        "text": "## 范围与证据等级"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "阅读 `packages/desktop/src/renderer/messages/streamGroups.ts` 的核心分组/时间/签名路径，完整阅读 `agentGroup.ts`、`fileChangeAggregator.ts`、`time.ts` 及其三份现有基线、时间测试；选择性阅读 `turnTiming.test.ts`、`MessageStream.tsx:416` 的实际折叠管线、`types.ts:1224` 工具消息 producer、`:1335` 结果终态 producer、`:1897` 文件摘要消费，以及 `FilesChangedCard.tsx:30` 的摘要卡合同。另静态核对 Coding `tools/apply-patch/parser.ts` / `types.ts` / `index.ts:25` 中本地 V4A 合同。大消费者文件只核对指定相关片段，没有声称通读或端到端验收。"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 9,
+        "text": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+      },
+      {
+        "line": 32,
+        "text": "## 其余阅读结论与未覆盖"
+      },
+      {
+        "line": 33,
+        "text": ""
+      },
+      {
+        "line": 34,
+        "text": "- `agentGroup.ts` 的成功/失败/运行数、并行 wallMs、单 agent 保持、相邻与嵌套折叠在既有基线中通过。普通 agent_start/agent_end 对 done 和时间的生产写入仅静态核对。没有从畸形手工对象推出“正常子代理失败被计成功”等结论。"
+      },
+      {
+        "line": 35,
+        "text": "- `streamGroups.ts` 的透明 thinking、硬边界、bookkeeping 尾锚点、steer、生命周期 timing 和不可变消息 identity reconciliation 只做源码/既有测试阅读。多 thinking lookahead 的性能可能性缺少本轮普通 producer 与动态证据，不新增项；没有假称全分组路径通过。"
+      },
+      {
+        "line": 36,
+        "text": "- `time.ts:86` 的固定 24 小时算昨天与 `:66` 的固定毫秒回推周一在夏令时日历下需要进一步核对；本轮没有设置实际时区、验证相邻 DST 日或运行时间/i18n 入口，不登记正式/候选，也不把旧 recorder midnight 失败路线恢复为新证据。未来跨日时间归类与超出 Date 可表示范围同样缺少正常 producer 合同，未新增项。"
+      },
+      {
+        "line": 37,
+        "text": "- 没有通过原生应用、真实浏览器、React mount 或重建 workspace dist 来增加覆盖。"
+      },
+      {
+        "line": 38,
+        "text": ""
+      },
+      {
+        "line": 39,
+        "text": "## 查重与执行收据"
+      },
+      {
+        "line": 40,
+        "text": ""
+      },
+      {
+        "line": 41,
+        "text": "[全历史 corpus](evidence/groups-dedup.json) 扫描所有 `docs/` 与 `bugs/` 下 MD/JSON（递归含 `archive` / `_archive`，排除本轮）：1075 MD + 641 JSON = 1716 文件，240534 JSON 叶子，0 解析错误，记录每个文件哈希及 216 个名称/概念命中。再用 [补丁语义补充](evidence/groups-patch-dedup.json) 搜索 Delete / Move / 符号前缀相关概念，51 个命中；核对上述 R2-08、May 30 countLines、undo 和 Round12 patch/parser 相关旧记录。关键词与所读上下文仍不等于语义穷举。"
+      },
+      {
+        "line": 42,
+        "text": ""
+      },
+      {
+        "line": 43,
+        "text": "[验证清单](evidence/groups-validation.json) 与 [冻结源码清单](evidence/groups-source-manifest.json) 分开记录：1 clean 首跑 shard（33 tests、66 expect）+ 1 failed 首跑 shard（加载阶段 0 pass、1 fail、1 error），0 重跑。只有 clean shard 计入成功测试总数。[artifact 收据](evidence/groups-artifact-receipt.json) 仅校验自有文件字节，不是产品测试；没有安装外部依赖。"
+      }
+    ],
+    "scopeDecisionCopies": [
+      {
+        "line": 5,
+        "exactTextMatchesCanonical": true
+      },
+      {
+        "line": 6,
+        "exactTextMatchesCanonical": true
+      },
+      {
+        "line": 7,
+        "exactTextMatchesCanonical": true
+      },
+      {
+        "line": 8,
+        "exactTextMatchesCanonical": true
+      },
+      {
+        "line": 9,
+        "exactTextMatchesCanonical": true
+      },
+      {
+        "line": 34,
+        "exactTextMatchesCanonical": true
+      },
+      {
+        "line": 35,
+        "exactTextMatchesCanonical": true
+      },
+      {
+        "line": 36,
+        "exactTextMatchesCanonical": true
+      },
+      {
+        "line": 43,
+        "exactTextMatchesCanonical": true
+      }
+    ]
+  },
+  "sourceManifest96BoundaryChecks": {
+    "rows": [
+      {
+        "path": "packages/desktop/src/renderer/messages/time.ts",
+        "coverage": "hash-only",
+        "allRangesEmpty": true,
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialEndingHashSame": true
+      },
+      {
+        "path": "packages/desktop/src/renderer/messages/time.test.ts",
+        "coverage": "hash-only",
+        "allRangesEmpty": true,
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialEndingHashSame": true
+      },
+      {
+        "path": "packages/desktop/src/renderer/MessageStream.tsx",
+        "coverage": "hash-only",
+        "allRangesEmpty": true,
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialEndingHashSame": true
+      },
+      {
+        "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+        "coverage": "hash-only",
+        "allRangesEmpty": true,
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialEndingHashSame": true
+      },
+      {
+        "path": "CODESHELL.md",
+        "coverage": "hash-only",
+        "allRangesEmpty": true,
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialEndingHashSame": true
+      },
+      {
+        "path": "AGENTS.md",
+        "coverage": "hash-only",
+        "allRangesEmpty": true,
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialEndingHashSame": true
+      }
+    ],
+    "totals": {
+      "currentSourceAndInstructionPins": 6,
+      "productHashOnlyFiles": 3,
+      "testHashOnlyFiles": 1,
+      "instructionHashOnlyFiles": 2,
+      "currentProductSemanticLines": 0,
+      "currentTestDeclarationLines": 0,
+      "currentProductNavigationLines": 0,
+      "currentProductBodyDisplayLines": 0,
+      "currentInstructionBodyReadLines": 0
+    },
+    "sameShaOldFullSourceTargetOnly": true,
+    "testFullSeparatelyActivated": false,
+    "newSourceSemanticLines": 0,
+    "currentTestDeclarationLines": 0,
+    "unusedConsumersOnlyAuthorPinsNotIndependentlyProductHashedBy99": true
+  },
+  "decision": {
+    "supportTimeTargetOldFullSourceGate": true,
+    "separatelyActivateTestFull": false,
+    "interpretation": "R13 MD7 explicitly complete time.ts source reading, bound by original/files11 to same current bytes/SHA. JSON scope disclaims behavioral/fullruntime inference, expressly defers source-only vs execution to MD; does not negate physical full-source sentence. Test/files12 currentSHA binding confirmed, but96 explicitly avoids activating a separate testfull, which99 preserves.",
+    "genericReviewModeAutoFull": false,
+    "globalCoverageUpdated": false,
+    "old87UnknownStillDated": true,
+    "newProductCorrectnessConclusion": false
+  },
+  "historicalLimitationsPreserved": [
+    "groups.md9:time/streamGroups/turnTiming not dynamically validated.",
+    "groups.md36:DST/fixed24h/Monday/futureDate leads unclassified; old recorder-midnight failure direction stays closed.",
+    "groups.md43:one historical clean shard and separate failed load shard0retry; neither is current96/99 execution.",
+    "Original test-log artifact SHA is not source binding; unrelated consumer/source files not semantically read."
+  ],
+  "endingInputChecks": [
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/artifact-receipt.json",
+      "bytes": 3331,
+      "sha256": "8d474bd446d486cab7559a3306097f4300ef5cb1a911f33c839c0774e859ccb5",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/canonical-gate-read.json",
+      "bytes": 8297,
+      "sha256": "607dcd3cf7333c47abde4acad33c99d35658ea990e653ba671d4e61f00198f88",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/checks.json",
+      "bytes": 775,
+      "sha256": "044cf346cec5a78173387c6da9c1f47bc2abe9370b6d334d642f269622a05f46",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/consumer-initial-pins.json",
+      "bytes": 770,
+      "sha256": "690c67fe0cba81b151d0f8679cb81ae4dd469caa4dd4b2eada53564b5cb255e1",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/ending-checks.json",
+      "bytes": 2172,
+      "sha256": "7724e183946bf82518d94a868f9e21e3f252180e40d72e035ad58c145654a863",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/finalize-metadata.py",
+      "bytes": 11459,
+      "sha256": "dbe6275a6294984825969b75074d85e760ff7dd582364569562326fa08f09d12",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-contexts.json",
+      "bytes": 110808,
+      "sha256": "36a7faad44efd3c5af826beeab862c565a6c3b1ec80e98068e9ceb026053e076",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-initial-inventory.json",
+      "bytes": 982323,
+      "sha256": "99f6ad7440a5c8d5d239fd042b259c68195279a3b77f23a59ad4cad601073768",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-source-rows.json",
+      "bytes": 44541,
+      "sha256": "6eac811ee4be657bc31c042c2d726ec4cccebf5232e353d26af0c402154593b2",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/history-summary.json",
+      "bytes": 805,
+      "sha256": "d9c08ea547606b545c4c5dd241970d04b746ed1915bd647b326426d3fc331181",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/initial-pins.json",
+      "bytes": 1375,
+      "sha256": "f4744de0224783f7112ec6daba4149c102086ee9b7886108bb871ee03a328d0f",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/report.md",
+      "bytes": 4399,
+      "sha256": "af93ea7a3d782c541a2bbf3d3fbb01220b0aa231745951d339b867783fd35ae1",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/scan-history.py",
+      "bytes": 5040,
+      "sha256": "61333b88cfcd58add62ab29cec4153535386cee249c4145dbd041bdd2a50a59b",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/scope-decision.json",
+      "bytes": 5228,
+      "sha256": "ce7fb8719eca96b67a7007d60df5d22f8abbf1966967e6206348838749ed6962",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/source-manifest.json",
+      "bytes": 6614,
+      "sha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round96-message-time/validation.json",
+      "bytes": 1622,
+      "sha256": "e6cb6b13157d72cb4f65c0db169224c009efbcbeaebed5a005fa10e95adeb60f",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/groups.md",
+      "bytes": 7742,
+      "sha256": "f476375c2755ae844859fdc3b047bc271cf33b11cf4b5f60c9afb98208d8922d",
+      "sameAsInitial": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "bytes": 7253,
+      "sha256": "e1157450175c31e7725623a89ef0e707d88ec7763da362920226799db3d8f123",
+      "sameAsInitial": true
+    }
+  ],
+  "currentProductHashOnlyChecks": [
+    {
+      "bytes": 3874,
+      "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "sameAsFirstHash": true,
+      "sourceTextDisplayedOrDecoded": false
+    },
+    {
+      "bytes": 2342,
+      "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+      "path": "packages/desktop/src/renderer/messages/time.test.ts",
+      "sameAsFirstHash": true,
+      "sourceTextDisplayedOrDecoded": false
+    }
+  ],
+  "ownMetadataDiagnostics": [
+    {
+      "toolChunk": "27c236",
+      "observedExitCode": 0,
+      "errorKind": "Own metadata comparison used absent canonical bytes instead of frozenBytes; first false flags preserved in source-manifest.first.json. No source byte drift or product failure.",
+      "correction": "Compare current bytes with original canonical frozenBytes; no product/body/method execution."
+    }
+  ],
+  "ownToolFailuresOrTruncations": [],
+  "execution": {
+    "product": 0,
+    "productSourceBodies": 0,
+    "testDeclarations": 0,
+    "authorMethods": 0,
+    "Git": 0,
+    "fixturesTestsReactDOMClockTimerNetworkNative": 0,
+    "freshHistoryScans": 0,
+    "metadata": "Own Python stdlib hashes/JSON/Markdown link and field comparisons only."
+  }
+}

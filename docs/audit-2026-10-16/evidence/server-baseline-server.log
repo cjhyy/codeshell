@@ -1,0 +1,243 @@
+bun test v1.3.11 (af24e281)
+
+packages/server/src/sessions-service.archive-race.test.ts:
+(pass) archiveDiskSession vs a concurrent state writer > archiving preserves a field another writer set in between [21.22ms]
+(pass) archiveDiskSession vs a concurrent state writer > a worker write after archiving does not erase archivedAt [7.50ms]
+(pass) archiveDiskSession vs a concurrent state writer > un-archiving clears the marker without dropping other fields [7.44ms]
+(pass) archiveDiskSession vs a concurrent state writer > interleaved archive and worker writes keep every field [12.49ms]
+(pass) archiveDiskSession vs a concurrent state writer > a worker write landing mid-archive is not clobbered [7.42ms]
+(pass) archiveDiskSession vs a concurrent state writer > state revision advances on each archive write [7.28ms]
+
+packages/server/src/worker-bridge-core.test.ts:
+(pass) WorkerBridgeCore > keeps accepted run accepted-run correlated beyond the admission deadline [338.54ms]
+(pass) WorkerBridgeCore > keeps accepted run %s correlated beyond the admission deadline [213.05ms]
+(pass) WorkerBridgeCore > retains the deadline for wrong-request [92.22ms]
+(pass) WorkerBridgeCore > retains the deadline for wrong-session [90.78ms]
+(pass) WorkerBridgeCore > retains the deadline for unaccepted [99.42ms]
+(pass) WorkerBridgeCore > worker exit settles an admitted long run after its original deadline [157.60ms]
+(pass) WorkerBridgeCore > completion tracking cannot remove deadlines from controls or omit exit cleanup [0.20ms]
+(pass) WorkerBridgeCore > request(): invalid JSON params settle as sendFailed and release correlation [0.66ms]
+(pass) WorkerBridgeCore > correlation ignores JSON scalars while retaining a pending request [20.49ms]
+(pass) WorkerBridgeCore > spawns on demand, frames stdout lines, and dispatches notifications [61.99ms]
+(pass) WorkerBridgeCore > request(): correlates a response by id; consume:false also dispatches it [49.51ms]
+(pass) WorkerBridgeCore > request(): consume:true settles the caller but hides the line from listeners [35.60ms]
+(pass) WorkerBridgeCore > request(): worker error becomes an error outcome; params omitted when undefined [30.53ms]
+(pass) WorkerBridgeCore > request(): times out when the worker never answers [230.01ms]
+(pass) WorkerBridgeCore > request(): failFast settles sendFailed immediately with no worker [0.16ms]
+(pass) WorkerBridgeCore > request(): a thrown send settles fail-fast exactly once and clears correlation [0.11ms]
+(pass) WorkerBridgeCore > request(): ensureWorker spawns a dead worker before sending, so the request is answered [38.52ms]
+(pass) WorkerBridgeCore > request(): only the first duplicate response settles the correlation [41.86ms]
+(pass) WorkerBridgeCore > request(): prepareInbound registers and strips host-only agent/run metadata [39.34ms]
+(pass) WorkerBridgeCore > request(): settleOnExit resolves pending requests when the worker dies [38.66ms]
+(pass) WorkerBridgeCore > injectWorkerMessage(): prepareInbound rewrites the line before it hits the worker [40.16ms]
+(pass) WorkerBridgeCore > injectWorkerMessage() and sendLine() drop safely with no live worker [0.05ms]
+(pass) previewLine > truncates long lines and passes short ones through [0.03ms]
+
+packages/server/src/sessions-service.disk.test.ts:
+(pass) listDiskSessions > returns top-level sessions (parentSessionId === null), newest first [33.19ms]
+(pass) listDiskSessions > drops sessions whose cwd was deleted (deleted-project resurrection guard) [7.50ms]
+(pass) listDiskSessions > filters OUT sub-agent sessions (parentSessionId is a non-empty string) [8.09ms]
+(pass) listDiskSessions > lists only direct children for an explicit parent, without adding them to the sidebar [27.69ms]
+(pass) listDiskSessions > paginates child queries across unrelated sessions and hides internal sessions [38.56ms]
+(pass) listDiskSessions > keeps child history accessible after its temporary worktree is removed [4.51ms]
+(pass) listDiskSessions > lets the host rebuild child tasks without a parent or surviving worktree [9.71ms]
+(pass) listDiskSessions > keeps complete host scans paginated and excludes archived/internal child records [23.88ms]
+(pass) listDiskSessions > rejects an invalid parent filter instead of silently listing top-level sessions [2.65ms]
+(pass) listDiskSessions > filters ephemeral and legacy qchat sessions out of the ordinary picker [8.72ms]
+(pass) listDiskSessions > filters durable pet sessions out of the ordinary work catalog [6.81ms]
+(pass) listDiskSessions > skips legacy sessions with NO parentSessionId key (存量 not auto-rebuilt) [6.38ms]
+(pass) listDiskSessions > falls back to id when summary missing [3.59ms]
+(pass) listDiskSessions > surfaces an exceptional completed-run boundary from durable state [3.38ms]
+(pass) listDiskSessions > paginates with limit + cursor [12.51ms]
+(pass) listDiskSessions > keeps the next page stable when an earlier session is deleted [12.28ms]
+(pass) listDiskSessions > shows desktop + automation origins; hides tui and origin-less [11.58ms]
+(pass) listDiskSessions > returns [] for a missing sessions dir [0.38ms]
+(pass) listDiskSessions > filters archived sessions by default and includes them on demand [6.87ms]
+(pass) listDiskSessions > paginates correctly while filtering archived sessions out by default [15.96ms]
+(pass) archiveDiskSession > writes archivedAt so the session drops out of the default catalog, then unarchives [10.74ms]
+(pass) archiveDiskSession > rejects unsafe ids without touching the filesystem [0.52ms]
+
+packages/server/src/links/http.test.ts:
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":1,"outcome":"stage","stage":"authorization"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":1,"outcome":"stage","stage":"body_validation"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":2,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"input_validation"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":2,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"host_store_read"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":2,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"remote_configuration"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"mode_selection"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"job_creation"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"input_validation"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"connection_review"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"host_store_read"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"connection_review"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"job_creation"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"final_authorization"}
+{"event":"link_authorization","transport":"http","requestId":"c1f5e793-c0a5-4eb6-95f6-fe1a1c920117","elapsedMs":3,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"success","stage":"final_authorization","httpStatus":200,"authorizationState":"pending"}
+(pass) shared Link HTTP boundary > unified authorization separates read-only begin/status from current-step submission [21.91ms]
+{"event":"link_authorization","transport":"http","requestId":"e311486f-96ea-452f-b4d1-158dadb0b875","elapsedMs":0,"outcome":"stage","stage":"authorization"}
+{"event":"link_authorization","transport":"http","requestId":"e311486f-96ea-452f-b4d1-158dadb0b875","elapsedMs":0,"outcome":"stage","stage":"body_validation"}
+{"event":"link_authorization","transport":"http","requestId":"e311486f-96ea-452f-b4d1-158dadb0b875","elapsedMs":0,"outcome":"failure","stage":"body_validation","internalCode":"request_body_invalid","publicCode":"invalid_request","httpStatus":400}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"outcome":"stage","stage":"authorization"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"outcome":"stage","stage":"body_validation"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"input_validation"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"host_store_read"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"remote_configuration"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"mode_selection"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"job_creation"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"input_validation"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"connection_review"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"host_store_read"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"connection_review"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"job_creation"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"stage","stage":"final_authorization"}
+{"event":"link_authorization","transport":"http","requestId":"5c071bc9-9bde-4e71-8ffd-b3a60c5d94ff","elapsedMs":0,"providerId":"github","methodId":"fine-grained-pat","authModeId":"token","outcome":"success","stage":"final_authorization","httpStatus":200,"authorizationState":"pending"}
+(pass) shared Link HTTP boundary > unified endpoints reject untrusted fields and require the same authenticated owner [6.36ms]
+(pass) shared Link HTTP boundary > requires authenticated owner and the host origin boundary [4.80ms]
+(pass) shared Link HTTP boundary > token connect, masked refresh, rename and CAS delete form one usable flow [19.24ms]
+(pass) shared Link HTTP boundary > rejects arbitrary URLs, CLI arguments, credential metadata and excessive payloads [4.86ms]
+(pass) shared Link HTTP boundary > provider failures never reflect raw bodies or credentials to the browser [3.66ms]
+(pass) shared Link HTTP boundary > bounds chunked bodies without accidentally finishing a 200 response [6.20ms]
+993 |   if (!isURLInstance(fileURLOrPath))
+994 |     return fileURLOrPath;
+995 |   return Bun.fileURLToPath(fileURLOrPath);
+996 | }
+997 | var { Error, TypeError } = globalThis;
+998 |   let err = new Error(message);
+                  ^
+error: Command failed: node --input-type=module -e 
+      import assert from "node:assert/strict";
+      import {createServer,request} from "node:http";
+      import {createLinkHttp} from "file:///Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/dist/links/http.js";
+      import {CredentialStore,PlaintextCipher} from "@cjhyy/code-shell-core";
+      const store=new CredentialStore(undefined,new PlaintextCipher(),"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/link-http-native-tkMDkQ");
+      let started, release, closed, finished;
+      const startedP=new Promise(r=>started=r), gate=new Promise(r=>release=r), closedP=new Promise(r=>closed=r), finishedP=new Promise(r=>finished=r);
+      const http=createLinkHttp({store,ownerId:async()=>"owner",isAuthorized:async()=>true,validateToken:async()=>{started();await gate;return {providerId:"github",identity:{externalAccountId:"42",label:"fixture"},capabilityIds:[],verifiedAt:new Date().toISOString()}}});
+      const server=createServer((req,res)=>{res.once("close",closed);void http.handle(req,res).finally(finished)});
+      await new Promise(r=>server.listen(0,"127.0.0.1",r));
+      const req=request({host:"127.0.0.1",port:server.address().port,path:"/api/v1/links/connections/token",method:"POST",headers:{"content-type":"application/json"}});
+      req.on("error",()=>{});req.end("{\"providerId\":\"github\",\"methodId\":\"fine-grained-pat\",\"label\":\"HTTP fixture\",\"token\":\"synthetic-http-token\",\"expectedRevision\":null}");
+      await startedP;req.destroy();await closedP;release();await finishedP;
+      assert.equal(store.list().length,0);http.close();server.closeAllConnections();await new Promise(r=>server.close(r));console.log("native disconnect passed");
+    
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/dist/links/http.js' imported from /Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/[eval1]
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:861:10)
+    at defaultResolve (node:internal/modules/esm/resolve:988:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:697:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:714:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:746:52)
+    at #resolve (node:internal/modules/esm/loader:679:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:599:35)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33)
+    at ModuleJob.link (node:internal/modules/esm/module_job:245:17) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/dist/links/http.js'
+}
+
+Node.js v25.8.1
+
+   code: 1,
+ killed: false,
+ signal: null,
+    cmd: "node --input-type=module -e \n      import assert from \"node:assert/strict\";\n      import {createServer,request} from \"node:http\";\n      import {createLinkHttp} from \"file:///Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/dist/links/http.js\";\n      import {CredentialStore,PlaintextCipher} from \"@cjhyy/code-shell-core\";\n      const store=new CredentialStore(undefined,new PlaintextCipher(),\"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/link-http-native-tkMDkQ\");\n      let started, release, closed, finished;\n      const startedP=new Promise(r=>started=r), gate=new Promise(r=>release=r), closedP=new Promise(r=>closed=r), finishedP=new Promise(r=>finished=r);\n      const http=createLinkHttp({store,ownerId:async()=>\"owner\",isAuthorized:async()=>true,validateToken:async()=>{started();await gate;return {providerId:\"github\",identity:{externalAccountId:\"42\",label:\"fixture\"},capabilityIds:[],verifiedAt:new Date().toISOString()}}});\n      const server=createServer((req,res)=>{res.once(\"close\",closed);void http.handle(req,res).finally(finished)});\n      await new Promise(r=>server.listen(0,\"127.0.0.1\",r));\n      const req=request({host:\"127.0.0.1\",port:server.address().port,path:\"/api/v1/links/connections/token\",method:\"POST\",headers:{\"content-type\":\"application/json\"}});\n      req.on(\"error\",()=>{});req.end(\"{\\\"providerId\\\":\\\"github\\\",\\\"methodId\\\":\\\"fine-grained-pat\\\",\\\"label\\\":\\\"HTTP fixture\\\",\\\"token\\\":\\\"synthetic-http-token\\\",\\\"expectedRevision\\\":null}\");\n      await startedP;req.destroy();await closedP;release();await finishedP;\n      assert.equal(store.list().length,0);http.close();server.closeAllConnections();await new Promise(r=>server.close(r));console.log(\"native disconnect passed\");\n    ",
+ stdout: "",
+ stderr: "node:internal/modules/esm/resolve:271\n    throw new ERR_MODULE_NOT_FOUND(\n          ^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/dist/links/http.js' imported from /Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/[eval1]\n    at finalizeResolution (node:internal/modules/esm/resolve:271:11)\n    at moduleResolve (node:internal/modules/esm/resolve:861:10)\n    at defaultResolve (node:internal/modules/esm/resolve:988:11)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:697:20)\n    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:714:38)\n    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:746:52)\n    at #resolve (node:internal/modules/esm/loader:679:17)\n    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:599:35)\n    at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33)\n    at ModuleJob.link (node:internal/modules/esm/module_job:245:17) {\n  code: 'ERR_MODULE_NOT_FOUND',\n  url: 'file:///Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/dist/links/http.js'\n}\n\nNode.js v25.8.1\n",
+
+      at genericNodeError (node:child_process:998:13)
+      at exitHandler (node:child_process:103:28)
+      at emit (node:events:98:22)
+      at #maybeClose (node:child_process:766:16)
+      at #handleOnExit (node:child_process:520:72)
+(fail) shared Link HTTP boundary > native Node detects a disconnected requester before persisting a provider response [97.25ms]
+(pass) shared Link HTTP boundary > reauthorizes a request after its body arrived [15.24ms]
+(pass) shared Link HTTP boundary > closing during the final asynchronous authorization cannot return stale success [3.52ms]
+(pass) shared Link HTTP boundary > malformed escaped route ids get a bounded request error [2.71ms]
+
+packages/server/src/links/browser-handoff.test.ts:
+(pass) external browser without any owner cookie completes once and cleans the code from history [4.68ms]
+(pass) wrong or duplicate states and callbacks before launch cannot consume the valid attempt [4.28ms]
+(pass) revoked, cancelled, expired and closed owners cannot exchange an upstream code [11.30ms]
+(pass) denial only cancels the captured original attempt; simultaneous callbacks exchange once [6.44ms]
+(pass) launch tickets never accept a callback or arbitrary external target from a different origin [1.72ms]
+
+packages/server/src/hub/auth-store.test.ts:
+(pass) HubAuthStore > bootstrap survives restart, is disclosed once, and cannot be reused [57.12ms]
+(pass) HubAuthStore > concurrent setup has exactly one winner and concurrent logins preserve sessions [148.10ms]
+(pass) HubAuthStore > login rotates the presented session, revocation is immediate across instances, and expiry is fixed [159.90ms]
+(pass) HubAuthStore > bounds persistent sessions and revokes the oldest when issuing beyond the limit [148.27ms]
+(pass) HubAuthStore > rejects bad credentials and weak or malformed input [132.36ms]
+(pass) HubAuthStore > malformed, oversized, deleted, or symlinked stores fail closed [125.28ms]
+(pass) HubAuthStore > cross-process bootstrap and login writes share the core file lock [1264.08ms]
+
+packages/server/src/hub/auth-http.test.ts:
+(pass) Hub authentication HTTP > requires HTTPS for external origins and rejects unconfigured non-loopback hosts [7.74ms]
+(pass) Hub authentication HTTP > initializes, restores cookie and bearer sessions, rotates login, lists devices, revokes and logs out [184.00ms]
+(pass) Hub authentication HTTP > rejects cross-origin writes and HTML forms, using configured origin behind HTTPS proxy [62.11ms]
+(pass) Hub authentication HTTP > rate limits incorrect login attempts and permits retry after the window [178.82ms]
+(pass) Hub authentication HTTP > rejects malformed and oversized JSON, including chunked bodies [9.63ms]
+(pass) Hub authentication HTTP > expired sessions fail and corrupt state returns a generic error without reopening setup [61.36ms]
+(pass) Hub authentication HTTP > initialization stays single-use and unknown routes never bypass auth [56.03ms]
+(pass) origin-less top-level read navigation is allowed without weakening writes, fetches or explicit Origin checks [10.36ms]
+(pass) authenticated browser navigation opens the Hub process directory and downloads with the same cookie [103.47ms]
+
+packages/server/src/hub/run-replay.test.ts:
+(pass) refresh combines a durable pre-run prefix with one live overlay and a race cursor [0.30ms]
+(pass) overlapping requests keep the earliest baseline until both finish
+(pass) missing-record recovery is limited to a tracked empty baseline [0.15ms]
+(pass) bounded replay falls back to durable data with an explicit incomplete marker
+(pass) worker exit releases overlays without recycling the stream cursor [0.08ms]
+(pass) concurrent sessions share a total memory budget and finishing one releases it [0.05ms]
+(pass) overlays and snapshot objects cannot mutate each other, and a finished run starts a fresh baseline
+
+packages/server/src/hub/approval-lease.test.ts:
+(pass) Hub approval leases > snapshot reads preserve reservations and never reopen submitted approvals [0.13ms]
+(pass) Hub approval leases > first device wins, explicit release and expiry permit another claimant
+(pass) Hub approval leases > a submitted decision is one-shot even after TTL or disconnect; worker error can retry
+
+packages/server/src/mobile-remote/trusted-device-store.test.ts:
+(pass) TrustedDeviceStore > adds, lists, authenticates, and revokes devices [11.23ms]
+(pass) TrustedDeviceStore > re-adding the same secretHash reuses the device instead of accumulating [5.96ms]
+(pass) TrustedDeviceStore > a different secretHash still creates a distinct device [5.71ms]
+(pass) TrustedDeviceStore > a revoked credential stays revoked until its tombstone is removed [10.14ms]
+(pass) TrustedDeviceStore > remove() hard-deletes a device row (no zombie left in the list) [8.70ms]
+(pass) TrustedDeviceStore > authenticate rejects a wrong-length secretHash without throwing (timing-safe) [7.78ms]
+(pass) TrustedDeviceStore > rename() changes a device's display name [6.06ms]
+(pass) TrustedDeviceStore > rejects invalid direct-call inputs before they can grow the credential store [0.41ms]
+(pass) TrustedDeviceStore > devices.json is written owner-only (0o600) — it holds the device secretHash [4.92ms]
+(pass) TrustedDeviceStore > corrupt data fails closed and is never silently overwritten [3.19ms]
+(pass) TrustedDeviceStore > oversized persisted fields fail closed instead of being loaded into authentication [1.98ms]
+(pass) TrustedDeviceStore > refuses linked device files without reading or replacing their targets [2.15ms]
+(pass) TrustedDeviceStore > concurrent processes preserve every independently paired device [2821.41ms]
+
+packages/server/src/mobile-remote/pairing.test.ts:
+(pass) PairingTokenManager > creates one-use token [0.14ms]
+(pass) PairingTokenManager > rejects expired token
+(pass) PairingTokenManager > rejects invalid TTLs and clock values instead of minting immortal tokens [0.06ms]
+(pass) PairingTokenManager > a broken clock fails closed when consuming an existing token [0.02ms]
+(pass) PairingTokenManager > failed commit keeps the token retryable [0.03ms]
+(pass) PairingTokenManager > successful commit samples expiry once and consumes exactly once [0.02ms]
+(pass) PairingTokenManager > minting prunes expired tokens and caps abandoned QR codes [1.29ms]
+
+packages/server/src/mobile-remote/mobile-client-event-validator.test.ts:
+(pass) parseMobileClientEvent > accepts representative authenticated protocol events [0.27ms]
+(pass) parseMobileClientEvent > rejects non-objects, unknown types, and malformed privileged events [0.08ms]
+(pass) parseMobileClientEvent > rejects malformed attachment metadata before it reaches storage [0.06ms]
+(pass) parseMobileClientEvent > caps history work and oversized identifiers [0.02ms]
+(pass) session creation accepts bounded optional client correlation without changing legacy requests [0.04ms]
+(pass) session sync accepts optional bounded epochs and rejects malformed lifetime identifiers [0.07ms]
+(pass) journal negotiation and pages bound opaque selection/request/cursor fields [0.08ms]
+(pass) Room pages bound view correlation, filter and opaque continuation fields [0.04ms]
+(pass) Panel source labels are bounded observation metadata on chat.send [0.07ms]
+
+1 tests failed:
+(fail) shared Link HTTP boundary > native Node detects a disconnected requester before persisting a provider response [97.25ms]
+
+ 121 pass
+ 1 fail
+ 532 expect() calls
+Ran 122 tests across 12 files. [8.22s]
+Bun test process failed (1)

@@ -1,0 +1,131 @@
+{
+  "baseline": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/compiler.ts",
+      "bytes": 12385,
+      "sha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/freeze.ts",
+      "bytes": 1788,
+      "sha256": "41dcee7d38b90067d247dab4b9d9a0e1c61d2a3ded1eeef5af00072ee0e42397",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "bytes": 3951,
+      "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "bytes": 9117,
+      "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/snapshot.ts",
+      "bytes": 2806,
+      "sha256": "ccd99f381aa753bf1faca984c133e3f3430b705e947121f121c32bc36053fd03",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/core-module.ts",
+      "bytes": 942,
+      "sha256": "7b154597f2b6fadb90b6d69b636dd2c3c2fdf310a439778b7dbc7a68bb67c386",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/activation.ts",
+      "bytes": 4413,
+      "sha256": "fbb9f7fe70b413a8661ccc50f98ebbb557456a43101baf95753c634cba774374",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/lifetime.ts",
+      "bytes": 2868,
+      "sha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/index.ts",
+      "bytes": 566,
+      "sha256": "1b0aede002ee5950af46f8431470c97c1656a8b56da1fec44804f4da0b5da331",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/compiler.test.ts",
+      "bytes": 8530,
+      "sha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/snapshot.test.ts",
+      "bytes": 1473,
+      "sha256": "17ac011bbf9b4769d3b29aa9aa47790477a673292bd25f79c09437ca83252f08",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/core-module.test.ts",
+      "bytes": 1150,
+      "sha256": "a99d0a21ab36032cfaf609c348a9500d07f068d3720cc02e0c955557d90bb618",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/composition/activation.test.ts",
+      "bytes": 12620,
+      "sha256": "5f87883553abfdc7697f52fda8392c8c974ba1a23e778378fe984154f9af10c8",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210013,
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    },
+    {
+      "path": "docs/todo/agent-module-resolved-composition-design.md",
+      "bytes": 41596,
+      "sha256": "20125e0b17ace00e18bdee8fbd70c5b4f48edc274278342efcfc25309f9a2dd1",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    }
+  ]
+}

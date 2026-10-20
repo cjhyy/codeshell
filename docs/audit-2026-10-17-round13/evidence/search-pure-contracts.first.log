@@ -1,0 +1,31 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round13/evidence/search-pure-contracts.test.ts:
+(pass) round13 search and selection pure observations > readiness counts trailing whitespace before Main's documented trimming [1.09ms]
+(pass) round13 search and selection pure observations > readiness has no upper bound, while the exact original term remains preserved [0.06ms]
+(pass) round13 search and selection pure observations > ordinary resolution excludes archived entries and preserves immutable inputs [0.32ms]
+(pass) round13 search and selection pure observations > pure settings callback updates only text while preserving ordinary defaults and input [0.21ms]
+(pass) round13 search and selection pure observations > absent settings yield a text-only patch without real persistence
+
+packages/desktop/src/renderer/modelSelection.test.ts:
+(pass) persistDefaultTextModel > persists the selected text model through the settings-change writer [0.73ms]
+(pass) persistDefaultTextModel > preserves existing defaults when none are configured
+
+packages/desktop/src/renderer/shell/sessionContentSearch.test.ts:
+(pass) parseContentQuery > no '>' prefix stays in title mode [0.01ms]
+(pass) parseContentQuery > bare '>' enters content mode with an empty, not-ready term
+(pass) parseContentQuery > '> a' strips the leading space but stays below the 2-char threshold
+(pass) parseContentQuery > '>ab' is ready at the 2-char boundary
+(pass) parseContentQuery > '> ab' strips leading spaces and is ready
+(pass) resolveContentMatch > resolves via engineSessionId [0.03ms]
+(pass) resolveContentMatch > falls back to matching the local id [0.01ms]
+(pass) resolveContentMatch > skips archived sessions
+(pass) resolveContentMatch > resolves a no-repo match to projectId null via the NO_REPO bucket [0.03ms]
+(pass) resolveContentMatch > iterates [null, ...projects] in order — no-repo wins a cross-bucket tie
+(pass) resolveContentMatch > returns null for a disk-only match with no in-memory session [0.02ms]
+
+ 18 pass
+ 0 fail
+ 32 expect() calls
+Ran 18 tests across 3 files. [281.00ms]
+Completed Bun shard: 18 tests, 0 skipped; 0 failures.

@@ -1,0 +1,95 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round25/evidence/root-prep/proposal.json",
+      "bytes": 5001,
+      "sha256": "52d3db58b66d4f6eb41edb7c532ccac9f085027f49ff5cde63ce9f0afe1019c0",
+      "pointer": "/sources/5",
+      "originalRow": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "bytes": 970,
+        "readScope": "full",
+        "readRanges": [
+          [
+            1,
+            43
+          ]
+        ]
+      },
+      "documentHeader": {
+        "baseline": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+        "status": "negative old-frontier selection;not current round24 evidence",
+        "findings": [],
+        "candidates": [],
+        "productAttempts": 0,
+        "testAttempts": 0,
+        "runtimeImports": 0,
+        "decisions": [
+          {
+            "direction": "simple diff cost or text invariants",
+            "decision": "exclude,old bounded17/57controls and old static O(n*m),0newexecution",
+            "history": [
+              "docs/audit-2026-10-17-round19/simplediff.md",
+              "docs/audit-2026-10-17-round4/root.md"
+            ]
+          },
+          {
+            "direction": "memory sort offset timestamps",
+            "decision": "exclude,existing formal OM3 and old failed whole memory dynamic direction;0attempts",
+            "history": [
+              "docs/audit-2026-10-17/operations-memory.md",
+              "docs/audit-2026-10-17/evidence/quality-final-review.md"
+            ]
+          },
+          {
+            "direction": "section/cache diagnostics planning",
+            "decision": "source navigation only;prior SectionCache coverage known, no independent ordinary producer defect established. No execution/no finalnewcoverage claim",
+            "history": [
+              "docs/audit-2026-10-17-round5/prompt.md"
+            ]
+          }
+        ],
+        "dedupScope": "dedup.json all docs/bugs MD and recursively parsed JSONscalar including read-time uncommitted24;simple-diff-history.json adaptive all exact contexts. Counts/hitcaps separate,not semantic exhaustion",
+        "next": "Choose independent new normal-producer leaf from other workerfrontiers;do not repeat excluded baseline suites or oldfailed directions."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round5/evidence/prompt-source-manifest.json",
+      "bytes": 10091,
+      "sha256": "29076eb97e3d25d7e9e6662df8631bf959b0e2676128cb409feccbccd2664f12",
+      "pointer": "/files/5",
+      "originalRow": {
+        "path": "packages/core/src/prompt/section-cache.ts",
+        "bytes": 970,
+        "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "frozenBlobSha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      },
+      "documentHeader": {
+        "frozenHead": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+        "branch": "codex/audit/prompt-profile-web-round5-20261017"
+      }
+    }
+  ],
+  "filenameInventory": {
+    "names": [
+      "docs/audit-2026-10-17-round5/profile.md",
+      "docs/audit-2026-10-17-round5/quality-root.md",
+      "docs/audit-2026-10-17-round5/integration-context.md",
+      "docs/audit-2026-10-17-round5/root-web.md",
+      "docs/audit-2026-10-17-round5/coverage.md",
+      "docs/audit-2026-10-17-round5/prompt.md",
+      "docs/audit-2026-10-17-round5/candidates-and-skips.md",
+      "docs/audit-2026-10-17-round5/quality-profile.md",
+      "docs/audit-2026-10-17-round5/quality-prompt.md",
+      "docs/audit-2026-10-17-round5/quality-chat.md",
+      "docs/audit-2026-10-17-round5/README.md",
+      "docs/audit-2026-10-17-round5/chat-text.md",
+      "docs/audit-2026-10-17-round5/evidence/prompt-receipt-assembly-note.md"
+    ],
+    "exitCode": 0,
+    "stderr": ""
+  }
+}

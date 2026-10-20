@@ -1,0 +1,15 @@
+{
+  "commandChunk": "19aa79",
+  "exitCode": 1,
+  "productFailure": false,
+  "stage": "Formatting final printed summary only; all 59 canonical hint rows printed before error",
+  "errorType": "TypeError",
+  "errorMessage": "keys must be str, int, float, bool or None, not tuple",
+  "cause": "Counter had tuple keys; json.dumps(default=str) does not transform mapping keys",
+  "truncated": false,
+  "originalOutputTokenCount": 9332,
+  "printedRowsRetainedIn": "history-claims.json",
+  "noScanOrProductRetry": "A corrected bounded metadata presentation will use JSON-friendly rows, not rerun scan or product.",
+  "observedStderrTranscribedVerbatim": "first-reader-stderr.txt",
+  "originalFullStdoutNotSeparatelyCaptured": "59 printed records remain in history-claims.json and tool chunk19aa79; do not call a regenerated file original raw stdout"
+}

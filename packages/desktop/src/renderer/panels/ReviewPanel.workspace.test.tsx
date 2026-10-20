@@ -4,6 +4,51 @@ import { createRoot, type Root } from "react-dom/client";
 import type { ReviewGitCommit } from "../../preload/types";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { ReviewPanel, useWorkspaceRecentCommits } from "./ReviewPanel";
+import { onComposerSeedRequest } from "../chat/composerSeed";
+import { SimpleSelect } from "../components/ui/simple-select";
+import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
+
+// Read only public component props; keep the actual select/viewer mounted.
+function componentProps(container: HTMLElement, component: unknown): any {
+  for (const node of nodes(container)) {
+    const key = Object.keys(node).find((name) => name.startsWith("__reactFiber$"));
+    let fiber = key ? node[key] : null;
+    while (fiber) {
+      if (fiber.type === component) return fiber.memoizedProps;
+      fiber = fiber.return;
+    }
+  }
+  throw new Error("component not rendered");
+}
+
+function domProps(node: any): any {
+  const key = Object.keys(node).find((name) => name.startsWith("__reactProps$"));
+  if (!key) throw new Error("element props unavailable");
+  return node[key];
+}
+
+async function chooseReviewFile(container: HTMLElement, label: string): Promise<void> {
+  const select = componentProps(container, SimpleSelect);
+  const option = select.options.find((item: any) => item.label === label);
+  if (!option) throw new Error(`missing option ${label}`);
+  await act(async () => {
+    select.onChange(option.value);
+    await flushMicrotasks();
+  });
+}
+
+async function clickButton(container: HTMLElement, label: string): Promise<void> {
+  const button = nodes(container).find(
+    (node) =>
+      node.tagName?.toLowerCase() === "button" &&
+      (node.getAttribute?.("aria-label") === label || text(node) === label),
+  );
+  if (!button) throw new Error(`missing button ${label}`);
+  await act(async () => {
+    domProps(button).onClick();
+    await flushMicrotasks();
+  });
+}
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -47,6 +92,233 @@ afterEach(async () => {
 });
 
 describe("ReviewPanel workspace requests", () => {
+  test("a file named __all__ is a single-file filter for both viewer and review draft", async () => {
+    const requests: any[][] = [];
+    Object.assign(window, {
+      codeshell: {
+        prepareReviewPrompt: async (...args: any[]) => {
+          requests.push(args);
+          return { prompt: "owned draft", truncated: false };
+        },
+      },
+    });
+    const unsubscribe = onComposerSeedRequest(() => true);
+    const special = snapshot.replaceAll("note.txt", "__all__");
+    const other = snapshot.replaceAll("note.txt", "other.txt");
+    const container = document.createElement("div");
+    root = createRoot(container);
+    try {
+      await act(async () => {
+        root?.render(
+          <ReviewPanel
+            cwd="/repo"
+            sessionId="session-a"
+            gitAvailable={false}
+            turnDiff={special + other}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      await chooseReviewFile(container, "__all__");
+      await clickButton(container, "准备 AI 代码审查");
+      await clickButton(container, "添加审查草稿");
+      expect({
+        onlyPath: componentProps(container, UnifiedDiffViewer).onlyPath,
+        visiblePaths: nodes(container)
+          .map((node) => node.getAttribute?.("title"))
+          .filter((title) => title === "__all__" || title === "other.txt"),
+        request: requests[0],
+      }).toEqual({
+        onlyPath: "__all__",
+        visiblePaths: ["__all__"],
+        request: [
+          "session-a",
+          { kind: "snapshot", diff: special, label: "__all__", instructions: "" },
+        ],
+      });
+      await chooseReviewFile(container, "全部文件（2）");
+      await clickButton(container, "添加审查草稿");
+      expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+      expect(text(container)).toContain("other.txt");
+      expect(requests[1]).toEqual([
+        "session-a",
+        { kind: "snapshot", diff: special + other, label: undefined, instructions: "" },
+      ]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  test("file option values preserve special path text and cannot collide with select control values", async () => {
+    const paths = [
+      "__simple_select_empty__",
+      "all",
+      "path:__all__",
+      "文 件/说明.txt",
+      'quote"name.txt',
+      "back\\slash.txt",
+    ];
+    const patchFor = (path: string) => {
+      const oldPath = JSON.stringify(`a/${path}`);
+      const newPath = JSON.stringify(`b/${path}`);
+      return `diff --git ${oldPath} ${newPath}\n--- ${oldPath}\n+++ ${newPath}\n@@ -1 +1 @@\n-old\n+new\n`;
+    };
+    const diff = paths.map(patchFor).join("");
+    const requests: any[][] = [];
+    Object.assign(window, {
+      codeshell: {
+        prepareReviewPrompt: async (...args: any[]) => {
+          requests.push(args);
+          return { prompt: "owned draft", truncated: false };
+        },
+      },
+    });
+    const unsubscribe = onComposerSeedRequest(() => true);
+    const container = document.createElement("div");
+    root = createRoot(container);
+    try {
+      await act(async () => {
+        root?.render(
+          <ReviewPanel cwd="/repo" sessionId="session-a" gitAvailable={false} turnDiff={diff} />,
+        );
+        await flushMicrotasks();
+      });
+      const values = componentProps(container, SimpleSelect).options.map(
+        (option: any) => option.value,
+      );
+      expect(new Set(values).size).toBe(paths.length + 1);
+      expect(values).not.toContain("");
+      expect(values).not.toContain("__simple_select_empty__");
+      await clickButton(container, "准备 AI 代码审查");
+      for (const [index, path] of paths.entries()) {
+        await chooseReviewFile(container, path);
+        await clickButton(container, "添加审查草稿");
+        expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBe(path);
+        expect(
+          nodes(container).filter((node) => node.getAttribute?.("title") === path),
+        ).toHaveLength(1);
+        expect(requests[index]).toEqual([
+          "session-a",
+          { kind: "snapshot", diff: patchFor(path), label: path, instructions: "" },
+        ]);
+      }
+      // A cleared/obsolete control value is never interpreted as a literal path.
+      await act(async () => {
+        componentProps(container, SimpleSelect).onChange("");
+        await flushMicrotasks();
+      });
+      expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+      await clickButton(container, "添加审查草稿");
+      expect(requests.at(-1)).toEqual([
+        "session-a",
+        { kind: "snapshot", diff, label: undefined, instructions: "" },
+      ]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  test("repeated historical edits render one file block and one menu option per path", async () => {
+    const second = snapshot.replace("after-note", "after-second-edit");
+    const other = snapshot.replaceAll("note.txt", "other.txt");
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <ReviewPanel
+          cwd="/repo"
+          sessionId="session-a"
+          gitAvailable={false}
+          turnDiff={snapshot + other + second}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    expect(
+      nodes(container).filter((node) => node.getAttribute?.("title") === "note.txt"),
+    ).toHaveLength(1);
+    expect(
+      nodes(container).filter((node) => node.getAttribute?.("title") === "other.txt"),
+    ).toHaveLength(1);
+    expect(text(container)).toContain("after-note");
+    expect(text(container)).toContain("after-second-edit");
+    // The file selector counts files rather than sequential edit operations.
+    expect(text(container)).toContain("全部文件（2）");
+    expect(text(container)).not.toContain("全部文件（3）");
+  });
+
+  test("the AI review action prepares the historical snapshot and custom focus as a draft", async () => {
+    const requests: unknown[][] = [];
+    const drafts: unknown[] = [];
+    Object.assign(window, {
+      codeshell: {
+        prepareReviewPrompt: async (...args: unknown[]) => {
+          requests.push(args);
+          return { prompt: "Review the historical changes", truncated: false };
+        },
+      },
+    });
+    const unsubscribe = onComposerSeedRequest((draft) => {
+      drafts.push(draft);
+      return true;
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    const propsOf = (node: any) => {
+      const key = Object.keys(node).find((key) => key.startsWith("__reactProps$"));
+      return key ? node[key] : null;
+    };
+    try {
+      await act(async () => {
+        root?.render(
+          <ReviewPanel
+            cwd="/repo"
+            sessionId="session-a"
+            gitAvailable={false}
+            turnDiff={snapshot}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      const open = nodes(container).find(
+        (node) => node.getAttribute?.("aria-label") === "准备 AI 代码审查",
+      );
+      await act(async () => {
+        propsOf(open).onClick();
+        await flushMicrotasks();
+      });
+      const textarea = nodes(container).find((node) => node.tagName?.toLowerCase() === "textarea");
+      await act(async () => {
+        propsOf(textarea).onChange({ target: { value: "检查权限边界" } });
+        await flushMicrotasks();
+      });
+      const add = nodes(container).find(
+        (node) => node.tagName?.toLowerCase() === "button" && text(node) === "添加审查草稿",
+      );
+      await act(async () => {
+        propsOf(add).onClick();
+        await flushMicrotasks();
+      });
+      expect(requests).toEqual([
+        [
+          "session-a",
+          {
+            kind: "snapshot",
+            diff: snapshot,
+            label: undefined,
+            instructions: "检查权限边界",
+          },
+        ],
+      ]);
+      expect(drafts).toEqual([
+        { source: "code-review", text: "Review the historical changes", sessionId: "session-a" },
+      ]);
+      expect(text(container)).toContain("已添加到对话输入框");
+    } finally {
+      unsubscribe();
+    }
+  });
+
   test("ignores an older workspace's commit response", async () => {
     const requests = [deferred<ReviewGitCommit[]>(), deferred<ReviewGitCommit[]>()];
     let requestIndex = 0;
@@ -152,7 +424,7 @@ describe("ReviewPanel workspace requests", () => {
     expect(requests).toEqual([]);
   });
 
-  test("does not mount a Git viewer without a repository or a nonempty snapshot", async () => {
+  test("does not mount a Git viewer without a repository or a supplied snapshot", async () => {
     const requests: string[] = [];
     Object.assign(window, {
       codeshell: {
@@ -164,7 +436,7 @@ describe("ReviewPanel workspace requests", () => {
     });
     const container = document.createElement("div");
     root = createRoot(container);
-    for (const turnDiff of [undefined, " \n\t"]) {
+    for (const turnDiff of [undefined]) {
       await act(async () => {
         root?.render(
           <ReviewPanel
@@ -178,6 +450,38 @@ describe("ReviewPanel workspace requests", () => {
         await flushMicrotasks();
       });
       expect(container.childNodes.length).toBe(0);
+    }
+    expect(requests).toEqual([]);
+  });
+
+  test("an explicit empty turn snapshot never falls back to unrelated working-tree changes", async () => {
+    const requests: unknown[] = [];
+    Object.assign(window, {
+      codeshell: {
+        getReviewDiff: async (...args: unknown[]) => {
+          requests.push(args);
+          throw new Error("must not query the live repository for an empty turn");
+        },
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    for (const gitAvailable of [true, false]) {
+      for (const turnDiff of ["", " \n\t"]) {
+        await act(async () => {
+          root?.render(
+            <ReviewPanel
+              cwd="/repo"
+              sessionId="session-a"
+              gitAvailable={gitAvailable}
+              files={["a.ts"]}
+              turnDiff={turnDiff}
+            />,
+          );
+          await flushMicrotasks();
+        });
+        expect(text(container)).toContain("no changes");
+      }
     }
     expect(requests).toEqual([]);
   });
@@ -249,31 +553,36 @@ describe("ReviewPanel workspace requests", () => {
     };
     await render(["a", "b"]);
 
-    // Reach the real select's public onChange prop through its rendered trigger;
-    // no module mock replaces the real diff viewer or leaks into other suites.
-    let chooseFile: ((value: string) => void) | undefined;
-    for (const node of nodes(container)) {
-      const key = Object.keys(node).find((key) => key.startsWith("__reactFiber$"));
-      let fiber = key ? node[key] : null;
-      while (fiber) {
-        if (fiber.memoizedProps?.options?.some((option: any) => option.value === "a.ts")) {
-          chooseFile = fiber.memoizedProps.onChange;
-          break;
-        }
-        fiber = fiber.return;
-      }
-      if (chooseFile) break;
-    }
-    expect(chooseFile).toBeFunction();
-    await act(async () => {
-      chooseFile!("a.ts");
-      await flushMicrotasks();
-    });
+    await chooseReviewFile(container, "a.ts");
     expect(text(container)).toContain("after-a");
     expect(text(container)).not.toContain("after-b");
 
     await render(["c", "d"]);
     expect(text(container)).toContain("after-c");
     expect(text(container)).toContain("after-d");
+    expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+
+    // Restoring an earlier path must not reactivate an unavailable selection.
+    await render(["a", "b"]);
+    expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+    expect(text(container)).toContain("after-a");
+    expect(text(container)).toContain("after-b");
+    await chooseReviewFile(container, "a.ts");
+    const obsoleteSelect = componentProps(container, SimpleSelect);
+    const obsoleteValue = obsoleteSelect.options.find(
+      (option: any) => option.label === "a.ts",
+    ).value;
+    await render([]);
+    expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+    expect(hasControl(container, "选择文件")).toBe(false);
+    expect(text(container)).toContain("no changes");
+    await act(async () => {
+      obsoleteSelect.onChange(obsoleteValue);
+      await flushMicrotasks();
+    });
+    await render(["a", "b"]);
+    expect(componentProps(container, UnifiedDiffViewer).onlyPath).toBeNull();
+    expect(text(container)).toContain("after-a");
+    expect(text(container)).toContain("after-b");
   });
 });

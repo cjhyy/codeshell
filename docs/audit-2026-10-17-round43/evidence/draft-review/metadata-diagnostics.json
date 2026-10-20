@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "toolChunk": "03c643",
+      "command": "rg --files packages/desktop/src/renderer docs bugs with source and MD/JSON globs",
+      "exitCode": 0,
+      "originalTokenCount": 61066,
+      "outputTruncated": true,
+      "classification": "overbroad path inventory display only; no body/semantic coverage claimed; fresh inventory will be captured without console path dump"
+    },
+    {
+      "toolChunk": "198dc3",
+      "classification": "correct bounded renderer source filename inventory; ChatView canonical at renderer/ChatView.tsx, not components/chat"
+    },
+    {
+      "toolChunk": "09708c",
+      "classification": "Verbose initial history contexts display truncated; full retained metadata stored, no all35-context semantic claim; compact scope rows reread only"
+    },
+    {
+      "toolChunk": "ecef70",
+      "classification": "Focused history locator list display truncated; full JSON stored. Only direct old report selected ranges establish exact-cause exclusion, not all322 retained windows read."
+    }
+  ],
+  "productFailures": 0
+}

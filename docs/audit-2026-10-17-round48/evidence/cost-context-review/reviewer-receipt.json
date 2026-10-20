@@ -1,0 +1,125 @@
+{
+  "frozenUTC": "2026-10-17T15:55:38.605288+00:00",
+  "directory": "/tmp/codeshell-audit-round63-cost-context-review",
+  "role": "Independent bounded ordinary source reviewer;61 author inputs not read or requested",
+  "files": [
+    {
+      "path": "artifact-checks.json",
+      "bytes": 3550,
+      "sha256": "390cbc55d904ae10ce6a0b7a0d9023522ab0df2c48eefea95eac1b7f5474ea0d"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 578,
+      "sha256": "b25acbfb173edc2361add7642e3a801971448efc32a344602df218fc747f2f69"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1852,
+      "sha256": "3bccbc0ab72fc4b95ff8e42abda326ad54343f4962d65c99b190f299e39b1754"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 18590,
+      "sha256": "59c9a86708a8999cfb7557de3623389b3426ce9905b14fed789b6437be3c43c3"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 3650,
+      "sha256": "6b9a978e6e17cab64f77aa8fcf2fc743fdddb80d112572ffa2da61921217a3cb"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 1201,
+      "sha256": "7413c382229bc745260f549791e05305c71ad877392eb915b621eb631a6d5c3c"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 86491,
+      "sha256": "eb57c4de00dbd69d80f49f88c9c22a3728eff965e0e86c1069b98578b3f34b58"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3674,
+      "sha256": "0955071575b871622c97366a51d3a20f0d7ec5a7503789cb7c3abd6b39c1bab4"
+    },
+    {
+      "path": "history.json",
+      "bytes": 945454,
+      "sha256": "58dcd92cb7c24b9742350d50166da0b57f148768d5b23facf5cbe9decc609869"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 850,
+      "sha256": "32e22ffe5aef90a299fd1f75404bc69991a0966c2c92abdc743bf1ab4581735a"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4863,
+      "sha256": "571e22165029ea2aec6e8bece989ed52a6e53b1dfff829b01d377635ebcaf33c"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 37703,
+      "sha256": "fbda596e7c6d168b76cfc9b18cf4fc322e779b29d951a5d74ab17cd6e906497b"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 11461,
+      "sha256": "8f269e3b13e00c32234eb309fcc0a0e2a0fccd08aecf088268c763b05e8f0d81"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1235,
+      "sha256": "a0031b78b79cdcbb6ada8efe2627907c0ee6bcd4e1f77066169630d1af1e7da2"
+    }
+  ],
+  "selfExcluded": true,
+  "fileCountExcludingSelf": 14,
+  "totalFilesIncludingSelf": 15,
+  "relativeReportLinks": 11,
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0,
+    "oldCauseExclusions": 1
+  },
+  "source": {
+    "semanticFiles": 7,
+    "full": 0,
+    "selected": 7,
+    "semanticLines": 329,
+    "productLines": 295,
+    "testLines": 34,
+    "displayedUniqueLinesIncludingNavigation": 523,
+    "navigationOnlyFiles": 1,
+    "existingTestDeclarationsIntentOnly": 2,
+    "testsExecuted": 0
+  },
+  "history": {
+    "datedFiles": 4255,
+    "md": 1423,
+    "json": 2832,
+    "stringValues": 1765237,
+    "scalarValues": 2662013,
+    "exactArchivePaths": 169,
+    "parseErrors": 0,
+    "matches": {
+      "path": 57,
+      "filename": 58,
+      "sha": 11,
+      "oldCause": 79
+    },
+    "cap": 100,
+    "endingDrift": 0,
+    "includesFrozen46ExcludesExact47And57to65": true
+  },
+  "sourceInstructionPins": 10,
+  "allSameAtEnding": true,
+  "productExecution": 0,
+  "ASLSOrProviderFixturesTestsNativeNetwork": 0,
+  "gitOperations": 0,
+  "productWrites": 0,
+  "metadataFirstFailuresOrTruncations": 0,
+  "limitations": "Ordinary selected dataflow only; no Node/SDK propagation/runtime validation, ledger persist/lock/pricing/crypto/identity mechanism audit, current-head certification or whole-module no-bug claim."
+}

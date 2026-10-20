@@ -1,0 +1,76 @@
+{
+  "snapshots": [
+    {
+      "path": "packages/server/src/session-titles-store.ts",
+      "range": [
+        1,
+        57
+      ],
+      "capturedUTC": "2026-10-17T15:51:11.051916+00:00",
+      "text": "/** Durable UI-side session titles, keyed by canonical engine session id. */\n\nimport { randomUUID } from \"node:crypto\";\nimport { constants } from \"node:fs\";\nimport * as fs from \"node:fs\";\nimport * as path from \"node:path\";\nimport { acquireLockOnPath } from \"@cjhyy/code-shell-core/internal\";\n\ninterface TitleMap {\n  [sessionId: string]: string;\n}\n\nconst MAX_TITLE_ENTRIES = 20_000;\nconst MAX_SESSION_ID_LENGTH = 256;\nconst MAX_TITLE_LENGTH = 1_024;\nconst MAX_TITLE_FILE_BYTES = 4 * 1024 * 1024;\nconst FORBIDDEN_MAP_KEYS = new Set([\"__proto__\", \"prototype\", \"constructor\"]);\n\nexport class SessionTitleConflictError extends Error {\n  constructor() {\n    super(\"Session title changed on another device\");\n    this.name = \"SessionTitleConflictError\";\n  }\n}\n\nfunction validSessionId(value: unknown): value is string {\n  return (\n    typeof value === \"string\" &&\n    value.length > 0 &&\n    value.length <= MAX_SESSION_ID_LENGTH &&\n    !FORBIDDEN_MAP_KEYS.has(value) &&\n    /^[A-Za-z0-9._-]+$/.test(value)\n  );\n}\n\nfunction validTitle(value: unknown): value is string {\n  return typeof value === \"string\" && value.length <= MAX_TITLE_LENGTH && !value.includes(\"\\0\");\n}\n\nfunction parseTitleMap(value: unknown, strict = false): TitleMap {\n  if (!value || typeof value !== \"object\" || Array.isArray(value)) {\n    if (strict) throw new Error(\"session title registry is malformed\");\n    return Object.create(null) as TitleMap;\n  }\n  if (strict && Object.keys(value).length > MAX_TITLE_ENTRIES)\n    throw new Error(\"session title registry contains too many entries\");\n  const result: TitleMap = Object.create(null) as TitleMap;\n  for (const [id, title] of Object.entries(value).slice(0, MAX_TITLE_ENTRIES)) {\n    if (!validSessionId(id) || !validTitle(title)) {\n      if (strict) throw new Error(\"session title registry contains malformed entries\");\n      continue;\n    }\n    if (strict || title) result[id] = title;\n  }\n  return result;\n}\n"
+    },
+    {
+      "path": "packages/server/src/session-titles-store.ts",
+      "range": [
+        121,
+        189
+      ],
+      "capturedUTC": "2026-10-17T15:51:11.053276+00:00",
+      "text": "export function createSessionTitlesStore(\n  file: string,\n  options: { strictMutations?: boolean } = {},\n) {\n  let mutationQueue: Promise<void> = Promise.resolve();\n  function serializeMutation(mutation: (target: string) => void): Promise<void> {\n    const target = file;\n    const result = mutationQueue.then(() => mutation(target));\n    mutationQueue = result.catch(() => undefined);\n    return result;\n  }\n\n  async function listTitles(): Promise<TitleMap> {\n    await mutationQueue.catch(() => undefined);\n    return load(file);\n  }\n\n  function setTitle(\n    id: string,\n    title: string,\n    expected: { expectedTitle?: string | null } = {},\n  ): Promise<void> {\n    if (!validSessionId(id)) throw new Error(\"invalid session id\");\n    if (!validTitle(title)) throw new Error(\"invalid session title\");\n    if (\n      expected.expectedTitle !== undefined &&\n      expected.expectedTitle !== null &&\n      !validTitle(expected.expectedTitle)\n    )\n      throw new Error(\"invalid expected session title\");\n    return serializeMutation((target) => {\n      const parent = path.dirname(target);\n      fs.mkdirSync(parent, { recursive: true, mode: 0o700 });\n      const parentInfo = fs.lstatSync(parent);\n      if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {\n        throw new Error(\"session title directory must be a real directory\");\n      }\n      // A volume root such as /data is writable while its parent / is not.\n      // Keep both the lock anchor and its sibling lock inside that volume.\n      const anchor = path.join(parent, `.${path.basename(target)}.mutex`);\n      fs.mkdirSync(anchor, { recursive: true, mode: 0o700 });\n      const anchorInfo = fs.lstatSync(anchor);\n      if (!anchorInfo.isDirectory() || anchorInfo.isSymbolicLink())\n        throw new Error(\"session title lock anchor must be a real directory\");\n      // No await inside this synchronous cross-process lock: a second store\n      // instance must never block the event loop while this holder waits for I/O.\n      const release = acquireLockOnPath(anchor);\n      try {\n        const map = load(target, options.strictMutations);\n        if (\n          expected.expectedTitle !== undefined &&\n          (map[id] ?? \"\") !== (expected.expectedTitle ?? \"\")\n        )\n          throw new SessionTitleConflictError();\n        if (title) {\n          if (!(id in map) && Object.keys(map).length >= MAX_TITLE_ENTRIES) {\n            throw new Error(\"session title registry is full\");\n          }\n          map[id] = title;\n        } else delete map[id];\n        save(target, map);\n      } finally {\n        release();\n      }\n    });\n  }\n\n  return { listTitles, setTitle };\n}"
+    },
+    {
+      "path": "packages/server/src/hub/session-management.ts",
+      "range": [
+        177,
+        199
+      ],
+      "capturedUTC": "2026-10-17T15:52:06.103124+00:00",
+      "text": "      throw new SessionRequestError(404, \"当前工作区没有这个会话。\");\n    }\n  }\n\n  function summary(\n    state: SessionState & { preview?: string; lastActiveAt?: number },\n    customTitle = \"\",\n  ) {\n    return {\n      sessionId: state.sessionId,\n      cwd: state.cwd,\n      title:\n        customTitle ||\n        hubSessionPreview(state.title) ||\n        hubSessionPreview(state.preview) ||\n        \"新对话\",\n      customTitle,\n      startedAt: state.startedAt,\n      lastActiveAt: state.lastActiveAt ?? state.startedAt,\n      model: state.model,\n      status: state.status,\n      turnCount: state.turnCount,\n      archivedAt: state.archivedAt ?? null,"
+    },
+    {
+      "path": "packages/server/src/hub/session-management.ts",
+      "range": [
+        223,
+        243
+      ],
+      "capturedUTC": "2026-10-17T15:52:06.104494+00:00",
+      "text": "      } catch {\n        throw new SessionRequestError(400, \"分页位置无效，请刷新会话列表。\");\n      }\n    }\n    const customTitles = await titles.listTitles();\n    const search = query.toLocaleLowerCase();\n    const entries = manager.list(limit + 1, {\n      cwd,\n      rootsOnly: true,\n      ...(archived !== \"all\" ? { archived: archived === \"true\" } : {}),\n      ...(before ? { before } : {}),\n      filter: search\n        ? (state) =>\n            `${customTitles[state.sessionId] ?? \"\"}\\n${hubSessionPreview(state.title) ?? \"\"}\\n${hubSessionPreview(state.preview) ?? \"\"}\\n${state.sessionId}`\n              .toLocaleLowerCase()\n              .includes(search)\n        : undefined,\n    });\n    const page = entries.slice(0, limit);\n    const last = page.at(-1);\n    return {"
+    },
+    {
+      "path": "packages/server/src/hub/session-management.ts",
+      "range": [
+        270,
+        281
+      ],
+      "capturedUTC": "2026-10-17T15:52:06.104505+00:00",
+      "text": "        sessionId = decodeURIComponent(match[1]!);\n      } catch {\n        throw new SessionRequestError(400, \"会话标识无效。\");\n      }\n      const state = owned(sessionId);\n      if (!match[2] && req.method === \"GET\") {\n        const customTitles = await titles.listTitles();\n        if (!(await options.isAuthorized(req))) throw new SessionRequestError(401, \"请重新登录。\");\n        hubJson(res, 200, summary(owned(sessionId), customTitles[sessionId]));\n      } else if (match[2] && req.method === \"GET\") {\n        if (options.isRunning(sessionId))\n          throw new SessionRequestError(409, \"请等待当前任务完成后再导出完整对话。\");"
+    },
+    {
+      "path": "packages/server/src/hub/session-management.ts",
+      "range": [
+        313,
+        333
+      ],
+      "capturedUTC": "2026-10-17T15:52:06.104512+00:00",
+      "text": "        if (\"title\" in input) {\n          if (Object.keys(input).some((key) => key !== \"title\" && key !== \"expectedTitle\"))\n            throw new SessionRequestError(400, \"每次只修改一个会话属性。\");\n          if (\n            typeof input.title !== \"string\" ||\n            input.title.length > 1024 ||\n            /[\\0\\r\\n]/.test(input.title)\n          )\n            throw new SessionRequestError(400, \"标题必须是 1024 字以内的单行文字。\");\n          if (\n            input.expectedTitle !== undefined &&\n            input.expectedTitle !== null &&\n            (typeof input.expectedTitle !== \"string\" ||\n              input.expectedTitle.length > 1024 ||\n              input.expectedTitle.includes(\"\\0\"))\n          )\n            throw new SessionRequestError(400, \"用于比较的原标题无效，请重新读取会话。\");\n          await titles.setTitle(sessionId, input.title.trim(), {\n            expectedTitle: input.expectedTitle as string | null | undefined,\n          });\n        } else if (Object.keys(input).length === 1 && typeof input.archived === \"boolean\") {"
+    },
+    {
+      "path": "packages/server/src/session-titles-store.test.ts",
+      "range": [
+        71,
+        81
+      ],
+      "capturedUTC": "2026-10-17T15:52:06.105325+00:00",
+      "text": "test(\"expected custom titles compare atomically against the latest independent writer\", async () => {\n  const { file, store } = fixture();\n  const other = createSessionTitlesStore(file, { strictMutations: true });\n  await store.setTitle(\"session\", \"First writer\", { expectedTitle: null });\n  await expect(\n    other.setTitle(\"session\", \"Stale overwrite\", { expectedTitle: \"\" }),\n  ).rejects.toBeInstanceOf(SessionTitleConflictError);\n  expect((await store.listTitles())[\"session\"]).toBe(\"First writer\");\n  await other.setTitle(\"session\", \"\", { expectedTitle: \"First writer\" });\n  expect((await store.listTitles())[\"session\"]).toBeUndefined();\n});"
+    },
+    {
+      "path": "packages/server/src/hub/session-management.ts",
+      "range": [
+        244,
+        251
+      ],
+      "capturedUTC": "2026-10-17T15:52:18.678506+00:00",
+      "text": "      sessions: page.map((state) => summary(state, customTitles[state.sessionId])),\n      nextCursor:\n        entries.length > limit && last\n          ? Buffer.from(\n              JSON.stringify({ lastActiveAt: last.lastActiveAt, sessionId: last.sessionId }),\n            ).toString(\"base64url\")\n          : null,\n    };"
+    }
+  ]
+}

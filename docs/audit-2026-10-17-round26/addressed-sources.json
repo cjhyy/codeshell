@@ -1,0 +1,72 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "count": 0,
+  "sourceChanges": [],
+  "sourceMetadataChanges": [
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx",
+      "frozenSha256": "53e3d749280c846a50c87d24e88ae307c6896474968c983c8e45ef8ae165c875",
+      "mainSha256": "10a2841bb73638291ff5385cadd1dfe8a5efd67ac9aa3d36ecffaffb2c175714",
+      "frozenBytes": 12507,
+      "mainBytes": 12885
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "frozenSha256": "de428ac137bd0d205805ec8f2756a175117bb6389b5fd188e81adf3e4cd49080",
+      "mainSha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "frozenBytes": 40415,
+      "mainBytes": 40459
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+      "frozenSha256": "da044391dc146875033787fda10b1df2c1b1155462168e16cb3bd2bc74965163",
+      "mainSha256": "31d77cfe853aceaa92f16bd91a9a63779b9e7ea079adf5831410c63abd82d220",
+      "frozenBytes": 16988,
+      "mainBytes": 17458
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+      "frozenSha256": "fcb344312ed6342e6d4239178e3d73e71018412cb93d6e5ade8ff0c769a423a6",
+      "mainSha256": "71a2811fc2060194ea1a1641da91749a76357920b33c0385c329a2adfb0e392c",
+      "frozenBytes": 660,
+      "mainBytes": 2395
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "frozenSha256": "a8bb1b08885541a3e89d02415fea9f715d8208f4358c65daf61ba4d11e09278d",
+      "mainSha256": "616db299d2eea30218c7996cd2bb89f579472ed57bb053bb014d31ee9b07658e",
+      "frozenBytes": 437,
+      "mainBytes": 1903
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "frozenSha256": "f1ad4679c164b0a906c60f6432a8b314e997ce2bcb895f70869c3e990e0bf42b",
+      "mainSha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "frozenBytes": 15998,
+      "mainBytes": 16212
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "frozenSha256": "6c99e51b85a5e17fc447b676124c856cb522ba06433502aaad4136c1db1a1193",
+      "mainSha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "frozenBytes": 34238,
+      "mainBytes": 34235
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "frozenSha256": "851706799747281a5650ae52f963e304782490092f46a1daa98e4abd0dc07cad",
+      "mainSha256": "88ce19d0b9d5b358c09e76300080fdaa0c1f50a3f4d926c6c86ada9520656d08",
+      "frozenBytes": 17885,
+      "mainBytes": 18347
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+      "frozenSha256": "4c11dfc6ab2a5a3aa88bc5ec50f7e2dde3d703cfa17678cb4668c5c1f581a74e",
+      "mainSha256": "a06d87548ca73be6235dd81953b64a75a5564488a84038067f6f954d441b4591",
+      "frozenBytes": 11449,
+      "mainBytes": 13600
+    }
+  ],
+  "runtimeRetested": false,
+  "note": "No oldfixvalidated/newproductfix. BranchcodepredatesReviewfeature;newrecorddoesnotmeanintroducedbylatestcommit."
+}

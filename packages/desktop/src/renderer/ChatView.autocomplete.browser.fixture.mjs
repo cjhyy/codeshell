@@ -1,5 +1,6 @@
-/* Production composer geometry and pointer/keyboard regression. */
-/* global document, window, requestAnimationFrame */
+/* Production composer geometry, keyboard and native textbox/portal accessibility. */
+/* Chromium AX relationships are checked here; screen-reader speech is not. */
+/* global document, window, requestAnimationFrame, MutationObserver */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile } from "node:fs/promises";
@@ -25,25 +26,39 @@ const source = `
   import {saveUILanguage} from './uiLanguage';
   const commands=Array.from({length:20},(_,i)=>({name:'demo:command'+i,pluginName:'demo',description:'Command '+i,argumentHint:'<path>'}));
   const skills=Array.from({length:8},(_,i)=>({name:'skill'+i,filePath:'/fixture/skill'+i+'/SKILL.md',description:'Skill '+i}));
-  const files=Array.from({length:12},(_,i)=>({path:'/fixture/file'+i+'.ts',relativePath:'file'+i+'.ts',kind:'file',rootId:'root'}));
+  const files=Array.from({length:12},(_,i)=>({path:'/fixture/file'+i+'.ts',name:'file'+i+'.ts',relativePath:'file'+i+'.ts',kind:'file',rootId:'root'}));
+  window.pendingFileSearches=new Map();
+  window.resolveFileSearch=(query,count)=>{
+    const resolve=window.pendingFileSearches.get(query);
+    if(!resolve) throw new Error('No pending search: '+query);
+    window.pendingFileSearches.delete(query);
+    resolve(files.slice(0,count));
+  };
   window.codeshell={sttAvailable:async()=>({available:false}),listPluginCommands:async()=>commands,
     onPluginCommandsChanged:()=>()=>{},listSkills:async()=>skills,inspectAttachments:async()=>[],
-    searchProjectFiles:async()=>files,getProjectGitBranches:async()=>({isRepo:true,current:'main',branches:['main']})};
+    searchProjectFiles:async(_project,query)=>query.startsWith('__deferred')
+      ?new Promise(resolve=>window.pendingFileSearches.set(query,resolve))
+      :query==='__none__'?[]:query==='__reverse__'?[...files].reverse():files,
+    getProjectGitBranches:async()=>({isRepo:true,current:'main',branches:['main']})};
   window.sends=[];
   const noop=()=>{};
-  function Fixture({narrowPane}) {
+  function Composer() {
     const [draft,setDraft]=React.useState('');
     const [contextTokens,setContextTokens]=React.useState(0);
     window.bumpContext=()=>setContextTokens(value=>value+100);
-    return <main style={{position:'fixed',inset:0,display:'flex',justifyContent:'flex-end',overflow:'hidden'}}>
-      <section style={{height:'100%',width:narrowPane?260:'100%',overflow:'hidden',border:'1px solid transparent'}}>
-        <ChatView variant="main" messages={[]} onSend={(text)=>window.sends.push(text)} onStop={noop} busy={false}
+    return <ChatView variant="main" messages={[]} onSend={(text)=>window.sends.push(text)} onStop={noop} busy={false}
           activeProjectId="project" permissionMode="plan" onPermissionChange={noop} goalEnabled={false} onGoalToggle={noop}
           modelOptions={[{key:'model',label:'Model',provider:'demo'}]} activeModelKey="model" onModelChange={noop}
           contextTokens={contextTokens} projects={[]} onSelectProject={noop} onAddProject={noop}
           configurationTarget={{projectId:'project'}} configurationAvailable conversationRoot="/fixture" conversationRootId="root"
-          draft={draft} onDraftChange={setDraft} attachments={[]} onAttachmentsChange={noop}/>
-      </section>
+          draft={draft} onDraftChange={setDraft} attachments={[]} onAttachmentsChange={noop}/>;
+  }
+  function Fixture({narrowPane,multiple=false}) {
+    return <main style={{position:'fixed',inset:0,display:'flex',justifyContent:'flex-end',overflow:'hidden'}}>
+      {Array.from({length:multiple?2:1},(_,index)=><section key={index}
+        style={{height:'100%',width:multiple?'50%':narrowPane?260:'100%',overflow:'hidden',border:'1px solid transparent'}}>
+        <Composer/>
+      </section>)}
     </main>;
   }
   const root=createRoot(document.getElementById('root'));
@@ -78,6 +93,217 @@ const browser = await chromium.launch({
 });
 const reports = [];
 const failures = [];
+
+async function association(input, menu, { empty = false } = {}) {
+  await menu.waitFor();
+  if (!empty) await menu.getByRole("option", { selected: true }).waitFor();
+  const state = await input.evaluate((node) => {
+    const controls = node.getAttribute("aria-controls");
+    const activeId = node.getAttribute("aria-activedescendant");
+    const list = controls && document.getElementById(controls);
+    const active = activeId && document.getElementById(activeId);
+    const selected = list?.querySelectorAll('[role="option"][aria-selected="true"]');
+    return {
+      role: node.getAttribute("role"),
+      label: node.getAttribute("aria-label"),
+      autocomplete: node.getAttribute("aria-autocomplete"),
+      hasPopup: node.getAttribute("aria-haspopup"),
+      expanded: node.getAttribute("aria-expanded"),
+      controls,
+      activeId,
+      selectedId: selected?.[0]?.id,
+      selectedCount: selected?.length,
+      optionCount: list?.querySelectorAll('[role="option"]').length,
+      controlledRole: list?.getAttribute("role"),
+      containsActive: !!active && list?.contains(active),
+      focused: document.activeElement === node,
+    };
+  });
+  assert.equal(state.role, null, "The multiline textarea retains its native textbox role");
+  assert.ok(state.label, "The composer has a stable accessible label");
+  assert.equal(state.expanded, null, "aria-expanded is not supported on a native textbox");
+  assert.equal(state.autocomplete, "list");
+  assert.equal(state.hasPopup, "listbox");
+  assert.equal(state.controls, await menu.getAttribute("id"));
+  assert.equal(state.controlledRole, "listbox");
+  assert.equal(state.focused, true, "DOM focus stays in the composer");
+  assert.equal(state.selectedCount, empty ? 0 : 1);
+  if (empty) {
+    assert.equal(state.optionCount, 0);
+    assert.equal(state.activeId, null, "An empty result has no active descendant");
+  } else {
+    assert.ok(state.activeId);
+    assert.equal(state.activeId, state.selectedId);
+    assert.equal(state.containsActive, true, "The active option belongs to the actual portal");
+  }
+  return state;
+}
+
+async function assertAX(page, state) {
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    const { nodes } = await cdp.send("Accessibility.getFullAXTree");
+    const property = (node, name) => node.properties?.find((item) => item.name === name)?.value;
+    const textbox = nodes.find(
+      (node) =>
+        node.role?.value === "textbox" &&
+        property(node, "controls")?.relatedNodes?.some((item) => item.idref === state.controls),
+    );
+    assert.ok(textbox, "The native textbox exposes its controlled listbox in Chromium's AX tree");
+    assert.equal(property(textbox, "multiline")?.value, true);
+    assert.equal(property(textbox, "autocomplete")?.value, "list");
+    assert.equal(property(textbox, "hasPopup")?.value, "listbox");
+    const target = property(textbox, "activedescendant")?.relatedNodes?.[0];
+    if (!state.activeId) {
+      assert.equal(target, undefined, "Empty results do not expose a stale AX target");
+      return;
+    }
+    assert.equal(target?.idref, state.activeId);
+    const option = nodes.find((node) => node.backendDOMNodeId === target.backendDOMNodeId);
+    assert.equal(
+      option?.role?.value,
+      "option",
+      "The mounted active descendant is exposed as an AX option",
+    );
+    assert.equal(property(option, "selected")?.value, true);
+  } finally {
+    await cdp.detach();
+  }
+}
+
+async function assertClosed(input, menu) {
+  await menu.waitFor({ state: "hidden" });
+  assert.equal(await input.getAttribute("aria-controls"), null);
+  assert.equal(await input.getAttribute("aria-activedescendant"), null);
+}
+
+async function waitForOptionCount(page, menu, count) {
+  await page.waitForFunction(
+    ({ id, count }) =>
+      document.getElementById(id)?.querySelectorAll('[role="option"]').length === count,
+    { id: await menu.getAttribute("id"), count },
+  );
+}
+
+async function waitForPick(page, input, expected) {
+  await page.waitForFunction((value) => {
+    const node = document.querySelector("textarea");
+    return (
+      node?.value === value &&
+      node.selectionStart === value.length &&
+      node.selectionEnd === value.length &&
+      document.activeElement === node
+    );
+  }, expected);
+  // A pick schedules caret restoration for the next paint. Let it finish
+  // before fill() starts its select-all/insertText replacement sequence.
+  await page.evaluate(async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  assert.equal(await input.inputValue(), expected);
+}
+
+async function asynchronousResults(page, input) {
+  const menu = page.getByRole("listbox");
+  await input.fill("/");
+  await menu.waitFor();
+  await waitForOptionCount(page, menu, 21);
+  await input.press("ArrowUp");
+  const slashLast = await association(input, menu);
+  await input.fill("/demo:command19");
+  await waitForOptionCount(page, menu, 1);
+  const narrowed = await association(input, menu);
+  assert.equal(narrowed.activeId, slashLast.activeId, "Filtering preserves command identity");
+  await assertAX(page, narrowed);
+  await input.press("Escape");
+  await assertClosed(input, menu);
+
+  await input.fill("@");
+  await menu.waitFor();
+  await waitForOptionCount(page, menu, 20);
+  const original = await association(input, menu);
+  const firstFileId = await menu.getByRole("option").nth(8).getAttribute("id");
+  await input.press("ArrowUp");
+  const last = await association(input, menu);
+
+  await input.fill("@__deferred_shrink__");
+  await page.waitForFunction(() => window.pendingFileSearches.has("__deferred_shrink__"));
+  await input.press("ArrowUp");
+  assert.equal((await association(input, menu)).activeId, last.activeId);
+  await page.evaluate(() => window.resolveFileSearch("__deferred_shrink__", 1));
+  await waitForOptionCount(page, menu, 1);
+  const shrunk = await association(input, menu);
+  assert.equal(shrunk.activeId, firstFileId, "Clamping points to the surviving mounted option");
+  await assertAX(page, shrunk);
+
+  await input.fill("@__reverse__");
+  await waitForOptionCount(page, menu, 12);
+  const reversed = await association(input, menu);
+  assert.equal(reversed.activeId, last.activeId, "Option identity survives list reordering");
+
+  await input.fill("@__deferred_empty__");
+  await page.waitForFunction(() => window.pendingFileSearches.has("__deferred_empty__"));
+  await input.press("ArrowUp");
+  await association(input, menu);
+  await page.evaluate(() => window.resolveFileSearch("__deferred_empty__", 0));
+  await waitForOptionCount(page, menu, 0);
+  await assertAX(page, await association(input, menu, { empty: true }));
+
+  await input.fill("@__deferred_close__");
+  await page.waitForFunction(() => window.pendingFileSearches.has("__deferred_close__"));
+  await input.press("Escape");
+  await assertClosed(input, menu);
+  await page.evaluate(async () => {
+    window.resolveFileSearch("__deferred_close__", 12);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  });
+  await assertClosed(input, menu);
+  await input.fill("@");
+  await menu.waitFor();
+  await waitForOptionCount(page, menu, 20);
+  const reopened = await association(input, menu);
+  assert.equal(reopened.controls, original.controls);
+  assert.equal(reopened.activeId, original.activeId);
+  await input.press("Escape");
+  await assertClosed(input, menu);
+}
+
+async function multipleComposers(page) {
+  await page.evaluate(() => window.renderFixture({ lang: "en", multiple: true }));
+  const inputs = page.locator("textarea");
+  await page.waitForFunction(() => document.querySelectorAll("textarea").length === 2);
+  const first = inputs.nth(0);
+  const second = inputs.nth(1);
+  await first.fill("/");
+  await page.waitForFunction(() =>
+    document.querySelectorAll("textarea")[0].hasAttribute("aria-controls"),
+  );
+  const firstId = await first.getAttribute("aria-controls");
+  const firstMenu = page.locator(`[id=${JSON.stringify(firstId)}]`);
+  await waitForOptionCount(page, firstMenu, 21);
+  const firstState = await association(first, firstMenu);
+  await second.fill("/");
+  await page.waitForFunction(() =>
+    document.querySelectorAll("textarea")[1].hasAttribute("aria-controls"),
+  );
+  const secondId = await second.getAttribute("aria-controls");
+  const secondMenu = page.locator(`[id=${JSON.stringify(secondId)}]`);
+  await waitForOptionCount(page, secondMenu, 21);
+  const secondState = await association(second, secondMenu);
+  assert.notEqual(firstId, secondId, "Each composer owns a distinct listbox");
+  assert.notEqual(firstState.activeId, secondState.activeId);
+  await assertClosed(first, firstMenu);
+  assert.deepEqual(await association(second, secondMenu), secondState);
+  await assertAX(page, secondState);
+  await first.click();
+  const reopened = await association(first, firstMenu);
+  assert.equal(reopened.activeId, firstState.activeId);
+  await assertClosed(second, secondMenu);
+  await association(first, firstMenu);
+  await first.press("Escape");
+  await assertClosed(first, firstMenu);
+}
+
 try {
   for (const lang of ["zh", "en"]) {
     for (const viewport of [
@@ -98,11 +324,34 @@ try {
         await page.evaluate((props) => window.renderFixture(props), { lang, narrowPane });
         const input = page.locator("textarea");
         await input.waitFor();
+        await page.evaluate(() => {
+          window.associationViolations = [];
+          new MutationObserver(() => {
+            for (const node of document.querySelectorAll("textarea")) {
+              const controls = node.getAttribute("aria-controls");
+              const activeId = node.getAttribute("aria-activedescendant");
+              const list = controls && document.getElementById(controls);
+              const active = activeId && document.getElementById(activeId);
+              if (
+                (controls && list?.getAttribute("role") !== "listbox") ||
+                (activeId &&
+                  (!list?.contains(active) || active?.getAttribute("aria-selected") !== "true"))
+              )
+                window.associationViolations.push({ controls, activeId });
+            }
+          }).observe(document.body, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ["id", "aria-controls", "aria-activedescendant", "aria-selected"],
+          });
+        });
         for (const token of ["@", "/"]) {
           await input.fill(token);
           const menu = page.getByRole("listbox");
           await menu.waitFor();
           await page.waitForTimeout(250);
+          const opened = recordOnly ? null : await association(input, menu);
           let phase = "open";
           const measure = async (phase) => {
             const box = await menu.evaluate((node) => {
@@ -124,6 +373,7 @@ try {
             const context = { lang, viewport, narrowPane, token, phase, box };
             reports.push(context);
             if (!recordOnly) {
+              await assertAX(page, await association(input, menu));
               assert.ok(
                 box.rect.left >= 10 &&
                   box.rect.top >= 10 &&
@@ -165,6 +415,7 @@ try {
                 scrolled,
                 "Background token updates preserve manually scrolled suggestions",
               );
+              assert.equal((await association(input, menu)).activeId, opened.activeId);
               phase = "keyboard";
               await input.press("ArrowUp");
               await page.waitForTimeout(80);
@@ -178,26 +429,20 @@ try {
                 }),
                 "Keyboard selection remains visible and clickable",
               );
+              const last = await association(input, menu);
+              await assertAX(page, last);
+              await input.press("ArrowDown");
+              assert.equal((await association(input, menu)).activeId, opened.activeId);
+              await input.press("ArrowUp");
+              assert.equal((await association(input, menu)).activeId, last.activeId);
               phase = "pick";
               await selected.click();
-              await menu.waitFor({ state: "hidden" });
+              await assertClosed(input, menu);
               const pickedDraft = token === "@" ? "@/fixture/file11.ts " : "/demo:command19 ";
               // Closing the portal is only one part of a pick. Check the
               // controlled draft, then let the pick's scheduled caret restore
               // finish before replacing the input again.
-              await page.waitForFunction((expected) => {
-                const node = document.querySelector("textarea");
-                return (
-                  node?.value === expected &&
-                  node.selectionStart === expected.length &&
-                  node.selectionEnd === expected.length
-                );
-              }, pickedDraft);
-              await page.evaluate(async () => {
-                await new Promise((resolve) =>
-                  requestAnimationFrame(() => requestAnimationFrame(resolve)),
-                );
-              });
+              await waitForPick(page, input, pickedDraft);
               assert.ok(
                 await input.evaluate((node) => document.activeElement === node),
                 "Pointer selection retains composer focus",
@@ -207,9 +452,23 @@ try {
                 0,
                 "Picking a suggestion never sends the draft",
               );
+              for (const key of ["Enter", "Tab"]) {
+                phase = `pick-${key}`;
+                await input.fill(token);
+                await menu.waitFor();
+                await waitForOptionCount(page, menu, opened.optionCount);
+                await input.press("ArrowUp");
+                assert.equal((await association(input, menu)).activeId, last.activeId);
+                await input.press(key);
+                await assertClosed(input, menu);
+                await waitForPick(page, input, pickedDraft);
+                assert.equal(await page.evaluate(() => window.sends.length), 0);
+              }
               phase = "reopen";
               await input.fill(token);
               await menu.waitFor();
+              await waitForOptionCount(page, menu, opened.optionCount);
+              assert.deepEqual(await association(input, menu), opened);
               assert.equal(
                 await input.inputValue(),
                 token,
@@ -225,6 +484,13 @@ try {
               await page.setViewportSize({ width: 320, height: 240 });
               await page.waitForTimeout(200);
               await measure("resize");
+              phase = "blur";
+              await input.evaluate((node) => node.blur());
+              await assertClosed(input, menu);
+              await input.click();
+              await menu.waitFor();
+              await waitForOptionCount(page, menu, opened.optionCount);
+              assert.deepEqual(await association(input, menu), opened);
             }
           } catch (error) {
             const inputState = await input.evaluate((node) => ({
@@ -236,11 +502,48 @@ try {
             failures.push(
               `${JSON.stringify({ lang, viewport, narrowPane, token, phase, inputState })}\n${error.message}`,
             );
+            console.error(failures.at(-1));
           }
           await input.press("Escape");
-          await menu.waitFor({ state: "hidden" });
+          if (recordOnly) await menu.waitFor({ state: "hidden" });
+          else {
+            await assertClosed(input, menu);
+            assert.equal(await input.inputValue(), token, "Escape preserves the draft");
+            assert.ok(await input.evaluate((node) => document.activeElement === node));
+          }
           await page.setViewportSize(viewport);
         }
+        if (!recordOnly && lang === "en" && viewport.width === 800 && !narrowPane) {
+          const menu = page.getByRole("listbox");
+          for (const token of ["/", "@"]) {
+            await input.fill(`${token}__none__`);
+            await menu.waitFor();
+            await waitForOptionCount(page, menu, 0);
+            await assertAX(page, await association(input, menu, { empty: true }));
+            for (const key of ["ArrowDown", "ArrowUp"]) {
+              await input.press(key);
+              await association(input, menu, { empty: true });
+            }
+            await input.press("Tab");
+            await assertClosed(input, menu);
+            assert.equal(await input.inputValue(), `${token}__none__`);
+            assert.equal(await page.evaluate(() => window.sends.length), 0);
+            await input.click();
+            await menu.waitFor();
+            await waitForOptionCount(page, menu, 0);
+            await association(input, menu, { empty: true });
+            await input.press("Escape");
+            await assertClosed(input, menu);
+          }
+          await asynchronousResults(page, input);
+          await multipleComposers(page);
+        }
+        if (!recordOnly)
+          assert.deepEqual(
+            await page.evaluate(() => window.associationViolations),
+            [],
+            "Observed DOM updates never leave a missing or unselected active descendant",
+          );
         assert.deepEqual(errors, []);
         await page.close();
       }

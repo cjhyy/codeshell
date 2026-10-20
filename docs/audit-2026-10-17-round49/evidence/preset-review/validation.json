@@ -1,0 +1,18 @@
+{
+  "capturedUTC": "2026-10-17T16:26:30.478137+00:00",
+  "mode": "static-directed-source and fresh history metadata only",
+  "productHelperFixtureTestReactTerminalNativeModelNetworkGitRuns": 0,
+  "realConfigReads": 0,
+  "testPasses": 0,
+  "metadataAdaptationCorrections": 1,
+  "commandFailures": 0,
+  "consoleTruncations": 0,
+  "productFailures": 0,
+  "inactiveFirstMethodOutputs": 5,
+  "firstDiagnostic": "metadata-first-diagnostic.json",
+  "correctionRunHandle": 45660,
+  "correctionExitCode": 0,
+  "sourceEndingSame": true,
+  "historyEndingSame": true,
+  "noFirstFullClaim": true
+}

@@ -1,0 +1,40 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/hub/run-replay.ts",
+      "bytes": 7446,
+      "sha256": "8618dddda862e1fb52fd3ff3bd0035b31826b13299a0c425d4f3b55589f76b38",
+      "lines": 206,
+      "pinAtUTC": "2026-10-17T20:40:48.887991+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target-before-body"
+    },
+    {
+      "path": "packages/server/src/session-http-responses.ts",
+      "bytes": 1369,
+      "sha256": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+      "lines": 39,
+      "pinAtUTC": "2026-10-17T20:40:48.890881+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target-before-body"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinAtUTC": "2026-10-17T20:40:48.891768+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "instruction-hash-reuse"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinAtUTC": "2026-10-17T20:40:48.893119+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "instruction-hash-reuse"
+    }
+  ]
+}

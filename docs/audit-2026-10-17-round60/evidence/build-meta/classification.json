@@ -1,0 +1,17 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "boundedConclusion": "Current declared root entry/exports/bin/content/config paths align with inspected build meta output statements and target package export paths. No new ordinary mismatch established.",
+  "scopeExclusions": [
+    "Old A11 release push/tag branch cause not investigated/reported or tested; Root-assigned exclusion.",
+    "Root R6 test:watch candidate not reclassified or reopened.",
+    "No arbitrary missing dist, dirty build, illegal CLI arguments, unsupported cross-platform chmod/shell behavior or published-version rewrite assumption used as a bug.",
+    "Permanent failed dynamic directions remain skipped."
+  ]
+}

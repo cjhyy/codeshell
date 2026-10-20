@@ -30,6 +30,7 @@ import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
 import { createComputerUseSettingsApi } from "./computer-use-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
+import { createModelTraceApi } from "./model-trace-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
 import { createPetApi } from "./pet-api";
@@ -44,6 +45,7 @@ import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-pr
 import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
+import type { PanelAppWindowTarget } from "../shared/panel-apps";
 import type { GoalConfig } from "@cjhyy/code-shell-core";
 import type {
   LocalPluginPreview,
@@ -998,6 +1000,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   listRuns: (options?: { includeSessions?: boolean }) => ipcRenderer.invoke("runs:list", options),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   ...createSessionTranscriptApi(ipcRenderer),
+  modelTraces: createModelTraceApi(ipcRenderer),
   /**
    * Re-subscribe to a session's main-held event snapshot after a remount.
    * Returns events past `sinceSeq` plus the next cursor, so the renderer can
@@ -1040,8 +1043,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
   listSkills: (target: RendererConfigurationTarget | null, opts?: { includeDisabled?: boolean }) =>
     ipcRenderer.invoke("skills:list", target, opts),
-  searchProjectFiles: (projectId: string, query: string) =>
-    ipcRenderer.invoke("files:searchProject", projectId, query),
   searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
     ipcRenderer.invoke("session:content-search", query),
   listPlugins: (target: RendererConfigurationTarget | null) =>
@@ -1511,7 +1512,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("links:authorizationCancel", cwd, id),
     authorizationOpen: (cwd: string, id: string) =>
       ipcRenderer.invoke("links:authorizationOpen", cwd, id),
-    remoteSnapshot: (cwd: string) => ipcRenderer.invoke("links:remoteSnapshot", cwd),
+    remoteSnapshot: (cwd: string, forceCatalog?: boolean) =>
+      ipcRenderer.invoke("links:remoteSnapshot", cwd, forceCatalog),
     remoteStart: (cwd: string, requestId: string, input: unknown) =>
       ipcRenderer.invoke("links:remoteStart", cwd, requestId, input),
     remoteCancel: (cwd: string, requestId: string) =>
@@ -1652,6 +1654,9 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("browser:probePorts", ports),
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout: (initialUrl?: string) => ipcRenderer.invoke("browser:popout", initialUrl),
+  /** Open a separate view of a project-bound installed Panel App. */
+  openPanelAppWindow: (target: PanelAppWindowTarget): Promise<void> =>
+    ipcRenderer.invoke("panel-apps:open-window", target),
   /** From a popout: send an element-pick anchor back to the parent window. */
   sendBrowserAnchor: (anchor: unknown) => ipcRenderer.send("browser:anchor", anchor),
   /** In the parent: receive anchors forwarded from a popout. Returns unsubscribe. */

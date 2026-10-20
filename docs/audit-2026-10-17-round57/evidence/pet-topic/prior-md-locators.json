@@ -1,0 +1,16 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "docs/audit-2026-10-17-round10",
+    "docs/audit-2026-10-17"
+  ],
+  "exitCode": 0,
+  "files": [
+    "docs/audit-2026-10-17/README.md",
+    "docs/audit-2026-10-17/pet-data.md",
+    "docs/audit-2026-10-17-round10/pet.md",
+    "docs/audit-2026-10-17-round10/README.md",
+    "docs/audit-2026-10-17-round10/evidence/cross-review-pet.md"
+  ]
+}

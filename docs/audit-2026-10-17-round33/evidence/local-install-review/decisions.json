@@ -1,0 +1,56 @@
+{
+  "frozenUtc": "2026-10-17T12:20:28.015872+00:00",
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalRound33Baseline": null,
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "classification": {
+    "newFormalFindings": 0,
+    "newCandidates": 0,
+    "newRelatedEntries": 0,
+    "sameOldRawCauseExclusions": 1
+  },
+  "disposition": "Exclude exact old raw cause per Root instruction; do not create a new bug/candidate/related item. Current static evidence strengthens the async/entry contract but not new causal identity.",
+  "currentStaticCause": [
+    "main.ts156-157 registers createPluginCommand; index.internal.ts419-422 directly exports async install.ts implementation.",
+    "Local CLI ternary branch does not await/return installPluginFromPath, while remote branch awaits; NPM branch also awaits. The log consumes a Promise value rather than resolved install directory.",
+    "runGuarded only awaits the async callback returned Promise; callback does not return/await the local installer Promise, so installer rejection is outside this guard error path.",
+    "Callee explicitly returns Promise<string>, awaits work and returns finalDir; ordinary invalid-directory/already-installed errors are thrown inside async function. No experimental rejection expression was run."
+  ],
+  "ordinaryContract": "Local directory is an advertised plugin install source and selected CLI registered action is reachable. Existing callee tests await successful installs/rejections; those declarations were not executed.",
+  "impactLimits": [
+    "Static log/value and ordering/error-linkage defect only.",
+    "No actual CLI log, global rejection behavior, process status/exit, HOME mutation or installed/staged directory damage observed or inferred as guaranteed.",
+    "No additional defect is split out from the same lost Promise cause."
+  ],
+  "oldCause": "old-cause.json",
+  "history": {
+    "files": 2988,
+    "markdownFiles": 1304,
+    "jsonFiles": 1684,
+    "stringLeaves": 645399,
+    "scalarLeaves": 957193,
+    "occurrenceCounts": {
+      "local-install-await": 396,
+      "lost-await": 386,
+      "promise-guard": 65
+    },
+    "savedContextCounts": {
+      "local-install-await": 100,
+      "lost-await": 100,
+      "promise-guard": 65
+    },
+    "contextCapEach": 100,
+    "selectedContextCandidates": 201,
+    "actualSelectedPrefixInspected": 20,
+    "directArchivedRawValueInspected": 1,
+    "parseErrors": 0,
+    "excluded": [
+      "current Round32",
+      "future Round33"
+    ],
+    "limits": "Complete MD/recursive JSON scalar-value scan with archives. Generic/capped matches are not all semantic review; exact archived cause was found in retained contexts and directly inspected."
+  },
+  "productAttempts": 0
+}

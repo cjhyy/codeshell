@@ -1,0 +1,8 @@
+{
+  "path": "packages/core/src/context/compaction.ts",
+  "bytes": 43905,
+  "lines": 1184,
+  "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+  "pinnedBeforeBodyUTC": "2026-10-17T18:45:47.510872+00:00",
+  "purpose": "Only collectBase64Images/downgradeImagePayloadsInHistory content/reference/index DTO helpers; compaction engine/runtime not audited"
+}

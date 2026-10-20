@@ -1,0 +1,28 @@
+{
+  "classification": "0/0/0",
+  "sourceRows": 12,
+  "sourceKindCounts": {
+    "files": 12,
+    "productFiles": 8,
+    "testDeclarationFiles": 2,
+    "instructionHashOnlyFiles": 2,
+    "productSemanticLines": 490,
+    "testDeclarationLines": 126,
+    "productAndTestDisplayedLines": 616,
+    "fullProductFiles": 3,
+    "selectedProductFiles": 5
+  },
+  "reportLinkCount": 7,
+  "allLinksExist": true,
+  "excerptRangeObjectsChecked": 17,
+  "excerptBytesAndHashesValid": true,
+  "sourceEndingRowsSame": 12,
+  "selectedMetadataEndingRowsSame": 7,
+  "productExecutions": 0,
+  "gitCalls": 0,
+  "firstMetadataErrorsPreserved": [
+    "finalizer.first.outer-observed.json",
+    "finalize-packet.corrected.stderr.txt"
+  ],
+  "captureProcessDeviation": "Initial shared schema peek has only observed tool transcript, not separate raw child streams."
+}

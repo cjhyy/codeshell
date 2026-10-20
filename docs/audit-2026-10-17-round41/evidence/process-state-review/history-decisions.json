@@ -1,0 +1,55 @@
+{
+  "inventory": {
+    "discovered": 3693,
+    "included": 3581,
+    "excluded": 112,
+    "md": 1369,
+    "json": 2212,
+    "bytes": 140201679,
+    "jsonStringValues": 1030881,
+    "jsonScalarValues": 1550274,
+    "jsonParseErrors": [],
+    "archiveBySubstring": 175,
+    "includesFrozenRound39": true
+  },
+  "method": {
+    "literalCasefoldedNeedles": {
+      "source_path": [
+        "packages/server/src/panels/process-state.ts"
+      ],
+      "source_filename": [
+        "process-state.ts"
+      ],
+      "source_sha": [
+        "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6"
+      ],
+      "state_contract": [
+        "panels/process-state",
+        "panelprocessstate"
+      ]
+    },
+    "capPerGroup": 160,
+    "notSemanticExhaustion": true,
+    "samePathShaRows": "Structured immediate-object metadata lookup; no product source execution."
+  },
+  "hitTotals": {
+    "source_path": 5,
+    "source_filename": 5,
+    "source_sha": 1,
+    "state_contract": 10
+  },
+  "retained": {
+    "source_path": 5,
+    "source_filename": 5,
+    "source_sha": 1,
+    "state_contract": 10
+  },
+  "allBelowCap160": true,
+  "selectedUniqueContextsFullyRead": 3,
+  "samePathShaRowsRead": 1,
+  "samePathShaDisposition": "Only R28 inventory row127lines/3867B/currentSHA; metadata hash is not full semantic coverage or never-read evidence.",
+  "sameCauseDecision": "No precise prior cause surfaced in bounded path/filename/SHA/state-type matching gate, but every historical document was not semantically read. No ordinary new cause established, so0/0/0.",
+  "archiveDefinition": "175 path substring archiv matches, not exact archive directory count.",
+  "mutableParentReport": "Not read/adopted; peer later messaged same limited negative and confirmed no ordinary concern. Its additional tool-executor/doc reading is not my source scope.",
+  "oldFailedDirections": "All remain skipped, none reopened."
+}

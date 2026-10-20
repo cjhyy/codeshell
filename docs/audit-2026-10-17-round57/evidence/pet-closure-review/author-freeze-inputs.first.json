@@ -1,0 +1,39 @@
+{
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round132-topic-segment/report.md",
+      "bytes": 5300,
+      "sha256": "a6881ff02fcea9d7d94b3c941b3e60857c48beef7067913f3deab1c6ff798c4b",
+      "matchesAuthorFreezeMessage": true,
+      "atUTC": "2026-10-17T19:08:47.475309+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round132-topic-segment/source-manifest.json",
+      "bytes": 39532,
+      "sha256": "b29c26853ae81955824fde33a0ecf76eb58660f1bf77390a0bec836a1bc274e6",
+      "matchesAuthorFreezeMessage": true,
+      "atUTC": "2026-10-17T19:08:47.476217+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round132-topic-segment/classification.json",
+      "bytes": 5216,
+      "sha256": "f12d0e3708decb29bca9b1c4b3cfa2e733fca9dab718c3f32cf4292938bac46d",
+      "matchesAuthorFreezeMessage": true,
+      "atUTC": "2026-10-17T19:08:47.476504+00:00"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round132-topic-segment/reviewer-receipt.json",
+      "bytes": 10409,
+      "sha256": "f5f49ed312c281556e5e1fc1e6d12193a69a2d476f5d05a23658e956620f077a",
+      "matchesAuthorFreezeMessage": true,
+      "atUTC": "2026-10-17T19:08:47.476813+00:00"
+    }
+  ],
+  "timing": "Only after peer freeze message; own initial source opinions and assistant-writer concern predate this read.",
+  "readScope": {
+    "report.md": "full report text",
+    "classification.json": "parsed classification; not printed or adopted as independent source",
+    "source-manifest.json": "hash-only this invocation",
+    "reviewer-receipt.json": "hash-only this invocation"
+  }
+}

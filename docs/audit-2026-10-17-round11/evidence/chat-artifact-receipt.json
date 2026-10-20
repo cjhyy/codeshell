@@ -1,0 +1,97 @@
+{
+  "sourceCommit": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "bytes": 6965,
+      "sha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "bytes": 352030,
+      "sha256": "5526576cf6318dbed766f2cc5a847588c73e7f0ce907de432abd69e4c2eb0bc3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-assemble.py",
+      "bytes": 4142,
+      "sha256": "0cc6379c606bd548a24854939d96ca106c610665bacb3b8ff28b4bb3a3d1413b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-candidates.json",
+      "bytes": 1573,
+      "sha256": "af313122f97dfe4a7553145cbd98f49c109fc64548901ae87e9eb15f1dc6ad9a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-channel-baseline.first.exit.json",
+      "bytes": 160,
+      "sha256": "7a8663e6d8c25b659bea37ff63343aa0b443504ce71d1d9fad587f26f9fb0d0a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-channel-baseline.first.log",
+      "bytes": 401,
+      "sha256": "2a1afa45666257d9e42d628a969f147dcd7721c84515ab9de8a121a42281cf59"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "bytes": 299984,
+      "sha256": "e2456e9b5fd81f512cc5f1d7af8be3330fc37f7547923bc7bf8b7c9bdafb14e7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-findings.json",
+      "bytes": 3130,
+      "sha256": "b5867052aeb00ce829b4ba4c2244d2abcebdf36f9acf669a6e255b5ec898f06b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-navigation-skip.md",
+      "bytes": 885,
+      "sha256": "a2b087d10b82df6bbd86af416ff8bbe5826099c980ae21340653c6c85f400944"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-primary-contracts.json",
+      "bytes": 1455,
+      "sha256": "e860c3bd4272d2115e93d4208b64b3667650c3644b653519db8d98b91b76668d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-progress-dedup.json",
+      "bytes": 7715,
+      "sha256": "8fa20fa88d96d1897c3b571e74b969b558cb5495175ecfce55c0c3a7f5d351a1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-progress-load.first.exit.json",
+      "bytes": 192,
+      "sha256": "209cae11712222a938b69e5b9bf1ae61c2390eb4e7de39f45ea32e77f9331c2d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-progress-load.first.log",
+      "bytes": 815,
+      "sha256": "8c6f3df96b6b3d1836502af99335915576cef9644bc71518e986de0e483ed9c1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-progress-load.test.ts",
+      "bytes": 5835,
+      "sha256": "2630e96635c4fc825eb43960b7a29f419e409221f2dba108f9714b036ec46df5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "bytes": 8813,
+      "sha256": "186bb098e3d80c7936072948b00cd254bb72d71fc21e4ee1ad143bf607a98e7d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-validation.json",
+      "bytes": 2003,
+      "sha256": "5dae318bc5c2142ade3e665c752466a60c80707edbd3ca0232b93e08f6476a4c"
+    }
+  ],
+  "summary": {
+    "formalFindings": 1,
+    "staticCandidates": 1,
+    "firstBunShards": 2,
+    "cleanPass": 6,
+    "expect": 91,
+    "fail": 0,
+    "skipped": 0,
+    "failedBunShards": 0,
+    "frozenSourceFiles": 24
+  },
+  "metadataOnly": true
+}

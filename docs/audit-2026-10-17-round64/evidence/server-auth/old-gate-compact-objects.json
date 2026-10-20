@@ -1,0 +1,32 @@
+[
+  {
+    "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+    "pointer": "/module_inventory/84740d56",
+    "keys": [
+      "production_source_files",
+      "paths",
+      "group_counts"
+    ],
+    "production_source_files": 187,
+    "selectedPathPointers": {
+      "/paths/8": "packages/server/src/hub/auth-http.ts",
+      "/paths/9": "packages/server/src/hub/auth-store.ts"
+    },
+    "hasPerFileShaOrReadScope": false
+  },
+  {
+    "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+    "pointer": "/module_inventory/a66f4ef2",
+    "keys": [
+      "production_source_files",
+      "paths",
+      "group_counts"
+    ],
+    "production_source_files": 188,
+    "selectedPathPointers": {
+      "/paths/8": "packages/server/src/hub/auth-http.ts",
+      "/paths/9": "packages/server/src/hub/auth-store.ts"
+    },
+    "hasPerFileShaOrReadScope": false
+  }
+]

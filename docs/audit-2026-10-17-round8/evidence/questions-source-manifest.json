@@ -1,0 +1,361 @@
+{
+  "baseline": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "headAtReceipt": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "selectedInspectedPathCount": 44,
+  "inspectionLevel": "selected contract/caller and test/fixture sections; not every line of each file",
+  "allSelectedPathsMatchFrozenSource": true,
+  "paths": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "lineCount": 217,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "tsconfig.json",
+      "frozenSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "sha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "bytes": 3723,
+      "lineCount": 80,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "bunfig.toml",
+      "frozenSha256": "c68a0066d926c1347730773f65032c5dbddf9827487add558eb830ac9bad69d6",
+      "sha256": "c68a0066d926c1347730773f65032c5dbddf9827487add558eb830ac9bad69d6",
+      "bytes": 475,
+      "lineCount": 9,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/test-setup.ts",
+      "frozenSha256": "a153ddcf1017389aef04b587fd1fe7d348190dc8232ca2cdba3914a46dce942d",
+      "sha256": "a153ddcf1017389aef04b587fd1fe7d348190dc8232ca2cdba3914a46dce942d",
+      "bytes": 2214,
+      "lineCount": 44,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/ask-user.ts",
+      "frozenSha256": "d57132b40917013a4dd407b6886dcaf93500925db323ee345cd538efe798ba80",
+      "sha256": "d57132b40917013a4dd407b6886dcaf93500925db323ee345cd538efe798ba80",
+      "bytes": 6920,
+      "lineCount": 158,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/tool-system/context.ts",
+      "frozenSha256": "1bfff3d434f876089460f61336ff160d31a0eda6483b604cf874b331fb6e3b03",
+      "sha256": "1bfff3d434f876089460f61336ff160d31a0eda6483b604cf874b331fb6e3b03",
+      "bytes": 29617,
+      "lineCount": 624,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "frozenSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "bytes": 195050,
+      "lineCount": 4949,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/core/src/run/RunApprovalBackend.ts",
+      "frozenSha256": "ab402f1f8c63d08e9cdac5853e52f6fbb06516e9afaf7ffa293a59cda70f7c0f",
+      "sha256": "ab402f1f8c63d08e9cdac5853e52f6fbb06516e9afaf7ffa293a59cda70f7c0f",
+      "bytes": 6928,
+      "lineCount": 197,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/pending-questions.ts",
+      "frozenSha256": "63a20c516aa258c2242e035de25a94cf83c0c0defa8feaa6b9528a149f0d6782",
+      "sha256": "63a20c516aa258c2242e035de25a94cf83c0c0defa8feaa6b9528a149f0d6782",
+      "bytes": 3788,
+      "lineCount": 118,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/pending-questions.test.ts",
+      "frozenSha256": "19ab3c620935675a9aa27da19c41e4182fbebcad93222e9e2f6ed7962595e119",
+      "sha256": "19ab3c620935675a9aa27da19c41e4182fbebcad93222e9e2f6ed7962595e119",
+      "bytes": 5546,
+      "lineCount": 135,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/AskUserPrompt.tsx",
+      "frozenSha256": "1d31c1920c640c3211401d111072f92a084da2088e0fd5f3300698301aeb989b",
+      "sha256": "1d31c1920c640c3211401d111072f92a084da2088e0fd5f3300698301aeb989b",
+      "bytes": 14910,
+      "lineCount": 440,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/AskUserPrompt.test.tsx",
+      "frozenSha256": "6c62cc7d5548e99fd54136ebd4afac3e0dd0d1489151243edda8c04f7faf4b78",
+      "sha256": "6c62cc7d5548e99fd54136ebd4afac3e0dd0d1489151243edda8c04f7faf4b78",
+      "bytes": 5261,
+      "lineCount": 205,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/TextInput.tsx",
+      "frozenSha256": "8b8296eaa6d3c5b17643bbd6e2cbcc07560384db912f9391a49f1f069e120a30",
+      "sha256": "8b8296eaa6d3c5b17643bbd6e2cbcc07560384db912f9391a49f1f069e120a30",
+      "bytes": 9638,
+      "lineCount": 283,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "frozenSha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "sha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "bytes": 13129,
+      "lineCount": 387,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "frozenSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "bytes": 90976,
+      "lineCount": 2318,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/render/hooks/use-input.ts",
+      "frozenSha256": "ed4d05bedcf6425f729dd009cd1d1d59e4f0fe7523c84fe5fe9f09339603b330",
+      "sha256": "ed4d05bedcf6425f729dd009cd1d1d59e4f0fe7523c84fe5fe9f09339603b330",
+      "bytes": 3112,
+      "lineCount": 92,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/render/events/input-event.ts",
+      "frozenSha256": "f8c62112887e81a00626eca4645d87c2beb81751f34b511c667c4fe4b7e7e2e5",
+      "sha256": "f8c62112887e81a00626eca4645d87c2beb81751f34b511c667c4fe4b7e7e2e5",
+      "bytes": 7306,
+      "lineCount": 205,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/render/components/App.tsx",
+      "frozenSha256": "3efc8fbee2da5a638faea0c1964231e6b502af4024c4d0b65e51c33f3559dfc7",
+      "sha256": "3efc8fbee2da5a638faea0c1964231e6b502af4024c4d0b65e51c33f3559dfc7",
+      "bytes": 31180,
+      "lineCount": 666,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/render/ink.tsx",
+      "frozenSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "bytes": 89185,
+      "lineCount": 1968,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "frozenSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "bytes": 7445,
+      "lineCount": 198,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/render/reconciler.ts",
+      "frozenSha256": "c262a12d930c36c04b5ecc1ba510f84cea899df6e230bb70182bccb0d6bf9408",
+      "sha256": "c262a12d930c36c04b5ecc1ba510f84cea899df6e230bb70182bccb0d6bf9408",
+      "bytes": 15164,
+      "lineCount": 527,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/tui/src/render/parse-keypress.ts",
+      "frozenSha256": "450ba7f1f2d568f830addd4c7cb356f32e1ad0fe3ed9a559050c8d8578a9cc05",
+      "sha256": "450ba7f1f2d568f830addd4c7cb356f32e1ad0fe3ed9a559050c8d8578a9cc05",
+      "bytes": 23611,
+      "lineCount": 803,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "tests/render-fixtures.ts",
+      "frozenSha256": "151bf695855051b7530f7e40d279b472387d0115741a0238af6609799204d2a6",
+      "sha256": "151bf695855051b7530f7e40d279b472387d0115741a0238af6609799204d2a6",
+      "bytes": 4094,
+      "lineCount": 113,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/tsconfig.json",
+      "frozenSha256": "40ce5376d618c6390862ee162e7a2d1ec58817d663d0a6e2e359312624220a65",
+      "sha256": "40ce5376d618c6390862ee162e7a2d1ec58817d663d0a6e2e359312624220a65",
+      "bytes": 911,
+      "lineCount": 29,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/tsconfig.mobile.json",
+      "frozenSha256": "8127b11c2a5c4473109285644dfbd1e7c7479bc906637bad0493190a37573c5d",
+      "sha256": "8127b11c2a5c4473109285644dfbd1e7c7479bc906637bad0493190a37573c5d",
+      "bytes": 952,
+      "lineCount": 34,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AskUserMessageView.tsx",
+      "frozenSha256": "69fb04884169e496da1d9a09fb4df04e7c1efa3e6133339c3d484ae7f0a0739d",
+      "sha256": "69fb04884169e496da1d9a09fb4df04e7c1efa3e6133339c3d484ae7f0a0739d",
+      "bytes": 15445,
+      "lineCount": 379,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AskUserMessageView.test.tsx",
+      "frozenSha256": "7e9fbe0f4d741e1ed19b245d39dd3444d06865fcc5583eae3208712ddd55e306",
+      "sha256": "7e9fbe0f4d741e1ed19b245d39dd3444d06865fcc5583eae3208712ddd55e306",
+      "bytes": 10012,
+      "lineCount": 253,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "frozenSha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "sha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "bytes": 51155,
+      "lineCount": 1175,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/cc-room/CCConversationView.tsx",
+      "frozenSha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "sha256": "f786eb6f4582c31967460cfe342059bc03c5ec8839cf601292e48d44ceb8f924",
+      "bytes": 35323,
+      "lineCount": 966,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/test-utils/renderHook.tsx",
+      "frozenSha256": "7f8bc7a7d1ef965069dc7eb0612127314a8b56c7054c983211b977b8eb25f033",
+      "sha256": "7f8bc7a7d1ef965069dc7eb0612127314a8b56c7054c983211b977b8eb25f033",
+      "bytes": 346,
+      "lineCount": 7,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/index.ts",
+      "frozenSha256": "063e6ed0b9eb98b76c24e537274dabb28c84d631adea39e3c233ac85f98fbd83",
+      "sha256": "063e6ed0b9eb98b76c24e537274dabb28c84d631adea39e3c233ac85f98fbd83",
+      "bytes": 203,
+      "lineCount": 3,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/App.tsx",
+      "frozenSha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "sha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "bytes": 11542,
+      "lineCount": 325,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/components/ApprovalCard.tsx",
+      "frozenSha256": "8a5a908ac07fb91aea656e189933f3e866e03a30d312779460a1ff1a1bbc9ddf",
+      "sha256": "8a5a908ac07fb91aea656e189933f3e866e03a30d312779460a1ff1a1bbc9ddf",
+      "bytes": 9366,
+      "lineCount": 251,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/desktop/src/mobile/components/ApprovalCard.test.tsx",
+      "frozenSha256": "9c9b83615c13ad0657f97651b315a0fcc2d8160b27e4a9fac819f3492d26c7dc",
+      "sha256": "9c9b83615c13ad0657f97651b315a0fcc2d8160b27e4a9fac819f3492d26c7dc",
+      "bytes": 5287,
+      "lineCount": 154,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "frozenSha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "sha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "bytes": 7039,
+      "lineCount": 144,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.test.ts",
+      "frozenSha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "sha256": "b17aa2a1464aa58b3688b8b5a2464408afc64483b3e7b4854d2d898b3864149e",
+      "bytes": 13196,
+      "lineCount": 267,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "frozenSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "bytes": 73050,
+      "lineCount": 1831,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.test.tsx",
+      "frozenSha256": "fe076f3416c18aa476496441efb4ed42d264da9d072dab6a5a2bc843d4f05d8e",
+      "sha256": "fe076f3416c18aa476496441efb4ed42d264da9d072dab6a5a2bc843d4f05d8e",
+      "bytes": 80862,
+      "lineCount": 2408,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "packages/web/src/test-utils/renderHook.tsx",
+      "frozenSha256": "97c85c35b82c62e17682860e316410d3413c906522c21fba99dc0cf8c0eadec2",
+      "sha256": "97c85c35b82c62e17682860e316410d3413c906522c21fba99dc0cf8c0eadec2",
+      "bytes": 14918,
+      "lineCount": 526,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/architecture/02-tool-system.md",
+      "frozenSha256": "405680ce91fb9c1237efd4f985bd0620d402541517e62041fb8fb5e16735fe81",
+      "sha256": "405680ce91fb9c1237efd4f985bd0620d402541517e62041fb8fb5e16735fe81",
+      "bytes": 23897,
+      "lineCount": 195,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-10-mobile-ui-capability-matrix.md",
+      "frozenSha256": "9f9b4858669c80205fc659824789d9200139a1c5c928814c5b87174c70bd4a99",
+      "sha256": "9f9b4858669c80205fc659824789d9200139a1c5c928814c5b87174c70bd4a99",
+      "bytes": 6208,
+      "lineCount": 105,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "frozenSha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "sha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "bytes": 13844,
+      "lineCount": 111,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/review-2026-10-12/server-round1.md",
+      "frozenSha256": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8",
+      "sha256": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8",
+      "bytes": 11399,
+      "lineCount": 82,
+      "matchesFrozenSource": true
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "frozenSha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "sha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "bytes": 16192,
+      "lineCount": 84,
+      "matchesFrozenSource": true
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "role": "Directed independent static source reader with prior-full overlap, not runtime verifier",
+  "executions": {
+    "product": 0,
+    "helpers": 0,
+    "imports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "UI": 0,
+    "timers": 0,
+    "native": 0,
+    "models": 0,
+    "network": 0,
+    "Git": 0,
+    "actualMessages": 0,
+    "realAccountsConfigurationsOrUserFiles": 0
+  },
+  "scopeTotals": {
+    "semanticFiles": 7,
+    "full": 0,
+    "selected": 7,
+    "productSemanticLines": 144,
+    "testDeclarationSemanticLines": 56,
+    "semanticLines": 200,
+    "uniqueDisplayedLinesSummedAcrossFiles": 449,
+    "sourceHashOnlyFiles": 1,
+    "sourceAndInstructionPins": 10,
+    "partialExistingTestDeclarationsRead": 3,
+    "ordinaryTestTitlesNavigationOnly": 17,
+    "additionalParameterizedTitleNavigationOnly": 1,
+    "testsExecuted": 0
+  },
+  "historyMode": "Own targeted46 raw path/SHA hit files and six selected canonical JSON containers only; Root shared5433 batch projected353media matches cap100. No own whole-corpus million-scalar rerun.",
+  "tests": "Three partial existing declarations read for static intent;0run. Fake SDK/network snippets are source text only; Discord/Slack implementation not source-reviewed by this prep.",
+  "firstDiagnostic": "One filename no-match exit1 preserved, no product failures/retries; source pins before navigation/body; no tool output truncation.",
+  "excludedMechanisms": "Download/private-address/path-custody/auth/identity/native/real provider send behavior not reviewed or certified; ordinary body/attachment DTO and step ordering only."
+}

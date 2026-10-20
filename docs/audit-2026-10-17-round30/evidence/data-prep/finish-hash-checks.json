@@ -1,0 +1,98 @@
+{
+  "checkedUtc": "2026-10-17T11:46:36.098427+00:00",
+  "prepParentContextBaseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "sourceRows": [
+    {
+      "path": "packages/chat/src/channel.ts",
+      "initialFilesystemSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "frozenFilesystemSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.ts",
+      "initialFilesystemSha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+      "frozenFilesystemSha256": "3fe382f24d088ed9f810f45400ac577d6ad4966aacb99379834573c643fe0861",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/channel.test.ts",
+      "initialFilesystemSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "frozenFilesystemSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/src/git/parse-log.test.ts",
+      "initialFilesystemSha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+      "frozenFilesystemSha256": "5ad6507e622fa8a96b648837b362266ee3cd4cb9755b9f451a888b94ad0654f8",
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/src/git/utils.ts",
+      "initialFilesystemSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "frozenFilesystemSha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "initialFilesystemSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "frozenFilesystemSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/src/capability-runtime.ts",
+      "initialFilesystemSha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "frozenFilesystemSha256": "38871d7137a4827e59da356f592f1977a333c1974a93be1a97a655920ff11a2b",
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "initialFilesystemSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "frozenFilesystemSha256": "0de851ebbecfc4d2159a994a04e026f8fc22378b7b8083c02a3ec4a144e8376c",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "initialFilesystemSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "frozenFilesystemSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "initialFilesystemSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "frozenFilesystemSha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/git-text.md",
+      "initialFilesystemSha256": "6208adc46883bb44a9d20bc77f23be2e17992b5213ec0531f19a7ed8e90aa2b8",
+      "frozenFilesystemSha256": "6208adc46883bb44a9d20bc77f23be2e17992b5213ec0531f19a7ed8e90aa2b8",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "initialFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "frozenFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "unchanged": true
+    }
+  ],
+  "selectionMetadataRows": [
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/package-inventory.json",
+      "initialSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "currentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "bytes": 841639,
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-index.json",
+      "initialSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "currentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "bytes": 1891704,
+      "unchanged": true
+    }
+  ],
+  "sourceChecks": 12,
+  "selectionMetadataChecks": 2,
+  "allUnchanged": true,
+  "meaning": "Metadata byte checks only; not product tests, Git checks or semantic coverage proof."
+}

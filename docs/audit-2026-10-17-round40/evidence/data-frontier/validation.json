@@ -1,0 +1,30 @@
+{
+  "mode": "pure static text/DTO helper and selected consumer",
+  "productHelperExecutions": 0,
+  "productImports": 0,
+  "testsExecuted": 0,
+  "existingTestDeclarationsRead": 13,
+  "languageFixturesEvaluated": 0,
+  "ReactBrowserDOMActions": 0,
+  "nativeCLINetworkModelPermissionIdentityCredentialAuthExperiments": 0,
+  "actualProjectOrAutomationActions": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyOwnedTmp": "/tmp/codeshell-audit-round40-data-frontier",
+  "oldFailedDirectionsReopened": false,
+  "oldPassesBorrowed": false,
+  "metadataRuns": [
+    {
+      "name": "full history gate",
+      "sessionId": 61507,
+      "exitCode": 0
+    },
+    {
+      "name": "replacement full-inventory targeted gate",
+      "sessionId": 95655,
+      "exitCode": 0
+    }
+  ],
+  "metadataDiagnostics": "metadata-diagnostics.json records dated ranking and irrelevant old-leaf broad-context output truncations, not product failures.",
+  "sourceInitialFinishStable": true
+}

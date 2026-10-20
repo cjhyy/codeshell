@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/sources-local-document.test.ts:
+{"case":"normal-local-document-version","originalBytes":12415,"chunks":3,"oldChunk":"c_8da9a74552050a10898da7ab","newChunk":"c_2659ecf20c0c49abfaee4eef","reconstructedUnchanged":true,"staleChunkRejected":true}
+(pass) normal local Unicode extraction reconstructs overlap and exact chunks, then refreshes changed bytes [230.44ms]
+
+ 1 pass
+ 0 fail
+ 10 expect() calls
+Ran 1 test across 1 file. [327.00ms]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.

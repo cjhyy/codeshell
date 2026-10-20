@@ -1,0 +1,33 @@
+{
+  "baseline": "248d091202869c07274adedf4fd50403105f1b1f",
+  "count": 1,
+  "candidates": [
+    {
+      "id": "TOOLS-R9-C1",
+      "status": "unconfirmed-contract-gap",
+      "title": "同名 definition-only 注册仍保留前次实现",
+      "location": {
+        "path": "packages/core/src/tool-system/registry.ts",
+        "line": 92
+      },
+      "actualEvidence": "Actual Registry and ToolSearch; in-memory fake implementation; 3 tests including two controls",
+      "limits": "No explicit API replacement contract; existing Engine/MCP registration paths pass executor. No actual tool/server/host/provider run. Not counted as confirmed bug.",
+      "fixture": "tools-registry-replacement.test.ts",
+      "firstLog": "tools-registry-replacement.first.log"
+    }
+  ],
+  "otherStaticObservations": [
+    {
+      "report": "attachments.md",
+      "subject": "Windows/backslash compatibility",
+      "status": "static-only-not-promoted",
+      "reason": "No Windows/native validation; no extra confirmed issue."
+    },
+    {
+      "report": "attachments.md",
+      "subject": "directory depth and truncated marker",
+      "status": "static-only-not-promoted",
+      "reason": "Consumer contract does not establish that depth omission must set truncated."
+    }
+  ]
+}

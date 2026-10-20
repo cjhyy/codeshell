@@ -1,0 +1,718 @@
+{
+  "frozen": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "scope": "all historical docs/bugs MD and parsed JSON leaves; round10 excluded; no product execution",
+  "scannedFiles": 1054,
+  "parseErrors": [],
+  "matches": [
+    {
+      "path": "docs/review-2026-07-10-goal-judge-v1.md",
+      "hits": [
+        {
+          "originalChars": 220,
+          "excerpt": "- 工具 projection 对显式 `sensitive:true`、图片/非文本、超长 Unicode 的处理是有界且不可逆的；prompt 将工具文本放在 JSON 字符串 `untrustedToolEvidence.quotedText` 中，并有 system-level 不可信指令约束。结构性 prompt escape 已被封住，但 LLM 对不可信语义的抵抗仍是概率性的，不能代替 verdict schema 校验。"
+        },
+        {
+          "originalChars": 85,
+          "excerpt": "- 覆盖显式 sensitive 快照脱敏、工具 prompt injection 的结构隔离、图片/混合非文本省略、1600/8000 两级 Unicode 安全截断。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/archive/arena-evidence-driven-architecture.md",
+      "hits": [
+        {
+          "originalChars": 20,
+          "excerpt": "    snippet: string;"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "hits": [
+        {
+          "originalChars": 87,
+          "excerpt": "| `repl.ts` / `REPL` | 执行 JS/TS/Python/Ruby snippets | language + code | 代码执行能力，需权限控制 |"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/quality-root.md",
+      "hits": [
+        {
+          "originalChars": 266,
+          "excerpt": "biz/en/reference/messaging-api/index.html.md) 的23057–23108动作标签表、23173–23201 URI节，确认buttons所属非image-carousel template的标签20及URI1000字段限制。只用ASCII长度边界证明当前接受的输入超限，不涉及Unicode计量歧义。真实平台验证/拒绝/投递没有执行，fake HTTP200只用来观察payload。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/chat-text.md",
+      "hits": [
+        {
+          "originalChars": 388,
+          "excerpt": "结果，不把 fake 当成平台成功验证。没有 `run()`、socket、账号、SDK 连接或服务器；默认 fetch 在首次 imports 前设为禁止网络的 callback，第一次测试 finally 恢复。全部请求始终使用显式注入 transport。同文件正常分块控制在 max 2/17/1800 下重建 Unicode/空白全文一致、分块在限内、没有孤立代理项。"
+        },
+        {
+          "originalChars": 113,
+          "excerpt": "| Slack thread、长附件名 Unicode、Telegram code fences、DeliveryQueue retry FIFO | 已有 finding/父任务给定已知，排除重复；本轮没有重复动态验证。 |"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/quality-prompt.md",
+      "hits": [
+        {
+          "originalChars": 699,
+          "excerpt": "8 URIs remaining overlong in the native action payload, and 81/2049 inputs being discarded by the generic Gateway validator. All lengths are ordinary ASCII, so Unicode counting conventions do not weaken these boundary observations. The fake HTTP 200 is solely an observation transport; it provides no platform acceptance evidence. Default fetch is blocked before imports and restored in the first test's `finally`; every send in all cases uses the explicit injected transport."
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/coverage.md",
+      "hits": [
+        {
+          "originalChars": 160,
+          "excerpt": "| Chat 文本 | 真实 Mimi→ChatGateway→LINE send 与内存 transport；长度边界、共享 Unicode/空白分块；3 / 46 | 真实 LINE validation/send、平台界面、所有 adapter 的入站/出站/Markdown/重试组合；主源不足的候选仍未确认 |"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/profile.md",
+      "hits": [
+        {
+          "originalChars": 675,
+          "excerpt": "*`, `docs/review*` (including source reports/validation records), and all `docs/archive` material including archived findings, with hashes and bounded matching snippets. The key-collision search had one unrelated “仓库清单” match, manually rejected; it found no prior finding about `sourceToRepoKey`, `humanRepoDir`, or distinct source cache collisions. Profile-related prior coverage and the reserved-key historical findings are retained in the same scan. Keyword scan absence alone is not proof of novelty; the older Core lifecycle report and the following contracts were also read."
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/README.md",
+      "hits": [
+        {
+          "originalChars": 67,
+          "excerpt": "| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/findings.json",
+      "hits": [
+        {
+          "originalChars": 19,
+          "excerpt": "长路径默认标签截断Unicode代理对"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/host-link.md",
+      "hits": [
+        {
+          "originalChars": 177,
+          "excerpt": "- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。"
+        },
+        {
+          "originalChars": 73,
+          "excerpt": "- **预期契约**：路径可以包含 Unicode；默认展示标签应保持合法 Unicode 文本。显式普通 Unicode 标签的对照项完整保留。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "hits": [
+        {
+          "originalChars": 213,
+          "excerpt": "- TUI search + 原渲染：15 pass / 63 assertions / 2 files，抽取前后结果一致；覆盖 CJK、emoji、组合字符、İ、noSelect、SpacerHead、空查询、非重叠和幂等高亮。TUI typecheck 通过；局部 ESLint 0 error，保留原文件已有的 `@ts-nocheck` warning。匹配仍逐行，未更改软换行或 vendored input 兼容。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/source-manifest.json",
+      "hits": [
+        {
+          "originalChars": 37,
+          "excerpt": "packages/pet/src/disclosure/search.ts"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/pet-data.md",
+      "hits": [
+        {
+          "originalChars": 102,
+          "excerpt": "- 位置：`packages/pet/src/disclosure/search.ts:123`，在JSON.parse与真实content查找前，用未编码query对JSON原文做includes预筛。"
+        },
+        {
+          "originalChars": 149,
+          "excerpt": "- 实际：JSON中引号/反斜杠已被编码，raw文字不包含原query，进入实际解码搜索前就continue。两个query均得 `matches=[] /scannedSessions=1 /truncated=false`；普通 `hello` 对照返回同消息，snippet完整保留引号代码。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/sources.md",
+      "hits": [
+        {
+          "originalChars": 315,
+          "excerpt": "- `evidence/sources-local-document.test.ts` 以自有临时 workspace 实跑正常 `readUploadedDocument → parseDocumentIsolated → index`：12,415 字节 Unicode 原文生成 3 chunks，全文/overlap 重建逐字符一致，查询后的 chunk 与 sourceHash 对应；改写为新版本后旧 chunk 明确拒绝，新 query 返回新 hash/id。`sources-local-document.log`：1 test / 10 expectations / 0 failures。该轮未新增正式发现。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "hits": [
+        {
+          "originalChars": 141,
+          "excerpt": "当前从外部会话 transcript 的读取/转换、TUI export/render/Unicode/交互纯逻辑开始。所有动态测试经 guarded runner，首次保存完整 stdout/stderr；遇到无法正常验证的项目按用户指令记录并跳过，不把支架失败计作产品 bug。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/candidates-and-skips.md",
+      "hits": [
+        {
+          "originalChars": 122,
+          "excerpt": "| 文档旧 chunk / Unicode 重建 | 真实本地 worker 的正常控制通过，旧 hash 拒绝与新版引用正确；没有新增问题 | [Sources 收束](sources.md)、sources-local-document |"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/README.md",
+      "hits": [
+        {
+          "originalChars": 69,
+          "excerpt": "| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/findings.json",
+      "hits": [
+        {
+          "originalChars": 21,
+          "excerpt": "长附件标签截断拆开 Unicode 代理对"
+        },
+        {
+          "originalChars": 37,
+          "excerpt": "packages/pet/src/disclosure/search.ts"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/coverage.md",
+      "hits": [
+        {
+          "originalChars": 140,
+          "excerpt": "| TUI | Markdown export、Markdown hybrid/table、选择性 Unicode/render helpers；真实离屏 renderer | 真实终端交互/PTY、完整 REPL；误写的既有 MessageContent suite 未运行 |"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/chat-data.md",
+      "hits": [
+        {
+          "originalChars": 53,
+          "excerpt": "## CHD02 — [P3，长标签触发] 附件名按 UTF-16 生切，产生破损 Unicode 元数据"
+        },
+        {
+          "originalChars": 166,
+          "excerpt": "- **正常触发条件**：长 remote/SDK 虚拟附件标签的第 255 个 UTF-16 code unit 位于 emoji 代理对中间；例子是 254 个 ASCII 字符加一个 emoji，输入为 255 个完整 Unicode codepoints。这里是附件显示标签，未声称本机 APFS 能创建该字节长度的文件名。"
+        },
+        {
+          "originalChars": 138,
+          "excerpt": "- **预期/实际**：受长度限制时应保留有效 Unicode 前缀；实际返回 254 个 ASCII + 单独 high surrogate `0xd83d`，在 UTF-8 编码后变成 U+FFFD 替换字符。元数据传到 bridge 前没有修复，因此正常标签被变成乱码。"
+        },
+        {
+          "originalChars": 290,
+          "excerpt": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+        },
+        {
+          "originalChars": 180,
+          "excerpt": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/review-2026-10-12/search-routing-round11.md",
+      "hits": [
+        {
+          "originalChars": 261,
+          "excerpt": "- **Primary location:** `packages/pet/src/disclosure/search.ts:85–89`, where capped candidates are accepted and `truncated` starts false. Cap definition **:19**. The catalog sorts by transcript mtime and slices at `packages/pet/src/disclosure/catalog.ts:47–54`."
+        },
+        {
+          "originalChars": 683,
+          "excerpt": "chSessionContent; `preload/index.ts:1031–1032` invokes `session:content-search`. Main handler `main/index.ts:4886–4891` trims/validates length 2–128 and calls `searchSessionTranscripts(sessionsRoot(), trimmed, {budgetMs:5000})`. **500 candidates is a hard-coded CANDIDATE_LIMIT**, not a user setting or an optional maxCandidates parameter. Main changes the time budget only; result cap defaults separately to 20 and snippet cap to 3 (`disclosure/search.ts:16–19,80–85`)."
+        },
+        {
+          "originalChars": 490,
+          "excerpt": "- **No prior UI scope notice:** SessionSearchModal's content toggle/placeholder/hint say “对话内容”, “搜索对话中的内容…” and “输入至少 2 个字符搜索会话内容” (`renderer/i18n/ns/panels.ts:248–260`). Its content-result header and empty state do not say “only the most recent 500”. The title-mode “近期对话” default is a separate mode and is not displayed as a content-search scope. The only incompleteness notice is conditional on result.truncated at `SessionSearchModal.tsx:179–187`, using “结果不完整（已达搜索上限）” from i18n :262"
+        },
+        {
+          "originalChars": 677,
+          "excerpt": "nsOnDisk(limit:501) returns 501 and places older-target at exact index 500; explicit assertions exclude directory iteration/timestamp tie uncertainty. The real search with the **production 5000ms budget** scans exactly 500 newer transcripts, returns no matches and **truncated:false**, despite that known older match. The target also exists in the rendered session index, so inability to map a disk-only result is not the explanation."
+        },
+        {
+          "originalChars": 426,
+          "excerpt": "- **What truncated already means:** it is not merely “more than 20 matching rows.” The worker sets it on elapsed **time budget** or match cap (`search.ts:94–95`) and on skipped **oversized transcript candidates** (:110–112). Its UI wording is generic incomplete results. The missing candidate-cutoff signal is therefore inconsistent with existing time/coverage semantics, not a request for unbounded scanning or a new feature."
+        },
+        {
+          "originalChars": 705,
+          "excerpt": "- **Counterexamples/recovery:** same old transcript is found normally in a two-session catalog, with truncated:false. The test's deterministic expired-deadline control (`budgetMs:-1`, test-only) returns truncated:true and the actual modal displays the existing incomplete-results message. Updating only the older target's mtime moves it into the selected candidate band, and the same unmodified query/content is then found. That filesystem control demonstrates the candidate cutoff cause; it is **not** recommended that users edit transcript files to "
+        },
+        {
+          "originalChars": 409,
+          "excerpt": "- **Evidence:** `search-cap-ui.test.tsx` / `search-cap-ui.log`, 2 tests / 14 assertions. Exact emitted defective reply: `{\"matches\":[],\"scannedSessions\":500,\"truncated\":false}` for a verified catalog of 501, followed by successful same-text lookup when the candidate band changes. No time-budget expiration, large/unreadable file, archived/subagent/ephemeral exclusion or missing UI-index condition is needed."
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/review-2026-10-12/README.md",
+      "hits": [
+        {
+          "originalChars": 236,
+          "excerpt": "55 的迟到结果来自合法磁盘会话与成功的 Main 项目校验；后台索引导入尚未完成时，Pet 卡与全局选择器仍可用。应关联所有导航意图，使旧打开可完成导入但不覆盖新选择。仅当前索引缺少该会话的异步路径已复现，不声称普通同步点击、输入或文件丢失。R56 应在候选超过500时透传覆盖范围不足；既有设计已明确500候选的有界搜索，修复仅需反馈覆盖不足。现有时间预算和大文件跳过已会设置 truncated，而候选截断未设置。标题搜索/手工打开可缓解，全文重试本身不扩大范围。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/review-2026-10-12/context-cancel-round18.md",
+      "hits": [
+        {
+          "originalChars": 909,
+          "excerpt": "eshell/packages/desktop/src/main/index.ts:4886) → pet disclosure search [54–57](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/pet/src/disclosure/search.ts:54) 只取 message；刚建成的 summary target 仅 meta/context_transfer，不应承诺 summary 正文可被搜索。即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/review-2026-10-12/search-quality-round12.md",
+      "hits": [
+        {
+          "originalChars": 299,
+          "excerpt": "**需要明确承认设计反证。** `docs/superpowers/plans/2026-07-23-session-world-progressive-disclosure.md:578` 规定 message-only、20MB 文件边界、8 并发、20 命中 session、3 snippets 和时间预算；`:692` 的实现样例已经写 `limit:500`，所以 500 候选并非本轮意外引入，也不能要求恢复为无界全盘扫描。该文档 `:1386–1388` 又要求截断时显示“结果不完整（已达搜索上限）”。这些事实支持将缺陷定性为**漏报搜索覆盖不足**，而不是单纯缺少搜索容量功能。"
+        },
+        {
+          "originalChars": 267,
+          "excerpt": "生产 `disclosure/search.ts:19,85–95` 先丢弃超过 500 的目录候选，再把 truncated 初始化 false，只在时间/命中数等后续条件更新；`disclosure/catalog.ts:47–54` 按 transcript mtime 排序后 slice，输出没有 overflow/cursor。全部 500 个被扫描完成时，search 已经无法知道原来还有候选。实际同一字段也在跳过超大 transcript 时置 true（`:110–112`），故其含义不只是“超过20个匹配行”。"
+        },
+        {
+          "originalChars": 362,
+          "excerpt": "实际用户入口没有隐藏参数可扩大候选：Main `index.ts:4886–4891` 只传 trimmed query 和 5000ms budget；preload `index.ts:1031–1032` 只接 query；search options 类型仅有 maxSessions/maxSnippetsPerSession/budgetMs，maxSessions 调大也只改变命中行上限，不能扩大候选。Mimi 的 Sessions action=search 在 `packages/pet/src/sessions-tool.ts:196–208` 复用同一个 helper，仍没有更大的候选带。项目/标题过滤不会先缩小该全局候选目录，content modal 也没有“更早/下一页/扩大范围”的动作。"
+        },
+        {
+          "originalChars": 347,
+          "excerpt": "实际 UI 的 content toggle、placeholder、hint、header 和空结果均未说明最近 500 个候选：`SessionSearchModal.tsx:95,137–146,150–188`，中文 `i18n/ns/panels.ts:247–262`、英文 `:531–546` 均如此。空输入标题模式的 Recent conversations 是独立模式；content mode 的 header 返回 Search results。唯一覆盖不足提示由 result.truncated 控制，故收到 false 时不会显示。共享 SearchDialog 的 footer 只有键盘提示。没有找到能把本例界面解释成“用户已经被告知仅搜索最近500”的提示。"
+        },
+        {
+          "originalChars": 270,
+          "excerpt": "最终 fixture 确认 catalog 为501且 older-target 恰在索引500，规避相同 mtime/目录顺序不确定性。真实 search 使用生产 5000ms 预算，扫描500、零匹配、truncated:false；真实 modal 展示未找到匹配内容，不显示不完整。目标在 renderer 索引中，排除了结果无法映射造成的不可用。只有目标 mtime 变新后同文本同查询被找到；小目录也能找到该旧文本。`budgetMs:-1` 只是控制组，用来证明现有 UI 能展示真实 truncated，不是缺陷触发条件。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-16/desktop.md",
+      "hits": [
+        {
+          "originalChars": 157,
+          "excerpt": "- 预期：按真实 Unicode 文件名搜索并返回可读取的相对路径。实际：`searchFiles(root, \"报告\")` 为 `[]`；空查询返回带引号和八进制转义的不存在路径。带换行文件名同样变为 `\"line\\nbreak.md\"`，不能读取。ASCII 文件及非 Git 目录中的相同中文文件均通过对照。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-16/quality.md",
+      "hits": [
+        {
+          "originalChars": 103,
+          "excerpt": "| D01 / P2 | 保留 | 生产搜索 service + 真实 Git/自有磁盘；Unicode 与换行名称变为 Git 转义字面量，ASCII/非 Git 对照正常。未运行 Electron。 |"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "hits": [
+        {
+          "originalChars": 37,
+          "excerpt": "packages/pet/src/disclosure/search.ts"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/refactor/goal-judge-v1-review-codex.md",
+      "hits": [
+        {
+          "originalChars": 73,
+          "excerpt": "`String.length/slice` 不是 Unicode code point 或 grapheme 计数；边界落在 emoji 等代理对"
+        },
+        {
+          "originalChars": 37,
+          "excerpt": "  Unicode 边界也不安全（Nit 3）。所以该项不能判为完整通过。"
+        },
+        {
+          "originalChars": 52,
+          "excerpt": "3. 决定缓存的真实语义并增加完整 TurnLoop 两轮覆盖；同时修正非文本省略提示和 Unicode"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/tui.md",
+      "hits": [
+        {
+          "originalChars": 244,
+          "excerpt": "result 的 compact 透传、store listener 隔离）保持去重。未执行真实 PTY / 终端 / CLI / 模型 / 原生应用 / 进程或剪贴板操作，没有读取操作人的会话数据，没有构建 dist 或依赖。一般的 memo / slice / store baseline 通过不能外推全部渲染器、Unicode 或滚动交互覆盖。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/attachments.md",
+      "hits": [
+        {
+          "originalChars": 345,
+          "excerpt": "- **契约与实际**：附件 detector 的模块注释要求返回可点击的产物路径；对完整、不含空白的 Unicode 路径已有基线保证。自有临时工作区中的实际文件为 `<tmp>/project with spaces/.code-shell/generated_images/1782-audit.png`，生产 detector 返回 `spaces/.code-shell/generated_images/1782-audit.png`。原文件存在，把错误 card path 按同一个 cwd 解析后得到另一条不存在的路径。另一个同根因变体是 `/fixture/project/final report.png` 被完全漏掉；相邻 `final-report.png` 正常。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-call-cap-dedup.json",
+      "hits": [
+        {
+          "originalChars": 705,
+          "excerpt": "- **Counterexamples/recovery:** same old transcript is found normally in a two-session catalog, with truncated:false. The test's deterministic expired-deadline control (`budgetMs:-1`, test-only) returns truncated:true and the actual modal displays the existing incomplete-results message. Updating only the older target's mtime moves it into the selected candidate band, and the same unmodified query/content is then found. That filesystem control demonstrates the candidate cutoff cause; it is **not** recommended that users edit transcript files to "
+        },
+        {
+          "originalChars": 426,
+          "excerpt": "- **What truncated already means:** it is not merely “more than 20 matching rows.” The worker sets it on elapsed **time budget** or match cap (`search.ts:94–95`) and on skipped **oversized transcript candidates** (:110–112). Its UI wording is generic incomplete results. The missing candidate-cutoff signal is therefore inconsistent with existing time/coverage semantics, not a request for unbounded scanning or a new feature."
+        },
+        {
+          "originalChars": 677,
+          "excerpt": "nsOnDisk(limit:501) returns 501 and places older-target at exact index 500; explicit assertions exclude directory iteration/timestamp tie uncertainty. The real search with the **production 5000ms budget** scans exactly 500 newer transcripts, returns no matches and **truncated:false**, despite that known older match. The target also exists in the rendered session index, so inability to map a disk-only result is not the explanation."
+        },
+        {
+          "originalChars": 261,
+          "excerpt": "- **Primary location:** `packages/pet/src/disclosure/search.ts:85–89`, where capped candidates are accepted and `truncated` starts false. Cap definition **:19**. The catalog sorts by transcript mtime and slices at `packages/pet/src/disclosure/catalog.ts:47–54`."
+        },
+        {
+          "originalChars": 267,
+          "excerpt": "生产 `disclosure/search.ts:19,85–95` 先丢弃超过 500 的目录候选，再把 truncated 初始化 false，只在时间/命中数等后续条件更新；`disclosure/catalog.ts:47–54` 按 transcript mtime 排序后 slice，输出没有 overflow/cursor。全部 500 个被扫描完成时，search 已经无法知道原来还有候选。实际同一字段也在跳过超大 transcript 时置 true（`:110–112`），故其含义不只是“超过20个匹配行”。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "hits": [
+        {
+          "originalChars": 705,
+          "excerpt": "- **Counterexamples/recovery:** same old transcript is found normally in a two-session catalog, with truncated:false. The test's deterministic expired-deadline control (`budgetMs:-1`, test-only) returns truncated:true and the actual modal displays the existing incomplete-results message. Updating only the older target's mtime moves it into the selected candidate band, and the same unmodified query/content is then found. That filesystem control demonstrates the candidate cutoff cause; it is **not** recommended that users edit transcript files to "
+        },
+        {
+          "originalChars": 426,
+          "excerpt": "- **What truncated already means:** it is not merely “more than 20 matching rows.” The worker sets it on elapsed **time budget** or match cap (`search.ts:94–95`) and on skipped **oversized transcript candidates** (:110–112). Its UI wording is generic incomplete results. The missing candidate-cutoff signal is therefore inconsistent with existing time/coverage semantics, not a request for unbounded scanning or a new feature."
+        },
+        {
+          "originalChars": 677,
+          "excerpt": "nsOnDisk(limit:501) returns 501 and places older-target at exact index 500; explicit assertions exclude directory iteration/timestamp tie uncertainty. The real search with the **production 5000ms budget** scans exactly 500 newer transcripts, returns no matches and **truncated:false**, despite that known older match. The target also exists in the rendered session index, so inability to map a disk-only result is not the explanation."
+        },
+        {
+          "originalChars": 683,
+          "excerpt": "chSessionContent; `preload/index.ts:1031–1032` invokes `session:content-search`. Main handler `main/index.ts:4886–4891` trims/validates length 2–128 and calls `searchSessionTranscripts(sessionsRoot(), trimmed, {budgetMs:5000})`. **500 candidates is a hard-coded CANDIDATE_LIMIT**, not a user setting or an optional maxCandidates parameter. Main changes the time budget only; result cap defaults separately to 20 and snippet cap to 3 (`disclosure/search.ts:16–19,80–85`)."
+        },
+        {
+          "originalChars": 261,
+          "excerpt": "- **Primary location:** `packages/pet/src/disclosure/search.ts:85–89`, where capped candidates are accepted and `truncated` starts false. Cap definition **:19**. The catalog sorts by transcript mtime and slices at `packages/pet/src/disclosure/catalog.ts:47–54`."
+        },
+        {
+          "originalChars": 267,
+          "excerpt": "生产 `disclosure/search.ts:19,85–95` 先丢弃超过 500 的目录候选，再把 truncated 初始化 false，只在时间/命中数等后续条件更新；`disclosure/catalog.ts:47–54` 按 transcript mtime 排序后 slice，输出没有 overflow/cursor。全部 500 个被扫描完成时，search 已经无法知道原来还有候选。实际同一字段也在跳过超大 transcript 时置 true（`:110–112`），故其含义不只是“超过20个匹配行”。"
+        },
+        {
+          "originalChars": 28,
+          "excerpt": "/matches/root_path/7/snippet"
+        },
+        {
+          "originalChars": 28,
+          "excerpt": "/matches/root_path/6/snippet"
+        },
+        {
+          "originalChars": 141,
+          "excerpt": "当前从外部会话 transcript 的读取/转换、TUI export/render/Unicode/交互纯逻辑开始。所有动态测试经 guarded runner，首次保存完整 stdout/stderr；遇到无法正常验证的项目按用户指令记录并跳过，不把支架失败计作产品 bug。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+      "hits": [
+        {
+          "originalChars": 355,
+          "excerpt": "ges/link/src/file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。\n- **预期契约**：路径可以包含 Unicode；默认展示标签应保持合法 Unicode 文本。显式普通 Unicode 标签的对照项完整保留。\n- **实际**：生产 resolver 接受且保留原始 `params.p"
+        },
+        {
+          "originalChars": 19,
+          "excerpt": "长路径默认标签截断Unicode代理对"
+        },
+        {
+          "originalChars": 348,
+          "excerpt": "](root.md) |\n| HL-01 | P3 | 精确GitHub文件路径被trim并合并引用 | [host-link.md](host-link.md) |\n| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |\n| CDP-R3-01 | P3 | 旋转quad点击/hover取到元素外的点 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-02 | P3 | Shift组合的logical key与text矛盾 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-03 | P2 | DOM hidden祖先剪枝漏掉"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/root-dedup.json",
+      "hits": [
+        {
+          "originalChars": 90,
+          "excerpt": "esult.truncated at `SessionSearchModal.tsx:179–187`, using “结果不完整（已达搜索上限）” from i18n :262."
+        },
+        {
+          "originalChars": 244,
+          "excerpt": "、hint、header 和空结果均未说明最近 500 个候选：`SessionSearchModal.tsx:95,137–146,150–188`，中文 `i18n/ns/panels.ts:247–262`、英文 `:531–546` 均如此。空输入标题模式的 Recent conversations 是独立模式；content mode 的 header 返回 Search results。唯一覆盖不足提示由 result.truncated 控制，故收到 false 时不会"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-diff-semantic.json",
+      "hits": [
+        {
+          "originalChars": 164,
+          "excerpt": "(diff.{0,100}(width|padding|wrap|CJK|unicode|marker|classif|color|colour|空白|换行|中文|彩色|颜色|加号|减号))|((padding|wrap|CJK|unicode|marker|classif|color|colour).{0,100}diff)"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/files-dedup.json",
+      "hits": [
+        {
+          "originalChars": 197,
+          "excerpt": "Markdown lines and individually parsed JSON string leaves; all prior docs/archive/bugs recursively; round7 excluded. Hashes cover searched input bytes. Snippets bounded around first match per leaf."
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "hits": [
+        {
+          "originalChars": 111304,
+          "excerpt": " creates maintenance risk if the summarization logic needs modification in the future.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/arena/phases/participant-research.ts\", \"line\": \"202-216\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Missing abort signal in force-conclude message\", \"detail\": \"The force-conclude call to client.createMessage() on line 202 does not pass the `signal` parameter, unlike earlier calls on lines 97 and 90. If an AbortSignal was provided to runParticipantResearchWithDossiers, the force-conclude message will not respect cancellation requests.\", \"fix\": \"Add `signal,` p"
+        },
+        {
+          "originalChars": 222261,
+          "excerpt": "ter the last `}` or `]`, but if the JSON response contains a `}` or `]` inside a string value (e.g., a comment containing `}` before the actual end), the regex truncates prematurely, leaving invalid JSON.\", \"fix\": \"Rely on the JSON.parse try-catch flow already in place (lines 84-95), which handles malformed JSON gracefully. Consider removing the aggressive trim-regex or making it smarter (e.g., find last unescaped `}` or `]`).\"}, {\"file\": \"packages/core/src/arena/iterate/tools/web-tools.ts\", \"line\": \"52-56\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Missing await on "
+        },
+        {
+          "originalChars": 113910,
+          "excerpt": "e message array separately with system vs user roles properly distinguished.\", \"pkg\": \"core\", \"_id\": 4}, {\"file\": \"packages/core/src/arena/phases/participant-research.ts\", \"line\": \"202-216\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing abort signal in force-conclude message\", \"detail\": \"The force-conclude call to client.createMessage() on line 202 does not pass the `signal` parameter, unlike earlier calls on lines 97 and 90. If an AbortSignal was provided to runParticipantResearchWithDossiers, the force-conclude message will not respect cancellation requests.\""
+        },
+        {
+          "originalChars": 169230,
+          "excerpt": " \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Underestimated replacement size in applyToolResultBudget\", \"detail\": \"At line 349, the code assumes truncated tool results will be replaced with ~200 chars: `remaining += 200`. However, the actual replacement message (lines 360-363) includes `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\\\n\\\\nPreview (first 500 chars):\\\\n${preview}`, which is approximately 150 + 500 = 650+ chars. This causes the `remaining` size estimate to be wildly inaccurate (off by 450+ cha"
+        },
+        {
+          "originalChars": 112304,
+          "excerpt": "o build the message array separately with system vs user roles properly distinguished.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/phases/participant-research.ts\", \"line\": \"202-216\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing abort signal in force-conclude message\", \"detail\": \"The force-conclude call to client.createMessage() on line 202 does not pass the `signal` parameter, unlike earlier calls on lines 97 and 90. If an AbortSignal was provided to runParticipantResearchWithDossiers, the force-conclude message will not respect cancellation requests.\""
+        },
+        {
+          "originalChars": 236,
+          "excerpt": "55 的迟到结果来自合法磁盘会话与成功的 Main 项目校验；后台索引导入尚未完成时，Pet 卡与全局选择器仍可用。应关联所有导航意图，使旧打开可完成导入但不覆盖新选择。仅当前索引缺少该会话的异步路径已复现，不声称普通同步点击、输入或文件丢失。R56 应在候选超过500时透传覆盖范围不足；既有设计已明确500候选的有界搜索，修复仅需反馈覆盖不足。现有时间预算和大文件跳过已会设置 truncated，而候选截断未设置。标题搜索/手工打开可缓解，全文重试本身不扩大范围。"
+        },
+        {
+          "originalChars": 222261,
+          "excerpt": "ter the last `}` or `]`, but if the JSON response contains a `}` or `]` inside a string value (e.g., a comment containing `}` before the actual end), the regex truncates prematurely, leaving invalid JSON.\", \"fix\": \"Rely on the JSON.parse try-catch flow already in place (lines 84-95), which handles malformed JSON gracefully. Consider removing the aggressive trim-regex or making it smarter (e.g., find last unescaped `}` or `]`).\"}, {\"file\": \"packages/core/src/arena/iterate/tools/web-tools.ts\", \"line\": \"52-56\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Missing await on "
+        },
+        {
+          "originalChars": 113910,
+          "excerpt": "e message array separately with system vs user roles properly distinguished.\", \"pkg\": \"core\", \"_id\": 4}, {\"file\": \"packages/core/src/arena/phases/participant-research.ts\", \"line\": \"202-216\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing abort signal in force-conclude message\", \"detail\": \"The force-conclude call to client.createMessage() on line 202 does not pass the `signal` parameter, unlike earlier calls on lines 97 and 90. If an AbortSignal was provided to runParticipantResearchWithDossiers, the force-conclude message will not respect cancellation requests.\""
+        },
+        {
+          "originalChars": 169230,
+          "excerpt": " \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Underestimated replacement size in applyToolResultBudget\", \"detail\": \"At line 349, the code assumes truncated tool results will be replaced with ~200 chars: `remaining += 200`. However, the actual replacement message (lines 360-363) includes `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\\\n\\\\nPreview (first 500 chars):\\\\n${preview}`, which is approximately 150 + 500 = 650+ chars. This causes the `remaining` size estimate to be wildly inaccurate (off by 450+ cha"
+        },
+        {
+          "originalChars": 112304,
+          "excerpt": "o build the message array separately with system vs user roles properly distinguished.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/phases/participant-research.ts\", \"line\": \"202-216\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing abort signal in force-conclude message\", \"detail\": \"The force-conclude call to client.createMessage() on line 202 does not pass the `signal` parameter, unlike earlier calls on lines 97 and 90. If an AbortSignal was provided to runParticipantResearchWithDossiers, the force-conclude message will not respect cancellation requests.\""
+        },
+        {
+          "originalChars": 222261,
+          "excerpt": "ter the last `}` or `]`, but if the JSON response contains a `}` or `]` inside a string value (e.g., a comment containing `}` before the actual end), the regex truncates prematurely, leaving invalid JSON.\", \"fix\": \"Rely on the JSON.parse try-catch flow already in place (lines 84-95), which handles malformed JSON gracefully. Consider removing the aggressive trim-regex or making it smarter (e.g., find last unescaped `}` or `]`).\"}, {\"file\": \"packages/core/src/arena/iterate/tools/web-tools.ts\", \"line\": \"52-56\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Missing await on "
+        },
+        {
+          "originalChars": 113910,
+          "excerpt": "e message array separately with system vs user roles properly distinguished.\", \"pkg\": \"core\", \"_id\": 4}, {\"file\": \"packages/core/src/arena/phases/participant-research.ts\", \"line\": \"202-216\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing abort signal in force-conclude message\", \"detail\": \"The force-conclude call to client.createMessage() on line 202 does not pass the `signal` parameter, unlike earlier calls on lines 97 and 90. If an AbortSignal was provided to runParticipantResearchWithDossiers, the force-conclude message will not respect cancellation requests.\""
+        },
+        {
+          "originalChars": 112304,
+          "excerpt": "o build the message array separately with system vs user roles properly distinguished.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/phases/participant-research.ts\", \"line\": \"202-216\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Missing abort signal in force-conclude message\", \"detail\": \"The force-conclude call to client.createMessage() on line 202 does not pass the `signal` parameter, unlike earlier calls on lines 97 and 90. If an AbortSignal was provided to runParticipantResearchWithDossiers, the force-conclude message will not respect cancellation requests.\""
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/plugins-dedup-corpus.json",
+      "hits": [
+        {
+          "originalChars": 157,
+          "excerpt": "- 预期：按真实 Unicode 文件名搜索并返回可读取的相对路径。实际：`searchFiles(root, \"报告\")` 为 `[]`；空查询返回带引号和八进制转义的不存在路径。带换行文件名同样变为 `\"line\\nbreak.md\"`，不能读取。ASCII 文件及非 Git 目录中的相同中文文件均通过对照。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/questions-dedup-inventory.json",
+      "hits": [
+        {
+          "originalChars": 35,
+          "excerpt": "/hits/grep-glob-fallback/44/snippet"
+        },
+        {
+          "originalChars": 35,
+          "excerpt": "/hits/grep-glob-fallback/27/snippet"
+        },
+        {
+          "originalChars": 34,
+          "excerpt": "/hits/grep-glob-fallback/4/snippet"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/cross-review-plugins.md",
+      "hits": [
+        {
+          "originalChars": 632,
+          "excerpt": "etWorktreeDiff` with only `gitOutput` replaced by memory returns. Its child_process exports throw on use, and each of the four cases asserts zero native calls. Unicode octal quoting and quoted double-quote names return 2; the ordinary same-file control returns 1, and different-file control returns 2. The first log and receipt agree on **4 pass / 12 expect / exit 0 / zero skipped / Completed**. Existing parse-log/slug baseline agrees on **8 pass / 17 expect**, giving Root **12 tests / 29 expect**. Green wrong-behavior assertions are correctly identified as reproduction evidence."
+        },
+        {
+          "originalChars": 341,
+          "excerpt": "The Web duplicates are correctly separated: old UI-02 case folding is distinct from the slash boundary, and the older Hub upload staging/admission issue concerns a different implementation. Frozen first fixtures and logs remain evidence for their original source only. No new finding or revision to priority is required by this cross-review."
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/evidence/web-dedup.json",
+      "hits": [
+        {
+          "originalChars": 35,
+          "excerpt": "/hits/grep-glob-fallback/51/snippet"
+        },
+        {
+          "originalChars": 273,
+          "excerpt": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+        },
+        {
+          "originalChars": 273,
+          "excerpt": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+        },
+        {
+          "originalChars": 180,
+          "excerpt": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+        },
+        {
+          "originalChars": 290,
+          "excerpt": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-context-cancel-round18/report.md",
+      "hits": [
+        {
+          "originalChars": 909,
+          "excerpt": "eshell/packages/desktop/src/main/index.ts:4886) → pet disclosure search [54–57](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/pet/src/disclosure/search.ts:54) 只取 message；刚建成的 summary target 仅 meta/context_transfer，不应承诺 summary 正文可被搜索。即使另有 content match，SessionSearchModal [191–198](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/SessionSearchModal.tsx:191) 仍要求 resolveContentMatch 映射已索引会话（[sessionContentSearch.ts:34–54](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/shell/sessionConte"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/quality-final-review.md",
+      "hits": [
+        {
+          "originalChars": 315,
+          "excerpt": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+        },
+        {
+          "originalChars": 343,
+          "excerpt": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/pet-source-manifest.json",
+      "hits": [
+        {
+          "originalChars": 37,
+          "excerpt": "packages/pet/src/disclosure/search.ts"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+      "hits": [
+        {
+          "originalChars": 36,
+          "excerpt": "CHD02 long attachment Unicode labels"
+        },
+        {
+          "originalChars": 343,
+          "excerpt": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+        },
+        {
+          "originalChars": 315,
+          "excerpt": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+        },
+        {
+          "originalChars": 53,
+          "excerpt": "## CHD02 — [P3，长标签触发] 附件名按 UTF-16 生切，产生破损 Unicode 元数据"
+        },
+        {
+          "originalChars": 69,
+          "excerpt": "| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |"
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    },
+    {
+      "path": "docs/archive/core-modules/external-agents.md",
+      "hits": [
+        {
+          "originalChars": 475,
+          "excerpt": "fault`. Don't weaken this matching. Real call sites normalize trailing slashes (`/\\/+$/`) before comparing — paths are matched by string equality, not realpath/case-folding, so the comparison is sensitive to canonical form."
+        }
+      ],
+      "note": "Bounded excerpt around first matching term; original full source remains in repository."
+    }
+  ]
+}

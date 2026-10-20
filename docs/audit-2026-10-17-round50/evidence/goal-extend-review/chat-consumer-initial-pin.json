@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T17:03:19.643145+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

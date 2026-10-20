@@ -1,0 +1,19 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "decisions": [
+    {
+      "subject": "Stream envelope live seq and steer replay",
+      "status": "negative/no-new-related",
+      "reason": "Archive already documents live seq retrofit and old steer exclusion. Current parse retains identified steer and seq/epoch; no new ordinary counterexample established. Historical line numbers refer to their original snapshot; not current proof."
+    },
+    {
+      "subject": "Output recovery and coverage",
+      "status": "static-boundary-negative",
+      "reason": "Current helper accumulates a private chat candidate, checks cancellation and bounded pages, typed pending state, then snapshot/input coverage before return. Actual selected client commits only after result and input-anchor checks; no concrete ordinary defect established. Identity/auth/journal experiments remain unrun. No claim that entire recovery protocol is correct."
+    }
+  ],
+  "dedup": "root-dedup.json",
+  "limits": "History MD+recursive JSON value scalars incl archives. Capped keyword context is navigation, not semantic exhaustion. Old tests/old directions are not rerun."
+}

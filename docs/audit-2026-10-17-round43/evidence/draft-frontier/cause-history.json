@@ -1,0 +1,1055 @@
+{
+  "finishedUTC": "2026-10-17T14:36:41.250187+00:00",
+  "method": "Same3773 inventory all MD paragraphs + recursive JSON value strings (scalars counted), keys not searched; one hit per unit literal/AND; cap100; bounded windows do not imply whole-value/whole-history semantic reading",
+  "fileCount": 3773,
+  "mdParagraphs": 57766,
+  "jsonStrings": 1180902,
+  "jsonScalars": 1782213,
+  "parseErrors": [],
+  "datedByteDrift": [],
+  "queries": {
+    "plugin-expand": {
+      "hits": 0,
+      "cap": 100,
+      "retained": 0
+    },
+    "draft-plugin-race": {
+      "hits": 105,
+      "cap": 100,
+      "retained": 100
+    },
+    "active-ref-draft": {
+      "hits": 2,
+      "cap": 100,
+      "retained": 2
+    }
+  },
+  "contexts": {
+    "plugin-expand": [],
+    "draft-plugin-race": [
+      {
+        "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+        "locator": "MD-paragraph-start:32",
+        "valueChars": 12256,
+        "offset": 1453,
+        "contextStart": 1003,
+        "contextEnd": 2703,
+        "text": "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| Required plugin manifest              | **Full**                        | Detects `.codex-plugin/plugin.json` and `.claude-plugin/plugin.json`; writes a trusted canonical manifest for runtime/UI consumption.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |\n| Skills with scripts/references/assets | **Full**                        | Codex skill trees are preserved; `Skill` exposes the absolute skill directory through `${CODESHELL_SKILL_DIR}` substitution.                                                                                                                                                                                                                                                                                                                                                    ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/architecture/13-plugin-parity-and-video-editor.md",
+        "locator": "MD-paragraph-start:59",
+        "valueChars": 7711,
+        "offset": 128,
+        "contextStart": 0,
+        "contextEnd": 1378,
+        "text": "1. preserves the complete Codex package for local/direct installs, so a hook\n   can actually reach scripts and assets through `$PLUGIN_ROOT`;\n2. accepts the Codex default hook location plus manifest path, inline, and\n   mixed array declarations;\n3. merges hook declarations into CodeShell's canonical `hooks/hooks.json`;\n4. rejects hook path traversal and escaping symlinks;\n5. exposes CodeShell-native and Codex-compatible root/data variables while\n   keeping mutable plugin data outside replaceable install directories;\n6. projects Codex agents, prompts/commands, hooks, and MCP servers for\n   marketplace installs too, including snake_case MCP secret fields.\n7. expands deprecated Codex prompt placeholders at invocation time instead of\n   leaving `$1` and named values inert.\n8. records the installed hook definition digest and refuses to execute hooks\n   that changed outside an explicit install/update; pre-digest installs remain\n   visible as `legacy` for compatibility.\n9. validates `interface.composerIcon`, `logo`, `logoDark`, and `screenshots`\n   against their real paths, rejects escaping symlinks, missing files, format\n   spoofing, oversized/dimension-bomb images, and non-`assets/*.png`\n   screenshots, then copies accepted bytes into an installer-owned canonical\n   asset directory. `composerIcon` additionally accepts a validated static SVG\n   shape subset: nam",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "MD-paragraph-start:16",
+        "valueChars": 17913,
+        "offset": 3654,
+        "contextStart": 3204,
+        "contextEnd": 4904,
+        "text": "ore 导致的环境 breakage(bun install 恢复,记忆已存)**。详见下方「续 D/E/F」。**最终全量基线:core 1751 · cdp 27 · tui 69 · desktop 988 全 0 fail · 三包 tsc 0 · 工作树净 · 领先 origin ~361,仍未 push**。**打包已由你完成(见顶部 📦 段),剩 §1.2 真机冒烟 + push。**\n>\n> **续(D)文档准确性核查(4 批 Explore subagent + 亲自复核,~19 份文档,按 receiving-code-review 纪律甄别误报):**\n> - `7de8708c` 修 3 份面向读者文档真错误:`hooks.md`(import 包名 `code-shell`→`@cjhyy/code-shell`;kill-switch 表用了不存在的 `strictSkills`/`CODESHELL_STRICT_SKILLS`→改真机制 `disabledPlugins/disabledPluginHooks/disabledSkills`)、`CODESHELL.md`(Build&Test 块 pre-monorepo:`dev` 指向不存在的 `src/cli/main.ts`)、`smoke-checklist-cc-orchestrator.md`(`ScheduleRoomTask` 已删→`CronCreate(once)`)。\n> - `39f33358` 修 2 份设计稿「已实现」状态撒谎:`background-agent-visibility-design`(状态行写 C 已实现=`listInterruptedSubagents`,但该函数已被 `a28fc54c` 删除+锚点机制取代)、`terminal-browser-feature`(开发期快照,4 面板早实现+架构演进 PanelTab)。\n> - `45b4479c`/`81e4181d` browser-tool/cookie-export/browser-automation 状态与实现落点勘误(P1①截图回显/P2⑤vision缩放已实现;cookie lease 真落点在 `credentials/` 走 `UseCredential` 非 `CODESHELL_COOKIE_FILE`;工具名 snapshot/click→observe/act 演进)。\n> - `bfc5cca3` `feature-inventory` 加时效声明(06-17 快照+55 feat,列未收录的统一后台面板等)。`2136fd8d` `roadmap` 速览表 Code Shell 列就地勘误(IDE/Slash/Undo/Memory 4 处 ❌→✅)。\n> - `7708d67d` 标 §5「审查面板 turn 级范围(真 bug)」**已修**(TODO 2.3a 链:`611c1fa4`/`42e78ccd`/`3f8f61fc`/`62df7f58`,`diff/reviewScope.ts`)+ §4.5 标已完成。\n> - **核查准确未改**:`mobile-remote-smoke`/`electron-image-input-design`/`arena-architecture-analysis`/4 份设计稿(steer-inject/send-input/local-install/local-plugin-upgrade,佐证 CHANGELOG 宣传特性真接线)/`subagent-visibility-smoke-checklist`(待办清单)。按纪律判定不改:arena cross-review 拆分提案/ArenaRoadmapPhaseDetail 未导出(代码组织非文档错)。\n> - **自我验证**:本轮文档引用的 7 个 commit hash 全部 `git cat-file -",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "MD-paragraph-start:516",
+        "valueChars": 14172,
+        "offset": 74,
+        "contextStart": 0,
+        "contextEnd": 1324,
+        "text": "| 子系统 | 结论 |\n|---|---|\n| cookie capture/inject · 多账号切换 | 修 2(见上)+ 余干净 |\n| plugin 安装/覆盖升级/卸载原子性 | 干净(reinstallAtomic 回滚正确·materialize 崩溃自愈·manifest 竞态非 beta 可达) |\n| model catalog resolve/merge | 干净(id Map 去重 user 覆盖 builtin 恰一次·corrupt 档降级不污染) |\n| mobile-remote 鉴权 | 修 1(passcode 头)+ 已知项维持 §2.4 取舍 |\n| permission session-cache | 修 1(链式绕过,见上) |\n| path-policy | 干净(锚定正则·coveredBy 补 sep;小 gap=命名凭证 `.bak` 不判敏感) |\n| bash-classifier | 干净(每段 min 安全度·管道每段须独立 safe-read·默认 unsafe) |\n| automation write-policy | 干净(三档 + 未知回退最安全,全 fail-closed) |\n| config 热重载(refreshRuntimeConfig) | 干净(version 单调·全量快照 patch·tool-set 变更只 warn·reconcile catch-log) |\n| turn-loop abort | 干净(signal 检查在 while 顶部,project_subagent_abort_leak 已修) |\n| stream/render parse | 干净(parseSnapshotAppend try/catch + steer 去重·readline 缓冲半行) |\n| seatbelt 沙箱 | 干净(deny default·realpath 防 symlink·cat 集成测;小记 quote 未转义 `)`/换行,但 writableRoots 可信自配) |\n| 记忆注入 filterByAge | 干净(边界 `>=` 无 off-by-one·双路一致) |\n| session run 并发锁 | 干净(active 锁首 await 前同步置位·队列串行·server isBusy 双保险,race-free) |\n| background job 生命周期 + wait-loop | 干净(.finally 配对无泄漏·abort-aware + 超时有界,绝不无界 park) |\n| LLM retry/clamp | 干净(isClientError 读双处 status·clampMaxTokens 三分支;408/cap≤0 学术性边角) |\n| ApplyPatch 原子性 | **范本级**(dry-run + 逆序快照回滚 + realpath 防逃逸;比 Codex 参考更严;14 测) |\n| session disk 恢复 | 干净(三道过滤正确·title",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "locator": "MD-paragraph-start:27",
+        "valueChars": 1727,
+        "offset": 908,
+        "contextStart": 458,
+        "contextEnd": 1727,
+        "text": "递归不返回，见 `packages/desktop/src/main/file-search-service.ts:105` 到 `packages/desktop/src/main/file-search-service.ts:109`。\n- `searchFiles` 最终只返回前 30 个文件 hit，见 `packages/desktop/src/main/file-search-service.ts:169` 到 `packages/desktop/src/main/file-search-service.ts:180`。\n- main 的 `files:search` IPC 只是校验 cwd 字符串后调用 `searchFiles(cwd, q)`，见 `packages/desktop/src/main/index.ts:1979` 到 `packages/desktop/src/main/index.ts:1983`。\n- Mention popover 说明当前只有「插件」和「文件」两个 section，见 `packages/desktop/src/renderer/chat/MentionPopover.tsx:1` 到 `packages/desktop/src/renderer/chat/MentionPopover.tsx:7`。\n- Mention popover 的 `MentionItem` 只有 `skill` 或 `file`，见 `packages/desktop/src/renderer/chat/MentionPopover.tsx:24` 到 `packages/desktop/src/renderer/chat/MentionPopover.tsx:27`。\n- 文件搜索结果从 `window.codeshell.searchFiles(cwd, query)` 异步获取，见 `packages/desktop/src/renderer/chat/MentionPopover.tsx:65` 到 `packages/desktop/src/renderer/chat/MentionPopover.tsx:77`。\n- 选择文件 mention 后，ChatView 只把 `@${item.file.path} ` 作为文本插入 draft，没有结构化引用，见 `packages/desktop/src/renderer/ChatView.tsx:537` 到 `packages/desktop/src/renderer/ChatView.tsx:555`。\n- 内部 file-panel 非图片拖入也只是插入 `@${absPath}` 文本，见 `packages/desktop/src/renderer/ChatView.tsx:513` 到 `packages/desktop/src/renderer/ChatView.tsx:535`。",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/5/matches/0/match",
+        "valueChars": 146567,
+        "offset": 6724,
+        "contextStart": 6274,
+        "contextEnd": 7974,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/5/matches/0/context",
+        "valueChars": 146947,
+        "offset": 6964,
+        "contextStart": 6514,
+        "contextEnd": 8214,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/9/matches/0/match",
+        "valueChars": 146567,
+        "offset": 6724,
+        "contextStart": 6274,
+        "contextEnd": 7974,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/9/matches/0/context",
+        "valueChars": 146947,
+        "offset": 6964,
+        "contextStart": 6514,
+        "contextEnd": 8214,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/13/matches/0/match",
+        "valueChars": 146567,
+        "offset": 6724,
+        "contextStart": 6274,
+        "contextEnd": 7974,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "/records/13/matches/0/context",
+        "valueChars": 146947,
+        "offset": 6964,
+        "contextStart": 6514,
+        "contextEnd": 8214,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round22/evidence/terminal-commands.json",
+        "locator": "/commands/1/stdout",
+        "valueChars": 137626,
+        "offset": 8900,
+        "contextStart": 8450,
+        "contextEnd": 10150,
+        "text": "s/audit-2026-10-17-round6/desktop-display.md\ndocs/audit-2026-10-17-round6/source-manifest.json\ndocs/audit-2026-10-17-round6/candidates.json\ndocs/plan-2026-07-09-security-M3-M2.md\ndocs/bug-fixing-guide.md\ndocs/nightly-2026-07-10-commit-summary.md\ndocs/audit-2026-10-17-round8/integration-context.md\ndocs/audit-2026-10-17-round8/questions.md\ndocs/audit-2026-10-17-round8/web.md\ndocs/audit-2026-10-17-round8/validation.json\ndocs/audit-2026-10-17-round8/plugins.md\ndocs/audit-2026-10-17-round8/findings.json\ndocs/audit-2026-10-17-round8/README.md\ndocs/audit-2026-10-17-round8/root-git.md\ndocs/audit-2026-10-17-round8/evidence-index.json\ndocs/audit-2026-10-17-round8/evidence/integration-before-final.json\ndocs/audit-2026-10-17-round8/evidence/cross-review-web.md\ndocs/audit-2026-10-17-round8/evidence/plugins-command-preflight.json\ndocs/audit-2026-10-17-round8/evidence/root-git-dedup.json\ndocs/audit-2026-10-17-round8/evidence/questions-core-preflight.json\ndocs/audit-2026-10-17-round8/evidence/plugins-artifact-receipt.json\ndocs/audit-2026-10-17-round8/evidence/questions-core-options.first.receipt.json\ndocs/audit-2026-10-17-round8/evidence/questions-candidates.json\ndocs/audit-2026-10-17-round8/evidence/integration-before.json\ndocs/audit-2026-10-17-round8/evidence/web-preflight.json\ndocs/audit-2026-10-17-round8/evidence/web-dedup.json\ndocs/audit-2026-10-17-round8/evidence/questions-tui-preflight.json\ndocs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.first.receipt.json\ndocs/audit-2026-10-17-round8/evidence/web-display-contracts.first.exit.json\ndocs/audit-2026-10-17-round8/evidence/cross-review-plugins.md\ndocs/audit-2026-10-17-round8/evidence/cross-review-questions.md\ndocs/au",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup-navigation.json",
+        "locator": "/stdout",
+        "valueChars": 141918,
+        "offset": 8900,
+        "contextStart": 8450,
+        "contextEnd": 10150,
+        "text": "s/audit-2026-10-17-round6/desktop-display.md\ndocs/audit-2026-10-17-round6/source-manifest.json\ndocs/audit-2026-10-17-round6/candidates.json\ndocs/plan-2026-07-09-security-M3-M2.md\ndocs/bug-fixing-guide.md\ndocs/nightly-2026-07-10-commit-summary.md\ndocs/audit-2026-10-17-round8/integration-context.md\ndocs/audit-2026-10-17-round8/questions.md\ndocs/audit-2026-10-17-round8/web.md\ndocs/audit-2026-10-17-round8/validation.json\ndocs/audit-2026-10-17-round8/plugins.md\ndocs/audit-2026-10-17-round8/findings.json\ndocs/audit-2026-10-17-round8/README.md\ndocs/audit-2026-10-17-round8/root-git.md\ndocs/audit-2026-10-17-round8/evidence-index.json\ndocs/audit-2026-10-17-round8/evidence/integration-before-final.json\ndocs/audit-2026-10-17-round8/evidence/cross-review-web.md\ndocs/audit-2026-10-17-round8/evidence/plugins-command-preflight.json\ndocs/audit-2026-10-17-round8/evidence/root-git-dedup.json\ndocs/audit-2026-10-17-round8/evidence/questions-core-preflight.json\ndocs/audit-2026-10-17-round8/evidence/plugins-artifact-receipt.json\ndocs/audit-2026-10-17-round8/evidence/questions-core-options.first.receipt.json\ndocs/audit-2026-10-17-round8/evidence/questions-candidates.json\ndocs/audit-2026-10-17-round8/evidence/integration-before.json\ndocs/audit-2026-10-17-round8/evidence/web-preflight.json\ndocs/audit-2026-10-17-round8/evidence/web-dedup.json\ndocs/audit-2026-10-17-round8/evidence/questions-tui-preflight.json\ndocs/audit-2026-10-17-round8/evidence/questions-tui-batched-choice.first.receipt.json\ndocs/audit-2026-10-17-round8/evidence/web-display-contracts.first.exit.json\ndocs/audit-2026-10-17-round8/evidence/cross-review-plugins.md\ndocs/audit-2026-10-17-round8/evidence/cross-review-questions.md\ndocs/au",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json",
+        "locator": "/stdout",
+        "valueChars": 146297,
+        "offset": 677,
+        "contextStart": 227,
+        "contextEnd": 1927,
+        "text": "gistry-confirmation.md\ndocs/device-relay-candidate.md\ndocs/audit-2026-10-17-round9/tools.md\ndocs/audit-2026-10-17-round9/session.md\ndocs/audit-2026-10-17-round9/validation.json\ndocs/audit-2026-10-17-round9/findings.json\ndocs/audit-2026-10-17-round9/README.md\ndocs/audit-2026-10-17-round9/usage.md\ndocs/audit-2026-10-17-round9/evidence-index.json\ndocs/core-deep-dive/07-run-automation-goal.md\ndocs/core-deep-dive/10-tui-host.md\ndocs/core-deep-dive/08-plugins-capabilities-credentials-memory.md\ndocs/core-deep-dive/02-engine-turn-loop.md\ndocs/core-deep-dive/v2-03-tool-system-security-deep-dive.md\ndocs/audit-2026-10-17-round9/evidence/integration-before-final.json\ndocs/audit-2026-10-17-round9/evidence/root-source-manifest.json\ndocs/audit-2026-10-17-round9/evidence/cross-review-session.md\ndocs/audit-2026-10-17-round9/evidence/root-validation.json\ndocs/audit-2026-10-17-round9/evidence/tools-candidates.json\ndocs/audit-2026-10-17-round9/evidence/attachments-source-manifest.json\ndocs/audit-2026-10-17-round9/evidence/integration-before.json\ndocs/audit-2026-10-17-round9/evidence/cross-review-attachments.md\ndocs/audit-2026-10-17-round9/evidence/root-usage-contracts.first.receipt.json\ndocs/audit-2026-10-17-round9/evidence/session-source-manifest.json\ndocs/audit-2026-10-17-round9/evidence/root-findings.json\ndocs/audit-2026-10-17-round9/evidence/attachments-dedup.json\ndocs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json\ndocs/audit-2026-10-17-round9/evidence/session-validation.json\ndocs/audit-2026-10-17-round9/evidence/cross-review-usage.md\ndocs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json\ndocs/audit-2026-10-17-round9/evidence/session-call-cap.first.exit.json\nd",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/77/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/78/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/79/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/80/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/81/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/82/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/147/excerpt",
+        "valueChars": 111073,
+        "offset": 25945,
+        "contextStart": 25495,
+        "contextEnd": 27195,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/148/excerpt",
+        "valueChars": 112643,
+        "offset": 26298,
+        "contextStart": 25848,
+        "contextEnd": 27548,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/149/excerpt",
+        "valueChars": 220729,
+        "offset": 18675,
+        "contextStart": 18225,
+        "contextEnd": 19925,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/150/excerpt",
+        "valueChars": 111073,
+        "offset": 25945,
+        "contextStart": 25495,
+        "contextEnd": 27195,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/151/excerpt",
+        "valueChars": 138898,
+        "offset": 58764,
+        "contextStart": 58314,
+        "contextEnd": 60014,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/152/excerpt",
+        "valueChars": 112643,
+        "offset": 26298,
+        "contextStart": 25848,
+        "contextEnd": 27548,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/153/excerpt",
+        "valueChars": 220729,
+        "offset": 18675,
+        "contextStart": 18225,
+        "contextEnd": 19925,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/154/excerpt",
+        "valueChars": 111073,
+        "offset": 25945,
+        "contextStart": 25495,
+        "contextEnd": 27195,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/155/excerpt",
+        "valueChars": 138898,
+        "offset": 58764,
+        "contextStart": 58314,
+        "contextEnd": 60014,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/156/excerpt",
+        "valueChars": 112643,
+        "offset": 26298,
+        "contextStart": 25848,
+        "contextEnd": 27548,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/157/excerpt",
+        "valueChars": 220729,
+        "offset": 18675,
+        "contextStart": 18225,
+        "contextEnd": 19925,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/158/excerpt",
+        "valueChars": 95287,
+        "offset": 15153,
+        "contextStart": 14703,
+        "contextEnd": 16403,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/selected-source.json",
+        "locator": "/sources/0/ranges/0/text",
+        "valueChars": 17111,
+        "offset": 2944,
+        "contextStart": 2494,
+        "contextEnd": 4194,
+        "text": "s — private host-neutral browser diagnostics collectors.\n  chat/     @cjhyy/code-shell-chat     — standalone multi-channel chat gateway + optional CodeShell integration.\n```\n\nCore entry contract: `.` = stable public SDK; `/extension` = capability-package\ncontract (coding/arena/pet import ONLY this); `/internal` = in-repo host surface\n(tui/desktop import host-only helpers from here, never from `.`).\n\n## Panel feature ownership\n\nPanel features are plugin-owned. Keep models, dependency versions/installers,\ndata providers, domain workflows, document schemas, templates, and editing rules\nin the independently versioned Panel package. A Panel feature must not require a\nnew CodeShell branch merely because its model or business logic changes.\n\nChange CodeShell only when an existing interface cannot provide a reusable Host\ncapability: for example authorized files, package entry handles, process/task\nlifecycle, credentials, or capability discovery. Establish the actual gap and\nconcrete consumers or a system-boundary reason first; ordinary helper reuse\nbelongs in the Panel SDK/library.\nNative tools must run outside the Host process through reviewed interfaces.\nIf a Host media operation remains, keep its limits and parameters domain-neutral;\nvoice-reference duration, timeline frame rate, and specific engine choices are\nPanel policy. Preserve existing callers while migrating legacy coupled code.\n\nExisting media services are not automatically Host-owned merely because they\nare reusable. Separate resource custody and process enforcement from asset\ncatalogs, progress calculation/UI, cancellation cleanup, and retry/recovery\npolicy. Put domain behavior in the Panel and ordinary shared imple",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+        "locator": "/hits/promise-guard/59/context",
+        "valueChars": 891,
+        "offset": 172,
+        "contextStart": 0,
+        "contextEnd": 891,
+        "text": "**。上述 Electron 验证与专项复现另计，不把它们混入单元测试数量。 [原字节归档与逐日志核对](baseline-evidence-round28.md)不增加测试执行。\n\n## 补充覆盖与验证边界\n\n0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，第十七轮补会话操作/Hub回答3项及上下文正常控制，第十八轮补上下文取消/模型偏好/Hub续接三项P3，第十九轮补原生认证锁EACCES阻塞1项P2，该阶段通用79文件236测试、native各38断言独立列；第二十轮再补Goal冷恢复两项P2和1文件4测试72expect，该阶段通用80文件240测试、正式79=1P1/51P2/27P3，另有R75原生存储补证与R29降级。第二十一轮补Chrome闲置断线反馈1项P3及1文件3测试40expect，该阶段通用81文件243测试、正式80=1P1/51P2/28P3。截止前已核对主分支差异及本文记录的失败恢复；最后10:35拉取的origin/main仍为a66f4ef2。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。\n\n未进行真实付费模型、真实第三方",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round34/evidence/worktrees-before.json",
+        "locator": "/raw",
+        "valueChars": 6222,
+        "offset": 5062,
+        "contextStart": 4612,
+        "contextEnd": 6222,
+        "text": "16/codeshell\nHEAD 686a05377be77e5513a9935eb4845d4bee9c3acc\nbranch refs/heads/codex/desktop/real-operation-cycles-20261016\n\nworktree /Users/admin/.codex/worktrees/release-ui-audit-20261016/codeshell\nHEAD f4cf3b625213babb56e436686c148bdd6669002f\nbranch refs/heads/codex/ci/workflow-tsx-test-paths-20261017\n\nworktree /Users/admin/.codex/worktrees/repo-audit-20261016/codeshell\nHEAD 40d79ff2190a98aa31067eb07006099c2726b21a\nbranch refs/heads/codex/audit/plugin-devtools-round33-20261017\n\nworktree /Users/admin/.codex/worktrees/turn-diff-aggregation-20261017/codeshell\nHEAD 4ad2052b6fd697af6141d8e60df1724cff509383\nbranch refs/heads/codex/core/turn-diff-aggregation-20261017\n\nworktree /Users/admin/.codex/worktrees/web-failure-home-gate-20261017/codeshell\nHEAD 9c23bd4581b87a801fe13eb3793a34f97aba777e\nbranch refs/heads/codex/docs/ci19-failure-20261017\n\nworktree /Users/admin/.codex/worktrees/workspace-status-performance/codeshell\nHEAD cf16a74e30cd24ceaeaf55aeae22f2dc2b8ae246\nbranch refs/heads/codex/desktop/app-chrome-alignment\n\nworktree /Users/admin/Documents/个人学习/代码学习/.worktrees/drive-codex-ctkmgu36\nHEAD d28b50a5146f86d23ef252c0bb68992ce7af4bc2\nbranch refs/heads/codex/core/model-vision-capability-20261015-ctkmgu36\n\nworktree /Users/admin/Documents/个人学习/代码学习/codeshell/.worktrees/host-shared-services-20261015\nHEAD c8a372b7dc7490b45ac638532b4110101629ad1a\nbranch refs/heads/codex/host/shared-services-20261015\n\nworktree /Users/admin/Documents/个人学习/代码学习/codeshell/.worktrees/quota-window-label-20261017\nHEAD 02d5d9a9ecbbb206d5f3d8a1d367e7081d937101\nbranch refs/heads/codex/coding/quota-window-label-20261017\n\n",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "locator": "/hits/admitted-name-local/7/excerpt",
+        "valueChars": 1200,
+        "offset": 660,
+        "contextStart": 210,
+        "contextEnd": 1200,
+        "text": "sion_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "locator": "/hits/uninstall-local-marketplace/6/excerpt",
+        "valueChars": 1200,
+        "offset": 660,
+        "contextStart": 210,
+        "contextEnd": 1200,
+        "text": "sion_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "locator": "/hits/collision-local-marketplace/4/excerpt",
+        "valueChars": 1200,
+        "offset": 660,
+        "contextStart": 210,
+        "contextEnd": 1200,
+        "text": "sion_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "locator": "/hits/exact-cause-cooccurrence/2/excerpt",
+        "valueChars": 1200,
+        "offset": 660,
+        "contextStart": 210,
+        "contextEnd": 1200,
+        "text": "sion_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |\n| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |\n| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |\n| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/6/object/match",
+        "valueChars": 146567,
+        "offset": 6724,
+        "contextStart": 6274,
+        "contextEnd": 7974,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/6/object/context",
+        "valueChars": 146947,
+        "offset": 6964,
+        "contextStart": 6514,
+        "contextEnd": 8214,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/7/object/match",
+        "valueChars": 146567,
+        "offset": 6724,
+        "contextStart": 6274,
+        "contextEnd": 7974,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/7/object/context",
+        "valueChars": 146947,
+        "offset": 6964,
+        "contextStart": 6514,
+        "contextEnd": 8214,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/8/object/match",
+        "valueChars": 146567,
+        "offset": 6724,
+        "contextStart": 6274,
+        "contextEnd": 7974,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/8/object/context",
+        "valueChars": 146947,
+        "offset": 6964,
+        "contextStart": 6514,
+        "contextEnd": 8214,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/9/object/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/10/object/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/11/object/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/12/object/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/13/object/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/14/object/excerpt",
+        "valueChars": 145360,
+        "offset": 6624,
+        "contextStart": 6174,
+        "contextEnd": 7874,
+        "text": "nt.data.turnNumber as number; if (turnNum > forkTurn) break; }` to make the intent clear and catch malformed events earlier.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"206\", \"category\": \"performance\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Memoization key generation calls statSync on every invocation, negating cache benefit\", \"detail\": \"The resolver function `(cwd: string) => \\\\`${cwd}\\\\0${userHome()}\\\\0${installedPluginsMtime()}\\\\`` calls `installedPluginsMtime()` on every memoized function invocation (line 206). This function performs a synchronous filesystem stat operation (line 198: `statSync(p).mtimeMs.toString()`). Even on cache hits, the resolver must execute to compute the cache key, incurring synchronous I/O overhead on the hot path. The mtime should be computed once and reused, or the key generation should be lazily evaluated only when needed.\", \"fix\": \"Move `installedPluginsMtime()` call outside the resolver, compute it once at module init and update it only when invalidateSkillCache() is called. Alternatively, use a two-level memoization where the mtime is cached separately.\"}, {\"file\": \"packages/core/src/skills/scanner.ts\", \"line\": \"260\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Unnecessary optional chaining on Map.clear() which always exists\", \"detail\": \"Line 260 uses `memoized.cache.clear?.()` but the Map.prototype.clear method always exists on valid Map objects. The memoized.cache is always a Map (assigned on line 204-207 via memoize.ts line 33: `memoized.cache = cache`), so the optional chaining is unnecessary and suggests defensive programming where it's not needed. This is harmless but",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/15/object/excerpt",
+        "valueChars": 111073,
+        "offset": 25945,
+        "contextStart": 25495,
+        "contextEnd": 27195,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/16/object/excerpt",
+        "valueChars": 112643,
+        "offset": 26298,
+        "contextStart": 25848,
+        "contextEnd": 27548,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/17/object/excerpt",
+        "valueChars": 220729,
+        "offset": 18675,
+        "contextStart": 18225,
+        "contextEnd": 19925,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/18/object/excerpt",
+        "valueChars": 111073,
+        "offset": 25945,
+        "contextStart": 25495,
+        "contextEnd": 27195,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/19/object/excerpt",
+        "valueChars": 138898,
+        "offset": 58764,
+        "contextStart": 58314,
+        "contextEnd": 60014,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/20/object/excerpt",
+        "valueChars": 112643,
+        "offset": 26298,
+        "contextStart": 25848,
+        "contextEnd": 27548,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/21/object/excerpt",
+        "valueChars": 220729,
+        "offset": 18675,
+        "contextStart": 18225,
+        "contextEnd": 19925,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/22/object/excerpt",
+        "valueChars": 111073,
+        "offset": 25945,
+        "contextStart": 25495,
+        "contextEnd": 27195,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/23/object/excerpt",
+        "valueChars": 138898,
+        "offset": 58764,
+        "contextStart": 58314,
+        "contextEnd": 60014,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/24/object/excerpt",
+        "valueChars": 112643,
+        "offset": 26298,
+        "contextStart": 25848,
+        "contextEnd": 27548,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/25/object/excerpt",
+        "valueChars": 220729,
+        "offset": 18675,
+        "contextStart": 18225,
+        "contextEnd": 19925,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/26/object/excerpt",
+        "valueChars": 95287,
+        "offset": 15153,
+        "contextStart": 14703,
+        "contextEnd": 16403,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/48/object/text",
+        "valueChars": 112304,
+        "offset": 26230,
+        "contextStart": 25780,
+        "contextEnd": 27480,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/49/object/text",
+        "valueChars": 113910,
+        "offset": 26583,
+        "contextStart": 26133,
+        "contextEnd": 27833,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/50/object/text",
+        "valueChars": 222261,
+        "offset": 18960,
+        "contextStart": 18510,
+        "contextEnd": 20210,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/51/object/text",
+        "valueChars": 112304,
+        "offset": 26230,
+        "contextStart": 25780,
+        "contextEnd": 27480,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/52/object/text",
+        "valueChars": 169230,
+        "offset": 84108,
+        "contextStart": 83658,
+        "contextEnd": 85358,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/53/object/text",
+        "valueChars": 113910,
+        "offset": 26583,
+        "contextStart": 26133,
+        "contextEnd": 27833,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/54/object/text",
+        "valueChars": 222261,
+        "offset": 18960,
+        "contextStart": 18510,
+        "contextEnd": 20210,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/55/object/text",
+        "valueChars": 112304,
+        "offset": 26230,
+        "contextStart": 25780,
+        "contextEnd": 27480,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/56/object/text",
+        "valueChars": 169230,
+        "offset": 84108,
+        "contextStart": 83658,
+        "contextEnd": 85358,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/57/object/text",
+        "valueChars": 113910,
+        "offset": 26583,
+        "contextStart": 26133,
+        "contextEnd": 27833,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/58/object/text",
+        "valueChars": 222261,
+        "offset": 18960,
+        "contextStart": 18510,
+        "contextEnd": 20210,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/59/object/text",
+        "valueChars": 111304,
+        "offset": 4406,
+        "contextStart": 3956,
+        "contextEnd": 5656,
+        "text": "property), `data.error` is undefined, and `!undefined` evaluates to true, causing the function to return true (valid key) for an unexpected/invalid response. However, this is currently dead code—the function is exported but never called in the codebase (grep for `validateApiKey(` returns only the definition at line 275, no callers). The function is also absent from the public API exports in index.ts.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/update.ts\", \"line\": \"26\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unhandled JSON/Zod parsing error in update.ts\", \"detail\": \"Line 26 calls JSON.parse() followed by CSMeta.parse() without try-catch. If the .cs-meta.json file is corrupted or has invalid structure, this will throw an unhandled exception, leaving the plugin in an unknown state. Line 35 has the same issue with CodexPluginManifest.parse().\", \"fix\": \"Wrap JSON.parse() and the Zod validation in a try-catch block, throwing PluginInstallError with a descriptive message on failure.\", \"verify_note\": \"The CLI layer (runGuarded) does catch all exceptions and exits cleanly, preventing user-facing crashes. However, this is incidental error handling at the caller level rather than proper error handling within the function itself. The function should wrap parsing operations in try-catch and convert SyntaxError/ZodError to PluginInstallError to match the established pattern in install.ts and the error contract implied by line 32's manual PluginInstallError throw. This is a correctness issue with low practical impact due to CLI-level error handling, but it violates API contract consistency and could cause problems for direct library users.\", \"verify_",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/logs/1/text",
+        "valueChars": 112304,
+        "offset": 26230,
+        "contextStart": 25780,
+        "contextEnd": 27480,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/logs/2/text",
+        "valueChars": 113910,
+        "offset": 26583,
+        "contextStart": 26133,
+        "contextEnd": 27833,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/logs/3/text",
+        "valueChars": 222261,
+        "offset": 18960,
+        "contextStart": 18510,
+        "contextEnd": 20210,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/settings-navigation/0/text",
+        "valueChars": 112304,
+        "offset": 26230,
+        "contextStart": 25780,
+        "contextEnd": 27480,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/settings-navigation/1/text",
+        "valueChars": 169230,
+        "offset": 84108,
+        "contextStart": 83658,
+        "contextEnd": 85358,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/settings-navigation/2/text",
+        "valueChars": 113910,
+        "offset": 26583,
+        "contextStart": 26133,
+        "contextEnd": 27833,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/settings-navigation/3/text",
+        "valueChars": 222261,
+        "offset": 18960,
+        "contextStart": 18510,
+        "contextEnd": 20210,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/sidebar-projection/8/text",
+        "valueChars": 112304,
+        "offset": 26230,
+        "contextStart": 25780,
+        "contextEnd": 27480,
+        "text": "ry so downstream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool: \\\"AgentSt",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/sidebar-projection/9/text",
+        "valueChars": 169230,
+        "offset": 84108,
+        "contextStart": 83658,
+        "contextEnd": 85358,
+        "text": "ync(tmp, ...). If renameSync(tmp, file) fails at line 696, the catch block writes directly to the original file but never removes the temporary file. The tmp variable (`${file}.${process.pid}.tmp`) is never deleted in the error case, leaving the temporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"verify_note\": \"The Zod schema at line 10 of types.ts restricts mcpServers to string | Record, so in normal usage the manifest is validated. However, if a JSON file somehow contains non-object data, the function silently accepts it instead of throwing an error, which is a contract violation. The fix proposed by the re",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/sidebar-projection/10/text",
+        "valueChars": 113910,
+        "offset": 26583,
+        "contextStart": 26133,
+        "contextEnd": 27833,
+        "text": "tream code never sees a dirty value.' The detectEnvKeys function (line 232) uses sanitizeApiKey which handles CRLF, BOM, control chars, etc., but resolveApiKey only trims. This inconsistency could allow unsanitized keys with hidden characters through.\", \"fix\": \"Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] || '').value` to match detectEnvKeys' approach.\", \"pkg\": \"core\", \"_id\": 32}, {\"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'mcpServers' property, but if it lacks that property (including non-objects), line 32's cast is unsafe.\", \"fix\": \"Add a validation check before line 32: `if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { throw new PluginInstallError(...); }` to ensure parsed is a plain object before casting.\", \"pkg\": \"core\", \"_id\": 33}, {\"file\": \"packages/core/src/preset/index.ts\", \"line\": \"88\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Orphaned permission rule for removed AgentStatus tool\", \"detail\": \"Line 88 includes a permission rule for AgentStatus: `{ tool",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/sidebar-projection/11/text",
+        "valueChars": 222261,
+        "offset": 18960,
+        "contextStart": 18510,
+        "contextEnd": 20210,
+        "text": "ilent failure return at line 87 rather than throwing an error or applying the update.\", \"fix\": \"Call settings.get() once before passing to both list() and the update logic, or redesign to find the descriptor from the current settings state directly without a separate list() call.\"}, {\"file\": \"packages/core/src/capability-control/project.ts\", \"line\": \"124-125\", \"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"Unsafe plugin name extraction when @ is at position 0\", \"detail\": \"The condition `at > 0 ? key.slice(0, at) : key` prevents extraction if @ appears at position 0, returning the full key instead. While unlikely in practice (plugin keys shouldn't start with @), the intent is to extract 'before the last @' for any key where @ is found. If this ever occurs, slice(0, 0) would yield an empty string, which is wrong. Current code defensively avoids this but the logic is unclear.\", \"fix\": \"Use explicit check `at !== -1` instead of `at > 0`, or add defensive check: `at > 0 ? key.slice(0, at) : (at === 0 ? '' : key)` to clarify intent.\"}, {\"file\": \"packages/core/src/cli/agent-server-stdio.ts\", \"line\": \"165-168\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"AgentServer instance not retained, risking garbage collection\", \"detail\": \"The AgentServer is instantiated but the result is not assigned to any variable (line 165: `new AgentServer(...)`). While the constructor sets up a handler closure that captures `this`, the instance itself is not explicitly retained in module scope. If garbage collection occurs before the handlers are invoked, the AgentServer instance could be collected, potentially losing state (pendingA",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/sidebar-projection/12/text",
+        "valueChars": 111304,
+        "offset": 4406,
+        "contextStart": 3956,
+        "contextEnd": 5656,
+        "text": "property), `data.error` is undefined, and `!undefined` evaluates to true, causing the function to return true (valid key) for an unexpected/invalid response. However, this is currently dead code—the function is exported but never called in the codebase (grep for `validateApiKey(` returns only the definition at line 275, no callers). The function is also absent from the public API exports in index.ts.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/update.ts\", \"line\": \"26\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unhandled JSON/Zod parsing error in update.ts\", \"detail\": \"Line 26 calls JSON.parse() followed by CSMeta.parse() without try-catch. If the .cs-meta.json file is corrupted or has invalid structure, this will throw an unhandled exception, leaving the plugin in an unknown state. Line 35 has the same issue with CodexPluginManifest.parse().\", \"fix\": \"Wrap JSON.parse() and the Zod validation in a try-catch block, throwing PluginInstallError with a descriptive message on failure.\", \"verify_note\": \"The CLI layer (runGuarded) does catch all exceptions and exits cleanly, preventing user-facing crashes. However, this is incidental error handling at the caller level rather than proper error handling within the function itself. The function should wrap parsing operations in try-catch and convert SyntaxError/ZodError to PluginInstallError to match the established pattern in install.ts and the error contract implied by line 32's manual PluginInstallError throw. This is a correctness issue with low practical impact due to CLI-level error handling, but it violates API contract consistency and could cause problems for direct library users.\", \"verify_",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/README.md",
+        "locator": "MD-paragraph-start:17",
+        "valueChars": 9999,
+        "offset": 1586,
+        "contextStart": 1136,
+        "contextEnd": 2836,
+        "text": " P2   | 已执行任务丢失 ACK 后恢复可重发草稿，重试生成新意图 ID 并重复执行                     | [Web W1](web-round1.md) |\n| R33  | P2   | 新会话 ACK 前收到后台原生输出，自动绑定错误会话并把新草稿迁走                         | [Web W11，第三轮](web-round3.md) |\n| R40  | P2   | 发送明确被拒绝前已输入后续稿，原失败文本不在草稿、聊天或历史中，无法直接恢复          | [Web W15，第五轮；限定预入队拒绝](web-round5.md) |\n| R41  | P2   | Hub 未确认送达的意图不计入刷新保护，实际未接受时刷新会丢掉唯一内存副本                | [Web W16，第五轮；真实认证 Hub 补强](web-round5.md) |\n| R52 | P2 | 市场相对路径源更新校验失败前删除旧插件，旧注册指向不存在目录 | [Agent Plugins W19，第七轮；有效新源可重新安装恢复](plugins-round7.md) |\n| R28  | P2   | 插件设置初次加载尚未完成时可切开关，写入空旧列表并重新启用之前禁用的插件/Skill        | [Desktop D11，第三轮](desktop-round3.md) |\n| R36  | P2   | worker 退出与 JSON-RPC 写入交叉时，stdin 的异步 EPIPE 没有监听，Node Host 随之退出    | [Runtime T3，第三轮](runtime-round3.md) |\n| R77 | P2 | Hub数据目录dataDir失去写权限，认证锁对EACCES同步重试约30秒，健康路由与Host定时器也被阻塞 | [原生文件锁 FM19-1](file-mutex-round19.md)，第十九轮；修权限后重试正常 |\n| R68 | P2 | 配对端慢连接的直播/设备发送绕过已有backlog门禁，实际队列增长仍保持在线 | [连接 W26](connection-recovery-round15.md)，第十五轮 |\n| R31  | P2   | Node Hub 关闭先返回并退出，忽略 SIGTERM 的 Panel 原生进程来不及强制终止而遗留         | [Runtime T2，第三轮；已验证 POSIX](runtime-round3.md) |\n| R57 | P2 | worker崩溃后恢复的后台下载被closeSession/killAll过滤，成功ACK后仍继续写盘 | [下载生命周期 C1](download-round11.md)，第十一轮；Core原生实证 |\n| R50  | P2   | 等待麦克风启动时双击创建两份录音，停止及组件卸载只释放最后一份                         | [Voice W17，第六轮；同一 renderer document 存活期间](voice-round6.md) |\n| R30  | P2   | 后台工具任务完成时终态写盘失败被吞掉，结果丢失并持续显示运行中、阻塞配置修改          | [Runtime T1，第三轮；存储恢复后可取消/重试](runtime-round3.md) |\n| R01  | P2   | 连续两个并行审批复用卡片，第二个显示“已批准”而无法操作                                | [Desktop D4](desktop-round1.md) |\n| R10  | P2   | CC 房间切换或离线后无法恢复待审批卡片，服务端一直等待直到超时                         | [Server S6](server-round1.md) |\n| R12  | ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/README.md",
+        "locator": "MD-paragraph-start:110",
+        "valueChars": 755,
+        "offset": 17,
+        "contextStart": 0,
+        "contextEnd": 755,
+        "text": "第三轮持续补充：[Desktop 插件/项目初始化](desktop-round3.md)、[手机配对/草稿/上传](web-round3.md)、[后台任务与 Node 主机退出](runtime-round3.md)。第四轮：[文件与历史流程](files-round4.md)。第五轮：[发送失败与刷新保护](web-round5.md)、[凭据新增与保存](credentials-round5.md)、[自动化执行与状态](automation-round5.md)。第六轮：[共享资料集恢复](collections-round6.md)、[录音生命周期](voice-round6.md)，已[独立复核](quality-round6.md)；[Panel 项目身份差异复查](panels-round6.md)没有新增正式问题。第七轮：[Agent Plugins 生命周期](plugins-round7.md)新增 R51–R53，并经[独立复核](plugin-quality-round9.md)保留；[身份与连接恢复](auth-round7.md)新增 0，正常契约已复现。第八轮：[Quick Chat 生命周期](quickchat-round8.md)新增 R54/P3；[Link 授权边界](links-round8.md)未确认新问题；[更新器候选独立反证](updater-candidate-audit.md)已排除。第十轮[Desktop 异步状态与恢复复核](desktop-quality-round10.md)保留六项P2并收窄影响；[Session 关闭屏障复核](session-close-round10.md)新增 0，现有正常套件 28 测试通过。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/review-2026-10-12/README.md",
+        "locator": "MD-paragraph-start:257",
+        "valueChars": 8660,
+        "offset": 3983,
+        "contextStart": 3533,
+        "contextEnd": 5233,
+        "text": "5/credentials-e2e.mjs.log` |\n| 第六轮 Collection 恢复         | 新快照 1 文件、4 测试、32 断言、0 失败；真实 Engine 本地 deterministic client | `latest-reproductions/collections-round6/`             |\n| 第六轮 Panel 身份边界          | 新快照自定义 1 文件、3 测试、26 断言通过；R22仍适用，legacy重开是正确保护 | `latest-reproductions/panels-round6/`                  |\n| 第六轮录音生命周期/恢复        | 1 文件、9 测试、87 断言，初始/新快照分别通过；含Panel上传重试与取消对照   | `reproductions/voice-round6/`                          |\n| 第七轮 Agent Plugins | 1 文件、7 测试、61 断言；初始/新快照分别通过，真实服务与本地 Git | `reproductions/plugins-round7/` |\n| 第七轮身份/连接恢复 | 3 文件、13 测试、87 Bun 断言；两基线通过，含 2 个 native Node 子进程 | `reproductions/auth-round7/` |\n| 第八轮 Quick Chat 生命周期 | 新增便携1文件7测试53断言，两基线分别通过；其余76既有测试仅单列复查 | `reproductions/quickchat-round8/`、`validation/quickchat-round8/` |\n| 第九轮 CLI/插件恢复反证 | 新便携2文件4测试52断言，两基线通过；没有新发现 | `reproductions/quality-round9/` |\n| 第十轮 Desktop 恢复反证 | 新便携4文件7测试51断言，两基线通过；六项保留、新增0 | `reproductions/quality-round10/` |\n| 第十轮审批与现代日志反证 | 新便携2文件7测试61断言，两基线通过；R11/R19降P3、R03保留P2 | `reproductions/quality-round10/` |\n| 第十轮 Session close 正常契约 | 现有3文件28测试通过；未计入便携复现总数 | `validation/session-close-round10/` |\n| 第十一轮搜索/导航与工作区恢复 | 新通用4文件8测试108断言，两基线分别通过；stable scope另1文件1测试9断言仅新快照 | `reproductions/search-routing-round11/`、`reproductions/workspace-quality-round11/` |\n| 第十一轮真实 Electron 搜索 | 通过；焦点、IME、滚动、选择、重试、快捷键及窄屏；0 renderer errors | `validation/search-routing-round11/search-e2e.log` |\n| 第十一轮下载恢复 native | 单次隔离Node smoke通过；Core close/killAll缺陷及专用kill/普通任务对照；仅新快照 | `validation/download-round11/native-run.log` |\n| 第十二轮文件传输/历史/保存正常控制 | 新便携2文件5测试136断言，两基线分别通过；新增0 | [传输与恢复复核](transfer-round12.md) |\n| 第十三轮终端/Review/会话/多窗口/Web 生命周期 | 新通用6文件48测试304断言，两基线分别通过；5项发现及正常控制 | [独立复核](quality-round13.md)与四",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/README.md",
+        "locator": "MD-paragraph-start:324",
+        "valueChars": 768,
+        "offset": 66,
+        "contextStart": 0,
+        "contextEnd": 768,
+        "text": "0.9.33 的 Panel 项目身份与跨文件 Collection 查询差异、已有便携复现适用范围已核对。认证连接与 Agent Plugins 安装恢复已收束；Quick Chat 生命周期已收束；第十轮独立反证已完成审批、Web意图/配置/草稿和Desktop异步状态，详见 [Web复核](web-quality-round10.md)、[审批复核](approval-quality-round10.md)。第十一轮工作区/Panel反证新增0，搜索与导航新增2P3，下载生命周期新增1P2；第十二轮独立质量复核保留三个新发现的限定分级，文件传输/导入导出正常控制新增0。第十三轮新增1P2+4P3并已独立核对，新增6份证据两基线通过；第十四轮再补3P3与R58图片扩展，新增4文件13测试两基线通过；第十五轮再补CLI接管/设置状态/慢连接3项，第十六轮再补目录修复/自动保存2项并完成Link/MCP正常控制，第十七轮补会话操作/Hub回答3项及上下文正常控制，第十八轮补上下文取消/模型偏好/Hub续接三项P3，第十九轮补原生认证锁EACCES阻塞1项P2，该阶段通用79文件236测试、native各38断言独立列；第二十轮再补Goal冷恢复两项P2和1文件4测试72expect，该阶段通用80文件240测试、正式79=1P1/51P2/27P3，另有R75原生存储补证与R29降级。第二十一轮补Chrome闲置断线反馈1项P3及1文件3测试40expect，该阶段通用81文件243测试、正式80=1P1/51P2/28P3。截止前已核对主分支差异及本文记录的失败恢复；最后10:35拉取的origin/main仍为a66f4ef2。已有 TODO 中明确后置的能力与尚未发行的修复单独核对，不将其重复列为新缺陷。",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+        "locator": "MD-paragraph-start:28",
+        "valueChars": 633,
+        "offset": 179,
+        "contextStart": 0,
+        "contextEnd": 633,
+        "text": "Production App renders its main ChatView without a session identity key (`App.tsx:2442`); changing engineSessionId/sendBucket keeps that component mounted. Expansion captures A's pluginCommandTarget and awaits IPC at ChatView:981, then checks only mountedRef before calling setDraft(:986–987). App's setter picks activeBucketRef.current *when applying the update*, which is now B. The actual IPC handler `packages/desktop/src/main/index.ts:3989–4000` awaits rendererConfigurationCwd before expansion; even a local command has a real asynchronous IPC/authority boundary. This does not depend on an external model or network operation.",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/review-2026-10-12/flow-coverage.md",
+        "locator": "MD-paragraph-start:5",
+        "valueChars": 5033,
+        "offset": 3749,
+        "contextStart": 3299,
+        "contextEnd": 4999,
+        "text": "Store/authority/hook/Files/FS](file-root-round27.md)，Git/transport明确适配 | R86/P3新primaryB.id配旧workspaceA.path，正确Main拒读；A、directB及原件正常，不重复R65反馈 |\n| 修改项目名称、模型、Skills、MCP、凭据 | 真实Electron模型/设置/凭据；真实store写盘与恢复 | R25旧完整表单回滚他端字段；R26冲突刷新没更新编辑revision；R27旧probe覆盖新配置；R28初始设置未到时开关写空列表；R29旧项目投影覆盖新广播；R75另一已打开窗口保存自身模型旧整图抹掉先前窗口持久偏好，重开回默认、重新选择恢复；R71项目rename真实拒写仍显示新名且无提示，普通广播回旧名、再次rename恢复；R42账号ID碰撞；R43拒写无反馈；R70自定义指令autosave失败清pending，存储修复后blur/离开不重试、未保存稿消失 |\n| 安装插件、更新和重装 | 真实Plugin服务、本地Git及review显式覆盖；[插件复核](plugin-quality-round9.md) | R51卸载后旧installed任务卡住重装；R52相对源校验失败前删旧cache；R53文件夹临时快照被持久保存为更新源 |\n| 运行自动化、看进度和历史 | 实际ChatSession FIFO与调度/展示控制；[自动化审查](automation-round5.md) | R44非once续接超时提前结算仍可重复排队；R45拒绝运行却向网关/生命周期发布completed；R46历史归属错误；R47界面未订阅自动停用；R48缺disabledReason；R63普通通知等待占住串行队列，urgent停用通知也被延迟（实际notifier/route+注入时钟，无OS通知） |\n| 暂停目标后继续执行 | [实际Main/preload/Goal组件与Core/Engine/磁盘](goal-sleep-round20.md)，内存provider，合法Host权威正常对照 | R78无worker Resume只写状态并成功回执，不驱动任务；R79有worker但bound会话非resident时漏WorkspaceContext，模型前拒绝却无失败结算；普通authorized run服务恢复正常，完整Desktop发送未执行 |\n| 恢复归档、查询资料集、录音 | 历史恢复、真实Collection Engine本地client；真实录音组件模拟设备 | R76异步回答的Core续接仍运行而Host判空闲，允许归档隐藏当前历史行，实际API恢复正常；R39成功恢复后自busy误挡导航；R72设置取消归档漏权威Core writer，renderer live但Core仍归档，正式folders可移除仍绑定secondary后resolver拒绝root_removed，历史/物理目录保留；R49已知原件变更指引丢失；R50同document双pending启动录音，stop/unmount只释放最后一份 |\n| 使用macOS全局菜单 | [实际Menu模块/preload/App源码回调](menu-routing-round23.md)，owned Electron/Menu/双窗口IPC适配，无真实OS菜单/键盘 | R82/P3显式Find/Palette/Sidebar/Recent仍投最后完成菜单安装的后台窗；role菜单与已移除Inspector排除，dead target只为适配器/源码边界 |\n| 项目变更后打开Recent | [实际ProjectStore/IPC/recents磁盘/Menu](menu-recents-round23.md)，单A窗口；guarded无native/App | R83/P3成功create仍空、rename仍旧名、remove仍残留；真实磁盘/",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/priority-and-coverage.md",
+        "locator": "MD-paragraph-start:19",
+        "valueChars": 1279,
+        "offset": 1105,
+        "contextStart": 655,
+        "contextEnd": 1279,
+        "text": "[Web W13，第三轮；限定 freshNative 场景](web-round3.md) |\n| 8 | P2 | R03 | 已执行任务丢失 ACK 后恢复可重发草稿，重试生成新意图 ID 并重复执行 | [Web W1](web-round1.md) |\n| 9 | P2 | R33 | 新会话 ACK 前收到后台原生输出，自动绑定错误会话并把新草稿迁走 | [Web W11，第三轮](web-round3.md) |\n| 10 | P2 | R40 | 发送明确被拒绝前已输入后续稿，原失败文本不在草稿、聊天或历史中，无法直接恢复 | [Web W15，第五轮；限定预入队拒绝](web-round5.md) |\n| 11 | P2 | R41 | Hub 未确认送达的意图不计入刷新保护，实际未接受时刷新会丢掉唯一内存副本 | [Web W16，第五轮；真实认证 Hub 补强](web-round5.md) |\n| 12 | P2 | R52 | 市场相对路径源更新校验失败前删除旧插件，旧注册指向不存在目录 | [Agent Plugins W19，第七轮；有效新源可重新安装恢复](plugins-round7.md) |\n| 13 | P2 | R28 | 插件设置初次加载尚未完成时可切开关，写入空旧列表并重新启用之前禁用的插件/Skill | [Desktop D11，第三轮](desktop-round3.md) |",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/priority-and-coverage.md",
+        "locator": "MD-paragraph-start:82",
+        "valueChars": 970,
+        "offset": 605,
+        "contextStart": 155,
+        "contextEnd": 970,
+        "text": "E.md:136) |\n| 46 | P2 | R06 | 原生运行回包错误被当作普通结果，发送失败无可见解释，草稿已清空 | [Desktop D1](desktop-round1.md) |\n| 47 | P2 | R32 | 新设备浏览器存储配额耗尽时，配对和认证生成不同 secret，配对流程必然失败 | [Web W10，第三轮](web-round3.md) |\n| 48 | P2 | R34 | 手机 PUT 已开始后无法随断线取消，重连在线仍被旧上传阻塞独立文本发送 | [Web W12，第三轮；主机正常收到请求时有 5 分钟票据上限](web-round3.md) |\n| 49 | P2 | R17 | 删除草稿附件不释放上传配额，空输入框仍被 16 个文件上限卡住 | [Server S3](server-round1.md) |\n| 50 | P2 | R51 | 成功安装后卸载，旧 installed 任务仍禁用市场重装，实际目录和注册已不存在 | [Agent Plugins W18，第七轮；同一 Main 生命周期](plugins-round7.md) |\n| 51 | P2 | R53 | 从文件夹预览安装把临时快照记成更新源，快照已删，原文件夹仍在也无法更新 | [Agent Plugins W20，第七轮；旧安装内容保留](plugins-round7.md) |\n| 52 | P2 | R46 | 自动化执行历史按名称/时间认领，遗漏真实实时记录并混入同项目其他任务的结果 | [Automation A3，第五轮；合并身份关联根因](automation-round5.md) |\n| 53 | P2 | R47 | 任务异步自动停用后，当前自动化页面仍显示活跃和旧下次运行时间 | [Automation A4，第五轮](automation-round5.md) |",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/priority-and-coverage.md",
+        "locator": "MD-paragraph-start:138",
+        "valueChars": 2446,
+        "offset": 900,
+        "contextStart": 450,
+        "contextEnd": 2150,
+        "text": "gation-round14.md)、[录音](voice-round6.md) | Environment/多环境切换、service worker/PWA 缓存升级与离线、Panel 视频采集等主要停留在既有测试或没有专项记录；真实移动浏览器、系统相机/麦克风权限及后台恢复未完整验证。 |\n| Desktop | 日常聊天/设置/项目/Panel/搜索/凭据/模型/菜单/终端/浏览器取消，有分层专项及部分真实 Electron 场景；[流程地图](flow-coverage.md) | task inbox、IM gateway、logs/runs/subagents 独立交互、媒体 custody 全流程、实际 Chrome 扩展完整链路及独立 Playwright 后端仍不足。终端 PTY、OS 菜单/原生拖放、真实账号/设备不应由组件替身结果推定全部通过。 |\n| Core | Session/Engine 的特定续接、上下文、输出日志、Goal、下载、权限/owner 控制、插件/Link/MCP 恢复等局部专项；[上下文](context-recovery-round17.md)、[Goal](goal-sleep-round20.md)、[插件](plugins-round7.md)、[MCP](command-recovery-round16.md) | LLM provider/模型请求边界、重试/限流/流解析、cost ledger/预算、hooks、完整工具执行与子代理组合生命周期等没有系统专项覆盖；现有安全正常对照不能替代完整权限边界审计。 |\n| Coding | 真实 Git/worktree 回滚、释放，Review 首提交及外部 runtime 路由局部；[工作区](workspace-quality-round11.md)、[终端与 Review](terminal-review-round13.md) | LSP、coding 工具集、external agents/runtimes、quota 和完整真实 CLI 执行/恢复未全面覆盖。Web/桌面 CLI 房间审查不是整包 Coding 或终端 TUI 审查。 |\n| Link 独立包 | Core/Host/Web 的授权与连接流程有[专项](link-recovery-round16.md) | `packages/link` 自身 provider manifest/授权指南正确性和所有真实服务授权没有独立专项；不能把同名 Links UI/服务审查视为整个 manifest 包已覆盖。 |\n| TUI | 插件命令共用服务有静态衔接，部分 Core 行为可供参考 | 真实 TTY/Ink 输入、多行/IME、终端缩放、快捷键、语音、退出与恢复没有完整专项。 |\n| Chat | 自动化通知到 relay 的局部静态衔接；[自动化复核](automation-quality-round18.md) | 各聊天平台 adapter、真实消息发送/编辑、附件、会话/thread 映射、重连、限流和去重没有渠道级专项。 |\n| Pet | 搜索/disclosure/导航局部有动态证据；[搜索](search-routing-round11.md)、[搜索复核](search-quality-round12.md)；Desktop 数字人另有 Electron UI 验证 | 完整委派、projection observer、行为 profile 与长任务生命周期没有全流程专项。数字人页面测试不等于整个 Pet capability 已审完。 |\n| Optimization Lab | Desktop 部分既有单测；构建/类型检查 | 没有专项审查报告。私有、默认关闭，排在在用主流程之后补审。 |\n| CDP 兼容包 | 浏览器专项触达维护中的 Desktop driver，部分预审提及协议/alias | `packages/cdp` 兼容层没",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/priority-quality-round20.md",
+        "locator": "MD-paragraph-start:21",
+        "valueChars": 8948,
+        "offset": 2763,
+        "contextStart": 2313,
+        "contextEnd": 4013,
+        "text": "不是完整 Electron 点击验收。 |\n| **R25 保留 P2** | 两个旧完整默认模型表单顺序进入已释放的配置门禁，第二次保存把用户没有改动的另一个默认值回滚；两边都报告已保存。是 durable lost update。 | 读取最新状态后再次选回正确值可修复，但用户原成功设置已被静默覆盖，重试原旧表单会继续携带旧字段；没有冲突提示帮用户识别丢失。 | [web-round2:19](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/web-round2.md:19)；HubSettings.tsx:669–674、configuration.ts:213–232。完整认证 Hub 正常顺序提交；不是两个 mutation 同时执行。后续实际使用哪个模型是配置接线推断，没有真实模型调用或费用实验。 |\n| **R28 保留 P2** | 插件行已可操作，初始权威禁用数组尚未到达；切换 beta 把原 alpha/alpha:skill 禁用项永久覆盖为空/另一数组。旧初始化响应还可反向绘制。 | 重开页面仅恢复正确显示，不能还原丢掉的禁用项；必须知晓原设置后手动重禁用。配置文件完整性锁不能恢复数组成员。 | [desktop-quality-round10:58](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/desktop-quality-round10.md:58)；ManagePage.tsx:70–83、104–120；PluginsTab.tsx:82–123、460–463。实际 Main writer 落盘；等待来自 renderer IPC/异步 settings read，不称 Main 两次同步扫描并行。项目 deny/trust 仍有效，不声称任意恶意插件执行。 |\n| **R29 拟降 P3，主审已采纳** | legacy bucket migration 等待实际 persistence.flush 时，新 Add Project B 的广播先到；旧 A 快照随后只改 renderer 投影，active B 仍在。Main A+B 及历史源保留。 | 动态使用 actual hook 对**仍可见 A**重命名，实际 store 广播恢复 A+B、保留 active B；无需退出。Open Recent 重读 registry 的补救为静态入口，未运行原生点击。 | [desktop-quality-round10:68](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/desktop-quality-round10.md:68)；useProjectRegistrySync.ts:32–43、49–62；transcripts.ts:800–806、821–830；useSessionNavigation.ts:174–179；App.tsx:1434–1442。狭窄升级迁移窗口、可见投影且普通事件可恢复，与 P3 迟到导航/跨窗选择更接近。没有实际 run、错项目执行或 transcript 删除证据。 |\n| **R30 保留 P2** | executor 已结束，但真实 EACCES 终态写入被吞，内存/磁盘仍 running、终态 result/error 缺失；activeCount=1 使重试及配置门禁持续被阻塞。 | 修复磁盘权限本身不补写；显式 service cancel→retry 或新 Host 将旧 checkpoint 标 interrupted 可解锁",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/priority-quality-round20.md",
+        "locator": "MD-paragraph-start:49",
+        "valueChars": 595,
+        "offset": 509,
+        "contextStart": 59,
+        "contextEnd": 595,
+        "text": "身份、权限投影与审批请求身份等已知 P2，避免真实意图重复或错误归属。\n2. **本次样本中，先处理状态/意图已经改变且简单重试不能撤销的项目**：R42 的凭据覆盖、R44 的重复排队、R25/R28 的静默配置覆盖、R72 的 durable restore/authority 失配、R09 的 live spool 删除。R73 的原题无法正常交付和 R30 的终态丢失/假 busy 应紧接处理；不要把取消重问/重跑写成原操作已恢复。\n3. **再处理恢复路径与配额阻断**：R69 的缺失根修复、R24 的 cold owner 释放、R17 的空草稿配额。它们没有用户文件删除，但工作流确实中断，需要路径恢复、多步权威修复或 TTL/service 重启。\n4. **P2 后部处理持续失效但保留替代路径的生命周期功能**：R18 spawn 句柄退役、R51 卸载后重装、R53 reviewed 更新来源。R53 即使保留 P2，也不应与 R42 的已保存身份覆盖或 R52 的工作插件文件删除同等紧急。\n5. **R29 随其他 P3 投影/导航恢复改进处理**。修复仍应统一初始快照与广播版本，不能用重命名/重启 workaround 替代根因修复。",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/repair-handoff.md",
+        "locator": "MD-paragraph-start:5",
+        "valueChars": 2323,
+        "offset": 1688,
+        "contextStart": 1238,
+        "contextEnd": 2323,
+        "text": "关闭等待 owned 资源退役；冷 Goal 续接完成合法权威重建并结算 resolved 失败；非 once 续接超时不能误报完成并重复排入。 |\n| 5 | 项目、根目录和存储更新保持同一份权威 | R22、R23、R24、R25、R28、R52、R58、R69、R72/P2，以及 R86/P3：[项目恢复](project-recovery-round16.md)、[归档恢复](session-operations-round17.md)、[根映射](file-root-round27.md)、[终端](terminal-review-round13.md)、[图片](file-navigation-round14.md) | 合法 secondary/worktree 保持可用；Session managed worktree 应可新开终端和预览普通 PNG，保留文本读取正常对照；单项目故障不清空健康 Panel；资源释放先于权威删除；旧表单不能覆盖他端新字段；新源校验失败保留旧插件；恢复同时写 Core 状态；root ID 与 path 必须来自同一个注册根。保留独立 engine session authority、每窗口 owner、trust、symlink 和越界拒读门禁；终端句柄不能充当 Core session ID，也不能通过放宽通用路径门禁修复 R58/R86。 |\n| 6 | 连接有发送上限，存储故障不扩大为整个 Host 无响应；后台状态与失败反馈能让用户继续操作 | R68、R77/P2：[连接发送](connection-recovery-round15.md)、[认证锁](file-mutex-round19.md)；其余 P2 按正式影响排入，P3 按使用频率处理：[全部编号与级别](README.md) | R68：已认证、仍 OPEN 的慢 peer 通过直播/设备发送时，单 socket 及聚合 backlog 有界；保留健康 peer、合法历史分页、重新认证和撤权控制。不把 24 MiB 内的队列增长说成已测 OOM/崩溃。R77：已初始化 dataDir 失去当前非 root 进程写权限且 hub 子目录仍可读/遍历/修权限时，认证锁应立即分类真实 EACCES 并给出上下文，避免同步耗尽约 30 秒预算拖住同进程健康路由和 timer；保留认证、互斥写、短跨进程争用和失败不写保护，修权限后同稿重试。其余失败重试保稿、恢复步骤可见，展示范围与持久状态一致；不能用静默吞错作为恢复。 |",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-repair-handoff-round28/root-initial-draft.raw.md",
+        "locator": "MD-paragraph-start:5",
+        "valueChars": 1480,
+        "offset": 1241,
+        "contextStart": 791,
+        "contextEnd": 1480,
+        "text": "untime-round3.md)、[自动化](automation-round5.md)、[Goal](goal-sleep-round20.md) | 不同 runtime 使用对应 Stop；后台队列不依赖前台选择；终态拒写有可恢复诊断；关闭等待 owned 资源退役；冷 Goal 续接完成合法权威重建并结算 resolved 失败；非 once 续接超时不能误报完成并重复排入。 |\n| 5 | 项目、根目录和存储更新保持同一份权威 | R22、R23、R24、R25、R28、R52、R69、R72/P2，以及 R86/P3：[项目恢复](project-recovery-round16.md)、[归档恢复](session-operations-round17.md)、[根映射](file-root-round27.md) | 合法 secondary/worktree 保持可用；单项目故障不清空健康 Panel；资源释放先于权威删除；旧表单不能覆盖他端新字段；新源校验失败保留旧插件；恢复同时写 Core 状态；root ID 与 path 必须来自同一个注册根。保留 trust、owner、symlink 和越界拒读门禁。 |\n| 6 | 连接、后台状态及失败反馈能让用户继续操作 | 其余 P2 按正式影响排入；P3 按使用频率处理：[全部编号与级别](README.md) | 慢 peer 不能无限累积发送；认证锁立即区分非争用错误；失败重试保稿、恢复步骤可见；展示覆盖范围与持久状态一致。各项已有正常控制应继续通过，不能用静默吞错作为恢复。 |",
+        "wholeValueIncluded": false
+      }
+    ],
+    "active-ref-draft": [
+      {
+        "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+        "locator": "MD-paragraph-start:28",
+        "valueChars": 633,
+        "offset": 179,
+        "contextStart": 0,
+        "contextEnd": 633,
+        "text": "Production App renders its main ChatView without a session identity key (`App.tsx:2442`); changing engineSessionId/sendBucket keeps that component mounted. Expansion captures A's pluginCommandTarget and awaits IPC at ChatView:981, then checks only mountedRef before calling setDraft(:986–987). App's setter picks activeBucketRef.current *when applying the update*, which is now B. The actual IPC handler `packages/desktop/src/main/index.ts:3989–4000` awaits rendererConfigurationCwd before expansion; even a local command has a real asynchronous IPC/authority boundary. This does not depend on an external model or network operation.",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/review-2026-10-12/desktop-round1.md",
+        "locator": "MD-paragraph-start:62",
+        "valueChars": 299,
+        "offset": 248,
+        "contextStart": 0,
+        "contextEnd": 299,
+        "text": "Trigger: run `/demo:review src/A.ts` in conversation A; while command expansion IPC is pending, switch to B, which already contains an unsent draft. ChatView remains mounted and only checks mountedRef after the await. Parent's draft setter chooses activeBucketRef.current when the promise completes.",
+        "wholeValueIncluded": true
+      }
+    ]
+  },
+  "actualReadNotYetClaimed": true
+}

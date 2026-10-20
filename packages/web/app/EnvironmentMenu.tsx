@@ -31,6 +31,7 @@ export function EnvironmentMenu({
   const [name, setName] = React.useState("");
   const [address, setAddress] = React.useState("");
   const [error, setError] = React.useState("");
+  const trigger = React.useRef<HTMLButtonElement>(null);
   const dialog = React.useRef<HTMLDialogElement>(null);
   const closeButton = React.useRef<HTMLButtonElement>(null);
 
@@ -71,6 +72,8 @@ export function EnvironmentMenu({
     if (!open) return;
     dialog.current?.showModal();
     closeButton.current?.focus();
+    // Restore explicitly because closing unmounts the native dialog.
+    return () => trigger.current?.focus();
   }, [open]);
 
   const edit = (operation: () => SavedEnvironment[]) => {
@@ -90,7 +93,12 @@ export function EnvironmentMenu({
 
   return (
     <div className="environment-switcher">
-      <button type="button" className="ghost environment-trigger" onClick={() => setOpen(true)}>
+      <button
+        ref={trigger}
+        type="button"
+        className="ghost environment-trigger"
+        onClick={() => setOpen(true)}
+      >
         {environment?.name ?? "连接环境"}
         <span aria-hidden="true"> ▾</span>
       </button>

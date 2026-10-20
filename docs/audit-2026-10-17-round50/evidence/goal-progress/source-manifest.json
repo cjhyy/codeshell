@@ -1,0 +1,541 @@
+{
+  "rootReportedReadBaseline": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "sha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "bytes": 4978,
+      "lines": 130,
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverSemanticRead": null,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          130
+        ]
+      ],
+      "semanticLineCount": 130,
+      "displayedLineRanges": [
+        [
+          1,
+          130
+        ]
+      ],
+      "bodyDisplayedLineCount": 130,
+      "endingBytes": 4978,
+      "endingSha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "sha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "bytes": 10530,
+      "lines": 279,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          187,
+          192
+        ]
+      ],
+      "semanticLineCount": 6,
+      "displayedLineRanges": [
+        [
+          180,
+          195
+        ]
+      ],
+      "bodyDisplayedLineCount": 16,
+      "endingBytes": 10530,
+      "endingSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "bytes": 37921,
+      "lines": 928,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          84,
+          89
+        ],
+        [
+          426,
+          443
+        ],
+        [
+          450,
+          462
+        ],
+        [
+          594,
+          598
+        ]
+      ],
+      "semanticLineCount": 42,
+      "displayedLineRanges": [
+        [
+          426,
+          474
+        ],
+        [
+          80,
+          92
+        ],
+        [
+          590,
+          601
+        ]
+      ],
+      "bodyDisplayedLineCount": 74,
+      "endingBytes": 37921,
+      "endingSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "bytes": 93752,
+      "lines": 2479,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          189,
+          202
+        ],
+        [
+          542,
+          618
+        ],
+        [
+          1258,
+          1276
+        ],
+        [
+          1774,
+          1818
+        ],
+        [
+          1821,
+          1866
+        ]
+      ],
+      "semanticLineCount": 201,
+      "displayedLineRanges": [
+        [
+          1234,
+          1283
+        ],
+        [
+          189,
+          211
+        ],
+        [
+          1764,
+          1818
+        ],
+        [
+          542,
+          618
+        ],
+        [
+          1821,
+          1883
+        ]
+      ],
+      "bodyDisplayedLineCount": 268,
+      "endingBytes": 93752,
+      "endingSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "bytes": 122863,
+      "lines": 2924,
+      "beforeCurrentLineNavigationAndBody": true,
+      "earlierAuditReadingExists": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          906,
+          911
+        ],
+        [
+          1051,
+          1069
+        ],
+        [
+          2578,
+          2580
+        ],
+        [
+          2657,
+          2657
+        ]
+      ],
+      "semanticLineCount": 29,
+      "displayedLineRanges": [
+        [
+          1036,
+          1075
+        ],
+        [
+          2648,
+          2662
+        ],
+        [
+          900,
+          919
+        ],
+        [
+          2574,
+          2584
+        ]
+      ],
+      "bodyDisplayedLineCount": 86,
+      "endingBytes": 122863,
+      "endingSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "bytes": 106169,
+      "lines": 2622,
+      "beforeCurrentLineNavigationAndBody": true,
+      "earlierAuditReadingExists": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1801,
+          1803
+        ]
+      ],
+      "semanticLineCount": 3,
+      "displayedLineRanges": [
+        [
+          1794,
+          1807
+        ]
+      ],
+      "bodyDisplayedLineCount": 14,
+      "endingBytes": 106169,
+      "endingSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "bytes": 55140,
+      "lines": 1247,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1114,
+          1127
+        ]
+      ],
+      "semanticLineCount": 14,
+      "displayedLineRanges": [
+        [
+          1110,
+          1132
+        ]
+      ],
+      "bodyDisplayedLineCount": 23,
+      "endingBytes": 55140,
+      "endingSha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "bytes": 86436,
+      "lines": 1892,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          609,
+          626
+        ]
+      ],
+      "semanticLineCount": 18,
+      "displayedLineRanges": [
+        [
+          609,
+          628
+        ]
+      ],
+      "bodyDisplayedLineCount": 20,
+      "endingBytes": 86436,
+      "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "bytes": 102370,
+      "lines": 2984,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1124,
+          1140
+        ]
+      ],
+      "semanticLineCount": 17,
+      "displayedLineRanges": [
+        [
+          1124,
+          1147
+        ]
+      ],
+      "bodyDisplayedLineCount": 24,
+      "endingBytes": 102370,
+      "endingSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/main/external-runtime-goal-rpc.ts",
+      "sha256": "9f21ee32db6ea4cb375711490b2138640d6a2b727979146fb387646b70180dff",
+      "bytes": 6230,
+      "lines": 161,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          130,
+          148
+        ]
+      ],
+      "semanticLineCount": 19,
+      "displayedLineRanges": [
+        [
+          125,
+          153
+        ]
+      ],
+      "bodyDisplayedLineCount": 29,
+      "endingBytes": 6230,
+      "endingSha256": "9f21ee32db6ea4cb375711490b2138640d6a2b727979146fb387646b70180dff",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "bytes": 195050,
+      "lines": 4949,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2231,
+          2295
+        ]
+      ],
+      "semanticLineCount": 65,
+      "displayedLineRanges": [
+        [
+          2230,
+          2325
+        ]
+      ],
+      "bodyDisplayedLineCount": 96,
+      "endingBytes": 195050,
+      "endingSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+      "sha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "bytes": 29998,
+      "lines": 733,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          219,
+          225
+        ],
+        [
+          306,
+          308
+        ],
+        [
+          413,
+          517
+        ],
+        [
+          531,
+          546
+        ]
+      ],
+      "semanticLineCount": 131,
+      "displayedLineRanges": [
+        [
+          219,
+          228
+        ],
+        [
+          330,
+          506
+        ],
+        [
+          306,
+          317
+        ],
+        [
+          507,
+          563
+        ]
+      ],
+      "bodyDisplayedLineCount": 256,
+      "endingBytes": 29998,
+      "endingSha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "bytes": 108774,
+      "lines": 2412,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          454,
+          477
+        ],
+        [
+          1054,
+          1056
+        ],
+        [
+          1559,
+          1562
+        ]
+      ],
+      "semanticLineCount": 31,
+      "displayedLineRanges": [
+        [
+          450,
+          482
+        ],
+        [
+          1050,
+          1059
+        ],
+        [
+          1555,
+          1568
+        ]
+      ],
+      "bodyDisplayedLineCount": 57,
+      "endingBytes": 108774,
+      "endingSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/core/src/protocol/dispatch.ts",
+      "sha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "bytes": 8824,
+      "lines": 228,
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "endingBytes": 8824,
+      "endingSha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "endingUTC": "2026-10-17T17:07:20.004410+00:00",
+      "currentSourceUnchanged": true,
+      "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only this prep; earlier instruction reading retained"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only this prep; earlier instruction reading retained"
+    }
+  ],
+  "counts": {
+    "full": 1,
+    "selected": 12,
+    "semanticLines": 706,
+    "bodyDisplayedLines": 1093,
+    "testDeclarations": 0
+  },
+  "historyReading": {
+    "filesMachineScanned": 4693,
+    "pathHits": 12,
+    "shaHits": 5,
+    "exactObjectsRead": 6,
+    "broadGoalCauseHits": 962,
+    "broadCap": 60,
+    "broadFirstPresentationTruncated": true,
+    "notAllBroadContextsRead": true,
+    "focusedExtendHits": 30,
+    "focusedExtendCap": 100,
+    "focusedExtendHitIndicesActuallyRead": [
+      0,
+      1,
+      26,
+      27,
+      28,
+      29
+    ],
+    "focusedGroupCauseHits": 0,
+    "allHistorySemanticExhausted": false
+  },
+  "coverageLimit": "Current130-line leaf is full static source read, not first-ever or module-correctness certification. Other consumers were read for a new specific question and retain known earlier partial/full possibility. No global coverage snapshot update.",
+  "productRuns": 0
+}

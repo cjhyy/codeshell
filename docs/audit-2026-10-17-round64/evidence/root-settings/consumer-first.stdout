@@ -1,0 +1,271 @@
+packages/core/src/settings/manager.ts
+ 260:    */
+ 261:   load(
+ 262:     flagOverrides?: Record<string, unknown>,
+ 263:     options?: { persistMigrations?: boolean; hookOrigins?: boolean },
+ 264:   ): ValidatedSettings {
+ 265:     this.sources = [];
+ 266:     this.merged = null;
+ 267:     this.hookOrigins = Object.freeze([]);
+ 268:     this.mergedHookSources = [];
+ 269:     this.hookOriginsEnabled = options?.hookOrigins === true;
+ 270:     this.unavailableHookPriority = -1;
+ 271: 
+ 272:     // Scope gates which disk layers we read. 'full' reads the host user dir
+ 273:     // (~/.code-shell); 'project' and 'isolated' never do. See SettingsScope.
+ 274:     const readUser = this.scope === "full";
+ 275:     const readProject = this.scope !== "isolated";
+ 276: 
+ 277:     if (readUser) {
+ 278:       // 1. Managed (lowest priority)
+ 279:       this.loadJsonFile(join(this.userConfigDir(), "settings.managed.json"), "managed", 0);
+ 280: 
+ 281:       // 2. User — only ~/.code-shell/. We used to also read ~/.claude/settings.json
+ 282:       // for "zero-migration from Claude Code", but Claude Code's schema diverges
+ 283:       // (e.g. `model` is a string there, an object here). Merging caused boot
+ 284:       // crashes on machines that had Claude Code installed but never ran us.
+ 285:       // File-level compat (CLAUDE.md, .claude/skills/) is kept elsewhere — only
+ 286:       // the settings.json read is dropped.
+ 287:       this.loadJsonFile(join(this.userConfigDir(), "settings.json"), "user", 1);
+ 288:     }
+ 289: 
+ 290:     if (readProject) {
+ 291:       // 3. Project
+ 292:       const projectPath = this.tryProjectSettingsPath(this.cwd, "settings.json");
+ 293:       if (projectPath) this.loadJsonFile(projectPath, "project", 2);
+ 294:       else if (this.hookOriginsEnabled)
+ 295:         this.unavailableHookPriority = Math.max(this.unavailableHookPriority, 2);
+ 296: 
+ 297:       // 4. Local
+ 298:       const localPath = this.tryProjectSettingsPath(this.cwd, "settings.local.json");
+ 299:       if (localPath) this.loadJsonFile(localPath, "local", 3);
+ 300:       else if (this.hookOriginsEnabled)
+ 301:         this.unavailableHookPriority = Math.max(this.unavailableHookPriority, 3);
+ 302:     }
+ 303: 
+ 304:     // 5. CLI flags (highest priority)
+ 305:     if (flagOverrides && Object.keys(flagOverrides).length > 0) {
+ 306:       this.sources.push({ name: "flag", priority: 4, data: sanitizeSettingsObject(flagOverrides) });
+ 307:     }
+ 308: 
+ 309:     // Sort by priority ascending (merge in order, later wins)
+ 310:     this.sources.sort((a, b) => a.priority - b.priority);
+ 311: 
+ 312:     // Version-based config migration (migrate-config.ts), applied per physical
+ 313:     // file (user + project settings.json) so the write-back lands in the file
+ 314:     // the data came from. A file is only rewritten (with a .bak) when a step
+ 315:     // actually changed its content — a version-stamp-only diff isn't worth
+ 316:     // dirtying the user's (or a repo-tracked project) file for; steps are
+ 317:     // idempotent, so re-running on unstamped files each load is fine.
+ 318:     if (readUser) {
+ 319:       this.applyConfigMigration(
+ 320:         join(this.userConfigDir(), "settings.json"),
+ 321:         "user",
+ 322:         options?.persistMigrations,
+ 323:       );
+ 324:     }
+ 325:     if (readProject) {
+ 440:    * Get current effective settings.
+ 441:    */
+ 442:   get(): ValidatedSettings {
+ 443:     if (!this.merged) return this.load();
+ 444:     return this.merged;
+ 445:   }
+ 446: 
+ 447:   /**
+ 448:    * Invalidate cached merge.
+ 449:    */
+ 450:   invalidate(): void {
+ 451:     this.clearHookOrigins();
+ 452:     this.merged = null;
+ 453:   }
+ 454: 
+ 455:   /**
+ 456:    * Host-only parallel view of validated get().hooks. No Settings values are
+ 457:    * exported, and invalidation never silently reloads an executable origin.
+ 458:    */
+ 459:   getHookOrigins(): readonly (SettingsHookOrigin | undefined)[] {
+ 460:     if (!this.merged) return Object.freeze([]);
+ 461:     const hooks = this.merged.hooks ?? [];
+ 462:     return Object.freeze(
+ 463:       hooks.map((hook, index) => {
+ 464:         const origin = this.hookOrigins[index];
+ 465:         return hooks.length === this.hookOrigins.length &&
+ 466:           origin?.definitionSha256 === settingsHookDefinitionSha256(hook)
+ 467:           ? origin
+ 468:           : undefined;
+ 469:       }),
+ 470:     );
+ 471:   }
+ 472: 
+ 473:   private clearHookOrigins(): void {
+ 474:     this.sources = this.sources.map(({ origin: _origin, ...source }) => Object.freeze(source));
+ 475:     this.hookOrigins = Object.freeze((this.merged?.hooks ?? []).map(() => undefined));
+ 476:     this.mergedHookSources = [];
+ 477:   }
+ 478: 
+ 479:   private clearSourceOrigin(name: SettingsSourceName): void {
+ 480:     this.sources = this.sources.map((source) => {
+ 481:       if (source.name !== name) return source;
+ 482:       const { origin: _origin, ...unpaired } = source;
+ 483:       return Object.freeze(unpaired);
+ 484:     });
+ 485:     this.hookOrigins = Object.freeze((this.merged?.hooks ?? []).map(() => undefined));
+ 486:     this.mergedHookSources = [];
+ 487:   }
+ 488: 
+ 489:   private replaceSource(
+ 490:     name: SettingsSourceName,
+ 491:     data: Record<string, unknown>,
+ 492:     origin?: SettingsHookSourceSnapshot,
+ 493:   ): void {
+ 494:     this.sources = this.sources.map((source) =>
+ 495:       source.name === name
+ 496:         ? Object.freeze({ name, priority: source.priority, data, origin })
+ 497:         : source,
+ 498:     );
+ 499:   }
+ 500: 
+ 501:   private validateMerged(raw: Record<string, unknown>): ValidatedSettings {
+ 502:     const validated = validateSettings(raw);
+ 503:     const hooks = validated.hooks ?? [];
+ 504:     this.hookOrigins = Object.freeze(
+ 505:       hooks.map((hook, index) => {
+ 506:         const selected = this.mergedHookSources[index];
+ 507:         if (
+ 508:           !this.hookOriginsEnabled ||
+ 509:           !selected?.source.origin ||
+ 510:           selected.source.priority <= this.unavailableHookPriority ||
+ 511:           selected.source.name === "flag" ||
+ 512:           hooks.length !== this.mergedHookSources.length
+ 513:         )
+ 514:           return undefined;
+ 515:         return Object.freeze({
+ 516:           ...selected.source.origin,
+ 517:           kind: "settings" as const,
+ 518:           layer: selected.source.name,
+ 519:           sourceLayerIndex: selected.sourceLayerIndex,
+ 520:           definitionSha256: settingsHookDefinitionSha256(hook),
+ 521:         });
+ 522:       }),
+ 523:     );
+ 524:     this.merged = validated;
+ 525:     return validated;
+ 880:       assertSafeSettingsWriteTarget(path);
+ 881:       // Re-read INSIDE the lock: a snapshot taken before acquiring it would be
+ 882:       // exactly the stale value that drops the other writer's key. Strict read:
+ 883:       // an existing-but-unreadable file must abort the mutation rather than be
+ 884:       // rewritten from {} — see readConfigFileForMutation.
+ 885:       const current = this.readJsonObjectForMutation(path);
+ 886:       if (mutate(current) === false) return;
+ 887:       this.atomicWriteJson(path, current);
+ 888:     } finally {
+ 889:       release();
+ 890:     }
+ 891:   }
+ 892: 
+ 893:   private loadJsonFile(path: string, name: SettingsSourceName, priority: number): void {
+ 894:     if (this.hookOriginsEnabled) {
+ 895:       try {
+ 896:         const snapshot = readSettingsHookSnapshot(path);
+ 897:         const data = parseConfigContent(snapshot.source.path, snapshot.content);
+ 898:         if (data) {
+ 899:           this.sources.push(Object.freeze({ name, priority, data, origin: snapshot.source }));
+ 900:           return;
+ 901:         }
+ 902:       } catch {
+ 903:         // Only executable provenance becomes unavailable. Ordinary loading
+ 904:         // keeps the legacy corrupt-file/UTF-8/selection behavior below.
+ 905:       }
+ 906:       // Keep ordinary tolerant data below, while preserving the fact that an
+ 907:       // existing layer (including an unsafe candidate) was not proven absent.
+ 908:       for (const candidate of settingsCandidatePaths(path)) {
+ 909:         try {
+ 910:           lstatSync(candidate);
+ 911:           this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);
+ 912:           break;
+ 913:         } catch (error) {
+ 914:           if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+ 915:             this.unavailableHookPriority = Math.max(this.unavailableHookPriority, priority);
+ 935:     // Top-level `hooks` is the one array that CONCATENATES across layers
+ 936:     // instead of being replaced wholesale: a user-level (global) hook and a
+ 937:     // project-level hook should BOTH run, mirroring how Claude Code merges
+ 938:     // hooks from all settings files. Order follows layer priority (user
+ 939:     // first, project after). An explicit `"hooks": null` in a layer still
+ 940:     // resets everything below it (the escape hatch merge() already gives
+ 941:     // every other key); per-entry opt-out is the `disabled` field.
+ 942:     let hooks: unknown[] | undefined;
+ 943:     let hookSources: typeof this.mergedHookSources = [];
+ 944:     let sawHooks = false;
+ 945:     for (const source of this.sources) {
+ 946:       if (!("hooks" in source.data)) continue;
+ 947:       const v = source.data.hooks;
+ 948:       if (v === null) {
+ 949:         hooks = undefined;
+ 950:         hookSources = [];
+ 951:         sawHooks = true;
+ 952:       } else if (Array.isArray(v)) {
+ 953:         hooks = [...(hooks ?? []), ...v];
+ 954:         hookSources = [
+ 955:           ...hookSources,
+ 956:           ...v.map((_hook, sourceLayerIndex) => ({ source, sourceLayerIndex })),
+ 957:         ];
+ 958:         sawHooks = true;
+ 959:       }
+ 960:       // Non-array garbage is left to merge()'s wholesale result so
+ 961:       // validateSettings still sees (and rejects) it unchanged.
+ 962:     }
+ 963:     if (sawHooks) {
+ 964:       if (hooks !== undefined) result.hooks = hooks;
+ 965:       else delete result.hooks;
+ 966:     }
+ 967:     this.mergedHookSources = hookSources;
+ 968:     return result;
+ 969:   }
+ 970: }
+packages/core/src/links/operation-hook-custody.ts
+   1: import { lstatSync, realpathSync } from "node:fs";
+   2: import { dirname, join } from "node:path";
+   3: import type { ConfiguredToolHook } from "../hooks/configured-tool-hooks.js";
+   4: import { installedPluginsPath } from "../plugins/installedPlugins.js";
+   5: import { listPluginHooksForHost, type PluginHookSource } from "../plugins/loadPluginHooks.js";
+   6: import {
+   7:   assertSettingsHookOriginCurrent,
+   8:   assertSettingsHookOriginMetadataCurrent,
+   9:   type SettingsHookOrigin,
+  10: } from "../settings/hook-provenance.js";
+  11: 
+  12: function identity(path: string): string {
+  13:   const info = lstatSync(path, { bigint: true });
+  14:   if (info.isSymbolicLink()) throw new Error("Hook source custody is unsafe");
+  15:   if (info.isDirectory()) return [info.dev, info.ino, info.mode].map(String).join(":");
+  16:   if (!info.isFile() || info.nlink !== 1n) throw new Error("Hook source custody is unsafe");
+  17:   return [info.dev, info.ino, info.mode, info.size, info.mtimeNs, info.ctimeNs, info.nlink]
+  18:     .map(String)
+  19:     .join(":");
+  20: }
+  21: 
+  22: export function sourceMatches(
+  23:   expected: Record<string, unknown>,
+  24:   actual: Record<string, unknown> | undefined,
+  25: ): boolean {
+  26:   return (
+  27:     actual !== undefined && Object.entries(expected).every(([key, value]) => actual[key] === value)
+  28:   );
+  29: }
+  30: 
+  31: /** Shared native custody only. No review owner/signal/SettingsManager is retained. */
+  32: export function createHookSourceCustody(hook: Readonly<ConfiguredToolHook>): () => void {
+  33:   if (!hook.source) throw new Error("Hook source provenance unavailable");
+  34:   const source = structuredClone(hook.source);
+  35:   if (source.kind === "settings") {
+  36:     assertSettingsHookOriginCurrent(source as SettingsHookOrigin);
+  37:     return () => assertSettingsHookOriginMetadataCurrent(source as SettingsHookOrigin);
+  38:   }
+  39:   const plugin = source as PluginHookSource;
+  40:   if (!plugin.custody) throw new Error("Plugin Hook source provenance unavailable");
+  41:   if (realpathSync(plugin.installPath) !== plugin.installPath)
+  42:     throw new Error("Hook installation is not canonical");
+  43:   const paths = new Set([
+  44:     installedPluginsPath(),
+  45:     plugin.installPath,

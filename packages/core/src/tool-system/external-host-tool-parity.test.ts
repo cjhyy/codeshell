@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeAll, beforeEach, expect, test } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,6 +12,8 @@ import { FIRST_PHASE_EXPOSURE } from "./external-tool-exposure.js";
 import { ToolRegistry } from "./registry.js";
 import { createSessionToolHost, type SessionToolHost } from "./session-tool-host.js";
 import { registerBuiltinSourceAdapters } from "./builtin/sources.js";
+
+beforeAll(installTestLinkProviders);
 
 let directory: string;
 let cwd: string;

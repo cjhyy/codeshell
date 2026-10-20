@@ -26,16 +26,25 @@ import {
 } from "./owned-external-stream.js";
 import {
   DESKTOP_OPERATION_BATCH_METHOD,
+  executeFigmaMcpLinkAction,
+  isFigmaMcpCredential,
+  McpLinkActionError,
+  type McpLinkActionRequest,
   type DesktopOperationBatchAuthorityInput,
   type DesktopOperationBatchAuthorityResult,
 } from "@cjhyy/code-shell-core/internal";
 import { createDesktopWorkerHost } from "./worker-host-runtime.js";
+import {
+  linkAccountExecutionOptions,
+  type CaptureLinkAccountAccess,
+} from "./link-account-access.js";
 import { randomUUID } from "node:crypto";
 import { MainOutputPublisher, type MainOutputSource } from "./main-output-publisher.js";
 import { WorkerRunOwnership } from "./worker-run-ownership.js";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { mkdirSync } from "node:fs";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopManagedRuntimeRoot } from "./managed-runtime-service.js";
@@ -71,6 +80,9 @@ import {
   executeRemoteLinkAction,
   RemoteLinkError,
   executeLocalOAuthLinkAction,
+  CredentialStore,
+  type CredentialSnapshot,
+  type RemoteLinkActionReply,
   type LocalOAuthLinkActionRequest,
   type RemoteLinkActionRequest,
   ErrorCodes,
@@ -106,8 +118,7 @@ import {
 import {
   activeGuestForSession,
   bucketForSession,
-  // Aliased: this class has its own forgetSession, and the two clear DIFFERENT
-  // registries. releaseExternalSession has to call both.
+  // Aliased: this clears the browser registration, not the retained stream.
   forgetSession as forgetSessionBucket,
   partitionForSession,
   registerSessionBucket,
@@ -375,11 +386,13 @@ export class AgentBridge implements PetStateBridge {
     private readonly oauthAccessResolver?: (req: {
       id: string;
       scope: "full";
+      serverUrl: string;
       forceRefresh?: boolean;
     }) => Promise<{ accessToken: string; expiresAt?: string }>,
     private readonly quickChatForkLifecycle?: QuickChatForkLifecycle,
     private readonly workerAutomationCreate?: WorkerAutomationCreate,
     private readonly modelRequestSigner?: ModelRequestSigner,
+    private readonly captureLinkAccount?: CaptureLinkAccountAccess,
   ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.core = new WorkerBridgeCore({
@@ -394,12 +407,17 @@ export class AgentBridge implements PetStateBridge {
         }),
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
+        CODE_SHELL_CREDENTIAL_ACCESS: "host",
         CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
         CODE_SHELL_OPERATION_BATCH_ACCESS: "host",
         // This bridge handles workspace switches and authoritative Session runs.
         CODE_SHELL_WORKSPACE_ACCESS: "host",
         CODE_SHELL_CAPABILITY_MODULES: composeCapabilityModulesEnv(
-          { coding: codingModule, pet: petCapabilityModule },
+          {
+            coding: codingModule,
+            pet: petCapabilityModule,
+            links: pathToFileURL(join(app.getAppPath(), "out/main/link-provider-module.mjs")).href,
+          },
           readUserFeatureFlags(resolveNoRepoCwd()),
           () => import.meta.resolve("@cjhyy/code-shell-capability-optimization-lab/capability"),
         ),
@@ -1281,6 +1299,7 @@ export class AgentBridge implements PetStateBridge {
       parsed.method !== "desktop/oauthAccessResolve" &&
       parsed.method !== "desktop/remoteLinkAction" &&
       parsed.method !== "desktop/localOAuthLinkAction" &&
+      parsed.method !== "desktop/mcpLinkAction" &&
       parsed.method !== "desktop/modelRequestSign" &&
       parsed.method !== "desktop/localOAuthLinkActionCancel"
     ) {
@@ -1296,7 +1315,7 @@ export class AgentBridge implements PetStateBridge {
     if (id === undefined) return true;
     const workerEpoch = this.localOAuthLinkEpoch;
     void (async () => {
-      let reply: Record<string, unknown>;
+      let reply: RemoteLinkActionReply;
       try {
         if (parsed.method === "desktop/modelRequestSign") {
           if (!this.modelRequestSigner) throw new Error("Host request signing unavailable");
@@ -1319,7 +1338,10 @@ export class AgentBridge implements PetStateBridge {
               normalizeCredentialResolveParams(parsed.params),
             ),
           };
-        } else if (parsed.method === "desktop/localOAuthLinkAction") {
+        } else if (
+          parsed.method === "desktop/localOAuthLinkAction" ||
+          parsed.method === "desktop/mcpLinkAction"
+        ) {
           if (this.localOAuthLinkActions.has(id))
             throw new Error("Local Link request is already running");
           const controller = new AbortController();
@@ -1328,10 +1350,23 @@ export class AgentBridge implements PetStateBridge {
             reply = {
               jsonrpc: "2.0",
               id,
-              result: await executeLocalOAuthLinkAction(
-                parsed.params as unknown as LocalOAuthLinkActionRequest,
-                { signal: controller.signal },
-              ),
+              result:
+                parsed.method === "desktop/mcpLinkAction"
+                  ? await executeFigmaMcpLinkAction(
+                      parsed.params as unknown as McpLinkActionRequest,
+                      {
+                        signal: controller.signal,
+                        resolveOAuthAccess: (request) => {
+                          if (!this.oauthAccessResolver)
+                            throw new Error("OAuth access resolver is unavailable");
+                          return this.oauthAccessResolver(request);
+                        },
+                      },
+                    )
+                  : await executeLocalOAuthLinkAction(
+                      parsed.params as unknown as LocalOAuthLinkActionRequest,
+                      { signal: controller.signal },
+                    ),
             };
           } finally {
             if (this.localOAuthLinkActions.get(id) === controller)
@@ -1343,6 +1378,7 @@ export class AgentBridge implements PetStateBridge {
             id,
             result: await executeRemoteLinkAction(
               parsed.params as unknown as RemoteLinkActionRequest,
+              linkAccountExecutionOptions(this.captureLinkAccount),
             ),
           };
         } else if (parsed.method === "desktop/credentialMaterializeCookie") {
@@ -1357,14 +1393,33 @@ export class AgentBridge implements PetStateBridge {
           if (!this.oauthAccessResolver) throw new Error("OAuth access resolver is unavailable");
           const credentialId = typeof parsed.params?.id === "string" ? parsed.params.id : "";
           if (!credentialId) throw new Error("oauthAccessResolve requires id");
+          const serverUrl =
+            typeof parsed.params?.serverUrl === "string" ? parsed.params.serverUrl : "";
+          if (!serverUrl) throw new Error("oauthAccessResolve requires the selected server URL");
+          const assertWorkerOAuthAccess = () => {
+            // This generic IPC returns a bearer to the Worker. Link-owned MCP
+            // tokens may only feed the dedicated Host execution route above.
+            const credential = new CredentialStore(undefined).resolve(credentialId, "full");
+            if (
+              !credential ||
+              credential.type !== "oauth" ||
+              credential.meta?.agentExposable === false ||
+              isFigmaMcpCredential(credential)
+            )
+              throw new Error("OAuth credential is restricted to Host-owned actions");
+          };
+          assertWorkerOAuthAccess();
+          const result = await this.oauthAccessResolver({
+            id: credentialId,
+            scope: "full",
+            serverUrl,
+            forceRefresh: parsed.params?.forceRefresh === true,
+          });
+          assertWorkerOAuthAccess();
           reply = {
             jsonrpc: "2.0",
             id,
-            result: await this.oauthAccessResolver({
-              id: credentialId,
-              scope: "full",
-              forceRefresh: parsed.params?.forceRefresh === true,
-            }),
+            result,
           };
         }
       } catch (err) {
@@ -1374,9 +1429,25 @@ export class AgentBridge implements PetStateBridge {
           error: {
             code: -32603,
             message: err instanceof Error ? err.message : String(err),
+            ...(parsed.method === "desktop/mcpLinkAction" && err instanceof McpLinkActionError
+              ? { data: { mcpLinkCode: err.code } }
+              : {}),
             ...(parsed.method === "desktop/remoteLinkAction" &&
             err instanceof RemoteLinkError &&
-            err.code === "file_not_authorized"
+            [
+              "invalid_request",
+              "unavailable",
+              "configuration_error",
+              "refresh_outcome_unknown",
+              "reconnect",
+              "changed",
+              "forbidden",
+              "file_not_authorized",
+              "unsupported_file_type",
+              "response_too_large",
+              "content_unavailable",
+              "busy",
+            ].includes(err.code)
               ? { data: { remoteLinkCode: err.code } }
               : {}),
           },
@@ -1384,10 +1455,41 @@ export class AgentBridge implements PetStateBridge {
       }
       if (
         (parsed.method === "desktop/localOAuthLinkAction" ||
+          parsed.method === "desktop/mcpLinkAction" ||
+          parsed.method === "desktop/remoteLinkAction" ||
           parsed.method === "desktop/modelRequestSign") &&
         workerEpoch !== this.localOAuthLinkEpoch
       )
         return;
+      if (
+        parsed.method === "desktop/remoteLinkAction" ||
+        parsed.method === "desktop/localOAuthLinkAction" ||
+        parsed.method === "desktop/mcpLinkAction"
+      ) {
+        // The Host may have refreshed or invalidated this grant while executing.
+        // Read the current store after settlement. Deliver it in the same reply
+        // so its invalidation cannot cancel this request before the Worker has
+        // detached the current waiter and preserved the original action error.
+        try {
+          const cwd = parsed.params?.cwd;
+          if (typeof cwd === "string" && cwd) this.credentialSnapshotCwds.add(cwd);
+          reply.credentialSnapshot = this.buildLatestCredentialSnapshot();
+        } catch {
+          // Status delivery is best effort. Preserve the action's original
+          // result/error even if reading or sending its snapshot fails.
+          try {
+            dlog(
+              "bridge",
+              parsed.method === "desktop/remoteLinkAction"
+                ? "remote_link.credential_snapshot_failed"
+                : "link_action.credential_snapshot_failed",
+              {},
+            );
+          } catch {
+            // Logging must not turn an already settled action into another error.
+          }
+        }
+      }
       this.core.sendLine(JSON.stringify(reply));
     })();
     return true;
@@ -1891,17 +1993,21 @@ export class AgentBridge implements PetStateBridge {
   pushCredentialSnapshot(cwd?: string): void {
     if (typeof cwd === "string" && cwd) this.credentialSnapshotCwds.add(cwd);
     if (!this.core.hasLiveWorker()) return;
-    this.credentialSnapshotRevision += 1;
-    const snapshot = buildCredentialSnapshot(
-      [...this.credentialSnapshotCwds],
-      this.credentialSnapshotRevision,
-    );
+    const snapshot = this.buildLatestCredentialSnapshot();
     this.core.sendLine(
       JSON.stringify({
         jsonrpc: "2.0",
         method: "desktop/credentialSnapshot",
         params: snapshot,
       }),
+    );
+  }
+
+  private buildLatestCredentialSnapshot(): CredentialSnapshot {
+    this.credentialSnapshotRevision += 1;
+    return buildCredentialSnapshot(
+      [...this.credentialSnapshotCwds],
+      this.credentialSnapshotRevision,
     );
   }
 
@@ -1918,6 +2024,11 @@ export class AgentBridge implements PetStateBridge {
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
     this.mainOutput.forget(sessionId);
+    this.releaseSessionResources(sessionId);
+  }
+
+  /** Release a runtime's authority without deleting its business Session output. */
+  private releaseSessionResources(sessionId: string): void {
     forgetHostSessionMaps(this.sessionCwd, this.hostReservations, sessionId);
     getSessionCwdIndex().forget(sessionId);
     this.panelHostWindowRoutes.forgetSession(sessionId);
@@ -2027,8 +2138,8 @@ export class AgentBridge implements PetStateBridge {
    *
    * Paired with {@link releaseExternalSession} on purpose. The two registries
    * live in different modules and are torn down by different functions —
-   * `forgetSession` here clears sessionCwd, while the bucket lives in
-   * browser-driver/active-guest and is cleared by ITS own forgetSession. Split
+   * `releaseSessionResources` clears sessionCwd, while the bucket lives in
+   * browser-driver/active-guest and is cleared by its own forgetSession. Split
    * the register/release halves across call sites and the bucket leaks for the
    * lifetime of the process.
    *
@@ -2047,9 +2158,13 @@ export class AgentBridge implements PetStateBridge {
     if (webContentsId !== undefined) this.claimSessionPanelOwner(sessionId, webContentsId);
   }
 
-  /** Release everything {@link registerExternalSession} registered. */
+  /**
+   * Release runtime resources while retaining the Session's stream and coverage.
+   * A replacement uses the same snapshot epoch, so resetting its sequence would
+   * make the renderer discard new output as already applied.
+   */
   releaseExternalSession(sessionId: string): void {
-    this.forgetSession(sessionId);
+    this.releaseSessionResources(sessionId);
   }
 
   /**

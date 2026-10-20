@@ -34,7 +34,7 @@ import {
   urlsMatch,
   useMarkerEcho,
 } from "../browser/markerEcho";
-import { NEW_TAB, NEW_TAB_TITLE } from "../browser/types";
+import { NEW_TAB, NEW_TAB_TITLE, type Tab, type WebviewElement } from "../browser/types";
 import { WebviewHost } from "../browser/WebviewHost";
 import { FloatingAt, IconBtn } from "../browser/ui";
 import { MarkerDot } from "../browser/markers";
@@ -175,7 +175,7 @@ export function BrowserAddressField({
           void openExternally();
         }}
         placeholder={t("panels.browser.addressPlaceholder")}
-        className="h-8 flex-1"
+        className="h-8 min-w-0 flex-1"
       />
       {menu && (
         <ContextMenu
@@ -228,6 +228,7 @@ export function BrowserPanel({
     active,
     nav,
     viewRef,
+    tabViewRef,
     setActiveId,
     patchTab,
     closeTab,
@@ -235,10 +236,6 @@ export function BrowserPanel({
     navigate,
   } = useBrowserTabs(initialUrl, openUrl, bucket);
 
-  // Idle-eviction: true once the panel has been hidden past IDLE_EVICT_MS. While
-  // evicted the <webview> is unmounted (its renderer process freed); becoming
-  // visible again clears this and remounts WebviewHost, reloading the tab url.
-  const evicted = useIdleEvict(visible);
   const showingNewTab = active.url === NEW_TAB;
 
   // Element-picking ("圈选").
@@ -275,10 +272,12 @@ export function BrowserPanel({
   const [chromeBusy, setChromeBusy] = useState(false);
   const [chromeExtensionPath, setChromeExtensionPath] = useState<string | undefined>();
 
-  const handleActiveGuestDomReady = useCallback(() => {
-    setReadyGuestTabId(activeId);
-  }, [activeId]);
-  const activeGuestReady = readyGuestTabId === activeId && !evicted && !showingNewTab;
+  const handleGuestDomReady = useCallback((id: string) => setReadyGuestTabId(id), []);
+  const handleGuestUnavailable = useCallback(
+    (id: string) => setReadyGuestTabId((previous) => (previous === id ? null : previous)),
+    [],
+  );
+  const activeGuestReady = readyGuestTabId === activeId && !showingNewTab;
 
   useEffect(() => {
     let cancelled = false;
@@ -409,7 +408,7 @@ export function BrowserPanel({
   const { selectorMissFor } = useMarkerEcho(viewRef, visibleMarkers, editingMarker);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-background">
+    <div className="@container/browser-panel flex min-h-0 min-w-0 flex-1 flex-col bg-background">
       {/* Tab strip */}
       <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1">
         {/* Tabs scroll horizontally when they overflow; the + button stays
@@ -462,7 +461,7 @@ export function BrowserPanel({
       </div>
 
       {/* Address bar */}
-      <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
+      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
         <IconBtn
           disabled={!nav.canGoBack}
           onClick={() => viewRef.current?.goBack()}
@@ -486,108 +485,110 @@ export function BrowserPanel({
           onDraftChange={(draft) => patchTab(activeId, { draft })}
           onNavigate={navigate}
         />
-        <IconBtn
-          onClick={() => void startPicking()}
-          disabled={active.url === NEW_TAB || selecting}
-          label={selecting ? t("panels.browser.picking") : t("panels.browser.pickElement")}
-          active={selecting}
-        >
-          <MousePointerSquareDashed className="h-4 w-4" />
-        </IconBtn>
-        {markers.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="relative h-8 gap-1 px-1.5 text-muted-foreground"
-                title={t("panels.browser.markers", {
-                  total: markers.length,
-                  visible: visibleMarkers.length,
-                })}
-              >
-                <MapPin className="h-4 w-4" />
-                <span className="text-xs tabular-nums">{markers.length}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-96 w-80 overflow-y-auto">
-              {groupMarkersByPage(markers).map((group, gi) => (
-                <React.Fragment key={group.url}>
-                  {gi > 0 && <DropdownMenuSeparator />}
-                  <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
-                    {group.title}
-                    {urlsMatch(group.url, active.url) ? t("panels.browser.onThisPage") : ""}
-                  </DropdownMenuLabel>
-                  {group.markers.map((m) => (
-                    <DropdownMenuItem
-                      key={m.anchor.id}
-                      onSelect={() => {
-                        // Same page: just open the marker. Another page:
-                        // navigate there first — the echo engine re-highlights
-                        // after dom-ready, and the dot appears once
-                        // active.url matches.
-                        if (!urlsMatch(group.url, active.url)) navigate(group.url);
-                        setEditingMarker(m.anchor.id);
-                      }}
-                    >
-                      <span className="truncate">
-                        <span className="font-medium">{m.anchor.label}</span>
-                        {m.anchor.comment ? ` · ${m.anchor.comment}` : ""}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </React.Fragment>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        {showPopout && (
+        <div className="flex min-w-0 items-center gap-1 @max-[560px]/browser-panel:w-full @max-[560px]/browser-panel:justify-end">
           <IconBtn
-            onClick={() =>
-              void window.codeshell.openBrowserPopout(
-                active.url === NEW_TAB ? undefined : active.url,
-              )
-            }
-            label={t("panels.browser.popout")}
+            onClick={() => void startPicking()}
+            disabled={active.url === NEW_TAB || selecting}
+            label={selecting ? t("panels.browser.picking") : t("panels.browser.pickElement")}
+            active={selecting}
           >
-            <PictureInPicture2 className="h-4 w-4" />
+            <MousePointerSquareDashed className="h-4 w-4" />
           </IconBtn>
-        )}
-        {engineSessionId && (
+          {markers.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="relative h-8 gap-1 px-1.5 text-muted-foreground"
+                  title={t("panels.browser.markers", {
+                    total: markers.length,
+                    visible: visibleMarkers.length,
+                  })}
+                >
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-xs tabular-nums">{markers.length}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-96 w-80 overflow-y-auto">
+                {groupMarkersByPage(markers).map((group, gi) => (
+                  <React.Fragment key={group.url}>
+                    {gi > 0 && <DropdownMenuSeparator />}
+                    <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+                      {group.title}
+                      {urlsMatch(group.url, active.url) ? t("panels.browser.onThisPage") : ""}
+                    </DropdownMenuLabel>
+                    {group.markers.map((m) => (
+                      <DropdownMenuItem
+                        key={m.anchor.id}
+                        onSelect={() => {
+                          // Same page: just open the marker. Another page:
+                          // navigate there first — the echo engine re-highlights
+                          // after dom-ready, and the dot appears once
+                          // active.url matches.
+                          if (!urlsMatch(group.url, active.url)) navigate(group.url);
+                          setEditingMarker(m.anchor.id);
+                        }}
+                      >
+                        <span className="truncate">
+                          <span className="font-medium">{m.anchor.label}</span>
+                          {m.anchor.comment ? ` · ${m.anchor.comment}` : ""}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {showPopout && (
+            <IconBtn
+              onClick={() =>
+                void window.codeshell.openBrowserPopout(
+                  active.url === NEW_TAB ? undefined : active.url,
+                )
+              }
+              label={t("panels.browser.popout")}
+            >
+              <PictureInPicture2 className="h-4 w-4" />
+            </IconBtn>
+          )}
+          {engineSessionId && (
+            <IconBtn
+              onClick={() => void toggleRuntimeHandoff()}
+              disabled={active.url === NEW_TAB || handoffBusy || !activeGuestReady}
+              label={t(
+                handoff.granted
+                  ? "panels.browser.revokeRuntimeHandoff"
+                  : "panels.browser.grantRuntimeHandoff",
+              )}
+              active={handoff.granted}
+            >
+              <ShieldCheck className="h-4 w-4" />
+            </IconBtn>
+          )}
+          {engineSessionId && (
+            <IconBtn
+              onClick={() => void toggleChromeRuntime()}
+              disabled={chromeBusy}
+              label={t(
+                chromeRuntime.granted || chromeRuntime.pairing
+                  ? "panels.browser.revokeChromeRuntime"
+                  : "panels.browser.connectChromeRuntime",
+              )}
+              active={Boolean(chromeRuntime.granted || chromeRuntime.pairing)}
+            >
+              <PlugZap className="h-4 w-4" />
+            </IconBtn>
+          )}
           <IconBtn
-            onClick={() => void toggleRuntimeHandoff()}
-            disabled={active.url === NEW_TAB || handoffBusy || !activeGuestReady}
-            label={t(
-              handoff.granted
-                ? "panels.browser.revokeRuntimeHandoff"
-                : "panels.browser.grantRuntimeHandoff",
-            )}
-            active={handoff.granted}
+            onClick={() => void openExternally(active.url)}
+            label={t("panels.browser.openExternal")}
           >
-            <ShieldCheck className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4" />
           </IconBtn>
-        )}
-        {engineSessionId && (
-          <IconBtn
-            onClick={() => void toggleChromeRuntime()}
-            disabled={chromeBusy}
-            label={t(
-              chromeRuntime.granted || chromeRuntime.pairing
-                ? "panels.browser.revokeChromeRuntime"
-                : "panels.browser.connectChromeRuntime",
-            )}
-            active={Boolean(chromeRuntime.granted || chromeRuntime.pairing)}
-          >
-            <PlugZap className="h-4 w-4" />
-          </IconBtn>
-        )}
-        <IconBtn
-          onClick={() => void openExternally(active.url)}
-          label={t("panels.browser.openExternal")}
-        >
-          <ExternalLink className="h-4 w-4" />
-        </IconBtn>
+        </div>
       </div>
 
       {handoff.granted && (
@@ -657,31 +658,23 @@ export function BrowserPanel({
       {/* Content: webview or the new-tab landing (localhost bookmarks). The
           element-pick comment box + saved markers float over the page. */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {evicted ? (
-          // Hidden past the idle window: the guest process was reclaimed. This
-          // placeholder renders only while off-screen, so the user never sees
-          // it — becoming visible clears `evicted` and remounts the webview,
-          // which reloads `active.url` from its frozen src.
-          <div className="flex min-h-0 flex-1 items-center justify-center" aria-hidden />
-        ) : active.url === NEW_TAB ? (
-          <NewTabLanding onOpen={navigate} />
-        ) : (
-          <WebviewHost
-            // key per tab: one <webview> is mounted at a time, so without a
-            // per-tab key React would reuse a single guest across tabs and
-            // their navigation histories (canGoBack/Forward) would bleed
-            // together. Keying by tab gives each its own guest + history — and
-            // freezes the per-tab initial src (see WebviewHost) so the guest's
-            // own redirects don't re-drive `src` into an ERR_ABORTED race.
-            key={activeId}
-            ref={viewRef}
-            initialUrl={active.url}
-            partition={partition}
-            bucket={bucket}
-            engineSessionId={engineSessionId}
-            onDomReady={handleActiveGuestDomReady}
-          />
-        )}
+        {showingNewTab && <NewTabLanding onOpen={navigate} />}
+        {tabs
+          .filter((tab) => tab.url !== NEW_TAB)
+          .map((tab) => (
+            <BrowserTabGuest
+              key={tab.id}
+              tab={tab}
+              active={tab.id === activeId}
+              visible={visible && tab.id === activeId}
+              viewRef={tabViewRef(tab.id)}
+              partition={partition}
+              bucket={bucket}
+              engineSessionId={engineSessionId}
+              onDomReady={handleGuestDomReady}
+              onUnavailable={handleGuestUnavailable}
+            />
+          ))}
 
         {/* Load-failure overlay. The <webview> renders blank on a failed load,
             so we cover it with our own message + retry rather than leave the user
@@ -786,6 +779,51 @@ export function BrowserPanel({
           </FloatingAt>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Keep unsent forms and history through quick tab switches; reclaim an idle
+ * tab's renderer using the same five-minute policy as a hidden browser panel. */
+function BrowserTabGuest({
+  tab,
+  active,
+  visible,
+  viewRef,
+  partition,
+  bucket,
+  engineSessionId,
+  onDomReady,
+  onUnavailable,
+}: {
+  tab: Tab;
+  active: boolean;
+  visible: boolean;
+  viewRef: React.RefCallback<WebviewElement>;
+  partition?: string;
+  bucket?: string;
+  engineSessionId?: string | null;
+  onDomReady: (id: string) => void;
+  onUnavailable: (id: string) => void;
+}) {
+  const evicted = useIdleEvict(visible);
+  const ready = useCallback(() => onDomReady(tab.id), [onDomReady, tab.id]);
+  useEffect(() => {
+    if (evicted) onUnavailable(tab.id);
+  }, [evicted, onUnavailable, tab.id]);
+  return (
+    <div className="absolute inset-0" hidden={!active} aria-hidden={!active || undefined}>
+      {!evicted && (
+        <WebviewHost
+          ref={viewRef}
+          initialUrl={tab.url}
+          partition={partition}
+          bucket={bucket}
+          engineSessionId={engineSessionId}
+          onDomReady={ready}
+          active={active}
+        />
+      )}
     </div>
   );
 }

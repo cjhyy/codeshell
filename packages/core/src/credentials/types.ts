@@ -131,6 +131,10 @@ export interface Credential {
    *   分区里其他站(不踢掉别的登录态);"clear" 先清空整分区再注入(干净换号,需显式选)。
    */
   meta?: {
+    /** Versioned Link connection metadata; private retirement entries use their own schema. */
+    recordSchemaVersion?: 2;
+    /** Routing and authorization strategy derive from this reviewed recipe. */
+    linkRecipeId?: import("@cjhyy/code-shell-link").LinkRecipeId;
     appUrl?: string;
     platform?: string;
     domain?: string;
@@ -140,14 +144,16 @@ export interface Credential {
     autoRefreshFromBrowser?: boolean;
     /** Link provider id for credentials owned by a local/server app connection. */
     linkProvider?: string;
+    /** Offline legacy cleanup fence. Never authorizes a reconnect or an execution. */
+    linkCleanupDisabled?: boolean;
     /** Provider-specific connection method, e.g. fine-grained-pat or github-app. */
     linkConnectionMethod?: string;
     /** Where the selected Link executes; runtime must not silently select another account. */
     linkExecutionRuntime?: "local" | "server";
     /** How a local Link credential was obtained without exposing its secret to the renderer. */
-    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
+    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth" | "mcp-oauth";
     /** Fixed execution adapter. CLI bindings never resolve or copy a provider token. */
-    linkExecutionBackend?: "http-token" | "cli" | "remote";
+    linkExecutionBackend?: "http-token" | "cli" | "remote" | "mcp";
     /** Remote Link authority; downstream tokens remain in the Host credential store. */
     linkRemoteIssuer?: string;
     linkRemoteConnectionId?: string;

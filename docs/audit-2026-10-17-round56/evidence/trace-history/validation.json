@@ -1,0 +1,36 @@
+{
+  "productImports": 0,
+  "productHelperCalls": 0,
+  "fixturesExecuted": 0,
+  "testsExecuted": 0,
+  "network": 0,
+  "clockExperiments": 0,
+  "ReactDOM": 0,
+  "nativeModelProductProcesses": 0,
+  "realUserTraceDataRead": 0,
+  "GitCalls": 0,
+  "auditMetadataTools": [
+    "Python stdlib metadata/hash/ranges",
+    "rg filenames/line navigation"
+  ],
+  "fatalMetadataErrors": 1,
+  "firstDiagnostic": "first-diagnostic.json",
+  "productFailures": 0,
+  "toolOutputTruncations": 0,
+  "sourceCounts": {
+    "selectedProductFiles": 5,
+    "selectedTestDeclarationFiles": 1,
+    "fullProductFiles": 0,
+    "productSemanticLines": 338,
+    "testDeclarationLines": 21,
+    "allSelectedSemanticDeclarationLines": 359,
+    "sourceBodyDisplayedLines": 524,
+    "navigationBeyondBodyLines": 25,
+    "allDisplayedSourceLinesIncludingNavigation": 549,
+    "testRuns": 0
+  },
+  "sourcePinsEndingSame": 8,
+  "priorCanonicalArtifactsEndingSame": 5,
+  "sharedHistoryInputSame": true,
+  "history": "Root batch5584 incl55/ex56+, target579 cap100 saved; only precise canonical docs/rows actually read, not all100 contexts. No own fresh million-scalar scan."
+}

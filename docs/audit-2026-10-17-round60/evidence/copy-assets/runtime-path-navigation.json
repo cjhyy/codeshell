@@ -1,0 +1,46 @@
+[
+  {
+    "command": [
+      "rg",
+      "-n",
+      "\\.md|\\.json|templates|import.meta|dirname|readFile|codingPrompt|loadCoding",
+      "packages/core/src/prompt/section-loader.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "6: * custom .md loader.\n9:import { readFileSync } from \"node:fs\";\n12:  return readFileSync(new URL(`./sections/${name}.md`, import.meta.url), \"utf-8\");\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "\\.md|\\.json|templates|import.meta|dirname|readFile|codingPrompt|loadCoding",
+      "packages/core/src/data/static-catalogs.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "17:const requireJson = createRequire(import.meta.url);\n38:  deepseek: requireJson(\"./deepseek-models.json\") as StaticCatalog,\n39:  zai: requireJson(\"./zai-models.json\") as StaticCatalog,\n40:  openai: requireJson(\"./openai-models.json\") as StaticCatalog,\n41:  google: requireJson(\"./gemini-models.json\") as StaticCatalog,\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "\\.md|\\.json|templates|import.meta|dirname|readFile|codingPrompt|loadCoding",
+      "packages/tui/src/cli/commands/builtin/init/index.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "2: * `/init` — bootstrap CODESHELL.md for the current repo.\n4: * Scope: documentation only. This command never writes to settings.json or\n5: * settings.local.json — those belong to Code Shell's own onboarding/permission\n9: *   improve  — CODESHELL.md already exists; LLM edits in place with diffs.\n10: *   migrate  — other AI configs (CLAUDE.md, .cursorrules, ...) exist; LLM\n19:import { existsSync, readFileSync } from \"node:fs\";\n26:  return readFileSync(new URL(`./templates/${name}.md`, import.meta.url), \"utf-8\");\n36: * Cap the inlined CODESHELL.md context so a freshly generated multi-thousand-\n37: * line file (rare, but possible on a migrate from a verbose CLAUDE.md) can't\n38: * blow up the next turn's prompt. CODESHELL.md is meant to be terse; if a user\n44:  const targetPath = join(cwd, \"CODESHELL.md\");\n47:  if (d.hasClaude) existingConfigs.push(join(cwd, \"CLAUDE.md\"));\n48:  if (d.hasAgents) existingConfigs.push(join(cwd, \"AGENTS.md\"));\n53:  if (d.hasCopilotInstructions) existingConfigs.push(join(cwd, \".github/copilot-instructions.md\"));\n58:  // it (they already have CODESHELL.md and presumably know the layout).\n84:      return \"Improving existing CODESHELL.md…\";\n86:      return \"Migrating from existing AI configs into CODESHELL.md…\";\n88:      return \"Creating new CODESHELL.md…\";\n90:      return \"Empty repo — asking you a few questions before writing CODESHELL.md…\";\n97:  description: \"Bootstrap or improve CODESHELL.md for this repo\",\n116:      const targetPath = join(ctx.cwd, \"CODESHELL.md\");\n125:        // Inject the *resulting* CODESHELL.md content directly into the\n130:          const content = readFileSync(targetPath, \"utf-8\");\n138:            `CODESHELL.md was ${intent === \"improve\" ? \"updated\" : \"created\"} by /init at ${targetPath}:\\n\\n${truncated}`,\n141:            \"CODESHELL.md injected into session context — the model will see it on every turn.\",\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "\\.md|\\.json|templates|import.meta|dirname|readFile|codingPrompt|loadCoding",
+      "packages/coding/src/index.capability.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "1:import { readFileSync } from \"node:fs\";\n321:  coding: readFileSync(new URL(\"./prompt/coding.md\", import.meta.url), \"utf-8\"),\n",
+    "stderr": ""
+  }
+]

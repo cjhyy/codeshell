@@ -1,0 +1,4280 @@
+{
+  "createdAt": "2026-10-17T17:59:43.332244+00:00",
+  "purpose": "Materialization only of already displayed/selected source lines; no new semantic reading or execution counted",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "selectedLineRanges": [
+        [
+          32,
+          32
+        ],
+        [
+          82,
+          88
+        ],
+        [
+          98,
+          174
+        ],
+        [
+          195,
+          201
+        ],
+        [
+          244,
+          263
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          12
+        ],
+        [
+          28,
+          34
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          77,
+          201
+        ],
+        [
+          224,
+          270
+        ],
+        [
+          287,
+          287
+        ],
+        [
+          292,
+          293
+        ],
+        [
+          306,
+          306
+        ],
+        [
+          309,
+          309
+        ],
+        [
+          315,
+          317
+        ],
+        [
+          330,
+          330
+        ],
+        [
+          333,
+          333
+        ],
+        [
+          338,
+          339
+        ],
+        [
+          347,
+          347
+        ],
+        [
+          350,
+          350
+        ],
+        [
+          355,
+          356
+        ],
+        [
+          364,
+          364
+        ],
+        [
+          376,
+          376
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "/**",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2,
+          "text": " * Tool call display — CC-style visual blocks with dots and vertical lines.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 3,
+          "text": " *",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 4,
+          "text": " * Layout (collapsed, default):",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 5,
+          "text": " *   ● Bash  git status",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 6,
+          "text": " *   ⎿  On branch main",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 7,
+          "text": " *      Changes not staged for commit:",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 8,
+          "text": " *      … +12 lines (ctrl+o to expand)",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 9,
+          "text": " *",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 10,
+          "text": " * Layout (expanded, in transcript mode):",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 11,
+          "text": " *   ● Bash  git status",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 12,
+          "text": " *   ⎿  On branch main",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 28,
+          "text": "import { truncate } from \"../truncate.js\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 29,
+          "text": "import { DiffLine, classifyDiffLine } from \"./DiffLine.js\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 30,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 31,
+          "text": "/** Max visible output lines in collapsed mode (matches CC's MAX_LINES_TO_SHOW). */",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 32,
+          "text": "const COLLAPSED_LINES = 3;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 33,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 34,
+          "text": "// ─── ToolCallStart ──────────────────────────────────────────────────",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 42,
+          "text": "export function ToolCallStart({ toolName, args, nested }: ToolCallStartProps) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 69,
+          "text": "export function ToolCallRunning({ toolName, nested }: ToolCallRunningProps) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 77,
+          "text": "  );",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 78,
+          "text": "}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 79,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 80,
+          "text": "// ─── ToolCallResult ─────────────────────────────────────────────────",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 81,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 82,
+          "text": "interface ToolCallResultProps {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 83,
+          "text": "  toolName: string;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 84,
+          "text": "  result?: string;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 85,
+          "text": "  error?: string;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 86,
+          "text": "  nested?: boolean;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 87,
+          "text": "  /** When true, show full output instead of collapsed preview. */",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 88,
+          "text": "  expanded?: boolean;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 89,
+          "text": "  /**",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 90,
+          "text": "   * When true, render as a single dim line — used for transient",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 91,
+          "text": "   * \"this attempt failed and was retried\" cases (e.g. a tool's",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 92,
+          "text": "   * fail-fast parameter check) so the feed isn't swamped with scary",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 93,
+          "text": "   * red error cards for what was just a parameter fix-up.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 94,
+          "text": "   */",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 95,
+          "text": "  compact?: boolean;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 96,
+          "text": "}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 97,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 98,
+          "text": "export function ToolCallResult({",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 99,
+          "text": "  toolName,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 100,
+          "text": "  result,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 101,
+          "text": "  error,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 102,
+          "text": "  nested,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 103,
+          "text": "  expanded: forceExpand,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 104,
+          "text": "  compact,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 105,
+          "text": "}: ToolCallResultProps) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 106,
+          "text": "  const [localExpanded, setLocalExpanded] = useState(false);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 107,
+          "text": "  const expanded = forceExpand || localExpanded;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 108,
+          "text": "  const ml = nested ? 3 : 0;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 109,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 110,
+          "text": "  if (compact) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 111,
+          "text": "    const summary = singleLine(result ?? error ?? \"\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 112,
+          "text": "    return (",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 113,
+          "text": "      <Box marginLeft={ml}>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 114,
+          "text": "        <Text dim>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 115,
+          "text": "          {\"  · \"}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 116,
+          "text": "          {toolName}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 117,
+          "text": "          {\" retried — \"}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 118,
+          "text": "          {truncate(summary, 90)}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 119,
+          "text": "        </Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 120,
+          "text": "      </Box>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 121,
+          "text": "    );",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 122,
+          "text": "  }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 123,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 124,
+          "text": "  if (error) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 125,
+          "text": "    return (",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 126,
+          "text": "      <Box marginLeft={ml}>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 127,
+          "text": "        <Text color=\"ansi:red\">{\"  ✗ \"}</Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 128,
+          "text": "        <Text dim>{toolName} </Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 129,
+          "text": "        <Text color=\"ansi:red\">{truncate(singleLine(error), 72)}</Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 130,
+          "text": "      </Box>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 131,
+          "text": "    );",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 132,
+          "text": "  }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 133,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 134,
+          "text": "  const content = result ?? \"\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 135,
+          "text": "  if (!content) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 136,
+          "text": "    return (",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 137,
+          "text": "      <Box marginLeft={ml}>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 138,
+          "text": "        <Text color=\"ansi:green\">{\"  ✓ \"}</Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 139,
+          "text": "        <Text dim>{toolName}</Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 140,
+          "text": "      </Box>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 141,
+          "text": "    );",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 142,
+          "text": "  }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 143,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 144,
+          "text": "  // Tool-specific rendering",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 145,
+          "text": "  const rendered = renderToolOutput(toolName, content, expanded);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 146,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 147,
+          "text": "  return (",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 148,
+          "text": "    <Box flexDirection=\"column\" marginLeft={ml}>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 149,
+          "text": "      <Box>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 150,
+          "text": "        <Text color=\"ansi:green\">{\"  ✓ \"}</Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 151,
+          "text": "        <Text dim>{toolName}</Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 152,
+          "text": "        {rendered.summary ? <Text dim> {rendered.summary}</Text> : null}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 153,
+          "text": "      </Box>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 154,
+          "text": "      {rendered.lines.length > 0 && (",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 155,
+          "text": "        <Box flexDirection=\"column\">",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 156,
+          "text": "          {rendered.lines.map((line, i) => (",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 157,
+          "text": "            <DiffOrPlainRow key={i} line={clampLine(line)} isError={rendered.errorLines?.[i]} />",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 158,
+          "text": "          ))}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 159,
+          "text": "          {rendered.hiddenCount > 0 && (",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 160,
+          "text": "            <Box>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 161,
+          "text": "              <Text dim>{\"  ⎿  \"}</Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 162,
+          "text": "              <Text dim>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 163,
+          "text": "                {\"… +\"}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 164,
+          "text": "                {rendered.hiddenCount}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 165,
+          "text": "                {\" lines\"}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 166,
+          "text": "                {!forceExpand ? \" (ctrl+o to expand)\" : \"\"}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 167,
+          "text": "              </Text>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 168,
+          "text": "            </Box>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 169,
+          "text": "          )}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 170,
+          "text": "        </Box>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 171,
+          "text": "      )}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 172,
+          "text": "    </Box>",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 173,
+          "text": "  );",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 174,
+          "text": "}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 175,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 176,
+          "text": "// ─── Tool Output Rendering ──────────────────────────────────────────",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 177,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 178,
+          "text": "interface RenderedOutput {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 179,
+          "text": "  summary: string;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 180,
+          "text": "  lines: string[];",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 181,
+          "text": "  hiddenCount: number;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 182,
+          "text": "  /**",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 183,
+          "text": "   * Optional per-line error flag, index-aligned with `lines`. Set only by the",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 184,
+          "text": "   * Bash branch (A1): the `STDERR:` section and `Exit code:` / `Killed by",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 185,
+          "text": "   * signal:` status lines render in the error color without altering the text.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 186,
+          "text": "   */",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 187,
+          "text": "  errorLines?: boolean[];",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 188,
+          "text": "}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 189,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 190,
+          "text": "/**",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 191,
+          "text": " * Strip <system-reminder>…</system-reminder> blocks from tool output before",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 192,
+          "text": " * rendering. The InvestigationGuard prepends these to nudge the LLM mid-loop;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 193,
+          "text": " * they're context for the model, not status for the user.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 194,
+          "text": " */",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 195,
+          "text": "function stripSystemReminders(content: string): string {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 196,
+          "text": "  return content.replace(/<system-reminder>[\\s\\S]*?<\\/system-reminder>\\s*/g, \"\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 197,
+          "text": "}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 198,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 199,
+          "text": "function renderToolOutput(toolName: string, content: string, expanded: boolean): RenderedOutput {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 200,
+          "text": "  content = stripSystemReminders(content);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 201,
+          "text": "  const rawLines = content.split(\"\\n\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 224,
+          "text": "      // diff is a `  - …` / `  + …` block (see edit.ts generateCompactDiff).",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 225,
+          "text": "      // Show the summary collapsed; expose the full diff in expanded /",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 226,
+          "text": "      // transcript mode so additions/removals get DiffColoredLine treatment.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 227,
+          "text": "      const [summaryLine, ...rest] = rawLines;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 228,
+          "text": "      const summary = singleLine(summaryLine ?? \"\").slice(0, 80);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 229,
+          "text": "      const diffLines = rest.filter((l) => l.length > 0);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 230,
+          "text": "      if (expanded) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 231,
+          "text": "        return { summary, lines: diffLines, hiddenCount: 0 };",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 232,
+          "text": "      }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 233,
+          "text": "      if (diffLines.length === 0) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 234,
+          "text": "        return { summary, lines: [], hiddenCount: 0 };",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 235,
+          "text": "      }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 236,
+          "text": "      const previewCount = Math.min(diffLines.length, COLLAPSED_LINES);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 237,
+          "text": "      return {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 238,
+          "text": "        summary,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 239,
+          "text": "        lines: diffLines.slice(0, previewCount),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 240,
+          "text": "        hiddenCount: Math.max(0, diffLines.length - previewCount),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 241,
+          "text": "      };",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 242,
+          "text": "    }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 243,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 244,
+          "text": "    case \"Glob\": {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 245,
+          "text": "      // Strip the \"N files matched:\" header glob.ts emits so the count is accurate.",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 246,
+          "text": "      const files = rawLines",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 247,
+          "text": "        .filter((l) => l.trim())",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 248,
+          "text": "        .filter((l) => !/^\\d+\\s+files?\\s+matched/i.test(l));",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 249,
+          "text": "      const count = files.length;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 250,
+          "text": "      if (expanded) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 251,
+          "text": "        return { summary: `${count} files`, lines: files, hiddenCount: 0 };",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 252,
+          "text": "      }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 253,
+          "text": "      // Few results: show them inline — making the user ctrl+o for a 2-file",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 254,
+          "text": "      // match was a regression. Many results: summary + first N + \"+M lines\".",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 255,
+          "text": "      if (count <= COLLAPSED_LINES) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 256,
+          "text": "        return { summary: `${count} files`, lines: files, hiddenCount: 0 };",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 257,
+          "text": "      }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 258,
+          "text": "      return {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 259,
+          "text": "        summary: `${count} files`,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 260,
+          "text": "        lines: files.slice(0, COLLAPSED_LINES),",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 261,
+          "text": "        hiddenCount: count - COLLAPSED_LINES,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 262,
+          "text": "      };",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 263,
+          "text": "    }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 264,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 265,
+          "text": "    case \"Grep\": {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 266,
+          "text": "      // Dedupe to unique file paths. ripgrep emits one line per match, so a",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 267,
+          "text": "      // file with 24 matches produces 24 lines — rendering each one is noise",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 268,
+          "text": "      // since users just want to know which files matched.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 269,
+          "text": "      const seen = new Set<string>();",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 270,
+          "text": "      const files: string[] = [];",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 287,
+          "text": "      if (expanded || fileCount <= COLLAPSED_LINES) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 292,
+          "text": "        lines: files.slice(0, COLLAPSED_LINES),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 293,
+          "text": "        hiddenCount: fileCount - COLLAPSED_LINES,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 306,
+          "text": "      if (expanded) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 309,
+          "text": "      if (totalLines <= COLLAPSED_LINES + 1) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 315,
+          "text": "        lines: rawLines.slice(0, COLLAPSED_LINES),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 316,
+          "text": "        hiddenCount: totalLines - COLLAPSED_LINES,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 317,
+          "text": "        errorLines: errorFlags.slice(0, COLLAPSED_LINES),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 330,
+          "text": "      if (expanded) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 333,
+          "text": "      if (totalLines <= COLLAPSED_LINES + 1) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 338,
+          "text": "        lines: rawLines.slice(0, COLLAPSED_LINES),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 339,
+          "text": "        hiddenCount: totalLines - COLLAPSED_LINES,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 347,
+          "text": "      if (expanded) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 350,
+          "text": "      if (totalLines <= COLLAPSED_LINES + 1) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 355,
+          "text": "        lines: rawLines.slice(0, COLLAPSED_LINES),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 356,
+          "text": "        hiddenCount: totalLines - COLLAPSED_LINES,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 364,
+          "text": "function clampLine(s: string): string {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 376,
+          "text": "function DiffOrPlainRow({ line, isError }: { line: string; isError?: boolean }) {",
+          "selectedForPurpose": false
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.ts",
+      "sha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+      "selectedLineRanges": [
+        [
+          13,
+          16
+        ],
+        [
+          29,
+          34
+        ],
+        [
+          84,
+          86
+        ],
+        [
+          103,
+          111
+        ],
+        [
+          114,
+          117
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          19
+        ],
+        [
+          24,
+          39
+        ],
+        [
+          70,
+          121
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "/**",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2,
+          "text": " * Built-in Glob file search tool.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 3,
+          "text": " */",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 4,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 5,
+          "text": "import { Glob } from \"glob\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 6,
+          "text": "import { stat } from \"node:fs/promises\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 7,
+          "text": "import * as path from \"node:path\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 8,
+          "text": "import type { ToolDefinition } from \"../../types.js\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 9,
+          "text": "import type { ToolContext } from \"../context.js\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 10,
+          "text": "import { classifyPath } from \"../path-policy.js\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 11,
+          "text": "import type { ToolFailure } from \"./index.js\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 12,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 13,
+          "text": "export const globToolDef: ToolDefinition = {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 14,
+          "text": "  name: \"Glob\",",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 15,
+          "text": "  description:",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 16,
+          "text": "    \"Fast file pattern matching. Returns matching file paths sorted by modification time. \" +",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 17,
+          "text": "    'Supports patterns like \"**/*.ts\" or \"src/**/*.tsx\". ' +",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 18,
+          "text": "    \"Use this to discover project structure before reading specific files.\",",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 19,
+          "text": "  inputSchema: {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 24,
+          "text": "    },",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 25,
+          "text": "    required: [\"pattern\"],",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 26,
+          "text": "  },",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 27,
+          "text": "};",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 28,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 29,
+          "text": "export async function globTool(",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 30,
+          "text": "  args: Record<string, unknown>,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 31,
+          "text": "  ctx?: ToolContext,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 32,
+          "text": "): Promise<string | ToolFailure> {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 33,
+          "text": "  const pattern = args.pattern as string;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 34,
+          "text": "  if (!pattern) return \"Error: pattern is required\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 35,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 36,
+          "text": "  // A4: resolve search root against ctx.cwd. Relative args.path is",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 37,
+          "text": "  // resolved against ctx.cwd; absolute args.path is used as-is.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 38,
+          "text": "  const baseDir = ctx?.cwd ?? process.cwd();",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 39,
+          "text": "  const argPath = args.path as string | undefined;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 70,
+          "text": "    const matches = (await matcher.walk()).filter((filePath) => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 71,
+          "text": "      const resolved = classifyPath(filePath, {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 72,
+          "text": "        workspaceRoot: cwd,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 73,
+          "text": "        operation: \"read\",",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 74,
+          "text": "      }).resolvedPath;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 75,
+          "text": "      const relativeToRoot = path.relative(searchRoot, resolved);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 76,
+          "text": "      return (",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 77,
+          "text": "        relativeToRoot === \"\" ||",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 78,
+          "text": "        (relativeToRoot !== \"..\" &&",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 79,
+          "text": "          !relativeToRoot.startsWith(`..${path.sep}`) &&",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 80,
+          "text": "          !path.isAbsolute(relativeToRoot))",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 81,
+          "text": "      );",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 82,
+          "text": "    });",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 83,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 84,
+          "text": "    if (matches.length === 0) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 85,
+          "text": "      return \"No files matched the pattern.\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 86,
+          "text": "    }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 87,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 88,
+          "text": "    // Get file stats for sorting and display",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 89,
+          "text": "    const withStats = await Promise.all(",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 90,
+          "text": "      matches.slice(0, 200).map(async (filePath) => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 91,
+          "text": "        try {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 92,
+          "text": "          const s = await stat(filePath);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 93,
+          "text": "          return { path: filePath, size: s.size, mtime: s.mtimeMs };",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 94,
+          "text": "        } catch {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 95,
+          "text": "          return { path: filePath, size: 0, mtime: 0 };",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 96,
+          "text": "        }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 97,
+          "text": "      }),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 98,
+          "text": "    );",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 99,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 100,
+          "text": "    // Sort by modification time (newest first)",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 101,
+          "text": "    withStats.sort((a, b) => b.mtime - a.mtime);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 102,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 103,
+          "text": "    // Format with relative paths and sizes",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 104,
+          "text": "    const cwdPrefix = cwd.endsWith(\"/\") ? cwd : cwd + \"/\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 105,
+          "text": "    const lines = withStats.map((f) => {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 106,
+          "text": "      const rel = f.path.startsWith(cwdPrefix) ? f.path.slice(cwdPrefix.length) : f.path;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 107,
+          "text": "      const sizeStr = f.size < 1024 ? `${f.size}B` : `${Math.round(f.size / 1024)}KB`;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 108,
+          "text": "      return `${rel}  (${sizeStr})`;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 109,
+          "text": "    });",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 110,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 111,
+          "text": "    let result = lines.join(\"\\n\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 112,
+          "text": "    if (matches.length > 200) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 113,
+          "text": "      result += `\\n\\n... and ${matches.length - 200} more files (${matches.length} total)`;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 114,
+          "text": "    } else {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 115,
+          "text": "      result = `${matches.length} files matched:\\n${result}`;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 116,
+          "text": "    }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 117,
+          "text": "    return result;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 118,
+          "text": "  } catch (err) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 119,
+          "text": "    return { ok: false, error: `Error in glob: ${(err as Error).message}` };",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 120,
+          "text": "  }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 121,
+          "text": "}",
+          "selectedForPurpose": false
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "selectedLineRanges": [
+        [
+          6,
+          6
+        ],
+        [
+          14,
+          24
+        ],
+        [
+          64,
+          74
+        ],
+        [
+          119,
+          125
+        ],
+        [
+          138,
+          146
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          77
+        ],
+        [
+          108,
+          163
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "/**",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2,
+          "text": " * Output renderers for different formats.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 3,
+          "text": " */",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 4,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 5,
+          "text": "import chalk from \"chalk\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 6,
+          "text": "import type { StreamEvent, TerminalReason } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 7,
+          "text": "import {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 8,
+          "text": "  formatToolArgs,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 9,
+          "text": "  singleLine,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 10,
+          "text": "  formatBytes,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 11,
+          "text": "} from \"@cjhyy/code-shell-core/internal\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 12,
+          "text": "import { truncate } from \"../../ui/truncate.js\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 13,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 14,
+          "text": "export type OutputFormat = \"text\" | \"json\" | \"jsonl\" | \"stream-json\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 15,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 16,
+          "text": "export interface OutputRenderer {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 17,
+          "text": "  onEvent(event: StreamEvent): void;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 18,
+          "text": "  onComplete(text: string, reason: TerminalReason, meta: Record<string, unknown>): void;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 19,
+          "text": "}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 20,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 21,
+          "text": "export class TextRenderer implements OutputRenderer {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 22,
+          "text": "  private activeAgents = new Set<string>();",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 23,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 24,
+          "text": "  onEvent(event: StreamEvent): void {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 25,
+          "text": "    const agentId = (event as any).agentId as string | undefined;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 26,
+          "text": "    const indent = agentId ? \"    \" : \"\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 27,
+          "text": "    const prefix = agentId ? chalk.dim(\"│ \") : \"\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 28,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 29,
+          "text": "    switch (event.type) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 30,
+          "text": "      case \"text_delta\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 31,
+          "text": "        // Only show main agent text in headless mode",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 32,
+          "text": "        if (!agentId) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 33,
+          "text": "          process.stdout.write(event.text);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 34,
+          "text": "        }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 35,
+          "text": "        break;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 36,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 37,
+          "text": "      case \"agent_start\": {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 38,
+          "text": "        const ev = event as any;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 39,
+          "text": "        this.activeAgents.add(ev.agentId);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 40,
+          "text": "        const startType = ev.agentType ? `${chalk.cyan(`[${ev.agentType}]`)} ` : \"\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 41,
+          "text": "        process.stderr.write(`\\n${indent}${chalk.magenta(\"▸\")} ${chalk.bold(\"Agent\")} ${startType}${chalk.dim(ev.description)}\\n`);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 42,
+          "text": "        break;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 43,
+          "text": "      }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 44,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 45,
+          "text": "      case \"agent_end\": {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 46,
+          "text": "        const ev = event as any;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 47,
+          "text": "        this.activeAgents.delete(ev.agentId);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 48,
+          "text": "        const endType = ev.agentType ? `[${ev.agentType}] ` : \"\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 49,
+          "text": "        if (ev.error) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 50,
+          "text": "          process.stderr.write(`${indent}${chalk.red(\"✗\")} ${chalk.dim(`Agent ${endType}${ev.description}: ${ev.error}`)}\\n`);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 51,
+          "text": "        } else {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 52,
+          "text": "          process.stderr.write(`${indent}${chalk.green(\"✓\")} ${chalk.dim(`Agent ${endType}${ev.description}`)}\\n`);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 53,
+          "text": "        }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 54,
+          "text": "        break;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 55,
+          "text": "      }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 56,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 57,
+          "text": "      case \"tool_use_start\": {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 58,
+          "text": "        const tc = event.toolCall;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 59,
+          "text": "        const argsStr = formatToolArgs(tc.toolName, tc.args);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 60,
+          "text": "        process.stderr.write(`${indent}${prefix}${chalk.cyan(\"●\")} ${chalk.bold(tc.toolName)} ${chalk.dim(argsStr)}\\n`);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 61,
+          "text": "        break;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 62,
+          "text": "      }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 63,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 64,
+          "text": "      case \"tool_result\": {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 65,
+          "text": "        const r = event.result;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 66,
+          "text": "        if (r.error) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 67,
+          "text": "          process.stderr.write(`${indent}${prefix}${chalk.red(\"✗\")} ${chalk.bold(r.toolName)} ${chalk.red(truncate(singleLine(r.error), 80))}\\n`);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 68,
+          "text": "        } else {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 69,
+          "text": "          const content = r.result ?? \"\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 70,
+          "text": "          const summary = compactSummary(r.toolName, content);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 71,
+          "text": "          process.stderr.write(`${indent}${prefix}${chalk.green(\"✓\")} ${chalk.bold(r.toolName)} ${chalk.dim(summary)}\\n`);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 72,
+          "text": "        }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 73,
+          "text": "        break;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 74,
+          "text": "      }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 75,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 76,
+          "text": "      case \"error\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 77,
+          "text": "        process.stderr.write(`${indent}${prefix}${chalk.red(\"✗\")} ${event.error}\\n`);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 108,
+          "text": "}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 109,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 110,
+          "text": "export class StreamJsonRenderer implements OutputRenderer {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 111,
+          "text": "  onEvent(event: StreamEvent): void {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 112,
+          "text": "    process.stdout.write(JSON.stringify(event) + \"\\n\");",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 113,
+          "text": "  }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 114,
+          "text": "  onComplete(text: string, reason: TerminalReason, meta: Record<string, unknown>): void {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 115,
+          "text": "    process.stdout.write(JSON.stringify({ type: \"result\", text, reason, ...meta }) + \"\\n\");",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 116,
+          "text": "  }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 117,
+          "text": "}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 118,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 119,
+          "text": "export function createRenderer(format: OutputFormat): OutputRenderer {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 120,
+          "text": "  switch (format) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 121,
+          "text": "    case \"json\": return new JsonRenderer();",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 122,
+          "text": "    case \"jsonl\": return new JsonlRenderer();",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 123,
+          "text": "    case \"stream-json\": return new StreamJsonRenderer();",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 124,
+          "text": "    default: return new TextRenderer();",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 125,
+          "text": "  }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 126,
+          "text": "}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 127,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 128,
+          "text": "// ─── Helpers ─────────────────────────────────────────────────────",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 129,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 130,
+          "text": "function extractViewImagePath(content: string): string | null {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 131,
+          "text": "  const loaded = content.match(/^\\[已加载图片: (.+?) \\(/);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 132,
+          "text": "  if (loaded) return loaded[1] ?? null;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 133,
+          "text": "  const skipped = content.match(/^\\[图片未加载: (.+?) ——/);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 134,
+          "text": "  if (skipped) return skipped[1] ?? null;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 135,
+          "text": "  return null;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 136,
+          "text": "}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 137,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 138,
+          "text": "function compactSummary(toolName: string, content: string): string {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 139,
+          "text": "  const lines = content.split(\"\\n\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 140,
+          "text": "  const total = lines.length;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 141,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 142,
+          "text": "  switch (toolName) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 143,
+          "text": "    case \"Read\":",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 144,
+          "text": "      return `${total} lines, ${formatBytes(content.length)}`;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 145,
+          "text": "    case \"Glob\":",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 146,
+          "text": "      return `${lines.filter((l) => l.trim()).length} files`;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 147,
+          "text": "    case \"Grep\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 148,
+          "text": "      return `${lines.filter((l) => l.trim()).length} matches`;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 149,
+          "text": "    case \"Write\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 150,
+          "text": "    case \"Edit\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 151,
+          "text": "      return truncate(singleLine(content), 60);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 152,
+          "text": "    case \"Bash\": {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 153,
+          "text": "      if (total <= 1) return truncate(singleLine(content), 80);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 154,
+          "text": "      const preview = truncate(lines[0], 60);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 155,
+          "text": "      return `${preview} (+${total - 1} lines)`;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 156,
+          "text": "    }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 157,
+          "text": "    case \"view_image\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 158,
+          "text": "      return extractViewImagePath(content) ?? truncate(content, 80);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 159,
+          "text": "    default:",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 160,
+          "text": "      if (total <= 1) return truncate(content, 80);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 161,
+          "text": "      return `${truncate(lines[0], 60)} (+${total - 1} lines)`;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 162,
+          "text": "  }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 163,
+          "text": "}",
+          "selectedForPurpose": false
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "selectedLineRanges": [
+        [
+          15,
+          15
+        ],
+        [
+          232,
+          235
+        ],
+        [
+          261,
+          272
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          15,
+          15
+        ],
+        [
+          25,
+          25
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          37,
+          37
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          59,
+          59
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          83,
+          83
+        ],
+        [
+          103,
+          103
+        ],
+        [
+          114,
+          114
+        ],
+        [
+          118,
+          118
+        ],
+        [
+          133,
+          133
+        ],
+        [
+          140,
+          140
+        ],
+        [
+          168,
+          168
+        ],
+        [
+          189,
+          189
+        ],
+        [
+          204,
+          204
+        ],
+        [
+          232,
+          274
+        ]
+      ],
+      "lines": [
+        {
+          "line": 15,
+          "text": "import { ToolCallResult, ToolCallRunning, ToolCallStart } from \"./components/ToolCall.js\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 25,
+          "text": "export function shouldTraceStreamEvent(type: StreamEvent[\"type\"]): boolean {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 29,
+          "text": "export function streamDiagnosticsEnabled(): boolean {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 33,
+          "text": "export function shouldAppendThinkingDeltaToMainFeed(agentId: string | undefined): boolean {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 37,
+          "text": "export function shouldDrainBackgroundNotifications(opts: {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 52,
+          "text": "export function canExecuteCommandWhileRunning(input: string): boolean {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 59,
+          "text": "export function goalEventMatchesActive(",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 70,
+          "text": "export function shouldApplyGoalUpdateEvent(",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 83,
+          "text": "export function goalUpdateResponseIsFresh(",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 103,
+          "text": "export function shouldSuppressCancelledMainStreamEvent(",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 114,
+          "text": "export function formatCommandError(error: unknown): string {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 118,
+          "text": "export function dispatchSlashCommandSafely(",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 133,
+          "text": "export function findLastIndex<T>(arr: T[], predicate: (item: T) => boolean): number {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 140,
+          "text": "export function friendlyReason(reason: string): string {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 168,
+          "text": "export function friendlyError(msg: string): string {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 189,
+          "text": "export function ModeIndicator({ mode }: { mode: \"plan\" | \"normal\" | \"bypass\" }) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 204,
+          "text": "export function classifyError(error: string): import(\"./store.js\").ErrorKind {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 232,
+          "text": "export function renderEntry(entry: ChatEntry, key: string, expanded = false) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 233,
+          "text": "  const nested = !!(entry as { agentId?: string }).agentId;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 234,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 235,
+          "text": "  switch (entry.type) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 236,
+          "text": "    case \"user\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 237,
+          "text": "      return <UserMessage key={key} text={entry.text} />;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 238,
+          "text": "    case \"assistant_text\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 239,
+          "text": "      return nested ? (",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 240,
+          "text": "        <Box key={key} marginLeft={1}>",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 241,
+          "text": "          <Text dim>│ ⎿ </Text>",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 242,
+          "text": "          <MessageContent text={entry.text} streaming={entry.streaming} nested />",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 243,
+          "text": "        </Box>",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 244,
+          "text": "      ) : (",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 245,
+          "text": "        <MessageContent key={key} text={entry.text} streaming={entry.streaming} />",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 246,
+          "text": "      );",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 247,
+          "text": "    case \"thinking\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 248,
+          "text": "      if (!nested) return null;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 249,
+          "text": "      return (",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 250,
+          "text": "        <Box key={key} marginLeft={1}>",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 251,
+          "text": "          <Text dim>│ ⎿ </Text>",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 252,
+          "text": "          <ThinkingMessage content={entry.content} collapsed={!expanded} nested />",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 253,
+          "text": "        </Box>",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 254,
+          "text": "      );",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 255,
+          "text": "    case \"tool_start\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 256,
+          "text": "      return (",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 257,
+          "text": "        <ToolCallStart key={key} toolName={entry.toolName} args={entry.args} nested={nested} />",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 258,
+          "text": "      );",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 259,
+          "text": "    case \"tool_running\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 260,
+          "text": "      return <ToolCallRunning key={key} toolName={entry.toolName} nested={nested} />;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 261,
+          "text": "    case \"tool_result\":",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 262,
+          "text": "      return (",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 263,
+          "text": "        <ToolCallResult",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 264,
+          "text": "          key={key}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 265,
+          "text": "          toolName={entry.toolName}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 266,
+          "text": "          result={entry.result}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 267,
+          "text": "          error={entry.error}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 268,
+          "text": "          nested={nested}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 269,
+          "text": "          expanded={expanded}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 270,
+          "text": "          compact={entry.compact}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 271,
+          "text": "        />",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 272,
+          "text": "      );",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 273,
+          "text": "    case \"agent_start\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 274,
+          "text": "      return (",
+          "selectedForPurpose": false
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "sha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "selectedLineRanges": [
+        [
+          26,
+          26
+        ],
+        [
+          232,
+          236
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          226,
+          237
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "import { join } from \"node:path\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2,
+          "text": "import { sessionsRoot } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 3,
+          "text": "/**",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 4,
+          "text": " * `run` command — headless single-prompt execution.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 5,
+          "text": " *",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 6,
+          "text": " * Uses the same Engine → AgentServer → AgentClient pipeline,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 7,
+          "text": " * but with a headless renderer instead of Ink UI.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 8,
+          "text": " */",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 9,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 10,
+          "text": "import { randomUUID } from \"node:crypto\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 11,
+          "text": "import { writeFileSync } from \"node:fs\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 12,
+          "text": "import { Engine } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 13,
+          "text": "import { mergePluginMcpServers } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 14,
+          "text": "import { EngineRuntime } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 15,
+          "text": "import { ChatSessionManager } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 16,
+          "text": "import { AgentServer } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 17,
+          "text": "import { AgentClient } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 18,
+          "text": "import { createInProcessTransport } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 19,
+          "text": "import { MCPManager } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 20,
+          "text": "import { SettingsManager } from \"@cjhyy/code-shell-core\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 26,
+          "text": "import { createRenderer, type OutputFormat } from \"../output/renderer.js\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 226,
+          "text": "  const server = new AgentServer({ chatManager, transport: serverTransport });",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 227,
+          "text": "  const client = new AgentClient({ transport: clientTransport });",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 228,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 229,
+          "text": "  // Unique sessionId per run invocation; use --resume if provided.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 230,
+          "text": "  const runSessionId = options.resume ?? `run-${randomUUID()}`;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 231,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 232,
+          "text": "  const outputFormat = options.output ?? (settings.output.format as OutputFormat) ?? \"text\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 233,
+          "text": "  const renderer = createRenderer(outputFormat);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 234,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 235,
+          "text": "  // Wire renderer to stream events from client",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 236,
+          "text": "  client.onStreamEvent((envelope) => renderer.onEvent(envelope.event));",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 237,
+          "text": "",
+          "selectedForPurpose": false
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "selectedLineRanges": [
+        [
+          883,
+          905
+        ],
+        [
+          2166,
+          2177
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          25,
+          27
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          108,
+          108
+        ],
+        [
+          427,
+          427
+        ],
+        [
+          430,
+          430
+        ],
+        [
+          883,
+          908
+        ],
+        [
+          1933,
+          1933
+        ],
+        [
+          2158,
+          2178
+        ]
+      ],
+      "lines": [
+        {
+          "line": 25,
+          "text": "  VirtualMessageList,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 26,
+          "text": "  type VirtualMessageListHandle,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 27,
+          "text": "} from \"./components/VirtualMessageList.js\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 94,
+          "text": "  renderEntry,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 108,
+          "text": "  renderEntry,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 427,
+          "text": "  // Imperative handle on VirtualMessageList so we can scroll the list to",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 430,
+          "text": "  const listRef = useRef<VirtualMessageListHandle | null>(null);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 883,
+          "text": "        case \"tool_result\": {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 884,
+          "text": "          // See note in tool_use_start: hide sub-agent tool I/O.",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 885,
+          "text": "          if (agentId !== undefined) break;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 886,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 887,
+          "text": "          const r = event.result;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 888,
+          "text": "",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 889,
+          "text": "          chatStore.update((prev) => {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 890,
+          "text": "            const filtered = prev.filter(",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 891,
+          "text": "              (e) => !(e.type === \"tool_running\" && e.agentId === agentId),",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 892,
+          "text": "            );",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 893,
+          "text": "            return [",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 894,
+          "text": "              ...filtered,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 895,
+          "text": "              entry({",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 896,
+          "text": "                type: \"tool_result\",",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 897,
+          "text": "                toolName: r.toolName,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 898,
+          "text": "                result: r.result,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 899,
+          "text": "                error: r.error,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 900,
+          "text": "                agentId,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 901,
+          "text": "              }),",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 902,
+          "text": "            ];",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 903,
+          "text": "          });",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 904,
+          "text": "          break;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 905,
+          "text": "        }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 906,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 907,
+          "text": "        case \"agent_start\": {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 908,
+          "text": "          const ev = event as Extract<StreamEvent, { type: \"agent_start\" }>;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 1933,
+          "text": "                case \"tool_result\":",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2158,
+          "text": "          {!initialSessionId && <WelcomeTips cwd={cwd} />}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2159,
+          "text": "        </>",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2160,
+          "text": "      )}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2161,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2162,
+          "text": "      {/* Chat log — virtualized for large conversations.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2163,
+          "text": "          Cursor outline + isStreaming/expanded gating is handled inside",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2164,
+          "text": "          VirtualMessageList; renderEntry stays cursor-agnostic so its",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2165,
+          "text": "          closure identity doesn't matter for MessageRow memo. */}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 2166,
+          "text": "      <VirtualMessageList",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2167,
+          "text": "        ref={listRef}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2168,
+          "text": "        entries={renderedEntries}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2169,
+          "text": "        renderEntry={renderEntry}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2170,
+          "text": "        columns={process.stdout.columns ?? 80}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2171,
+          "text": "        streamingEntryId={streamingEntryId}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2172,
+          "text": "        selectedEntryId={selectedEntryId}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2173,
+          "text": "        expanded={isTranscript}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2174,
+          "text": "        dividerIndex={dividerIndex}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2175,
+          "text": "        unseenCount={unseenCount}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2176,
+          "text": "        onScrollAway={onScrollAway}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2177,
+          "text": "      />",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 2178,
+          "text": "",
+          "selectedForPurpose": false
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "selectedLineRanges": [
+        [
+          34,
+          34
+        ],
+        [
+          41,
+          42
+        ],
+        [
+          86,
+          86
+        ],
+        [
+          166,
+          167
+        ],
+        [
+          235,
+          236
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          34,
+          34
+        ],
+        [
+          41,
+          42
+        ],
+        [
+          82,
+          88
+        ],
+        [
+          160,
+          168
+        ],
+        [
+          230,
+          237
+        ]
+      ],
+      "lines": [
+        {
+          "line": 34,
+          "text": "  renderEntry: (entry: ChatEntry, key: string, expanded: boolean) => ReactNode;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 41,
+          "text": "  /** True when long entries should render expanded (transcript mode). */",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 42,
+          "text": "  expanded?: boolean;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 82,
+          "text": "      renderEntry,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 83,
+          "text": "      columns,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 84,
+          "text": "      streamingEntryId = null,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 85,
+          "text": "      selectedEntryId = null,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 86,
+          "text": "      expanded = false,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 87,
+          "text": "      dividerIndex,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 88,
+          "text": "      unseenCount = 0,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 160,
+          "text": "              <CursorOutline active={isSelected}>",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 161,
+          "text": "                <MessageRow",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 162,
+          "text": "                  entry={e}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 163,
+          "text": "                  columns={columns}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 164,
+          "text": "                  isStreaming={streamingEntryId === e.id}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 165,
+          "text": "                  isSelected={isSelected}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 166,
+          "text": "                  expanded={expanded}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 167,
+          "text": "                  render={(en) => renderEntry(en, en.id, expanded)}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 168,
+          "text": "                />",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 230,
+          "text": "                  <MessageRow",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 231,
+          "text": "                    entry={e}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 232,
+          "text": "                    columns={columns}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 233,
+          "text": "                    isStreaming={streamingEntryId === e.id}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 234,
+          "text": "                    isSelected={isSelected}",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 235,
+          "text": "                    expanded={expanded}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 236,
+          "text": "                    render={(en) => renderEntry(en, en.id, expanded)}",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 237,
+          "text": "                  />",
+          "selectedForPurpose": false
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "sha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "selectedLineRanges": [
+        [
+          26,
+          26
+        ],
+        [
+          196,
+          197
+        ],
+        [
+          206,
+          209
+        ],
+        [
+          403,
+          404
+        ],
+        [
+          413,
+          413
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          26,
+          26
+        ],
+        [
+          145,
+          145
+        ],
+        [
+          196,
+          198
+        ],
+        [
+          200,
+          201
+        ],
+        [
+          206,
+          210
+        ],
+        [
+          224,
+          225
+        ],
+        [
+          398,
+          415
+        ],
+        [
+          1142,
+          1142
+        ]
+      ],
+      "lines": [
+        {
+          "line": 26,
+          "text": "import { globToolDef, globTool } from \"./glob.js\";",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 145,
+          "text": " * Write, Bash, Edit, Glob, Grep, etc. — may simply ignore the second arg.",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 196,
+          "text": "const FAILURE_TEXT =",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 197,
+          "text": "  /^(?:error\\b|failed\\b|failure\\b|skill\\b.*(?:not found\\b|disabled\\b|not available\\b|allowlist\\b|denied\\b)|(?:[a-z][\\w-]*\\s+){1,3}(?:error\\b|failed\\b|failure\\b|aborted\\b|timed out\\b))/i;",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 198,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 200,
+          "text": "  if (typeof result.error === \"string\" && result.error) return result.error;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 201,
+          "text": "  if (typeof result.result === \"string\" && result.result) return result.result;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 206,
+          "text": "export function toToolExecutionResult(value: unknown): ToolExecutionResult {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 207,
+          "text": "  if (typeof value === \"string\") {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 208,
+          "text": "    return FAILURE_TEXT.test(value) ? { ok: false, error: value } : { ok: true, result: value };",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 209,
+          "text": "  }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 210,
+          "text": "  if (!value || typeof value !== \"object\") {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 224,
+          "text": "  const text = typeof result.result === \"string\" ? result.result : undefined;",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 225,
+          "text": "  if (text && FAILURE_TEXT.test(text)) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 398,
+          "text": "    execute: editTool,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 399,
+          "text": "    exposure: expose(HARNESS_TAGS),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 400,
+          "text": "  },",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 401,
+          "text": "  {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 402,
+          "text": "    definition: {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 403,
+          "text": "      ...globToolDef,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 404,
+          "text": "      source: \"builtin\",",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 405,
+          "text": "      permissionDefault: \"allow\",",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 406,
+          "text": "      isReadOnly: true,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 407,
+          "text": "      isConcurrencySafe: true,",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 408,
+          "text": "      pathPolicy: [",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 409,
+          "text": "        { kind: \"arg\", arg: \"path\", operation: \"read\", defaultToCwd: true },",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 410,
+          "text": "        { kind: \"arg\", arg: \"pattern\", operation: \"read\" },",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 411,
+          "text": "      ],",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 412,
+          "text": "    },",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 413,
+          "text": "    execute: globTool,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 414,
+          "text": "    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(globToolDef.name) }),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 415,
+          "text": "  },",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 1142,
+          "text": "    execute: async (args, ctx) => toToolExecutionResult(await execute(args, ctx)),",
+          "selectedForPurpose": false
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/registry.ts",
+      "sha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "selectedLineRanges": [
+        [
+          17,
+          17
+        ],
+        [
+          243,
+          244
+        ],
+        [
+          251,
+          267
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          17,
+          17
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          238,
+          267
+        ]
+      ],
+      "lines": [
+        {
+          "line": 17,
+          "text": "  toToolExecutionResult,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 94,
+          "text": "        toToolExecutionResult(await executor(args, ctx)),",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 238,
+          "text": "      parentSignal?.removeEventListener(\"abort\", onParentAbort);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 239,
+          "text": "      if (onChildAbort) childController.signal.removeEventListener(\"abort\", onChildAbort);",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 240,
+          "text": "    };",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 241,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 242,
+          "text": "    try {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 243,
+          "text": "      const rawResult = await Promise.race([executor(argsWithSignal, ctx), aborted]);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 244,
+          "text": "      const result = toToolExecutionResult(rawResult);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 245,
+          "text": "      if (childController.signal.aborted) {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 246,
+          "text": "        throw childController.signal.reason instanceof Error",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 247,
+          "text": "          ? childController.signal.reason",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 248,
+          "text": "          : Object.assign(new Error(\"Tool aborted\"), { name: \"AbortError\" });",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 249,
+          "text": "      }",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 250,
+          "text": "      cleanup();",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 251,
+          "text": "      if (!result.ok) {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 252,
+          "text": "        return {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 253,
+          "text": "          id,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 254,
+          "text": "          toolName: name,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 255,
+          "text": "          error: result.error,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 256,
+          "text": "          isError: true,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 257,
+          "text": "          sandbox: result.sandbox,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 258,
+          "text": "        };",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 259,
+          "text": "      }",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 260,
+          "text": "      return {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 261,
+          "text": "        id,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 262,
+          "text": "        toolName: name,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 263,
+          "text": "        result: result.result ?? (result.contentBlocks ? \"(image)\" : \"\"),",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 264,
+          "text": "        contentBlocks: result.contentBlocks,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 265,
+          "text": "        sandbox: result.sandbox,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 266,
+          "text": "        sensitive: result.sensitive,",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 267,
+          "text": "        displayResult: result.displayResult,",
+          "selectedForPurpose": true
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.test.ts",
+      "sha256": "23dacdfa4fa413e6230a9e3eae705440d06c1014fb523933daf9fef65ea41bb4",
+      "selectedLineRanges": [
+        [
+          24,
+          34
+        ],
+        [
+          88,
+          91
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          19,
+          36
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          80,
+          80
+        ],
+        [
+          88,
+          93
+        ],
+        [
+          104,
+          104
+        ],
+        [
+          111,
+          111
+        ]
+      ],
+      "lines": [
+        {
+          "line": 19,
+          "text": "describe(\"globTool\", () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 20,
+          "text": "  it(\"requires a pattern\", async () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 21,
+          "text": "    expect(await globTool({}, ctx())).toContain(\"pattern is required\");",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 22,
+          "text": "  });",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 23,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 24,
+          "text": "  it(\"matches files by pattern and lists them with sizes\", async () => {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 25,
+          "text": "    writeFileSync(join(dir, \"a.ts\"), \"x\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 26,
+          "text": "    writeFileSync(join(dir, \"b.ts\"), \"yy\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 27,
+          "text": "    writeFileSync(join(dir, \"c.js\"), \"zzz\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 28,
+          "text": "    const out = await globTool({ pattern: \"*.ts\" }, ctx());",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 29,
+          "text": "    expect(out).toContain(\"a.ts\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 30,
+          "text": "    expect(out).toContain(\"b.ts\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 31,
+          "text": "    expect(out).not.toContain(\"c.js\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 32,
+          "text": "    expect(out).toContain(\"2 files matched\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 33,
+          "text": "    expect(out).toMatch(/\\(\\d+B\\)/);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 34,
+          "text": "  });",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 35,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 36,
+          "text": "  it(\"rejects an absolute pattern instead of returning files outside the workspace\", async () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 42,
+          "text": "  it(\"rejects a pattern that escapes above the workspace\", async () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 52,
+          "text": "  it(\"does not return files reached through a symlink outside the search root\", async () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 65,
+          "text": "  it(\"keeps workspace-relative recursive patterns working\", async () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 80,
+          "text": "  it(\"keeps a workspace subdirectory path working with a relative pattern\", async () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 88,
+          "text": "  it(\"returns a clear message when nothing matches\", async () => {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 89,
+          "text": "    writeFileSync(join(dir, \"a.ts\"), \"x\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 90,
+          "text": "    expect(await globTool({ pattern: \"*.py\" }, ctx())).toBe(\"No files matched the pattern.\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 91,
+          "text": "  });",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 92,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 93,
+          "text": "  it(\"sorts by modification time, newest first\", async () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 104,
+          "text": "  it(\"recurses with ** and resolves a relative path arg against cwd\", async () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 111,
+          "text": "  it(\"ignores node_modules\", async () => {",
+          "selectedForPurpose": false
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.test.ts",
+      "sha256": "ef51ee33912b0d347ea7fdead6731bc417a9205061086c1bf1d98cd86665a1e4",
+      "selectedLineRanges": [
+        [
+          86,
+          93
+        ],
+        [
+          95,
+          110
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          2,
+          2
+        ],
+        [
+          35,
+          37
+        ],
+        [
+          48,
+          49
+        ],
+        [
+          63,
+          65
+        ],
+        [
+          86,
+          111
+        ]
+      ],
+      "lines": [
+        {
+          "line": 2,
+          "text": "import { createRenderer } from \"./renderer.js\";",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 35,
+          "text": "describe(\"output renderers — schema contracts\", () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 36,
+          "text": "  test(\"json emits exactly one final aggregated object\", () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 37,
+          "text": "    const r = createRenderer(\"json\");",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 48,
+          "text": "  test(\"jsonl emits one line per event plus a final result line\", () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 49,
+          "text": "    const r = createRenderer(\"jsonl\");",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 63,
+          "text": "  test(\"stream-json is a documented alias of jsonl (same wire shape)\", () => {",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 64,
+          "text": "    const jsonl = createRenderer(\"jsonl\");",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 65,
+          "text": "    const stream = createRenderer(\"stream-json\");",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 86,
+          "text": "  test(\"unknown format falls back to the text renderer\", () => {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 87,
+          "text": "    // text writes a trailing newline on completed; just assert it doesn't throw",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 88,
+          "text": "    // and isn't one of the JSON renderers' single-object shape.",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 89,
+          "text": "    const r = createRenderer(\"text\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 90,
+          "text": "    r.onComplete(\"hi\", reason, {});",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 91,
+          "text": "    restore();",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 92,
+          "text": "    expect(chunks.join(\"\")).not.toContain('\"reason\"');",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 93,
+          "text": "  });",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 94,
+          "text": "",
+          "selectedForPurpose": false
+        },
+        {
+          "line": 95,
+          "text": "  test(\"text renderer shows only the image path for view_image results\", () => {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 96,
+          "text": "    const r = createRenderer(\"text\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 97,
+          "text": "    r.onEvent({",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 98,
+          "text": "      type: \"tool_result\",",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 99,
+          "text": "      result: {",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 100,
+          "text": "        id: \"call_1\",",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 101,
+          "text": "        toolName: \"view_image\",",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 102,
+          "text": "        result: \"[已加载图片: /tmp/codeshell-shot.png (image/png, 12 KB)]\",",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 103,
+          "text": "      },",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 104,
+          "text": "    } as StreamEvent);",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 105,
+          "text": "    restore();",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 106,
+          "text": "    expect(stderrChunks.join(\"\")).toContain(\"/tmp/codeshell-shot.png\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 107,
+          "text": "    expect(stderrChunks.join(\"\")).not.toContain(\"已加载图片\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 108,
+          "text": "    expect(stderrChunks.join(\"\")).not.toContain(\"image/png\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 109,
+          "text": "    expect(stderrChunks.join(\"\")).not.toContain(\"12 KB\");",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 110,
+          "text": "  });",
+          "selectedForPurpose": true
+        },
+        {
+          "line": 111,
+          "text": "});",
+          "selectedForPurpose": false
+        }
+      ]
+    }
+  ]
+}

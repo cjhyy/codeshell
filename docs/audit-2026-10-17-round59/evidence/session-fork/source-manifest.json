@@ -1,0 +1,670 @@
+{
+  "schema": "fork-data-targeted-static-review/v1",
+  "atUTC": "2026-10-17T19:46:50.348318+00:00",
+  "rootReportedBaseline": "c39eb6f987b7bd5d740fee6d8ab5b46718f9c9af",
+  "gitCertified": false,
+  "files": [
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "bytes": 109429,
+      "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+      "lineCount": 2841,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          302,
+          325
+        ],
+        [
+          341,
+          366
+        ],
+        [
+          2137,
+          2233
+        ],
+        [
+          2235,
+          2333
+        ],
+        [
+          2335,
+          2351
+        ],
+        [
+          2477,
+          2544
+        ],
+        [
+          2546,
+          2566
+        ]
+      ],
+      "selectedLineCount": 352,
+      "bodyDisplayedLineRanges": [
+        [
+          302,
+          366
+        ],
+        [
+          2110,
+          2405
+        ],
+        [
+          2477,
+          2576
+        ]
+      ],
+      "bodyDisplayedLineCount": 461,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          302,
+          366
+        ],
+        [
+          2110,
+          2405
+        ],
+        [
+          2477,
+          2576
+        ]
+      ],
+      "displayedLineCount": 461,
+      "initialSha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+      "initialPinUTC": "2026-10-17T19:39:49.915702+00:00",
+      "initialPinTiming": "before own source body/nav; exact inventory confirmed",
+      "originalPinRow": {
+        "path": "packages/core/src/session/session-manager.ts",
+        "bytes": 109429,
+        "lineCount": 2841,
+        "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+        "pinnedAtUTC": "2026-10-17T19:39:49.915702+00:00",
+        "timing": "before own source body/nav; exact inventory confirmed"
+      },
+      "scope": "Concrete full/summary/completed-side source window, lineage/state/transcript data and copy policy. clone/remap/freeze/publication ordering reviewed; FS/native staging/locks/custody and complete tool validator not certified. Native publish body and list/state unrelated blocks are displayed boundaries only."
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "lineCount": 1377,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          368,
+          401
+        ],
+        [
+          883,
+          891
+        ],
+        [
+          1154,
+          1182
+        ]
+      ],
+      "selectedLineCount": 72,
+      "bodyDisplayedLineRanges": [
+        [
+          368,
+          406
+        ],
+        [
+          875,
+          901
+        ],
+        [
+          1154,
+          1237
+        ]
+      ],
+      "bodyDisplayedLineCount": 150,
+      "additionalNavigationSnippetLines": [
+        3,
+        234,
+        251,
+        582,
+        653,
+        695,
+        1122,
+        1135
+      ],
+      "displayedLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          234,
+          234
+        ],
+        [
+          251,
+          251
+        ],
+        [
+          368,
+          406
+        ],
+        [
+          582,
+          582
+        ],
+        [
+          653,
+          653
+        ],
+        [
+          695,
+          695
+        ],
+        [
+          875,
+          901
+        ],
+        [
+          1122,
+          1122
+        ],
+        [
+          1135,
+          1135
+        ],
+        [
+          1154,
+          1237
+        ]
+      ],
+      "displayedLineCount": 158,
+      "initialSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "initialPinUTC": "2026-10-17T19:39:49.916261+00:00",
+      "initialPinTiming": "before own source body/nav; exact inventory confirmed",
+      "originalPinRow": {
+        "path": "packages/core/src/session/transcript.ts",
+        "bytes": 51303,
+        "lineCount": 1377,
+        "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+        "pinnedAtUTC": "2026-10-17T19:39:49.916261+00:00",
+        "timing": "before own source body/nav; exact inventory confirmed"
+      },
+      "scope": "Inclusive range clone and pair-validation call, context_transfer background projection, copied-prefix note/checkpoint reference remap. Loader/repair/native fallback source only displayed boundary, no whole transcript correctness claim."
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          1281,
+          1308
+        ],
+        [
+          1319,
+          1324
+        ],
+        [
+          1325,
+          1339
+        ],
+        [
+          1341,
+          1346
+        ],
+        [
+          1383,
+          1409
+        ],
+        [
+          1417,
+          1424
+        ]
+      ],
+      "selectedLineCount": 90,
+      "bodyDisplayedLineRanges": [
+        [
+          1274,
+          1442
+        ]
+      ],
+      "bodyDisplayedLineCount": 169,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1274,
+          1442
+        ]
+      ],
+      "displayedLineCount": 169,
+      "initialSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "initialPinUTC": "2026-10-17T19:41:07.786052+00:00",
+      "initialPinTiming": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report",
+      "originalPinRow": {
+        "path": "packages/core/src/engine/engine.ts",
+        "bytes": 210666,
+        "lineCount": 5082,
+        "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+        "pinnedAtUTC": "2026-10-17T19:41:07.786052+00:00",
+        "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+      },
+      "scope": "Actual SessionManager delegations; selected normal textual package/portable serializer, aux request with signal and nonempty return before publication. Large-fragment token fitting, model/cost/config restore details displayed but not globally validated; no provider/model execution."
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "lineCount": 4949,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          1396,
+          1417
+        ],
+        [
+          1418,
+          1497
+        ],
+        [
+          1512,
+          1557
+        ],
+        [
+          1559,
+          1649
+        ]
+      ],
+      "selectedLineCount": 239,
+      "bodyDisplayedLineRanges": [
+        [
+          1390,
+          1650
+        ]
+      ],
+      "bodyDisplayedLineCount": 261,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1390,
+          1650
+        ]
+      ],
+      "displayedLineCount": 261,
+      "initialSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "initialPinUTC": "2026-10-17T19:41:07.788076+00:00",
+      "initialPinTiming": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report",
+      "originalPinRow": {
+        "path": "packages/core/src/protocol/server.ts",
+        "bytes": 195050,
+        "lineCount": 4949,
+        "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+        "pinnedAtUTC": "2026-10-17T19:41:07.788076+00:00",
+        "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+      },
+      "scope": "Actual fork RPC branch full/summary/side data inputs and response; summary selection before call before publication, busy check and exclusive call visible. Not certification of runExclusive implementation, protocol authorization, locks or session custody."
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "bytes": 43905,
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "lineCount": 1184,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          891,
+          944
+        ],
+        [
+          946,
+          968
+        ]
+      ],
+      "selectedLineCount": 77,
+      "bodyDisplayedLineRanges": [
+        [
+          885,
+          968
+        ]
+      ],
+      "bodyDisplayedLineCount": 84,
+      "additionalNavigationSnippetLines": [
+        998
+      ],
+      "displayedLineRanges": [
+        [
+          885,
+          968
+        ],
+        [
+          998,
+          998
+        ]
+      ],
+      "displayedLineCount": 85,
+      "initialSha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "initialPinUTC": "2026-10-17T19:43:40.954144+00:00",
+      "initialPinTiming": "before body/nav; exact originalCTX2 hyperlink and currentfilename inventory",
+      "originalPinRow": {
+        "path": "packages/core/src/context/compaction.ts",
+        "bytes": 43905,
+        "lineCount": 1184,
+        "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+        "pinnedAtUTC": "2026-10-17T19:43:40.954144+00:00",
+        "timing": "before body/nav; exact originalCTX2 hyperlink and currentfilename inventory",
+        "scopeIntent": "Only actual portable context-package nested-text serializer called by Engine; old compaction/snipping mechanism not re-audited."
+      },
+      "scope": "Only actual portable context-package recursive serializer retaining nested text/results, explicit image metadata; differs from old ordinary compaction CTX2. No reread of old snip/ordinary compaction mechanism or global context full claim."
+    },
+    {
+      "path": "packages/core/src/session/session-manager.context-transfer.test.ts",
+      "bytes": 2097,
+      "sha256": "09b7b700527f9e26b6c126ab296895852f3f5743493ea6bc12ee865302eefc6e",
+      "lineCount": 55,
+      "kind": "test-declaration",
+      "coverage": "selected-existing-test-declarations; execution0",
+      "selectedLineRanges": [
+        [
+          15,
+          54
+        ]
+      ],
+      "selectedLineCount": 40,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "bodyDisplayedLineCount": 55,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "displayedLineCount": 55,
+      "initialSha256": "09b7b700527f9e26b6c126ab296895852f3f5743493ea6bc12ee865302eefc6e",
+      "initialPinUTC": "2026-10-17T19:41:07.788643+00:00",
+      "initialPinTiming": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report",
+      "originalPinRow": {
+        "path": "packages/core/src/session/session-manager.context-transfer.test.ts",
+        "bytes": 2097,
+        "lineCount": 55,
+        "sha256": "09b7b700527f9e26b6c126ab296895852f3f5743493ea6bc12ee865302eefc6e",
+        "pinnedAtUTC": "2026-10-17T19:41:07.788643+00:00",
+        "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+      },
+      "scope": "Existing summary-only target/background declarations. No test or FS fixture executed or historical pass borrowed."
+    },
+    {
+      "path": "packages/core/src/session/session-manager.side-fork.test.ts",
+      "bytes": 9272,
+      "sha256": "1ac1df286552cd98c1ca228a5c655372d5b0547810730dffa4dcb27fe5c9d650",
+      "lineCount": 214,
+      "kind": "test-declaration",
+      "coverage": "selected-existing-test-declarations; execution0",
+      "selectedLineRanges": [
+        [
+          19,
+          79
+        ],
+        [
+          194,
+          213
+        ]
+      ],
+      "selectedLineCount": 81,
+      "bodyDisplayedLineRanges": [
+        [
+          19,
+          80
+        ],
+        [
+          194,
+          214
+        ]
+      ],
+      "bodyDisplayedLineCount": 83,
+      "additionalNavigationSnippetLines": [
+        81,
+        111,
+        126,
+        144,
+        179
+      ],
+      "displayedLineRanges": [
+        [
+          19,
+          81
+        ],
+        [
+          111,
+          111
+        ],
+        [
+          126,
+          126
+        ],
+        [
+          144,
+          144
+        ],
+        [
+          179,
+          179
+        ],
+        [
+          194,
+          214
+        ]
+      ],
+      "displayedLineCount": 88,
+      "initialSha256": "1ac1df286552cd98c1ca228a5c655372d5b0547810730dffa4dcb27fe5c9d650",
+      "initialPinUTC": "2026-10-17T19:41:07.789367+00:00",
+      "initialPinTiming": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report",
+      "originalPinRow": {
+        "path": "packages/core/src/session/session-manager.side-fork.test.ts",
+        "bytes": 9272,
+        "lineCount": 214,
+        "sha256": "1ac1df286552cd98c1ca228a5c655372d5b0547810730dffa4dcb27fe5c9d650",
+        "pinnedAtUTC": "2026-10-17T19:41:07.789367+00:00",
+        "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+      },
+      "scope": "Existing ordinary completed snapshot/clone independence/reset goal declarations. Source fixture writes and cleanup not executed. Other test titles navigation only."
+    },
+    {
+      "path": "packages/core/src/protocol/server.fork.test.ts",
+      "bytes": 14733,
+      "sha256": "b7292a9a9357feb2989d9ee35ab0b97f1bdaa3747531a617519689035ca4b7dc",
+      "lineCount": 460,
+      "kind": "navigation-only",
+      "coverage": "navigation-only;semantic0;body0",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        95,
+        146,
+        184,
+        245,
+        275,
+        303,
+        330,
+        400,
+        427
+      ],
+      "displayedLineRanges": [
+        [
+          95,
+          95
+        ],
+        [
+          146,
+          146
+        ],
+        [
+          184,
+          184
+        ],
+        [
+          245,
+          245
+        ],
+        [
+          275,
+          275
+        ],
+        [
+          303,
+          303
+        ],
+        [
+          330,
+          330
+        ],
+        [
+          400,
+          400
+        ],
+        [
+          427,
+          427
+        ]
+      ],
+      "displayedLineCount": 9,
+      "initialSha256": "b7292a9a9357feb2989d9ee35ab0b97f1bdaa3747531a617519689035ca4b7dc",
+      "initialPinUTC": "2026-10-17T19:41:07.789975+00:00",
+      "initialPinTiming": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report",
+      "originalPinRow": {
+        "path": "packages/core/src/protocol/server.fork.test.ts",
+        "bytes": 14733,
+        "lineCount": 460,
+        "sha256": "b7292a9a9357feb2989d9ee35ab0b97f1bdaa3747531a617519689035ca4b7dc",
+        "pinnedAtUTC": "2026-10-17T19:41:07.789975+00:00",
+        "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+      },
+      "scope": "Test title inventory only;0body/0semantic, not claimed as tests read or run."
+    },
+    {
+      "path": "packages/core/src/engine/engine.session-fork-history.test.ts",
+      "bytes": 10028,
+      "sha256": "7bde9395bb6d35c2dbab98386483b043a4b3a1787195096a0f1c988a49b996d6",
+      "lineCount": 245,
+      "kind": "navigation-only",
+      "coverage": "navigation-only;semantic0;body0",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [
+        38,
+        107,
+        162,
+        205
+      ],
+      "displayedLineRanges": [
+        [
+          38,
+          38
+        ],
+        [
+          107,
+          107
+        ],
+        [
+          162,
+          162
+        ],
+        [
+          205,
+          205
+        ]
+      ],
+      "displayedLineCount": 4,
+      "initialSha256": "7bde9395bb6d35c2dbab98386483b043a4b3a1787195096a0f1c988a49b996d6",
+      "initialPinUTC": "2026-10-17T19:41:07.790474+00:00",
+      "initialPinTiming": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report",
+      "originalPinRow": {
+        "path": "packages/core/src/engine/engine.session-fork-history.test.ts",
+        "bytes": 10028,
+        "lineCount": 245,
+        "sha256": "7bde9395bb6d35c2dbab98386483b043a4b3a1787195096a0f1c988a49b996d6",
+        "pinnedAtUTC": "2026-10-17T19:41:07.790474+00:00",
+        "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+      },
+      "scope": "Test title inventory only;0body/0semantic. No fixture import, no Engine run."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "kind": "instruction-reuse",
+      "coverage": "hash-only-this-packet; sameSHA prior full instructions reused",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinUTC": "2026-10-17T19:39:49.914561+00:00",
+      "originalPinRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "lineCount": 217,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "pinnedAtUTC": "2026-10-17T19:39:49.914561+00:00",
+        "timing": "before own source body/nav; exact inventory confirmed"
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "kind": "instruction-reuse",
+      "coverage": "hash-only-this-packet; sameSHA prior full instructions reused",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinUTC": "2026-10-17T19:39:49.914798+00:00",
+      "originalPinRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "lineCount": 5,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "pinnedAtUTC": "2026-10-17T19:39:49.914798+00:00",
+        "timing": "before own source body/nav; exact inventory confirmed"
+      }
+    }
+  ],
+  "counts": {
+    "productSelectedRows": 5,
+    "productSelectedLines": 830,
+    "testDeclarationSelectedLines": 121,
+    "displayedSourceLines": 1290,
+    "testTitleNavigationOnlyRows": 2,
+    "instructionHashOnlyRows": 2,
+    "sourceInstructionPins": 11,
+    "semanticFullRows": 0,
+    "testsExecuted": 0,
+    "runtimeAttempts": 0,
+    "selectedTotalLines": 951
+  },
+  "rangeConvention": "One-based inclusive; display canonical union body+navigation. Selected subset, repeated displays once. No whole-file/new unique semantic coverage or native/custody correctness certification from a hash or complete display.",
+  "historyGate": "ExactR9/R32 original source objects and oldR9/CTX MD examined before product bodies. Older manager SHA935b differs current3a0; transcript sameSHA pin alone not explicit full. Shared609/548 matches capped100 each means not exhaustive canonical/full inventory."
+}

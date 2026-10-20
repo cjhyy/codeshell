@@ -1,0 +1,157 @@
+{
+  "atUTC": "2026-10-17T20:40:17.242338+00:00",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "beforeSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/resolve.ts",
+      "beforeSha256": "3d54fa881dd97c8b183fef070dc4f69742b391a730f0f9f3b20bb47301a3ef98",
+      "endingSha256": "3d54fa881dd97c8b183fef070dc4f69742b391a730f0f9f3b20bb47301a3ef98",
+      "endingBytes": 5489,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/collection.test.ts",
+      "beforeSha256": "fadac8725cd2eea6a5b03e1284fc03f0181169623852005d22af7b75ed8e3424",
+      "endingSha256": "fadac8725cd2eea6a5b03e1284fc03f0181169623852005d22af7b75ed8e3424",
+      "endingBytes": 18712,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/collection.ts",
+      "beforeSha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6",
+      "endingSha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6",
+      "endingBytes": 3025,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/link-view.ts",
+      "beforeSha256": "b93f18dd00dddd7abb6a67df1faafda6b3f1d9e445cda2c18a3860eedae5a135",
+      "endingSha256": "b93f18dd00dddd7abb6a67df1faafda6b3f1d9e445cda2c18a3860eedae5a135",
+      "endingBytes": 3804,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/collection-url.test.ts",
+      "beforeSha256": "975ac5e7f72368a87173699058916e1990860013c5e8bc0b31c5275b3665b5b1",
+      "endingSha256": "975ac5e7f72368a87173699058916e1990860013c5e8bc0b31c5275b3665b5b1",
+      "endingBytes": 18818,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.ts",
+      "beforeSha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "endingSha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "endingBytes": 1622,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.test.ts",
+      "beforeSha256": "63f3c12f5e55b09d777ce1319379537289d1a8482f69b63af5ae6d405d64b7cb",
+      "endingSha256": "63f3c12f5e55b09d777ce1319379537289d1a8482f69b63af5ae6d405d64b7cb",
+      "endingBytes": 5019,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/resolve.test.ts",
+      "beforeSha256": "811480404850c671e1ade430cd9b2e7cb3214f00b4c5c0e7825fb40bbc2d8f54",
+      "endingSha256": "811480404850c671e1ade430cd9b2e7cb3214f00b4c5c0e7825fb40bbc2d8f54",
+      "endingBytes": 9703,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/adapters/collection.ts",
+      "beforeSha256": "564e8db97c4fd74a3b1a3d0fd98aad82eead3f20ef58238801d60630c6a014d5",
+      "endingSha256": "564e8db97c4fd74a3b1a3d0fd98aad82eead3f20ef58238801d60630c6a014d5",
+      "endingBytes": 5415,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/catalog.ts",
+      "beforeSha256": "7257cd54f1a1fd1ef9c1972429b0dfda284ebc560b022018a43cbc532d2c8142",
+      "endingSha256": "7257cd54f1a1fd1ef9c1972429b0dfda284ebc560b022018a43cbc532d2c8142",
+      "endingBytes": 9080,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/sources/collection-local.ts",
+      "beforeSha256": "a7168998bd1a689b712fa63139a37ad22eae53bb3419dd7efcdee6ad3a73fb54",
+      "endingSha256": "a7168998bd1a689b712fa63139a37ad22eae53bb3419dd7efcdee6ad3a73fb54",
+      "endingBytes": 6114,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-source-manifest.json",
+      "beforeSha256": "9dcfd98366643d5457896822572b8421d9cb3fc0322a65f808d39dc7f1299dda",
+      "endingSha256": "9dcfd98366643d5457896822572b8421d9cb3fc0322a65f808d39dc7f1299dda",
+      "endingBytes": 3547,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "beforeSha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+      "endingSha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+      "endingBytes": 6963,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "beforeSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "endingSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "endingBytes": 12061422,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/documents.md",
+      "beforeSha256": "5651ef7737a98944ae24e7acff5c7197175f962cbbc6556d155a7157f1e3112f",
+      "endingSha256": "5651ef7737a98944ae24e7acff5c7197175f962cbbc6556d155a7157f1e3112f",
+      "endingBytes": 4961,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/coverage.md",
+      "beforeSha256": "2ec024330f12f4d9afcdb2c6ed33feee65e4ce958206861fb54ddb6b471acfd5",
+      "endingSha256": "2ec024330f12f4d9afcdb2c6ed33feee65e4ce958206861fb54ddb6b471acfd5",
+      "endingBytes": 3081,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/findings.json",
+      "beforeSha256": "6a4cf415ee6c3a4fb5c7fae5d97445838bd668fcbe6060a1c4656c51f5cd96b2",
+      "endingSha256": "6a4cf415ee6c3a4fb5c7fae5d97445838bd668fcbe6060a1c4656c51f5cd96b2",
+      "endingBytes": 12610,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/sources.md",
+      "beforeSha256": "91081486ad6936609bbbc702aed26d2b1feca50d965b1e449adaed24988eca70",
+      "endingSha256": "91081486ad6936609bbbc702aed26d2b1feca50d965b1e449adaed24988eca70",
+      "endingBytes": 13762,
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round166-desktop-theme-window/history-batch.json",
+      "beforeSha256": "ef4df7a319131c0faaf06d395d75705091386a4b243fe9899c693f29195de07a",
+      "endingSha256": "ef4df7a319131c0faaf06d395d75705091386a4b243fe9899c693f29195de07a",
+      "endingBytes": 1802741,
+      "unchanged": true
+    }
+  ],
+  "sourceInstructionChecks": 13,
+  "boundedCanonicalSharedMetadataChecks": 8,
+  "allUnchanged": true,
+  "gitOrFrozenBlobVerification": false,
+  "scope": "Only own pins and actual bounded metadata inputs; not a new scan or ending rehash of all6484 historical files."
+}

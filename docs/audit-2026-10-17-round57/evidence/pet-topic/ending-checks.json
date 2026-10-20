@@ -1,0 +1,402 @@
+{
+  "at": "2026-10-17T19:05:07.335054+00:00",
+  "sourceChecks": [
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "initialSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "endingSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "bytes": 108774,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+      "initialSha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "endingSha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "bytes": 121036,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/session-conversation-bridge.ts",
+      "initialSha256": "0832345e9ac09824f5f20abcec6f1309e63329288191e0c3a06b4d71129dad7f",
+      "endingSha256": "0832345e9ac09824f5f20abcec6f1309e63329288191e0c3a06b4d71129dad7f",
+      "bytes": 8489,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "initialSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "bytes": 299337,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-runtime.ts",
+      "initialSha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "endingSha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "bytes": 5768,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/conversation-session-route-store.ts",
+      "initialSha256": "2966a715032d4c866f3411559c487338682a3ee043ddedbd7fcc1f1efce47a77",
+      "endingSha256": "2966a715032d4c866f3411559c487338682a3ee043ddedbd7fcc1f1efce47a77",
+      "bytes": 10967,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+      "initialSha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "endingSha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "bytes": 11519,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+      "initialSha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "endingSha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "bytes": 11377,
+      "same": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "same": true
+    },
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "same": true
+    },
+    {
+      "path": "packages/pet/src/topic-segment.ts",
+      "initialSha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "endingSha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "bytes": 2719,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "initialSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "endingSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "bytes": 210666,
+      "same": true
+    },
+    {
+      "path": "packages/pet/src/conversation-session-route.ts",
+      "initialSha256": "5c87bb342284c4a90c77fde336cc08cc0325dd79a49555dbb13e6e13c3f75f8b",
+      "endingSha256": "5c87bb342284c4a90c77fde336cc08cc0325dd79a49555dbb13e6e13c3f75f8b",
+      "bytes": 12852,
+      "same": true
+    },
+    {
+      "path": "packages/pet/src/segment-closure.ts",
+      "initialSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "endingSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "bytes": 6195,
+      "same": true
+    },
+    {
+      "path": "packages/pet/src/topic-segment.test.ts",
+      "initialSha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "endingSha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "bytes": 2315,
+      "same": true
+    },
+    {
+      "path": "packages/pet/src/conversation-session-route.test.ts",
+      "initialSha256": "98604e965e244ef566e7b926403a27ce0b5f515e2ab429cb5a0e8a903304b4fa",
+      "endingSha256": "98604e965e244ef566e7b926403a27ce0b5f515e2ab429cb5a0e8a903304b4fa",
+      "bytes": 8610,
+      "same": true
+    },
+    {
+      "path": "packages/pet/src/segment-closure.test.ts",
+      "initialSha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "endingSha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "bytes": 3238,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/protocol/dispatch.ts",
+      "initialSha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "endingSha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "bytes": 8824,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session.ts",
+      "initialSha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "endingSha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "bytes": 23896,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "initialSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "endingSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "bytes": 195050,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+      "initialSha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "endingSha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "bytes": 17609,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "initialSha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "endingSha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "bytes": 11804,
+      "same": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "initialSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "endingSha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "bytes": 51303,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts",
+      "initialSha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "endingSha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "bytes": 7159,
+      "same": true
+    },
+    {
+      "path": "packages/pet/src/follow-ups.ts",
+      "initialSha256": "8860a778f2cc19195a4ec012033701c5d9db3c84948e65aa3b8520efa9febd8a",
+      "endingSha256": "8860a778f2cc19195a4ec012033701c5d9db3c84948e65aa3b8520efa9febd8a",
+      "bytes": 10597,
+      "same": true
+    },
+    {
+      "path": "packages/pet/src/registered-follow-ups.ts",
+      "initialSha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "endingSha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "bytes": 6245,
+      "same": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+      "initialSha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "endingSha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "bytes": 6984,
+      "same": true
+    }
+  ],
+  "priorAndFocusedHistoryChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-source-manifest.json",
+      "initialSha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208",
+      "endingSha256": "4d3413be6bc45939cdf636bd71a99ad0350478deebc0d009e8f148487eca3208",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/pet-source-manifest.json",
+      "initialSha256": "edbc9da97765fe320db364592ff0cbdf5028c1eb6151701a62fac408ce1590f5",
+      "endingSha256": "edbc9da97765fe320db364592ff0cbdf5028c1eb6151701a62fac408ce1590f5",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/pet-data.md",
+      "initialSha256": "2c8df717e0725dc7179dcdfa9a7f64a4f34ff2723689cb956f2985d5a9917ee8",
+      "endingSha256": "2c8df717e0725dc7179dcdfa9a7f64a4f34ff2723689cb956f2985d5a9917ee8",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/pet.md",
+      "initialSha256": "1b97c1b43cbf600c3b590a9162b0f4005ed374b8f6d7754635d06f6406d0b5ab",
+      "endingSha256": "1b97c1b43cbf600c3b590a9162b0f4005ed374b8f6d7754635d06f6406d0b5ab",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/cross-review-pet.md",
+      "initialSha256": "8646c1a8e9a7eb4a4d4f395aa905d46983e6591517fa86758154b8988c3073f4",
+      "endingSha256": "8646c1a8e9a7eb4a4d4f395aa905d46983e6591517fa86758154b8988c3073f4",
+      "same": true
+    },
+    {
+      "path": "docs/architecture/07-plugins-capabilities-credentials-memory.md",
+      "initialSha256": "f51d5f184f8a3a28a9db7d82c379e7ade281298a22ddcb0dc3391c4aa8fd1c20",
+      "endingSha256": "f51d5f184f8a3a28a9db7d82c379e7ade281298a22ddcb0dc3391c4aa8fd1c20",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/prompt.md",
+      "initialSha256": "c7de3978cf9795719df125d2555a5ab1ea2cebec99b21273f2555f4772b330db",
+      "endingSha256": "c7de3978cf9795719df125d2555a5ab1ea2cebec99b21273f2555f4772b330db",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-excerpts.json",
+      "initialSha256": "79ba6e631d1c445218c6df8335b99797ea669242e3cbc08bbcab41df0561b31a",
+      "endingSha256": "79ba6e631d1c445218c6df8335b99797ea669242e3cbc08bbcab41df0561b31a",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/live-activity/declined-hypotheses.json",
+      "initialSha256": "e51cce1ecea2e6cf0a54895b4eb3af4e067c319fb3e45f9ce807784c99db15f0",
+      "endingSha256": "e51cce1ecea2e6cf0a54895b4eb3af4e067c319fb3e45f9ce807784c99db15f0",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/live-activity/source-excerpts.json",
+      "initialSha256": "953178a1ec7397026e7ab7b4f3c2e4076a388cd7bc89580ed203ea611a4b32c0",
+      "endingSha256": "953178a1ec7397026e7ab7b4f3c2e4076a388cd7bc89580ed203ea611a4b32c0",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-progress/group-source-excerpts.json",
+      "initialSha256": "ba88edcb8cfe50656c96032673863b22bf6382f92ae60eef6e32e47d6552abd6",
+      "endingSha256": "ba88edcb8cfe50656c96032673863b22bf6382f92ae60eef6e32e47d6552abd6",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+      "initialSha256": "4ea1323cb749df9549fbe1a4b5f72a931bd331694e3f5a531ce898c5f320ccff",
+      "endingSha256": "4ea1323cb749df9549fbe1a4b5f72a931bd331694e3f5a531ce898c5f320ccff",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/third-selection-history.json",
+      "initialSha256": "9dc3987b1428283bb36ae6ae51a6ecd57cc37a6b0ca7668e30d7912a95071761",
+      "endingSha256": "9dc3987b1428283bb36ae6ae51a6ecd57cc37a6b0ca7668e30d7912a95071761",
+      "same": true
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "initialSha256": "b2006f1b9e8af0251719756eaadb1a51d277694f57c56d137015e5e700ffcc0b",
+      "endingSha256": "b2006f1b9e8af0251719756eaadb1a51d277694f57c56d137015e5e700ffcc0b",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "initialSha256": "7b2a3423fc1d8a4bdf3a2246d2d87541c6eb979c3fe8ff1e7c8d3784d4586968",
+      "endingSha256": "7b2a3423fc1d8a4bdf3a2246d2d87541c6eb979c3fe8ff1e7c8d3784d4586968",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/session-usage-gate/history-contexts.json",
+      "initialSha256": "fbb0ac83656e30528c25c45a9f32e827bc10ca18405a2503d5a3c41864dc8ce4",
+      "endingSha256": "fbb0ac83656e30528c25c45a9f32e827bc10ca18405a2503d5a3c41864dc8ce4",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/review.md",
+      "initialSha256": "4cc019dbedc7949c72d2a8dff021322ed1cfd4a255ef8343fe8818db72a67b11",
+      "endingSha256": "4cc019dbedc7949c72d2a8dff021322ed1cfd4a255ef8343fe8818db72a67b11",
+      "same": true
+    },
+    {
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "initialSha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+      "endingSha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "initialSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e",
+      "endingSha256": "a4ed7b286c4a503c7d628600e1fcbc178a2ebac76c3f12c218a141a881aefb0e",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "initialSha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248",
+      "endingSha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "initialSha256": "ea237de513d27f5366ec2c6d831a2091e59d5a9d9768263c49c00db4b09e73ac",
+      "endingSha256": "ea237de513d27f5366ec2c6d831a2091e59d5a9d9768263c49c00db4b09e73ac",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "initialSha256": "6f4513a2b7ed9ad6edbb6cb2e42ebeda0ee358e561914d12cbdf5e3842426196",
+      "endingSha256": "6f4513a2b7ed9ad6edbb6cb2e42ebeda0ee358e561914d12cbdf5e3842426196",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "initialSha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+      "endingSha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/history.json",
+      "initialSha256": "8526bc9cc05eef33a280e73446683f25bec0c2cc0c644085471290acc8906530",
+      "endingSha256": "8526bc9cc05eef33a280e73446683f25bec0c2cc0c644085471290acc8906530",
+      "same": true
+    },
+    {
+      "path": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+      "initialSha256": "5b8e893648235dd1c7caec7bf5810946b8216afe4b921ad9baab9210e988685e",
+      "endingSha256": "5b8e893648235dd1c7caec7bf5810946b8216afe4b921ad9baab9210e988685e",
+      "same": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/PLAN.md",
+      "initialSha256": "37f0ec9d447ede1e73febe3ab8196c23e9d1aae850222e803acce68d6ea8454e",
+      "endingSha256": "37f0ec9d447ede1e73febe3ab8196c23e9d1aae850222e803acce68d6ea8454e",
+      "same": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/independent-stage-quality.md",
+      "initialSha256": "cba55ebc6eb393895295caf3ec5a91a4e270b813a9b0201d0015d7a61b918d28",
+      "endingSha256": "cba55ebc6eb393895295caf3ec5a91a4e270b813a9b0201d0015d7a61b918d28",
+      "same": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/report.md",
+      "initialSha256": "641aa904aa54a41a67f65bcfed704f3248692ff6265a5577054c2e210d9f43f3",
+      "endingSha256": "641aa904aa54a41a67f65bcfed704f3248692ff6265a5577054c2e210d9f43f3",
+      "same": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-quality-history.raw.md",
+      "initialSha256": "07b93893344a348f41c15e277482d7145a349b40849347c76bac9aadcb245fb7",
+      "endingSha256": "07b93893344a348f41c15e277482d7145a349b40849347c76bac9aadcb245fb7",
+      "same": true
+    },
+    {
+      "path": "docs/review-2026-10-12/modern-desktop-image-quality-round25.md",
+      "initialSha256": "36d4892b31b9342551911b38aa236d77d058db58547f8b54e6a8394e512b918d",
+      "endingSha256": "36d4892b31b9342551911b38aa236d77d058db58547f8b54e6a8394e512b918d",
+      "same": true
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-07-persist-mimi-archive-boundary.md",
+      "initialSha256": "53ea123bdcff5ad6bc7a41f63a4d27ea3f578d48ff13a9abc45a7668bc6a62f6",
+      "endingSha256": "53ea123bdcff5ad6bc7a41f63a4d27ea3f578d48ff13a9abc45a7668bc6a62f6",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+      "initialSha256": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91",
+      "endingSha256": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+      "initialSha256": "5eea48937df9632c3ee627ec52c8cf637ead09a9884e1316312d7ab511cb8687",
+      "endingSha256": "5eea48937df9632c3ee627ec52c8cf637ead09a9884e1316312d7ab511cb8687",
+      "same": true
+    }
+  ],
+  "sharedInputCheck": {
+    "path": "/tmp/codeshell-audit-round135-static-files/history-batch.json",
+    "initialSha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f",
+    "endingSha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f",
+    "same": true,
+    "scope": "Input JSON hash only, Root owns5676 inventory ending; no independent full rerun."
+  },
+  "scope": "Hash-only ending; no repeated source semantic read or full-history rescan."
+}

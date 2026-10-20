@@ -1,0 +1,79 @@
+{
+  "checks": [
+    {
+      "path": "server-auth/report.md",
+      "bytes": 3287,
+      "sha256": "80b19090037a5f2788d81c76affb16e2ea3a2d8373d0a91e1c9fe3bdb8d26860"
+    },
+    {
+      "path": "server-auth/source-manifest.json",
+      "bytes": 21369,
+      "sha256": "c86eac44ffdbb77db76f41bfdb636a36bda95edbefb63ace32c493e0675e3301"
+    },
+    {
+      "path": "server-auth/reviewer-receipt.json",
+      "bytes": 12690,
+      "sha256": "e03250651b5fcd713f85b0c4f442a621d923ac40b11b102a0f979bc2c81c24b0"
+    },
+    {
+      "path": "panel-github/report.md",
+      "bytes": 3282,
+      "sha256": "a559539230123771b55dd2bcacf80a822e643a6bce2c2d5ceabcbbd691af03c6"
+    },
+    {
+      "path": "panel-github/source-manifest.json",
+      "bytes": 37717,
+      "sha256": "f31e1d100ce8582fc58a1d9f3f4433e4259368859de6e75fa46b654371d1f6f4"
+    },
+    {
+      "path": "panel-github/reviewer-receipt.json",
+      "bytes": 7867,
+      "sha256": "bd0b90afbdf83ff3b1cf0c15ac38daee2331c713a37f894bb571a1377ccc0b9e"
+    },
+    {
+      "path": "server-attachments/report.md",
+      "bytes": 6720,
+      "sha256": "b931be9be7cbe8d08a146f1cf294cfba39526f3a494952055b0a2ac1976a0f23"
+    },
+    {
+      "path": "server-attachments/source-manifest.json",
+      "bytes": 20144,
+      "sha256": "7ceeb69b2370ce4935592c3879628dd390ca61aa6e2543b3e1dbc2e3eb0af4ee"
+    },
+    {
+      "path": "server-attachments/artifact-receipt.json",
+      "bytes": 6115,
+      "sha256": "4facfb3558ea47c9a412238901a1ffe38079c359e9db5a483b84a885bc28b67a"
+    },
+    {
+      "path": "root-settings/report.md",
+      "bytes": 2550,
+      "sha256": "8999f94ffa3ce32be04ba113ec477540b85146dbb32bc3ec6a61b23e39c32e5f"
+    },
+    {
+      "path": "root-settings/source-manifest.json",
+      "bytes": 12496,
+      "sha256": "bf7746219aad65400d64260b5313d3aa1c047bfb1c516c74143e7a7b52ec0129"
+    },
+    {
+      "path": "root-settings/artifact-receipt.json",
+      "bytes": 5493,
+      "sha256": "3661d9ee56dcf0befdd31e9735ee8297cee07b688354a46a061b9373d64475f6"
+    },
+    {
+      "path": "attachment-peer/report.md",
+      "bytes": 3504,
+      "sha256": "c50a38362e437b1d8b42eda7f8f9025508a6ebd972834e25599d8912fedad40e"
+    },
+    {
+      "path": "attachment-peer/source-manifest.json",
+      "bytes": 35140,
+      "sha256": "6a365a85fb94311f03b57de53d52560236cb5154ce6aae8f938de750450d89c9"
+    },
+    {
+      "path": "attachment-peer/reviewer-receipt.json",
+      "bytes": 9559,
+      "sha256": "b8ab3e017c6cd23d2103cd65eaa75d6931f7e16b18c9365d87ceaeae4248120a"
+    }
+  ]
+}

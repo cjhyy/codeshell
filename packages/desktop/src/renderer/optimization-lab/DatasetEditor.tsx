@@ -4,6 +4,7 @@ import type {
   HardAssertion,
 } from "@cjhyy/code-shell-capability-optimization-lab";
 import { Button } from "@/components/ui/button";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { useT } from "../i18n";
 import {
   changeAssertionKind,
@@ -77,13 +78,19 @@ function AssertionEditor({
   value,
   onChange,
   id,
+  disabled,
 }: {
   value: HardAssertion;
   onChange(value: HardAssertion): void;
   id: string;
+  disabled: boolean;
 }) {
   const { t } = useT();
-  const scalarType = value.value === null ? "null" : typeof value.value;
+  const scalarType = (value.value === null ? "null" : typeof value.value) as
+    | "null"
+    | "string"
+    | "number"
+    | "boolean";
   return (
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -98,18 +105,18 @@ function AssertionEditor({
         </label>
         <label className="space-y-1 text-sm">
           <span>{t("optimizationLab.editor.assertionKind")}</span>
-          <select
-            className={inputClass}
-            data-testid={testId(`${id}-kind`)}
+          <SimpleSelect<HardAssertion["kind"]>
+            ariaLabel={t("optimizationLab.editor.assertionKind")}
+            triggerProps={{ "data-testid": testId(`${id}-kind`) }}
             value={value.kind}
-            onChange={(event) =>
-              onChange(changeAssertionKind(value, event.target.value as HardAssertion["kind"]))
-            }
-          >
-            <option value="contains">{t("optimizationLab.editor.contains")}</option>
-            <option value="not_contains">{t("optimizationLab.editor.notContains")}</option>
-            <option value="json_field_equals">{t("optimizationLab.editor.jsonFieldEquals")}</option>
-          </select>
+            disabled={disabled}
+            onChange={(kind) => onChange(changeAssertionKind(value, kind))}
+            options={[
+              { value: "contains", label: t("optimizationLab.editor.contains") },
+              { value: "not_contains", label: t("optimizationLab.editor.notContains") },
+              { value: "json_field_equals", label: t("optimizationLab.editor.jsonFieldEquals") },
+            ]}
+          />
         </label>
       </div>
       {value.kind === "json_field_equals" && (
@@ -123,24 +130,24 @@ function AssertionEditor({
           />
           <label className="block space-y-1 text-sm">
             <span>{t("optimizationLab.editor.valueType")}</span>
-            <select
-              className={inputClass}
-              data-testid={testId(`${id}-value-type`)}
+            <SimpleSelect<"string" | "number" | "boolean" | "null">
+              ariaLabel={t("optimizationLab.editor.valueType")}
+              triggerProps={{ "data-testid": testId(`${id}-value-type`) }}
               value={scalarType}
-              onChange={(event) =>
+              disabled={disabled}
+              onChange={(type) =>
                 onChange({
                   ...value,
-                  value: ({ string: "", number: 0, boolean: false, null: null } as const)[
-                    event.target.value as "string" | "number" | "boolean" | "null"
-                  ],
+                  value: ({ string: "", number: 0, boolean: false, null: null } as const)[type],
                 })
               }
-            >
-              <option value="string">{t("optimizationLab.editor.string")}</option>
-              <option value="number">{t("optimizationLab.editor.number")}</option>
-              <option value="boolean">{t("optimizationLab.editor.boolean")}</option>
-              <option value="null">null</option>
-            </select>
+              options={[
+                { value: "string", label: t("optimizationLab.editor.string") },
+                { value: "number", label: t("optimizationLab.editor.number") },
+                { value: "boolean", label: t("optimizationLab.editor.boolean") },
+                { value: "null", label: "null" },
+              ]}
+            />
           </label>
         </>
       )}
@@ -172,15 +179,17 @@ function AssertionEditor({
       ) : value.kind === "json_field_equals" && typeof value.value === "boolean" ? (
         <label className="block space-y-1 text-sm">
           <span>{t("optimizationLab.editor.assertionValue")}</span>
-          <select
-            className={inputClass}
-            data-testid={testId(`${id}-value`)}
+          <SimpleSelect
+            ariaLabel={t("optimizationLab.editor.assertionValue")}
+            triggerProps={{ "data-testid": testId(`${id}-value`) }}
             value={String(value.value)}
-            onChange={(event) => onChange({ ...value, value: event.target.value === "true" })}
-          >
-            <option value="false">false</option>
-            <option value="true">true</option>
-          </select>
+            disabled={disabled}
+            onChange={(next) => onChange({ ...value, value: next === "true" })}
+            options={[
+              { value: "false", label: "false" },
+              { value: "true", label: "true" },
+            ]}
+          />
         </label>
       ) : (
         <p className="text-sm text-muted-foreground">{t("optimizationLab.editor.nullValue")}</p>
@@ -259,18 +268,14 @@ export function DatasetEditor({
   ) => (
     <label className="space-y-1 text-sm">
       <span>{label}</span>
-      <select
-        className={inputClass}
-        data-testid={testId(`case-${index}-${key}`)}
+      <SimpleSelect
+        ariaLabel={label}
+        triggerProps={{ "data-testid": testId(`case-${index}-${key}`) }}
         value={dataset!.cases[index]![key]}
-        onChange={(event) => updateCase(index, { [key]: event.target.value })}
-      >
-        {options.map(([option, title]) => (
-          <option key={option} value={option}>
-            {title}
-          </option>
-        ))}
-      </select>
+        disabled={disabled}
+        onChange={(next) => updateCase(index, { [key]: next })}
+        options={options.map(([value, label]) => ({ value, label }))}
+      />
     </label>
   );
   return (
@@ -595,6 +600,7 @@ export function DatasetEditor({
                       <div key={ruleIndex} className="space-y-2 rounded-md bg-muted/40 p-3">
                         <AssertionEditor
                           value={assertion}
+                          disabled={disabled}
                           id={`case-${index}-assertion-${ruleIndex}`}
                           onChange={(next) =>
                             updateCase(index, {

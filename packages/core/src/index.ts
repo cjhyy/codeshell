@@ -4,7 +4,7 @@
  * Public API exports.
  */
 
-export const VERSION = "0.9.42";
+export const VERSION = "0.9.45";
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -34,6 +34,8 @@ export type {
   TerminalReason,
   TurnCompletionKind,
   StreamEvent,
+  TurnDiffSnapshot,
+  TurnDiffFile,
   StreamCallback,
   LLMConfig,
   ClientDefaults,
@@ -709,6 +711,7 @@ export {
   type CredentialMetadata,
   type CredentialSnapshot,
   type CredentialSnapshotEntry,
+  type RemoteLinkActionReply,
   type EncryptionCipher,
   PlaintextCipher,
   setDefaultCredentialCipher,
@@ -717,6 +720,7 @@ export {
 
 export {
   LOCAL_LINK_PROVIDERS,
+  registerLocalLinkProviders,
   getLocalLinkProvider,
   listLocalLinkProviders,
   validateLocalLinkToken,
@@ -838,6 +842,7 @@ export {
   type RemoteLinkConfiguration,
   type RemoteLinkAttempt,
   type RemoteLinkActionRequest,
+  type RemoteLinkExecutionDiagnostic,
 } from "./links/remote.js";
 
 export {

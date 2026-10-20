@@ -1,0 +1,286 @@
+packages/core/src/tool-system/builtin/agent.ts:800–935
+800:  */
+801: async function runSyncSubAgent(args: {
+802:   spawner: SubAgentSpawner;
+803:   agentId: string;
+804:   name?: string;
+805:   description: string;
+806:   prompt: string;
+807:   maxTurns: number;
+808:   overrides: AgentTypeOverrides;
+809:   continuation?: SubAgentContinuation;
+810:   autoBgMs: number;
+811:   parentSignal?: AbortSignal;
+812:   parentStream?: StreamCallback;
+813:   ctx?: ToolContext;
+814:   /** Resume an existing child session (continuation) instead of cold start. */
+815:   resumeSessionId?: string;
+816: }): Promise<string> {
+817:   const {
+818:     spawner,
+819:     agentId,
+820:     name,
+821:     description,
+822:     prompt,
+823:     maxTurns,
+824:     overrides,
+825:     continuation,
+826:     autoBgMs,
+827:     parentSignal,
+828:     parentStream,
+829:     ctx,
+830:     resumeSessionId,
+831:   } = args;
+832: 
+833:   const syncController = new AbortController();
+834:   const onParentAbort = () => syncController.abort();
+835:   parentSignal?.addEventListener("abort", onParentAbort, { once: true });
+836:   // Per-call flag (NOT module-level): true once we've detached the agent into
+837:   // the background, so the finally block leaves the parent-abort listener with
+838:   // the background handlers instead of removing it.
+839:   let handedOff = false;
+840:   const childSessionId = resumeSessionId ?? agentId;
+841:   const runtimeGeneration = asyncAgentRegistry.allocateRuntimeGeneration(childSessionId);
+842:   const progressTracker = createAgentProgressTracker(agentId);
+843:   let liveBinding: { control: LiveChildControl; lease: ChildWriterLease } | undefined;
+844:   if (resumeSessionId) {
+845:     const previous = asyncAgentRegistry.get(agentId);
+846:     asyncAgentRegistry.register({
+847:       agentId,
+848:       name,
+849:       agentType: overrides.resolvedType,
+850:       continuation,
+851:       description,
+852:       sessionId: ctx?.sessionId,
+853:       childSessionId,
+854:       runtimeGeneration,
+855:       transcript: previous?.transcript,
+856:       progress: progressTracker.current(),
+857:       status: "running",
+858:       startedAt: Date.now(),
+859:       abort: () => syncController.abort(),
+860:     });
+861:   }
+862: 
+863:   const finishContinuation = (status: "completed" | "failed" | "cancelled") => {
+864:     if (!resumeSessionId) return;
+865:     if (liveBinding) {
+866:       asyncAgentRegistry.completeTerminal(agentId, status, liveBinding.lease);
+867:     } else if (status === "completed") {
+868:       asyncAgentRegistry.markCompleted(agentId);
+869:     } else if (status === "cancelled") {
+870:       asyncAgentRegistry.markCancelled(agentId);
+871:     } else {
+872:       asyncAgentRegistry.markFailed(agentId);
+873:     }
+874:   };
+875: 
+876:   // Run the agent, but don't necessarily await it to completion: race the run
+877:   // against the auto-background timer. The run promise is shared between the
+878:   // inline await and (if we hand off) the background completion handlers, so
+879:   // the agent is never started twice and never killed by the handoff.
+880:   const runPromise = runSubAgent(spawner, {
+881:     agentId,
+882:     name,
+883:     description,
+884:     agentType: overrides.resolvedType,
+885:     continuation,
+886:     prompt,
+887:     maxTurns,
+888:     model: overrides.model,
+889:     toolAllowlist: overrides.toolAllowlist,
+890:     skillAllowlist: overrides.skillAllowlist,
+891:     sandboxMode: overrides.sandboxMode,
+892:     mcpAllowlist: overrides.mcpAllowlist,
+893:     appendSystemPrompt: overrides.appendSystemPrompt,
+894:     readOnlySession:
+895:       continuation?.readOnlySession ??
+896:       (overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer"),
+897:     resumeSessionId,
+898:     hooks: ctx?.hooks,
+899:     recordBilledUsage: ctx?.recordBilledUsage,
+900:     runtimeGeneration,
+901:     bindLiveControl: (control, ownerToken) => {
+902:       const lease = asyncAgentRegistry.acquireWriterLease(
+903:         control.childSessionId,
+904:         control.runtimeGeneration,
+905:         ownerToken,
+906:       );
+907:       if (!lease) return false;
+908:       if (resumeSessionId && !asyncAgentRegistry.bindLiveControl(agentId, control, lease)) {
+909:         asyncAgentRegistry.releaseWriterLease(lease);
+910:         return false;
+911:       }
+912:       liveBinding = { control, lease };
+913:       return lease;
+914:     },
+915:     closeLiveControl: (_control, lease) => {
+916:       if (!lease) return;
+917:       if (handedOff || resumeSessionId) {
+918:         return asyncAgentRegistry.closeDirectionIntake(agentId, lease);
+919:       }
+920:       return asyncAgentRegistry.releaseWriterLease(lease);
+921:     },
+922:     onProgressEvent: progressTracker.onEvent,
+923:     onAgentProgress: progressTracker.onRuntime,
+924:     signal: syncController.signal,
+925:   });
+926: 
+927:   // Sentinel that the timer resolves with, so we can tell "agent finished" from
+928:   // "threshold elapsed" without rejecting either side.
+929:   const BG_HANDOFF = Symbol("bg-handoff");
+930:   let bgTimer: ReturnType<typeof setTimeout> | undefined;
+931:   const timerPromise =
+932:     autoBgMs > 0 && autoBgMs !== Infinity
+933:       ? new Promise<typeof BG_HANDOFF>((resolve) => {
+934:           bgTimer = setTimeout(() => resolve(BG_HANDOFF), autoBgMs);
+935:         })
+
+packages/core/src/tool-system/builtin/agent.ts:1425–1571
+1425:   if (!prompt?.trim()) return "Error: prompt is required.";
+1426:   if (
+1427:     rawDelivery !== undefined &&
+1428:     rawDelivery !== "next-safe-point" &&
+1429:     rawDelivery !== "interrupt-and-redrive"
+1430:   ) {
+1431:     return "Error: invalid delivery. Expected next-safe-point or interrupt-and-redrive.";
+1432:   }
+1433:   const delivery = rawDelivery ?? "next-safe-point";
+1434: 
+1435:   if (!ctx?.subAgentSpawner) {
+1436:     return "Error: Agent tool is not configured (no subAgentSpawner in ctx).";
+1437:   }
+1438:   // Same flat-hierarchy rule as Agent: a sub-agent cannot continue (or spawn)
+1439:   // another sub-agent. Layered with the NESTED_AGENT_TOOLS strip in engine.ts.
+1440:   if (ctx.isSubAgent === true) {
+1441:     return JSON.stringify({
+1442:       status: "rejected",
+1443:       reason: "not-direct-parent",
+1444:       rejectedAt: Date.now(),
+1445:       message: "Nested agents are not supported. Sub-agents cannot send input to other sub-agents.",
+1446:     });
+1447:   }
+1448:   const spawner = ctx.subAgentSpawner;
+1449: 
+1450:   const parentSignal = args.__signal as AbortSignal | undefined;
+1451:   if (parentSignal?.aborted) {
+1452:     return "Agent aborted before resuming.";
+1453:   }
+1454: 
+1455:   // Resolve the child session to resume. With the agent_id===childSid
+1456:   // convention the child session is stored at sessions/<agent_id>/, so the
+1457:   // agent_id IS the resume target. Confirm it's resumable:
+1458:   //   1. in-memory registry (fast path, same process) — gives us the recorded
+1459:   //      childSessionId (== agentId) and the dock label/agentType;
+1460:   //   2. on-disk probe (cross-restart) — the registry is gone but the session
+1461:   //      transcript persists.
+1462:   // Both miss → the agent never existed or was cleaned up.
+1463:   const entry = asyncAgentRegistry.get(agentId);
+1464:   const resumeSessionId = entry?.childSessionId ?? agentId;
+1465:   const onDisk = spawner.sessionExists?.(resumeSessionId) ?? false;
+1466:   if (!entry && !onDisk) {
+1467:     return (
+1468:       `Error: no resumable sub-agent with agent_id "${agentId}". ` +
+1469:       `It may never have run or its session was cleaned up. ` +
+1470:       `Re-spawn with Agent(...) and a complete task description.`
+1471:     );
+1472:   }
+1473: 
+1474:   // A running target owns its transcript writer lease. This branch is route-only:
+1475:   // registry validation + the bound live runtime enqueue the direction envelope;
+1476:   // it must never construct/resume a second child Engine.
+1477:   if (entry?.status === "running") {
+1478:     const ack = await asyncAgentRegistry.routeDirection({
+1479:       callerSessionId: ctx.sessionId ?? "",
+1480:       callerIsSubAgent: false,
+1481:       agentId,
+1482:       prompt,
+1483:       delivery,
+1484:     });
+1485:     return JSON.stringify(ack);
+1486:   }
+1487: 
+1488:   if (entry?.status === "cancelling" || asyncAgentRegistry.getWriterLease(resumeSessionId)) {
+1489:     return `Error: sub-agent "${agentId}" is still cancelling; wait for its previous runtime to fully exit.`;
+1490:   }
+1491: 
+1492:   const callerSessionId = ctx.sessionId ?? "";
+1493:   const continuation = entry?.continuation ?? spawner.getSessionContinuation?.(resumeSessionId);
+1494:   if (entry) {
+1495:     if (!callerSessionId || entry.sessionId !== callerSessionId) {
+1496:       return `Error: caller is not the direct parent of sub-agent "${agentId}" (not in this session).`;
+1497:     }
+1498:   } else {
+1499:     const persistedParent = spawner.getSessionParentId?.(resumeSessionId);
+1500:     if (!callerSessionId || persistedParent === undefined || persistedParent === null) {
+1501:       return `Error: cannot verify the direct parent of sub-agent "${agentId}"; continuation is denied.`;
+1502:     }
+1503:     if (persistedParent !== callerSessionId) {
+1504:       return `Error: caller is not the direct parent of sub-agent "${agentId}" (not in this session).`;
+1505:     }
+1506:   }
+1507:   if (continuation && continuation.parentSessionId !== callerSessionId) {
+1508:     return `Error: caller is not the direct parent of sub-agent "${agentId}" (continuation metadata mismatch).`;
+1509:   }
+1510:   if (!entry && !continuation) {
+1511:     return (
+1512:       `Error: sub-agent "${agentId}" has no saved continuation scope. ` +
+1513:       `Start a new Agent with a complete task description instead of restoring an unknown role.`
+1514:     );
+1515:   }
+1516: 
+1517:   if (delivery === "interrupt-and-redrive") {
+1518:     return (
+1519:       `Error: sub-agent "${agentId}" is no longer running; ` +
+1520:       `interrupt-and-redrive cannot interrupt a terminal target. ` +
+1521:       `Omit delivery to use the existing transcript continuation path.`
+1522:     );
+1523:   }
+1524: 
+1525:   const name = entry?.name ?? continuation?.name;
+1526:   const description = entry?.description ?? continuation?.description ?? "sub-agent continuation";
+1527:   // Transcript replay restores conversation, not runtime authority. Reuse the
+1528:   // original scope snapshot even if a role was edited or removed. Legacy
+1529:   // same-process entries may re-resolve a known role, but must never silently
+1530:   // fall back to the parent's full tool set or pick a new default role.
+1531:   let overrides: AgentTypeOverrides;
+1532:   if (continuation) {
+1533:     overrides = {
+1534:       resolvedType: continuation.agentType ?? undefined,
+1535:       model: continuation.model,
+1536:       maxTurns: continuation.maxTurns,
+1537:       toolAllowlist: continuation.toolAllowlist,
+1538:       skillAllowlist: continuation.skillAllowlist,
+1539:       sandboxMode: continuation.sandboxMode,
+1540:       mcpAllowlist: continuation.mcpAllowlist,
+1541:       appendSystemPrompt: continuation.appendSystemPrompt,
+1542:     };
+1543:   } else {
+1544:     try {
+1545:       overrides = entry?.agentType
+1546:         ? resolveAgentTypeOverrides(entry.agentType, ctx.agentDefinitions)
+1547:         : {};
+1548:     } catch (err) {
+1549:       return `Error: cannot restore sub-agent "${agentId}" role scope: ${(err as Error).message}. Start a new Agent instead.`;
+1550:     }
+1551:   }
+1552: 
+1553:   const maxTurns = overrides.maxTurns ?? 15;
+1554:   const autoBgMs = resolveAutoBgMs();
+1555: 
+1556:   return runSyncSubAgent({
+1557:     spawner,
+1558:     agentId,
+1559:     name,
+1560:     description,
+1561:     prompt,
+1562:     maxTurns,
+1563:     overrides,
+1564:     continuation,
+1565:     autoBgMs,
+1566:     parentSignal,
+1567:     parentStream: spawner.parentStream,
+1568:     ctx,
+1569:     resumeSessionId,
+1570:   });
+1571: }

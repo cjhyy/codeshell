@@ -3,6 +3,8 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
+import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import { join } from "node:path";
 import { nativeNodeWorkerFixture } from "../../test-utils/native-node-worker.js";
 import { createPanelAgentTaskHost, type PanelAgentTaskScope } from "./agent-task-host.js";
@@ -14,6 +16,7 @@ test("native Node Core task executes a real Write only after host approval", asy
   const workspace = join(root, "workspace");
   const home = join(root, "home");
   const proof = join(workspace, "task-proof.txt");
+  const networkPreload = join(root, "exact-model-origin.mjs");
   const requests: any[] = [];
   const approvals: any[] = [];
   const modelErrors: unknown[] = [];
@@ -72,6 +75,7 @@ test("native Node Core task executes a real Write only after host approval", asy
       CODE_SHELL_HOME: join(home, ".code-shell"),
       CODE_SHELL_DATA_ROOT: join(root, "data"),
       CODE_SHELL_CREDENTIAL_ACCESS: "local",
+      NODE_OPTIONS: `--import=${JSON.stringify(pathToFileURL(networkPreload).href)}`,
       CODE_SHELL_CAPABILITY_MODULES: codingCapabilityModule,
     }),
     models: () => ({
@@ -107,6 +111,10 @@ test("native Node Core task executes a real Write only after host approval", asy
     model.listen(0, "127.0.0.1");
     await once(model, "listening");
     const port = (model.address() as { port: number }).port;
+    await writeFile(
+      networkPreload,
+      `const realFetch=globalThis.fetch;const allowed=${JSON.stringify(`http://127.0.0.1:${port}`)};globalThis.fetch=function(input,init){const url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url);if(url.origin!==allowed)throw new Error('Fixture blocked unexpected model network origin');return realFetch(input,init);};`,
+    );
     await writeFile(
       join(workspace, ".code-shell/settings.local.json"),
       JSON.stringify({
@@ -174,6 +182,31 @@ test("native Node Core task executes a real Write only after host approval", asy
       () => [],
     );
     expect(persisted.some((file) => file.endsWith("state.json"))).toBe(false);
+    const traces = new ModelTraceStore({
+      storageDir: join(root, "data", "sessions", ".model-traces"),
+    });
+    expect(traces.getConfig()).toMatchObject({
+      enabled: true,
+      captureContent: true,
+      includeEphemeral: true,
+    });
+    const records = traces
+      .list({ source: "panel:sample" })
+      .items.map((item) => traces.get(item.id)!);
+    expect(records.length).toBeGreaterThanOrEqual(2);
+    for (const record of records) expect(record.workspacePath).toBe(workspace);
+    for (const request of toolRequests)
+      expect(
+        records.some((record) =>
+          record.attempts.some(
+            (attempt) =>
+              attempt.coverage === "provider-wire" &&
+              JSON.stringify(attempt.input) === JSON.stringify(request),
+          ),
+        ),
+      ).toBe(true);
+    expect(JSON.stringify(records)).toContain("Write the task proof file now.");
+    expect(JSON.stringify(records)).not.toContain("isolated-panel-fixture");
     expect(modelErrors).toEqual([]);
   } finally {
     host.close();

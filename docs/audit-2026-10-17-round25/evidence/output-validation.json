@@ -1,0 +1,75 @@
+{
+  "base": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "guardedRuns": [
+    {
+      "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+      "argv": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/runtime/output-clean.test.ts",
+        "docs/audit-2026-10-17-round25/evidence/output-crlf.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "elapsedSeconds": 0.284,
+      "raw": "docs/audit-2026-10-17-round25/evidence/output-first.raw.log",
+      "rawBytes": 2477,
+      "rawSha256": "3756561600256bdbd45f529d4a6b0d0936c1e6fb49710c36a79a08e6d02c80d0",
+      "combinedStdoutStderr": true,
+      "rawAndExitSavedBeforeInspection": true,
+      "productReruns": 0,
+      "completedGuard": true,
+      "pass": 13,
+      "expect": 23,
+      "fail": 0,
+      "skipped": 0,
+      "existingTests": 7,
+      "focusedTests": 6,
+      "focusedWrongBehaviorCharacterizations": 4,
+      "focusedControls": 2,
+      "actualProductionLeafCalls": true,
+      "manualConsumerMirror": false
+    }
+  ],
+  "totals": {
+    "cleanRuns": 1,
+    "failedRuns": 0,
+    "runtimeAttempts": 1,
+    "pass": 13,
+    "expect": 23,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 7,
+    "focusedTests": 6,
+    "productRetryCount": 0
+  },
+  "actualScope": [
+    "Direct real output-clean.ts leaf only, with bun:test. Existing7 bounded pure-leaf tests plus focused6 short ASCII string cases; four characterize current wrong CRLF results with printed literal expected/observed, two controls cover LF and bareCR.",
+    "Only the guarded Node/Bun runner and its owned fixture were executed. The runner uses its normal isolated environment; no custom provider/Host configuration or real user data."
+  ],
+  "staticOnly": [
+    "Full leaf/existing test and ring-file source, selected background-shell manager/BashOutput/spec ranges, instruction source.",
+    "No dynamic producer, ring, disk, manager, BashOutput tool, ownership/session, model or OS behavior."
+  ],
+  "excluded": [
+    "Any manager/tool/barrel/Engine import or construction; real background subprocess/PTY/Windows/native workflow; network/model/account/permission/security/custody/identity experiment.",
+    "VM/AST/eval, pressure tests, large input/cap/wraparound/cursor or chunk-split experiments, new ANSI/OSC/bidi/grapheme direction.",
+    "All old failed source groups, sort/memory/formatter/i18n/skills/frontmatter/patch/NDJSON directions; no recovery/retry/alternate validation.",
+    "Build/lint/typecheck/full suites and any additional product test run."
+  ],
+  "limitations": [
+    "One independent cause, not four findings. Passing tests assert current bad behavior and do not mean a fix.",
+    "Literal LF expected strings preserve visible text; no byte-exact CRLF contract claimed.",
+    "Static raw producer chain only; raw retention/disk mirror source is counterevidence, not actual persistence validation."
+  ],
+  "metadataOnlyFailures": 1,
+  "prohibitedProductRuntimeAttempts": 0,
+  "downstreamRuntimeImports": 0,
+  "productChanges": false,
+  "gitWrites": false
+}

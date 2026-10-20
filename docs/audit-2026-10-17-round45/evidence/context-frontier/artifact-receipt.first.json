@@ -1,0 +1,110 @@
+{
+  "frozenUTC": "2026-10-17T15:21:15.444379+00:00",
+  "scope": "Exact /tmp/codeshell-audit-round52-context-settings only; excludes receipt self. Static ordinary form source prep, original3979 history time and source pin times preserved. No source/Git/product mutation.",
+  "files": [
+    {
+      "path": "history-contexts.json",
+      "bytes": 94825,
+      "sha256": "111b7a4458e340ea1d89a4d49dded6a2b59fda4254eee4fa297a055b5e213ded"
+    },
+    {
+      "path": "history-contract-selected.json",
+      "bytes": 58515,
+      "sha256": "c655ebbb19d939e58a383a0e8fb12b787833effbb31676f62bc9f71867994b31"
+    },
+    {
+      "path": "history-decisions.json",
+      "bytes": 3450,
+      "sha256": "f7851412bfa6984cf1d8217832bcc1c7203465f1bb58bf7e9cc2b10d342f81c8"
+    },
+    {
+      "path": "history-finish-check.json",
+      "bytes": 261,
+      "sha256": "28c786b4a0db0741d9b799ae77a304b7f1ce241acaac1da6f8a0c764bc2fe36d"
+    },
+    {
+      "path": "history-focused.json",
+      "bytes": 21910,
+      "sha256": "e15186429a62b509f3cc4d1561c4af397d58227f6c54408f7bbcef4e8b9faaa6"
+    },
+    {
+      "path": "history-gate-selected.json",
+      "bytes": 6855,
+      "sha256": "94fc416db924e661018fbf0161730ba969528ab27811c7b928f8d3b58c8f041d"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 875552,
+      "sha256": "c7644d7f302926de759a5799838806ace6aea51eb53880f4eca95db6f61f3606"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 257007,
+      "sha256": "edca4ab6fb158afe30641e439c4ac08178e67ab219eff89ab40b80a33a4d9c9d"
+    },
+    {
+      "path": "history.json",
+      "bytes": 876669,
+      "sha256": "357edccc65a3a8940795a6e072174fd97a1ec5ed1eac01c5a4c08e29f5e76422"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1527,
+      "sha256": "39cad15db064caab466618bd5d65445de88f58ffae21c9f9d1e9092fd95e0309"
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 1379,
+      "sha256": "6faa22dcdc1aaefd17a2c9a95cb1ab855cc6a9fbe782e4c668677cc7b79156f2"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 881,
+      "sha256": "d7d7231223ca97cfc91d43d0f6c67067f0d3362ed29a3737aa366f6f1a90e7c3"
+    },
+    {
+      "path": "producer-consumer-initial-pins.json",
+      "bytes": 3000,
+      "sha256": "20ecd27e4f94b5f255946de8d5062669afe25ec3e1f83d917ea063748385d4c9"
+    },
+    {
+      "path": "ratio-route-initial-pin.json",
+      "bytes": 377,
+      "sha256": "8ccfa44a23c9d1a858e521d3b912c58fd040ef16d089be1042f02af3f101a57c"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5487,
+      "sha256": "813f0e00981e2493479e152a7cb9d0f1078747ee8201a70e740dd09e569d9e50"
+    },
+    {
+      "path": "save-chain-initial-pins.json",
+      "bytes": 804,
+      "sha256": "dbac2e340b8c97c1a84c5adaf4750df1cbb9d07ea8b64591fc68763457bbded6"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5611,
+      "sha256": "818deb9626ef029ecd1d6839b5649d7b9a7bc19054dbd39c4cec6215bd01b118"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 32572,
+      "sha256": "eae87563b4eb4631b87e1357eb6be803c15f1ee0713db8e67806c658385a0027"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 25641,
+      "sha256": "b173f438e07f94429bdda37ce91601171b8e23f48c4b3651b37ea8c299275f14"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 736,
+      "sha256": "6dc56a50b5e2fe04bd6edd676a616447471ee82ece207478139f745fa5784228"
+    }
+  ],
+  "artifactCountExcludingSelf": 20,
+  "totalFilesIncludingSelf": 21,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

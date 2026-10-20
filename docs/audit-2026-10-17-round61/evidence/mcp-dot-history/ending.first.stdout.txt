@@ -1,0 +1,1 @@
+{"checkedAt": "2026-10-17T20:22:39.153447+00:00", "initialCount": 6244, "endingCount": 6244, "addedPaths": [], "removedPaths": [], "changed": [], "excludedFormalAtOrAbove": 61, "GitVerified": false, "productExecution": 0, "note": "Ending hashes are metadata integrity, not renewed semantic reading. Original scan counts/first bytes remain unchanged if dated drift exists."}

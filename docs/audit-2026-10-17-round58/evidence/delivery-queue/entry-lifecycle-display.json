@@ -1,0 +1,137 @@
+[
+  {
+    "path": "packages/chat/src/cli.ts",
+    "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+    "readAt": "2026-10-17T19:29:32.444376+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        75
+      ],
+      [
+        317,
+        320
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 1,
+        "last": 75,
+        "text": "1: #!/usr/bin/env node\n2: \n3: import { resolve } from \"node:path\";\n4: import { createInterface } from \"node:readline/promises\";\n5: import { stdin, stdout } from \"node:process\";\n6: import qrcode from \"qrcode-terminal\";\n7: import { createChannelAdapterAsync } from \"./adapter-factory.js\";\n8: import {\n9:   ChatGateway,\n10:   createAllowlistMiddleware,\n11:   createRateLimitMiddleware,\n12: } from \"./chat-gateway.js\";\n13: import { defaultGatewayConfigPath, loadGatewayConfig } from \"./config.js\";\n14: import { DesktopControlClient } from \"./desktop-control-client.js\";\n15: import { createBoundSessionChat } from \"./bound-session-chat.js\";\n16: import {\n17:   CODE_SHELL_REMOTE_COMMANDS,\n18:   createCodeShellRemoteCommands,\n19:   createMimiPetChat,\n20:   MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET,\n21: } from \"./gateway.js\";\n22: import { loginCodeShellWechat } from \"./wechat-login.js\";\n23: import { defaultWechatDataDirectory } from \"./wechat-storage.js\";\n24: import { acquireGatewayInstanceLock } from \"./instance-lock.js\";\n25: import { renderWebhookIngress, type IngressFormat } from \"./ingress.js\";\n26: import { GatewayServiceManager } from \"./service-manager.js\";\n27: import { runPlatformCanary } from \"./platform-canary.js\";\n28: import { createDesktopNotificationHandler } from \"./notification-relay.js\";\n29: import {\n30:   FileNotificationDeliveryProgressStore,\n31:   notificationDeliveryProgressPath,\n32: } from \"./notification-progress.js\";\n33: \n34: const CHAT_HELP = `用法：\n35:   code-shell-chat [--config /path/config.json]\n36:   code-shell-chat wechat login [--config /path/config.json] [--credentials-dir /path]\n37:   code-shell-chat service install|uninstall|status [--config /path/config.json]\n38:   code-shell-chat ingress print --host chat.example.com [--format caddy|nginx]\n39:   code-shell-chat canary [--config /path/config.json]\n40: \n41: 选项：\n42:   -h, --help  显示帮助并退出`;\n43: \n44: async function main(args = process.argv.slice(2)): Promise<void> {\n45:   if (args.includes(\"--help\") || args.includes(\"-h\")) {\n46:     console.log(CHAT_HELP);\n47:     return;\n48:   }\n49:   if (args[0] === \"wechat\" && args[1] === \"login\") {\n50:     await loginWechat(readWechatLoginOptions(args.slice(2)));\n51:     return;\n52:   }\n53:   if (args[0] === \"service\") {\n54:     await manageService(args.slice(1));\n55:     return;\n56:   }\n57:   if (args[0] === \"ingress\" && args[1] === \"print\") {\n58:     printIngress(args.slice(2));\n59:     return;\n60:   }\n61:   if (args[0] === \"canary\") {\n62:     await runCanary(args.slice(1));\n63:     return;\n64:   }\n65: \n66:   const configPath = readConfigPath(args);\n67:   const config = loadGatewayConfig({ configPath });\n68:   const lease = acquireGatewayInstanceLock(config.runtime.lockPath, \"code-shell-chat CLI\");\n69:   const shutdown = new AbortController();\n70:   const stop = () => shutdown.abort();\n71:   process.once(\"SIGINT\", stop);\n72:   process.once(\"SIGTERM\", stop);\n73:   try {\n74:     const desktop = new DesktopControlClient(config.desktop);\n75:     const adapters = await Promise.all("
+      },
+      {
+        "first": 317,
+        "last": 320,
+        "text": "317: main().catch((error) => {\n318:   console.error(`[code-shell-chat] ${error instanceof Error ? error.message : String(error)}`);\n319:   process.exitCode = 1;\n320: });"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/instance-lock.ts",
+    "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+    "readAt": "2026-10-17T19:29:32.445277+00:00",
+    "displayedLineRanges": [
+      [
+        27,
+        30
+      ],
+      [
+        47,
+        90
+      ],
+      [
+        156,
+        159
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 27,
+        "last": 30,
+        "text": "27: export interface GatewayInstanceLease {\n28:   readonly path: string;\n29:   readonly owner: string;\n30:   release(): void;"
+      },
+      {
+        "first": 47,
+        "last": 90,
+        "text": "47: /**\n48:  * Cross-process single-owner lease shared by the CLI and Desktop lifecycle.\n49:  * A dead owner's lock is reclaimed, while a live or unreadable lock fails\n50:  * closed so two processes can never consume the same platform updates.\n51:  */\n52: export function acquireGatewayInstanceLock(path: string, owner: string): GatewayInstanceLease {\n53:   if (!path || !owner) throw new Error(\"gateway lock path and owner are required\");\n54:   if (owner.length > MAX_LOCK_OWNER_CHARS || /[\\0\\r\\n]/u.test(owner)) {\n55:     throw new Error(\"gateway lock owner is invalid\");\n56:   }\n57:   const parent = dirname(path);\n58:   mkdirSync(parent, { recursive: true, mode: 0o700 });\n59:   const parentInfo = lstatSync(parent);\n60:   if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {\n61:     throw new Error(\"gateway lock parent must be a real directory\");\n62:   }\n63: \n64:   const record: GatewayLockRecord = {\n65:     version: 1,\n66:     pid: process.pid,\n67:     owner,\n68:     token: randomUUID(),\n69:     startedAt: Date.now(),\n70:   };\n71: \n72:   for (let attempt = 0; attempt < 3; attempt++) {\n73:     let fd: number | undefined;\n74:     let created = false;\n75:     try {\n76:       fd = openSync(path, \"wx\", 0o600);\n77:       created = true;\n78:       writeFileSync(fd, `${JSON.stringify(record)}\\n`, \"utf-8\");\n79:       closeSync(fd);\n80:       fd = undefined;\n81:       if (process.platform !== \"win32\") chmodSync(path, 0o600);\n82:       let released = false;\n83:       return {\n84:         path,\n85:         owner,\n86:         release: () => {\n87:           if (released) return;\n88:           released = true;\n89:           removeOwnedLock(path, record.token);\n90:         },"
+      },
+      {
+        "first": 156,
+        "last": 159,
+        "text": "156: function removeOwnedLock(path: string, token: string): void {\n157:   const current = readLock(path);\n158:   if (current?.token === token) rmSync(path, { force: true });\n159: }"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/gateway.ts",
+    "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+    "readAt": "2026-10-17T19:29:32.445644+00:00",
+    "displayedLineRanges": [
+      [
+        224,
+        244
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 224,
+        "last": 244,
+        "text": "224: async function buildMimiOutgoingReplies(\n225:   options: MimiPetChatOptions,\n226:   message: ChannelMessage,\n227:   capabilities: ChannelCapabilities,\n228:   configuredChannels: readonly ChannelAdapter[],\n229: ): Promise<OutgoingMessage[]> {\n230:   const attachments = await materializeChatAttachments(message.attachments);\n231:   const result = await options.desktop.petChat({\n232:     message: message.text,\n233:     ...(attachments.length > 0 ? { attachments } : {}),\n234:     origin: {\n235:       channel: message.channel,\n236:       target: message.target,\n237:       senderId: message.senderId,\n238:       isDirectMessage: message.isDirectMessage === true,\n239:       ...(message.messageId ? { messageId: message.messageId } : {}),\n240:       capabilities,\n241:       channels: gatewayChannelCatalog(message.channel, capabilities, configuredChannels),\n242:     },\n243:   });\n244:   if (result.suppressReply) return [];"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/desktop-control-client.ts",
+    "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+    "readAt": "2026-10-17T19:29:32.445925+00:00",
+    "displayedLineRanges": [
+      [
+        101,
+        118
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 101,
+        "last": 118,
+        "text": "101:   async petChat(input: PetChatRequest): Promise<PetChatResult> {\n102:     await this.ensureDesktopAvailable();\n103:     type Pending = { pending: true; requestId: string };\n104:     let result = await this.request<PetChatResult | Pending>(\n105:       \"POST\",\n106:       \"/v1/pet/chat/start\",\n107:       30_000,\n108:       input,\n109:     );\n110:     while (result && typeof result === \"object\" && \"pending\" in result && result.pending === true) {\n111:       if (typeof result.requestId !== \"string\" || !/^[a-f0-9-]{36}$/.test(result.requestId)) {\n112:         throw new DesktopControlUnavailableError(\"桌面端返回了无效请求标识，消息将重试\");\n113:       }\n114:       result = await this.request<PetChatResult | Pending>(\n115:         \"GET\",\n116:         `/v1/pet/chat/result/${result.requestId}?waitMs=25000`,\n117:         35_000,\n118:       );"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/src/delivery-queue.ts",
+    "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+    "readAt": "2026-10-17T19:29:32.446242+00:00",
+    "displayedLineRanges": [
+      [
+        700,
+        742
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 700,
+        "last": 742,
+        "text": "700: async function ensureRealDirectory(path: string): Promise<void> {\n701:   await mkdir(path, { recursive: true, mode: 0o700 });\n702:   await assertRealDirectory(path);\n703: }\n704: \n705: async function assertRealDirectory(path: string): Promise<void> {\n706:   const info = await lstat(path);\n707:   if (info.isSymbolicLink() || !info.isDirectory()) {\n708:     throw new Error(`Chat Gateway storage path is not a real directory: ${path}`);\n709:   }\n710: }\n711: \n712: async function assertSafeRegularTarget(path: string): Promise<void> {\n713:   try {\n714:     const info = await lstat(path);\n715:     if (info.isSymbolicLink() || !info.isFile()) {\n716:       throw new Error(`Chat Gateway storage target is not a regular file: ${path}`);\n717:     }\n718:   } catch (error) {\n719:     if ((error as NodeJS.ErrnoException).code !== \"ENOENT\") throw error;\n720:   }\n721: }\n722: \n723: async function readBoundedRegularFile(\n724:   path: string,\n725:   maxBytes: number,\n726:   label: string,\n727: ): Promise<string> {\n728:   const entry = await lstat(path);\n729:   if (entry.isSymbolicLink() || !entry.isFile() || entry.size > maxBytes) {\n730:     throw new Error(`${label} is not a bounded regular file`);\n731:   }\n732:   const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));\n733:   try {\n734:     const opened = await handle.stat();\n735:     if (!opened.isFile() || opened.size > maxBytes) {\n736:       throw new Error(`${label} is not a bounded regular file`);\n737:     }\n738:     return await handle.readFile(\"utf8\");\n739:   } finally {\n740:     await handle.close();\n741:   }\n742: }"
+      }
+    ]
+  },
+  {
+    "path": "packages/chat/package.json",
+    "sha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+    "readAt": "2026-10-17T19:29:32.446632+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        35
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 1,
+        "last": 35,
+        "text": "1: {\n2:   \"name\": \"@cjhyy/code-shell-chat\",\n3:   \"version\": \"0.9.45\",\n4:   \"description\": \"A standalone, transport-agnostic multi-channel chat gateway for Node.js and Bun.\",\n5:   \"type\": \"module\",\n6:   \"main\": \"./dist/index.js\",\n7:   \"types\": \"./dist/index.d.ts\",\n8:   \"exports\": {\n9:     \".\": {\n10:       \"types\": \"./dist/index.d.ts\",\n11:       \"import\": \"./dist/index.js\"\n12:     },\n13:     \"./codeshell\": {\n14:       \"types\": \"./dist/codeshell.d.ts\",\n15:       \"import\": \"./dist/codeshell.js\"\n16:     },\n17:     \"./factory\": {\n18:       \"types\": \"./dist/adapter-factory.d.ts\",\n19:       \"import\": \"./dist/adapter-factory.js\"\n20:     },\n21:     \"./telegram\": {\n22:       \"types\": \"./dist/telegram.d.ts\",\n23:       \"import\": \"./dist/telegram.js\"\n24:     },\n25:     \"./discord\": {\n26:       \"types\": \"./dist/discord.d.ts\",\n27:       \"import\": \"./dist/discord.js\"\n28:     },\n29:     \"./slack\": {\n30:       \"types\": \"./dist/slack.d.ts\",\n31:       \"import\": \"./dist/slack.js\"\n32:     },\n33:     \"./lark\": {\n34:       \"types\": \"./dist/lark.d.ts\",\n35:       \"import\": \"./dist/lark.js\""
+      }
+    ]
+  }
+]

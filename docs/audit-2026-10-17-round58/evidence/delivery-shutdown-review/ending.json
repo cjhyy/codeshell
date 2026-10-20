@@ -1,0 +1,144 @@
+{
+  "atUTC": "2026-10-17T19:33:37.006587+00:00",
+  "sourceInstructionChecks": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameSha256": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/chat/src/delivery-queue.ts",
+      "bytes": 28387,
+      "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "initialSha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.ts",
+      "bytes": 3817,
+      "sha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "initialSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "bytes": 11645,
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "initialSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "initialSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "initialSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "bytes": 15174,
+      "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "initialSha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/chat/src/instance-lock.ts",
+      "bytes": 4712,
+      "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "initialSha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "bytes": 28057,
+      "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "initialSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "sameSha256": true
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "bytes": 12790,
+      "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "initialSha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "sameSha256": true
+    }
+  ],
+  "all11SourceInstructionPinsSameSHA": true,
+  "boundedMetadataChecks": [
+    {
+      "path": "docs/audit-2026-10-16/server-web-chat.md",
+      "bytes": 16408,
+      "sha256": "e12916c5a52bc6bee7ccb78acf25788fcc68a160283523fa32f52e2f74098de0",
+      "initialSha256": "e12916c5a52bc6bee7ccb78acf25788fcc68a160283523fa32f52e2f74098de0",
+      "sameSha256": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "bytes": 31923,
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "initialSha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "sameSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "bytes": 6965,
+      "sha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "initialSha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "sameSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "bytes": 8813,
+      "sha256": "186bb098e3d80c7936072948b00cd254bb72d71fc21e4ee1ad143bf607a98e7d",
+      "initialSha256": "186bb098e3d80c7936072948b00cd254bb72d71fc21e4ee1ad143bf607a98e7d",
+      "sameSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-source-manifest.json",
+      "bytes": 4686,
+      "sha256": "e692ced1ae9e6fababd38dc22e4b3e2db8e59e9ae6258ef02e1870ab8ced3e35",
+      "initialSha256": "e692ced1ae9e6fababd38dc22e4b3e2db8e59e9ae6258ef02e1870ab8ced3e35",
+      "sameSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-source-manifest.json",
+      "bytes": 6349,
+      "sha256": "66bb614d01d4075fb0415f482a6ecaa23b1df2a2bd9fd1c3cead648ece3a4147",
+      "initialSha256": "66bb614d01d4075fb0415f482a6ecaa23b1df2a2bd9fd1c3cead648ece3a4147",
+      "sameSha256": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/source-manifest.json",
+      "bytes": 2815,
+      "sha256": "9a624ccb9a02c21474a563b4b7382799a95cf7961f5ee6d2cf7f36da54c666d9",
+      "initialSha256": "9a624ccb9a02c21474a563b4b7382799a95cf7961f5ee6d2cf7f36da54c666d9",
+      "sameSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round141-pairing/history-batch.json",
+      "bytes": 1396813,
+      "sha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b",
+      "initialSha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b",
+      "sameSha256": true
+    }
+  ],
+  "all8BoundedMetadataInputsSameSHA": true,
+  "allComparedSameSHA": true,
+  "scope": "Bounded7old originals+sharedJSON bytes only, not independently rehashed5850 original entries or Git state."
+}

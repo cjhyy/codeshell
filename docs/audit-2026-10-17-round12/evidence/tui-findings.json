@@ -1,0 +1,56 @@
+[
+  {
+    "id": "TUI-R12-01",
+    "severity": "P3",
+    "title": "modifyOtherKeys 将非 Ctrl 大写文本降为小写",
+    "file": "packages/tui/src/render/parse-keypress.ts",
+    "line": 539,
+    "related": [
+      {
+        "file": "packages/tui/src/render/events/input-event.ts",
+        "line": 133
+      },
+      {
+        "file": "packages/tui/src/ui/components/TextInput.tsx",
+        "line": 205
+      }
+    ],
+    "trigger": "合法 modifyOtherKeys 字符编码 ESC[27;2;65~（Shift+A）；以及 ESC[27;4;81~（Alt+Shift+Q）。仅 Shift 的首例进入常规文本输入。",
+    "expected": "字符码 65 的非 Ctrl 文本 input 保留 A；Ctrl 快捷键可继续采用归一化小写名称。",
+    "actual": "真实 parseMultipleKeypresses→InputEvent 返回 a；81 的独立控制返回 q；shift/meta 位保持正确。",
+    "contract": "xterm 官方定义第三项是字符的十进制码；use-input.ts:20 回调交付用户输入，TextInput.tsx:205–213 插入非 ctrl/meta input；现有 Ctrl+Shift 测试小写合同不覆盖非 Ctrl 输入。",
+    "evidenceLevel": "actual parser and InputEvent constructor, static useInput/TextInput consumer trace",
+    "fixture": "tui-key-events.test.ts",
+    "log": "tui-key-events.first.log",
+    "controls": "raw A/a、编码小写、/、空格均保留；未执行 React/TextInput/App/终端。",
+    "limits": "没有运行终端或 Ink；没有声称所有终端都发送该编码；输入遵照公开 xterm 协议。",
+    "dedup": "all docs/bugs MD/JSON/TXT 1725 files, 95 hits; no same root cause found"
+  },
+  {
+    "id": "TUI-R12-02",
+    "severity": "P3",
+    "title": "KeyboardEvent 未将编码可打印键还原为字面字符",
+    "file": "packages/tui/src/render/events/keyboard-event.ts",
+    "line": 50,
+    "related": [
+      {
+        "file": "packages/tui/src/render/components/Button.tsx",
+        "line": 96
+      },
+      {
+        "file": "packages/tui/src/render/components/App.tsx",
+        "line": 514
+      }
+    ],
+    "trigger": "合法 Alt+Space 的 ESC[27;3;32~ 或 CSI 32;3u；标准 ESC 前缀 Alt+z。",
+    "expected": "KeyboardEvent 自身显式合同要求 printable key 为字面字符：空格为单字符 U+0020，Alt+z 为 z，modifier 独立保存。",
+    "actual": "真实 parseMultipleKeypresses→KeyboardEvent 空格 key=\"space\"（长度 5）；Alt+z key 包含 ESC 前缀。对应 InputEvent 已分别得到正确空格及 z。",
+    "contract": "keyboard-event.ts:7–10 明确 literal character 和 key.length===1；Button.tsx:96 按 key===literal-space 处理激活，App.tsx 静态将同一 ParsedKey 交给该 constructor。",
+    "evidenceLevel": "actual parser and KeyboardEvent/InputEvent constructors, static DOM dispatcher/Button trace",
+    "fixture": "tui-key-events.test.ts",
+    "log": "tui-key-events.first.log",
+    "controls": "raw space/z/3/slash、arrow/return、Ctrl+C 的 key 和 flags 正常。",
+    "limits": "没有执行 dispatcher、Button、Ink 或真实 key/TTY/PTY；Button 影响仅静态分支推导。",
+    "dedup": "all docs/bugs MD/JSON/TXT 1725 files, 95 hits; no same root cause found"
+  }
+]

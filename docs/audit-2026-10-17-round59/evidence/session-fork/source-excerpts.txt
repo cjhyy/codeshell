@@ -1,0 +1,1307 @@
+packages/core/src/session/session-manager.ts
+302: export interface ForkSessionOptions {
+303:   targetSessionId?: string;
+304:   /** Inclusive source event cursor; omitted means the frozen transcript tail. */
+305:   throughEventId?: string;
+306:   /** `completed` is the interrupted snapshot used by ephemeral side chats. */
+307:   snapshotMode?: "tail" | "completed";
+308:   /** Keep this temporary fork in process memory only. */
+309:   ephemeral?: boolean;
+310: }
+311: 
+312: export interface ForkSessionResult {
+313:   bundle: SessionBundle;
+314:   lineage: SessionForkLineage;
+315:   copiedEventCount: number;
+316: }
+317: 
+318: export interface SummaryForkOptions {
+319:   targetSessionId?: string;
+320:   fromEventId: string;
+321:   toEventId: string;
+322:   summary: string;
+323:   sourceEventCount: number;
+324:   estimatedTokens: number;
+325: }
+326: 
+327: interface FrozenForkSnapshot {
+328:   sourceState: SessionState;
+329:   copiedEvents: TranscriptEvent[];
+330: }
+331: 
+332: type ForkEventPolicy = "copy" | "skip";
+333: 
+334: /**
+335:  * Every known transcript event must make an explicit fork decision. The
+336:  * `satisfies` constraint turns new TranscriptEventType additions into a
+337:  * compile-time error instead of a quick-chat failure discovered at runtime.
+338:  * The runtime fallback below still rejects unknown events from newer or
+339:  * malformed persisted transcripts.
+340:  */
+341: const FORK_EVENT_POLICY = {
+342:   // Signed wire receipts remain bound to the original Session incarnation.
+343:   model_request_boundary: "skip",
+344:   model_request_attempt: "skip",
+345:   message: "copy",
+346:   tool_use: "copy",
+347:   tool_result: "copy",
+348:   summary: "copy",
+349:   context_transfer: "copy",
+350:   context_note: "copy",
+351:   context_checkpoint: "copy",
+352:   range_archive: "copy",
+353:   content_replace: "copy",
+354:   file_history: "skip",
+355:   plan_operation: "skip",
+356:   session_meta: "skip",
+357:   subagent: "copy",
+358:   external_file_changes: "copy",
+359:   turn_diff: "copy",
+360:   turn_boundary: "copy",
+361:   // Idempotency receipts belong to the source session and never contribute to
+362:   // model context. Copying them could replay a source response in the child.
+363:   run_result: "skip",
+364:   goal_progress: "copy",
+365:   turn_stopped: "copy",
+366:   error: "copy",
+2110:     if (sessionId.startsWith("qchat-")) {
+2111:       throw new SessionError(`Session state file not found: ${sessionId}`);
+2112:     }
+2113:     const stateFile = join(this.sessionsDir, sessionId, "state.json");
+2114:     if (!existsSync(stateFile)) {
+2115:       throw new SessionError(`Session state file not found: ${sessionId}`);
+2116:     }
+2117:     try {
+2118:       return hydrateGoalLifecycle(JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState);
+2119:     } catch (err) {
+2120:       throw new SessionError(
+2121:         `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
+2122:       );
+2123:     }
+2124:   }
+2125: 
+2126:   private rebaseLiveState(live: SessionState, persisted: SessionState): void {
+2127:     for (const key of Object.keys(live) as Array<keyof SessionState>) {
+2128:       if (!(key in persisted)) delete live[key];
+2129:     }
+2130:     Object.assign(live, persisted);
+2131:   }
+2132: 
+2133:   private generationKey(sessionId: string): string {
+2134:     return `${this.sessionsDir}\0${sessionId}`;
+2135:   }
+2136: 
+2137:   /** Create an independent, top-level session from a frozen event cursor. */
+2138:   fork(sourceSessionId: string, options: ForkSessionOptions = {}): ForkSessionResult {
+2139:     assertSafeSessionId(sourceSessionId);
+2140:     if (options.targetSessionId !== undefined) assertSafeSessionId(options.targetSessionId);
+2141:     if (options.snapshotMode === "completed" && options.throughEventId !== undefined) {
+2142:       throw new SessionError(`Completed snapshot cannot use an explicit fork cursor`);
+2143:     }
+2144:     const snapshot = this.readForkSnapshot(
+2145:       sourceSessionId,
+2146:       options.throughEventId,
+2147:       options.snapshotMode ?? "tail",
+2148:     );
+2149:     const targetSessionId = options.targetSessionId ?? nanoid(16);
+2150:     const createdAt = Date.now();
+2151:     const lineage: SessionForkLineage = {
+2152:       sessionId: sourceSessionId,
+2153:       mode: "full",
+2154:       fromEventId: snapshot.copiedEvents[0]?.id,
+2155:       throughEventId: snapshot.copiedEvents[snapshot.copiedEvents.length - 1]?.id,
+2156:       sourceEventCount: snapshot.copiedEvents.length,
+2157:       createdAt,
+2158:     };
+2159:     const state = buildForkState(snapshot.sourceState, targetSessionId, lineage, createdAt);
+2160:     if (options.ephemeral === true) state.ephemeral = true;
+2161:     const events = buildForkTranscript(snapshot.copiedEvents, state);
+2162:     const bundle = this.publishSessionAtomically(targetSessionId, state, events);
+2163:     return { bundle, lineage, copiedEventCount: snapshot.copiedEvents.length };
+2164:   }
+2165: 
+2166:   /** Freeze and validate an inclusive source range before any model call. */
+2167:   selectContextPackage(
+2168:     sourceSessionId: string,
+2169:     range: { fromEventId: string; toEventId: string },
+2170:   ): ReturnType<typeof Transcript.selectContextRange> {
+2171:     assertSafeSessionId(sourceSessionId);
+2172:     const processLocal = this.processLocalBundle(sourceSessionId);
+2173:     if (processLocal) {
+2174:       return Transcript.selectContextRange(processLocal.transcript.getEvents(), range);
+2175:     }
+2176:     if (sourceSessionId.startsWith("qchat-")) {
+2177:       throw new SessionError(`Session not found: ${sourceSessionId}`);
+2178:     }
+2179:     const transcriptFile = join(this.sessionsDir, sourceSessionId, "transcript.jsonl");
+2180:     const stateFile = join(this.sessionsDir, sourceSessionId, "state.json");
+2181:     if (!existsSync(stateFile)) throw new SessionError(`Session not found: ${sourceSessionId}`);
+2182:     const parsed = Transcript.readEvents(transcriptFile);
+2183:     if (parsed.malformedLineCount > 0) {
+2184:       throw new SessionError(
+2185:         `Session transcript is malformed for ${sourceSessionId}: ${parsed.malformedLineCount} invalid line(s)`,
+2186:       );
+2187:     }
+2188:     return Transcript.selectContextRange(parsed.events, range);
+2189:   }
+2190: 
+2191:   /** Publish a summary-only top-level fork after summarization has succeeded. */
+2192:   createSummaryFork(sourceSessionId: string, options: SummaryForkOptions): ForkSessionResult {
+2193:     assertSafeSessionId(sourceSessionId);
+2194:     if (options.targetSessionId !== undefined) assertSafeSessionId(options.targetSessionId);
+2195:     if (!options.fromEventId || !options.toEventId) {
+2196:       throw new SessionError("Summary fork requires a closed source event range");
+2197:     }
+2198:     if (!options.summary.trim())
+2199:       throw new SessionError("Summary fork requires a non-empty summary");
+2200:     const source = this.resume(sourceSessionId);
+2201:     const targetSessionId = options.targetSessionId ?? nanoid(16);
+2202:     const createdAt = Date.now();
+2203:     const lineage: SessionForkLineage = {
+2204:       sessionId: sourceSessionId,
+2205:       mode: "summary",
+2206:       fromEventId: options.fromEventId,
+2207:       throughEventId: options.toEventId,
+2208:       sourceEventCount: options.sourceEventCount,
+2209:       createdAt,
+2210:     };
+2211:     const state = buildForkState(source.state, targetSessionId, lineage, createdAt);
+2212:     const [meta] = buildForkTranscript([], state);
+2213:     const summaryEvent: TranscriptEvent = {
+2214:       id: nanoid(12),
+2215:       type: "context_transfer",
+2216:       timestamp: createdAt,
+2217:       turnNumber: 0,
+2218:       data: {
+2219:         summary: options.summary,
+2220:         sourceRange: {
+2221:           sessionId: sourceSessionId,
+2222:           fromEventId: options.fromEventId,
+2223:           toEventId: options.toEventId,
+2224:         },
+2225:         sourceEventCount: options.sourceEventCount,
+2226:         estimatedTokens: options.estimatedTokens,
+2227:         summaryVersion: 1,
+2228:         summaryHash: createHash("sha256").update(options.summary).digest("hex"),
+2229:       },
+2230:     };
+2231:     const bundle = this.publishSessionAtomically(targetSessionId, state, [meta!, summaryEvent]);
+2232:     return { bundle, lineage, copiedEventCount: 0 };
+2233:   }
+2234: 
+2235:   private readForkSnapshot(
+2236:     sourceSessionId: string,
+2237:     throughEventId: string | undefined,
+2238:     snapshotMode: "tail" | "completed",
+2239:   ): FrozenForkSnapshot {
+2240:     const processLocal = this.processLocalBundle(sourceSessionId);
+2241:     if (processLocal) {
+2242:       return this.freezeForkSnapshot(
+2243:         sourceSessionId,
+2244:         structuredClone(processLocal.state),
+2245:         processLocal.transcript.getEvents(),
+2246:         throughEventId,
+2247:         snapshotMode,
+2248:       );
+2249:     }
+2250:     if (sourceSessionId.startsWith("qchat-")) {
+2251:       throw new SessionError(`Session not found: ${sourceSessionId}`);
+2252:     }
+2253:     const sessionDir = join(this.sessionsDir, sourceSessionId);
+2254:     const stateFile = join(sessionDir, "state.json");
+2255:     const transcriptFile = join(sessionDir, "transcript.jsonl");
+2256:     if (!existsSync(stateFile)) throw new SessionError(`Session not found: ${sourceSessionId}`);
+2257:     let sourceState: SessionState;
+2258:     try {
+2259:       sourceState = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+2260:     } catch (err) {
+2261:       throw new SessionError(
+2262:         `Session state is corrupt for ${sourceSessionId}: ${err instanceof Error ? err.message : String(err)}`,
+2263:       );
+2264:     }
+2265:     const parsed = Transcript.readEvents(transcriptFile);
+2266:     if (parsed.malformedLineCount > 0) {
+2267:       throw new SessionError(
+2268:         `Session transcript is malformed for ${sourceSessionId}: ${parsed.malformedLineCount} invalid line(s)`,
+2269:       );
+2270:     }
+2271:     return this.freezeForkSnapshot(
+2272:       sourceSessionId,
+2273:       sourceState,
+2274:       parsed.events,
+2275:       throughEventId,
+2276:       snapshotMode,
+2277:     );
+2278:   }
+2279: 
+2280:   private freezeForkSnapshot(
+2281:     sourceSessionId: string,
+2282:     sourceState: SessionState,
+2283:     events: readonly TranscriptEvent[],
+2284:     throughEventId: string | undefined,
+2285:     snapshotMode: "tail" | "completed",
+2286:   ): FrozenForkSnapshot {
+2287:     // Both process-local and disk readers provide a snapshot array. Fork
+2288:     // selection is synchronous, so keep event references here and clone once
+2289:     // when the independently-owned target transcript is constructed below.
+2290:     const sourceEvents = [...events];
+2291:     let frozen = sourceEvents;
+2292:     const effectiveCursor =
+2293:       snapshotMode === "completed" ? sourceState.completedThroughEventId : throughEventId;
+2294:     if (snapshotMode === "completed" && effectiveCursor === undefined) {
+2295:       // Legacy sessions predate completedThroughEventId. Their tail is a safe
+2296:       // completed snapshot only when the persisted lifecycle status says the
+2297:       // last run completed naturally. A modern schema marker without a cursor
+2298:       // means persistence was degraded, so even status=completed must not use
+2299:       // the tail. Active/error/abort tails may be partial as well.
+2300:       frozen =
+2301:         sourceState.completedSnapshotVersion === undefined && sourceState.status === "completed"
+2302:           ? sourceEvents
+2303:           : [];
+2304:     } else if (effectiveCursor !== undefined) {
+2305:       const matches = sourceEvents
+2306:         .map((event, index) => (event.id === effectiveCursor ? index : -1))
+2307:         .filter((index) => index >= 0);
+2308:       if (matches.length !== 1) {
+2309:         throw new SessionError(
+2310:           snapshotMode === "completed"
+2311:             ? `Completed fork cursor must identify exactly one source event`
+2312:             : `Fork cursor must identify exactly one source event`,
+2313:         );
+2314:       }
+2315:       const cursor = sourceEvents[matches[0]];
+2316:       if (cursor.type === "session_meta") {
+2317:         throw new SessionError(`Fork cursor cannot point at session metadata`);
+2318:       }
+2319:       frozen = sourceEvents.slice(0, matches[0] + 1);
+2320:     }
+2321: 
+2322:     const copiedEvents: TranscriptEvent[] = [];
+2323:     for (const event of frozen) {
+2324:       const policy: ForkEventPolicy | undefined = FORK_EVENT_POLICY[event.type];
+2325:       if (policy === "skip") continue;
+2326:       if (policy !== "copy") {
+2327:         throw new SessionError(`Unsupported transcript event in fork: ${String(event.type)}`);
+2328:       }
+2329:       copiedEvents.push(event);
+2330:     }
+2331:     validateForkToolPairs(copiedEvents);
+2332:     return { sourceState: structuredClone(sourceState), copiedEvents };
+2333:   }
+2334: 
+2335:   private publishSessionAtomically(
+2336:     targetSessionId: string,
+2337:     state: SessionState,
+2338:     events: readonly TranscriptEvent[],
+2339:   ): SessionBundle {
+2340:     const targetDir = join(this.sessionsDir, targetSessionId);
+2341:     if (isEphemeralSessionState(state)) {
+2342:       if (this.processLocalBundle(targetSessionId) || existsSync(targetDir)) {
+2343:         throw new SessionError(`Session already exists: ${targetSessionId}`);
+2344:       }
+2345:       const bundle = {
+2346:         state: hydrateGoalLifecycle(structuredClone(state)),
+2347:         transcript: Transcript.fromMemoryEvents(targetSessionId, events),
+2348:       };
+2349:       this.storeProcessLocalBundle(bundle);
+2350:       return bundle;
+2351:     }
+2352:     if (existsSync(targetDir)) throw new SessionError(`Session already exists: ${targetSessionId}`);
+2353:     const stagingDir = join(this.sessionsDir, `.pending-fork-${targetSessionId}-${nanoid(8)}`);
+2354:     let published = false;
+2355:     try {
+2356:       mkdirSync(stagingDir, { mode: 0o700 });
+2357:       writeFileSync(join(stagingDir, "state.json"), JSON.stringify(state, null, 2), {
+2358:         encoding: "utf-8",
+2359:         mode: 0o600,
+2360:       });
+2361:       const jsonl = events.map((event) => JSON.stringify(event)).join("\n") + "\n";
+2362:       writeFileSync(join(stagingDir, "transcript.jsonl"), jsonl, {
+2363:         encoding: "utf-8",
+2364:         mode: 0o600,
+2365:       });
+2366:       if (existsSync(targetDir)) {
+2367:         throw new SessionError(`Session already exists: ${targetSessionId}`);
+2368:       }
+2369:       renameSync(stagingDir, targetDir);
+2370:       published = true;
+2371:       return this.resume(targetSessionId);
+2372:     } finally {
+2373:       if (!published) rmSync(stagingDir, { recursive: true, force: true });
+2374:     }
+2375:   }
+2376: 
+2377:   list(
+2378:     limit = 20,
+2379:     opts?: {
+2380:       excludeKinds?: readonly string[];
+2381:       /** Apply workspace/visibility filters before the result limit and previews. */
+2382:       cwd?: string;
+2383:       archived?: boolean;
+2384:       rootsOnly?: boolean;
+2385:       before?: { lastActiveAt: number; sessionId: string };
+2386:       filter?: (entry: Readonly<SessionListEntry>) => boolean;
+2387:     },
+2388:   ): SessionListEntry[] {
+2389:     if (!existsSync(this.sessionsDir)) return [];
+2390:     // Core is domain-agnostic: only the composition root knows which
+2391:     // extension-owned kinds belong outside its generic list. AgentServer passes
+2392:     // the resolved hidden-kind union explicitly; direct SDK callers see every
+2393:     // kind unless they choose exclusions themselves.
+2394:     const excludeKinds = opts?.excludeKinds ?? [];
+2395: 
+2396:     const dirs = readdirSync(this.sessionsDir, { withFileTypes: true })
+2397:       .filter(
+2398:         (d) => d.isDirectory() && !d.name.startsWith(".pending-") && !d.name.startsWith("qchat-"),
+2399:       )
+2400:       .map((d) => d.name);
+2401: 
+2402:     // Two-pass scan. Pass 1: cheap stat to find each session's
+2403:     // lastActiveAt and sort. Pass 2 opens state.json in that order until it
+2404:     // finds `limit` non-ephemeral winners, then tails only those transcripts
+2405:     // for previews. With ~1 k sessions on disk the difference is ~1 s
+2477: export function buildForkState(
+2478:   source: SessionState,
+2479:   targetSessionId: string,
+2480:   lineage: SessionForkLineage,
+2481:   startedAt = Date.now(),
+2482: ): SessionState {
+2483:   const workspace = isSessionWorkspace(source.workspace)
+2484:     ? structuredClone(source.workspace)
+2485:     : { root: source.cwd, kind: "main" as const };
+2486:   return {
+2487:     sessionId: targetSessionId,
+2488:     kind: "work",
+2489:     stateRevision: 0,
+2490:     cwd: source.cwd,
+2491:     workspace,
+2492:     startedAt,
+2493:     model: source.model,
+2494:     provider: source.provider,
+2495:     tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+2496:     cacheUsageVersion: 1,
+2497:     cumulativePromptTokens: 0,
+2498:     cumulativeCacheReadTokens: 0,
+2499:     cumulativeCacheCreationTokens: 0,
+2500:     turnCount: 0,
+2501:     turnSeq: 0,
+2502:     invokedSkills: [],
+2503:     parentSessionId: null,
+2504:     forkedFrom: structuredClone(lineage),
+2505:     ...(source.origin ? { origin: source.origin } : {}),
+2506:     status: "active",
+2507:   };
+2508: }
+2509: 
+2510: export function buildForkTranscript(
+2511:   sourceEvents: readonly TranscriptEvent[],
+2512:   state: SessionState,
+2513: ): TranscriptEvent[] {
+2514:   const meta: TranscriptEvent = {
+2515:     id: nanoid(12),
+2516:     type: "session_meta",
+2517:     timestamp: state.startedAt,
+2518:     turnNumber: 0,
+2519:     data: {
+2520:       sessionId: state.sessionId,
+2521:       cwd: state.cwd,
+2522:       workspace: structuredClone(state.workspace),
+2523:       model: state.model,
+2524:       provider: state.provider,
+2525:       startedAt: state.startedAt,
+2526:       forkedFrom: structuredClone(state.forkedFrom),
+2527:     },
+2528:   };
+2529:   const copied = sourceEvents.map((source) => ({
+2530:     ...structuredClone(source),
+2531:     id: nanoid(12),
+2532:   }));
+2533:   Transcript.remapContextForkReferences(sourceEvents, copied);
+2534:   const copiedIds = new Map(sourceEvents.map((event, index) => [event.id, copied[index]!.id]));
+2535:   for (const event of copied) {
+2536:     if (event.type !== "turn_diff") continue;
+2537:     for (const key of ["turnId", "runId"] as const) {
+2538:       const original = event.data[key];
+2539:       if (typeof original === "string" && copiedIds.has(original))
+2540:         event.data[key] = copiedIds.get(original)!;
+2541:     }
+2542:   }
+2543:   return [meta, ...copied];
+2544: }
+2545: 
+2546: function validateForkToolPairs(events: readonly TranscriptEvent[]): void {
+2547:   const projectedUses: string[] = [];
+2548:   const projectedResults: string[] = [];
+2549:   const seenProjectedUses = new Set<string>();
+2550:   const seenProjectedResults = new Set<string>();
+2551:   const projectedPending: string[] = [];
+2552: 
+2553:   for (const message of Transcript.eventsToMessages(events)) {
+2554:     const blocks = Array.isArray(message.content) ? message.content : [];
+2555:     const uses = blocks.filter((block) => block.type === "tool_use");
+2556:     const results = blocks.filter((block) => block.type === "tool_result");
+2557: 
+2558:     if (projectedPending.length > 0) {
+2559:       if (message.role !== "user" || results.length !== blocks.length || results.length === 0) {
+2560:         throw new SessionError(
+2561:           `Fork provider history inserts a message before pending tool results`,
+2562:         );
+2563:       }
+2564:     } else if (results.length > 0) {
+2565:       throw new SessionError(`Fork provider history contains an orphaned tool result`);
+2566:     }
+2567: 
+2568:     if (uses.length > 0) {
+2569:       if (message.role !== "assistant" || results.length > 0) {
+2570:         throw new SessionError(`Fork provider history contains tool use blocks in an invalid role`);
+2571:       }
+2572:       for (const block of uses) {
+2573:         const id = block.id;
+2574:         if (typeof id !== "string" || !id) {
+2575:           throw new SessionError(`Fork provider history contains a tool use without id`);
+2576:         }
+
+packages/core/src/session/transcript.ts
+3:  * toMessages() derives Message[] from events for sending to LLM.
+234:       trigger: "context_transfer";
+251:   "context_transfer",
+368:   static remapContextForkReferences(
+369:     sourceEvents: readonly TranscriptEvent[],
+370:     copiedEvents: TranscriptEvent[],
+371:   ): void {
+372:     if (!sourceEvents.some((event) => event.type === "context_note")) return;
+373:     const eventIds = new Map(
+374:       sourceEvents.map((event, index) => [event.id, copiedEvents[index]!.id]),
+375:     );
+376:     for (const [index, source] of sourceEvents.entries()) {
+377:       const copied = copiedEvents[index]!;
+378:       // An inherited note can cite old event ids. Resolve those aliases only
+379:       // against the copied prefix, never by reaching into the parent session.
+380:       copied.data.contextHistorySourceIds = [
+381:         ...(Array.isArray(source.data.contextHistorySourceIds)
+382:           ? source.data.contextHistorySourceIds.filter((id): id is string => typeof id === "string")
+383:           : []),
+384:         source.id,
+385:       ];
+386:       if (source.type === "context_note") {
+387:         const cursor = source.data.coveredThroughEventId;
+388:         if (typeof cursor === "string" && eventIds.has(cursor)) {
+389:           copied.data.coveredThroughEventId = eventIds.get(cursor);
+390:         }
+391:       }
+392:       if (source.type !== "context_checkpoint") continue;
+393:       const snapshot = readCheckpoint(source, sourceEvents.slice(0, index));
+394:       if (!snapshot) continue; // Never turn a corrupt source checkpoint into a valid one.
+395:       const noteId = eventIds.get(snapshot.noteId);
+396:       const coveredThroughEventId = eventIds.get(snapshot.coveredThroughEventId);
+397:       if (!noteId || !coveredThroughEventId) continue;
+398:       const remapped = { ...snapshot, noteId, coveredThroughEventId };
+399:       Object.assign(copied.data, remapped, { checksum: checkpointHash(remapped) });
+400:     }
+401:   }
+402: 
+403:   isPersistent(): boolean {
+404:     return this.persistent;
+405:   }
+406: 
+582:    * receipt stays outside toMessages(), so replay support does not change the
+653:       return this.append("context_transfer", { summary, ...provenance });
+695:   toMessages(): Message[] {
+875:           // Content replacement: inject summary as system-reminder
+876:           const { summary } = event.data as { summary: string };
+877:           messages.push({
+878:             role: "user",
+879:             content: `<system-reminder>Previous conversation was summarized:\n${summary}</system-reminder>`,
+880:           });
+881:           break;
+882:         }
+883:         case "context_transfer": {
+884:           const { summary, handoffId } = event.data as { summary: string; handoffId?: string };
+885:           messages.push({
+886:             role: "user",
+887:             content: handoffId
+888:               ? `<system-reminder>Session handoff received:\n${summary}</system-reminder>`
+889:               : `<system-reminder>Background context transferred from a selected conversation range:\n${summary}</system-reminder>`,
+890:           });
+891:           break;
+892:         }
+893:         // turn_boundary, run_result, session_meta, file_history, plan_operation, error
+894:         // are not included in LLM messages. range_archive is handled entirely
+895:         // by the pre-pass above (it emits the summary at span entry and drops
+896:         // events inside the span); it never falls through to this switch.
+897:       }
+898:     }
+899: 
+900:     return { messages, liveIndexByClientMessageId };
+901:   }
+1122:         case "context_transfer": {
+1135:           // messages inside its span the way toMessages() does — the caller
+1154:   static selectContextRange(
+1155:     events: readonly TranscriptEvent[],
+1156:     range: ContextEventRange,
+1157:   ): SelectedContextRange {
+1158:     const fromMatches = events
+1159:       .map((event, index) => (event.id === range.fromEventId ? index : -1))
+1160:       .filter((index) => index >= 0);
+1161:     const toMatches = events
+1162:       .map((event, index) => (event.id === range.toEventId ? index : -1))
+1163:       .filter((index) => index >= 0);
+1164:     if (fromMatches.length !== 1 || toMatches.length !== 1) {
+1165:       throw new Error("Context range endpoints must each identify exactly one source event");
+1166:     }
+1167:     const fromIndex = fromMatches[0]!;
+1168:     const toIndex = toMatches[0]!;
+1169:     if (fromIndex > toIndex) throw new Error("Context range endpoints are out of order");
+1170: 
+1171:     const frozen = structuredClone(events.slice(fromIndex, toIndex + 1));
+1172:     if (frozen[0]?.type === "session_meta" || frozen.at(-1)?.type === "session_meta") {
+1173:       throw new Error("Context range cannot use session metadata as a boundary");
+1174:     }
+1175:     const selected = frozen.filter((event) => CONTEXT_EVENT_TYPES.has(event.type));
+1176:     validateSelectedToolPairs(selected);
+1177:     return {
+1178:       events: selected,
+1179:       messages: Transcript.eventsToMessages(selected) as Message[],
+1180:       sourceEventCount: frozen.length,
+1181:     };
+1182:   }
+1183: 
+1184:   static loadFromFile(filePath: string): Transcript {
+1185:     const transcript = new Transcript(filePath);
+1186:     if (!existsSync(filePath)) return transcript;
+1187: 
+1188:     const content = readFileSync(filePath, "utf-8");
+1189:     const lines = content.split("\n").filter((l) => l.trim());
+1190: 
+1191:     const events: TranscriptEvent[] = [];
+1192:     for (const line of lines) {
+1193:       try {
+1194:         events.push(JSON.parse(line) as TranscriptEvent);
+1195:       } catch {
+1196:         // Skip malformed lines
+1197:       }
+1198:     }
+1199:     transcript.loadEvents(events);
+1200: 
+1201:     // Repair pairing on load
+1202:     transcript.repairToolResultPairs();
+1203: 
+1204:     return transcript;
+1205:   }
+1206: 
+1207:   /**
+1208:    * Load the active replay for a model run while leaving the append-only audit
+1209:    * transcript untouched on disk. A host-authored from-less range archive
+1210:    * replaces everything before its `to` anchor, so a large Mimi transcript can
+1211:    * retain only that boundary and the live tail in memory. If the boundary is
+1212:    * absent, too old, malformed, or not self-contained in the bounded tail, we
+1213:    * fail open to the full loader.
+1214:    */
+1215:   static loadContextFromFile(
+1216:     filePath: string,
+1217:     maxTailBytes: number = DEFAULT_CONTEXT_TAIL_SCAN_BYTES,
+1218:   ): Transcript {
+1219:     if (!existsSync(filePath)) return new Transcript(filePath);
+1220:     let tail: string;
+1221:     try {
+1222:       const fd = openSync(filePath, "r");
+1223:       try {
+1224:         const fileSize = fstatSync(fd).size;
+1225:         if (fileSize <= maxTailBytes) return Transcript.loadFromFile(filePath);
+1226:         const length = Math.min(fileSize, Math.max(1, maxTailBytes));
+1227:         const buffer = Buffer.allocUnsafe(length);
+1228:         const bytesRead = readSync(fd, buffer, 0, length, fileSize - length);
+1229:         let window = buffer.subarray(0, bytesRead);
+1230:         const newline = window.indexOf(0x0a);
+1231:         if (newline < 0) return Transcript.loadFromFile(filePath);
+1232:         window = window.subarray(newline + 1);
+1233:         tail = window.toString("utf8");
+1234:       } finally {
+1235:         closeSync(fd);
+1236:       }
+1237:     } catch {
+
+packages/core/src/engine/engine.ts
+1274:    * whose target session the user deleted must fail loudly, not run its prompt
+1275:    * against a blank session. A stat probe, not a load.
+1276:    */
+1277:   sessionExistsOnDisk(sessionId: string): boolean {
+1278:     return this.sessionManager.exists(sessionId);
+1279:   }
+1280: 
+1281:   forkSession(sourceSessionId: string, options?: ForkSessionOptions): ForkSessionResult {
+1282:     return this.sessionManager.fork(sourceSessionId, options);
+1283:   }
+1284: 
+1285:   selectContextPackage(
+1286:     sourceSessionId: string,
+1287:     range: { fromEventId: string; toEventId: string },
+1288:   ): ReturnType<SessionManager["selectContextPackage"]> {
+1289:     return this.sessionManager.selectContextPackage(sourceSessionId, range);
+1290:   }
+1291: 
+1292:   createSummaryFork(sourceSessionId: string, options: SummaryForkOptions): ForkSessionResult {
+1293:     return this.sessionManager.createSummaryFork(sourceSessionId, options);
+1294:   }
+1295: 
+1296:   /** Summarize a selected transcript package using the configured aux tier. */
+1297:   async summarizeContextPackage(
+1298:     messages: Message[],
+1299:     signal?: AbortSignal,
+1300:     sourceSessionId?: string,
+1301:   ): Promise<{ summary: string; estimatedTokens: number }> {
+1302:     if (messages.length === 0) throw new Error("Cannot summarize an empty context package");
+1303:     const serializedSelection = serializeContextPackageMessages(messages);
+1304:     if (!serializedSelection.hasSummarizableContent) {
+1305:       throw new Error(
+1306:         "Cannot summarize an image-only context package without textual or tool facts",
+1307:       );
+1308:     }
+1309:     if (sourceSessionId && this.config.costStore) {
+1310:       const persisted = this.sessionManager.readSessionState(sourceSessionId)?.costState;
+1311:       const legacy = persisted?.kind === "usage-ledger" ? persisted.legacyStore : persisted;
+1312:       if (legacy !== undefined) this.config.costStore.restore(legacy);
+1313:     }
+1314:     const billingOwner = this.usageOwnerForSession(
+1315:       sourceSessionId ?? "unattributed",
+1316:       undefined,
+1317:       "context_package",
+1318:     );
+1319:     const primaryClient = await createLLMClient(this.config.llm, this.config.clientDefaults);
+1320:     const resolvedAux = await this.auxiliaryPipeline.resolveAuxClientWithMetadata(
+1321:       primaryClient,
+1322:       this.resolveMaxContextTokens(),
+1323:     );
+1324:     const client = resolvedAux.client;
+1325:     const systemPrompt =
+1326:       "You package selected conversation context. Be concise, factual, and complete.";
+1327:     const fitsAuxWindow = (conversation: string, priorSummary?: string): boolean => {
+1328:       const prompt = buildContextPackagePromptFromSerialized(conversation, priorSummary);
+1329:       const requestTokens = estimateTokens([
+1330:         { role: "system", content: systemPrompt },
+1331:         { role: "user", content: prompt },
+1332:       ]);
+1333:       return requestTokens + CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS <= resolvedAux.maxContextTokens;
+1334:     };
+1335:     if (!fitsAuxWindow("x")) {
+1336:       throw new Error(
+1337:         `Auxiliary model context window (${resolvedAux.maxContextTokens}) is too small for the context package template and output reserve`,
+1338:       );
+1339:     }
+1340: 
+1341:     // Preserve complete API rounds whenever they fit. If one round alone is
+1342:     // larger than the aux window, split its lossless serialized form and feed
+1343:     // every fragment through the same rolling nine-section merge.
+1344:     const pending = groupMessagesByApiRound(messages).map(
+1345:       (group) => serializeContextPackageMessages(group).text,
+1346:     );
+1347:     let summary: string | undefined;
+1348:     while (pending.length > 0) {
+1349:       let conversation = "";
+1350:       while (pending.length > 0) {
+1351:         const next = pending[0]!;
+1352:         const candidate = conversation ? `${conversation}\n${next}` : next;
+1353:         if (fitsAuxWindow(candidate, summary)) {
+1354:           conversation = candidate;
+1355:           pending.shift();
+1356:           continue;
+1357:         }
+1358:         if (conversation) break;
+1359: 
+1360:         let low = 1;
+1361:         let high = next.length;
+1362:         let fitLength = 0;
+1363:         while (low <= high) {
+1364:           const middle = Math.floor((low + high) / 2);
+1365:           if (fitsAuxWindow(next.slice(0, middle), summary)) {
+1366:             fitLength = middle;
+1367:             low = middle + 1;
+1368:           } else {
+1369:             high = middle - 1;
+1370:           }
+1371:         }
+1372:         if (fitLength === 0) {
+1373:           throw new Error(
+1374:             `Auxiliary model context window (${resolvedAux.maxContextTokens}) cannot fit the rolling context package prompt`,
+1375:           );
+1376:         }
+1377:         conversation = next.slice(0, fitLength);
+1378:         const remainder = next.slice(fitLength);
+1379:         if (remainder) pending[0] = remainder;
+1380:         else pending.shift();
+1381:         break;
+1382:       }
+1383:       const sourceState = sourceSessionId
+1384:         ? this.sessionManager.readSessionState(sourceSessionId)
+1385:         : undefined;
+1386:       const response = await withEngineAuxiliaryModelTrace(
+1387:         sourceState,
+1388:         "context_package",
+1389:         () =>
+1390:           withUsageOwner(billingOwner, () =>
+1391:             client.createMessage({
+1392:               systemPrompt,
+1393:               messages: [
+1394:                 {
+1395:                   role: "user",
+1396:                   content: buildContextPackagePromptFromSerialized(conversation, summary),
+1397:                 },
+1398:               ],
+1399:               tools: [],
+1400:               maxTokens: CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
+1401:               billingEnabled: true,
+1402:               requestVisible: false,
+1403:               usagePurpose: "context_package",
+1404:               reasoning: { mode: "off" },
+1405:               signal,
+1406:             }),
+1407:           ),
+1408:         { sessionId: sourceSessionId },
+1409:       );
+1410:       if (response.usage && sourceSessionId) {
+1411:         this.sessionManager.recordAuxiliaryUsage(
+1412:           sourceSessionId,
+1413:           response.usage,
+1414:           this.usageCostState(sourceSessionId),
+1415:         );
+1416:       }
+1417:       summary = response.text.trim();
+1418:       if (!summary) throw new Error("Context package summary was empty");
+1419:     }
+1420:     return {
+1421:       summary: summary!,
+1422:       estimatedTokens: estimateTokens([{ role: "user", content: summary! }]),
+1423:     };
+1424:   }
+1425: 
+1426:   /** Restore a cold Engine's configured model from persisted source state without resetting usage. */
+1427:   restoreSessionModel(sessionId: string): void {
+1428:     const state = this.sessionManager.resume(sessionId).state;
+1429:     if (this.config.llm.model === state.model && this.config.llm.provider === state.provider)
+1430:       return;
+1431:     const entry =
+1432:       this.modelPool
+1433:         .list()
+1434:         .find(
+1435:           (candidate) => candidate.model === state.model && candidate.provider === state.provider,
+1436:         ) ?? this.modelPool.list().find((candidate) => candidate.model === state.model);
+1437:     if (!entry) {
+1438:       throw new Error(`Persisted source model is no longer configured: ${state.model}`);
+1439:     }
+1440:     this.config = { ...this.config, llm: this.modelPool.toLLMConfig(entry) };
+1441:     this.boundModelKey = entry.key;
+1442:   }
+
+packages/core/src/protocol/server.ts
+1390:     }
+1391:     return null;
+1392:   }
+1393: 
+1394:   // ─── Run ────────────────────────────────────────────────────────
+1395: 
+1396:   private async handleForkSession(req: RpcRequest): Promise<void> {
+1397:     const params = req.params ?? {};
+1398:     const sourceSessionId =
+1399:       typeof params.sourceSessionId === "string" ? params.sourceSessionId : "";
+1400:     const targetSessionId =
+1401:       typeof params.targetSessionId === "string" ? params.targetSessionId : undefined;
+1402:     const throughEventId =
+1403:       typeof params.throughEventId === "string" ? params.throughEventId : undefined;
+1404:     const fromEventId = typeof params.fromEventId === "string" ? params.fromEventId : undefined;
+1405:     const toEventId = typeof params.toEventId === "string" ? params.toEventId : undefined;
+1406:     const mode = params.mode;
+1407:     const isSideFork = params.forkKind === "side";
+1408:     if (!sourceSessionId || (mode !== "full" && mode !== "summary")) {
+1409:       this.transport.send(
+1410:         createErrorResponse(
+1411:           req.id,
+1412:           ErrorCodes.InvalidParams,
+1413:           "forkSession requires sourceSessionId and mode=full|summary",
+1414:         ),
+1415:       );
+1416:       return;
+1417:     }
+1418:     if (
+1419:       params.targetSessionId !== undefined &&
+1420:       (typeof params.targetSessionId !== "string" || params.targetSessionId.length === 0)
+1421:     ) {
+1422:       this.transport.send(
+1423:         createErrorResponse(
+1424:           req.id,
+1425:           ErrorCodes.InvalidParams,
+1426:           "targetSessionId must be a non-empty string",
+1427:         ),
+1428:       );
+1429:       return;
+1430:     }
+1431:     if (params.throughEventId !== undefined && typeof params.throughEventId !== "string") {
+1432:       this.transport.send(
+1433:         createErrorResponse(req.id, ErrorCodes.InvalidParams, "throughEventId must be a string"),
+1434:       );
+1435:       return;
+1436:     }
+1437:     if (mode === "summary" && (!fromEventId || !toEventId)) {
+1438:       this.transport.send(
+1439:         createErrorResponse(
+1440:           req.id,
+1441:           ErrorCodes.InvalidParams,
+1442:           "summary fork requires fromEventId and toEventId",
+1443:         ),
+1444:       );
+1445:       return;
+1446:     }
+1447:     if (
+1448:       mode === "summary" &&
+1449:       (params.throughEventId !== undefined ||
+1450:         params.forkKind !== undefined ||
+1451:         params.quickChatClaimId !== undefined)
+1452:     ) {
+1453:       this.transport.send(
+1454:         createErrorResponse(
+1455:           req.id,
+1456:           ErrorCodes.InvalidParams,
+1457:           "summary fork only accepts fromEventId/toEventId range fields",
+1458:         ),
+1459:       );
+1460:       return;
+1461:     }
+1462:     if (mode === "full" && (params.fromEventId !== undefined || params.toEventId !== undefined)) {
+1463:       this.transport.send(
+1464:         createErrorResponse(
+1465:           req.id,
+1466:           ErrorCodes.InvalidParams,
+1467:           "full fork does not accept summary range fields",
+1468:         ),
+1469:       );
+1470:       return;
+1471:     }
+1472:     if (
+1473:       mode === "full" &&
+1474:       params.quickChatClaimId !== undefined &&
+1475:       typeof params.quickChatClaimId !== "string"
+1476:     ) {
+1477:       this.transport.send(
+1478:         createErrorResponse(req.id, ErrorCodes.InvalidParams, "quickChatClaimId must be a string"),
+1479:       );
+1480:       return;
+1481:     }
+1482:     if (params.forkKind !== undefined && !isSideFork) {
+1483:       this.transport.send(
+1484:         createErrorResponse(req.id, ErrorCodes.InvalidParams, "forkKind must be side when present"),
+1485:       );
+1486:       return;
+1487:     }
+1488:     if (isSideFork && throughEventId !== undefined) {
+1489:       this.transport.send(
+1490:         createErrorResponse(
+1491:           req.id,
+1492:           ErrorCodes.InvalidParams,
+1493:           "side fork uses the last completed turn and cannot specify throughEventId",
+1494:         ),
+1495:       );
+1496:       return;
+1497:     }
+1498:     try {
+1499:       assertSafeSessionId(sourceSessionId);
+1500:       if (targetSessionId !== undefined) assertSafeSessionId(targetSessionId);
+1501:     } catch (err) {
+1502:       this.transport.send(
+1503:         createErrorResponse(
+1504:           req.id,
+1505:           ErrorCodes.InvalidParams,
+1506:           err instanceof Error ? err.message : String(err),
+1507:         ),
+1508:       );
+1509:       return;
+1510:     }
+1511: 
+1512:     let source;
+1513:     try {
+1514:       source = this.chatManager?.get(sourceSessionId);
+1515:       if (!source && this.chatManager) {
+1516:         if (this.chatManager.isUnavailable(sourceSessionId)) {
+1517:           this.transport.send(
+1518:             createErrorResponse(
+1519:               req.id,
+1520:               ErrorCodes.SessionClosed,
+1521:               `Session is closing or closed: ${sourceSessionId}`,
+1522:             ),
+1523:           );
+1524:           return;
+1525:         }
+1526:         source =
+1527:           (await this.chatManager.getOrCreatePersisted(
+1528:             sourceSessionId,
+1529:             this.lastSliceBySession.get(sourceSessionId),
+1530:             mode === "summary",
+1531:           )) ?? undefined;
+1532:         if (source) {
+1533:           this.rememberSessionSlice(sourceSessionId, {
+1534:             ...this.lastSliceBySession.get(sourceSessionId),
+1535:             cwd: source.engine.getConfig().cwd,
+1536:           });
+1537:         }
+1538:       }
+1539:     } catch (err) {
+1540:       this.transport.send(
+1541:         createErrorResponse(
+1542:           req.id,
+1543:           ErrorCodes.Overloaded,
+1544:           err instanceof Error ? err.message : String(err),
+1545:         ),
+1546:       );
+1547:       return;
+1548:     }
+1549:     if (!isSideFork && source && (source.isBusy() || source.queueDepth() > 0)) {
+1550:       this.transport.send(
+1551:         createErrorResponse(
+1552:           req.id,
+1553:           ErrorCodes.Overloaded,
+1554:           "source session is still producing or has queued turns",
+1555:         ),
+1556:       );
+1557:       return;
+1558:     }
+1559:     const engine = source?.engine ?? this.legacyEngine;
+1560:     if (!engine || !engine.sessionExistsOnDisk(sourceSessionId)) {
+1561:       this.transport.send(
+1562:         createErrorResponse(
+1563:           req.id,
+1564:           ErrorCodes.SessionNotFound,
+1565:           `Session not found: ${sourceSessionId}`,
+1566:         ),
+1567:       );
+1568:       return;
+1569:     }
+1570:     if (targetSessionId && engine.sessionExistsOnDisk(targetSessionId)) {
+1571:       this.transport.send(
+1572:         createErrorResponse(
+1573:           req.id,
+1574:           ErrorCodes.InvalidParams,
+1575:           `Session already exists: ${targetSessionId}`,
+1576:         ),
+1577:       );
+1578:       return;
+1579:     }
+1580:     try {
+1581:       if (mode === "summary") {
+1582:         const sourceRange = { fromEventId: fromEventId!, toEventId: toEventId! };
+1583:         const packageAndPublish = async (signal?: AbortSignal) => {
+1584:           const selected = engine.selectContextPackage(sourceSessionId, sourceRange);
+1585:           const packaged = await engine.summarizeContextPackage(
+1586:             selected.messages,
+1587:             signal,
+1588:             sourceSessionId,
+1589:           );
+1590:           const result = engine.createSummaryFork(sourceSessionId, {
+1591:             targetSessionId,
+1592:             ...sourceRange,
+1593:             summary: packaged.summary,
+1594:             sourceEventCount: selected.sourceEventCount,
+1595:             estimatedTokens: packaged.estimatedTokens,
+1596:           });
+1597:           return { selected, packaged, result };
+1598:         };
+1599:         let packagedResult: Awaited<ReturnType<typeof packageAndPublish>>;
+1600:         if (source) {
+1601:           packagedResult = await source.runExclusive(packageAndPublish);
+1602:         } else {
+1603:           if (this.running)
+1604:             throw new Error("source session is still producing or has queued turns");
+1605:           this.running = true;
+1606:           this.abortController = new AbortController();
+1607:           try {
+1608:             packagedResult = await packageAndPublish(this.abortController.signal);
+1609:           } finally {
+1610:             this.abortController = null;
+1611:             this.running = false;
+1612:           }
+1613:         }
+1614:         const { packaged, result } = packagedResult;
+1615:         const workspace = result.bundle.state.workspace ?? {
+1616:           root: result.bundle.state.cwd,
+1617:           kind: "main" as const,
+1618:         };
+1619:         this.transport.send(
+1620:           createResponse(req.id, {
+1621:             sessionId: result.bundle.state.sessionId,
+1622:             mode: "summary",
+1623:             summary: packaged.summary,
+1624:             sourceRange,
+1625:             estimatedTokens: packaged.estimatedTokens,
+1626:             forkedFrom: result.lineage,
+1627:             workspace,
+1628:           }),
+1629:         );
+1630:         return;
+1631:       }
+1632:       const result = engine.forkSession(
+1633:         sourceSessionId,
+1634:         isSideFork
+1635:           ? { targetSessionId, snapshotMode: "completed", ephemeral: true }
+1636:           : { targetSessionId, throughEventId },
+1637:       );
+1638:       const workspace = result.bundle.state.workspace ?? {
+1639:         root: result.bundle.state.cwd,
+1640:         kind: "main" as const,
+1641:       };
+1642:       this.transport.send(
+1643:         createResponse(req.id, {
+1644:           sessionId: result.bundle.state.sessionId,
+1645:           mode: "full",
+1646:           forkedFrom: result.lineage,
+1647:           workspace,
+1648:           copiedEventCount: result.copiedEventCount,
+1649:         }),
+1650:       );
+
+packages/core/src/context/compaction.ts
+885:   /** Complete textual representation. Image bytes are replaced by explicit metadata placeholders. */
+886:   text: string;
+887:   /** False when the selection contains images/placeholders but no facts a text model can summarize. */
+888:   hasSummarizableContent: boolean;
+889: }
+890: 
+891: function serializeContextPackageBlock(block: ContentBlock): SerializedContextPackage {
+892:   switch (block.type) {
+893:     case "text": {
+894:       const text = block.text ?? "";
+895:       return { text, hasSummarizableContent: text.trim().length > 0 };
+896:     }
+897:     case "reasoning": {
+898:       const text = block.reasoningContent ?? block.text ?? "";
+899:       return {
+900:         text: `[reasoning]: ${text}`,
+901:         hasSummarizableContent: text.trim().length > 0,
+902:       };
+903:     }
+904:     case "tool_use": {
+905:       const args = JSON.stringify(block.input ?? {});
+906:       const name = block.name ?? "unknown_tool";
+907:       return {
+908:         text: `[tool_use id=${block.id ?? "unknown"}]: ${name}(${args})`,
+909:         hasSummarizableContent: name !== "unknown_tool" || args !== "{}",
+910:       };
+911:     }
+912:     case "tool_result": {
+913:       if (typeof block.content === "string") {
+914:         return {
+915:           text: `[tool_result tool_use_id=${block.tool_use_id ?? "unknown"}${block.is_error ? " is_error=true" : ""}]: ${block.content}`,
+916:           hasSummarizableContent: block.content.trim().length > 0,
+917:         };
+918:       }
+919:       const nested = (block.content ?? []).map(serializeContextPackageBlock);
+920:       return {
+921:         text:
+922:           `[tool_result tool_use_id=${block.tool_use_id ?? "unknown"}${block.is_error ? " is_error=true" : ""}]:\n` +
+923:           nested.map((item) => item.text).join("\n"),
+924:         hasSummarizableContent: nested.some((item) => item.hasSummarizableContent),
+925:       };
+926:     }
+927:     case "image": {
+928:       const source = block.source;
+929:       const mediaType = source?.media_type ?? "unknown";
+930:       const encoding = source?.type ?? "unknown";
+931:       const encodedChars = source?.data.length ?? 0;
+932:       return {
+933:         text: `[image media_type=${mediaType} encoding=${encoding} encoded_chars=${encodedChars}; binary payload intentionally represented by metadata]`,
+934:         hasSummarizableContent: false,
+935:       };
+936:     }
+937:     default: {
+938:       return {
+939:         text: `[unknown content block]: ${JSON.stringify(block)}`,
+940:         hasSummarizableContent: true,
+941:       };
+942:     }
+943:   }
+944: }
+945: 
+946: /**
+947:  * Serialize a selected context range without head-only truncation. Text, tool
+948:  * arguments/results, nested structured results, and reasoning are retained in
+949:  * full. Raw image bytes are intentionally not copied into a text prompt; an
+950:  * explicit metadata placeholder makes that conversion visible and bounded.
+951:  */
+952: export function serializeContextPackageMessages(messages: Message[]): SerializedContextPackage {
+953:   const lines: string[] = [];
+954:   let hasSummarizableContent = false;
+955:   for (const message of messages) {
+956:     if (typeof message.content === "string") {
+957:       lines.push(`[${message.role}]: ${message.content}`);
+958:       if (message.content.trim()) hasSummarizableContent = true;
+959:       continue;
+960:     }
+961:     for (const block of message.content) {
+962:       const serialized = serializeContextPackageBlock(block);
+963:       lines.push(`[${message.role}] ${serialized.text}`);
+964:       hasSummarizableContent ||= serialized.hasSummarizableContent;
+965:     }
+966:   }
+967:   return { text: lines.join("\n"), hasSummarizableContent };
+968: }
+998:     serializeContextPackageMessages(messagesToSummarize).text,
+
+packages/core/src/session/session-manager.context-transfer.test.ts
+1: import { afterEach, describe, expect, it } from "bun:test";
+2: import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+3: import { tmpdir } from "node:os";
+4: import { join } from "node:path";
+5: import { SessionManager } from "./session-manager.js";
+6: 
+7: describe("SessionManager context-transfer fork", () => {
+8:   let dir: string | undefined;
+9: 
+10:   afterEach(() => {
+11:     if (dir) rmSync(dir, { recursive: true, force: true });
+12:     dir = undefined;
+13:   });
+14: 
+15:   it("persists one context_transfer event and hydrates it as model background", () => {
+16:     dir = mkdtempSync(join(tmpdir(), "session-context-transfer-"));
+17:     const manager = new SessionManager(dir);
+18:     const source = manager.create("/project", "model", "provider", "source");
+19:     const from = source.transcript.appendMessage("user", "selected original text");
+20:     const to = source.transcript.appendMessage("assistant", "selected original answer");
+21: 
+22:     manager.createSummaryFork("source", {
+23:       targetSessionId: "target",
+24:       fromEventId: from.id,
+25:       toEventId: to.id,
+26:       summary: "portable background only",
+27:       sourceEventCount: 2,
+28:       estimatedTokens: 4,
+29:     });
+30: 
+31:     const persisted = readFileSync(join(dir, "target", "transcript.jsonl"), "utf-8")
+32:       .trim()
+33:       .split("\n")
+34:       .map((line) => JSON.parse(line));
+35:     expect(persisted.map((event) => event.type)).toEqual(["session_meta", "context_transfer"]);
+36:     expect(persisted[1]?.data).toMatchObject({
+37:       summary: "portable background only",
+38:       sourceRange: {
+39:         sessionId: "source",
+40:         fromEventId: from.id,
+41:         toEventId: to.id,
+42:       },
+43:       sourceEventCount: 2,
+44:       estimatedTokens: 4,
+45:       summaryVersion: 1,
+46:     });
+47: 
+48:     const messages = new SessionManager(dir).resume("target").transcript.toMessages();
+49:     expect(messages).toHaveLength(1);
+50:     expect(messages[0]).toMatchObject({ role: "user" });
+51:     expect(String(messages[0]?.content)).toContain("portable background only");
+52:     expect(String(messages[0]?.content)).toContain("Background context");
+53:     expect(JSON.stringify(messages)).not.toContain("selected original text");
+54:   });
+55: });
+
+packages/core/src/session/session-manager.side-fork.test.ts
+19:   test("does not copy the user message already persisted by an in-flight parent run", () => {
+20:     const manager = new SessionManager(dir);
+21:     const source = manager.create("/project", "model", "provider", "parent");
+22:     source.transcript.appendMessage("user", "completed request");
+23:     source.transcript.appendMessage("assistant", "completed response");
+24:     const completedBoundary = source.transcript.appendTurnBoundary();
+25:     Object.assign(source.state, { completedThroughEventId: completedBoundary.id });
+26:     manager.saveState(source.state);
+27: 
+28:     // Engine.run() persists this before starting the model call. A tail fork
+29:     // copies it and creates the dead user bubble reported in quick chat.
+30:     source.transcript.appendMessage("user", "parent request still running", {
+31:       clientMessageId: "parent-in-flight",
+32:     });
+33: 
+34:     const forked = manager.fork("parent", {
+35:       targetSessionId: "side-child",
+36:       snapshotMode: "completed",
+37:       ephemeral: true,
+38:     } as never);
+39:     const copiedMessages = forked.bundle.transcript.getEvents("message");
+40: 
+41:     expect(copiedMessages.map((event) => event.data.content)).toEqual([
+42:       "completed request",
+43:       "completed response",
+44:     ]);
+45:     expect(copiedMessages.some((event) => event.data.clientMessageId === "parent-in-flight")).toBe(
+46:       false,
+47:     );
+48:     expect(forked.lineage.throughEventId).toBe(completedBoundary.id);
+49:     expect(forked.bundle.state.ephemeral).toBe(true);
+50:     const blankQuickChat = manager.create("/project", "model", "provider", "qchat-blank");
+51:     expect(blankQuickChat.state.ephemeral).toBe(true);
+52:     expect(existsSync(join(dir, "side-child"))).toBe(false);
+53:     expect(existsSync(join(dir, "qchat-blank"))).toBe(false);
+54: 
+55:     const sibling = new SessionManager(dir);
+56:     expect(sibling.exists("side-child")).toBe(true);
+57:     expect(
+58:       sibling
+59:         .resume("side-child")
+60:         .transcript.getEvents("message")
+61:         .map((event) => event.data.content),
+62:     ).toEqual(["completed request", "completed response"]);
+63:     copiedMessages[0]!.data.content = "mutated child copy";
+64:     expect(source.transcript.getEvents("message")[0]!.data.content).toBe("completed request");
+65:     const siblingState = sibling.resume("side-child").state;
+66:     siblingState.title = "memory-only title";
+67:     expect(sibling.saveState(siblingState)).toBe(true);
+68:     expect(manager.resume("side-child").state.title).toBe("memory-only title");
+69:     expect(manager.list(10).map((session) => session.sessionId)).toEqual(["parent"]);
+70: 
+71:     expect(sibling.forgetEphemeralSession("side-child")).toBe(true);
+72:     expect(manager.exists("side-child")).toBe(false);
+73:     expect(() => manager.resume("side-child")).toThrow(SessionError);
+74:     expect(manager.forgetEphemeralSession("qchat-blank")).toBe(true);
+75: 
+76:     blankQuickChat.state.title = "late write after close";
+77:     expect(manager.saveState(blankQuickChat.state)).toBe(false);
+78:     expect(existsSync(join(dir, "qchat-blank"))).toBe(false);
+79:   });
+80: 
+81:   test("cuts all paired assistant and tool tail events after the completed cursor", () => {
+111:   test("copies no parent events when no completed conversation turn exists", () => {
+126:   test("uses the stable tail of a legacy session whose persisted status is completed", () => {
+144:   test("skips source-session run receipts in a completed side snapshot", () => {
+179:   test("fails closed when the persisted completed cursor is not in the transcript", () => {
+194:   test("does not inherit the parent's active goal or control state", () => {
+195:     const manager = new SessionManager(dir);
+196:     const source = manager.create("/project", "model", "provider", "parent-goal");
+197:     source.transcript.appendMessage("user", "stable request");
+198:     source.transcript.appendMessage("assistant", "stable answer");
+199:     const completedBoundary = source.transcript.appendTurnBoundary();
+200:     Object.assign(source.state, {
+201:       completedThroughEventId: completedBoundary.id,
+202:       activeGoal: { objective: "parent-only goal", setAtMs: 1 },
+203:     });
+204:     manager.saveState(source.state);
+205: 
+206:     const forked = manager.fork("parent-goal", {
+207:       targetSessionId: "side-goal",
+208:       snapshotMode: "completed",
+209:     } as never);
+210: 
+211:     expect(forked.bundle.state.activeGoal).toBeUndefined();
+212:     expect(forked.bundle.state.parentSessionId).toBeNull();
+213:   });
+214: });
+
+packages/core/src/protocol/server.fork.test.ts
+95:   it("forks a cold persisted source and returns lineage/workspace", async () => {
+146:   it("rejects missing sources, target conflicts and unsupported modes", async () => {
+184:   it("summarizes a validated event range before publishing the target", async () => {
+245:   it("does not publish a target when context summarization fails", async () => {
+275:   it("rejects full-only quickChatClaimId on a summary fork", async () => {
+303:   it("rejects an empty targetSessionId before any Engine operation", async () => {
+330:   it("queues a run arriving during summary packaging until usage/publication finishes", async () => {
+400:     it(`rejects a live ${sourceState} source without forking`, async () => {
+427:   it("forks a busy source as a completed side snapshot without weakening normal fork guard", async () => {
+
+packages/core/src/engine/engine.session-fork-history.test.ts
+38:   test("sends copied legal tool history followed by the new user message", async () => {
+107:   test("does not propagate parent turns completed after the child snapshot", async () => {
+162:   test("sends only the persisted transfer summary before the first real target message", async () => {
+205:   test("a modern completed run with injected transcript flush degradation cannot use legacy tail fallback", async () => {

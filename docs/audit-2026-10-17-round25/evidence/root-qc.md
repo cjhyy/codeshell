@@ -1,0 +1,17 @@
+# Root QC
+
+本批是持续审查中的进展：第24批0新项/19targets7776静态行已完整提交集成8b9677c78，并未把全仓目标标complete。当前选定此前未确认的普通CRLF文本清理根因，排除旧OM3/失败memory、simplediff成本与其旧17/57、既有SectionCache等方向。Root只读并分派actual叶子首跑，自己产品尝试0。
+
+Root已完整读actual45行output-clean、34行既有tests、focusedfixture与firstwrapper、首raw/exit；静态读background-shell onData/readOutput、实际inventory定位BashOutput及protocol输出段。fourcharacterizations字面expected/observed明确，one CRLF line变成纯换行；4样例不是4bugs。13/23=7existing+6focused，Completed0fail0skip；fixture4wrongbehavior+2normalLF/bareCR，passing不是修复。首raw2477bytes SHA3756561600256bdbd45f529d4a6b0d0936c1e6fb49710c36a79a08e6d02c80d0，firstexit0/attempt1/reruns0。只有零runtimeimports叶子产品模块运行，没有manager/tool/ring/protocol/native实例化。
+
+P2依据是普通实际producer保留原CRLF后清理函数删除整行可见正文，而非特殊恶意输入、压力/cap或未建dist。两模式consumer静态支持影响；BashOutput可返回blankline而不必是(no newoutput)，rawretention不是cleanedprojection，本批不声称磁盘日志消失、真实Windows/进程/完整LLM验证。独立review不重跑，只读normalcontracts与同份raw材料。
+
+data/root/link三份prep均原字节copy，47sourcecheck只rehash来源，不能算47新读/新执行；原作者各自全文/selected范围保持。不同history时点与archives/字符串及scalar分开，关键词/context不是语义穷尽。Root错误locator exit2及作者metadata首次语法/rg错误保留，不恢复任何产品失败路线。guard本身临时HOME/JUnit属于执行隔离，不虚称完全没有任何文件系统动作。
+
+最终Root依索引全集/bytes/hash、frozen/current/main源码、author/prep收据、本地MD链接/行号与13/23分类核验；然后仅本批路径暂存、raw只精确owned force-add，full/nonlog whitespace及cache/commit/主checkout blob逐字节验证，主checkout已有dirty快照保全。当前批无产品修复；目标保持active，独占worktree仍供后续使用。
+
+首次聚合metadata完成：62unique source/meta pins；Root6+作者7+独立static17=30个来源检查，另47prep hash-only；作者18artifacts+24prep copy=42材料检查。source bytes在冻结/current/main均一致，当前主checkout与初始snapshot完全相同。首index63项是review-output/review-aggregate写入前时点，Root最终统一重建，不把它提前当最终文件总数。root draft newline替换断言未命中，是多余的metadata检查，首响应已保留在root-metadata-notes；实际脚本原本是正确单个反斜杠，未改产品或重跑测试。
+
+结束source刷新：并行d9d2一提交/28paths，62pins中仅desktop main/index.ts变化（+8行，old6447之后/new6448–6455 Review handler），Link作者selected行逐字相同；Root完整读该补丁，其它27路径只有库存，不声称新Reviewfeature/fullsuite/修复验证。作者frozen与最终current/main分列；原snapshot只HEAD变化。freshfetch83004同handle exit0，ownbranch已FFmain，0产品重跑。
+
+首次暂存metadata检查发现worktree库存txt末尾Git原生分隔空行（full/nonlog diffcheck各exit2），commit前停止；非产品失败。原stdout完整转入worktrees-before.json并保留bytes/SHA与空行，firststage收据另存.first.json，首响应/处理存root-metadata-notes。只对owned本批路径取消暂存后重建索引/暂存，无product raw/fixture/exit变化或产品重跑。

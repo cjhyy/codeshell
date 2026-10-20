@@ -1,0 +1,175 @@
+{
+  "baseline": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "totals": {
+    "firstBunShards": 5,
+    "completedCleanShards": 5,
+    "failedBunShards": 0,
+    "passedTests": 55,
+    "expectations": 136,
+    "failedTests": 0,
+    "skippedOrFilteredTests": 0,
+    "existingBaselineTests": 33,
+    "newFocusedObservationsAndControls": 22,
+    "docParserBunAttempts": 0,
+    "docParserMetadataPreflightFailures": 1,
+    "productReruns": 0
+  },
+  "runs": [
+    {
+      "log": "evidence/root-cli-existing.first.log",
+      "exitFile": "evidence/root-cli-existing.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/tui/src/cli/parse-int-option.test.ts",
+        "packages/tui/src/cli/commands/max-context-tokens.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 12,
+      "skipped": 0,
+      "existingTests": 9,
+      "focusedTests": 0,
+      "sha256": "bfdbf1af3b42937bc8e4f6c6945710360d01cb5a65394e1dda3a7a490c4ed159"
+    },
+    {
+      "log": "evidence/migration-config-pure.first.log",
+      "exitFile": "evidence/migration-config-pure.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round15/evidence/migration-config-pure.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 4,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 16,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 4,
+      "sha256": "f9a9cd718da6ea954281d67c4ac845e2ecc9cbe6f9128ed83808e3f66b0441c0"
+    },
+    {
+      "log": "evidence/migration-source-pure.first.log",
+      "exitFile": "evidence/migration-source-pure.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round15/evidence/migration-source-pure.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 11,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 7,
+      "sha256": "1120dc67f17359ddd5579a51a0adc76505335e97849c9c928ff2aac2576994d3"
+    },
+    {
+      "log": "evidence/injection-cache-queue.first.raw.log",
+      "exitFile": "evidence/injection-cache-queue.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/engine/injected-context-cache.test.ts",
+        "packages/core/src/engine/steer-queue.test.ts",
+        "docs/audit-2026-10-17-round15/evidence/injection-cache-queue.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 39,
+      "skipped": 0,
+      "existingTests": 10,
+      "focusedTests": 5,
+      "sha256": "c73b521471a0c200f54fe7612648be0e568d5d5a4d2d9df6d936e899b0eb6d71"
+    },
+    {
+      "log": "evidence/injection-image-grammar.first.raw.log",
+      "exitFile": "evidence/injection-image-grammar.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "tests/parse-task.test.ts",
+        "docs/audit-2026-10-17-round15/evidence/injection-image-grammar.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 20,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 58,
+      "skipped": 0,
+      "existingTests": 14,
+      "focusedTests": 6,
+      "sha256": "a871dabb84fc6cead612a6d45585bf052d7834181873d7b08f228b7432fefda1"
+    }
+  ],
+  "unexecutedDirections": [
+    {
+      "direction": "parseDocument dynamic validation",
+      "bunAttempts": 0,
+      "metadataExitCode": 1,
+      "evidence": "evidence/docinput-preflight-skip.md",
+      "disposition": "SKIP; guessed root package metadata assertion, no actual Bun resolver/product import or dependency failure proven"
+    }
+  ],
+  "metadataNotes": [
+    "evidence/docinput-navigation-skip.md",
+    "evidence/migration-navigation-skip.md",
+    "evidence/injection-navigation-skip.md",
+    "evidence/root-assembly-note.md",
+    "evidence/review-migration.md",
+    "evidence/review-injection.md"
+  ],
+  "notes": [
+    "Five first combined stdout/stderr logs and exit receipts saved before inspection; no product retry, failed Bun shard or alternative validation.",
+    "55 = 33 existing + 22 focused. Existing CLI9 includes 8 actual-helper tests and 1 source-wiring assertion, not executed REPL or Commander parsing.",
+    "Configuration v0 backfill/immutability/idempotence and source parsing are actual pure calls; no sandbox fields, installer filesystem, remote clone or CLI action.",
+    "Steer queue default-id expression is manually mirrored from static Engine, actual Engine default branch/ordinary omitted-id producer not established.",
+    "Image parser receives synthetic malformed grammar strings and base64 syntax; no actual image decode or ordinary malformed-wire producer established.",
+    "Document parser and context summary remain static only; metadata package-path assertion does not prove Bun or dependency failure.",
+    "No real models, paid APIs, accounts, user artifacts, external messages, product network/native/PTY/auth/permission/security/custody/watchdog experiments, shared dependency/dist rebuild or full build/typecheck/lint/suite.",
+    "Other-task JPEG alias source repair recorded separately; no old defect or new regression tests rerun here."
+  ]
+}

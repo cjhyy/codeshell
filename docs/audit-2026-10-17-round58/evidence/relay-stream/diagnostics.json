@@ -1,0 +1,9 @@
+{
+  "atUTC": "2026-10-17T19:21:14.776580+00:00",
+  "productAttempts": 0,
+  "productFailures": 0,
+  "metadataFailures": [],
+  "navigationFailures": [],
+  "truncations": [],
+  "note": "All prep139 observed tools exited 0 and outputs used for source scope were complete; no product retry or replacement run. Filename inventory repeated packages/server under packages yields duplicate path lines only, deduplicated for metadata."
+}

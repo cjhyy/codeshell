@@ -1,0 +1,75 @@
+{
+  "createdUTC": "2026-10-17T15:47:06.810496+00:00",
+  "sourceChecks": [
+    {
+      "path": "packages/chat/src/adapter-factory.ts",
+      "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "endingSha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "endingSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "endingSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/slack.ts",
+      "sha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "endingSha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "unchanged": true
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "endingSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "unchanged": true
+    }
+  ],
+  "sourceAllSame": true,
+  "historyEnding": {
+    "count": 4255,
+    "sameScopeAsInitial": true,
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "historyActualReading": {
+    "explicitCoverageRowsRead": 19,
+    "pathWindows": "27compact path/locator rows inspected; all matching scalar texts are36char exact paths; no whole parent docs claim.",
+    "SHAWindows": "not separately all read; same-SHA metadata from19row gate inspected",
+    "causeWindowsRead": {
+      "swc-old": [
+        4
+      ],
+      "multi-account": [
+        4
+      ],
+      "matrix-loop": [
+        2
+      ],
+      "slack-thread": [
+        4
+      ]
+    },
+    "causeReadWindows": 4,
+    "causeReadDistinctHistoricalUnits": 2,
+    "notFullCauseSemanticExhaustion": true
+  },
+  "runtime": {
+    "factoryHelperOrImport": 0,
+    "productFunctions": 0,
+    "testsBodyOrExecution": 0,
+    "languageFixtures": 0,
+    "realConfigSecretsRead": 0,
+    "sendLoginNetworkTransport": 0,
+    "uiProcessesNative": 0,
+    "git": 0
+  }
+}

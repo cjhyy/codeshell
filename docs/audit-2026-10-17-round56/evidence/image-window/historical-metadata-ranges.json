@@ -1,0 +1,58 @@
+{
+  "createdAt": "2026-10-17T18:48:49.467236+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round4/context.md",
+      "bytes": 9369,
+      "sha256": "54c21c92ef3478959c96061834f5bbda908c62b0ca7c3191024bf7d9396655c7",
+      "firstOwnMetadataHashTiming": "Late own metadata hash after rg snippets; shared earlier batch inventory provenance retained, not backdated",
+      "sharedInventoryRow": {
+        "path": "docs/audit-2026-10-17-round4/context.md",
+        "bytes": 9369,
+        "sha256": "54c21c92ef3478959c96061834f5bbda908c62b0ca7c3191024bf7d9396655c7"
+      },
+      "displayedMetadataLines": [
+        15,
+        21,
+        23,
+        27,
+        39
+      ],
+      "purposeSelectedMetadataLines": [
+        39
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/candidates-and-skips.md",
+      "bytes": 2415,
+      "sha256": "0c71078f68aeccf969ada205650103c65c03965ba4ca43a7b0d807b2cd981ccc",
+      "firstOwnMetadataHashTiming": "Late own metadata hash after rg snippets; shared earlier batch inventory provenance retained, not backdated",
+      "sharedInventoryRow": {
+        "path": "docs/audit-2026-10-17-round4/candidates-and-skips.md",
+        "bytes": 2415,
+        "sha256": "0c71078f68aeccf969ada205650103c65c03965ba4ca43a7b0d807b2cd981ccc"
+      },
+      "displayedMetadataLines": [
+        8
+      ],
+      "purposeSelectedMetadataLines": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/coverage.md",
+      "bytes": 3160,
+      "sha256": "e8b2949930778f27b4d55cf0a1dcccd8afd2776ae12fb05f148107a344539f9c",
+      "firstOwnMetadataHashTiming": "Late own metadata hash after rg snippets; shared earlier batch inventory provenance retained, not backdated",
+      "sharedInventoryRow": {
+        "path": "docs/audit-2026-10-17-round21/coverage.md",
+        "bytes": 3160,
+        "sha256": "e8b2949930778f27b4d55cf0a1dcccd8afd2776ae12fb05f148107a344539f9c"
+      },
+      "displayedMetadataLines": [
+        13,
+        15
+      ],
+      "purposeSelectedMetadataLines": []
+    }
+  ],
+  "scope": "Finite original report/archive navigation only, no machine-context or source semantic full inference"
+}

@@ -1,0 +1,81 @@
+{
+  "baseline": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "files": [
+    {
+      "path": "friendly-error.md",
+      "bytes": 5323,
+      "sha256": "2e9b0dea1b69853e2512649469623dfb9b345e5cfa5d4c9b71d5a4e73f85c291"
+    },
+    {
+      "path": "evidence/root-candidates.json",
+      "bytes": 81,
+      "sha256": "321da14cc54a2b4bcf4fc1a587e20288076f8bd58776ea61816c38f2b8ff072f"
+    },
+    {
+      "path": "evidence/root-dedup-decisions.json",
+      "bytes": 1252,
+      "sha256": "1e909f91c228dcd6d42ddec4576a98789dc4a6cf0758b565fa3e3c017f367411"
+    },
+    {
+      "path": "evidence/root-dedup.json",
+      "bytes": 469172,
+      "sha256": "0822147160e51c37e7ae22751363ceec1530de01812139a973878f46d14fd974"
+    },
+    {
+      "path": "evidence/root-dedup.py",
+      "bytes": 3078,
+      "sha256": "ebe4a68c267ed64d74ea5872692e71ceedb75d2bb29ae1834c5b5f6bfc28ac43"
+    },
+    {
+      "path": "evidence/root-external-contract.json",
+      "bytes": 1160,
+      "sha256": "dc2d86c1eacd828456e32e959c77b21e190076120189a941c66316fdb2b218d0"
+    },
+    {
+      "path": "evidence/root-findings.json",
+      "bytes": 1446,
+      "sha256": "59d97a5fe3b15aa86c7a48327f517c81b0a983408113c5ba0358af20f917c877"
+    },
+    {
+      "path": "evidence/root-friendly.first.exit.json",
+      "bytes": 373,
+      "sha256": "aaef0abe72077f0b4c8840a3d793788b169ac76266a36cc0cfd2751625c33c59"
+    },
+    {
+      "path": "evidence/root-friendly.first.raw.log",
+      "bytes": 1651,
+      "sha256": "742699bd682db2b595e7cf8d4471d774bc6b9dd2429a72e4486f04613b87c035"
+    },
+    {
+      "path": "evidence/root-friendly.test.ts",
+      "bytes": 3958,
+      "sha256": "6555a44c8c3020eb8ac26c7aa02613cbf37bc14758c650bc862f27344c4ca2ec"
+    },
+    {
+      "path": "evidence/root-metadata-notes.md",
+      "bytes": 2319,
+      "sha256": "d4eb7745a62f91cec179e9ac6464339ebc7214799511c7bd98db1ff98704b682"
+    },
+    {
+      "path": "evidence/root-quota-dedup.json",
+      "bytes": 539860,
+      "sha256": "f9b75d716a613ca2e44516467f266bf47f95cddbaaf79948eec1b88323c790c7"
+    },
+    {
+      "path": "evidence/root-quota-dedup.py",
+      "bytes": 3304,
+      "sha256": "c2d91d940dd5b1eb9f84b860a640ef244bd72283ead12af84e58f20082bb416e"
+    },
+    {
+      "path": "evidence/root-related.json",
+      "bytes": 83,
+      "sha256": "2fd1c1743031c4cfd3d86d18760a00f06bb2bc546fb646b5d12a9978b032f07b"
+    },
+    {
+      "path": "evidence/root-source-manifest.json",
+      "bytes": 5582,
+      "sha256": "4d830c3ac5d4d7ba00666b00f74de80fe71f33effc7ce46b07e4a308fa996930"
+    }
+  ],
+  "note": "Author artifacts before crossreview; self excluded. Combined first raw/exit saved before inspection. Metadata notes manually transcribed and labeled, not original tool outputs."
+}

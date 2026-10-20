@@ -1,0 +1,73 @@
+{
+  "capturedUTC": "2026-10-17T16:22:34.838152+00:00",
+  "sourceInstructionChecks": [
+    {
+      "path": "AGENTS.md",
+      "initialBytes": 206,
+      "initialSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "endingSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "same": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialBytes": 17639,
+      "initialSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "endingSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "initialBytes": 4696,
+      "initialSHA": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "endingBytes": 4696,
+      "endingSHA": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "initialBytes": 6078,
+      "initialSHA": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "endingBytes": 6078,
+      "endingSHA": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "same": true
+    }
+  ],
+  "allSourceInstructionSame": true,
+  "canonicalMetadataChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+      "initialPinFromOwnHistory": {
+        "path": "docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+        "bytes": 9769,
+        "sha256": "9bdf32fd9a5ccc35e0defc082fb53ab44367376125a95496afc97d5810a26d79",
+        "kind": "json"
+      },
+      "endingBytes": 9769,
+      "endingSHA": "9bdf32fd9a5ccc35e0defc082fb53ab44367376125a95496afc97d5810a26d79",
+      "same": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/skills-agents.md",
+      "initialPinFromOwnHistory": {
+        "path": "docs/audit-2026-10-17-round6/skills-agents.md",
+        "bytes": 9203,
+        "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+        "kind": "md"
+      },
+      "endingBytes": 9203,
+      "endingSHA": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "same": true
+    }
+  ],
+  "allCanonicalMetadataSame": true,
+  "historyInitialCount": 4492,
+  "historyEndingFilterCount": 4492,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "historyOriginalRewritten": false,
+  "productBodyRead": 0,
+  "gitOperations": 0
+}

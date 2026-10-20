@@ -1,0 +1,19 @@
+{
+  "formal": 0,
+  "candidate": 1,
+  "newRelated": 0,
+  "proposalIds": [
+    "GOAL-R91-C1"
+  ],
+  "productRuns": 0,
+  "helperRuns": 0,
+  "testRuns": 0,
+  "testDeclarations": 0,
+  "fixtureRuns": 0,
+  "reactDomRuns": 0,
+  "timerRuns": 0,
+  "businessNetworkRuns": 0,
+  "nativeRuns": 0,
+  "testPassClaims": 0,
+  "gitMutationsWithinPrep": 0
+}

@@ -166,6 +166,12 @@ describe("Engine auto-compaction Goal accounting", () => {
     expect(result.reason).toBe("completed");
     expect(scenario.summaryCalls).toBeGreaterThan(0);
     expect(scenario.judgeCalls).toBe(1);
+    expect(engine.getSessionManager().resume(result.sessionId!).state).toMatchObject({
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: scenario.responses
+        .slice(0, scenario.mainCalls)
+        .reduce((total, response) => total + response.usage!.promptTokens, 0),
+    });
     expect(scenario.judgePrompts[0]).toContain("最近的完整对话");
     // Tool summaries are hidden from the foreground request list but are real
     // billed calls and therefore part of the returned usage and Goal budget.
@@ -211,6 +217,9 @@ describe("Engine auto-compaction Goal accounting", () => {
 
     expect(result.reason).toBe("completed");
     expect(scenario.summaryCalls).toBe(0);
+    expect(engine.getSessionManager().resume(result.sessionId!).state.cumulativePromptTokens).toBe(
+      normalUsage.promptTokens,
+    );
     expect(result.usage.totalTokens).toBeGreaterThanOrEqual(
       normalUsage.totalTokens + MAIN_USAGE.totalTokens,
     );

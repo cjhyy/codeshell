@@ -1,0 +1,19 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "status": "Two before-body same-SHA old-full exclusions; no current ordinary route body reviewed.",
+  "target": "host-requests ordinary data-shape/mapping scope only",
+  "fallback": "runtime ordinary capability/synchronous lifecycle scope only",
+  "limitations": [
+    "No new source-level route/input/output conclusion",
+    "No authority/approval/auth/identity/native/security/custody mechanism certification",
+    "No current runtime repair verification",
+    "No whole-Host/repository absence-of-bugs claim"
+  ]
+}

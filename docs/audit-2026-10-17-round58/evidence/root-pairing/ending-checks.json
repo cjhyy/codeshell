@@ -1,0 +1,84 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/pairing.ts",
+      "bytes": 2298,
+      "sha256": "19777b68d1ad6297b9ea182298dd457077340dc4b1977433b60192fdc24af5ca",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.ts",
+      "bytes": 2448,
+      "sha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+      "bytes": 25828,
+      "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+      "bytes": 18225,
+      "sha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "bytes": 25666,
+      "sha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pairing.test.ts",
+      "bytes": 3169,
+      "sha256": "76935704b1443dab971196d1e9952804a4b46b76042176f57b21acaf59d97c3f",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.test.ts",
+      "bytes": 5224,
+      "sha256": "a5ccceb55dfdcf39f9132b0624de40d11a2a5d2f18ec311dd72f459fcc1055e6",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/trusted-device-store.ts",
+      "bytes": 10474,
+      "sha256": "6cdee911aba2713e2d8fa8f058018687577e3dc8b070fdefae9a169aa1cb2ef1",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "sameAsInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/agent-bridge.ts",
+      "bytes": 102778,
+      "sha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "sameAsInitial": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameAsInitial": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameAsInitial": true
+    }
+  ],
+  "sharedHistorySha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b",
+  "fullHistoryMembersIndependentlyRehashed": false
+}

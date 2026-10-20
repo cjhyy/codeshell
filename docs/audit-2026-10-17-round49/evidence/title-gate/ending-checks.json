@@ -1,0 +1,47 @@
+{
+  "capturedUTC": "2026-10-17T16:18:23.852015+00:00",
+  "sourceAndInstructionChecks": [
+    {
+      "path": "AGENTS.md",
+      "initialBytes": 206,
+      "initialSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "endingSHA": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "same": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialBytes": 17639,
+      "initialSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "endingSHA": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/session-title.ts",
+      "initialBytes": 1798,
+      "initialSHA": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "endingBytes": 1798,
+      "endingSHA": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.ts",
+      "initialBytes": 1622,
+      "initialSHA": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "endingBytes": 1622,
+      "endingSHA": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "same": true
+    }
+  ],
+  "allSourceInstructionSame": true,
+  "initialHistoryCount": 4492,
+  "endingHistoryFilterCount": 4492,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "canonicalMetadataRowsSame": true,
+  "originalHistoryRewritten": false,
+  "productBodyRead": 0,
+  "gitOperations": 0
+}

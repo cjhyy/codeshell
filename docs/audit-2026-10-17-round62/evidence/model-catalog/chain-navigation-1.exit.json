@@ -1,0 +1,1 @@
+{"exitCode": 0, "command": ["rg", "-n", "upsertCatalogEntry|upsertModelPreset|safeParse|export function|modelPresets|modelPresetSchema", "packages/core/src/model-catalog/types.ts", "packages/core/src/model-catalog/index.ts", "packages/core/src/model-catalog/save-entry.ts"]}

@@ -1,0 +1,44 @@
+5: *  - setEnabled(id, on): reads the target descriptor's inlined `control` and
+6: *    routes the write to the right settings key. It never branches on `kind`.
+16:import type { SettingsManager } from "../settings/manager.js";
+17:import type { SkillDefinition } from "../skills/scanner.js";
+19:import type { InstalledPluginsV2 } from "../plugins/types.js";
+35:} from "./overlay.js";
+36:import type { CapabilityOverrides } from "../settings/schema.js";
+40:  settings: Pick<
+49:  /** Full agent role set for `cwd` (user + project), loaded WITHOUT the
+54:    preset?: string;
+69:   * and `enabled` reflects the tri-state overlay (spec §6.1).
+72:    const s = this.deps.settings.get() as Record<string, any>;
+75:    const preset: string | undefined = agent.preset;
+81:        presetDefaults: this.deps.resolveBuiltinToolNames({ preset, host }),
+83:          preset,
+90:        mcpServers: s.mcpServers ?? {},
+91:        mcpTools: tools.filter((t) => t.source === "mcp"),
+94:        skills: this.deps.scanSkills(this.deps.cwd, {}),
+98:        installed: this.deps.readInstalledPlugins().plugins,
+108:      ? (this.deps.settings.getForScope("project", cwd).capabilityOverrides as CapabilityOverrides)
+110:    const foldedOverrides = cwd ? effectiveProjectOverrides(this.deps.settings, cwd) : undefined;
+114:      const token = overrideTokenForId(d.id);
+115:      const ov = cwd ? overrideFor(foldedOverrides, d.kind, token) : undefined;
+116:      const userOverride = cwd ? overrideFor(userOverrides, d.kind, token) : undefined;
+133:  setEnabled(id: string, on: boolean, opts?: { scope?: WriteScope; cwd?: string }): void {
+135:      this.setOverride(id, on ? "on" : "off", {
+147:   * writes to capabilityOverrides.builtin.<token> — now support project
+151:  setOverride(
+161:    const token = overrideTokenForId(id);
+162:    const path = `capabilityOverrides.${bucket}.${token}`;
+163:    if (state === "inherit") this.deps.settings.deleteProjectSetting(path, opts.cwd);
+164:    else this.deps.settings.saveProjectSetting(path, state, opts.cwd);
+167:  /** Existing global write path — unchanged behavior, refactored out of setEnabled. */
+171:    const { settingsKey, mode, token } = descriptor.control;
+172:    const s = this.deps.settings.get() as Record<string, any>;
+175:      const servers = { ...(s.mcpServers ?? {}) };
+177:      if (!servers[token]) return;
+178:      servers[token] = { ...servers[token], enabled: on };
+179:      this.deps.settings.saveUserSetting("mcpServers", servers);
+183:    const arr = new Set<string>(readArray(s, settingsKey));
+186:    if (wantPresent) arr.add(token);
+187:    else arr.delete(token);
+188:    this.deps.settings.saveUserSetting(settingsKey, [...arr]);
+192:/** Read an array at a dotted settings path (e.g. agent.disabledBuiltinTools). */

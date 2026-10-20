@@ -1,0 +1,182 @@
+{
+  "query": "hostWake.{0,80}segment|segment.{0,80}hostWake|injected.{0,80}boundary|boundary.{0,80}injected|synthetic.{0,80}segment|segment.{0,80}synthetic",
+  "files": [
+    {
+      "path": "docs/architecture/07-plugins-capabilities-credentials-memory.md",
+      "bytes": 29268,
+      "sha256": "f51d5f184f8a3a28a9db7d82c379e7ade281298a22ddcb0dc3391c4aa8fd1c20"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/prompt.md",
+      "bytes": 8621,
+      "sha256": "c7de3978cf9795719df125d2555a5ab1ea2cebec99b21273f2555f4772b330db"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-excerpts.json",
+      "bytes": 122749,
+      "sha256": "79ba6e631d1c445218c6df8335b99797ea669242e3cbc08bbcab41df0561b31a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/live-activity/declined-hypotheses.json",
+      "bytes": 1153,
+      "sha256": "e51cce1ecea2e6cf0a54895b4eb3af4e067c319fb3e45f9ce807784c99db15f0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/live-activity/source-excerpts.json",
+      "bytes": 85702,
+      "sha256": "953178a1ec7397026e7ab7b4f3c2e4076a388cd7bc89580ed203ea611a4b32c0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-progress/group-source-excerpts.json",
+      "bytes": 12458,
+      "sha256": "ba88edcb8cfe50656c96032673863b22bf6382f92ae60eef6e32e47d6552abd6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+      "bytes": 209011,
+      "sha256": "4ea1323cb749df9549fbe1a4b5f72a931bd331694e3f5a531ce898c5f320ccff"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/third-selection-history.json",
+      "bytes": 225878,
+      "sha256": "9dc3987b1428283bb36ae6ae51a6ecd57cc37a6b0ca7668e30d7912a95071761"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "bytes": 40017,
+      "sha256": "b2006f1b9e8af0251719756eaadb1a51d277694f57c56d137015e5e700ffcc0b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "bytes": 814193,
+      "sha256": "7b2a3423fc1d8a4bdf3a2246d2d87541c6eb979c3fe8ff1e7c8d3784d4586968"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/session-usage-gate/history-contexts.json",
+      "bytes": 100769,
+      "sha256": "fbb0ac83656e30528c25c45a9f32e827bc10ca18405a2503d5a3c41864dc8ce4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/review.md",
+      "bytes": 4894,
+      "sha256": "4cc019dbedc7949c72d2a8dff021322ed1cfd4a255ef8343fe8818db72a67b11"
+    }
+  ],
+  "count": 14,
+  "cap": 35,
+  "saved": [
+    {
+      "path": "docs/architecture/07-plugins-capabilities-credentials-memory.md",
+      "pointer": "",
+      "offset": 20134,
+      "text": "afeStorage` ciphertext (`index.ts:1421`). Current default behavior is therefore owner-only `plain:` files at 0o600 (`store.ts:107`, `cipher.ts:35`, `index.ts:1427`), with the host-injected encryption boundary ready for the next wiring step.\n\n**Use gates.** The tool registry marks `UseCredential` as `permissionDefault: \"allow\"` and read-only because the credential approval is inside the tool (`builtin/index.ts:740`). The gate order is global auto-approve or per-credential `autoUseByAI`, then an in-memory `sessionId` allow set, then `askUser`; no UI means deny (`use-gate.ts:62`). Cookie materialization writes a unique temp Netscape file with 0o600 and ",
+      "length": 29262,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/prompt.md",
+      "pointer": "",
+      "offset": 4434,
+      "text": "; their green status does not mean the ordering is correct. Test 1 exercises the real scanner and combiner; test 2 exercises the actual composer. Only owned temporary files and an injected boundary function are used; no Engine, real Git boundary finder, model, provider, or network is exercised.\n\n## Candidate disposition and historical deduplication\n\n[Dedup ledger](evidence/prompt-dedup.json) scans **808 Markdown/JSON files** under every pre-existing `docs/audit-*`, `docs/review*`, and `docs/archive` root, with path hashes, query expressions, matching Markdown excerpts and parsed finding records. The new Round 5 directory is excluded from that historical corpus. There are 14 instruction/",
+      "length": 8575,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-excerpts.json",
+      "pointer": "/8/displayedLines/39/text",
+      "offset": 11,
+      "text": "  // A non-injected user message is always a turn boundary. An injected one",
+      "length": 75,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-excerpts.json",
+      "pointer": "/8/displayedLines/55/text",
+      "offset": 7,
+      "text": "    // Injected: only a boundary if a done assistant precedes it since the last",
+      "length": 79,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/live-activity/source-excerpts.json",
+      "pointer": "/5/displayedLines/119/text",
+      "offset": 14,
+      "text": "      // Mark injected so it doesn't reset the file-change aggregation boundary",
+      "length": 79,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-progress/group-source-excerpts.json",
+      "pointer": "/files/0/excerpts/1/text",
+      "offset": 4192,
+      "text": "mid-flight. So injected\n419:   // user messages are NOT boundaries: they fall inside the preceding turn's slice\n420:   // and render inline as a user bubble there.\n421:   // A non-injected user message is always a turn boundary. An injected one\n422:   // (steer / goal wakeup / cron续接) usually is NOT — it continues the current\n423:   // turn (see the comment above). EXCEPTION: a wakeup that arrives AFTER the\n424:   // prior turn already finished (a done assistant sits before it) is really the\n425:   // start of NEW work; treating it as a boundary keeps that new streaming work\n426:   // live instead of folding it into the completed prior turn's card.\n427:   const userIdx",
+      "length": 9045,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-progress/group-source-excerpts.json",
+      "pointer": "/files/0/excerpts/1/text",
+      "offset": 5044,
+      "text": "ed === true || isSystemReminderText(it.text);\n432:     if (!injected) {\n433:       userIdxs.push(i);\n434:       continue;\n435:     }\n436:     if (it.steerId) continue;\n437:     // Injected: only a boundary if a done assistant precedes it since the last\n438:     // real boundary (i.e. the prior turn completed before this wakeup).\n439:     const priorStart = userIdxs.length ? userIdxs[userIdxs.length - 1]! : -1;\n440:     if (turnHasCompleted(items, priorStart, i)) userIdxs.push(i);\n441:   }\n442:   if (userIdxs.length === 0) return items.slice();\n443: \n444:   // Only the most recent turn can be \"live\", AND only while the\n445:   // engine is actively ",
+      "length": 9045,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/second-selection-history.json",
+      "pointer": "/hits/orphans/115/excerpt",
+      "offset": 393,
+      "text": " sid 匹配时接受注入，见 `packages/core/src/engine/engine.ts:384`、`packages/core/src/engine/engine.ts:820`。纯 helper 负责入队、消费、撤回，见 `packages/core/src/engine/steer-queue.ts:1`。TurnLoop 每个 step boundary 调 `consumeQueuedSteer()`，注入为 user message 并发 `steer_injected`，见 `packages/core/src/engine/turn-",
+      "length": 497,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/third-selection-history.json",
+      "pointer": "/hits/index.ts/29/excerpt",
+      "offset": 679,
+      "text": "afeStorage` ciphertext (`index.ts:1421`). Current default behavior is therefore owner-only `plain:` files at 0o600 (`store.ts:107`, `cipher.ts:35`, `index.ts:1427`), with the host-injected encryption boundary ready for the next wiring step.",
+      "length": 739,
+      "bounded": true
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "pointer": "",
+      "offset": 7830,
+      "text": " sid 匹配时接受注入，见 `packages/core/src/engine/engine.ts:384`、`packages/core/src/engine/engine.ts:820`。纯 helper 负责入队、消费、撤回，见 `packages/core/src/engine/steer-queue.ts:1`。TurnLoop 每个 step boundary 调 `consumeQueuedSteer()`，注入为 user message 并发 `steer_injected`，见 `packages/core/src/engine/turn-loop.ts:581`。\n\n`StreamingToolQueue` 对 `isConcurrencySafe` 工具立即开始执行，对 unsafe 工具在 drain 时串行执行，并把 rejected promise 统一转成 error ToolResult，见 `packages/core/src/engine/streaming-tool-queue.ts:29`、`packages/core/src/engine/streaming-tool-queue.ts:49`。`patchOrphanedToolUses()` 扫描完整 messages，给缺 result 的 tool_use 插入 synthetic error tool_result，且幂等，见 `packages/core/src/engine/patch-orphaned-tools.ts:49`。headless run 会在 Tur",
+      "length": 30503,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "pointer": "/hits/direct_sources/33/context",
+      "offset": 175,
+      "text": "匹配时接受注入，见 `packages/core/src/engine/engine.ts:384`、`packages/core/src/engine/engine.ts:820`。纯 helper 负责入队、消费、撤回，见 `packages/core/src/engine/steer-queue.ts:1`。TurnLoop 每个 step boundary 调 `consumeQueuedSteer()`，注入为 user message 并发 `steer_injected`，见 `packages/core/src/engine/turn-loop.ts:581`。\n\n`StreamingToolQueue` 对 `isConcurrencySafe` 工具立即开始执行，对 unsafe 工具在 drain 时串行执行，并把 rejected promise 统一转成 error ToolResult，见 `packages/core/s",
+      "length": 431,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "pointer": "/hits/steering_queue/9/context",
+      "offset": 393,
+      "text": " sid 匹配时接受注入，见 `packages/core/src/engine/engine.ts:384`、`packages/core/src/engine/engine.ts:820`。纯 helper 负责入队、消费、撤回，见 `packages/core/src/engine/steer-queue.ts:1`。TurnLoop 每个 step boundary 调 `consumeQueuedSteer()`，注入为 user message 并发 `steer_injected`，见 `packages/core/src/engine/turn-",
+      "length": 497,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/session-usage-gate/history-contexts.json",
+      "pointer": "/oldCause/2/context",
+      "offset": 1150,
+      "text": " sid 匹配时接受注入，见 `packages/core/src/engine/engine.ts:384`、`packages/core/src/engine/engine.ts:820`。纯 helper 负责入队、消费、撤回，见 `packages/core/src/engine/steer-queue.ts:1`。TurnLoop 每个 step boundary 调 `consumeQueuedSteer()`，注入为 user message 并发 `steer_injected`，见 `packages/core/src/engine/turn-loop.ts:581`。\n\n`StreamingToolQueue` 对 `isConcurrencySafe` 工具立即开始执行，对 unsafe 工具在 drain 时串行执行，并把 rejected promise 统一转成 error ToolResult，见 `packages/core/src/engi",
+      "length": 1413,
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/review.md",
+      "pointer": "",
+      "offset": 801,
+      "text": "ze。它不是外层loop开始就追加boundary。实际停止、异常和其它分支只读已声明片段，没有执行模型或完整engine循环。\n\ncontextSelection的finish若segment没有真实user，会把它追加到previous.eventIds并推进toEventId；因此同一user任务的后续模型迭代、工具和注入reminder不会仅因多一个boundary就成为另一picker任务。UI分组也排除injected/reminder作为新任务。既有9个测试声明涵盖完整task、reminder continuation、连续范围、alignment等，全文223行只读，0执行。\n\nMessageStream打开选择前拒绝liveTurnActive，取真实getSessionRawEvents后buildTurns(raw,false)，通过durable源事件/提交字段alignment后才用selectedTurnRange创建summary fork；没有用UI行号猜原事件范围。raw API→IPC→raw reader保持原始顺序和事件字段，读取窗口/跳过畸形行是源码边界，本次没有实际用户历史或容量压力实验。\n\n## 独立backend范围反证\n\n本reviewer额外静态跟随preload fork、protocol summary、Engine委托、SessionManager、Transcript。summary必须from/to，先selectContextPackage后摘要；",
+      "length": 2812,
+      "bounded": true
+    }
+  ],
+  "scope": "bounded selected matching files only, not full history scan. Literal-name pair windows not semantic exhaustion."
+}

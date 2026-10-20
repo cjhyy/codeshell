@@ -1,0 +1,16 @@
+{
+  "createdAt": "2026-10-17T17:59:45.333072+00:00",
+  "productExecutions": 0,
+  "helperExecutions": 0,
+  "fixtureExecutions": 0,
+  "testExecutions": 0,
+  "reactDOMClockTimerNativeNetworkModelExecutions": 0,
+  "gitExecutions": 0,
+  "authorMethodsExecuted": 0,
+  "runtimeValidation": false,
+  "evidenceLevel": "Independent static source and metadata review; manual inference of branch behavior, no product or language fixture evaluation",
+  "productSemanticLineCount": 273,
+  "testDeclarationLineCount": 39,
+  "semanticLineCount": 312,
+  "displayedLineCount": 736
+}

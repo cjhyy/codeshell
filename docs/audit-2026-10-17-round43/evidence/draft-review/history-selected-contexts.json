@@ -1,0 +1,1639 @@
+{
+  "scope": "Retained initial gate contexts saved in full; console09708c truncated. Only compact structured20 scope rows and the one old plugin expansion summary context were completely displayed and assessed; all34 SHA locator strings are metadata, not34 semantic contexts. Broader path307/filename399 capped160 each are navigation only.",
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-author-checks.json",
+      "jsonPointer": "/sourceFinishChecks/19",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-source-manifest.json",
+      "jsonPointer": "/files/19",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "finishFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lineCount": 2622,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            231,
+            242
+          ],
+          [
+            370,
+            390
+          ],
+          [
+            1760,
+            1777
+          ],
+          [
+            1809,
+            1824
+          ]
+        ],
+        "coveredLineCount": 67,
+        "initialPredecessorPinSha256": null,
+        "matchesPredecessorPin": null,
+        "gitComparisonPerformed": false,
+        "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+        "role": "product-or-test-contract"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+      "jsonPointer": "/files/8",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "lineCount": 2622,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "initialFilesystemSha256": null,
+        "finishFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "initialPinTiming": "First durable reviewer hash captured after selected read; no earlier SHA claimed",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1765,
+            1823
+          ]
+        ],
+        "coveredLineCount": 59,
+        "gitBlobVerifiedByReviewer": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+      "jsonPointer": "/authorSourceByteChecks/19",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "readCoverageNotExpanded": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "jsonPointer": "/files/28",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentBytes": 106169,
+        "currentSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "mainBytes": 106169,
+        "mainSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/56",
+      "row": {
+        "manifest": "aggregator-source-manifest.json",
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "rootIndependentlyBoundFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/86",
+      "row": {
+        "manifest": "review-aggregator-independent-source-manifest.json",
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "rootIndependentlyBoundFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/606",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "lines": 2622,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "status": "current-sha-selected-only",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 3,
+        "currentSelectedUnionLines": 98,
+        "currentSelectedUnionRanges": [
+          [
+            231,
+            242
+          ],
+          [
+            370,
+            390
+          ],
+          [
+            1760,
+            1824
+          ]
+        ],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 2,
+        "claimVariants": 6,
+        "claims": [
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-selected",
+            "rawCoverageLabel": "selected",
+            "selectedLineRanges": [
+              [
+                231,
+                242
+              ],
+              [
+                370,
+                390
+              ],
+              [
+                1760,
+                1777
+              ],
+              [
+                1809,
+                1824
+              ]
+            ],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round27/evidence/aggregator-source-manifest.json",
+                "jsonLocation": "$[\"files\"][19]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-selected",
+            "rawCoverageLabel": "selected",
+            "selectedLineRanges": [
+              [
+                1765,
+                1823
+              ]
+            ],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+                "jsonLocation": "$[\"files\"][8]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+                "jsonLocation": "$[\"authorSourceByteChecks\"][19]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+                "jsonLocation": "$[\"files\"][28]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+                "jsonLocation": "$[\"paths\"][28]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+                "jsonLocation": "$[\"files\"][49]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                "jsonLocation": "$[\"files\"][67]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-selected",
+            "rawCoverageLabel": "selected",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][56]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][86]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": "selected modelOptions/ModelPill current caller search hits only; not executed",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][22]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+                "jsonLocation": "$[34]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+                "jsonLocation": "$[34]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/2370",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "lines": 2622,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/parent-caller-initial-pins.json",
+      "jsonPointer": "/files/0",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "totalLines": 2622,
+        "pinTimeUTC": "2026-10-17T12:40:52.178803+00:00",
+        "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/source-manifest.json",
+      "jsonPointer": "/files/9",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "totalLines": 2622,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1568,
+            1591
+          ],
+          [
+            1753,
+            1779
+          ],
+          [
+            1792,
+            1825
+          ]
+        ],
+        "additionalNavigationSnippetLines": [
+          129,
+          236,
+          238,
+          240,
+          401,
+          446,
+          447,
+          448,
+          542,
+          646,
+          651,
+          661,
+          671,
+          697,
+          1007,
+          1047,
+          1192,
+          1487,
+          1511,
+          1522,
+          1525,
+          1544,
+          1564,
+          1567,
+          1836,
+          1844,
+          1947,
+          2002,
+          2045,
+          2078,
+          2153,
+          2154,
+          2187,
+          2309,
+          2503,
+          2589
+        ],
+        "declaredReadLineCount": 121,
+        "purpose": "ordinary parent passes engineSessionId/sendEpoch; stream conditional on hydration/new-chat, keyed ChatLinkResources is a different child",
+        "initialBeforeSemanticRead": true,
+        "initialFilesystemPin": {
+          "path": "packages/desktop/src/renderer/ChatView.tsx",
+          "bytes": 106169,
+          "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+          "totalLines": 2622,
+          "pinTimeUTC": "2026-10-17T12:40:52.178803+00:00",
+          "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked",
+          "pinArtifact": "parent-caller-initial-pins.json"
+        },
+        "finishFilesystemPin": {
+          "bytes": 106169,
+          "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+          "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+        },
+        "unchangedFromInitialPin": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/source-manifest.json",
+      "jsonPointer": "/files/9/initialFilesystemPin",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "totalLines": 2622,
+        "pinTimeUTC": "2026-10-17T12:40:52.178803+00:00",
+        "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked",
+        "pinArtifact": "parent-caller-initial-pins.json"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "jsonPointer": "/checks/9",
+      "row": {
+        "manifest": "/tmp/codeshell-audit-round36-chat-view-frontier/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "rootAdditionalProductSemanticRead": false
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/8",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentBytes": 106169,
+        "currentSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "mainBytes": 106169,
+        "mainSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/9",
+      "row": {
+        "manifest": "chat-view-frontier/source-manifest.json",
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "jsonPointer": "/sources/22",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "coverage": "selected modelOptions/ModelPill current caller search hits only; not executed",
+        "bytes": 106169,
+        "lines": 2622,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+      "jsonPointer": "/paths/28",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "bytes": 106169,
+        "lineCount": 2622,
+        "frozenSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "matchesFrozenSource": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "jsonPointer": "/files/49",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-source-manifest.json",
+      "jsonPointer": "/sources/20",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "readScope": "selected",
+        "readRanges": [
+          [
+            250,
+            410
+          ],
+          [
+            1115,
+            1235
+          ]
+        ],
+        "bytes": 106169,
+        "lines": 2622,
+        "frozenSourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "jsonPointer": "/files/67",
+      "row": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-author-checks.json",
+      "jsonPointer": "/sourceFinishChecks/19/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      },
+      "sourceSha256": "e60145006bb3ef6c195ce4aa32ce0db11767d56aff0f4795d7e558206d3443bf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-source-manifest.json",
+      "jsonPointer": "/files/19/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "finishFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lineCount": 2622,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            231,
+            242
+          ],
+          [
+            370,
+            390
+          ],
+          [
+            1760,
+            1777
+          ],
+          [
+            1809,
+            1824
+          ]
+        ],
+        "coveredLineCount": 67,
+        "initialPredecessorPinSha256": null,
+        "matchesPredecessorPin": null,
+        "gitComparisonPerformed": false,
+        "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+        "role": "product-or-test-contract"
+      },
+      "sourceSha256": "a52740645b7c9595980fede2878c11b71617db676aeb999c38f802d39721e7f4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-source-manifest.json",
+      "jsonPointer": "/files/19/currentFilesystemSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "finishFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lineCount": 2622,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            231,
+            242
+          ],
+          [
+            370,
+            390
+          ],
+          [
+            1760,
+            1777
+          ],
+          [
+            1809,
+            1824
+          ]
+        ],
+        "coveredLineCount": 67,
+        "initialPredecessorPinSha256": null,
+        "matchesPredecessorPin": null,
+        "gitComparisonPerformed": false,
+        "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+        "role": "product-or-test-contract"
+      },
+      "sourceSha256": "a52740645b7c9595980fede2878c11b71617db676aeb999c38f802d39721e7f4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-source-manifest.json",
+      "jsonPointer": "/files/19/finishFilesystemSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "finishFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "lineCount": 2622,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            231,
+            242
+          ],
+          [
+            370,
+            390
+          ],
+          [
+            1760,
+            1777
+          ],
+          [
+            1809,
+            1824
+          ]
+        ],
+        "coveredLineCount": 67,
+        "initialPredecessorPinSha256": null,
+        "matchesPredecessorPin": null,
+        "gitComparisonPerformed": false,
+        "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+        "role": "product-or-test-contract"
+      },
+      "sourceSha256": "a52740645b7c9595980fede2878c11b71617db676aeb999c38f802d39721e7f4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+      "jsonPointer": "/files/8/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "lineCount": 2622,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "initialFilesystemSha256": null,
+        "finishFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "initialPinTiming": "First durable reviewer hash captured after selected read; no earlier SHA claimed",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1765,
+            1823
+          ]
+        ],
+        "coveredLineCount": 59,
+        "gitBlobVerifiedByReviewer": false
+      },
+      "sourceSha256": "c6a4e7b56d90198d973d7201736ff8c64010b9a63bbd2379c9494f84a5826d4b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+      "jsonPointer": "/files/8/finishFilesystemSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "lineCount": 2622,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "initialFilesystemSha256": null,
+        "finishFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "initialPinTiming": "First durable reviewer hash captured after selected read; no earlier SHA claimed",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1765,
+            1823
+          ]
+        ],
+        "coveredLineCount": 59,
+        "gitBlobVerifiedByReviewer": false
+      },
+      "sourceSha256": "c6a4e7b56d90198d973d7201736ff8c64010b9a63bbd2379c9494f84a5826d4b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+      "jsonPointer": "/authorSourceByteChecks/19/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "readCoverageNotExpanded": true
+      },
+      "sourceSha256": "c6a4e7b56d90198d973d7201736ff8c64010b9a63bbd2379c9494f84a5826d4b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "jsonPointer": "/files/28/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentBytes": 106169,
+        "currentSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "mainBytes": 106169,
+        "mainSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      },
+      "sourceSha256": "fe1428588d3b8cae8c88cc9c280f55e75b2472c313c194167c7cffe03a54e757"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "jsonPointer": "/files/28/currentSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentBytes": 106169,
+        "currentSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "mainBytes": 106169,
+        "mainSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      },
+      "sourceSha256": "fe1428588d3b8cae8c88cc9c280f55e75b2472c313c194167c7cffe03a54e757"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "jsonPointer": "/files/28/mainSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentBytes": 106169,
+        "currentSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "mainBytes": 106169,
+        "mainSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true,
+        "currentWorkingTreeMatchesMain": true
+      },
+      "sourceSha256": "fe1428588d3b8cae8c88cc9c280f55e75b2472c313c194167c7cffe03a54e757"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/56/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "manifest": "aggregator-source-manifest.json",
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "rootIndependentlyBoundFrozenBlob": true
+      },
+      "sourceSha256": "fe1428588d3b8cae8c88cc9c280f55e75b2472c313c194167c7cffe03a54e757"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/86/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "manifest": "review-aggregator-independent-source-manifest.json",
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "rootIndependentlyBoundFrozenBlob": true
+      },
+      "sourceSha256": "fe1428588d3b8cae8c88cc9c280f55e75b2472c313c194167c7cffe03a54e757"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/606/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "lines": 2622,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "status": "current-sha-selected-only",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 3,
+        "currentSelectedUnionLines": 98,
+        "currentSelectedUnionRanges": [
+          [
+            231,
+            242
+          ],
+          [
+            370,
+            390
+          ],
+          [
+            1760,
+            1824
+          ]
+        ],
+        "priorVersionClaimVariants": 1,
+        "currentPinOnlyVariants": 2,
+        "claimVariants": 6,
+        "claims": [
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-selected",
+            "rawCoverageLabel": "selected",
+            "selectedLineRanges": [
+              [
+                231,
+                242
+              ],
+              [
+                370,
+                390
+              ],
+              [
+                1760,
+                1777
+              ],
+              [
+                1809,
+                1824
+              ]
+            ],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round27/evidence/aggregator-source-manifest.json",
+                "jsonLocation": "$[\"files\"][19]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-selected",
+            "rawCoverageLabel": "selected",
+            "selectedLineRanges": [
+              [
+                1765,
+                1823
+              ]
+            ],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+                "jsonLocation": "$[\"files\"][8]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+                "jsonLocation": "$[\"authorSourceByteChecks\"][19]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+                "jsonLocation": "$[\"files\"][28]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+                "jsonLocation": "$[\"paths\"][28]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+                "jsonLocation": "$[\"files\"][49]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+                "jsonLocation": "$[\"files\"][67]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "explicit-selected",
+            "rawCoverageLabel": "selected",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][56]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][86]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": "selected modelOptions/ModelPill current caller search hits only; not executed",
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+                "jsonLocation": "$[\"sources\"][22]"
+              }
+            ]
+          },
+          {
+            "sourceSha256": "63611e699f58eb8837e0adbe460d622ecf3bd6c16593ba310035069a0d4f433c",
+            "matchesCurrentFilesystem": false,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": null,
+            "manifests": [
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/first-authorized/source-manifest.json",
+                "jsonLocation": "$[34]"
+              },
+              {
+                "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/second-authorized/source-manifest.json",
+                "jsonLocation": "$[34]"
+              }
+            ]
+          }
+        ]
+      },
+      "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/606/claims/0/sourceSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "matchesCurrentFilesystem": true,
+        "coverageKind": "explicit-selected",
+        "rawCoverageLabel": "selected",
+        "selectedLineRanges": [
+          [
+            231,
+            242
+          ],
+          [
+            370,
+            390
+          ],
+          [
+            1760,
+            1777
+          ],
+          [
+            1809,
+            1824
+          ]
+        ],
+        "validRangeBoundsForCurrentFile": true,
+        "manifests": [
+          {
+            "path": "docs/audit-2026-10-17-round27/evidence/aggregator-source-manifest.json",
+            "jsonLocation": "$[\"files\"][19]"
+          }
+        ]
+      },
+      "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/606/claims/1/sourceSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "matchesCurrentFilesystem": true,
+        "coverageKind": "explicit-selected",
+        "rawCoverageLabel": "selected",
+        "selectedLineRanges": [
+          [
+            1765,
+            1823
+          ]
+        ],
+        "validRangeBoundsForCurrentFile": true,
+        "manifests": [
+          {
+            "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+            "jsonLocation": "$[\"files\"][8]"
+          }
+        ]
+      },
+      "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/606/claims/2/sourceSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "matchesCurrentFilesystem": true,
+        "coverageKind": "scope-unknown-pin-only",
+        "rawCoverageLabel": null,
+        "selectedLineRanges": [],
+        "validRangeBoundsForCurrentFile": true,
+        "manifests": [
+          {
+            "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+            "jsonLocation": "$[\"authorSourceByteChecks\"][19]"
+          },
+          {
+            "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+            "jsonLocation": "$[\"files\"][28]"
+          },
+          {
+            "path": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+            "jsonLocation": "$[\"paths\"][28]"
+          },
+          {
+            "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+            "jsonLocation": "$[\"files\"][49]"
+          },
+          {
+            "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+            "jsonLocation": "$[\"files\"][67]"
+          }
+        ]
+      },
+      "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/606/claims/3/sourceSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "matchesCurrentFilesystem": true,
+        "coverageKind": "explicit-selected",
+        "rawCoverageLabel": "selected",
+        "selectedLineRanges": [],
+        "validRangeBoundsForCurrentFile": true,
+        "manifests": [
+          {
+            "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+            "jsonLocation": "$[\"workerSourceChecks\"][56]"
+          },
+          {
+            "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+            "jsonLocation": "$[\"workerSourceChecks\"][86]"
+          }
+        ]
+      },
+      "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/606/claims/4/sourceSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "sourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "matchesCurrentFilesystem": true,
+        "coverageKind": "scope-unknown-pin-only",
+        "rawCoverageLabel": "selected modelOptions/ModelPill current caller search hits only; not executed",
+        "selectedLineRanges": [],
+        "validRangeBoundsForCurrentFile": true,
+        "manifests": [
+          {
+            "path": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+            "jsonLocation": "$[\"sources\"][22]"
+          }
+        ]
+      },
+      "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/2370/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "lines": 2622,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      },
+      "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/parent-caller-initial-pins.json",
+      "jsonPointer": "/files/0/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "totalLines": 2622,
+        "pinTimeUTC": "2026-10-17T12:40:52.178803+00:00",
+        "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked"
+      },
+      "sourceSha256": "a624295ee1ae526ec339ebc47782a4f4e46f0ede52b9e0a9241c5889418bbea4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/source-manifest.json",
+      "jsonPointer": "/files/9/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "totalLines": 2622,
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1568,
+            1591
+          ],
+          [
+            1753,
+            1779
+          ],
+          [
+            1792,
+            1825
+          ]
+        ],
+        "additionalNavigationSnippetLines": [
+          129,
+          236,
+          238,
+          240,
+          401,
+          446,
+          447,
+          448,
+          542,
+          646,
+          651,
+          661,
+          671,
+          697,
+          1007,
+          1047,
+          1192,
+          1487,
+          1511,
+          1522,
+          1525,
+          1544,
+          1564,
+          1567,
+          1836,
+          1844,
+          1947,
+          2002,
+          2045,
+          2078,
+          2153,
+          2154,
+          2187,
+          2309,
+          2503,
+          2589
+        ],
+        "declaredReadLineCount": 121,
+        "purpose": "ordinary parent passes engineSessionId/sendEpoch; stream conditional on hydration/new-chat, keyed ChatLinkResources is a different child",
+        "initialBeforeSemanticRead": true,
+        "initialFilesystemPin": {
+          "path": "packages/desktop/src/renderer/ChatView.tsx",
+          "bytes": 106169,
+          "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+          "totalLines": 2622,
+          "pinTimeUTC": "2026-10-17T12:40:52.178803+00:00",
+          "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked",
+          "pinArtifact": "parent-caller-initial-pins.json"
+        },
+        "finishFilesystemPin": {
+          "bytes": 106169,
+          "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+          "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+        },
+        "unchangedFromInitialPin": true
+      },
+      "sourceSha256": "ad334f20513f2dcedb9be323028da3d329bbcc527c8e3449aee0ee1e8d4263c4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/source-manifest.json",
+      "jsonPointer": "/files/9/initialFilesystemPin/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "totalLines": 2622,
+        "pinTimeUTC": "2026-10-17T12:40:52.178803+00:00",
+        "purpose": "before narrow parent lifecycle/key and follow prop navigation; no React invoked",
+        "pinArtifact": "parent-caller-initial-pins.json"
+      },
+      "sourceSha256": "ad334f20513f2dcedb9be323028da3d329bbcc527c8e3449aee0ee1e8d4263c4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/source-manifest.json",
+      "jsonPointer": "/files/9/finishFilesystemPin/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "timeUTC": "2026-10-17T12:41:54.183253+00:00"
+      },
+      "sourceSha256": "ad334f20513f2dcedb9be323028da3d329bbcc527c8e3449aee0ee1e8d4263c4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "jsonPointer": "/checks/9/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "manifest": "/tmp/codeshell-audit-round36-chat-view-frontier/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "rootAdditionalProductSemanticRead": false
+      },
+      "sourceSha256": "9c5a6f21484584ca5f6a1b5cc31b5211ad2ed43ef18cce0b07c5b127faa92e0e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/8/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentBytes": 106169,
+        "currentSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "mainBytes": 106169,
+        "mainSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/8/currentSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentBytes": 106169,
+        "currentSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "mainBytes": 106169,
+        "mainSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/files/8/mainSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentBytes": 106169,
+        "currentSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "mainBytes": 106169,
+        "mainSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/9/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "manifest": "chat-view-frontier/source-manifest.json",
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+      },
+      "sourceSha256": "ce236bba4e688cd0d29f73c53836afbe976156febf9b92c62c3dec8f44c1ebfe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "jsonPointer": "/sources/22/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "coverage": "selected modelOptions/ModelPill current caller search hits only; not executed",
+        "bytes": 106169,
+        "lines": 2622,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+      },
+      "sourceSha256": "0c55ed662238dba4bdb1bc74f24f2b9ed7f20812be858ba0c7d3b5c4b281cc5b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+      "jsonPointer": "/paths/28/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "bytes": 106169,
+        "lineCount": 2622,
+        "frozenSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "matchesFrozenSource": true
+      },
+      "sourceSha256": "cf7bc671fc3ab8501eb287a78ef6961d23b2f909217f09b75172c88be657b6d9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+      "jsonPointer": "/paths/28/frozenSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "bytes": 106169,
+        "lineCount": 2622,
+        "frozenSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "matchesFrozenSource": true
+      },
+      "sourceSha256": "cf7bc671fc3ab8501eb287a78ef6961d23b2f909217f09b75172c88be657b6d9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "jsonPointer": "/files/49/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      },
+      "sourceSha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-source-manifest.json",
+      "jsonPointer": "/sources/20/frozenSourceSha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "readScope": "selected",
+        "readRanges": [
+          [
+            250,
+            410
+          ],
+          [
+            1115,
+            1235
+          ]
+        ],
+        "bytes": 106169,
+        "lines": 2622,
+        "frozenSourceSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "currentWorkingTreeMatchesFrozenBlob": true
+      },
+      "sourceSha256": "936602d9050215292aa54af5bffa974b4203de0f24179c075ff8993d38fd3842"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "jsonPointer": "/files/67/sha256",
+      "line": 1,
+      "needle": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "context": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "immediateParentForExactValue": {
+        "path": "packages/desktop/src/renderer/ChatView.tsx",
+        "bytes": 106169,
+        "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      },
+      "sourceSha256": "9ecb24ca95fdfc4f5c6b8fb60c513ebeea0fee7025a38c37adabaf3e5b1432d7"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "jsonPointer": null,
+      "line": 15,
+      "needle": "plugin expansion",
+      "context": "argeted controls and evidence\n\nEvidence directory: `/tmp/codeshell-review-20261012-desktop-quality-round10/`.\n\n| Fixture and matching `.log` | Latest result | New evidence |\n| --- | --- | --- |\n| `composer-recovery-controls.test.tsx` | 3 pass / 16 assertions / 0 fail / 0 skip | Actual ChatView: remove stale path chip before sending B; same-session plugin expansion; late expansion after React unmount |\n| `question-recovery-control.test.tsx` | 1 pass / 9 assertions / 0 fail / 0 skip | Actual ChatView: selecting B's valid visible option does not remove hidden A index; an intervening session with no question remounts the sticky view and B submits once |\n| `plugin-settings-durable-controls.test.tsx` | 2 pass / 17 assertions / 0 fail / 0 skip | Actual ManagePage + PluginsTab + real Main writeSettings/readSettings under isolated HOME: initial race durably replaces arrays; normal loaded toggle preserves alpha; observed actual React mount IPC call order is plugins:list, skills:list, settings:get |\n| `project-recovery-control.test.tsx` | 1 pass / 9 assertions ",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e"
+    }
+  ],
+  "compactGateRows": [
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-author-checks.json",
+      "pointer": "/sourceFinishChecks/19",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-source-manifest.json",
+      "pointer": "/files/19",
+      "coverage": "selected",
+      "ranges": [
+        [
+          231,
+          242
+        ],
+        [
+          370,
+          390
+        ],
+        [
+          1760,
+          1777
+        ],
+        [
+          1809,
+          1824
+        ]
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+      "pointer": "/files/8",
+      "coverage": "selected",
+      "ranges": [
+        [
+          1765,
+          1823
+        ]
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/review-aggregator-independent-source-manifest.json",
+      "pointer": "/authorSourceByteChecks/19",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "pointer": "/files/28",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "pointer": "/workerSourceChecks/56",
+      "coverage": "selected",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/source-manifest.json",
+      "pointer": "/workerSourceChecks/86",
+      "coverage": "selected",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/606",
+      "coverage": "current-sha-selected-only",
+      "ranges": [],
+      "claimTypes": [
+        "explicit-selected",
+        "explicit-selected",
+        "scope-unknown-pin-only",
+        "explicit-selected",
+        "scope-unknown-pin-only",
+        "scope-unknown-pin-only"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2370",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/parent-caller-initial-pins.json",
+      "pointer": "/files/0",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/source-manifest.json",
+      "pointer": "/files/9",
+      "coverage": "selected",
+      "ranges": [
+        [
+          1568,
+          1591
+        ],
+        [
+          1753,
+          1779
+        ],
+        [
+          1792,
+          1825
+        ]
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/source-manifest.json",
+      "pointer": "/files/9/initialFilesystemPin",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "pointer": "/checks/9",
+      "coverage": "selected",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "pointer": "/files/8",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "pointer": "/workerSourceChecks/9",
+      "coverage": "selected",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-source-manifest.json",
+      "pointer": "/sources/22",
+      "coverage": "selected modelOptions/ModelPill current caller search hits only; not executed",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/tasks-source-manifest.json",
+      "pointer": "/paths/28",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "pointer": "/files/49",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/attachments-source-manifest.json",
+      "pointer": "/sources/20",
+      "coverage": "selected",
+      "ranges": [
+        [
+          250,
+          410
+        ],
+        [
+          1115,
+          1235
+        ]
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/source-manifest.json",
+      "pointer": "/files/67",
+      "coverage": "pin only/no semantic scope in row",
+      "ranges": []
+    }
+  ]
+}

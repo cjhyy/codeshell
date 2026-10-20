@@ -1,0 +1,67 @@
+{
+  "finishedUTC": "2026-10-17T14:10:36.097148+00:00",
+  "currentSourceAndHashOnlyPaths": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "bytes": 6622,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "matchesBeforeReadPin": true
+    },
+    {
+      "path": "packages/server/src/panels/process-state.ts",
+      "bytes": 3867,
+      "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "matchesBeforeReadPin": true
+    },
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "bytes": 27329,
+      "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "matchesBeforeReadPin": true
+    },
+    {
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "bytes": 2058,
+      "sha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+      "matchesBeforeReadPin": true
+    },
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "bytes": 44502,
+      "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "matchesBeforeReadPin": true
+    },
+    {
+      "path": "packages/server/src/panels/process-entry.ts",
+      "bytes": 2220,
+      "sha256": "fa0280f375aa4e1ad61bb5c5cb40d2de42b44cfbf9b39287d24c239ad3ff1d13",
+      "matchesBeforeReadPin": true
+    },
+    {
+      "path": "packages/server/src/panels/bridge-contract.ts",
+      "bytes": 3493,
+      "sha256": "1ce948d0608f88ebc7e658ce92614db79f72f65e17e5270de445102870be3fcd",
+      "matchesBeforeReadPin": true
+    },
+    {
+      "path": "docs/panel-native-tools.md",
+      "bytes": 39804,
+      "sha256": "aa434a5b4ad3a55c1071bf6fc78821c7dc0be77f1b32f76ba420630d05054227",
+      "matchesBeforeReadHistoryPin": true
+    }
+  ],
+  "all8PinsStable": true,
+  "history": {
+    "originalFileCount": 3581,
+    "currentSameScopePathCount": 3581,
+    "added": [],
+    "removed": [],
+    "sharedByteChanges": [],
+    "missing": [],
+    "originalInventoryPreserved": true,
+    "endingCheckKind": "bytes/SHA/path metadata only; not new full semantic/history-context reading",
+    "canonicalInitialInventorySha256": "e5b3f7da1cee753e90ae8eb73024c0ee19a352550ea7620a0e7ed78b5b251f07"
+  },
+  "gitCommands": 0,
+  "productTestsFixturesFunctions": 0
+}

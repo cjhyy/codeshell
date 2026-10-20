@@ -1,0 +1,47 @@
+{
+  "checkedUTC": "2026-10-17T16:50:44.609046+00:00",
+  "repositoryUsed": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "sourceChecks": [
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "bytes": 6078,
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "bytes": 53688,
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/web/app/app.css",
+      "bytes": 21770,
+      "sha256": "897cbba5d0fc77533486bcc45800e30273891297dd45ebc9a45689eee6661f11",
+      "unchanged": true
+    }
+  ],
+  "all3SourcesUnchanged": true,
+  "initialInstructionHashOnlyChecks": [
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "bytes": 17639,
+      "unchanged": true,
+      "newInstructionSemanticLines": 0
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "bytes": 206,
+      "unchanged": true,
+      "newInstructionSemanticLines": 0
+    }
+  ],
+  "originalHistoryCount": 4693,
+  "currentFilteredHistoryCount": 4693,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "newSemanticReadDuringEnding": 0
+}

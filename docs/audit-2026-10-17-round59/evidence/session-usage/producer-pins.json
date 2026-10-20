@@ -1,0 +1,40 @@
+{
+  "atUTC": "2026-10-17T19:43:46.661515+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lines": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "bytes": 10149,
+      "lines": 310,
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "bytes": 19306,
+      "lines": 480,
+      "sha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/run-state-persistence.test.ts",
+      "bytes": 3310,
+      "lines": 99,
+      "sha256": "bbe61d2746ca76bd3b7b06eb74a96dcbcaec64b4f5ed562087a27a423d136e31",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.primary-cache-accounting.test.ts",
+      "bytes": 11409,
+      "lines": 317,
+      "sha256": "259b288bfda6eb9105c6968d6f45c97bf5529c15962e2f68f61f03d821fc4fbb",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

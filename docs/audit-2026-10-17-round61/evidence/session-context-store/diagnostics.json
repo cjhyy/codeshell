@@ -1,0 +1,21 @@
+{
+  "productExecution": 0,
+  "gitCommands": 0,
+  "helperImportFixtureTestCliModelNativeNetworkExecution": 0,
+  "actualUserDataRead": 0,
+  "firstInventoryExit": 0,
+  "firstMetadataFailure": {
+    "operation": "Filename-only old R2 inventory using guessed docs/audit-2026-10-17-round2 directory",
+    "exitCode": 2,
+    "stdout": "old-r2-inventory.first.stdout",
+    "stderr": "old-r2-inventory.first.stderr",
+    "exit": "old-r2-inventory.first.exit.json",
+    "cause": "Directory does not exist. Product files were not addressed by this failed navigation.",
+    "correction": "Filename-only R2-01 locator identified original docs/audit-2026-10-17/root.md; it was pinned before bounded read. No product retry."
+  },
+  "outputTruncation": false,
+  "sourceReadingEnded": "2026-10-17T20:12:19.464089+00:00",
+  "domainCorrection": "Task name suggested ordinary persisted session/context/cwd storage. Actual target is memory-only live host routing. The report limits its opinion accordingly and does not substitute map shape for authority/custody enforcement.",
+  "noNewSemanticReadingDuringFinalization": true,
+  "validation": "Own stdlib metadata hashing/ranges/receipt only; no product method or historical test execution."
+}

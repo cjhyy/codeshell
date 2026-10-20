@@ -1,0 +1,20 @@
+[
+  {
+    "id": "PROV-R7-C1",
+    "status": "not-confirmed-normal-producer-reachability",
+    "title": "OpenAI 工具身份晚到时不会在流阶段补 start",
+    "file": "packages/core/src/llm/providers/openai.ts",
+    "line": 831,
+    "evidence": "Synthetic in-memory iterable → actual ModelFacade/Web reducer behavior observed in passing fixture; final tool call correct.",
+    "limit": "No valid normal Chat Completions or compatible-endpoint producer established. Final TurnLoop start backfill exists. Not counted as a bug."
+  },
+  {
+    "id": "PROV-R7-C2",
+    "status": "skipped-after-first-fixture-failure",
+    "title": "Anthropic thinking 工具续轮遗漏 thinking/redacted_thinking blocks",
+    "file": "packages/core/src/llm/providers/anthropic.ts",
+    "line": 385,
+    "evidence": "Static normalization chain and current official thinking tool workflow contract; independent first fixture failed late at exact result shape due to unaccounted cache_control.",
+    "limit": "1 pass / 1 fail / 13 expectations retained separately. No repair/retry/alternate execution or real API rejection. Not counted as a confirmed bug."
+  }
+]

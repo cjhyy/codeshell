@@ -1,0 +1,12 @@
+{
+  "capturedAtUTC": "2026-10-17T14:19:29.012458+00:00",
+  "toolChunk": "7a3417",
+  "exitCode": 1,
+  "error": "KeyError: semanticLineCount",
+  "scope": "This aggregate metadata checker only",
+  "cause": "Author manifest uses semanticLineCount while independent manifest uses coveredLineCount; checker initially assumed one schema.",
+  "checksJsonWrittenByFailedAttempt": false,
+  "productFunctionsOrSourcesExecutedRead": false,
+  "gitCommands": 0,
+  "correction": "Explicit semanticLineCount/coveredLineCount metadata adapter; no source/history/product retry."
+}

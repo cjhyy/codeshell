@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
-import { ChatView } from "./ChatView";
+import { ChatView, type AttachmentSelection } from "./ChatView";
+import { emptyComposerMetadata, type ComposerMetadata } from "./chat/composerMetadata";
 import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelection";
 import { useCloudProjectRuntime } from "./runtime/useCloudProjectRuntime";
 import { CloudProjectWorkspace } from "./runtime/CloudProjectWorkspace";
@@ -72,7 +73,6 @@ import type {
   SummaryForkSessionResult,
 } from "../preload/types";
 import {
-  loadProjects,
   loadActiveProjectId,
   saveActiveProjectId,
   unmarkProjectPathRemoved,
@@ -84,9 +84,11 @@ import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
 import { loadView, saveView, type ViewState } from "./view";
 import { useTaskInboxFeature } from "./task-inbox/useTaskInboxFeature";
+import { ActivityNavigation, isActivityPage } from "./activity/ActivityNavigation";
 import { useOptimizationLabFeature } from "./optimization-lab/useOptimizationLabFeature";
 import { PAGE_REGISTRY } from "./pages/PageRegistry";
-import { replacePanelApps } from "./panels/PanelRegistry";
+import { PanelCatalogContext } from "./panels/PanelCatalogContext";
+import { usePanelAppCatalog } from "./app/usePanelAppCatalog";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -129,6 +131,14 @@ import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 import { usePanelBuckets } from "./app/usePanelBuckets";
+import { useViewTargets } from "./app/useViewTargets";
+import {
+  createComposerDraftTargets,
+  pinPendingAttachmentRoot,
+  resumePendingAttachmentRoot,
+  type PendingAttachmentRoot,
+} from "./app/composerDraftTargets";
+import { useQuickChatImages } from "./chat/useQuickChatImages";
 import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
 import { useActiveSessionUiAuthority } from "./sessionUiAuthority";
@@ -227,10 +237,14 @@ function App() {
     loadActiveProjectId(),
   );
   const [view, setView] = useState<ViewState>(() => loadView((mode) => PAGE_REGISTRY.has(mode)));
-  const [credentialsInitialTab, setCredentialsInitialTab] = useState<"link" | undefined>();
-  useEffect(() => {
-    if (view.viewMode !== "credentials") setCredentialsInitialTab(undefined);
-  }, [view.viewMode]);
+  const {
+    historyViewIntentRef,
+    credentialsInitialTab,
+    traceTarget,
+    openTrace,
+    navigateTo,
+    openLinkCredentials,
+  } = useViewTargets(view.viewMode, setView);
   // Settings replace the chrome, while the wide-window navigation preference
   // remains independent of the temporary narrow-window drawer.
   const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
@@ -282,12 +296,10 @@ function App() {
   >();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   const [revealedSessionIds, setRevealedSessionIds] = useState<Record<string, string>>({});
-  /** Transient: a run to pre-select when jumping into the runs view (e.g. from
-   *  the 自动化 detail's 「查看最近运行」 button). Not persisted in view state. */
-  const [runsInitialRunId, setRunsInitialRunId] = useState<string | null>(null);
 
   const { sessionIndices, setSessionIndices, archivedPetSessionIds } = useSessionIndices();
   const locallyCreatedSessionIdsRef = useRef<Set<string>>(new Set());
+  const pendingAttachmentRootsRef = useRef(new Map<string, PendingAttachmentRoot>());
 
   /**
    * Create a fresh session on demand (lazy: only when the user actually
@@ -383,13 +395,15 @@ function App() {
     {},
   );
   const [quickChatDrafts, setQuickChatDrafts] = useState<Record<string, string>>({});
-  const [quickChatAttachments, setQuickChatAttachments] = useState<
-    Record<string, ImageAttachment[]>
-  >({});
   const quickChatSessionsRef = useRef<Record<string, QuickChatSessionRef>>({});
+  quickChatSessionsRef.current = quickChatSessions;
+  const {
+    attachments: quickChatAttachments,
+    setAttachments: setQuickChatAttachments,
+    forSession: quickChatImageComposer,
+  } = useQuickChatImages(quickChatSessionsRef);
   const activeBucketRef = useRef(activeBucket);
   activeBucketRef.current = activeBucket;
-  quickChatSessionsRef.current = quickChatSessions;
   useEffect(() => {
     if (!activeSessionId || isExternalRuntimeModelKey(activeModelKey)) return;
     window.codeshell.registerBrowserSessionBucket({
@@ -411,34 +425,33 @@ function App() {
       return { ...prev, [targetBucket]: { ...current, text } };
     });
   };
+  const composerTargets = createComposerDraftTargets(activeBucketRef, setComposerDrafts);
   const setComposerDraftAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>> = (
     next,
-  ) => {
-    setComposerDrafts((prev) => {
-      const targetBucket = activeBucketRef.current;
-      const current = prev[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
-      const attachments = typeof next === "function" ? next(current.attachments) : next;
-      if (attachments === current.attachments) return prev;
-      return { ...prev, [targetBucket]: { ...current, attachments } };
-    });
-  };
+  ) => composerTargets.updateAttachments(activeBucketRef.current, next);
+  // A render's ordinary editor callback may never adopt a later live bucket.
+  const setComposerMetadata: React.Dispatch<React.SetStateAction<ComposerMetadata>> = (next) =>
+    composerTargets.updateMetadata(activeBucket, next);
   // Attach an on-disk image to the composer by absolute path (file-panel add —
   // TODO 2.1). The staged attachment keeps the real path as its name so the
   // chip shows it and the wire payload carries it. Reads bytes via IPC.
   const attachImageByPath = async (absPath: string): Promise<void> => {
-    const context = prepareAttachmentSession();
-    if (!context) return;
+    const selection = beginAttachmentSelection();
+    const context = selection?.prepare();
+    if (!selection || !context) return;
     const dataUrl = await window.codeshell.readImageDataUrl(absPath, {
       cwd: context.cwd,
       sessionId: context.sessionId,
     });
+    if (!selection.isCurrent()) return;
     if (!dataUrl) {
       window.codeshell.log("attach.path.not_image", { path: absPath });
       return;
     }
     const sha256 = await sha256FromDataUrl(dataUrl).catch(() => undefined);
+    if (!selection.isCurrent()) return;
     const modelPath = pathForModel(absPath, context.cwd);
-    setComposerDraftAttachments((cur) => {
+    selection.updateAttachments((cur) => {
       const { attachment } = buildPathAttachment(absPath, dataUrl, cur, {
         path: modelPath,
         relPath: modelPath === absPath ? undefined : modelPath,
@@ -568,85 +581,11 @@ function App() {
     setSettingsInitialModule(undefined);
   }, [view.viewMode]);
 
-  const projectPathsKey = projects
-    .map((project) => project.path)
-    .sort()
-    .join("\0");
-
-  useEffect(() => {
-    let alive = true;
-    const applyPanelApps = (
-      apps: Awaited<ReturnType<typeof window.codeshell.listPanelApps>>,
-      projectPath: string | null,
-      extraBound: Record<string, string[]> = {},
-    ) => {
-      if (alive) replacePanelApps(apps, projectPath, extraBound);
-    };
-    const listForProjects = (
-      window.codeshell as typeof window.codeshell & {
-        listPanelAppsForProjects?: typeof window.codeshell.listPanelAppsForProjects;
-      }
-    ).listPanelAppsForProjects;
-    const panelAppsApi = window.codeshell as typeof window.codeshell & {
-      listPanelApps?: typeof window.codeshell.listPanelApps;
-      onPanelAppsChanged?: typeof window.codeshell.onPanelAppsChanged;
-    };
-    const listApps = panelAppsApi.listPanelApps;
-    const subscribe = panelAppsApi.onPanelAppsChanged;
-    if (!listApps || !subscribe) {
-      void applyPanelApps([], null);
-      return;
-    }
-    let refreshGeneration = 0;
-    const refresh = () => {
-      const generation = ++refreshGeneration;
-      const projectPath = activeProject?.path ?? null;
-      // Register apps bound by ANY tracked project, not just the active one:
-      // panel buckets are per project and bindings are editable for any project
-      // from the Extensions screen, so filtering to the active project left
-      // other projects' docks empty.
-      if (listForProjects) {
-        // Use the same project list the dock resolves its projectPath from
-        // (`projects` state, via SessionPanelDock), NOT loadProjects(): a
-        // project present only in state — just added, or id-remapped by disk
-        // reconciliation — would otherwise never be asked about, so its dock
-        // stayed empty even with a valid binding on disk.
-        const paths = projects.map((project) => project.path);
-        for (const extra of loadProjects().map((project) => project.path)) {
-          if (!paths.includes(extra)) paths.push(extra);
-        }
-        if (projectPath && !paths.includes(projectPath)) paths.push(projectPath);
-        void listForProjects(paths, lang)
-          .then((result) => {
-            if (generation !== refreshGeneration) return;
-            void applyPanelApps(result.descriptors, projectPath, result.boundProjectPathsByAppId);
-          })
-          .catch(() => {
-            if (generation !== refreshGeneration) return;
-            void applyPanelApps([], projectPath);
-          });
-        return;
-      }
-      void listApps(projectPath ?? "", lang)
-        .then((apps) => {
-          if (generation !== refreshGeneration) return;
-          void applyPanelApps(apps, projectPath);
-        })
-        .catch(() => {
-          if (generation !== refreshGeneration) return;
-          void applyPanelApps([], projectPath);
-        });
-    };
-    refresh();
-    const unsubscribe = subscribe(refresh);
-    return () => {
-      alive = false;
-      unsubscribe();
-    };
-    // Keyed on the project PATHS, not the array identity: a rename or reorder
-    // must not re-scan, but a newly tracked project must be asked about.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProject?.path, lang, projectPathsKey]);
+  const panelCatalog = usePanelAppCatalog({
+    projectPaths: projects.map((project) => project.path),
+    activeProjectPath: activeProject?.path ?? null,
+    locale: lang,
+  });
 
   function prepareAttachmentSession(): { cwd: string; sessionId: string } | null {
     // The ref is updated synchronously by navigation actions, while the
@@ -668,7 +607,17 @@ function App() {
         sessionUiAuthority.configurationTarget.sessionId !== engineSessionId ||
         !sessionUiAuthority.workspaceRoot
       ) {
-        return null;
+        return resumePendingAttachmentRoot({
+          pin: pendingAttachmentRootsRef.current.get(liveBucket.sessionId),
+          projectId,
+          sessionId: liveBucket.sessionId,
+          summary: loadSessionIndex(projectId).sessions.find(
+            (candidate) => candidate.id === liveBucket.sessionId,
+          ),
+          locallyCreated: locallyCreatedSessionIdsRef.current.has(liveBucket.sessionId),
+          noRepoCwd: noRepoCwdRef.current,
+          authority: sessionUiAuthority,
+        });
       }
       return { cwd: sessionUiAuthority.workspaceRoot, sessionId: engineSessionId };
     }
@@ -680,6 +629,8 @@ function App() {
     const draftBucket = bucketKey(projectId, null);
     const { index, sessionId } = createSession(projectId);
     locallyCreatedSessionIdsRef.current.add(sessionId);
+    const pin = pinPendingAttachmentRoot(projectId, cwd, noRepoCwdRef.current, sessionUiAuthority);
+    if (pin) pendingAttachmentRootsRef.current.set(sessionId, pin);
     const nextBucket = bucketKey(projectId, sessionId);
     activeBucketRef.current = nextBucket;
     setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: index }));
@@ -694,6 +645,9 @@ function App() {
     setModelOverrides((prev) => migrateBucketOverride(prev, draftBucket, nextBucket));
     return { cwd, sessionId };
   }
+
+  const beginAttachmentSelection = (): AttachmentSelection | null =>
+    composerTargets.beginSelection(activeBucket, prepareAttachmentSession);
 
   const materializeActiveSessionForPanel = (): string | null => {
     const current = parsePanelBucket(activeBucketRef.current);
@@ -1196,6 +1150,7 @@ function App() {
     panelBuckets,
     togglePanel,
     openPanel,
+    openSubagent,
     panelWidth,
     beginPanelResize,
     composerSeed,
@@ -1216,6 +1171,7 @@ function App() {
       sessionIndicesRef,
       setSessionIndices,
       materializeActiveSessionForPanel,
+      appendReviewDraft: composerTargets.appendText,
     },
     quickChat: {
       quickChatSessions,
@@ -1326,6 +1282,7 @@ function App() {
     handleDeleteSession,
     handleOpenAutomationRunSession,
     handleOpenAutomationDiskSession,
+    handleOpenHistorySession,
   } = useSessionNavigation({
     projects,
     setProjects,
@@ -1359,7 +1316,7 @@ function App() {
     setPanelByBucket,
     activeBucketRef,
     setView,
-    setRunsInitialRunId,
+    onOpenTrace: openTrace,
   });
 
   const [handleAddProject, newProjectDialog] = useNewProjectDialog(handleAddLocalProject, {
@@ -1396,10 +1353,14 @@ function App() {
       sessionIndices,
       selectSession: handleSelectSession,
       openDiskSession: handleOpenAutomationDiskSession,
+      openHistorySession: (id) => {
+        const intent = historyViewIntentRef.current.revision;
+        return handleOpenHistorySession(id, () => historyViewIntentRef.current.revision === intent);
+      },
       openPetTarget: handleOpenPetTarget,
       petSnapshot: petState.projection,
       openPetPage,
-      setRunsInitialRunId,
+      onOpenTrace: openTrace,
     });
 
   const { onSessionRenamed, onSessionDeleted } = useSessionHistorySync({
@@ -1421,9 +1382,9 @@ function App() {
     setComposerDrafts,
   });
 
-  // toggleInspector retained as a no-op for menu/palette wiring that
-  // still references the action verb but the panel itself is gone.
-  const toggleInspector = (): void => undefined;
+  const toggleInspector = useCallback(() => {
+    openTrace(activeEngineSessionId ?? undefined);
+  }, [activeEngineSessionId, openTrace]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -1521,7 +1482,7 @@ function App() {
           toggleSidebar();
           break;
         case "toggle-inspector":
-          // no-op: inspector panel removed
+          navigateFromSidebar(toggleInspector);
           break;
         case "new-window":
           void window.codeshell.newWindow();
@@ -1529,7 +1490,7 @@ function App() {
       }
     });
     return off;
-  }, [projects, toggleSidebar, navigateFromSidebar]);
+  }, [projects, toggleSidebar, toggleInspector, navigateFromSidebar]);
 
   // Refresh model list + active selection + permission from settings.
   useEffect(() => {
@@ -2216,7 +2177,12 @@ function App() {
   }, [pendingNewProject, activeProjectId, projectRuntime.ready, cloudSelected, cloudRuntime]);
 
   return (
-    <AppShell platformClass={platformClass} sidebarCollapsed={!sidebarVisible}>
+    <AppShell
+      platformClass={platformClass}
+      sidebarCollapsed={!sidebarVisible}
+      isFullscreen={isFullscreen}
+      sidebarIsDialog={isNarrowWindow}
+    >
       <div
         className={isSettingsPage ? "hidden" : "flex min-h-0 flex-1 flex-col"}
         aria-hidden={isSettingsPage}
@@ -2280,7 +2246,7 @@ function App() {
         </div>
 
         <ThemeMusicMiniPlayer />
-        <div className="flex min-h-0 flex-1">
+        <div data-app-body className="relative flex min-h-0 flex-1">
           <ResponsiveSidebar
             narrow={isNarrowWindow}
             open={sidebarVisible}
@@ -2322,7 +2288,7 @@ function App() {
               }
               onNewConversation={() => navigateFromSidebar(() => newVisibleConversation())}
               onOpenSearch={() => navigateFromSidebar(() => setSessionSearchOpen(true))}
-              onNavigate={(mode) => navigateFromSidebar(() => setViewMode(mode))}
+              onNavigate={(mode) => navigateFromSidebar(() => navigateTo(mode))}
               onOpenProjectConfig={(projectId) => {
                 navigateFromSidebar(() => {
                   setActiveProjectId(projectId);
@@ -2330,6 +2296,12 @@ function App() {
                 });
               }}
               onOpenSettingsPage={() => navigateFromSidebar(() => setViewMode("settings_page"))}
+              onOpenAccountSettings={() =>
+                navigateFromSidebar(() => {
+                  setSettingsInitialModule("account");
+                  setViewMode("settings_page");
+                })
+              }
               onOpenPetPage={() => navigateFromSidebar(openPetPage)}
               onTogglePetWidget={togglePetWidget}
               onLoadMoreSessionHistory={() =>
@@ -2351,6 +2323,15 @@ function App() {
           <div className="relative flex min-w-0 flex-1 overflow-hidden">
             <AppMainView
               lifecycle={isChatView && !cloudSelected ? lifecycle : null}
+              navigation={
+                isActivityPage(view.viewMode) ? (
+                  <ActivityNavigation
+                    page={view.viewMode}
+                    taskInboxEnabled={taskInboxEnabled}
+                    onNavigate={navigateTo}
+                  />
+                ) : null
+              }
               searchLayer={
                 !isPetSurface ? (
                   <SearchBar
@@ -2402,11 +2383,21 @@ function App() {
               ) : registeredPageRender ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   {registeredPageRender({
-                    runsInitialRunId,
+                    tracesInitialSessionId: traceTarget.sessionId,
+                    tracesInitialTraceId: traceTarget.traceId,
+                    onOpenTrace: openTrace,
                     onOpenTaskInboxRecord,
                     activeProjectPath: activeProject?.path ?? null,
                     activeProjectId: activeProject?.id ?? null,
                     onNewSession: handleNewConversation,
+                    onOpenSession: async (id) => {
+                      const intent = historyViewIntentRef.current.revision;
+                      const result = await handleOpenHistorySession(
+                        id,
+                        () => historyViewIntentRef.current.revision === intent,
+                      );
+                      if (result === "unavailable") return false;
+                    },
                     onSessionRenamed,
                     onSessionDeleted,
                   })}
@@ -2592,6 +2583,7 @@ function App() {
                       handleContextPackageCreated(result, activeBucket, options)
                     }
                     contextSelectionRequest={contextSelectionRequest}
+                    onViewSubagent={openSubagent}
                     sendBucket={activeBucket}
                     onPrepareLinkSubmission={() => {
                       const context = prepareAttachmentSession();
@@ -2659,6 +2651,10 @@ function App() {
                     onDraftChange={setComposerDraftText}
                     attachments={composerDraft.attachments}
                     onAttachmentsChange={setComposerDraftAttachments}
+                    composerMetadata={
+                      composerDraft.metadata ?? emptyComposerMetadata(composerDraft.text)
+                    }
+                    onComposerMetadataChange={setComposerMetadata}
                     anchors={anchors}
                     onRemoveAnchor={removeAnchor}
                     onClearAnchors={clearAnchors}
@@ -2666,6 +2662,7 @@ function App() {
                     onExtendGoal={extendGoal}
                     onAttachImagePath={(p) => void attachImageByPath(p)}
                     onPrepareAttachmentSession={prepareAttachmentSession}
+                    onBeginAttachmentSelection={beginAttachmentSelection}
                     imageDetail={imageDetail}
                     pendingApproval={visibleApproval}
                     onApprovalDecide={
@@ -2757,49 +2754,54 @@ function App() {
                   ) : null
                 }
               >
-                <SessionPanelDock
-                  panelBuckets={panelBuckets}
-                  panelByBucket={panelByBucket}
-                  activeBucket={activeBucket}
-                  isChatView={isChatView}
-                  onRestorePanelFocus={() => panelToggleRef.current?.focus({ preventScroll: true })}
-                  projects={projects}
-                  updatePanelBucket={updatePanelBucket}
-                  onRevealConsumed={onRevealConsumed}
-                  onOpenCliSessionConsumed={onOpenCliSessionConsumed}
-                  panelWidth={panelWidth}
-                  beginPanelResize={beginPanelResize}
-                  onAttachImage={(path) => void attachImageByPath(path)}
-                  anchorsByBucket={anchorsByBucket}
-                  removeAnchor={removeAnchor}
-                  updateAnchorComment={updateAnchorComment}
-                  resolveEngineSessionIdForBucket={resolveEngineSessionIdForBucket}
-                  quickChatSessions={quickChatSessions}
-                  transcripts={transcripts}
-                  busyKeys={busyKeys}
-                  approvalForBucket={approvalForBucket}
-                  noRepoCwd={noRepoCwdRef.current}
-                  permissionOverrides={permissionOverrides}
-                  defaultPermissionMode={defaultPermissionMode}
-                  modelOverrides={modelOverrides}
-                  defaultSessionModelKey={defaultActiveModelKey}
-                  defaultActiveModelKey={quickChatDefaultModelKey}
-                  quickChatDrafts={quickChatDrafts}
-                  quickChatAttachments={quickChatAttachments}
-                  modelOptions={quickChatModelOptions}
-                  imageDetail={imageDetail}
-                  setQuickChatPermission={setQuickChatPermission}
-                  setQuickChatModel={setQuickChatModel}
-                  ensureQuickChatSession={ensureQuickChatSession}
-                  cleanupQuickChatPanelSession={cleanupQuickChatPanelSession}
-                  restartQuickChatSession={restartQuickChatSession}
-                  setQuickChatDraft={setQuickChatDraft}
-                  setQuickChatAttachmentState={setQuickChatAttachmentState}
-                  sendQuickChat={sendQuickChat}
-                  stop={stop}
-                  handleAskUserAnswer={handleAskUserAnswer}
-                  decideEnvelope={decideEnvelope}
-                />
+                <PanelCatalogContext.Provider value={panelCatalog}>
+                  <SessionPanelDock
+                    panelBuckets={panelBuckets}
+                    panelByBucket={panelByBucket}
+                    activeBucket={activeBucket}
+                    isChatView={isChatView}
+                    onRestorePanelFocus={() =>
+                      panelToggleRef.current?.focus({ preventScroll: true })
+                    }
+                    projects={projects}
+                    updatePanelBucket={updatePanelBucket}
+                    onRevealConsumed={onRevealConsumed}
+                    onOpenCliSessionConsumed={onOpenCliSessionConsumed}
+                    panelWidth={panelWidth}
+                    beginPanelResize={beginPanelResize}
+                    onAttachImage={(path) => void attachImageByPath(path)}
+                    anchorsByBucket={anchorsByBucket}
+                    removeAnchor={removeAnchor}
+                    updateAnchorComment={updateAnchorComment}
+                    resolveEngineSessionIdForBucket={resolveEngineSessionIdForBucket}
+                    quickChatSessions={quickChatSessions}
+                    transcripts={transcripts}
+                    busyKeys={busyKeys}
+                    approvalForBucket={approvalForBucket}
+                    noRepoCwd={noRepoCwdRef.current}
+                    permissionOverrides={permissionOverrides}
+                    defaultPermissionMode={defaultPermissionMode}
+                    modelOverrides={modelOverrides}
+                    defaultSessionModelKey={defaultActiveModelKey}
+                    defaultActiveModelKey={quickChatDefaultModelKey}
+                    quickChatDrafts={quickChatDrafts}
+                    quickChatAttachments={quickChatAttachments}
+                    quickChatImageComposer={quickChatImageComposer}
+                    modelOptions={quickChatModelOptions}
+                    imageDetail={imageDetail}
+                    setQuickChatPermission={setQuickChatPermission}
+                    setQuickChatModel={setQuickChatModel}
+                    ensureQuickChatSession={ensureQuickChatSession}
+                    cleanupQuickChatPanelSession={cleanupQuickChatPanelSession}
+                    restartQuickChatSession={restartQuickChatSession}
+                    setQuickChatDraft={setQuickChatDraft}
+                    setQuickChatAttachmentState={setQuickChatAttachmentState}
+                    sendQuickChat={sendQuickChat}
+                    stop={stop}
+                    handleAskUserAnswer={handleAskUserAnswer}
+                    decideEnvelope={decideEnvelope}
+                  />
+                </PanelCatalogContext.Provider>
               </React.Suspense>
             )}
           </div>
@@ -2811,7 +2813,7 @@ function App() {
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
           commands={buildCommands({
-            setViewMode,
+            setViewMode: navigateTo,
             openPanel,
             gitReviewAvailable: reviewAvailability.available,
             localRuntime: !cloudSelected && projectRuntime.ready,
@@ -2871,10 +2873,7 @@ function App() {
                 isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                onOpenLink={() => {
-                  setCredentialsInitialTab("link");
-                  setViewMode("credentials");
-                }}
+                onOpenLink={openLinkCredentials}
               />
             ) : activeProject ? (
               // project_config: the same settings center, preselected to the
@@ -2899,10 +2898,7 @@ function App() {
                 isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                onOpenLink={() => {
-                  setCredentialsInitialTab("link");
-                  setViewMode("credentials");
-                }}
+                onOpenLink={openLinkCredentials}
               />
             ) : null}
           </React.Suspense>

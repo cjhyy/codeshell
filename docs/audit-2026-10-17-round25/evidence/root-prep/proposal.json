@@ -1,0 +1,182 @@
+{
+  "baseline": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "status": "negative old-frontier selection;not current round24 evidence",
+  "findings": [],
+  "candidates": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "sources": [
+    {
+      "path": "packages/core/src/session/simple-diff.ts",
+      "sha256": "fc1d8e83f81bc3d6042561fb3549dc0af14e228d20b6a76b46998d9b3446ffeb",
+      "bytes": 3041,
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          89
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/session/simple-diff.test.ts",
+      "sha256": "a38f35d8159d8de537cc27ba052587d18744fc30f37dfd458bb687a503bfe83d",
+      "bytes": 1828,
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          60
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "bytes": 523,
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          13
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.test.ts",
+      "sha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "bytes": 1229,
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          27
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/session/undo-target.ts",
+      "sha256": "ec84eced06a0288a7cfd65526056a05457650fa17f4e20890310f5acdc561063",
+      "bytes": 7551,
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          160
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/prompt/section-cache.ts",
+      "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "bytes": 970,
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          43
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/prompt-cache-diagnostics.ts",
+      "sha256": "5fdef8bfe040fb7ae3fa5edd3820abdf6c54e1398532df9a79707925733a6a9e",
+      "bytes": 9316,
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          269
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/prompt-cache.ts",
+      "sha256": "0c4d64c68ccefdc3f1f368c63313191076a1c7e4a6a689875d0b505152381d53",
+      "bytes": 8363,
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          239
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/sandbox-cache-key.ts",
+      "sha256": "797afb95bc499a445850ae6aad00aeb4d4e321b4bcfc79e194058f931d56d6c0",
+      "bytes": 748,
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          19
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/utility-commands.ts",
+      "sha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "bytes": 9016,
+      "readScope": "selected",
+      "readRanges": [
+        [
+          1,
+          180
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/session/file-history.ts",
+      "sha256": "6f944dd828efe723fb8c11608139a712e9f51268bf24eb03768f3c7da50349e5",
+      "bytes": 37411,
+      "readScope": "selected",
+      "readRanges": [
+        [
+          1,
+          240
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/services/session-memory.ts",
+      "sha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "bytes": 7686,
+      "readScope": "selected",
+      "readRanges": [
+        [
+          25,
+          145
+        ]
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "direction": "simple diff cost or text invariants",
+      "decision": "exclude,old bounded17/57controls and old static O(n*m),0newexecution",
+      "history": [
+        "docs/audit-2026-10-17-round19/simplediff.md",
+        "docs/audit-2026-10-17-round4/root.md"
+      ]
+    },
+    {
+      "direction": "memory sort offset timestamps",
+      "decision": "exclude,existing formal OM3 and old failed whole memory dynamic direction;0attempts",
+      "history": [
+        "docs/audit-2026-10-17/operations-memory.md",
+        "docs/audit-2026-10-17/evidence/quality-final-review.md"
+      ]
+    },
+    {
+      "direction": "section/cache diagnostics planning",
+      "decision": "source navigation only;prior SectionCache coverage known, no independent ordinary producer defect established. No execution/no finalnewcoverage claim",
+      "history": [
+        "docs/audit-2026-10-17-round5/prompt.md"
+      ]
+    }
+  ],
+  "dedupScope": "dedup.json all docs/bugs MD and recursively parsed JSONscalar including read-time uncommitted24;simple-diff-history.json adaptive all exact contexts. Counts/hitcaps separate,not semantic exhaustion",
+  "next": "Choose independent new normal-producer leaf from other workerfrontiers;do not repeat excluded baseline suites or oldfailed directions."
+}

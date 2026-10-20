@@ -1,0 +1,309 @@
+{
+  "parentReportedHead": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.ts",
+      "bytes": 1518,
+      "sha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "firstFilesystemSha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "finishFilesystemSha256": "bd3d5fb555ddd695fba4a699622760787835f91f865a6f3d9011bd0ac91ca804",
+      "sameSinceFirst": true,
+      "lineCount": 37,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          37
+        ]
+      ],
+      "coveredLineCount": 37,
+      "gitComparisonPerformed": false,
+      "role": "product-or-contract-static"
+    },
+    {
+      "path": "packages/optimization-lab/src/overfit-hints.test.ts",
+      "bytes": 1601,
+      "sha256": "8471f588cf3d60822af322c6eb6c59deee77340972892756de59bf500ff82a6d",
+      "firstFilesystemSha256": "8471f588cf3d60822af322c6eb6c59deee77340972892756de59bf500ff82a6d",
+      "finishFilesystemSha256": "8471f588cf3d60822af322c6eb6c59deee77340972892756de59bf500ff82a6d",
+      "sameSinceFirst": true,
+      "lineCount": 31,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          31
+        ]
+      ],
+      "coveredLineCount": 31,
+      "gitComparisonPerformed": false,
+      "role": "test-source-only"
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.ts",
+      "bytes": 1739,
+      "sha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "firstFilesystemSha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "finishFilesystemSha256": "98786f057fc732a7b4d445a632f644dde3c4826d8d49a787667873cb6036bda4",
+      "sameSinceFirst": true,
+      "lineCount": 48,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          48
+        ]
+      ],
+      "coveredLineCount": 48,
+      "gitComparisonPerformed": false,
+      "role": "product-or-contract-static"
+    },
+    {
+      "path": "packages/optimization-lab/src/assertions.test.ts",
+      "bytes": 977,
+      "sha256": "41191d3a37fc73df2c79bea7d374d87c0c9c9d7165b9e948676dda2cfb6c7893",
+      "firstFilesystemSha256": "41191d3a37fc73df2c79bea7d374d87c0c9c9d7165b9e948676dda2cfb6c7893",
+      "finishFilesystemSha256": "41191d3a37fc73df2c79bea7d374d87c0c9c9d7165b9e948676dda2cfb6c7893",
+      "sameSinceFirst": true,
+      "lineCount": 24,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          24
+        ]
+      ],
+      "coveredLineCount": 24,
+      "gitComparisonPerformed": false,
+      "role": "test-source-only"
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.ts",
+      "bytes": 7764,
+      "sha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "firstFilesystemSha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "finishFilesystemSha256": "ed02a35ec48d171477dc0b5b7c252c4d6404df96603e30de8c74a93339ee2c2d",
+      "sameSinceFirst": true,
+      "lineCount": 240,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          240
+        ]
+      ],
+      "coveredLineCount": 240,
+      "gitComparisonPerformed": false,
+      "role": "product-or-contract-static"
+    },
+    {
+      "path": "packages/optimization-lab/src/grading.test.ts",
+      "bytes": 3460,
+      "sha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "firstFilesystemSha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "finishFilesystemSha256": "ff35e96330f32a2c3aa700c23b5f162872c5f93d9936733548472fa914066d0b",
+      "sameSinceFirst": true,
+      "lineCount": 110,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "coveredLineCount": 110,
+      "gitComparisonPerformed": false,
+      "role": "test-source-only"
+    },
+    {
+      "path": "packages/optimization-lab/src/report.ts",
+      "bytes": 23091,
+      "sha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "firstFilesystemSha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "finishFilesystemSha256": "fc0a79ca1ba29d6c4633e7cf28289416c7d2f0def0a5bf6844eb27c4a4c8159c",
+      "sameSinceFirst": true,
+      "lineCount": 544,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          544
+        ]
+      ],
+      "coveredLineCount": 544,
+      "gitComparisonPerformed": false,
+      "role": "product-or-contract-static"
+    },
+    {
+      "path": "packages/optimization-lab/src/report.test.ts",
+      "bytes": 12438,
+      "sha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "firstFilesystemSha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "finishFilesystemSha256": "b904c10684fc852a76efe638f32e9eb0ffa7fb064cbd72acae25494fd8150165",
+      "sameSinceFirst": true,
+      "lineCount": 301,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          301
+        ]
+      ],
+      "coveredLineCount": 301,
+      "gitComparisonPerformed": false,
+      "role": "test-source-only"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/eval-case.ts",
+      "bytes": 2526,
+      "sha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "firstFilesystemSha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "finishFilesystemSha256": "407eaa17770ccc7184c6a68b039efa52a5dc82887b29e72b1d94a7362a9bd4f0",
+      "sameSinceFirst": true,
+      "lineCount": 69,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "coveredLineCount": 69,
+      "gitComparisonPerformed": false,
+      "role": "product-or-contract-static"
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.ts",
+      "bytes": 3656,
+      "sha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "firstFilesystemSha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "finishFilesystemSha256": "f65dd74e60581e2b1339ce5f36194539deab6e8dd3a1eed33b64dca22baecc3d",
+      "sameSinceFirst": true,
+      "lineCount": 91,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          91
+        ]
+      ],
+      "coveredLineCount": 91,
+      "gitComparisonPerformed": false,
+      "role": "product-or-contract-static"
+    },
+    {
+      "path": "packages/optimization-lab/src/strategy.test.ts",
+      "bytes": 1761,
+      "sha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "firstFilesystemSha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "finishFilesystemSha256": "f0c95001acde31366f9525a733024310c2fe62f0c05929b1f06de04c39f98f35",
+      "sameSinceFirst": true,
+      "lineCount": 56,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "coveredLineCount": 56,
+      "gitComparisonPerformed": false,
+      "role": "test-source-only"
+    },
+    {
+      "path": "packages/optimization-lab/src/candidate.ts",
+      "bytes": 2689,
+      "sha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "firstFilesystemSha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "finishFilesystemSha256": "a4b9098d0b9a16446b999117f0ffdd412c73b2b5e4618461d6692ac392525c34",
+      "sameSinceFirst": true,
+      "lineCount": 81,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          81
+        ]
+      ],
+      "coveredLineCount": 81,
+      "gitComparisonPerformed": false,
+      "role": "product-or-contract-static"
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/verdict-policy.ts",
+      "bytes": 943,
+      "sha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "firstFilesystemSha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "finishFilesystemSha256": "2bde145cf91ad783ec884072424f6a10ad7b0535369b3958ea73299a66236972",
+      "sameSinceFirst": true,
+      "lineCount": 18,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          18
+        ]
+      ],
+      "coveredLineCount": 18,
+      "gitComparisonPerformed": false,
+      "role": "product-or-contract-static"
+    },
+    {
+      "path": "packages/optimization-lab/src/test-fixtures/foundation.ts",
+      "bytes": 4460,
+      "sha256": "9318e3dc183e68b4512b81ef410b7c178486b1b3242108d9220932cf95c51540",
+      "firstFilesystemSha256": "9318e3dc183e68b4512b81ef410b7c178486b1b3242108d9220932cf95c51540",
+      "finishFilesystemSha256": "9318e3dc183e68b4512b81ef410b7c178486b1b3242108d9220932cf95c51540",
+      "sameSinceFirst": true,
+      "lineCount": 151,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          151
+        ]
+      ],
+      "coveredLineCount": 151,
+      "gitComparisonPerformed": false,
+      "role": "test-source-only"
+    },
+    {
+      "path": "packages/optimization-lab/src/controller.ts",
+      "bytes": 54060,
+      "sha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "firstFilesystemSha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "finishFilesystemSha256": "e2963dcd05dd5caa5012453e718463d8d2a309c8eaf2632699036e0e04bf8073",
+      "sameSinceFirst": true,
+      "lineCount": 1394,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          500,
+          533
+        ],
+        [
+          726,
+          777
+        ],
+        [
+          802,
+          865
+        ],
+        [
+          1013,
+          1073
+        ]
+      ],
+      "coveredLineCount": 211,
+      "gitComparisonPerformed": false,
+      "role": "product-or-contract-static"
+    }
+  ],
+  "sourcePinCount": 15,
+  "fullSemanticFiles": 14,
+  "selectedSemanticFiles": 1,
+  "coveredLines": 2012,
+  "inventoryHashOnlyCount": 48,
+  "noGitBaselineClaim": true,
+  "note": "Parent head is context only; filesystem start hashes were captured before any selected semantic read, then exact finish hashes compared. Hash-only48 and full/selected15 are not additive full coverage. Existing test and fixture definitions are source only and never executed."
+}

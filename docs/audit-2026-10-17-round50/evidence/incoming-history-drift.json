@@ -1,0 +1,18 @@
+{
+  "frozenHistoryFiles": 4693,
+  "readBaseline": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "mainAfterReadersFroze": "8e366d97c92c614f00df989006f5b8208185246f",
+  "changed": [
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "frozenBytes": 231027,
+      "frozenSha256": "0ae834852729a24e9eee850e42b8aa96e4619f8ffb6a3e885af6df27b10c06aa",
+      "currentBytes": 241993,
+      "currentSha256": "8d854771a12655c1dc81afc1d70114fa0b55314888a4ed06f48b2c116c0c4415"
+    }
+  ],
+  "missing": [],
+  "incomingSourcePinIntersection": [],
+  "sourcePinsAllSameFrozenBytes": 74,
+  "scope": "Original4693 inventory byte comparison only; no new semantic reading or retroactive initial/ending correction."
+}

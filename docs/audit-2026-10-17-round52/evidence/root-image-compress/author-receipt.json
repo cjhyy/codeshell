@@ -1,0 +1,137 @@
+{
+  "atUTC": "2026-10-17T17:41:32.517811+00:00",
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 827,
+      "sha256": "df918b247fc1fd1ea9ede17f6bb5f3c568837a5f4b0ac5d8d2f934f3f90606ec"
+    },
+    {
+      "path": "consumer-navigation-first-exit.json",
+      "bytes": 16,
+      "sha256": "982b9e9bfb10ffe83cad665807abcfd3fa97b37822db5ab7831157a499548a9e"
+    },
+    {
+      "path": "consumer-navigation.first.txt",
+      "bytes": 6151,
+      "sha256": "dc257c8c3fb93adc63ab5d96cd4092f1419ca5747d897183ffb98ae339a8d4b3"
+    },
+    {
+      "path": "consumer-source-excerpts.json",
+      "bytes": 11110,
+      "sha256": "6fc21ee4dd596cf5742c5a0fadd64f3817d4a2f3b9a81ec66fac61948bbfa546"
+    },
+    {
+      "path": "coverage-read.compact.json",
+      "bytes": 7601,
+      "sha256": "bc57d3c9dd66a80c40b1f53e53462b45386926388156dd619c520181e91265cf"
+    },
+    {
+      "path": "coverage-rows.json",
+      "bytes": 21349,
+      "sha256": "54b7f1c1abbe02766420cf61892bce83ee2044cebe3b0ee51c4b357da1041f38"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 156,
+      "sha256": "372bdc767147e82c020c3478153cc62a47bd4e71aef148ea2d32171ed20f36ea"
+    },
+    {
+      "path": "external-standard.json",
+      "bytes": 771,
+      "sha256": "caea3626b137beaa30e122d7575b5acbc8c2d7487ce1ae98f8341d63af8fb83e"
+    },
+    {
+      "path": "first-metadata-limits.json",
+      "bytes": 865,
+      "sha256": "78577b43a02fc62e3ab1e055944b60dab8b21f5899cf040f60feaf44e0f93d0c"
+    },
+    {
+      "path": "focused-coverage-rows.json",
+      "bytes": 21349,
+      "sha256": "54b7f1c1abbe02766420cf61892bce83ee2044cebe3b0ee51c4b357da1041f38"
+    },
+    {
+      "path": "focused-first-exit.json",
+      "bytes": 34,
+      "sha256": "0b6993dc2b721dc11b2955f1d7b918e967c7fa39948ad9c25065c934a86cb6f6"
+    },
+    {
+      "path": "focused-first.txt",
+      "bytes": 256,
+      "sha256": "6a0371cb5b0db929c4ea3dadd382bf7760a03853b90d339b008a5b06dea31c03"
+    },
+    {
+      "path": "focused-history.json",
+      "bytes": 1144505,
+      "sha256": "1870d660913dcd7410b6a7ba3ca0f1c9e4afa0d08070ff8b4348b0b32169d1ab"
+    },
+    {
+      "path": "focused-read-compact.json",
+      "bytes": 26341,
+      "sha256": "a0eb4240a2759c0246e9bb06c9e4d04b160139eef38e6c67078508b1068776a4"
+    },
+    {
+      "path": "focused-read.json",
+      "bytes": 58126,
+      "sha256": "839924d870f863e47fc75352b5d6445ba46ac9f7b4aa77f9963331405e3f481c"
+    },
+    {
+      "path": "freeze-root.py",
+      "bytes": 9005,
+      "sha256": "31ca04c88839a1d44261042ce3cb7df37c4614bac4ea43cff916bd68869a4742"
+    },
+    {
+      "path": "history-first-exit.json",
+      "bytes": 34,
+      "sha256": "068ae1215077bc26ce02ce80e736e68b48c9f3a1474787121f24af5016d85a08"
+    },
+    {
+      "path": "history-first.txt",
+      "bytes": 211,
+      "sha256": "a6928eb5d73c40b5b867036dfe1f320583b4fa98443274e6d9dfca7ebdc6a8f3"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1141600,
+      "sha256": "930814ab39b3ed1ebab42fb1831c53c28d32bc2325a9f05c9825a92a38cc702e"
+    },
+    {
+      "path": "proposal.json",
+      "bytes": 1734,
+      "sha256": "0bca1c5b2ff7b34af82d16c3b7b4e4615a58968c5fefc26792e4ae7c0dbeca0c"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2710,
+      "sha256": "e651a8de8c4c89541f52f5babbaecd20b6e9d4185d23e983572b58cbd525c1cd"
+    },
+    {
+      "path": "scan-focused-history.py",
+      "bytes": 3335,
+      "sha256": "5fbe4b7fda06ed39526cf0898328b9ec0598ef4995dcdf5a66a1940b8f4d645e"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 2938,
+      "sha256": "c68d0d1c26a05afdee794d4aefbf21b4ea7a9284877e90d6639c297926884124"
+    },
+    {
+      "path": "selection-initial-pins.json",
+      "bytes": 410,
+      "sha256": "b71dcafd9eebe95d97034503a9241cf081d88b2684401d9fbbabc82d0b8ffe0b"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 9725,
+      "sha256": "3d6ed8911304b7036cd917e00d42c75739bce4a759875672649441e82f35f943"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 5604,
+      "sha256": "02bf05ec24671b93a1b49c55f63125cdd2896802b4dacdbca71e2196befc6ef5"
+    }
+  ],
+  "selfExcluded": true,
+  "productRuns": 0
+}

@@ -1,0 +1,301 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "scope": "all inventoried docs/bugs Markdown and recursively parsed JSON leaves, including archives; current batch excluded",
+  "statistics": {
+    "files": 2050,
+    "markdownFiles": 1161,
+    "jsonFiles": 889,
+    "jsonStringLeaves": 260970,
+    "jsonScalarLeaves": 363859,
+    "readOrParseErrors": []
+  },
+  "inventorySha256": "9519d2728936992a38479f1e00ce0afb7b91522177a42ac3b6b953f6490db3c0",
+  "patterns": {
+    "exact_simple_diff": "renderDiffPreview|diffLines|simple-diff(?:\\.ts)?",
+    "known_lcs_cost": "(?:simple[- ]diff|renderDiffPreview|LCS).{0,120}(?:O\\(n|quadratic|平方|成本|内存)",
+    "preview_newline_blank": "(?:undo|预览|preview|simple[- ]diff).{0,120}(?:trailing|空文件|末尾换行|空行|newline|blank)|(?:trailing|空文件|末尾换行|空行|newline|blank).{0,120}(?:undo|预览|preview|simple[- ]diff)",
+    "preview_markdown_fence": "(?:undo|diff|预览|preview).{0,120}(?:fenc|backtick|代码围栏|代码块|反引号)|(?:fenc|backtick|代码围栏|反引号).{0,120}(?:undo|diff|预览|preview)"
+  },
+  "matchCounts": {
+    "exact_simple_diff": 50,
+    "known_lcs_cost": 2,
+    "preview_newline_blank": 8,
+    "preview_markdown_fence": 15
+  },
+  "matchingFiles": {
+    "exact_simple_diff": [
+      "docs/architecture/04-protocol-and-sessions.md",
+      "docs/archive/architecture/19-core-chain-review-beta.md",
+      "docs/archive/core-modules/session.md",
+      "docs/audit-2026-10-16/inventory.json",
+      "docs/audit-2026-10-17-round4/candidates-and-skips.md",
+      "docs/audit-2026-10-17-round4/root.md",
+      "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "docs/review-remaining-2026-10-12/validation/core/core-inventory.json"
+    ],
+    "known_lcs_cost": [
+      "docs/audit-2026-10-17-round4/candidates-and-skips.md",
+      "docs/audit-2026-10-17-round4/root.md"
+    ],
+    "preview_newline_blank": [
+      "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "docs/archive/review-2026-05-30/low_confirmed.json",
+      "docs/audit-2026-10-17-round12/evidence/patch-dedup-note.md",
+      "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+      "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json"
+    ],
+    "preview_markdown_fence": [
+      "docs/archive/core-modules/review.md",
+      "docs/archive/review-2026-05-30/confirmed.json",
+      "docs/archive/review-2026-05-30/findings.json",
+      "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "docs/audit-2026-10-17/root.md"
+    ]
+  },
+  "contextsPerPatternCap": 20,
+  "contexts": {
+    "exact_simple_diff": [
+      {
+        "path": "docs/architecture/04-protocol-and-sessions.md",
+        "locator": "line:118",
+        "context": "ry.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`)."
+      },
+      {
+        "path": "docs/architecture/04-protocol-and-sessions.md",
+        "locator": "line:118",
+        "context": " with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`)."
+      },
+      {
+        "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+        "locator": "line:358",
+        "context": "| `session/simple-diff.ts`、`undo-target.ts` | undo 目标和 diff 辅助。 |"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "locator": "line:17",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "locator": "line:17",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "locator": "line:17",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "locator": "line:19",
+        "context": "` | Unit tests (session-manager home/origin/parent/readcwd, memory maxage, undo target/integration, simple-diff). |"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "locator": "line:85",
+        "context": "// simple-diff.ts"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "locator": "line:86",
+        "context": "function diffLines(from: string, to: string): DiffLine[];"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "locator": "line:87",
+        "context": "function renderDiffPreview(from: string, to: string, context?: number): string;"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "locator": "line:133",
+        "context": "const preview = renderDiffPreview(currentOnDisk, fs.readFileSync(targets[0].backupPath, \"utf8\"));"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "locator": "line:145",
+        "context": "- **`undo-target.ts` and `simple-diff.ts` are deliberately fs-free and pure** so the \"what to undo\" decision is unit-testable and shared across hosts. Keep them that way — read files in the caller, pass content/snapshot "
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "locator": "$ [\"source_inventory\"][569]",
+        "context": "packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/candidates-and-skips.md",
+        "locator": "line:16",
+        "context": "| earlyInput escape parser、simple-diff O(n*m) | 前者未找到当前启动调用；后者仅静态成本，无压力证据，不计 bug | [root.md](root.md) |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/root.md",
+        "locator": "line:26",
+        "context": "les/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/root.md",
+        "locator": "line:26",
+        "context": "ming/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+        "locator": "$ [\"matches\"][81][\"text\"]",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+        "locator": "$ [\"matches\"][81][\"text\"]",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+        "locator": "$ [\"matches\"][81][\"text\"]",
+        "context": "| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+        "locator": "$ [\"matches\"][82][\"text\"]",
+        "context": "function diffLines(from: string, to: string): DiffLine[];"
+      }
+    ],
+    "known_lcs_cost": [
+      {
+        "path": "docs/audit-2026-10-17-round4/candidates-and-skips.md",
+        "locator": "line:16",
+        "context": "| earlyInput escape parser、simple-diff O(n*m) | 前者未找到当前启动调用；后者仅静态成本，无压力证据，不计 bug | [root.md](root.md) |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/root.md",
+        "locator": "line:26",
+        "context": "les/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      }
+    ],
+    "preview_newline_blank": [
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "locator": "$ [38][\"verify_note\"]",
+        "context": "Real defect: loses 1 character from truncated content when no newline exists in first 10,000 chars. Low severity because: (1) only affects preview text display, (2) minimal data loss (1 char), (3) rare in practice since most docs have newlines within 10k chars, (4) easy to notice but not critical functionality."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "locator": "$ [8][\"note\"]",
+        "context": "Real defect: loses 1 character from truncated content when no newline exists in first 10,000 chars. Low severity because: (1) only affects preview text display, (2) minimal data loss (1 char), (3) rare in practice since most docs have newlines within 10k chars, (4) easy to notice but not critical functionality."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "locator": "$ [7][\"verify_note\"]",
+        "context": "Real defect: loses 1 character from truncated content when no newline exists in first 10,000 chars. Low severity because: (1) only affects preview text display, (2) minimal data loss (1 char), (3) rare in practice since most docs have newlines within 10k chars, (4) easy to notice but not critical functionality."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-note.md",
+        "locator": "line:7",
+        "context": "新增范围内的 ApplyPatch 命中是架构、工具路径、undo、routing 和历史说明；没有发现与合法、带 marker 的首空白 context 被 outer parser 丢弃相同的记录。旧 May 30 unmarked blank acceptance 的完整对象已读过，触发条件与分支不同。关键词加有限上下文仍有语义查重限制。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-patch-dedup.json",
+        "locator": "$ [\"hits\"][22][\"text\"]",
+        "context": "新增范围内的 ApplyPatch 命中是架构、工具路径、undo、routing 和历史说明；没有发现与合法、带 marker 的首空白 context 被 outer parser 丢弃相同的记录。旧 May 30 unmarked blank acceptance 的完整对象已读过，触发条件与分支不同。关键词加有限上下文仍有语义查重限制。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "$ [\"hits\"][\"settings-navigation\"][1][\"text\"]",
+        "context": "he no-newline case.\", \"verify_note\": \"Real defect: loses 1 character from truncated content when no newline exists in first 10,000 chars. Low severity because: (1) only affects preview text display, (2) minimal data loss (1 char), (3) rare in practice since most docs have newlines within 10k chars, (4) easy to notice but not critical functionality.\", \"verify_rea"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "$ [\"hits\"][\"sidebar-projection\"][9][\"text\"]",
+        "context": "he no-newline case.\", \"verify_note\": \"Real defect: loses 1 character from truncated content when no newline exists in first 10,000 chars. Low severity because: (1) only affects preview text display, (2) minimal data loss (1 char), (3) rare in practice since most docs have newlines within 10k chars, (4) easy to notice but not critical functionality.\", \"verify_rea"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "$ [\"hits\"][\"sidebar-projection\"][12][\"text\"]",
+        "context": "he no-newline case.\", \"verify_note\": \"Real defect: loses 1 character from truncated content when no newline exists in first 10,000 chars. Low severity because: (1) only affects preview text display, (2) minimal data loss (1 char), (3) rare in practice since most docs have newlines within 10k chars, (4) easy to notice but not critical functionality.\", \"verify_rea"
+      }
+    ],
+    "preview_markdown_fence": [
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:28",
+        "context": "  incremental?: boolean;       // true = diff (```diff fence); false = whole file (plain fence + \"code\" wording)"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:82",
+        "context": "- **`incremental` defaults to diff behavior.** Only an explicit `incremental: false` switches to the plain (whole-file) fence and wording; `undefined` is treated as a diff."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/confirmed.json",
+        "locator": "$ [3][\"detail\"]",
+        "context": "rameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\`git diff --stat HEAD ${file}\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/confirmed.json",
+        "locator": "$ [3][\"verify_reason\"]",
+        "context": "rameter into shell command templates without any sanitization or escaping. The code `execSync(\\`git diff --stat HEAD ${file}\\`, ...)` passes a backtick template literal to execSync, which interprets it as a shell command. This allows an attacker to inject shell metacharacters like `; rm -rf /` or backticks to execute arbitrary co"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "locator": "$ [144][\"detail\"]",
+        "context": "rameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\`git diff --stat HEAD ${file}\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "$ [\"records\"][5][\"matches\"][0][\"match\"]",
+        "context": "ameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\\\`git diff --stat HEAD ${file}\\\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines.\", \"fix\": \"Use `execFileSync` instead of `execSync` to avoid shell interpretation, or p"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "$ [\"records\"][5][\"matches\"][0][\"context\"]",
+        "context": "ameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\\\`git diff --stat HEAD ${file}\\\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines.\", \"fix\": \"Use `execFileSync` instead of `execSync` to avoid shell interpretation, or p"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "$ [\"records\"][9][\"matches\"][0][\"match\"]",
+        "context": "ameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\\\`git diff --stat HEAD ${file}\\\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines.\", \"fix\": \"Use `execFileSync` instead of `execSync` to avoid shell interpretation, or p"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "$ [\"records\"][9][\"matches\"][0][\"context\"]",
+        "context": "ameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\\\`git diff --stat HEAD ${file}\\\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines.\", \"fix\": \"Use `execFileSync` instead of `execSync` to avoid shell interpretation, or p"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "$ [\"records\"][13][\"matches\"][0][\"match\"]",
+        "context": "ameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\\\`git diff --stat HEAD ${file}\\\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines.\", \"fix\": \"Use `execFileSync` instead of `execSync` to avoid shell interpretation, or p"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "locator": "$ [\"records\"][13][\"matches\"][0][\"context\"]",
+        "context": "ameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\\\`git diff --stat HEAD ${file}\\\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines.\", \"fix\": \"Use `execFileSync` instead of `execSync` to avoid shell interpretation, or p"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "$ [\"hits\"][\"logs\"][3][\"text\"]",
+        "context": "ameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\\\`git diff --stat HEAD ${file}\\\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines.\", \"fix\": \"Use `execFileSync` instead of `execSync` to avoid shell interpretation, or p"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "$ [\"hits\"][\"settings-navigation\"][3][\"text\"]",
+        "context": "ameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\\\`git diff --stat HEAD ${file}\\\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines.\", \"fix\": \"Use `execFileSync` instead of `execSync` to avoid shell interpretation, or p"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "$ [\"hits\"][\"sidebar-projection\"][11][\"text\"]",
+        "context": "ameter (user input) is interpolated directly into shell commands without escaping: `execSync(\\\\`git diff --stat HEAD ${file}\\\\`, ...)`. An attacker could pass shell metacharacters like `; rm -rf /` or backticks to execute arbitrary commands. This affects both the stat and diff commands at these lines.\", \"fix\": \"Use `execFileSync` instead of `execSync` to avoid shell interpretation, or p"
+      },
+      {
+        "path": "docs/audit-2026-10-17/root.md",
+        "locator": "line:28",
+        "context": "- 位置：`packages/tui/src/cli/commands/builtin/export-md.ts:130-134`，无条件用三反引号围住未经转义的工具结果；长结果 preview 与 reasoning 有相似结构，但本轮动态只验证短 tool_result。"
+      }
+    ]
+  },
+  "limitations": "Pattern hits are an index, not proof of exhaustive semantic deduplication; context caps do not cap counts."
+}

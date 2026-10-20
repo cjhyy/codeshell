@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-web",
-  "version": "0.9.42",
+  "version": "0.9.45",
   "description": "CodeShell web client logic layer — remote-app state (chatReducer + server-event fold), reconnecting WebSocket hook, pairing/device-credential/risk helpers, and the mobile i18n namespace. Browser-only (no Electron, no Node); seed of the standalone browser client.",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,11 +17,27 @@
     "dist-app"
   ],
   "scripts": {
+    "test:latest-browser": "node scripts/test-latest-messages.mjs",
+    "test:mobile-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-mobile-workbench-browser.mjs",
+    "test:chat-operations-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-chat-operations-browser.mjs",
+    "test:service-worker-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-service-worker-browser.mjs",
     "build": "bun run clean && tsc -p tsconfig.json && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.app.json --noEmit",
     "build:app": "vite build",
+    "test:sidebar-browser": "node scripts/test-sidebar-navigation.mjs",
+    "test:settings-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-settings-browser.mjs",
+    "test:skills-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-skills-browser.mjs",
+    "test:model-actions-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-model-actions-browser.mjs",
+    "test:mcp-settings-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-mcp-settings-browser.mjs",
+    "test:history-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-history-browser.mjs",
+    "test:links-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-links-browser.mjs",
+    "test:sidebar-focus-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-sidebar-focus-browser.mjs",
+    "test:devices-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-devices-browser.mjs",
     "dev:app": "vite dev",
-    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\""
+    "test:files-browser": "node scripts/test-file-browser.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\"",
+    "test:host-operations-browser": "node ../../scripts/run-isolated-node-smoke.mjs ../../scripts/smoke-web-host-operations.mjs",
+    "test:host-title-browser": "node ../../scripts/run-isolated-node-smoke.mjs ../../scripts/smoke-web-host-operations.mjs --late-title"
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",

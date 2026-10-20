@@ -1,0 +1,10 @@
+{
+  "retrievedDate": "2026-10-17",
+  "source": "https://git-scm.com/docs/pretty-formats",
+  "title": "Git pretty-formats official documentation",
+  "reviewedLines": "299–307, 414–417, 531–532, 629–637",
+  "facts": "The format interpolates information fields; %s is the subject, %an the author name, and %ci the committer date. This only contextualizes an already recorded A04 parser defect.",
+  "verbatimQuoteWords": 0,
+  "productGitExecuted": false,
+  "newFindingFromThisSource": false
+}

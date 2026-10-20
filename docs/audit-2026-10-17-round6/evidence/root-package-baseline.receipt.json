@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "tests/build-meta.test.ts",
+    "tests/package-boundaries.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 1.4872572422027588,
+  "frozenSourceCommit": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "log": "root-package-baseline.first.log",
+  "scope": "Package boundary source/metadata checks and copied build-meta script against owned temporary fake TUI; no shared dist build, network, publisher, real application, credentials or user data."
+}

@@ -1,0 +1,7 @@
+{
+  "baseline": "cef9ff76167d33a6a6e5b4464ba5313f7fd35f79",
+  "count": 0,
+  "priorities": {},
+  "findings": [],
+  "note": "Zero newly confirmed bugs in this finite batch. Static candidates and fixture failures are separate; no claim of whole-repository correctness."
+}

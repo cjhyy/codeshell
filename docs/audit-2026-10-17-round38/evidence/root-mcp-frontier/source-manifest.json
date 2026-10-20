@@ -1,0 +1,128 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "lineCount": 62,
+      "selectedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "coverage": "full",
+      "semanticReadLines": 62,
+      "initialSemanticReadSha256": null,
+      "readTiming": "Hash before this direct read; peer precise excerpts already seen, so no backdated first-semantic pin."
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "lineCount": 1893,
+      "selectedLineRanges": [
+        [
+          418,
+          441
+        ],
+        [
+          449,
+          451
+        ],
+        [
+          649,
+          666
+        ],
+        [
+          699,
+          716
+        ],
+        [
+          1104,
+          1132
+        ],
+        [
+          1300,
+          1320
+        ],
+        [
+          1357,
+          1405
+        ],
+        [
+          1465,
+          1483
+        ],
+        [
+          1756,
+          1769
+        ],
+        [
+          1870,
+          1893
+        ]
+      ],
+      "coverage": "selected",
+      "semanticReadLines": 219,
+      "initialSemanticReadSha256": null,
+      "readTiming": "Hash before this direct read; peer precise excerpts already seen, so no backdated first-semantic pin.",
+      "displayedLineRanges": [
+        [
+          21,
+          53
+        ],
+        [
+          390,
+          448
+        ],
+        [
+          1092,
+          1135
+        ],
+        [
+          1357,
+          1405
+        ],
+        [
+          1756,
+          1769
+        ],
+        [
+          1870,
+          1893
+        ],
+        [
+          690,
+          721
+        ],
+        [
+          1463,
+          1491
+        ],
+        [
+          449,
+          451
+        ],
+        [
+          649,
+          666
+        ],
+        [
+          1300,
+          1320
+        ]
+      ],
+      "displayedLines": 326,
+      "incidentalDisplayedLines": 107
+    }
+  ],
+  "productRuns": 0,
+  "testDeclarations": 0,
+  "limitations": [
+    "Direct selected source only; no actual form, helper, language fixture, MCP, process, network, or settings operations.",
+    "Metadata source display errors are not product attempts."
+  ],
+  "totalSemanticLines": 281,
+  "metadataNote": "First manifest reflected initial broad display ranges. Final ranges restrict ordinary args contract; 107 displayed adjacent lines/navigation are not additional semantic coverage. No source reread or product rerun."
+}

@@ -1,0 +1,102 @@
+{
+  "createdUTC": "2026-10-17T12:51:10.187229+00:00",
+  "scope": "Historical documents only; quoted implementation/test commands inside plans were not executed. All files pinned before selection; actual selected ranges from first output plus corrected actual EOF range only.",
+  "files": [
+    {
+      "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+      "sha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5",
+      "selectedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "selectedLines": 50,
+      "excerpts": [
+        {
+          "range": [
+            1,
+            50
+          ],
+          "text": "1: # 本地插件:覆盖升级 + 可卸载 + 卸载清 settings — 实施计划(2026-06-22)\n2: \n3: > worktree: `feat/local-plugin-upgrade-uninstall`,根 = `.claude/worktrees/installer-upgrade`。\n4: > 测试框架 bun:test,HOME 隔离临时目录(参考 uninstall.test.ts)。core 跑 `bun test src/...`,desktop 有独立 tsc/build。\n5: > **TDD 铁律:先写失败测试,看它失败,再写最小实现。**\n6: \n7: **根因(已查实):** 升级能力(`updatePluginByName`)和本地卸载(`uninstallPluginByName`)core 早已实现,缺的是 UI 接线 + 卸载不清 settings。\n8: \n9: ---\n10: \n11: ## Task A:本地导入支持覆盖升级(LocalAddPanel)\n12: \n13: **真相:** `installPluginFromArchive`/`installLocalPlugin` 在目录已存在时由 `installPluginFromPath` 硬抛 \"already installed\"。`updatePluginByName(name, installedAt, force=true)` 已实现原子覆盖重装。缺口=本地导入流程不检测同名、不走 update。\n14: \n15: **Files:**\n16: - `packages/core/src/plugins/installer/installFromArchive.ts` — 给 `installLocalPlugin` 加 `{ overwrite?: boolean }` 选项:overwrite 时若同名已装,走 `updatePluginByName(name, installedAt, true)` 而非 `installPluginFromPath`。\n17: - `packages/core/src/plugins/installer/installFromArchive.test.ts` — 新测试。\n18: - `packages/desktop/src/main/marketplace-service.ts:174` — `installLocalPluginForUi` 透传 overwrite。\n19: - `packages/desktop/src/preload/index.ts:518` — `installLocalPlugin` 签名加 overwrite。\n20: - `packages/desktop/src/renderer/settings/PluginsAndSkillsSection.tsx` LocalAddPanel — 装前检测同名;已装则 `confirm()` 弹\"覆盖升级\"(复用 existSameNameMsg 文案或新增),确认后带 overwrite=true 重调。\n21: \n22: **TDD steps(core 部分):**\n23: - [ ] RED: 写测试 `installLocalPlugin overwrite reinstalls an already-installed plugin`:先装 v1,改源 plugin.json 版本为 v2,不带 overwrite 再装 → 期望抛 already installed;带 `{overwrite:true}` 再装 → 期望成功且 `.cs-meta.json` version=v2。\n24: - [ ] 跑测试看失败(overwrite 选项不存在 → 类型/行为失败)。\n25: - [ ] GREEN: `installLocalPlugin` 加 overwrite 分支:同名已装 + overwrite → 调 `updatePluginByName`。注意 update 需要源记录在 `.cs-meta.json`,而本地装的 meta.source 指向原 sourceDir;zip 场景 source 是临时解压目录(用完即删)——所以 **overwrite 重装必须直接走\"先 uninstallPluginByName 再 installPluginFromPath\"或复用 reinstallAtomic 思路**,不能依赖 meta.source 回查(zip 临时目录已删)。最小实现:overwrite 时先 `uninstallPluginByName(name)` 再正常装(非原子,但简单);或更稳妥用 update.ts 里 reinstallAtomic 的 rename-backup 思路。实现者择优,但必须有测试覆盖\"覆盖后旧版没了、新版在\"。\n26: - [ ] 跑测试看通过 + 全 installer 测试不回归。\n27: - [ ] commit。\n28: - [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n29: - [ ] commit。\n30: \n31: ## Task B:本地插件可卸载(uninstallTarget + UI)\n32: \n33: **真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n34: \n35: **Files:**\n36: - `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `{ uninstallable:true, kind:\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace\"`)。\n37: - `packages/desktop/src/renderer/extensions/uninstallTarget.test.ts` — 新测试。\n38: - `packages/desktop/src/renderer/extensions/PluginsTab.tsx:86` — uninstall 按 kind 分派:local 调新 IPC `uninstallLocalPlugin(name)`,marketplace 走原路径。\n39: - preload + marketplace-service + main:加 `plugins:uninstallLocal` → core `uninstallPluginByName`。\n40: \n41: **TDD steps:**\n42: - [ ] RED: uninstallTarget.test.ts 加测试:本地插件(marketplace=null)→ 期望 `uninstallable:true, kind:\"local\", pluginName` (当前返回 false,失败)。marketplace 插件仍 `kind:\"marketplace\"`。\n43: - [ ] 跑测试看失败。\n44: - [ ] GREEN: 改 uninstallTarget 返回带 kind 的判别联合。\n45: - [ ] 跑测试看通过。\n46: - [ ] commit。\n47: - [ ] UI/IPC 接线 + desktop tsc。\n48: - [ ] commit。\n49: \n50: ## Task C:卸载清理 settings 孤立条目(disabledSkills/disabledPlugins)"
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "sha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80",
+      "selectedLineRanges": [
+        [
+          45,
+          118
+        ]
+      ],
+      "selectedLines": 74,
+      "excerpts": [
+        {
+          "range": [
+            45,
+            118
+          ],
+          "text": "45: ---\n46: \n47: ## Task 1: 卸载参数解析（纯函数 + 测试）\n48: \n49: `uninstallPlugin` 需要 `(pluginName, marketplaceName)`，但前端持有的是 `PluginSummary`。先写一个纯函数把它解析出来，并明确 marketplace 为 null 时不可卸载。\n50: \n51: **Files:**\n52: - Create: `packages/desktop/src/renderer/extensions/uninstallTarget.ts`\n53: - Test: `packages/desktop/src/renderer/extensions/uninstallTarget.test.ts`\n54: \n55: - [ ] **Step 1: 写失败测试**\n56: \n57: ```ts\n58: // uninstallTarget.test.ts\n59: import { describe, it, expect } from \"bun:test\";\n60: import { resolveUninstallTarget } from \"./uninstallTarget\";\n61: \n62: describe(\"resolveUninstallTarget\", () => {\n63:   it(\"splits a marketplace install key into name + marketplace\", () => {\n64:     expect(\n65:       resolveUninstallTarget({ name: \"superpowers\", installKey: \"superpowers@official\", marketplace: \"official\" }),\n66:     ).toEqual({ uninstallable: true, pluginName: \"superpowers\", marketplaceName: \"official\" });\n67:   });\n68: \n69:   it(\"marks local / direct-github installs (no marketplace) as not uninstallable\", () => {\n70:     expect(\n71:       resolveUninstallTarget({ name: \"mine\", installKey: \"mine\", marketplace: null }),\n72:     ).toEqual({ uninstallable: false });\n73:   });\n74: \n75:   it(\"prefers the installKey split over the name field when both present\", () => {\n76:     expect(\n77:       resolveUninstallTarget({ name: \"x\", installKey: \"real-name@mkt\", marketplace: \"mkt\" }),\n78:     ).toEqual({ uninstallable: true, pluginName: \"real-name\", marketplaceName: \"mkt\" });\n79:   });\n80: });\n81: ```\n82: \n83: - [ ] **Step 2: 运行验证失败**\n84: \n85: Run: `cd packages/desktop && bun test src/renderer/extensions/uninstallTarget.test.ts`\n86: Expected: FAIL — `resolveUninstallTarget` is not defined / module not found.\n87: \n88: - [ ] **Step 3: 写实现**\n89: \n90: ```ts\n91: // uninstallTarget.ts\n92: /** Minimal shape needed from PluginSummary to decide uninstall. */\n93: export interface UninstallablePlugin {\n94:   name: string;\n95:   installKey: string;\n96:   marketplace: string | null;\n97: }\n98: \n99: export type UninstallTarget =\n100:   | { uninstallable: false }\n101:   | { uninstallable: true; pluginName: string; marketplaceName: string };\n102: \n103: /**\n104:  * core's uninstallPlugin(pluginName, marketplaceName) requires a marketplace.\n105:  * Plugins installed locally or via direct GitHub (marketplace === null) have\n106:  * no marketplace key and cannot be uninstalled through this path.\n107:  */\n108: export function resolveUninstallTarget(p: UninstallablePlugin): UninstallTarget {\n109:   if (!p.marketplace) return { uninstallable: false };\n110:   const at = p.installKey.lastIndexOf(\"@\");\n111:   const pluginName = at > 0 ? p.installKey.slice(0, at) : p.installKey;\n112:   const marketplaceName = at > 0 ? p.installKey.slice(at + 1) : p.marketplace;\n113:   return { uninstallable: true, pluginName, marketplaceName };\n114: }\n115: ```\n116: \n117: - [ ] **Step 4: 运行验证通过**\n118: "
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-29-plugin-runtime-and-commands.md",
+      "sha256": "96101e758161f76cdd92ccf5961d2f76f6643b16681c9d7a7ee6b1cb38d702e4",
+      "selectedLineRanges": [
+        [
+          20,
+          70
+        ],
+        [
+          238,
+          263
+        ],
+        [
+          458,
+          485
+        ],
+        [
+          820,
+          828
+        ]
+      ],
+      "selectedLines": 114,
+      "excerpts": [
+        {
+          "range": [
+            20,
+            70
+          ],
+          "text": "20: \n21: ---\n22: \n23: ### Task 1: install registers into installed_plugins.json\n24: \n25: **Files:**\n26: - Modify: `packages/core/src/plugins/installer/install.ts`\n27: - Modify: `packages/core/src/plugins/installer/install.test.ts`\n28: \n29: After the successful `renameSync`, register the install so existing loaders discover it. Marketplace tag = `\"local\"`.\n30: \n31: - [ ] **Step 1: Add failing test** (append to install.test.ts)\n32: \n33: ```typescript\n34: import { readInstalledPlugins } from \"../installedPlugins.js\";\n35: \n36: test(\"registers the install in installed_plugins.json\", () => {\n37:   mkdirSync(join(src, \"skills\", \"s\"), { recursive: true });\n38:   writeFileSync(join(src, \"skills\", \"s\", \"SKILL.md\"), \"---\\nname: s\\ndescription: d\\n---\\nb\");\n39:   const dir = installPluginFromPath(src, \"regplug\", STAMP);\n40:   const reg = readInstalledPlugins();\n41:   const entry = reg.plugins[\"regplug@local\"]?.[0];\n42:   expect(entry?.installPath).toBe(dir);\n43:   expect(entry?.version).toBeDefined();\n44: });\n45: ```\n46: \n47: - [ ] **Step 2: Run, expect FAIL**\n48: \n49: Run: `cd packages/core && bun test src/plugins/installer/install.test.ts`\n50: Expected: FAIL — `regplug@local` undefined.\n51: \n52: - [ ] **Step 3: Implement** — in `install.ts`, add import + register after `renameSync(tmpDir, finalDir);`:\n53: \n54: ```typescript\n55: import { appendInstallEntry, pluginInstallKey } from \"../installedPlugins.js\";\n56: ```\n57: \n58: ```typescript\n59:     renameSync(tmpDir, finalDir);\n60:     appendInstallEntry(pluginInstallKey(name, \"local\"), {\n61:       scope: \"user\",\n62:       installPath: finalDir,\n63:       version: meta.version ?? \"local\",\n64:       installedAt,\n65:       lastUpdated: installedAt,\n66:     });\n67:     return finalDir;\n68: ```\n69: \n70: - [ ] **Step 4: Run, expect PASS**"
+        },
+        {
+          "range": [
+            238,
+            263
+          ],
+          "text": "238: \n239: describe(\"mergePluginMcpServers\", () => {\n240:   let home: string, prev: string | undefined;\n241:   beforeEach(() => {\n242:     prev = process.env.HOME;\n243:     home = mkdtempSync(join(tmpdir(), \"cs-pm-\"));\n244:     process.env.HOME = home;\n245:   });\n246:   afterEach(() => {\n247:     process.env.HOME = prev;\n248:     rmSync(home, { recursive: true, force: true });\n249:   });\n250: \n251:   function regPlugin(name: string, servers: Record<string, unknown>) {\n252:     const p = join(home, \".code-shell\", \"plugins\", name);\n253:     mkdirSync(p, { recursive: true });\n254:     writeFileSync(join(p, \"mcp-servers.json\"), JSON.stringify(servers));\n255:     appendInstallEntry(pluginInstallKey(name, \"local\"), {\n256:       scope: \"user\", installPath: p, version: \"1\", installedAt: \"t\", lastUpdated: \"t\",\n257:     });\n258:   }\n259: \n260:   test(\"merges plugin servers into the base map\", () => {\n261:     regPlugin(\"p1\", { \"p1:fs\": { command: \"f\", name: \"p1:fs\" } });\n262:     const merged = mergePluginMcpServers({ user1: { command: \"u\" } as any }, []);\n263:     expect(merged.user1).toBeDefined();"
+        },
+        {
+          "range": [
+            458,
+            485
+          ],
+          "text": "458: - [ ] **Step 3: Implement** — `uninstall.ts`:\n459: \n460: ```typescript\n461: import { existsSync, rmSync } from \"node:fs\";\n462: import { pluginInstallDir, assertSafePluginName } from \"./paths.js\";\n463: import { removeInstallEntries, pluginInstallKey } from \"../installedPlugins.js\";\n464: import { PluginInstallError } from \"./types.js\";\n465: \n466: /** Remove a locally-installed plugin dir + its installed_plugins.json entry. */\n467: export function uninstallPluginByName(name: string): void {\n468:   assertSafePluginName(name);\n469:   const dir = pluginInstallDir(name);\n470:   if (!existsSync(dir)) {\n471:     throw new PluginInstallError(`no plugin named '${name}'`);\n472:   }\n473:   rmSync(dir, { recursive: true, force: true });\n474:   removeInstallEntries(pluginInstallKey(name, \"local\"));\n475: }\n476: ```\n477: \n478: - [ ] **Step 4: Run, expect PASS**\n479: \n480: Run: `cd packages/core && bun test src/plugins/installer/uninstall.test.ts`\n481: Expected: PASS.\n482: \n483: - [ ] **Step 5: Export + add CLI subcommand** — `index.ts`:\n484: ```typescript\n485: export { uninstallPluginByName } from \"./plugins/installer/uninstall.js\";"
+        },
+        {
+          "range": [
+            820,
+            828
+          ],
+          "text": "820: \n821: ---\n822: \n823: ## Self-Review notes\n824: \n825: - **Spec coverage:** §M5 runtime → T1 (register) + T2 (agents) + T3/T4 (mcp merge at all 3 sites); §8.4 uninstall → T5; §8.3 list → T6; §6.7/§8.2 update → T7. Skills+hooks need no new code (auto-discovered via T1 registration).\n826: - **Type consistency:** `mergePluginMcpServers(base, disabledPlugins)`, `pluginAgentDirs(disabledPlugins)`, `uninstallPluginByName(name)`, `listInstalledPlugins()`, `updatePluginByName(name, installedAt, force)` — stable across tasks. `installedAt`/timestamp passed in (Date.now unavailable in core); CLI stamps.\n827: - **source union widened** to `\"project\"|\"user\"|\"plugin\"` in both agent-definition.ts and agent-definition-registry.ts — used consistently in T2.\n828: - **Marketplace tag `\"local\"`** for all local installs — used in T1 register, T5 uninstall key, consistent."
+        }
+      ]
+    }
+  ],
+  "selectedFiles": 3,
+  "selectedLines": 238,
+  "otherActualMetadataRead": "All helper55 and supplement109 match locators (path/pointer/line/matched text) printed without excerpts; old_branch2 complete context values explicitly inspected. Earlier broad excerpts console was truncated, not claimed fully read."
+}

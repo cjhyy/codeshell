@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T15:32:11.124073+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "bytes": 34235,
+      "sha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "lines": 928,
+      "beforeCurrentRootNavigationAndBody": true
+    }
+  ]
+}

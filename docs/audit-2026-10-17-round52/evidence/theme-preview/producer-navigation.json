@@ -1,0 +1,38 @@
+{
+  "commands": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "ThemePackPreview|installedThemes|allThemes|BUILTIN_THEME_PACKS|theme-packs",
+        "packages/desktop/src/renderer/settings/AppearanceSection.tsx"
+      ],
+      "exitCode": 0,
+      "stdout": "3:import type { ThemeImportKind } from \"../../shared/theme-packs\";\n13:import { THEME_PACKS, DEFAULT_PACK_ID, type ThemePack } from \"../theme-packs\";\n14:import { installedThemePacks, refreshInstalledThemes } from \"../installedThemes\";\n21:import { ThemePackPreview } from \"./ThemePackPreview\";\n306:              <ThemePackPreview pack={pack} />\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "ThemeVars|ThemePack|ThemeSurface|swatch|frame:|colors:",
+        "packages/desktop/src/renderer/theme-packs.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "7: * active (see theme.ts applyThemePack). Values are unitless HSL triples\n54:export type ThemeVars = Partial<Record<CssVarName, string>>;\n100:export type ThemeSurfaceName = (typeof THEME_SURFACE_NAMES)[number];\n102:export interface ThemeSurfaceSpec extends WallpaperSpec {\n118:export interface ThemePack {\n123:  /** Representative color (unitless HSL) for the picker swatch — the pack's primary. */\n124:  swatch: string;\n125:  colors: {\n126:    light: ThemeVars;\n127:    dark: ThemeVars;\n134:  surfaces?: Partial<Record<ThemeSurfaceName, ThemeSurfaceSpec>>;\n174:export const THEME_PACKS: ThemePack[] = [\n179:    swatch: \"19 63% 45%\",\n180:    colors: { light: {}, dark: {} },\n186:    swatch: \"210 80% 45%\",\n187:    colors: {\n204:    swatch: \"150 55% 36%\",\n205:    colors: {\n222:    swatch: \"270 55% 52%\",\n223:    colors: {\n243:export function getThemePack(id: string): ThemePack {\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "resolveThemeSurface|backgroundOpacity|SURFACE|frame|background:",
+        "packages/desktop/src/renderer/theme-appearance.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "3:const SURFACE_BACKGROUNDS: Record<ThemeSurfaceName, [CssVarName, number]> = {\n15:export function resolveThemeSurface(\n26:  const [baseToken, baseOpacity] = SURFACE_BACKGROUNDS[name];\n32:    background: color ?? basePalette[baseToken] ?? `var(${baseToken})`,\n33:    backgroundOpacity: appearance?.backgroundOpacity ?? (color ? 1 : baseOpacity),\n",
+      "stderr": ""
+    }
+  ],
+  "navigationOnlyAfterInitialPins": true
+}

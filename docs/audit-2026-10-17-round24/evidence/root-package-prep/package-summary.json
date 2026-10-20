@@ -1,0 +1,528 @@
+[
+  {
+    "path": "package.json",
+    "name": "@cjhyy/code-shell",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "bin": {
+      "code-shell": "./dist/cli.js"
+    },
+    "files": [
+      "assets/codeshell-dog-icon.png",
+      "assets/codeshell-promo.png",
+      "assets/codeshell-desktop-screenshot-en.png",
+      "docs/architecture/images/overview-runtime-layers.png",
+      "dist",
+      "scripts/check-node.cjs",
+      "README.md",
+      "README.zh-CN.md",
+      "LICENSE",
+      "CHANGELOG.md"
+    ],
+    "scripts": {
+      "build": "bun run --filter '@cjhyy/code-shell-link' build && bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-host' build && bun run --filter '@cjhyy/code-shell-pet' build && bun run --filter '@cjhyy/code-shell-capability-optimization-lab' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-cdp' build && bun run --filter '@cjhyy/code-shell-browser-devtools' build && bun run --filter '@cjhyy/code-shell-web' build && bun run --filter '@cjhyy/code-shell-server' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run --filter '@cjhyy/code-shell-chat' build && bun run scripts/build-meta.ts",
+      "typecheck": "bun run build && bun run typecheck:workspaces"
+    }
+  },
+  {
+    "path": "packages/arena/package.json",
+    "name": "@cjhyy/code-shell-arena",
+    "private": true,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./runtime": {
+        "types": "./dist/index.runtime.d.ts",
+        "import": "./dist/index.runtime.js"
+      }
+    },
+    "bin": null,
+    "files": [
+      "dist"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/browser-devtools/package.json",
+    "name": "@cjhyy/code-shell-browser-devtools",
+    "private": true,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "bin": null,
+    "files": [
+      "dist",
+      "README.md"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/cdp/package.json",
+    "name": "@cjhyy/code-shell-cdp",
+    "private": true,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "bin": null,
+    "files": [
+      "dist"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/chat/package.json",
+    "name": "@cjhyy/code-shell-chat",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./codeshell": {
+        "types": "./dist/codeshell.d.ts",
+        "import": "./dist/codeshell.js"
+      },
+      "./factory": {
+        "types": "./dist/adapter-factory.d.ts",
+        "import": "./dist/adapter-factory.js"
+      },
+      "./telegram": {
+        "types": "./dist/telegram.d.ts",
+        "import": "./dist/telegram.js"
+      },
+      "./discord": {
+        "types": "./dist/discord.d.ts",
+        "import": "./dist/discord.js"
+      },
+      "./slack": {
+        "types": "./dist/slack.d.ts",
+        "import": "./dist/slack.js"
+      },
+      "./lark": {
+        "types": "./dist/lark.d.ts",
+        "import": "./dist/lark.js"
+      },
+      "./dingtalk": {
+        "types": "./dist/dingtalk.d.ts",
+        "import": "./dist/dingtalk.js"
+      },
+      "./wecom": {
+        "types": "./dist/wecom.d.ts",
+        "import": "./dist/wecom.js"
+      },
+      "./wechat": {
+        "types": "./dist/wechat.d.ts",
+        "import": "./dist/wechat.js"
+      },
+      "./matrix": {
+        "types": "./dist/matrix.d.ts",
+        "import": "./dist/matrix.js"
+      },
+      "./mattermost": {
+        "types": "./dist/mattermost.d.ts",
+        "import": "./dist/mattermost.js"
+      },
+      "./line": {
+        "types": "./dist/line.d.ts",
+        "import": "./dist/line.js"
+      },
+      "./whatsapp": {
+        "types": "./dist/whatsapp.d.ts",
+        "import": "./dist/whatsapp.js"
+      },
+      "./teams": {
+        "types": "./dist/teams.d.ts",
+        "import": "./dist/teams.js"
+      }
+    },
+    "bin": {
+      "code-shell-chat": "./dist/cli.js"
+    },
+    "files": [
+      "dist",
+      "README.md",
+      "LICENSE"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/coding/package.json",
+    "name": "@cjhyy/code-shell-capability-coding",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./capability": {
+        "types": "./dist/index.capability.d.ts",
+        "import": "./dist/index.capability.js"
+      },
+      "./git": {
+        "types": "./dist/index.git.d.ts",
+        "import": "./dist/index.git.js"
+      },
+      "./orchestration": {
+        "types": "./dist/index.orchestration.d.ts",
+        "import": "./dist/index.orchestration.js"
+      },
+      "./external-runtimes": {
+        "types": "./dist/external-runtimes/index.d.ts",
+        "import": "./dist/external-runtimes/index.js"
+      }
+    },
+    "bin": null,
+    "files": [
+      "dist",
+      "THIRD_PARTY_NOTICES.md"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json && bun run copy-assets",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "copy-assets": "node ../../scripts/copy-assets.mjs dist/prompt src/prompt/*.md && node ../../scripts/copy-assets.mjs dist/tools/apply-patch src/tools/apply-patch/NOTICE.md src/tools/apply-patch/LICENSE-codex",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/core/package.json",
+    "name": "@cjhyy/code-shell-core",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./internal": {
+        "types": "./dist/index.internal.d.ts",
+        "import": "./dist/index.internal.js"
+      },
+      "./internal/skills": {
+        "types": "./dist/index.skills.d.ts",
+        "import": "./dist/index.skills.js"
+      },
+      "./panel-app-runtime": {
+        "types": "./dist/panel-apps/runtime.d.ts",
+        "import": "./dist/panel-apps/runtime.js"
+      },
+      "./browser/panel-app-runtime": {
+        "types": "./dist/panel-apps/runtime.d.ts",
+        "import": "./dist/panel-apps/runtime.js"
+      },
+      "./extension": {
+        "types": "./dist/index.extension.d.ts",
+        "import": "./dist/index.extension.js"
+      },
+      "./bin/agent-server-stdio": "./dist/cli/agent-server-stdio.js"
+    },
+    "bin": {
+      "code-shell-output-journal": "./dist/cli/output-journal-repair.js"
+    },
+    "files": [
+      "dist"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json && bun run copy-assets",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "copy-assets": "node ../../scripts/copy-assets.mjs dist/prompt/sections src/prompt/sections/*.md && node ../../scripts/copy-assets.mjs dist/data src/data/*.json src/data/*.txt",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/desktop/package.json",
+    "name": "@cjhyy/code-shell-desktop",
+    "private": true,
+    "type": "module",
+    "main": "./out/main/index.mjs",
+    "types": null,
+    "exports": null,
+    "bin": null,
+    "files": null,
+    "scripts": {
+      "build": "bun run scripts/build.ts",
+      "typecheck": "tsc --noEmit && tsc -p tsconfig.mobile.json --noEmit"
+    }
+  },
+  {
+    "path": "packages/host/package.json",
+    "name": "@cjhyy/code-shell-host",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "bin": null,
+    "files": [
+      "dist",
+      "README.md"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/link/package.json",
+    "name": "@cjhyy/code-shell-link",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "bin": null,
+    "files": [
+      "dist",
+      "README.md"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/optimization-lab/package.json",
+    "name": "@cjhyy/code-shell-capability-optimization-lab",
+    "private": true,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./capability": {
+        "types": "./dist/index.capability.d.ts",
+        "import": "./dist/index.capability.js"
+      }
+    },
+    "bin": null,
+    "files": [
+      "dist"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/pet/package.json",
+    "name": "@cjhyy/code-shell-pet",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./capability": {
+        "types": "./dist/index.capability.d.ts",
+        "import": "./dist/index.capability.js"
+      },
+      "./protocol": {
+        "types": "./dist/index.protocol.d.ts",
+        "import": "./dist/index.protocol.js"
+      },
+      "./team": {
+        "types": "./dist/index.team.d.ts",
+        "import": "./dist/index.team.js"
+      },
+      "./disclosure": {
+        "types": "./dist/index.disclosure.d.ts",
+        "import": "./dist/index.disclosure.js"
+      }
+    },
+    "bin": null,
+    "files": [
+      "dist"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/server/package.json",
+    "name": "@cjhyy/code-shell-server",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./storage": {
+        "types": "./dist/index.storage.d.ts",
+        "import": "./dist/index.storage.js"
+      },
+      "./worker": {
+        "types": "./dist/index.worker.d.ts",
+        "import": "./dist/index.worker.js"
+      },
+      "./remote-relay": {
+        "types": "./dist/index.remote-relay.d.ts",
+        "import": "./dist/index.remote-relay.js"
+      },
+      "./auth": {
+        "types": "./dist/index.auth.d.ts",
+        "import": "./dist/index.auth.js"
+      },
+      "./mobile-remote": {
+        "types": "./dist/index.mobile-remote.d.ts",
+        "import": "./dist/index.mobile-remote.js"
+      },
+      "./serve": {
+        "types": "./dist/index.serve.d.ts",
+        "import": "./dist/index.serve.js"
+      },
+      "./desktop-web": {
+        "types": "./dist/index.desktop-web.d.ts",
+        "import": "./dist/index.desktop-web.js"
+      },
+      "./links": {
+        "types": "./dist/index.links.d.ts",
+        "import": "./dist/index.links.js"
+      },
+      "./panels": {
+        "types": "./dist/index.panels.d.ts",
+        "import": "./dist/index.panels.js"
+      }
+    },
+    "bin": {
+      "code-shell-serve": "./dist/bin/code-shell-serve.js",
+      "code-shell-settings-recovery": "./dist/bin/code-shell-settings-recovery.js",
+      "code-shell-cloud-account": "./dist/bin/code-shell-cloud-account.js",
+      "code-shell-link-cleanup": "./dist/bin/code-shell-link-cleanup.js"
+    },
+    "files": [
+      "dist"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/tui/package.json",
+    "name": "@cjhyy/code-shell-tui",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./cli": {
+        "types": "./dist/cli/main.d.ts",
+        "import": "./dist/cli/main.js"
+      }
+    },
+    "bin": {
+      "code-shell": "./dist/cli/main.js"
+    },
+    "files": [
+      "dist",
+      "THIRD_PARTY_NOTICES.md"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json && node ../../scripts/copy-assets.mjs dist/cli/commands/builtin/init src/cli/commands/builtin/init/templates",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    }
+  },
+  {
+    "path": "packages/web/package.json",
+    "name": "@cjhyy/code-shell-web",
+    "private": false,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    },
+    "bin": null,
+    "files": [
+      "dist",
+      "dist-app"
+    ],
+    "scripts": {
+      "build": "bun run clean && tsc -p tsconfig.json && vite build",
+      "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.app.json --noEmit",
+      "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\""
+    }
+  }
+]

@@ -1,0 +1,41 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "-F",
+    "copy-assets.mjs",
+    "-g",
+    "package.json",
+    "."
+  ],
+  "exitCode": 0,
+  "stdout": "./packages/coding/package.json\n./packages/tui/package.json\n./packages/core/package.json\n",
+  "stderr": "",
+  "files": [
+    {
+      "path": "packages/coding/package.json",
+      "bytes": 1906,
+      "lines": 60,
+      "sha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "pinAt": "2026-10-17T19:54:29.042160+00:00",
+      "coverage": "hash-only before package script metadata body/navigation"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "lines": 73,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "pinAt": "2026-10-17T19:54:29.042953+00:00",
+      "coverage": "hash-only before package script metadata body/navigation"
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "lines": 110,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "pinAt": "2026-10-17T19:54:29.043147+00:00",
+      "coverage": "hash-only before package script metadata body/navigation"
+    }
+  ],
+  "scope": "Filename-only consumer inventory; no package script executed."
+}

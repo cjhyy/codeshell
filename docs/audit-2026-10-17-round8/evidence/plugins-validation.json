@@ -1,0 +1,49 @@
+{
+  "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+  "runs": [
+    {
+      "name": "plugins-command-metadata",
+      "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round8/evidence/plugins-command-metadata.test.ts",
+      "attempt": 1,
+      "fixture": "docs/audit-2026-10-17-round8/evidence/plugins-command-metadata.test.ts",
+      "fixtureSha256": "f5a00d46869728567e7bf41a3869b8a2d85ace9547437858ddb0887d152be732",
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round8/evidence/plugins-command-metadata.first.log",
+      "rawLogSha256": "fe8c9182996cad6b2ff9a66492a392372841b66c60814c9dc381101bfaf630b7",
+      "exitFile": "docs/audit-2026-10-17-round8/evidence/plugins-command-metadata.first.exit.json",
+      "exitCode": 0,
+      "tests": 6,
+      "skipped": 0,
+      "failures": 0,
+      "expectCalls": 13,
+      "guardedCompletionPresent": true
+    },
+    {
+      "name": "plugins-parser-metadata",
+      "sourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.test.ts",
+      "attempt": 1,
+      "fixture": "docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.test.ts",
+      "fixtureSha256": "70c9af4f4d1e77f10e321a5b408cf2fc057284e3a345e34041ed3c112e809e1a",
+      "rawCombinedStdoutStderr": "docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.first.log",
+      "rawLogSha256": "9dc82a7e5a81819af793b3964b2cf2ffaf7eac12aaf4478c9f655e274a35a96f",
+      "exitFile": "docs/audit-2026-10-17-round8/evidence/plugins-parser-metadata.first.exit.json",
+      "exitCode": 0,
+      "tests": 5,
+      "skipped": 0,
+      "failures": 0,
+      "expectCalls": 27,
+      "guardedCompletionPresent": true
+    }
+  ],
+  "totals": {
+    "cleanFirstShards": 2,
+    "tests": 11,
+    "expectCalls": 40,
+    "failures": 0,
+    "skipped": 0
+  },
+  "failedProductShards": [],
+  "metadataAssemblyFailure": "plugins-metadata-assembly-note.md",
+  "testMeaning": "11 new focused proof/control tests; passing assertions deliberately describe current incorrect behavior; no product fix or full plugin suite/build/typecheck/lint claim"
+}

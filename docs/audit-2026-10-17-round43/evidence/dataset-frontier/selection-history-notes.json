@@ -1,0 +1,58 @@
+{
+  "outputDiagnostic": {
+    "toolChunk": "39bb0b",
+    "exitCode": 0,
+    "kind": "Overbroad161 toolDisplay contexts print exceeded budget; not all semantically read. OldR14 gate excerpts already identify exact related/failed/unused boundary. No product retry."
+  },
+  "selectedContexts": [
+    {
+      "index": 54,
+      "path": "docs/audit-2026-10-17-round14/related.json",
+      "location": "$[\"observations\"][0][\"source\"]",
+      "excerpt": "packages/core/src/utils/toolDisplay.ts"
+    },
+    {
+      "index": 55,
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "location": "$[\"files\"][24][\"path\"]",
+      "excerpt": "packages/core/src/utils/toolDisplay.ts"
+    },
+    {
+      "index": 56,
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "location": "$[\"files\"][24][\"sha256\"]",
+      "excerpt": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000"
+    },
+    {
+      "index": 57,
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][50][\"path\"]",
+      "excerpt": "packages/core/src/utils/toolDisplay.ts"
+    },
+    {
+      "index": 58,
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][50][\"sha256\"]",
+      "excerpt": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000"
+    },
+    {
+      "index": 59,
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "location": "11",
+      "excerpt": "另一份 [cache/semver/toolDisplay fixture](evidence/utils-cache-format-controls.test.ts) 从未执行，保留了同样的错误相对 import，既未修正也未运行；不能把其中断言或预期当成观察结果。两份自写 fixture 都不是回归通过证据。"
+    },
+    {
+      "index": 60,
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "location": "29",
+      "excerpt": "- `UTIL-R14-R1`：Core [toolDisplay.ts:114](../../packages/core/src/utils/toolDisplay.ts#L114) 的摘要仍按 UTF-16 `.slice(0, max - 1)` 截断，机制与已登记 `DESKTOP-R12-01` 相同。正常 60/88 上限可用于 Unicode 命令/描述/文件名，但本轮对应 fixture 未执行，仅记静态关联，不重复增加 formal；当前 Desktop 的独立修复不能证明这个 Core helper 已修复。"
+    },
+    {
+      "index": 61,
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "location": "29",
+      "excerpt": "- `UTIL-R14-R1`：Core [toolDisplay.ts:114](../../packages/core/src/utils/toolDisplay.ts#L114) 的摘要仍按 UTF-16 `.slice(0, max - 1)` 截断，机制与已登记 `DESKTOP-R12-01` 相同。正常 60/88 上限可用于 Unicode 命令/描述/文件名，但本轮对应 fixture 未执行，仅记静态关联，不重复增加 formal；当前 Desktop 的独立修复不能证明这个 Core helper 已修复。"
+    }
+  ],
+  "activeSelectionStillBeforeBodyRead": true
+}

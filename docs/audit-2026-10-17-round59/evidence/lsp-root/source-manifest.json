@@ -1,0 +1,416 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "c39eb6f987b7bd5d740fee6d8ab5b46718f9c9af",
+  "branchReported": 59,
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "packages/coding/src/lsp/root-path.ts",
+      "bytes": 508,
+      "lines": 13,
+      "sha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+      "pinAt": "2026-10-17T19:39:35.510165+00:00",
+      "coverage": "full",
+      "pinArtifact": "initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "semanticLineCount": 13,
+      "displayedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "displayedLineCount": 13,
+      "displayArtifact": "initial-source-display.json",
+      "scope": "Entire pure conversion helper including regression comment. Overlaps prior same-SHA R4 normal control; no platform/runtime certification.",
+      "endingSha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/coding/src/lsp/servers.ts",
+      "bytes": 1744,
+      "lines": 71,
+      "sha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+      "pinAt": "2026-10-17T19:39:35.510506+00:00",
+      "coverage": "full",
+      "pinArtifact": "initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          71
+        ]
+      ],
+      "semanticLineCount": 71,
+      "displayedLineRanges": [
+        [
+          1,
+          71
+        ]
+      ],
+      "displayedLineCount": 71,
+      "displayArtifact": "initial-source-display.json",
+      "scope": "Entire builtin server DTO and extension selector. Old JS/SCSS languageId candidate remains old/unpromoted; no server mode inferred.",
+      "endingSha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/coding/src/lsp/manager.ts",
+      "bytes": 8880,
+      "lines": 279,
+      "sha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+      "pinAt": "2026-10-17T19:39:35.510936+00:00",
+      "coverage": "selected",
+      "pinArtifact": "initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          128
+        ],
+        [
+          176,
+          279
+        ]
+      ],
+      "semanticLineCount": 232,
+      "displayedLineRanges": [
+        [
+          1,
+          279
+        ]
+      ],
+      "displayedLineCount": 279,
+      "displayArtifact": "initial-source-display.json",
+      "scope": "Root conversion, per-root registry, selected startup/get/shutdown call ownership, LRU and invalidation. Availability/PATH/executable mechanism131–174 only adjacent display; old C4/C5 remain excluded, not declared healthy.",
+      "endingSha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/coding/src/tools/lsp.ts",
+      "bytes": 8752,
+      "lines": 243,
+      "sha256": "c2c3678fcd30d46761e151c716bb905944f3f44daa2312ab9636b5c657233eab",
+      "pinAt": "2026-10-17T19:42:56.055733+00:00",
+      "coverage": "selected",
+      "pinArtifact": "consumer-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          5,
+          9
+        ],
+        [
+          34,
+          110
+        ]
+      ],
+      "semanticLineCount": 82,
+      "displayedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "displayedLineCount": 110,
+      "displayArtifact": "consumer-source-display.json",
+      "scope": "Actual ordinary input/schema, ctx.cwd/file resolution, per-cwd manager and extension selection, initialized client request. Old URI-result/diagnostics bodies outside current semantic range not reopened.",
+      "endingSha256": "c2c3678fcd30d46761e151c716bb905944f3f44daa2312ab9636b5c657233eab",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/coding/src/lsp/client.ts",
+      "bytes": 7365,
+      "lines": 220,
+      "sha256": "7884e6ab61bbc5c82dbf7872941d602a3a4d2170b634932dcdb83b4dbe5aa31e",
+      "pinAt": "2026-10-17T19:42:56.056710+00:00",
+      "coverage": "selected",
+      "pinArtifact": "consumer-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          40,
+          46
+        ],
+        [
+          68,
+          86
+        ],
+        [
+          130,
+          148
+        ],
+        [
+          150,
+          156
+        ]
+      ],
+      "semanticLineCount": 52,
+      "displayedLineRanges": [
+        [
+          40,
+          86
+        ],
+        [
+          130,
+          156
+        ]
+      ],
+      "displayedLineCount": 74,
+      "displayArtifact": "consumer-source-display.json",
+      "scope": "Constructor root storage, initialize rootUri and initialized notification, selected shutdown/liveness source for old-cause boundaries. Native spawn/listener48–66 only displayed; no process or readiness validation.",
+      "endingSha256": "7884e6ab61bbc5c82dbf7872941d602a3a4d2170b634932dcdb83b4dbe5aa31e",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "bytes": 11585,
+      "lines": 377,
+      "sha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+      "pinAt": "2026-10-17T19:42:56.056497+00:00",
+      "coverage": "selected",
+      "pinArtifact": "consumer-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          190,
+          193
+        ],
+        [
+          198,
+          199
+        ]
+      ],
+      "semanticLineCount": 6,
+      "displayedLineRanges": [
+        [
+          190,
+          200
+        ]
+      ],
+      "displayedLineCount": 11,
+      "displayArtifact": "consumer-source-display.json",
+      "scope": "Registration binds LSP definition to actual lspTool. Adjacent permission/path-policy/concurrency flags are not enforcement review.",
+      "endingSha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.test.ts",
+      "bytes": 1432,
+      "lines": 33,
+      "sha256": "fcc79e191c841cf4466b17b97db2d7962a0424ca550f8b25c795fef2cf611991",
+      "pinAt": "2026-10-17T19:42:56.056920+00:00",
+      "coverage": "full",
+      "pinArtifact": "consumer-initial-pins.json",
+      "sourceKind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          1,
+          33
+        ]
+      ],
+      "semanticLineCount": 33,
+      "displayedLineRanges": [
+        [
+          1,
+          33
+        ]
+      ],
+      "displayedLineCount": 33,
+      "displayArtifact": "consumer-source-display.json",
+      "scope": "Entire existing declaration including test data/comments. No fixture/helper/test executed; overlaps prior fixed-URI regression.",
+      "endingSha256": "fcc79e191c841cf4466b17b97db2d7962a0424ca550f8b25c795fef2cf611991",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    },
+    {
+      "path": "packages/coding/src/lsp/manager-lifecycle.test.ts",
+      "bytes": 5479,
+      "lines": 134,
+      "sha256": "149d77a060427e6aac3eba6250b45540220d4c480a5f0b74dc93bd85b92073b4",
+      "pinAt": "2026-10-17T19:42:56.057372+00:00",
+      "coverage": "full",
+      "pinArtifact": "consumer-initial-pins.json",
+      "sourceKind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          1,
+          134
+        ]
+      ],
+      "semanticLineCount": 134,
+      "displayedLineRanges": [
+        [
+          1,
+          134
+        ]
+      ],
+      "displayedLineCount": 134,
+      "displayArtifact": "consumer-source-display.json",
+      "scope": "Entire existing passive registry test declarations/setup. No FS fixture, manager, client or server invoked. These declarations do not prove real initialized-server eviction/shutdown behavior.",
+      "endingSha256": "149d77a060427e6aac3eba6250b45540220d4c480a5f0b74dc93bd85b92073b4",
+      "endingUnchanged": true,
+      "newUniqueCoverageClaim": false
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T19:39:35.508924+00:00",
+      "coverage": "hash-only",
+      "pinArtifact": "initial-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Instruction same-SHA reuse, no new body read."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T19:39:35.509792+00:00",
+      "coverage": "hash-only",
+      "pinArtifact": "initial-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Instruction same-SHA reuse, no new body read."
+    },
+    {
+      "path": "packages/coding/src/lsp/manager.test.ts",
+      "bytes": 1066,
+      "lines": 30,
+      "sha256": "493fa1d39db49f4d57ac43ba022bdcd3c54f17d29fd53130cd1e702b877d0198",
+      "pinAt": "2026-10-17T19:42:56.057145+00:00",
+      "coverage": "hash-only",
+      "pinArtifact": "consumer-initial-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Only pinned. Narrow declaration navigation returned no match; availability mechanism/test body not read."
+    }
+  ],
+  "filenameOnlyReferences": [
+    "packages/coding/src/index.ts"
+  ],
+  "historyReferences": [
+    {
+      "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+      "sha256": "8a24586af05d7ff9741ed73a8086baef555838ee65e0140403b764797e60f054",
+      "bytes": 16629,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedObjects": [
+        "/files/12",
+        "/files/14",
+        "/files/15"
+      ],
+      "displayedLineRanges": [],
+      "scope": "Only saved six objects and selected MD lines were read. Same-SHA hash receipts do not themselves state whole-source semantic coverage."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/coding-receipts.json",
+      "sha256": "3c1622371a5030b791ac131324f396006b79200e53034d4098db4f3c7d7b0e15",
+      "bytes": 7917,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedObjects": [
+        "/sources/1",
+        "/sources/2",
+        "/sources/4"
+      ],
+      "displayedLineRanges": [],
+      "scope": "Only saved six objects and selected MD lines were read. Same-SHA hash receipts do not themselves state whole-source semantic coverage."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/coding.md",
+      "sha256": "90cf1904e21a433228cb72498f40147ed6ec1004136849094c40ff4cb7ec22a3",
+      "bytes": 8002,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedObjects": [],
+      "displayedLineRanges": [
+        [
+          1,
+          47
+        ]
+      ],
+      "scope": "Only saved six objects and selected MD lines were read. Same-SHA hash receipts do not themselves state whole-source semantic coverage."
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+      "bytes": 31923,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedObjects": [],
+      "displayedLineRanges": [
+        [
+          84,
+          119
+        ]
+      ],
+      "scope": "Only saved six objects and selected MD lines were read. Same-SHA hash receipts do not themselves state whole-source semantic coverage."
+    }
+  ],
+  "sharedHistory": {
+    "input": {
+      "path": "/tmp/codeshell-audit-round148-subagent-continuation/history-batch.json",
+      "bytes": 1505906,
+      "sha256": "dc387a8132ac329ec5c8fdd7cb997704d4ba62bfb8c5ffeeb0069edd0f0d76b5"
+    },
+    "snapshotAt": "2026-10-17T19:40:10.533242+00:00",
+    "historyFiles": 6010,
+    "jsonValueScalarsVisited": 4291442,
+    "excludedFormalAtOrAbove": 59,
+    "counts": {
+      "packages/coding/src/lsp/root-path.ts": 37,
+      "packages/coding/src/lsp/servers.ts": 37,
+      "packages/coding/src/lsp/manager.ts": 56
+    },
+    "savedCounts": {
+      "packages/coding/src/lsp/root-path.ts": 37,
+      "packages/coding/src/lsp/servers.ts": 37,
+      "packages/coding/src/lsp/manager.ts": 56
+    },
+    "capPerTarget": 100,
+    "allTargetHitsSaved": true,
+    "allHitsSemanticallyRead": false,
+    "errors": [],
+    "scope": "Shared machine MD/recursive JSON value traversal includes archives, keys excluded. This author projects target only; not a fresh whole-history rescan or cause exhaustion."
+  },
+  "totals": {
+    "productFiles": 6,
+    "productSemanticLines": 456,
+    "testDeclarationFiles": 2,
+    "testDeclarationLines": 167,
+    "fullProductFiles": 2,
+    "selectedProductFiles": 4,
+    "fullTestDeclarationFiles": 2,
+    "displayedProductAndTestLines": 725,
+    "hashOnlyFiles": 3,
+    "navigationOnlyFiles": 0,
+    "newUniqueCoverageClaim": false
+  },
+  "executions": {
+    "product": 0,
+    "imports": 0,
+    "helper": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "LSPProcesses": 0,
+    "native": 0,
+    "network": 0,
+    "Git": 0
+  },
+  "endingAt": "2026-10-17T19:44:59.037091+00:00"
+}

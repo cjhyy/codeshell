@@ -1,0 +1,26 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round16/evidence/tasknoise-pure.test.ts:
+(pass) round16 task-noise pure helper > ordinary long prose remains task text [1.97ms]
+(pass) round16 task-noise pure helper > under ten code units bypasses even box-only input [0.01ms]
+(pass) round16 task-noise pure helper > ten box glyphs are rejected as entirely stripped input [0.02ms]
+(pass) round16 task-noise pure helper > nonempty low-signal text at original length 100 remains accepted [0.19ms]
+(pass) round16 task-noise pure helper > same signal at original length 101 crosses threshold [0.05ms]
+(pass) round16 task-noise pure helper > exactly 30 percent signal remains accepted [0.02ms]
+(pass) round16 task-noise pure helper > below 30 percent signal is rejected [0.01ms]
+(pass) round16 task-noise pure helper > basic SGR-only stream is recognized once above the short gate [0.01ms]
+(pass) round16 task-noise pure helper > semicolon true-color SGR-only stream is recognized
+(pass) round16 task-noise pure helper > colon true-color SGR-only stream is retained as signal
+(pass) round16 task-noise pure helper > OSC8-only stream is retained as signal
+(pass) round16 task-noise pure helper > custom dashed border glyphs remain signal
+(pass) round16 task-noise pure helper > equivalent solid border glyphs are entirely stripped
+(pass) round16 task-noise pure helper > ordinary prose decorated by ANSI has only its cleaned projection changed
+(pass) round16 task-noise pure helper > CR-only creates one LF in the helper projection [0.05ms]
+(pass) round16 task-noise pure helper > CRLF creates two LF in helper projection without changing input
+(pass) round16 task-noise pure helper > explicit question plus dense recognized decoration triggers heuristic
+
+ 17 pass
+ 0 fail
+ 27 expect() calls
+Ran 17 tests across 1 file. [140.00ms]
+Completed Bun shard: 17 tests, 0 skipped; 0 failures.

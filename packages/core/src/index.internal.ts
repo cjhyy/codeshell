@@ -7,12 +7,51 @@
  */
 
 export {
+  ModelTraceStore,
+  DEFAULT_MODEL_TRACE_CONFIG,
+  MODEL_TRACE_CALL_TYPES,
+  isModelTraceCallType,
+  configureModelTracing,
+  withModelTraceContext,
+  recordModelTraceEvent,
+  recordExternalModelTrace,
+  clearModelTracingConfiguration,
+} from "./model-traces/index.js";
+export { createNativeModelTraceFrameDecoder } from "./model-traces/native-frames.js";
+export type {
+  ModelTraceContentState,
+  ModelTraceStatus,
+  ModelTraceCallType,
+  ModelTraceConfig,
+  ModelTraceConfigPatch,
+  ModelTraceOutput,
+  ModelTraceAttempt,
+  ModelTraceRecord,
+  ModelTraceSummary,
+  ModelTraceListQuery,
+  ModelTracePage,
+  ModelTraceSessionSummary,
+  ModelTraceSessionPage,
+  ModelTraceEvent,
+  ModelTraceEventInput,
+  ModelTraceContext,
+  ExternalModelTraceInput,
+} from "./model-traces/index.js";
+
+export {
   SessionOutputCoverageStore,
   type SessionOutputCoverageProof,
 } from "./session/output-coverage-state.js";
 
 export { outputUserMessage } from "./engine/run-output-user-message.js";
 export { createRunTiming } from "./session/stream-timing.js";
+export { normalizeCumulativeUsageCounters } from "./session/usage.js";
+export { McpResponseTooLargeError } from "./tool-system/mcp-results.js";
+export {
+  assertMcpOAuthCredentialBinding,
+  assertMcpResourceTarget,
+  normalizeMcpServerUrl,
+} from "./credentials/mcp-binding.js";
 
 // ─── Utils (shared primitives used by TUI) ───────────────────────
 
@@ -133,6 +172,12 @@ export type {
 // ─── Tool system and host services ───────────────────────────────
 
 export { createLinkOperationReviewStore } from "./links/operation-review.js";
+export {
+  isLegacyLinkConnection,
+  previewLegacyLinkCleanup,
+  cleanupLegacyLinkConnections,
+  type LegacyLinkCleanupEntry,
+} from "./links/legacy-cleanup.js";
 export { createOperationHookHost } from "./links/operation-hook-host.js";
 export { createConstrainedDockerProcessHost } from "./runtime/constrained-process/docker.js";
 export type {
@@ -476,6 +521,13 @@ export {
 export { readOperationSessionOwner } from "./operations/session-owner.js";
 export { createSessionOperationServices } from "./operations/session-services.js";
 export { allowsLinkAction, linkAuthoritySnapshot } from "./links/authority.js";
+export {
+  executeFigmaMcpLinkAction,
+  isFigmaMcpCredential,
+  McpLinkActionError,
+  type McpLinkActionRequest,
+  type McpLinkActionOptions,
+} from "./links/figma-mcp.js";
 export {
   isOperationBatchAuthorityFrame,
   DESKTOP_OPERATION_BATCH_METHOD,

@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17/evidence/ui-annotation-roundtrip.test.ts:
+{"observation":"multiline-comment-projection","inputComment":"第一行说明\n第二行必须保留\nreason: 该字段是评论内容","displayedComment":"第一行说明","displayedLocators":[{"key":"文件","value":"example.ts"},{"key":"行","value":"10"},{"key":"reason","value":"该字段是评论内容"}],"originalWireRetainsFullComment":true}
+(pass) round 2: observes multiline comment display truncation in production codec [9.06ms]
+(pass) round 2 control: one-line comment retains exact text [0.20ms]
+
+ 2 pass
+ 0 fail
+ 8 expect() calls
+Ran 2 tests across 1 file. [147.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

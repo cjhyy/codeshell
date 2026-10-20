@@ -1,0 +1,29 @@
+{
+  "capturedUTC": "2026-10-17T14:51:41.829426+00:00",
+  "firstDraftArtifacts": {
+    "build-index.py": {
+      "bytes": 14124,
+      "sha256": "d0382315ce6776ef91408f205b9c2e53a653d1901dd1a53a972a045fa67a315e"
+    },
+    "summary.json": {
+      "bytes": 1422,
+      "sha256": "65488930208f2747bab566c231259d5bd5479364f243015d71cd27b58ae5bb45"
+    },
+    "coverage-index.json": {
+      "bytes": 2758233,
+      "sha256": "8770870ab2f3d15ac3c29d3950241ea517d0c6ccd9372adc4970b85a9b8ca440"
+    },
+    "coverage-claims.json": {
+      "bytes": 25561768,
+      "sha256": "64927a4906d96f1963c6fcab07e721fd0ae074febc2917374cbe70d3018d28c7"
+    }
+  },
+  "firstSummaryPreserved": "classifier-first-summary.json",
+  "firstBuilderPreserved": "classifier-first-script.py",
+  "reason": "Conservative metadata refinement before any freeze, not a runtime/product failure: explicit except/excludes scopes and unsupported range representations must veto full; direct review false conflicts retained; scalar-list review fields and flat/text ranges adapted. Same first dated source/history byte inventories reused. No source body read or product rerun.",
+  "firstDraftNotAuthoritative": true,
+  "productAttempts": 0,
+  "additionalRefinement": "Count all direct TS/TSX source-shaped paths, including absent historic paths, to veto multi-source ambiguity. Store provenance historyRow indices into the one dated inventory registry instead of repeating document path/SHA51k times; storage compression only. No source reading or fresh inventory.",
+  "updatedUTC": "2026-10-17T14:55:58.362135+00:00",
+  "finalStorage": "Final builder writes the two large tables compactly and stores provenance by zero-based first history inventory row; final replay reuses original dated inventories and JSON bytes only. Structured source-path map-key adapter also includes any conflicting child path in ambiguity veto; corpus has0 such map-key anchors."
+}

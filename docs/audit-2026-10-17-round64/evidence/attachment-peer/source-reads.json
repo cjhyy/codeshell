@@ -1,0 +1,1164 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+    "atUTC": "2026-10-17T21:11:41.782153+00:00",
+    "mode": "evidence",
+    "ranges": [
+      [
+        1,
+        87
+      ]
+    ],
+    "totalLines": 87,
+    "sha256": "abcae4504ba63806cdcdac1d1395d8dbd882a1b9e535d18936c8d3652dcd5185"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first.log",
+    "atUTC": "2026-10-17T21:11:41.865535+00:00",
+    "mode": "evidence",
+    "ranges": [
+      [
+        1,
+        11
+      ]
+    ],
+    "totalLines": 11,
+    "sha256": "7f7c6c3006954a915d44611977ec8a19b365ecd4f4936c26b416509a2e2add69"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.first-exit.json",
+    "atUTC": "2026-10-17T21:11:41.920528+00:00",
+    "mode": "evidence",
+    "ranges": [
+      [
+        1,
+        13
+      ]
+    ],
+    "totalLines": 13,
+    "sha256": "12dbce4fbd1fce26b41b983ce5d739ba7c1c1814179bbc1b9d70f1065c4bf7d9"
+  },
+  {
+    "path": "packages/server/src/attachment-service.ts",
+    "atUTC": "2026-10-17T21:11:41.983758+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        1,
+        90
+      ],
+      [
+        240,
+        285
+      ],
+      [
+        350,
+        390
+      ],
+      [
+        435,
+        465
+      ],
+      [
+        865,
+        887
+      ]
+    ],
+    "totalLines": 887,
+    "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23"
+  },
+  {
+    "path": "packages/server/src/attachment-service.ts",
+    "atUTC": "2026-10-17T21:11:53.241036+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        98,
+        98
+      ],
+      [
+        99,
+        99
+      ],
+      [
+        122,
+        122
+      ],
+      [
+        123,
+        123
+      ],
+      [
+        177,
+        177
+      ],
+      [
+        256,
+        256
+      ],
+      [
+        295,
+        295
+      ],
+      [
+        316,
+        316
+      ],
+      [
+        352,
+        352
+      ],
+      [
+        368,
+        368
+      ],
+      [
+        409,
+        409
+      ],
+      [
+        420,
+        420
+      ],
+      [
+        453,
+        453
+      ],
+      [
+        459,
+        459
+      ],
+      [
+        476,
+        476
+      ],
+      [
+        690,
+        690
+      ],
+      [
+        708,
+        708
+      ],
+      [
+        717,
+        717
+      ],
+      [
+        749,
+        749
+      ],
+      [
+        754,
+        754
+      ],
+      [
+        761,
+        761
+      ],
+      [
+        767,
+        767
+      ],
+      [
+        807,
+        807
+      ],
+      [
+        835,
+        835
+      ],
+      [
+        866,
+        866
+      ],
+      [
+        875,
+        875
+      ],
+      [
+        876,
+        876
+      ],
+      [
+        884,
+        884
+      ]
+    ],
+    "totalLines": 887,
+    "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+    "pattern": "TTL|removedFromDraft|findExistingSessionFile|removeAttachment|stageImageDataUrl|cleanupAttachments|appendManifest|ManifestRecord"
+  },
+  {
+    "path": "packages/server/src/attachment-service.ts",
+    "atUTC": "2026-10-17T21:11:53.343773+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        100,
+        145
+      ],
+      [
+        170,
+        240
+      ],
+      [
+        275,
+        306
+      ],
+      [
+        387,
+        435
+      ],
+      [
+        459,
+        487
+      ],
+      [
+        805,
+        840
+      ]
+    ],
+    "totalLines": 887,
+    "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23"
+  },
+  {
+    "path": "packages/desktop/src/renderer/chat/attachments.ts",
+    "atUTC": "2026-10-17T21:11:53.462646+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        4,
+        4
+      ],
+      [
+        19,
+        19
+      ],
+      [
+        20,
+        20
+      ],
+      [
+        32,
+        32
+      ],
+      [
+        35,
+        35
+      ],
+      [
+        47,
+        47
+      ],
+      [
+        49,
+        49
+      ],
+      [
+        63,
+        63
+      ],
+      [
+        66,
+        66
+      ],
+      [
+        75,
+        75
+      ],
+      [
+        77,
+        77
+      ],
+      [
+        78,
+        78
+      ],
+      [
+        91,
+        91
+      ],
+      [
+        137,
+        137
+      ],
+      [
+        178,
+        178
+      ],
+      [
+        182,
+        182
+      ],
+      [
+        200,
+        200
+      ],
+      [
+        217,
+        217
+      ],
+      [
+        225,
+        225
+      ],
+      [
+        226,
+        226
+      ],
+      [
+        230,
+        230
+      ],
+      [
+        231,
+        231
+      ],
+      [
+        237,
+        237
+      ],
+      [
+        243,
+        243
+      ],
+      [
+        247,
+        247
+      ],
+      [
+        248,
+        248
+      ],
+      [
+        269,
+        269
+      ],
+      [
+        291,
+        291
+      ],
+      [
+        300,
+        300
+      ],
+      [
+        307,
+        307
+      ]
+    ],
+    "totalLines": 391,
+    "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+    "pattern": "mark|Sent|remove|dedup|staged|stage|id|absPath|send|filter"
+  },
+  {
+    "path": "packages/server/src/attachment-service.ts",
+    "atUTC": "2026-10-17T21:12:02.826187+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        690,
+        716
+      ]
+    ],
+    "totalLines": 887,
+    "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23"
+  },
+  {
+    "path": "packages/desktop/src/renderer/app/useRunController.ts",
+    "atUTC": "2026-10-17T21:12:02.908467+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        375,
+        412
+      ]
+    ],
+    "totalLines": 1247,
+    "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60"
+  },
+  {
+    "path": "packages/desktop/src/preload/index.ts",
+    "atUTC": "2026-10-17T21:12:02.992249+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        928,
+        953
+      ]
+    ],
+    "totalLines": 1892,
+    "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901"
+  },
+  {
+    "path": "packages/desktop/src/main/index.ts",
+    "atUTC": "2026-10-17T21:12:03.079476+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        3228,
+        3252
+      ],
+      [
+        3465,
+        3483
+      ],
+      [
+        5124,
+        5183
+      ]
+    ],
+    "totalLines": 7330,
+    "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0"
+  },
+  {
+    "path": "packages/desktop/src/renderer/ChatView.tsx",
+    "atUTC": "2026-10-17T21:12:27.926833+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        108,
+        108
+      ],
+      [
+        171,
+        171
+      ],
+      [
+        190,
+        190
+      ],
+      [
+        258,
+        258
+      ],
+      [
+        261,
+        261
+      ],
+      [
+        282,
+        282
+      ],
+      [
+        289,
+        289
+      ],
+      [
+        293,
+        293
+      ],
+      [
+        307,
+        307
+      ],
+      [
+        314,
+        314
+      ],
+      [
+        318,
+        318
+      ],
+      [
+        325,
+        325
+      ],
+      [
+        331,
+        331
+      ],
+      [
+        337,
+        337
+      ],
+      [
+        342,
+        342
+      ],
+      [
+        345,
+        345
+      ],
+      [
+        346,
+        346
+      ],
+      [
+        356,
+        356
+      ],
+      [
+        358,
+        358
+      ],
+      [
+        387,
+        387
+      ],
+      [
+        414,
+        414
+      ],
+      [
+        457,
+        457
+      ],
+      [
+        459,
+        459
+      ],
+      [
+        490,
+        490
+      ],
+      [
+        523,
+        523
+      ],
+      [
+        530,
+        530
+      ],
+      [
+        559,
+        559
+      ],
+      [
+        568,
+        568
+      ],
+      [
+        994,
+        994
+      ],
+      [
+        1018,
+        1018
+      ],
+      [
+        1020,
+        1020
+      ],
+      [
+        1267,
+        1267
+      ],
+      [
+        1268,
+        1268
+      ],
+      [
+        1305,
+        1305
+      ],
+      [
+        1522,
+        1522
+      ],
+      [
+        1530,
+        1530
+      ],
+      [
+        1565,
+        1565
+      ],
+      [
+        1609,
+        1609
+      ],
+      [
+        1815,
+        1815
+      ],
+      [
+        1954,
+        1954
+      ],
+      [
+        1962,
+        1962
+      ],
+      [
+        2032,
+        2032
+      ],
+      [
+        2112,
+        2112
+      ],
+      [
+        2320,
+        2320
+      ],
+      [
+        2321,
+        2321
+      ]
+    ],
+    "totalLines": 2622,
+    "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+    "pattern": "stageImage|setImages|onRemove|removeImage|filter\\(|sha256|absPath|onAttachmentsChange"
+  },
+  {
+    "path": "packages/desktop/src/preload/index.ts",
+    "atUTC": "2026-10-17T21:12:28.006946+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        941,
+        946
+      ]
+    ],
+    "totalLines": 1892,
+    "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901"
+  },
+  {
+    "path": "packages/desktop/src/renderer/ChatView.tsx",
+    "atUTC": "2026-10-17T21:12:32.557691+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        275,
+        299
+      ],
+      [
+        1190,
+        1310
+      ]
+    ],
+    "totalLines": 2622,
+    "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+  },
+  {
+    "path": "packages/desktop/src/renderer/app/useRunController.ts",
+    "atUTC": "2026-10-17T21:12:32.652852+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        11,
+        11
+      ],
+      [
+        200,
+        200
+      ],
+      [
+        315,
+        315
+      ],
+      [
+        341,
+        341
+      ],
+      [
+        366,
+        366
+      ],
+      [
+        367,
+        367
+      ],
+      [
+        394,
+        394
+      ],
+      [
+        399,
+        399
+      ],
+      [
+        402,
+        402
+      ],
+      [
+        445,
+        445
+      ],
+      [
+        467,
+        467
+      ],
+      [
+        562,
+        562
+      ],
+      [
+        565,
+        565
+      ],
+      [
+        566,
+        566
+      ],
+      [
+        594,
+        594
+      ],
+      [
+        606,
+        606
+      ],
+      [
+        625,
+        625
+      ],
+      [
+        630,
+        630
+      ],
+      [
+        634,
+        634
+      ],
+      [
+        732,
+        732
+      ],
+      [
+        752,
+        752
+      ],
+      [
+        779,
+        779
+      ],
+      [
+        795,
+        795
+      ],
+      [
+        820,
+        820
+      ],
+      [
+        824,
+        824
+      ],
+      [
+        840,
+        840
+      ],
+      [
+        848,
+        848
+      ],
+      [
+        849,
+        849
+      ],
+      [
+        858,
+        858
+      ],
+      [
+        859,
+        859
+      ],
+      [
+        863,
+        863
+      ],
+      [
+        889,
+        889
+      ],
+      [
+        897,
+        897
+      ],
+      [
+        906,
+        906
+      ]
+    ],
+    "totalLines": 1247,
+    "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60",
+    "pattern": "opts.attachments|attachments:|wireImages|attachment|map\\("
+  },
+  {
+    "path": "packages/server/src/attachment-service.test.ts",
+    "atUTC": "2026-10-17T21:12:32.746482+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        16,
+        16
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        19,
+        19
+      ],
+      [
+        43,
+        43
+      ],
+      [
+        54,
+        54
+      ],
+      [
+        78,
+        78
+      ],
+      [
+        101,
+        101
+      ],
+      [
+        129,
+        129
+      ],
+      [
+        151,
+        151
+      ],
+      [
+        166,
+        166
+      ],
+      [
+        197,
+        197
+      ],
+      [
+        211,
+        211
+      ],
+      [
+        236,
+        236
+      ],
+      [
+        259,
+        259
+      ],
+      [
+        283,
+        283
+      ],
+      [
+        296,
+        296
+      ],
+      [
+        311,
+        311
+      ],
+      [
+        334,
+        334
+      ],
+      [
+        357,
+        357
+      ],
+      [
+        385,
+        385
+      ],
+      [
+        406,
+        406
+      ],
+      [
+        420,
+        420
+      ],
+      [
+        434,
+        434
+      ],
+      [
+        451,
+        451
+      ],
+      [
+        452,
+        452
+      ],
+      [
+        454,
+        454
+      ],
+      [
+        460,
+        460
+      ],
+      [
+        462,
+        462
+      ],
+      [
+        468,
+        468
+      ],
+      [
+        470,
+        470
+      ],
+      [
+        472,
+        472
+      ],
+      [
+        476,
+        476
+      ],
+      [
+        478,
+        478
+      ],
+      [
+        480,
+        480
+      ],
+      [
+        481,
+        481
+      ],
+      [
+        482,
+        482
+      ],
+      [
+        484,
+        484
+      ],
+      [
+        486,
+        486
+      ],
+      [
+        488,
+        488
+      ],
+      [
+        489,
+        489
+      ],
+      [
+        492,
+        492
+      ],
+      [
+        510,
+        510
+      ],
+      [
+        516,
+        516
+      ],
+      [
+        546,
+        546
+      ]
+    ],
+    "totalLines": 551,
+    "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+    "pattern": "test\\(|it\\(|describe\\(|TTL|dedup|expired|cleanup|sent|draft"
+  },
+  {
+    "path": "packages/server/src/attachment-service.test.ts",
+    "atUTC": "2026-10-17T21:13:00.036448+00:00",
+    "mode": "test-declaration",
+    "ranges": [
+      [
+        54,
+        100
+      ],
+      [
+        434,
+        490
+      ]
+    ],
+    "totalLines": 551,
+    "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca"
+  },
+  {
+    "path": "packages/desktop/src/main/index.ts",
+    "atUTC": "2026-10-17T21:13:00.102262+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        3194,
+        3194
+      ],
+      [
+        5034,
+        5034
+      ],
+      [
+        5079,
+        5079
+      ],
+      [
+        5093,
+        5093
+      ],
+      [
+        5096,
+        5096
+      ],
+      [
+        5098,
+        5098
+      ],
+      [
+        5101,
+        5101
+      ],
+      [
+        5105,
+        5105
+      ]
+    ],
+    "totalLines": 7330,
+    "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+    "pattern": "function knownAttachmentCwds|function runClaimBoundAttachmentOperation|attachments:stageImageDataUrl"
+  },
+  {
+    "path": "packages/desktop/src/main/index.ts",
+    "atUTC": "2026-10-17T21:13:00.179394+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        5077,
+        5128
+      ]
+    ],
+    "totalLines": 7330,
+    "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0"
+  },
+  {
+    "path": "packages/desktop/src/renderer/app/useRunController.ts",
+    "atUTC": "2026-10-17T21:13:00.228855+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        355,
+        369
+      ]
+    ],
+    "totalLines": 1247,
+    "sha256": "ebed7655a5d099ce71446b7c53655817f66ac0344f82e07aae120375b64e6c60"
+  },
+  {
+    "path": "packages/desktop/src/main/index.ts",
+    "atUTC": "2026-10-17T21:13:04.137902+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        3194,
+        3217
+      ],
+      [
+        5034,
+        5076
+      ]
+    ],
+    "totalLines": 7330,
+    "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0"
+  },
+  {
+    "path": "packages/desktop/src/renderer/ChatView.tsx",
+    "atUTC": "2026-10-17T21:13:04.220145+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        1150,
+        1168
+      ]
+    ],
+    "totalLines": 2622,
+    "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+  },
+  {
+    "path": "packages/desktop/src/renderer/chat/attachments.ts",
+    "atUTC": "2026-10-17T21:13:04.303761+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        98,
+        98
+      ],
+      [
+        104,
+        104
+      ],
+      [
+        136,
+        136
+      ],
+      [
+        180,
+        180
+      ],
+      [
+        185,
+        185
+      ]
+    ],
+    "totalLines": 391,
+    "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+    "pattern": "seen|existing|duplicate|name.*size|const key|accepted.push"
+  },
+  {
+    "path": "packages/desktop/src/renderer/ChatView.tsx",
+    "atUTC": "2026-10-17T21:13:09.216673+00:00",
+    "mode": "navigation-only",
+    "ranges": [
+      [
+        280,
+        280
+      ],
+      [
+        1188,
+        1188
+      ],
+      [
+        2498,
+        2498
+      ],
+      [
+        2499,
+        2499
+      ]
+    ],
+    "totalLines": 2622,
+    "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+    "pattern": "runAttachments =|toRunAttachments\\("
+  },
+  {
+    "path": "packages/desktop/src/renderer/ChatView.tsx",
+    "atUTC": "2026-10-17T21:13:09.297641+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        1168,
+        1185
+      ]
+    ],
+    "totalLines": 2622,
+    "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+  },
+  {
+    "path": "packages/desktop/src/renderer/chat/attachments.ts",
+    "atUTC": "2026-10-17T21:13:09.383855+00:00",
+    "mode": "selected",
+    "ranges": [
+      [
+        91,
+        145
+      ]
+    ],
+    "totalLines": 391,
+    "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621"
+  }
+]

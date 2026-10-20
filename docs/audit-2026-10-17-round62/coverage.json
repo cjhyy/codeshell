@@ -1,0 +1,25 @@
+{
+  "baseline": "d195788bc2c18cd85c81aea4a431ab29074df5cf",
+  "mainHead": "11dae24c23ea04bbb24644d6a2761c17c54b9249",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 60,
+  "activeSourceChecks": 31,
+  "incidentalSourceChecks": 19,
+  "hashOnlyChecks": 25,
+  "unboundNavigationReferences": 0,
+  "missingDeclaredByteCounts": 0,
+  "receiptChecks": 525,
+  "verbatimCopies": 265,
+  "frozenWhitespaceArtifacts": 7,
+  "datedCoverageReference": "Conservative through61 on original4643 same-SHA paths:360full/363selected/3920unknown,4283 not full.62 current source reviews not unioned; no exact remaining audit/bug count. Same-filter inventory separately checked; old57 evidence-only TS outside denominator.",
+  "historicalFormalRecords": 119,
+  "priorities": {
+    "P2": 46,
+    "P3": 73
+  },
+  "changedFromFrozenSourcePaths": [],
+  "productRuns": 0,
+  "goalStillActive": true
+}

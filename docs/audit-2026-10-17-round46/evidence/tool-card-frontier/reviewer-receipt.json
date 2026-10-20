@@ -1,0 +1,110 @@
+{
+  "frozenUTC": "2026-10-17T15:24:30.550933+00:00",
+  "directory": "/tmp/codeshell-audit-round54-tool-card",
+  "files": [
+    {
+      "path": "cause-history-method.py",
+      "bytes": 2464,
+      "sha256": "1255dc7271736eb094acd032e8b6179904a86064a9ee97b2c5941f427264ac32"
+    },
+    {
+      "path": "cause-history.json",
+      "bytes": 50312,
+      "sha256": "a3be0da7838c9acf006e68c30a433b9be72662fd529d2166036519a45587a410"
+    },
+    {
+      "path": "chain-pins.json",
+      "bytes": 2143,
+      "sha256": "7bcdaf403d300c44f42c1a08272e6d628579c50a502f74a769d2032ad7f730ab"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 2126,
+      "sha256": "ae3c264e8ab41be09ae9d4ad14965b5c4ccbd5ff70548232fe570d1f027338d3"
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 6088,
+      "sha256": "d5eb9d7a8fe25b2bb64fb838a8ec53fe4526cdd2fe7f8739d7e41aa7e4e6d499"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 4513,
+      "sha256": "92d0477ebfbe9d8c94ecaf3606d9bc64e0c2856784fa918c3617697d039368dc"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 29310,
+      "sha256": "a3a9d1eed286c9088a901aa70fe7eb54c8eb6f9ece9ff76692b8d42c2e9a06ed"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3805,
+      "sha256": "626fb12c5f58625cdd9de527618ae39b39ef496378414806fb776f3209e9a1de"
+    },
+    {
+      "path": "history.json",
+      "bytes": 814092,
+      "sha256": "457e397415ba87b59164ee55bc3dc1b45bb0e0f1e957069369c17ba697bd4649"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 820,
+      "sha256": "2e948b570c41d4e3a8595fba27f2c306874428bc69b8a55eb3c1e344929d15e4"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 1439,
+      "sha256": "3c461899b123721ac13a76adc6e3939b48c45c8d09a09dd4ba21622021abe033"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3790,
+      "sha256": "3d0daec5e28ce332734ec137c0cdd5e21ba07cf4acd2cbff6efc3638c4a58760"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 26229,
+      "sha256": "7ee6003d40991b187b7af5102842a72b667c8a5ba3dca0ea8a5f552fea440b74"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 11058,
+      "sha256": "ff0b5099c6f49c86c7885fb37f3a24a3990ffc69276b15233bcf9ea075980709"
+    }
+  ],
+  "selfExcluded": "reviewer-receipt.json",
+  "fileCountExcludingSelf": 14,
+  "totalFilesIncludingSelf": 15,
+  "reportLinks": {
+    "count": 14,
+    "missing": []
+  },
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "source": {
+    "semanticRows": 8,
+    "hashOnlyRows": 1,
+    "full": 2,
+    "selected": 6,
+    "semanticProductLines": 383,
+    "displayedProductLines": 567,
+    "all9PinsEndingSame": true
+  },
+  "history": {
+    "initialFiles": 4088,
+    "endingFiles": 4088,
+    "added": 0,
+    "removed": 0,
+    "changed": 1,
+    "changedPath": "docs/todo/release-real-operations-2026-10-16.md",
+    "originalSnapshotPreserved": true
+  },
+  "productExecutions": 0,
+  "testExecutions": 0,
+  "gitOperations": 0,
+  "limits": "Finite ordinary DTO display source audit, no whole behavior/history correctness or unique repository coverage claim."
+}

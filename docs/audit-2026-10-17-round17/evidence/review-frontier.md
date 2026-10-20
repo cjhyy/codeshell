@@ -1,0 +1,11 @@
+# Root independent read-only review: ingress
+
+Accept **CHAT-R17-01 / P3**, with the finding limited to the actual configuration generator rejecting a documented ordinary endpoint. Root read the report, fixture, first raw/exit, findings and actual ingress.ts, selected CLI213–231 and Chat README364–370. No product, URL constructor or test was rerun during review.
+
+The source requires an allowed loopback hostname and nonempty parsed port. The first characterization demonstrates URL normalization removing explicit HTTP port80, causing all three supported loopback spellings to throw in both configuration formats. The same three hosts at8080 succeed in both formats. Default8787, ordinary public-host normalization, configured paths and body limit controls also succeed.22 expectations across3 focused tests, guard Completed and exit0 reconcile with the receipt.
+
+The documented loopback host:port input and static CLI pass-through establish an ordinary input contract. The final worker also pins the static config.ts port range1–65,535; root read its webhook.port/readPort ranges and confirmed80 is not excluded, without importing config or loading any file. The concrete observed impact is refusal to produce the requested configuration; no real listener, deployment, proxy process, account, authentication, authorization or network experiment is necessary or claimed. Runtime Caddy/Nginx syntax and proxy operation are outside the evidence. The renderer function is the only imported product module and has no runtime imports.
+
+Historical checks include all prior Markdown/parsed JSON plus a focused default-port mechanism search; bounded matches were manually examined, not represented as semantic exhaustion. Existing channel behavior and old delivery/attachment/Host/Link issues are exclusions, not repeated findings or restored failed dynamics. Source/output truncation during selection is explicitly disclosed, so inventory views do not become full-package coverage claims.
+
+Read-only verification passed for15 frozen/current source pins and13 artifact bytes/SHA. The report assembly SyntaxWarning is separately transcribed as metadata-only, with fixture/raw/exit unchanged. No correction to the finding, extra runtime, product edit or expanded severity is requested. Root integration will perform the final index/staged/primary checks.

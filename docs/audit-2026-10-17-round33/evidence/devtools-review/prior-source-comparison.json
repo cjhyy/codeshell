@@ -1,0 +1,61 @@
+{
+  "checks": [
+    {
+      "path": "CODESHELL.md",
+      "oldR10FrozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "independentCurrentReadStartSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    },
+    {
+      "path": "packages/browser-devtools/README.md",
+      "oldR10FrozenSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "independentCurrentReadStartSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "oldR10FrozenSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "independentCurrentReadStartSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "oldR10FrozenSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "independentCurrentReadStartSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "oldR10FrozenSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "independentCurrentReadStartSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "oldR10FrozenSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "independentCurrentReadStartSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "oldR10FrozenSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "independentCurrentReadStartSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "oldR10FrozenSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "independentCurrentReadStartSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    }
+  ],
+  "note": "Historical full claim for package comes from direct R10 report/coverageLimit, not invented ranges in old manifest."
+}

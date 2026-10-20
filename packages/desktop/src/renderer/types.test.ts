@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
+import { parseUnifiedDiff } from "./diff/parseUnifiedDiff";
 import {
   INITIAL_STATE,
   applyStreamEvent,
@@ -1075,7 +1076,11 @@ describe("applyStreamEvent — turn_complete files_changed + turnEpoch", () => {
     const cards = s.messages.filter((m) => m.kind === "files_changed");
     expect(cards.length).toBe(1);
     if (cards[0].kind === "files_changed") {
-      expect(cards[0].files).toEqual([{ path: "a.ts", added: 2, removed: 2, count: 2 }]);
+      expect(cards[0].files).toEqual([{ path: "a.ts", added: 1, removed: 1, count: 2 }]);
+      expect(cards[0].sessionDiffs).toHaveLength(1);
+      expect(cards[0].sessionDiffs?.[0]?.diff).toContain("-x");
+      expect(cards[0].sessionDiffs?.[0]?.diff).toContain("+z");
+      expect(cards[0].sessionDiffs?.[0]?.diff).not.toContain("+y");
     }
   });
 });
@@ -1274,7 +1279,7 @@ describe("applyStreamEvent — goal_progress markers", () => {
 });
 
 describe("applyStreamEvent — background_agent_completed", () => {
-  test("DriveAgent changedFiles join the current turn and dedupe against in-session edits", () => {
+  test("DriveAgent changedFiles stay separate from relative tools with unknown caller cwd", () => {
     const messages: Message[] = [
       { kind: "user", id: "u1", text: "edit the feature" },
       {
@@ -1308,8 +1313,9 @@ describe("applyStreamEvent — background_agent_completed", () => {
     expect(cards).toHaveLength(1);
     if (cards[0]?.kind === "files_changed") {
       expect(cards[0].files).toEqual([
-        { path: "src/a.ts", added: 1, removed: 1, count: 2 },
-        { path: "src/b.ts", added: 0, removed: 0, count: 1 },
+        { path: "src/a.ts", added: 1, removed: 1, count: 1 },
+        { path: "/repo/src/a.ts", added: 0, removed: 0, count: 1 },
+        { path: "/repo/src/b.ts", added: 0, removed: 0, count: 1 },
       ]);
     }
   });
@@ -1359,7 +1365,7 @@ describe("applyStreamEvent — background_agent_completed", () => {
     expect(cards[0]!.index).toBeLessThan(user2Index);
     expect(cards[0]!.message).toMatchObject({
       kind: "files_changed",
-      files: [{ path: "old.ts", added: 0, removed: 0, count: 1 }],
+      files: [{ path: "/repo/old.ts", added: 0, removed: 0, count: 1 }],
     });
   });
 
@@ -1399,9 +1405,9 @@ describe("applyStreamEvent — background_agent_completed", () => {
     expect(cards[0]!.message).toMatchObject({
       kind: "files_changed",
       files: [
-        { path: "one.ts", added: 0, removed: 0, count: 1 },
-        { path: "shared.ts", added: 0, removed: 0, count: 2 },
-        { path: "two.ts", added: 0, removed: 0, count: 1 },
+        { path: "/repo/one.ts", added: 0, removed: 0, count: 1 },
+        { path: "/repo/shared.ts", added: 0, removed: 0, count: 2 },
+        { path: "/repo/two.ts", added: 0, removed: 0, count: 1 },
       ],
     });
   });
@@ -1769,4 +1775,309 @@ test("subagent fallback revokes only its unexecuted nested tool card", () => {
   expect(s.messages).toHaveLength(1);
   expect(s.messages[0]).toMatchObject({ kind: "agent", toolCalls: [], toolCount: 0 });
   expect(s.agentMessageIndex.child).toBe(0);
+});
+
+describe("subagent request text revocation", () => {
+  test("revokes failed partial text while preserving previous completed child output", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("text_delta", { text: "parent stays" } as any),
+      startAgent("A"),
+      ev("text_delta", { agentId: "A", text: "legacy prefix\n" } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "completed" } as any),
+      ev("text_delta", { agentId: "A", text: "completed step\n" } as any),
+      ev("assistant_message", {
+        agentId: "A",
+        messageId: "completed",
+        message: { role: "assistant", content: "completed step\n" },
+      } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 2, messageId: "failed" } as any),
+      ev("text_delta", { agentId: "A", text: "revoked partial" } as any),
+      ev("tombstone", { agentId: "A", messageId: "failed" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("legacy prefix\ncompleted step\n");
+    expect(findAgent(s, "A").done).toBe(false);
+    expect(findMainAssistant(s).text).toBe("parent stays");
+  });
+
+  test("shows only the replacement before agent_end, then keeps authoritative terminal text", () => {
+    let s = dispatch(INITIAL_STATE, [
+      startAgent("A"),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "same-request" } as any),
+      ev("text_delta", { agentId: "A", text: "failed partial" } as any),
+      ev("tombstone", { agentId: "A", messageId: "same-request" } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "same-request" } as any),
+      ev("text_delta", { agentId: "A", text: "replacement" } as any),
+      ev("assistant_message", {
+        agentId: "A",
+        messageId: "same-request",
+        message: { role: "assistant", content: "replacement" },
+      } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("replacement");
+    s = applyStreamEvent(s, ev("agent_end", { agentId: "A", text: "canonical final" } as any));
+    s = applyStreamEvent(s, ev("tombstone", { agentId: "A", messageId: "same-request" } as any));
+    expect(findAgent(s, "A")).toMatchObject({
+      text: "canonical final",
+      textBuffer: "",
+      done: true,
+    });
+  });
+
+  test("revokes only the current request after a background parent's buffer flush", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("agent_backgrounded", { agentId: "A" } as any),
+      ev("text_delta", { agentId: "A", text: "completed prefix\n" } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 2, messageId: "failed" } as any),
+      ev("text_delta", { agentId: "A", text: "revoked partial" } as any),
+      ev("turn_complete", { reason: "completed" } as any),
+      ev("tombstone", { agentId: "A", messageId: "failed" } as any),
+    ]);
+    expect(findAgent(s, "A")).toMatchObject({
+      text: "completed prefix\n",
+      textBuffer: "",
+      done: false,
+      backgrounded: true,
+    });
+  });
+
+  test("keeps siblings and successful tools while revoking text and unexecuted tools separately", () => {
+    let s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("text_delta", { text: "parent" } as any),
+      startAgent("A"),
+      startAgent("B"),
+      ev("text_delta", { agentId: "B", text: "sibling" } as any),
+      ev("tool_use_start", {
+        agentId: "A",
+        toolCall: { id: "completed-tool", toolName: "Read", args: {} },
+      } as any),
+      ev("tool_result", {
+        agentId: "A",
+        result: { id: "completed-tool", toolName: "Read", result: "kept" },
+      } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 2, messageId: "failed" } as any),
+      ev("text_delta", { agentId: "A", text: "partial" } as any),
+      ev("tool_use_start", {
+        agentId: "A",
+        toolCall: { id: "partial-tool", toolName: "Read", args: {} },
+      } as any),
+      ev("tombstone", { agentId: "A", messageId: "partial-tool" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("partial");
+    expect(findAgent(s, "A").toolCalls.map((tool) => tool.id)).toEqual(["completed-tool"]);
+    s = applyStreamEvent(s, ev("tombstone", { agentId: "A", messageId: "failed" } as any));
+    expect(findAgent(s, "A").textBuffer).toBe("");
+    expect(findAgent(s, "A").toolCalls.map((tool) => tool.id)).toEqual(["completed-tool"]);
+    expect(findAgent(s, "B").textBuffer).toBe("sibling");
+    expect(findMainAssistant(s).text).toBe("parent");
+  });
+
+  test("unknown or older request tombstones and no-id legacy starts do not discard text", () => {
+    let s = dispatch(INITIAL_STATE, [
+      startAgent("A"),
+      ev("stream_request_start", { agentId: "A", turnNumber: 2, messageId: "current" } as any),
+      ev("text_delta", { agentId: "A", text: "current text" } as any),
+      ev("tombstone", { agentId: "A", messageId: "older" } as any),
+      ev("tombstone", { agentId: "unknown", messageId: "current" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("current text");
+    s = dispatch(s, [
+      ev("stream_request_start", { agentId: "A", turnNumber: 3 } as any),
+      ev("text_delta", { agentId: "A", text: " legacy" } as any),
+      ev("tombstone", { agentId: "A", messageId: "current" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("current text legacy");
+  });
+
+  test("a repeated start for the same request does not move the revocation frontier", () => {
+    const s = dispatch(INITIAL_STATE, [
+      startAgent("A"),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "request" } as any),
+      ev("text_delta", { agentId: "A", text: "first partial" } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "request" } as any),
+      ev("text_delta", { agentId: "A", text: " second partial" } as any),
+      ev("tombstone", { agentId: "A", messageId: "request" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("");
+  });
+
+  test("a correlated child start preserves main pointers, feed and sibling object identity", () => {
+    const before = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("text_delta", { text: "parent" } as any),
+      ev("thinking_delta", { text: "parent reasoning" } as any),
+      startAgent("A"),
+      startAgent("B"),
+      ev("text_delta", { agentId: "B", text: "sibling" } as any),
+    ]);
+    const after = applyStreamEvent(
+      before,
+      ev("stream_request_start", {
+        agentId: "A",
+        turnNumber: 1,
+        messageId: "child-request",
+      } as any),
+    );
+    expect(after.streamingAssistantId).toBe(before.streamingAssistantId);
+    expect(after.streamingThinkingId).toBe(before.streamingThinkingId);
+    expect(findMainAssistant(after)).toBe(findMainAssistant(before));
+    expect(findAgent(after, "B")).toBe(findAgent(before, "B"));
+    expect(after.activeAgents).toBe(before.activeAgents);
+    expect(after.messages).toHaveLength(before.messages.length);
+    expect(findAgent(after, "A").textBuffer).toBe(findAgent(before, "A").textBuffer);
+  });
+});
+
+describe("applyStreamEvent — interleaved file writers", () => {
+  test("retains a later child Write when the agent card precedes the parent tool", () => {
+    let state = appendUserMessage(INITIAL_STATE, "update shared file", 1);
+    let clock = 10;
+    const events: StreamEvent[] = [
+      startAgent("writer-child"),
+      ev("tool_use_start", {
+        toolCall: {
+          id: "parent-write",
+          toolName: "Write",
+          args: { file_path: "shared.ts", content: "parent" },
+        },
+      } as any),
+      ev("tool_result", {
+        result: { id: "parent-write", toolName: "Write", result: "ok" },
+      } as any),
+      ev("tool_use_start", {
+        agentId: "writer-child",
+        toolCall: {
+          id: "child-write",
+          toolName: "Write",
+          args: { file_path: "shared.ts", content: "child" },
+        },
+      } as any),
+      ev("tool_result", {
+        agentId: "writer-child",
+        result: { id: "child-write", toolName: "Write", result: "ok" },
+      } as any),
+      turnComplete,
+    ];
+    for (const event of events) state = applyStreamEvent(state, event, () => clock++);
+
+    const childIndex = state.messages.findIndex((message) => message.kind === "agent");
+    const parentIndex = state.messages.findIndex(
+      (message) => message.kind === "tool" && message.id === "parent-write",
+    );
+    expect(childIndex).toBeLessThan(parentIndex);
+    expect(findAgent(state, "writer-child").toolCalls[0]?.status).toBe("succeeded");
+    const card = state.messages.find((message) => message.kind === "files_changed");
+    expect(card?.kind).toBe("files_changed");
+    if (card?.kind !== "files_changed") throw new Error("missing changed-files card");
+    expect(card.files).toHaveLength(1);
+    expect(card.files[0]?.count).toBe(2);
+    const snapshot = card.sessionDiffs?.map((file) => file.diff).join("\n") ?? "";
+    expect(snapshot).toContain("+child");
+    expect(snapshot).toContain("+parent");
+  });
+
+  const writeEvents = (id: string, content: string, agentId?: string): StreamEvent[] => [
+    ev("tool_use_start", {
+      agentId,
+      toolCall: { id, toolName: "Write", args: { file_path: "shared.ts", content } },
+    } as any),
+    ev("tool_result", { agentId, result: { id, toolName: "Write", result: "ok" } } as any),
+  ];
+
+  function summaryFor(events: StreamEvent[], now: () => number | undefined = () => undefined) {
+    let state = appendUserMessage(INITIAL_STATE, "update shared file", 1);
+    for (const event of [...events, turnComplete]) state = applyStreamEvent(state, event, now);
+    const card = state.messages.find((message) => message.kind === "files_changed");
+    if (card?.kind !== "files_changed") throw new Error("missing changed-files card");
+    return card;
+  }
+
+  test("retains both writers with reversed events and equal or missing timestamps", () => {
+    for (const childFirst of [false, true]) {
+      for (const stamp of [100, undefined]) {
+        const parent = writeEvents("parent-write", "parent");
+        const child = writeEvents("child-write", "child", "writer-child");
+        const card = summaryFor(
+          [
+            startAgent("writer-child"),
+            ...(childFirst ? [...child, ...parent] : [...parent, ...child]),
+          ],
+          () => stamp,
+        );
+        expect(card.files).toEqual([{ path: "shared.ts", added: 2, removed: 0, count: 2 }]);
+        expect(card.sessionDiffs).toHaveLength(1);
+        const files = parseUnifiedDiff(card.sessionDiffs![0]!.diff);
+        expect(files).toHaveLength(1);
+        expect(files[0]?.hunks).toHaveLength(2);
+        expect(files[0]?.hunks.flatMap((hunk) => hunk.lines.map((line) => line.text))).toEqual([
+          "child",
+          "parent",
+        ]);
+      }
+    }
+  });
+
+  test("keeps both agents' successful writes instead of treating card order as execution order", () => {
+    const card = summaryFor([
+      startAgent("agent-a"),
+      startAgent("agent-b"),
+      ...writeEvents("b-write", "earlier-b", "agent-b"),
+      ...writeEvents("a-write", "later-a", "agent-a"),
+    ]);
+    expect(card.sessionDiffs).toHaveLength(1);
+    const diff = card.sessionDiffs![0]!.diff;
+    expect(diff).toContain("+earlier-b");
+    expect(diff).toContain("+later-a");
+    expect(parseUnifiedDiff(diff)[0]?.hunks).toHaveLength(2);
+  });
+
+  test("does not cancel opposite edits from different writers without an established total order", () => {
+    const edit = (
+      id: string,
+      oldText: string,
+      newText: string,
+      agentId?: string,
+    ): StreamEvent[] => [
+      ev("tool_use_start", {
+        agentId,
+        toolCall: {
+          id,
+          toolName: "Edit",
+          args: { file_path: "shared.ts", old_string: oldText, new_string: newText },
+        },
+      } as any),
+      ev("tool_result", { agentId, result: { id, toolName: "Edit", result: "ok" } } as any),
+    ];
+    const card = summaryFor([
+      startAgent("writer-child"),
+      ...edit("parent-edit", "a", "b"),
+      ...edit("child-edit", "b", "a", "writer-child"),
+    ]);
+    expect(card.files).toEqual([{ path: "shared.ts", added: 2, removed: 2, count: 2 }]);
+    const diff = card.sessionDiffs![0]!.diff;
+    for (const line of ["-a", "+b", "-b", "+a"]) expect(diff).toContain(line);
+    expect(parseUnifiedDiff(diff)[0]?.hunks).toHaveLength(2);
+  });
+
+  test("still composes one agent's sequential writes and ignores an unsuccessful other writer", () => {
+    const card = summaryFor([
+      startAgent("writer-child"),
+      ...writeEvents("child-first", "intermediate", "writer-child"),
+      ...writeEvents("parent-failed", "failed-parent").map((event) =>
+        event.type === "tool_result"
+          ? ({ ...event, result: { ...event.result, error: "write failed" } } as StreamEvent)
+          : event,
+      ),
+      ...writeEvents("child-second", "final", "writer-child"),
+    ]);
+    expect(card.files).toEqual([{ path: "shared.ts", added: 1, removed: 0, count: 2 }]);
+    const diff = card.sessionDiffs![0]!.diff;
+    expect(diff).toContain("+final");
+    expect(diff).not.toContain("intermediate");
+    expect(diff).not.toContain("failed-parent");
+    expect(parseUnifiedDiff(diff)[0]?.hunks).toHaveLength(1);
+  });
 });

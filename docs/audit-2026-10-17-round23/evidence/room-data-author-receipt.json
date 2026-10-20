@@ -1,0 +1,133 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "report": "docs/audit-2026-10-17-round23/room-data-report.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-assemble.py",
+      "bytes": 7961,
+      "sha256": "25f69330390d1d4aa42d0ac2bffc654d5739d613b7d1ee718d222215c968386c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-callers-navigation.json",
+      "bytes": 9338,
+      "sha256": "1036b21f0ae0dcab44105c8feab6f9bb48f1f36427f881acbb7dfe1372d4c341"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup-decisions.json",
+      "bytes": 2291,
+      "sha256": "4bcb5a53e31f3788a04b765f75be370299a293aac7f3e79e04e5dd4deec0306f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup-first.exit.json",
+      "bytes": 284,
+      "sha256": "e33cd694b69c0938bc4b185a89c5f700d2b987aacd78bc4b521d30128a0012ff"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup-first.txt",
+      "bytes": 1378,
+      "sha256": "c89d801cb699cec82e862ab763f2d6880636c29861cb97c5d04dc5e1c203abb3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup-navigation.json",
+      "bytes": 144446,
+      "sha256": "7b9ad6d49579d972637ab9f83796971eacc093c75653d7d28925b5b2418f671c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "bytes": 654432,
+      "sha256": "0c29a340a6ffe129ebee9c99deb6b00c73b70122e440fd07af57acc9b75cd248"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.py",
+      "bytes": 3303,
+      "sha256": "91caf0ecdff1c8657eec5afdd1dad3b0b03688436632512cfca6b8b541a596e1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-first.exit.json",
+      "bytes": 615,
+      "sha256": "df609741819dd4dfb61e318913368a5bab38b2d7b4a7e20eb10de96d94784a80"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-first.raw.log",
+      "bytes": 1024,
+      "sha256": "ef82f0429bdd43e631ccc958dd6b57e138e61d90317be663bcb5ba8e96c1fc0b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-metadata-notes.json",
+      "bytes": 867,
+      "sha256": "559c9ddc0d2d10f52d5a44de18435cf0ef432bb1f1f8116a26aa7298b964db7f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-mobile-history.test.ts",
+      "bytes": 3491,
+      "sha256": "761b60e00e5688ed60c8ca25b2097c5a0eb1599e5ee13497732784ff90ff17d3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-navigation.json",
+      "bytes": 3569,
+      "sha256": "e5b5bd68aa65a2a3a63f33fdb90d7b1a32d0a7934a8a571ac3fcb348ee54aace"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-preflight.json",
+      "bytes": 988,
+      "sha256": "0c8ea983edf729c55e02a224944f8374c2e748fdd2601d32394f4d2a8b9e2431"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-run-first.py",
+      "bytes": 1128,
+      "sha256": "02e0a402979e5cc88b16051d6e6206de13d051652b5354eae02021829b35607c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-source-checks.json",
+      "bytes": 2457,
+      "sha256": "49bc5d0726634af5f01661ec7f36dda3d1a5d86b917966e652f211ef9440fe28"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+      "bytes": 4134,
+      "sha256": "27902497dc9dcf82db3500c77d63e84b371c9161ef7af9ed028de4b100915a41"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-transcript-navigation.json",
+      "bytes": 1854,
+      "sha256": "e983f74bc5992d6f7832964f10aad3bbecd229451af16dd512e1b4dc03406854"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-validation.json",
+      "bytes": 2911,
+      "sha256": "89fe80ff48fa16718ea683980aa5d6c554b63e2560098a3966ec53740d0dc631"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/room-data-report.md",
+      "bytes": 5934,
+      "sha256": "05ff94ee53aa9560d142a01aa2efba2bf05d41fb86396afb046f8adfe7f404e2"
+    }
+  ],
+  "sourceChecks": 7,
+  "rawLogs": [
+    "docs/audit-2026-10-17-round23/evidence/room-data-first.raw.log"
+  ],
+  "guardedRuns": 1,
+  "productReruns": 0,
+  "productChanges": false,
+  "gitWrites": false,
+  "receiptExcludesItself": true
+}

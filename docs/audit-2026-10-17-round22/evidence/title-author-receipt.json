@@ -1,0 +1,84 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "worker": "session_title_round22",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round22/title-report.md",
+      "bytes": 4527,
+      "sha256": "781d87b52602f82d429a30b42d3f957aff5d1d37ec82e77d41ff7262bf9434a6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-candidates.json",
+      "bytes": 206,
+      "sha256": "5cf13e02b5eed0495c95245975b3e98b9e7d33b5db97e58998f29a7faa0bf8db"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-dedup-decisions.json",
+      "bytes": 2820,
+      "sha256": "66de5e3db06bddcaada6cfa13f0ace5f15271c9ddc78a20b201bd5b4b9462045"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+      "bytes": 594332,
+      "sha256": "cbc6c1a608ce230c7aaf847bf75c0f979041b20ab11426aa0e008c8ba48498fd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.py",
+      "bytes": 2851,
+      "sha256": "df48d25697ef4b2e5ab737e4492bd129a7b0b79286b59bbab24688ee54257800"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-findings.json",
+      "bytes": 204,
+      "sha256": "fbeac17f1d892217201fe098787f22b5b60a055fa3255676ae29a83025d607d0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-preflight.json",
+      "bytes": 999,
+      "sha256": "44ea13617f1e2c383e2d48862ed2d5efdfb3aba419827aa47125e77ecd16de45"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-related.json",
+      "bytes": 203,
+      "sha256": "f2732772cb098551c01fb05a1d3a42fa809c39dc8eb6ad15706a38be4005ccc6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-session-leaf.exit.json",
+      "bytes": 579,
+      "sha256": "95d68841898def2c981eeef54e41c5bb77b9f4daa8fdd3c600effb3417022fac"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-session-leaf.raw.log",
+      "bytes": 1816,
+      "sha256": "bf460abb7c6763bfe68091dd2c555116c1ed32658a430ccb340c7c29b9b76557"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-session-leaf.test.ts",
+      "bytes": 5529,
+      "sha256": "daf65659c08321992a335e2507318534943d0ac3e2ca6b95eab59cd3cee1a3bb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-source-manifest.json",
+      "bytes": 8023,
+      "sha256": "38c2c7e69747906ccd77eece9cb1fca7e0d3ae17e9226195361c734ae6d12cc7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-validation.json",
+      "bytes": 1703,
+      "sha256": "2a3f59735842975e38e948aa0a5cf1ae18553de2d94b349d355d5656dc0c50ba"
+    }
+  ],
+  "sourceManifest": "docs/audit-2026-10-17-round22/evidence/title-source-manifest.json",
+  "checks": {
+    "artifactHashCount": 13,
+    "markdownLinks": 20,
+    "markdownLinkErrors": [],
+    "rawHashMatches": true,
+    "firstRunExitCode": 0,
+    "tests": 12,
+    "expect": 34,
+    "noProductEdits": true,
+    "noGitWrites": true
+  },
+  "scope": "Only title-report.md and evidence/title-* owned files written. Git commands read-only source byte checks; no product, old test, Git metadata, primary checkout or other audit files modified. Self excluded from artifact hashes."
+}

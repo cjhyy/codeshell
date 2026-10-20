@@ -1,0 +1,80 @@
+{
+  "expectedCount": 15,
+  "checks": [
+    {
+      "path": "evidence/tool-card-frontier/report.md",
+      "bytes": 3790,
+      "sha256": "3d0daec5e28ce332734ec137c0cdd5e21ba07cf4acd2cbff6efc3638c4a58760"
+    },
+    {
+      "path": "evidence/tool-card-frontier/source-manifest.json",
+      "bytes": 11058,
+      "sha256": "ff0b5099c6f49c86c7885fb37f3a24a3990ffc69276b15233bcf9ea075980709"
+    },
+    {
+      "path": "evidence/tool-card-frontier/reviewer-receipt.json",
+      "bytes": 3160,
+      "sha256": "2ad80b7fa72b4cdccbe10ebf2b1fe8ecd88b7cfa745837b0470ad0b3807eeb44"
+    },
+    {
+      "path": "evidence/tool-card-review/review.md",
+      "bytes": 4201,
+      "sha256": "7b84e6f0db51b01c4287cf643fc1eb8c2e5a39fa97d0e2a60ef4446148ed4be6"
+    },
+    {
+      "path": "evidence/tool-card-review/source-manifest.json",
+      "bytes": 11908,
+      "sha256": "7eb17ef7982cf394a04be7af46421e593ce38185adbb6350c16bc800cd6442e5"
+    },
+    {
+      "path": "evidence/tool-card-review/reviewer-receipt.json",
+      "bytes": 3563,
+      "sha256": "2a99a90a5a70474b4ae262c3f5b1baf7be46e7b0ec2ed9151f96e15a5462b3dc"
+    },
+    {
+      "path": "evidence/panel-frontier/report.md",
+      "bytes": 5827,
+      "sha256": "996f46854b5fbd6787063a38348f4e51d47787d64ad3db3bca865b64c8d89bd2"
+    },
+    {
+      "path": "evidence/panel-frontier/source-manifest.json",
+      "bytes": 10921,
+      "sha256": "91e9bff80b73ff631d843b71dec2042f1b5d4a64077f3ca6a8c6317f4a4d1c9b"
+    },
+    {
+      "path": "evidence/panel-frontier/artifact-receipt.json",
+      "bytes": 4206,
+      "sha256": "55797b37d3737ec49c16990c157a389cec649a0c7abad87070993f254131bce3"
+    },
+    {
+      "path": "evidence/panel-review/report.md",
+      "bytes": 2473,
+      "sha256": "aff80e660a83477d4ff5120135bd5cf403a15ff0a0d82dc8c31a26de4c084830"
+    },
+    {
+      "path": "evidence/panel-review/source-manifest.json",
+      "bytes": 3143,
+      "sha256": "2c6c6ba34dfa2e58519b9da3b8f2e1bf10320c760d65a79ab5df8325d58b67aa"
+    },
+    {
+      "path": "evidence/panel-review/artifact-receipt.json",
+      "bytes": 2939,
+      "sha256": "8f972352f195ab6b9fce2b29756373ab0748fbda9b40eecdcb5d5c75030523a3"
+    },
+    {
+      "path": "evidence/prior-scope-gate/report.md",
+      "bytes": 2548,
+      "sha256": "ed36f7d2e0caadbcde4041232f89255774b4ee262d625c309505651f09029c7b"
+    },
+    {
+      "path": "evidence/prior-scope-gate/source-manifest.json",
+      "bytes": 4420,
+      "sha256": "2cd1a8e2e0cd46765588158ce9ecf267fbb0f052856fee74f6563fb49dbbff50"
+    },
+    {
+      "path": "evidence/prior-scope-gate/reviewer-receipt.json",
+      "bytes": 2741,
+      "sha256": "9a32f6d841f3ed1899eb095a04cefc1645269b8328308e0695c306b247f2524c"
+    }
+  ]
+}

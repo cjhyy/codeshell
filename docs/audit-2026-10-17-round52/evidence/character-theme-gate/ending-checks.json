@@ -1,0 +1,45 @@
+{
+  "checkedUTC": "2026-10-17T17:33:36.921570+00:00",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:33:35.204201+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:33:35.205059+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+      "bytes": 5792,
+      "sha256": "000d7d4a2e5db231cc9fb4a99c732b344baa2a14266af97326fb9464544bda80",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:33:35.205453+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "bytes": 7737,
+      "sha256": "700fe7ffcc4e80a60b645cd74f84159fb8c733b52dc66caede4c41e607c2387d",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:33:35.206011+00:00"
+    }
+  ],
+  "allSourcesUnchanged": true,
+  "history": {
+    "initialCount": 5017,
+    "endingIncludedCount": 5017,
+    "sameIncludedPathSet": true,
+    "changed": [],
+    "missing": [],
+    "addedIncludedPaths": [],
+    "removedIncludedPaths": [],
+    "excludedAudit52PlusPaths": [],
+    "initialInventoryPreserved": true
+  }
+}

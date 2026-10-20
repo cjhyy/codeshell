@@ -1,0 +1,26 @@
+{
+  "files": [
+    {
+      "path": "packages/tui/src/render/screen.ts",
+      "bytes": 49323,
+      "lineCount": 1486,
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "pinBeforeSelectedSemanticRead": true
+    },
+    {
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "bytes": 7445,
+      "lineCount": 198,
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "pinBeforeSelectedSemanticRead": true
+    },
+    {
+      "path": "packages/tui/src/render/ink.tsx",
+      "bytes": 89185,
+      "lineCount": 1968,
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "pinBeforeSelectedSemanticRead": true
+    }
+  ],
+  "productExecution": false
+}

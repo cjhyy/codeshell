@@ -1,0 +1,73 @@
+{
+  "frozenUTC": "2026-10-17T15:01:54.253527+00:00",
+  "directory": "/tmp/codeshell-audit-round50-source-review",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 3905,
+      "sha256": "7fbd5fc084ad36208654e13a815e2d76d71214e51cbfc8db9a91f5fbf7bfbe0b"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1975,
+      "sha256": "feaacdf940ad0f321f1e57793ba5d30dfe7faa3cea9dcd574e5f792ee31d4e34"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1201,
+      "sha256": "ddb8d98be7b530f969cf101e49133fe889f0dbd33b88ab7a936d6f38ef2ce4a9"
+    },
+    {
+      "path": "patch-pins.json",
+      "bytes": 398,
+      "sha256": "32620da37e49ae5d1720cd62a990d667c0270bc323ea2d1804fbb083a85b3ca8"
+    },
+    {
+      "path": "producer-pins.json",
+      "bytes": 988,
+      "sha256": "4a171ae95a2446087723d767d4f34c58592f8012c2c18ab4ae254835bac7e3c6"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3266,
+      "sha256": "2a3776d504fd37f3235f48a4d7b844b8d2153b59f9e34594aa363bf80518d40c"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 30932,
+      "sha256": "391f16fe260d4cdfafea1961e878ae2d99c3a9b7632cdd6d2663d54ae15272ea"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 13696,
+      "sha256": "10a7c3510c9a80efd2e4cf83725106ca62af7545023304bc72b1fe2833845179"
+    },
+    {
+      "path": "stages.json",
+      "bytes": 2983,
+      "sha256": "670fec60139570694ee1fdb700ad1c207bf97322bf453ede32e8b8ae3b537643"
+    }
+  ],
+  "selfExcluded": "reviewer-receipt.json",
+  "fileCountExcludingSelf": 9,
+  "totalFilesIncludingSelf": 10,
+  "reportLinks": {
+    "count": 9,
+    "missing": []
+  },
+  "sourceFiles": 10,
+  "sourceEndingAllMatch": true,
+  "coverage": {
+    "full": 1,
+    "selected": 9,
+    "semanticProductLines": 350,
+    "displayedProductLines": 671
+  },
+  "conclusion": "For each existing R37/R38/R39 original condition: source-addressed at Root-reported07e / runtime not revalidated. No original classification changed, no new ID.",
+  "newFormal": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "ownProductExecution": 0,
+  "ownGit": 0,
+  "role": "Prior metadata/history aggregate reviewer, not original source author or fix implementer; not blind review."
+}

@@ -1,0 +1,239 @@
+packages/core/src/settings/hook-provenance.ts
+   1: /**
+   2:  * Host-only custody for opt-in executable Hook origins. These values contain
+   3:  * file identity, not Settings contents or a review's permission callback.
+   4:  */
+   5: import { createHash } from "node:crypto";
+   6: import {
+   7:   closeSync,
+   8:   constants,
+   9:   fstatSync,
+  10:   lstatSync,
+  11:   openSync,
+  12:   readSync,
+  13:   realpathSync,
+  14:   type BigIntStats,
+  15: } from "node:fs";
+  16: import { dirname, resolve } from "node:path";
+  17: 
+  18: const MAX_SETTINGS_FILE_BYTES = 4 * 1024 * 1024;
+  19: 
+  20: export interface SettingsHookFileIdentity {
+  21:   readonly dev: string;
+  22:   readonly ino: string;
+  23:   readonly mode: string;
+  24:   readonly size: string;
+  25:   readonly mtimeNs: string;
+  26:   readonly ctimeNs: string;
+  27:   readonly nlink: string;
+  28: }
+  29: 
+  30: export interface SettingsHookParentIdentity {
+  31:   readonly path: string;
+  32:   readonly dev: string;
+  33:   readonly ino: string;
+  34:   readonly mode: string;
+  35: }
+  36: 
+  37: export interface SettingsHookSourceSnapshot {
+  38:   readonly path: string;
+  39:   readonly rawSha256: string;
+  40:   readonly custody: {
+  41:     readonly jsonPath: string;
+  42:     readonly file: SettingsHookFileIdentity;
+  43:     readonly parents: readonly SettingsHookParentIdentity[];
+  44:     readonly precedingCandidates: readonly string[];
+  45:   };
+  46: }
+  47: 
+  48: export interface SettingsHookOrigin extends SettingsHookSourceSnapshot {
+  49:   readonly kind: "settings";
+  50:   readonly layer: "managed" | "user" | "project" | "local";
+  51:   readonly sourceLayerIndex: number;
+  52:   readonly definitionSha256: string;
+  53: }
+  54: 
+  55: function identity(info: BigIntStats): SettingsHookFileIdentity {
+  56:   return Object.freeze({
+  57:     dev: String(info.dev),
+  58:     ino: String(info.ino),
+  59:     mode: String(info.mode),
+  60:     size: String(info.size),
+  61:     mtimeNs: String(info.mtimeNs),
+  62:     ctimeNs: String(info.ctimeNs),
+  63:     nlink: String(info.nlink),
+  64:   });
+  65: }
+  66: 
+  67: function equal(a: unknown, b: unknown): boolean {
+  68:   return JSON.stringify(a) === JSON.stringify(b);
+  69: }
+  70: 
+  71: function parents(path: string): readonly SettingsHookParentIdentity[] {
+  72:   const paths: string[] = [];
+  73:   for (let current = dirname(path); ; current = dirname(current)) {
+  74:     paths.unshift(current);
+  75:     if (dirname(current) === current) break;
+  76:   }
+  77:   return Object.freeze(
+  78:     paths.map((path) => {
+  79:       const info = lstatSync(path, { bigint: true });
+  80:       if (!info.isDirectory() || info.isSymbolicLink()) {
+  81:         throw new Error("Settings Hook origin traversal is unsafe");
+  82:       }
+  83:       return Object.freeze({
+  84:         path,
+  85:         dev: String(info.dev),
+  86:         ino: String(info.ino),
+  87:         mode: String(info.mode),
+  88:       });
+  89:     }),
+  90:   );
+  91: }
+  92: 
+  93: function absent(path: string): boolean {
+  94:   try {
+  95:     lstatSync(path, { bigint: true });
+  96:     return false;
+  97:   } catch (error) {
+  98:     if ((error as NodeJS.ErrnoException).code === "ENOENT") return true;
+  99:     throw error;
+ 100:   }
+ 101: }
+ 102: 
+ 103: function assertRegular(info: BigIntStats): void {
+ 104:   if (
+ 105:     !info.isFile() ||
+ 106:     info.isSymbolicLink() ||
+ 107:     info.nlink !== 1n ||
+ 108:     info.size < 0n ||
+ 109:     info.size > BigInt(MAX_SETTINGS_FILE_BYTES)
+ 110:   ) {
+ 111:     throw new Error("Settings Hook origin is not a bounded single-link regular file");
+ 112:   }
+ 113: }
+ 114: 
+ 115: /**
+ 116:  * Hash and fatal UTF-8 decode the same bounded descriptor Buffer. Ancestor
+ 117:  * checks are metadata custody checks, not an atomic directory-fd walk or an
+ 118:  * assertion that transient hostile ancestor ABA changes are impossible.
+ 119:  */
+ 120: export function readSettingsHookSnapshot(jsonPath: string): {
+ 121:   readonly content: string;
+ 122:   readonly source: SettingsHookSourceSnapshot;
+ 123: } {
+ 124:   const canonicalJsonPath = resolve(jsonPath);
+ 125:   const parentPins = parents(canonicalJsonPath);
+ 126:   const base = canonicalJsonPath.replace(/\.json$/, "");
+ 127:   const precedingCandidates: string[] = [];
+ 128:   let selected: string | undefined;
+ 129:   for (const candidate of [canonicalJsonPath, `${base}.yaml`, `${base}.yml`]) {
+ 130:     if (absent(candidate)) precedingCandidates.push(candidate);
+ 131:     else {
+ 132:       selected = candidate;
+ 133:       break;
+ 134:     }
+ 135:   }
+ 136:   if (!selected) throw new Error("Settings Hook origin is absent");
+ 137:   const path = selected;
+ 138:   const opening = lstatSync(path, { bigint: true });
+ 139:   assertRegular(opening);
+ 140:   if (realpathSync(path) !== path) throw new Error("Settings Hook origin is not canonical");
+ 141:   let fd: number | undefined;
+ 142:   try {
+ 143:     fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+ 144:     const descriptor = fstatSync(fd, { bigint: true });
+ 145:     assertRegular(descriptor);
+ 146:     const file = identity(opening);
+ 147:     if (!equal(file, identity(descriptor))) throw new Error("Settings Hook origin changed at open");
+ 148:     // One extra byte proves growth beyond the opening length while retaining
+ 149:     // the global hard bound; tiny settings do not allocate 4 MiB per recheck.
+ 150:     const buffer = Buffer.allocUnsafe(Number(opening.size) + 1);
+ 151:     let length = 0;
+ 152:     while (length < buffer.length) {
+ 153:       const count = readSync(fd, buffer, length, buffer.length - length, null);
+ 154:       if (count === 0) break;
+ 155:       length += count;
+ 156:     }
+ 157:     const finalDescriptor = fstatSync(fd, { bigint: true });
+ 158:     const finalPath = lstatSync(path, { bigint: true });
+ 159:     assertRegular(finalDescriptor);
+ 160:     assertRegular(finalPath);
+ 161:     if (
+ 162:       length > MAX_SETTINGS_FILE_BYTES ||
+ 163:       BigInt(length) !== opening.size ||
+ 164:       !equal(file, identity(finalDescriptor)) ||
+ 165:       !equal(file, identity(finalPath)) ||
+ 166:       !equal(parentPins, parents(path)) ||
+ 167:       precedingCandidates.some((candidate) => !absent(candidate)) ||
+ 168:       realpathSync(path) !== path
+ 169:     ) {
+ 170:       throw new Error("Settings Hook origin changed during capture");
+ 171:     }
+ 172:     const bytes = buffer.subarray(0, length);
+ 173:     const rawSha256 = createHash("sha256").update(bytes).digest("hex");
+ 174:     // Do not label a replacement-decoded UTF-8 string as the raw byte hash.
+ 175:     // Preserve U+FEFF exactly as readFileSync(..., "utf8"): JSON.parse must
+ 176:     // continue rejecting BOM-prefixed JSON; YAML keeps its existing parser.
+ 177:     const content = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+ 178:     const source: SettingsHookSourceSnapshot = Object.freeze({
+ 179:       path,
+ 180:       rawSha256,
+ 181:       custody: Object.freeze({
+ 182:         jsonPath: canonicalJsonPath,
+ 183:         file,
+ 184:         parents: parentPins,
+ 185:         precedingCandidates: Object.freeze(precedingCandidates),
+ 186:       }),
+ 187:     });
+ 188:     return Object.freeze({ content, source });
+ 189:   } finally {
+ 190:     if (fd !== undefined) closeSync(fd);
+ 191:   }
+ 192: }
+ 193: 
+ 194: /** No manager, owner, grant, AbortSignal or resource resolver is retained. */
+ 195: export function assertSettingsHookOriginCurrent(origin: SettingsHookOrigin): void {
+ 196:   const current = readSettingsHookSnapshot(origin.custody.jsonPath).source;
+ 197:   if (
+ 198:     current.path !== origin.path ||
+ 199:     current.rawSha256 !== origin.rawSha256 ||
+ 200:     !equal(current.custody, origin.custody)
+ 201:   ) {
+ 202:     throw new Error("Settings Hook origin custody changed");
+ 203:   }
+ 204: }
+ 205: 
+ 206: /**
+ 207:  * A previously byte-verified immutable source keeps its full file identity.
+ 208:  * Recheck all custody facts without rehashing the same Settings for every
+ 209:  * mapped resource. Current-review policy loads still read/hash fresh RAW bytes.
+ 210:  */
+ 211: export function assertSettingsHookOriginMetadataCurrent(origin: SettingsHookOrigin): void {
+ 212:   const current = lstatSync(origin.path, { bigint: true });
+ 213:   assertRegular(current);
+ 214:   if (
+ 215:     !equal(identity(current), origin.custody.file) ||
+ 216:     !equal(parents(origin.path), origin.custody.parents) ||
+ 217:     origin.custody.precedingCandidates.some((candidate) => !absent(candidate)) ||
+ 218:     realpathSync(origin.path) !== origin.path
+ 219:   )
+ 220:     throw new Error("Settings Hook origin custody changed");
+ 221: }
+ 222: 
+ 223: /** Stable digest of a validated Hook definition, independent of JSON key order. */
+ 224: export function settingsHookDefinitionSha256(hook: unknown): string {
+ 225:   function ordered(value: unknown): unknown {
+ 226:     if (Array.isArray(value)) return value.map(ordered);
+ 227:     if (!value || typeof value !== "object") return value;
+ 228:     return Object.fromEntries(
+ 229:       Object.entries(value as Record<string, unknown>)
+ 230:         .filter(([, child]) => child !== undefined)
+ 231:         .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+ 232:         .map(([key, child]) => [key, ordered(child)]),
+ 233:     );
+ 234:   }
+ 235:   return createHash("sha256")
+ 236:     .update(JSON.stringify(ordered(hook)))
+ 237:     .digest("hex");
+ 238: }

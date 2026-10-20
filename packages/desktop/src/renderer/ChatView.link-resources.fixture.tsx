@@ -7,7 +7,7 @@ import type {
   MaskedLinkConnection,
 } from "@cjhyy/code-shell-link";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
-import type { Message } from "./types";
+import type { Message, ToolMessage, ToolStatus } from "./types";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 
 // Keep the actual controller and dialog; only Radix portals are replaced for the mini DOM.
@@ -36,6 +36,16 @@ function descendants(node: any): any[] {
 function props(node: any): Record<string, any> {
   const key = Object.keys(node).find((name) => name.startsWith("__reactProps$"));
   return key ? node[key] : {};
+}
+/** Closed Radix menus live outside the mini-DOM; inspect the owning selector contract. */
+function selectProps(node: any): Record<string, any> {
+  const key = Object.keys(node).find((name) => name.startsWith("__reactFiber$"));
+  let fiber = key ? node[key] : undefined;
+  while (fiber) {
+    if (fiber.type?.name === "SimpleSelect") return fiber.memoizedProps;
+    fiber = fiber.return;
+  }
+  throw new Error("Expected a rendered SimpleSelect");
 }
 function childText(value: any): string {
   if (typeof value === "string" || typeof value === "number") return String(value);
@@ -68,6 +78,15 @@ function connection(id = "one", files: string[] = []): MaskedLinkConnection {
     editable: true,
   };
 }
+function mcpConnection(id = "mcp-one"): MaskedLinkConnection {
+  return {
+    ...connection(id),
+    methodId: "mcp",
+    runtime: "local",
+    authSource: "mcp-oauth",
+    capabilityIds: ["figma.get_design_context", "figma.get_screenshot"],
+  };
+}
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => {
@@ -93,6 +112,7 @@ async function fixture(
     queued?: boolean;
     delayedStart?: Promise<unknown>;
     preparedBucket?: string;
+    mcp?: boolean;
   } = {},
 ) {
   ensureMiniDom();
@@ -120,6 +140,17 @@ async function fixture(
         tokenPlaceholder: "",
         actions: [],
         authModes: [
+          ...(options.mcp
+            ? [
+                {
+                  id: "mcp-oauth",
+                  methodId: "mcp",
+                  kind: "redirect" as const,
+                  label: "MCP",
+                  available: true,
+                },
+              ]
+            : []),
           {
             id: "remote-link",
             methodId: "remote-link",
@@ -135,11 +166,14 @@ async function fixture(
     revision: "snapshot-one",
   };
   const starts: LinkConnectionInput[] = [];
+  const startModes: string[] = [];
   const cancellations: string[] = [];
   const reads: Array<{ text: string; bucket: string; clientMessageId: string }> = [];
   const submissions: Array<{ text: string; opts: Record<string, any> }> = [];
   let prepareCalls = 0;
   let snapshotCalls = 0;
+  let liveMessages: Message[] = options.history ?? [];
+  let toolSequence = 0;
   let nextSnapshot: (() => Promise<LinkSnapshot>) | undefined;
   let startConnected = false;
   Object.defineProperty(window, "codeshell", {
@@ -155,19 +189,31 @@ async function fixture(
           snapshotCalls++;
           return nextSnapshot ? nextSnapshot() : currentSnapshot;
         },
-        authorizationStart: async (_cwd: string, id: string, input: LinkConnectionInput) => {
+        authorizationStart: async (
+          _cwd: string,
+          id: string,
+          input: LinkConnectionInput,
+          mode: string,
+        ) => {
           starts.push(input);
+          startModes.push(mode);
           if (options.delayedStart) return options.delayedStart;
           if (startConnected) {
-            const saved = connection(
-              input.connectionId ?? "created",
-              input.resourceUrl ? ["FileOne"] : [],
-            );
-            currentSnapshot = { ...currentSnapshot, connections: [saved] };
+            const saved =
+              input.methodId === "mcp"
+                ? mcpConnection(input.connectionId ?? "mcp-created")
+                : connection(input.connectionId ?? "created", input.resourceUrl ? ["FileOne"] : []);
+            currentSnapshot = {
+              ...currentSnapshot,
+              connections: [
+                ...currentSnapshot.connections.filter((item) => item.id !== saved.id),
+                saved,
+              ],
+            };
             return {
               id,
               providerId: "figma",
-              methodId: "remote-link",
+              methodId: input.methodId,
               state: "connected",
               connection: saved,
             };
@@ -175,7 +221,7 @@ async function fixture(
           return {
             id,
             providerId: "figma",
-            methodId: "remote-link",
+            methodId: input.methodId,
             state: "pending",
             step: {
               id: "redirect",
@@ -206,6 +252,7 @@ async function fixture(
     });
     const [draft, setDraft] = React.useState("");
     update = setState;
+    liveMessages = state.messages;
     const submit = (text: string, opts: Record<string, any> = {}) => {
       submissions.push({ text, opts });
       liveBucket = opts.bucket ?? state.bucket;
@@ -314,9 +361,11 @@ async function fixture(
   return {
     container,
     starts,
+    startModes,
     cancellations,
     reads,
     submissions,
+    messages: () => liveMessages,
     send,
     click,
     type,
@@ -340,8 +389,99 @@ async function fixture(
       });
     },
     setBusy: async (busy: boolean) => {
+      if (!busy) synchronousBusy.delete(liveBucket);
       await act(async () => {
         update((state) => ({ ...state, busy }));
+        await flushMicrotasks();
+      });
+    },
+    requireMcp: async (params: Record<string, unknown>, action = "get_design_context") => {
+      toolSequence++;
+      const tool: ToolMessage = {
+        kind: "tool",
+        id: `mcp-auth-${toolSequence}`,
+        toolName: "LinkAction",
+        args: JSON.stringify({ provider: "figma", action, params }),
+        status: "succeeded",
+        startedAt: toolSequence,
+        result: JSON.stringify({
+          kind: "authorization_required",
+          provider: "figma",
+          backend: "mcp",
+          action,
+          resourceUrl: params.file_url_or_key ?? params.file_key,
+        }),
+      };
+      await act(async () => {
+        update((state) => ({ ...state, messages: [...state.messages, tool] }));
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+    },
+    fileReadResult: async (
+      resourceId = "FileOne",
+      options: {
+        failed?: boolean;
+        status?: ToolStatus;
+        action?: string;
+        agentId?: string;
+        params?: Record<string, unknown>;
+        backend?: "mcp";
+      } = {},
+    ) => {
+      const action = options.action ?? "get_file";
+      toolSequence += 1;
+      const message: ToolMessage = {
+        kind: "tool",
+        id: options.agentId
+          ? `link-${options.agentId}-${resourceId}-${action}`
+          : `link-result-${toolSequence}`,
+        toolName: "LinkAction",
+        args: JSON.stringify({
+          provider: "figma",
+          action,
+          params: options.params ?? { file_url_or_key: resourceId },
+        }),
+        status: options.status ?? "succeeded",
+        startedAt: toolSequence,
+        result: JSON.stringify(
+          options.failed
+            ? { kind: "error", provider: "figma", action, error: "File read failed" }
+            : {
+                kind: "action_result",
+                provider: "figma",
+                action,
+                ...(options.backend ? { backend: options.backend } : {}),
+                data: { name: resourceId },
+              },
+        ),
+      };
+      const entry: Message = options.agentId
+        ? {
+            kind: "agent",
+            id: options.agentId,
+            description: "Read the Figma file",
+            done: message.status !== "queued" && message.status !== "running",
+            backgrounded: true,
+            startedAt: toolSequence,
+            toolCalls: [message],
+            toolCount: 1,
+            textBuffer: "",
+          }
+        : message;
+      await act(async () => {
+        update((state) => {
+          const existingAgent = options.agentId
+            ? state.messages.findIndex(
+                (item) => item.kind === "agent" && item.id === options.agentId,
+              )
+            : -1;
+          if (existingAgent === -1) return { ...state, messages: [...state.messages, entry] };
+          return {
+            ...state,
+            messages: state.messages.map((item, index) => (index === existingAgent ? entry : item)),
+          };
+        });
         await flushMicrotasks();
       });
     },
@@ -409,26 +549,273 @@ describe("chat file authorization", () => {
     expect(f.reads).toHaveLength(0);
   });
 
-  test("completion never sends a model turn; one explicit read uses the selected connection once", async () => {
+  test("file consent resumes once with shallow structure and removes the completed card", async () => {
     const f = await fixture();
     f.completeImmediately();
     await f.send();
     await f.click("授权此文件");
-    expect(f.reads).toHaveLength(0);
-    const read = button(f.container, "读取文件");
-    expect(read).toBeDefined();
-    await act(async () => {
-      props(read).onClick();
-      props(read).onClick();
-      await flushMicrotasks();
-    });
     expect(f.reads).toHaveLength(1);
     expect(f.reads[0]!.bucket).toBe("project::session-one");
     expect(f.reads[0]!.text).toContain('"connectionId":"one"');
     expect(f.reads[0]!.text).toContain(
       '"file_url_or_key":"https://www.figma.com/design/FileOne/Design?node-id=0-1"',
     );
+    expect(f.reads[0]!.text).toContain('"depth":2');
+    expect(f.reads[0]!.text).toContain("页面和顶层结构");
+    expect(f.reads[0]!.text).toContain("node-id 时仅查看该节点");
+    expect(f.reads[0]!.text).toContain("根据任务需要用 get_nodes");
+    expect(f.reads[0]!.text).toContain("仅在原任务确有需要时用 full:true");
+    expect(f.reads[0]!.text).not.toContain('"full":true');
+    expect(f.reads[0]!.text).not.toContain("摘要");
     expect(f.starts).toHaveLength(1);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+    const history = f.messages();
+    await f.navigate("project::session-two");
+    f.setSnapshot({ ...f.snapshot(), connections: [connection()] });
+    await f.navigate("project::session-one", history);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+  });
+
+  test("an already granted link stays in the original request without a duplicate model turn", async () => {
+    const f = await fixture({ connections: [connection("one", ["FileOne"])] });
+    await f.send();
+    expect(f.submissions).toHaveLength(1);
+    expect(f.submissions[0]!.text).toBe(
+      "读取 https://www.figma.com/design/FileOne/Design?node-id=0-1",
+    );
+    expect(f.reads).toHaveLength(0);
+    expect(f.starts).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+    await f.fileReadResult();
+    const history = f.messages();
+    await f.navigate("project::session-two");
+    f.setSnapshot({ ...f.snapshot(), connections: [connection()] });
+    await f.navigate("project::session-one", history);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+    expect(f.reads).toHaveLength(0);
+  });
+
+  test("a failed original read can be retried and its accepted retry removes the notice", async () => {
+    const f = await fixture({ connections: [connection("one", ["FileOne"])] });
+    await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
+    expect(button(f.container, "读取文件")).toBeDefined();
+    f.changeLiveCwd("/tmp/changed");
+    await f.click("读取文件");
+    expect(f.reads).toHaveLength(0);
+    expect(button(f.container, "读取文件")).toBeDefined();
+    f.changeLiveCwd("/tmp/project");
+    await f.click("读取文件");
+    expect(f.reads).toHaveLength(1);
+    expect(f.starts).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+  });
+
+  test("dismissing a notice only clears its UI provenance and never revokes a grant", async () => {
+    const saved = connection("one", ["FileOne"]);
+    const f = await fixture({ connections: [saved] });
+    await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
+    const dismiss = descendants(f.container).find(
+      (node) => node.tagName === "BUTTON" && props(node)["aria-label"] === "关闭文件提示",
+    );
+    expect(dismiss).toBeDefined();
+    await act(async () => {
+      props(dismiss).onClick();
+      await flushMicrotasks();
+    });
+    expect(f.snapshot().connections).toEqual([saved]);
+    expect(f.starts).toHaveLength(0);
+    expect(f.cancellations).toHaveLength(0);
+    expect(f.reads).toHaveLength(0);
+    const history = f.messages();
+    await f.navigate("project::session-two");
+    f.setSnapshot({ ...f.snapshot(), connections: [connection()] });
+    await f.navigate("project::session-one", history);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+    await f.send();
+    expect(button(f.container, "授权此文件")).toBeDefined();
+  });
+
+  test("first connection authorizes the composer file in one dialog and resumes it", async () => {
+    const f = await fixture({ connections: [] });
+    f.completeImmediately();
+    await f.send();
+    expect(f.starts).toHaveLength(0);
+    await f.click("连接 Figma");
+    expect(f.starts).toHaveLength(1);
+    expect(f.starts[0]!.connectionId).toBeUndefined();
+    expect(f.starts[0]!.expectedRevision).toBeNull();
+    expect(f.starts[0]!.resourceUrl).toBe(
+      "https://www.figma.com/design/FileOne/Design?node-id=0-1",
+    );
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain('"connectionId":"created"');
+  });
+
+  test.each([false, true])(
+    "completed consent waits for the original turn and avoids a duplicate when it read the file: %s",
+    async (originalRead) => {
+      const gate = deferred<unknown>();
+      const f = await fixture({ delayedStart: gate.promise });
+      await f.send();
+      await f.click("授权此文件");
+      await f.setBusy(true);
+      const granted = connection("one", ["FileOne"]);
+      f.setSnapshot({ ...f.snapshot(), connections: [granted] });
+      await act(async () => {
+        gate.resolve({
+          id: "completed",
+          providerId: "figma",
+          methodId: "remote-link",
+          state: "connected",
+          connection: granted,
+        });
+        await flushMicrotasks();
+      });
+      expect(f.reads).toHaveLength(0);
+      if (originalRead) await f.fileReadResult();
+      await f.setBusy(false);
+      expect(f.reads).toHaveLength(originalRead ? 0 : 1);
+      expect(f.starts).toHaveLength(1);
+      expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+        false,
+      );
+    },
+  );
+
+  test("a subagent read completing before the consent callback prevents a duplicate follow-up", async () => {
+    const gate = deferred<unknown>();
+    const f = await fixture({ delayedStart: gate.promise });
+    await f.send();
+    await f.click("授权此文件");
+    await f.setBusy(true);
+    const granted = connection("one", ["FileOne"]);
+    f.setSnapshot({ ...f.snapshot(), connections: [granted] });
+    await f.fileReadResult("FileOne", { agentId: "delegated-reader" });
+    await act(async () => {
+      gate.resolve({
+        id: "completed",
+        providerId: "figma",
+        state: "connected",
+        connection: granted,
+      });
+      await flushMicrotasks();
+    });
+    await f.setBusy(false);
+    expect(f.reads).toHaveLength(0);
+    expect(f.starts).toHaveLength(1);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+  });
+
+  test.each(["succeeded", "failed", "cancelled"] as const)(
+    "a background file read blocks an idle owner's consent resume until its result is %s",
+    async (status) => {
+      const gate = deferred<unknown>();
+      const f = await fixture({ delayedStart: gate.promise });
+      await f.send();
+      await f.click("授权此文件");
+      const granted = connection("one", ["FileOne"]);
+      f.setSnapshot({ ...f.snapshot(), connections: [granted] });
+      await f.fileReadResult("FileOne", { agentId: "background-reader", status: "running" });
+      await act(async () => {
+        gate.resolve({
+          id: "completed",
+          providerId: "figma",
+          state: "connected",
+          connection: granted,
+        });
+        await flushMicrotasks();
+      });
+      expect(f.reads).toHaveLength(0);
+      const retry = button(f.container, "读取文件");
+      expect(retry).toBeDefined();
+      expect(props(retry).disabled).toBe(true);
+      await f.click("读取文件");
+      expect(f.reads).toHaveLength(0);
+      await f.fileReadResult("FileOne", {
+        agentId: "background-reader",
+        status,
+        failed: status !== "succeeded",
+      });
+      expect(f.reads).toHaveLength(status === "succeeded" ? 0 : 1);
+      expect(f.starts).toHaveLength(1);
+      expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+        false,
+      );
+    },
+  );
+
+  test("a background read of another file does not block this file's manual retry", async () => {
+    const f = await fixture({ connections: [connection("one", ["FileOne", "FileTwo"])] });
+    await f.send("https://figma.com/design/FileOne/One https://figma.com/design/FileTwo/Two");
+    await f.fileReadResult("FileOne", { agentId: "background-reader", status: "queued" });
+    await f.fileReadResult("FileTwo", { failed: true });
+    expect(props(button(f.container, "读取文件")).disabled).toBe(false);
+    await f.click("读取文件");
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain("https://figma.com/design/FileTwo/Two");
+    expect(f.starts).toHaveLength(0);
+  });
+
+  test("a connection revision changing while consent waits leaves a retry instead of auto-reading", async () => {
+    const gate = deferred<unknown>();
+    const f = await fixture({ delayedStart: gate.promise });
+    await f.send();
+    await f.click("授权此文件");
+    await f.setBusy(true);
+    const granted = connection("one", ["FileOne"]);
+    f.setSnapshot({ ...f.snapshot(), connections: [granted] });
+    await act(async () => {
+      gate.resolve({
+        id: "completed",
+        providerId: "figma",
+        state: "connected",
+        connection: granted,
+      });
+      await flushMicrotasks();
+    });
+    f.setSnapshot({ ...f.snapshot(), connections: [{ ...granted, revision: "changed-again" }] });
+    await f.setBusy(false);
+    expect(f.reads).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node).role === "alert")).toBe(true);
+    await f.click("读取文件");
+    expect(f.reads).toHaveLength(1);
+    expect(f.starts).toHaveLength(1);
+  });
+
+  test("an authorization returning a different account cannot silently resume the read", async () => {
+    const gate = deferred<unknown>();
+    const f = await fixture({ delayedStart: gate.promise });
+    await f.send();
+    await f.click("授权此文件");
+    const different = connection("other", ["FileOne"]);
+    f.setSnapshot({ ...f.snapshot(), connections: [different] });
+    await act(async () => {
+      gate.resolve({
+        id: "completed",
+        providerId: "figma",
+        state: "connected",
+        connection: different,
+      });
+      await flushMicrotasks();
+    });
+    expect(f.reads).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node).role === "alert")).toBe(true);
   });
 
   test("draft preparation uses the live project bucket instead of the rendered project", async () => {
@@ -443,12 +830,18 @@ describe("chat file authorization", () => {
   test("already authorized files read directly without reauthorization and require account selection", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne"]), connection("two")] });
     await f.send();
-    const select = descendants(f.container).find((node) => node.tagName === "SELECT");
+    const select = descendants(f.container).find(
+      (node) => props(node).role === "combobox" && props(node)["aria-label"] === "使用账号",
+    );
     expect(select).toBeDefined();
-    expect(childText(props(select).children)).toContain("Design one · user-one");
+    expect(selectProps(select).options.map((option: { label: string }) => option.label)).toEqual([
+      "选择 Figma 连接",
+      "Design one · user-one",
+      "Design two · user-two",
+    ]);
     expect(props(button(f.container, "连接 Figma")).disabled).toBe(true);
     await act(async () => {
-      props(select).onChange({ target: { value: "one" } });
+      selectProps(select).onChange("one");
       await flushMicrotasks();
     });
     await f.click("读取文件");
@@ -475,7 +868,9 @@ describe("chat file authorization", () => {
     await f.click("连接 Figma");
     expect(f.starts).toHaveLength(1);
     expect(f.starts[0]!.connectionId).toBeUndefined();
-    expect(f.starts[0]!.resourceUrl).toBeUndefined();
+    expect(f.starts[0]!.resourceUrl).toBe(
+      "https://www.figma.com/design/FileOne/Design?node-id=0-1",
+    );
   });
 
   test("queued local human input still has provenance when echoed as injected steering", async () => {
@@ -505,6 +900,8 @@ describe("chat file authorization", () => {
   test("two file read clicks in one frame share the owner's synchronous busy guard", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne", "FileTwo"])] });
     await f.send("https://figma.com/design/FileOne/One https://figma.com/design/FileTwo/Two");
+    await f.fileReadResult("FileOne", { failed: true });
+    await f.fileReadResult("FileTwo", { failed: true });
     const buttons = descendants(f.container).filter(
       (node) => node.tagName === "BUTTON" && childText(props(node).children) === "读取文件",
     );
@@ -516,11 +913,17 @@ describe("chat file authorization", () => {
     });
     expect(f.reads).toHaveLength(1);
     expect(f.starts).toHaveLength(0);
+    expect(
+      descendants(f.container)
+        .map((node) => props(node)["data-chat-link-resource"])
+        .filter(Boolean),
+    ).toEqual(["FileTwo"]);
   });
 
   test("revocation during a reviewed read never silently starts new authorization", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne"])] });
     await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
     f.setSnapshot({
       ...f.snapshot(),
       connections: [{ ...connection("one", ["FileOne"]), status: "unavailable" }],
@@ -536,6 +939,7 @@ describe("chat file authorization", () => {
     async (kind) => {
       const f = await fixture({ connections: [connection("one", ["FileOne"])] });
       await f.send();
+      await f.fileReadResult("FileOne", { failed: true });
       if (kind === "cwd") f.changeLiveCwd("/tmp/different-project");
       else f.disableConfiguration();
       await f.click("读取文件");
@@ -547,6 +951,7 @@ describe("chat file authorization", () => {
   test("switching sessions during a fresh check cannot grant or read in the new session", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne"])] });
     await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
     const gate = deferred<LinkSnapshot>();
     f.nextSnapshot(() => gate.promise);
     await f.click("读取文件");
@@ -565,10 +970,34 @@ describe("chat file authorization", () => {
   test("owner live navigation before a React commit refuses a read", async () => {
     const f = await fixture({ connections: [connection("one", ["FileOne"])] });
     await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
     f.changeLiveBucket("project::session-two");
     await f.click("读取文件");
     expect(f.reads).toHaveLength(0);
     expect(f.starts).toHaveLength(0);
+  });
+
+  test("dismissing a card synchronously cancels a read whose snapshot resolves in the same frame", async () => {
+    const f = await fixture({ connections: [connection("one", ["FileOne"])] });
+    await f.send();
+    await f.fileReadResult("FileOne", { failed: true });
+    const gate = deferred<LinkSnapshot>();
+    f.nextSnapshot(() => gate.promise);
+    await f.click("读取文件");
+    const dismiss = descendants(f.container).find(
+      (node) => node.tagName === "BUTTON" && props(node)["aria-label"] === "关闭文件提示",
+    );
+    expect(dismiss).toBeDefined();
+    await act(async () => {
+      props(dismiss).onClick();
+      gate.resolve(f.snapshot());
+      await flushMicrotasks();
+    });
+    expect(f.reads).toHaveLength(0);
+    expect(f.starts).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
   });
 
   test("unmounting an authorization cancels it; a late completed callback cannot resume", async () => {
@@ -589,5 +1018,223 @@ describe("chat file authorization", () => {
     });
     expect(f.cancellations.length).toBeGreaterThan(0);
     expect(f.reads).toHaveLength(0);
+  });
+});
+
+describe("Figma MCP authorization and task resume", () => {
+  const makeUrl = "https://figma.com/make/FileOne/App";
+  const designUrl = "https://www.figma.com/design/FileOne/Design?node-id=0-1";
+  const params = { file_url_or_key: designUrl, node_id: "0:1", clientLanguages: "typescript" };
+
+  test("Make connects only its MCP channel and saves without a fabricated read", async () => {
+    const f = await fixture({ mcp: true, connections: [connection("api", ["FileOne"])] });
+    f.completeImmediately();
+    await f.send(`查看 ${makeUrl}`);
+    expect(f.starts).toHaveLength(0);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeDefined();
+    await f.click("连接 Figma 设计上下文");
+    expect(f.starts).toHaveLength(1);
+    expect(f.startModes).toEqual(["mcp-oauth"]);
+    expect(f.starts[0]).toMatchObject({
+      methodId: "mcp",
+      resourceUrl: makeUrl,
+    });
+    expect(f.reads).toHaveLength(0);
+    expect(f.snapshot().connections.map((item) => item.id)).toEqual(["api", "mcp-created"]);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeUndefined();
+  });
+
+  test("already connected Make and ordinary Design do not add a read or start OAuth", async () => {
+    const f = await fixture({
+      mcp: true,
+      connections: [connection("api", ["FileOne"]), mcpConnection()],
+    });
+    await f.send(`查看 ${makeUrl}`);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeUndefined();
+    await f.send();
+    expect(button(f.container, "授权此文件")).toBeUndefined();
+    expect(f.starts).toHaveLength(0);
+    expect(f.reads).toHaveLength(0);
+  });
+
+  test("API completion retains local provenance for a later real MCP need and resumes once", async () => {
+    const f = await fixture({ mcp: true, connections: [connection("api", ["FileOne"])] });
+    await f.send();
+    await f.fileReadResult();
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeUndefined();
+    await f.requireMcp(params);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeDefined();
+    expect(f.starts).toHaveLength(0);
+    f.completeImmediately();
+    await f.click("连接 Figma 设计上下文");
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain(
+      JSON.stringify({
+        provider: "figma",
+        action: "get_design_context",
+        connectionId: "mcp-created",
+        params,
+      }),
+    );
+    expect(f.reads[0]!.text).not.toContain('"get_file"');
+    expect(f.reads[0]!.text).not.toContain('"full"');
+    const original = f.messages();
+    await f.navigate("project::other");
+    await f.navigate("project::session-one", original);
+    await f.setBusy(false);
+    expect(f.reads).toHaveLength(1);
+    expect(button(f.container, "读取文件")).toBeUndefined();
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeUndefined();
+  });
+
+  test("MCP need with an existing connection requires explicit continue and keeps the saved target", async () => {
+    const f = await fixture({
+      mcp: true,
+      connections: [connection("api", ["FileOne"]), mcpConnection()],
+    });
+    await f.send();
+    await f.requireMcp(params, "get_screenshot");
+    expect(f.reads).toHaveLength(0);
+    await f.click("读取文件");
+    expect(f.starts).toHaveLength(0);
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain('"action":"get_screenshot"');
+    expect(f.reads[0]!.text).toContain('"connectionId":"mcp-one"');
+  });
+
+  test("multiple MCP accounts require an explicit choice and never select an API account", async () => {
+    const f = await fixture({
+      mcp: true,
+      connections: [
+        connection("api", ["FileOne"]),
+        mcpConnection("mcp-one"),
+        mcpConnection("mcp-two"),
+      ],
+    });
+    await f.send();
+    await f.requireMcp(params);
+    const select = descendants(f.container).find(
+      (node) => props(node).role === "combobox" && props(node)["aria-label"] === "使用账号",
+    );
+    expect(selectProps(select).options.map((option: { value: string }) => option.value)).toEqual([
+      "",
+      "mcp-one",
+      "mcp-two",
+    ]);
+    expect(props(button(f.container, "连接 Figma 设计上下文")).disabled).toBe(true);
+    await act(async () => {
+      selectProps(select).onChange("mcp-two");
+      await flushMicrotasks();
+    });
+    await f.click("读取文件");
+    expect(f.starts).toHaveLength(0);
+    expect(f.reads).toHaveLength(1);
+    expect(f.reads[0]!.text).toContain('"connectionId":"mcp-two"');
+  });
+
+  test("a newer blocked action cancels the old dialog and rejects its late resume", async () => {
+    const gate = deferred<unknown>();
+    const f = await fixture({
+      mcp: true,
+      connections: [connection("api", ["FileOne"])],
+      delayedStart: gate.promise,
+    });
+    await f.send();
+    await f.requireMcp(params);
+    await f.click("连接 Figma 设计上下文");
+    await f.requireMcp(params, "get_screenshot");
+    expect(f.cancellations).toHaveLength(1);
+    const saved = mcpConnection("mcp-created");
+    f.setSnapshot({ ...f.snapshot(), connections: [connection("api", ["FileOne"]), saved] });
+    await act(async () => {
+      gate.resolve({
+        id: "completed",
+        providerId: "figma",
+        methodId: "mcp",
+        state: "connected",
+        connection: saved,
+      });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(f.reads).toHaveLength(0);
+    expect(f.starts).toHaveLength(1);
+    expect(button(f.container, "连接 Figma 设计上下文")).toBeDefined();
+  });
+
+  test.each(["succeeded", "failed"] as const)(
+    "background MCP %s resolves a pending OAuth resume without duplicates",
+    async (status) => {
+      const gate = deferred<unknown>();
+      const f = await fixture({
+        mcp: true,
+        connections: [connection("api", ["FileOne"])],
+        delayedStart: gate.promise,
+      });
+      await f.send();
+      await f.requireMcp(params);
+      await f.click("连接 Figma 设计上下文");
+      const saved = mcpConnection("mcp-created");
+      f.setSnapshot({ ...f.snapshot(), connections: [connection("api", ["FileOne"]), saved] });
+      await f.fileReadResult("FileOne", {
+        status: "running",
+        action: "get_design_context",
+        backend: "mcp",
+        agentId: "background-mcp",
+        params,
+      });
+      await act(async () => {
+        gate.resolve({
+          id: "completed",
+          providerId: "figma",
+          methodId: "mcp",
+          state: "connected",
+          connection: saved,
+        });
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      expect(f.reads).toHaveLength(0);
+      expect(props(button(f.container, "读取文件")).disabled).toBe(true);
+      await f.fileReadResult("FileOne", {
+        status,
+        failed: status === "failed",
+        action: "get_design_context",
+        backend: "mcp",
+        agentId: "background-mcp",
+        params,
+      });
+      expect(f.reads).toHaveLength(status === "succeeded" ? 0 : 1);
+      expect(f.starts).toHaveLength(1);
+      expect(button(f.container, "读取文件")).toBeUndefined();
+    },
+  );
+
+  test("dismissed blocked MCP work stays closed after navigation and delayed checks", async () => {
+    const f = await fixture({
+      mcp: true,
+      connections: [connection("api", ["FileOne"]), mcpConnection()],
+    });
+    await f.send();
+    await f.requireMcp(params);
+    const wait = deferred<LinkSnapshot>();
+    f.nextSnapshot(() => wait.promise);
+    const read = button(f.container, "读取文件");
+    const close = descendants(f.container).find(
+      (node) => props(node)["aria-label"] === "关闭文件提示",
+    );
+    await act(async () => {
+      props(read).onClick();
+      props(close).onClick();
+      wait.resolve(f.snapshot());
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(f.reads).toHaveLength(0);
+    f.nextSnapshot(undefined);
+    const original = f.messages();
+    await f.navigate("project::other");
+    await f.navigate("project::session-one", original);
+    expect(button(f.container, "读取文件")).toBeUndefined();
   });
 });

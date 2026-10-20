@@ -1,0 +1,22 @@
+{
+  "base": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "checks": [
+    {
+      "path": "packages/chat/src/ingress.ts",
+      "exists": true,
+      "frozenSha256": "311d22304a4772f464589bc27822cabe9d6ed0af6f137c5b451a6852d5b5f333",
+      "currentSha256": "311d22304a4772f464589bc27822cabe9d6ed0af6f137c5b451a6852d5b5f333",
+      "matchesFrozen": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "exists": true,
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true
+    }
+  ],
+  "productLeaf": "packages/chat/src/ingress.ts",
+  "productRuntimeImports": [],
+  "purpose": "Actual source existence and frozen bytes only. No dependency resolver or node_modules guesses. No product execution."
+}

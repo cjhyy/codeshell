@@ -1,0 +1,24 @@
+{
+  "baselineProvidedByRoot": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "runs": [],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "productFunctionEvaluations": 0,
+  "fixturesWritten": 0,
+  "reactBrowserRuns": 0,
+  "vmAstRuns": 0,
+  "nativeRuns": 0,
+  "networkRequests": 0,
+  "modelCalls": 0,
+  "gitCommands": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "productReruns": 0,
+  "sourceTestsOnly": true,
+  "limitations": [
+    "RoomHistory eight case declarations and mapper/reducer expectations were read only. R14 andR17 old passes are historical, not this author execution.",
+    "No server/journal/follower/transcript/parser/authentication/permission/identity experiment or operator data access.",
+    "R14 user-display, R27 compose and all old failed directions remain skipped; no alternative runtime."
+  ]
+}

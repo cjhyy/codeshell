@@ -1,0 +1,46 @@
+[
+  {
+    "command": [
+      "rg",
+      "-n",
+      "baseConfig|new Engine|model:|opts.model|appendSystemPrompt|continuation|getSessionContinuation|parent",
+      "packages/core/src/engine/subagent-spawner.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "33:  parentLlm: LLMConfig,\n39:  return parentLlm;\n44:  parentDisabled: string[] | undefined,\n45:  parentEnabled: string[] | undefined,\n48:    const parentDenied = new Set(parentDisabled ?? []);\n51:        (tool) => !NESTED_AGENT_TOOLS.includes(tool) && !parentDenied.has(tool),\n53:      disabled: Array.from(new Set([...(parentDisabled ?? []), ...NESTED_AGENT_TOOLS])),\n57:    enabled: parentEnabled?.filter((tool) => !NESTED_AGENT_TOOLS.includes(tool)),\n58:    disabled: Array.from(new Set([...(parentDisabled ?? []), ...NESTED_AGENT_TOOLS])),\n64:  parent: SandboxConfig,\n66:  if (mode === undefined) return parent;\n71:  if (parent.mode === \"seatbelt\" || parent.mode === \"bwrap\") return parent;\n72:  if (parent.mode === \"auto\" && (mode === \"off\" || mode === \"auto\")) return parent;\n73:  return { ...defaultSandboxConfig(mode), ...parent, mode };\n78:  parent: Record<string, MCPServerConfig> | undefined,\n80:  if (allowlist === undefined) return parent;\n82:  return Object.fromEntries(Object.entries(parent ?? {}).filter(([name]) => allowed.has(name)));\n116:  parentConfig: EngineConfig;\n117:  parentSessionId?: string;\n120:  /** Fully resolved sandbox for this parent run, including settings layers. */\n121:  parentSandbox: SandboxConfig;\n130:  getSessionContinuation?: SubAgentSpawner[\"getSessionContinuation\"];\n132:  parentStream?: StreamCallback;\n310:    parentStream: deps.parentStream,\n318:    getSessionContinuation: deps.getSessionContinuation,\n330:        deps.parentConfig.disabledBuiltinTools,\n331:        deps.parentConfig.enabledBuiltinTools,\n334:        llm: resolveChildLlm(request.model, deps.modelPool, deps.parentConfig.llm),\n336:          ...(deps.parentConfig.clientDefaults ?? {}),\n340:        workspaceContext: deps.workspaceContext ?? deps.parentConfig.workspaceContext,\n345:        composition: deps.parentConfig.composition,\n346:        modules: deps.parentConfig.modules,\n347:        builtinToolHost: deps.parentConfig.builtinToolHost,\n348:        documentParserExecutable: deps.parentConfig.documentParserExecutable,\n349:        customSystemPrompt: deps.parentConfig.customSystemPrompt,\n350:        appendSystemPrompt:\n351:          [deps.parentConfig.appendSystemPrompt, request.appendSystemPrompt]\n354:        responseLanguage: deps.parentConfig.responseLanguage,\n355:        userProfile: deps.parentConfig.userProfile,\n356:        instructions: deps.parentConfig.instructions,\n358:        maxContextTokens: deps.parentConfig.maxContextTokens ?? 200_000,\n359:        sessionStorageDir: deps.parentConfig.sessionStorageDir,\n360:        usageLedger: deps.parentConfig.usageLedger,\n363:        modelRequestSigner: deps.parentConfig.modelRequestSigner,\n364:        headless: deps.parentConfig.headless,\n365:        readOnlySession: deps.parentConfig.readOnlySession || request.readOnlySession,\n366:        projectTrusted: deps.parentConfig.projectTrusted,\n367:        allowBackgroundShells: deps.parentConfig.allowBackgroundShells,\n368:        approvalBackend: deps.parentConfig.approvalBackend,\n369:        approvalRouter: deps.parentConfig.approvalRouter,\n371:        sandbox: resolveChildSandbox(request.sandboxMode, deps.parentSandbox),\n372:        mcpServers: resolveChildMcpServers(request.mcpAllowlist, deps.parentConfig.mcpServers),\n373:        settingsScope: deps.parentConfig.settingsScope ?? \"project\",\n376:      const destination = request.streamOverride ?? deps.parentStream;\n378:      const parentSessionId = deps.getParentSessionId?.() ?? deps.parentSessionId;\n379:      const host = parentSessionId\n380:        ? deps.parentConfig.createChildHostBindings?.({\n381:            parentSessionId,\n418:            subAgentContinuation: request.continuation,\n428:          subAgentContinuation: request.continuation,\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "resolveAgentTypeOverrides|AgentTypeOverrides",
+      "packages/core/src/tool-system/builtin/agent.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "51:export interface AgentTypeOverrides {\n79:export function resolveAgentTypeOverrides(\n82:): AgentTypeOverrides {\n175:  // role that doesn't exist (resolveAgentTypeOverrides would throw, wasting a\n431:  let overrides: AgentTypeOverrides;\n433:    overrides = resolveAgentTypeOverrides(agentType, ctx?.agentDefinitions);\n808:  overrides: AgentTypeOverrides;\n1531:  let overrides: AgentTypeOverrides;\n1546:        ? resolveAgentTypeOverrides(entry.agentType, ctx.agentDefinitions)\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "continuation|subAgentContinuation|resumeSessionId",
+      "packages/core/src/engine/run-session-open.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "10:import { parseSubAgentContinuation } from \"../session/subagent-continuation.js\";\n63:  const continuation =\n64:    options?.subAgentContinuation === undefined\n66:      : parseSubAgentContinuation(options.subAgentContinuation, getCurrentSid());\n67:  if (options?.subAgentContinuation !== undefined && (!args.isSubAgent || !continuation)) {\n68:    throw new SessionError(\"Invalid sub-agent continuation metadata or parent ownership\");\n101:    if (continuation) {\n103:        session.state.subAgentContinuation,\n107:        session.state.parentSessionId !== continuation.parentSessionId ||\n108:        (session.state.subAgentContinuation !== undefined &&\n109:          (!persisted || !isDeepStrictEqual(persisted, continuation)))\n111:        throw new SessionError(\"Sub-agent continuation cannot change its parent or frozen scope\");\n206:      continuation,\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "continuation|subAgentContinuation",
+      "packages/core/src/session/session-manager.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "39:import { parseSubAgentContinuation } from \"./subagent-continuation.js\";\n730:    subAgentContinuation?: SubAgentContinuation,\n736:    const continuation =\n737:      subAgentContinuation === undefined\n739:        : parseSubAgentContinuation(subAgentContinuation, parentSessionId);\n740:    if (subAgentContinuation !== undefined && !continuation) {\n741:      throw new SessionError(\"Invalid sub-agent continuation metadata or parent ownership\");\n766:      ...(continuation ? { subAgentContinuation: continuation } : {}),\n1048:        ? parseSubAgentContinuation(state.subAgentContinuation, state.parentSessionId)\n",
+    "stderr": ""
+  }
+]

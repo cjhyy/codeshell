@@ -1,0 +1,73 @@
+{
+  "createdUTC": "2026-10-17T13:13:09.042489+00:00",
+  "scope": "Historical artifact metadata and selected saved context values, no archived code/test command executed.",
+  "readSamePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "jsonPointer": "/rankedCandidates/138",
+      "row": {
+        "path": "packages/tui/src/render/layout/geometry.ts",
+        "bytes": 2471,
+        "lines": 97,
+        "sha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+        "coverageStatus": "no-matching-source-manifest-row",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 0,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 0,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3817",
+      "row": {
+        "path": "packages/tui/src/render/layout/geometry.ts",
+        "bytes": 2471,
+        "lines": 97,
+        "sha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd"
+      }
+    }
+  ],
+  "readAllSourcePathContexts": 22,
+  "readAllRectClipLocators": 139,
+  "readDirectOldArchiveRow": [
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPointer": "/177/file",
+      "line": 1,
+      "needle": "packages/tui/src/render/layout/geometry.ts",
+      "context": "packages/tui/src/render/layout/geometry.ts",
+      "immediateParentForExactValue": {
+        "file": "packages/tui/src/render/layout/geometry.ts",
+        "line": "37",
+        "category": "correctness",
+        "severity": "low",
+        "confidence": "medium",
+        "title": "Unsafe non-null assertion on parameter d in edges() function",
+        "detail": "At line 37, the code returns `{ top: a, right: b, bottom: c, left: d! }` with a non-null assertion on `d`. The function signature accepts `d?: number`, and while overloads restrict callers to 1, 2, or 4 arguments, the implementation allows 3 arguments where d would be undefined. The assertion is technically unsafe even though in practice TypeScript's overload resolution should prevent the issue.",
+        "fix": "Either: (1) add proper validation `if (d === undefined) return { top: a, right: b, bottom: c, left: 0 }` with an error, or (2) remove the non-null assertion and trust the overloads are enforced by TypeScript's type system, then document that only 1, 2, or 4 arguments are valid."
+      },
+      "sourceSha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35"
+    }
+  ],
+  "readSelectedHistoricalClipContext": [
+    {
+      "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+      "jsonPointer": null,
+      "line": 83,
+      "needle": "intersectrect",
+      "context": "at lines 134-137. There is no viewport intersection/clamping.\n\nImpact: for very tall/wide or partially visible elements, the element center can remain outside the viewport after scrolling. CDP mouse events then miss the target or fail, even though a visible part of the element is clickable.\n\nFix: reuse the screenshot path's `layoutViewportRect()`/`intersectRects()` logic to choose a point inside the visible intersection, with a small inset. Return a stale/no-visible-box result when no intersection exists.\n\n### `packages/cdp/src/driver.ts:295` - `fetchImageData()` interpolates `maxDim` directly into evaluated JS\n\nProblem: `ref` is escaped via `JSON.stringify(ref)`, and `timeoutMs` is sanitized, but `maxDim` is embedded directly into a `Runtime.evaluate` expression.\n\nImpact: TypeScript callers see `number`, but the published JS API has no runtime guard. If a host forwards an untrusted value as `maxDim`, it can turn into evaluated page JavaScript. Even accidental non-numeric values create brittle expression strings.\n\nFix: sanitize `maxDim` with `posi",
+      "immediateParentForExactValue": null,
+      "sourceSha256": "dc0153bc7f0e9fed765900d98921fe5c59f0cf3b1fb29bce16a7674306f0859f"
+    }
+  ],
+  "assessment": [
+    "Two same path+SHA objects are dated R28 inventory/ranking metadata, not full semantic source read proof; no-matching-row does not prove never-read.",
+    "Raw May30 finding[177] alleges edges() non-null d under3-argument call; current overload accepts1/2/4 and this is old / nonordinary input, excluded with no new related. Raw archive confidence is not current validation.",
+    "The intersectRects archive context concerns CDP viewport click targeting, outside TUI geometry helper cause; no CDP/native/security experiment."
+  ],
+  "notSemanticExhaustion": true
+}

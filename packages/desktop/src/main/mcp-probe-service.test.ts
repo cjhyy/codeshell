@@ -134,12 +134,24 @@ test("OAuth callback uses the stored account and reports expiry without reflecti
     id: "oauth",
     type: "oauth",
     label: "Fixture",
-    secret: JSON.stringify({ accessToken: "access-secret", expiresAt: "2030-01-01T00:00:00.000Z" }),
+    meta: { mcpServerUrl: `${origin}/mcp`, resource: `${origin}/`, issuer: `${origin}/auth` },
+    secret: JSON.stringify({
+      accessToken: "access-secret",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      resource: `${origin}/`,
+      issuer: `${origin}/auth`,
+    }),
   });
   const cfg = { name: "oauth", url: `${origin}/mcp`, credentialRef: "oauth" };
   const result = await probeMcpServer(cfg, {
     cwd: directory,
-    oauthService: { resolveAccessToken: async () => ({ accessToken: "access-secret" }) },
+    oauthService: {
+      resolveAccessToken: async (id, options) => {
+        expect(id).toBe("oauth");
+        expect(options.serverUrl).toBe(cfg.url);
+        return { accessToken: "access-secret" };
+      },
+    },
   });
   expect(result.status).toBe("ok");
   expect(authorizations).toContain("Bearer access-secret");
@@ -154,6 +166,36 @@ test("OAuth callback uses the stored account and reports expiry without reflecti
   expect(expired.errorMessage).toContain("OAuth");
   expect(expired.errorMessage).toContain("刷新");
   expect(JSON.stringify(expired)).not.toContain("access-secret");
+});
+test("OAuth probe rejects a different endpoint before resolving or sending credentials", async () => {
+  new CredentialStore().save("user", {
+    id: "bound-oauth",
+    type: "oauth",
+    label: "Fixture",
+    meta: { mcpServerUrl: `${origin}/mcp`, resource: `${origin}/`, issuer: `${origin}/auth` },
+    secret: JSON.stringify({
+      accessToken: "bound-secret",
+      resource: `${origin}/`,
+      issuer: `${origin}/auth`,
+    }),
+  });
+  let resolutions = 0;
+  const result = await probeMcpServer(
+    { name: "wrong-endpoint", url: `${origin}/other`, credentialRef: "bound-oauth" },
+    {
+      cwd: directory,
+      oauthService: {
+        resolveAccessToken: async () => {
+          resolutions++;
+          return { accessToken: "bound-secret" };
+        },
+      },
+    },
+  );
+  expect(result.status).toBe("error");
+  expect(resolutions).toBe(0);
+  expect(authorizations).toEqual([]);
+  expect(JSON.stringify(result)).not.toContain("bound-secret");
 });
 class UnavailableSafeCipher implements EncryptionCipher {
   encrypt(value: string) {

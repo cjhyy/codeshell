@@ -1,0 +1,14 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "-F",
+    "coding.md",
+    "packages/coding/src",
+    "-g",
+    "*.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/coding/src/index.capability.ts\n",
+  "stderr": ""
+}

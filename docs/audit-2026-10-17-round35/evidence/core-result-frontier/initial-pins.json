@@ -1,0 +1,48 @@
+{
+  "capturedUTC": "2026-10-17T12:31:56.089658+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "parentReportedFrozenContext": "Round33=40d79ff2190a98aa31067eb07006099c2726b21a",
+  "historyExclusions": [
+    "mutable34",
+    "future35"
+  ],
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only before semantic reading",
+      "timing": "Before source semantic reading; exact rg filename inventory only"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only before semantic reading",
+      "timing": "Before source semantic reading; exact rg filename inventory only"
+    },
+    {
+      "path": "packages/core/src/tool-system/bound-tool-result.ts",
+      "bytes": 572,
+      "lineCount": 13,
+      "sha256": "6050f07a77046605c082e6e8d77e96ca849d7d4eb980c1417e6072ff7422e7fe",
+      "coverage": "hash-only before semantic reading",
+      "timing": "Before source semantic reading; exact rg filename inventory only"
+    },
+    {
+      "path": "packages/core/src/engine/aux-key.ts",
+      "bytes": 451,
+      "lineCount": 12,
+      "sha256": "f4fabd96ff420b0da102d1556cc13966e6e993dfd6f5fe366c97dde5d2dda8c3",
+      "coverage": "hash-only before semantic reading",
+      "timing": "Before source semantic reading; exact rg filename inventory only"
+    }
+  ],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0
+}

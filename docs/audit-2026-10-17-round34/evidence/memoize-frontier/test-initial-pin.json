@@ -1,0 +1,9 @@
+{
+  "capturedUTC": "2026-10-17T12:23:33.172306+00:00",
+  "path": "docs/audit-2026-10-17-round16/evidence/root-memoize.test.ts",
+  "bytes": 3556,
+  "lineCount": 93,
+  "sha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b",
+  "timing": "Before direct existing test-source read; filename inventory only",
+  "notExecuted": true
+}

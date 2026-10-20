@@ -1,0 +1,14 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round3/evidence/lab-offline-round1.test.ts:
+(pass) Lab continuation accepts the corrected grade but reflection sends its superseded predecessor [5.64ms]
+(pass) Arena missing or invalid peer verdict becomes explicit agreement and verifies the claim [0.43ms]
+(pass) Arena skips its unresolved sweep when every remaining claim is proposed or under review [2.51ms]
+AUDIT_OBSERVATIONS [{"id":"LAB-R3-01","continuationFullyGraded":true,"latestSemanticPassed":true,"actualReflectionFeedback":{"trialId":"trial-dev","semanticPassed":null,"criteria":[{"id":"accuracy","verdict":"inconclusive","evidence":"Initial review unfinished"}]}},{"id":"ARENA-R3-01","raw":{"claimId":"author:f1","reason":"I have not completed checking this"},"parsedVerdict":"agree","actualClaimStatus":"verified"},{"id":"ARENA-R3-01","raw":{"claimId":"author:f1","verdict":"uncertain","reason":"Unable to verify"},"parsedVerdict":"agree","actualClaimStatus":"verified"},{"id":"ARENA-R3-02","allClaimCount":2,"actualStatuses":["proposed","under_review"],"summarizedClaimCount":0}]
+(pass) emit audit observations [0.60ms]
+
+ 4 pass
+ 0 fail
+ 19 expect() calls
+Ran 4 tests across 1 file. [912.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

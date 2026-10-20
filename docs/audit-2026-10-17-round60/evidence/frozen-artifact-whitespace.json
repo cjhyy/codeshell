@@ -1,0 +1,64 @@
+{
+  "exactArtifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-read-01.txt",
+      "source": "/tmp/codeshell-audit-round153-release-audit-config/source-read-01.txt",
+      "bytes": 10397,
+      "sha256": "66530dad33c448b9ffab43010d4a9b7a79c1ed853efd0e9bdc155ede9f14b93c",
+      "trailingLineNumbers": [
+        5,
+        23,
+        32,
+        41,
+        131,
+        135,
+        138,
+        142,
+        146,
+        150,
+        158,
+        182,
+        185,
+        205,
+        214,
+        233,
+        239,
+        248,
+        255,
+        267,
+        276,
+        282,
+        289,
+        295
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-read-02.txt",
+      "source": "/tmp/codeshell-audit-round153-release-audit-config/source-read-02.txt",
+      "bytes": 7451,
+      "sha256": "1d53df405e501bfc42749149754a64c0f2b3463995729ed77f65bd39dd2bf8a1",
+      "trailingLineNumbers": [
+        12,
+        34,
+        48,
+        60,
+        70,
+        76,
+        100,
+        118,
+        143,
+        152,
+        165,
+        179,
+        183,
+        190
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    }
+  ],
+  "productRuns": 0,
+  "scope": "Only frozen copied provenance. All other files must pass ordinary whitespace check; full check actual exit retained."
+}

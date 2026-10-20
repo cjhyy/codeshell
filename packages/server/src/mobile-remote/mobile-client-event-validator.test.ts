@@ -234,3 +234,23 @@ test("Room pages bound view correlation, filter and opaque continuation fields",
   ])
     expect(parseMobileClientEvent({ ...first, ...patch })).toBeUndefined();
 });
+
+test("Panel source labels are bounded observation metadata on chat.send", () => {
+  expect(
+    parseMobileClientEvent({
+      type: "chat.send",
+      text: "hello",
+      modelTraceSource: "panel:design-studio",
+    }),
+  ).toMatchObject({ modelTraceSource: "panel:design-studio" });
+  for (const source of [
+    "/foreign",
+    "panel:",
+    "panel:" + "a".repeat(65),
+    42,
+    { storageDir: "/foreign" },
+  ])
+    expect(
+      parseMobileClientEvent({ type: "chat.send", text: "hello", modelTraceSource: source }),
+    ).toBeUndefined();
+});

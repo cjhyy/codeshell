@@ -1,0 +1,44 @@
+packages/core/src/tool-system/builtin/agent.ts:325:    resumeSessionId?: string;
+packages/core/src/tool-system/builtin/agent.ts:782:    // AgentSendInput can resolve the role on continuation, not to render.
+packages/core/src/tool-system/builtin/agent.ts:791: * long. `resumeSessionId`, when set, resumes an existing child session
+packages/core/src/tool-system/builtin/agent.ts:815:  resumeSessionId?: string;
+packages/core/src/tool-system/builtin/agent.ts:830:    resumeSessionId,
+packages/core/src/tool-system/builtin/agent.ts:840:  const childSessionId = resumeSessionId ?? agentId;
+packages/core/src/tool-system/builtin/agent.ts:844:  if (resumeSessionId) {
+packages/core/src/tool-system/builtin/agent.ts:864:    if (!resumeSessionId) return;
+packages/core/src/tool-system/builtin/agent.ts:897:    resumeSessionId,
+packages/core/src/tool-system/builtin/agent.ts:908:      if (resumeSessionId && !asyncAgentRegistry.bindLiveControl(agentId, control, lease)) {
+packages/core/src/tool-system/builtin/agent.ts:917:      if (handedOff || resumeSessionId) {
+packages/core/src/tool-system/builtin/agent.ts:1464:  const resumeSessionId = entry?.childSessionId ?? agentId;
+packages/core/src/tool-system/builtin/agent.ts:1465:  const onDisk = spawner.sessionExists?.(resumeSessionId) ?? false;
+packages/core/src/tool-system/builtin/agent.ts:1488:  if (entry?.status === "cancelling" || asyncAgentRegistry.getWriterLease(resumeSessionId)) {
+packages/core/src/tool-system/builtin/agent.ts:1493:  const continuation = entry?.continuation ?? spawner.getSessionContinuation?.(resumeSessionId);
+packages/core/src/tool-system/builtin/agent.ts:1499:    const persistedParent = spawner.getSessionParentId?.(resumeSessionId);
+packages/core/src/tool-system/builtin/agent.ts:1507:  if (continuation && continuation.parentSessionId !== callerSessionId) {
+packages/core/src/tool-system/builtin/agent.ts:1534:      resolvedType: continuation.agentType ?? undefined,
+packages/core/src/tool-system/builtin/agent.ts:1535:      model: continuation.model,
+packages/core/src/tool-system/builtin/agent.ts:1536:      maxTurns: continuation.maxTurns,
+packages/core/src/tool-system/builtin/agent.ts:1537:      toolAllowlist: continuation.toolAllowlist,
+packages/core/src/tool-system/builtin/agent.ts:1538:      skillAllowlist: continuation.skillAllowlist,
+packages/core/src/tool-system/builtin/agent.ts:1539:      sandboxMode: continuation.sandboxMode,
+packages/core/src/tool-system/builtin/agent.ts:1540:      mcpAllowlist: continuation.mcpAllowlist,
+packages/core/src/tool-system/builtin/agent.ts:1541:      appendSystemPrompt: continuation.appendSystemPrompt,
+packages/core/src/tool-system/builtin/agent.ts:1569:    resumeSessionId,
+packages/core/src/engine/subagent-spawner.ts:130:  getSessionContinuation?: SubAgentSpawner["getSessionContinuation"];
+packages/core/src/engine/subagent-spawner.ts:318:    getSessionContinuation: deps.getSessionContinuation,
+packages/core/src/engine/subagent-spawner.ts:320:      if (!request.resumeSessionId) {
+packages/core/src/engine/subagent-spawner.ts:377:      const childSessionId = request.resumeSessionId ?? request.agentId;
+packages/core/src/engine/engine.ts:1470:      return await this.runExclusive(task, options, runTiming);
+packages/core/src/engine/engine.ts:1583:  private async runExclusive(
+packages/core/src/engine/engine.ts:2150:   * the {@link runExclusive} skeleton so the terminal-state assembly reads as a
+packages/core/src/engine/engine.ts:2231:   * verbatim from the body of the {@link runExclusive} try block; the cleanup
+packages/core/src/engine/engine.ts:2292:   * Extracted verbatim from the {@link runExclusive} skeleton.
+packages/core/src/engine/engine.ts:2350:   * Extracted verbatim from the {@link runExclusive} skeleton.
+packages/core/src/engine/engine.ts:2465:   * verbatim from the {@link runExclusive} skeleton; the todo snapshot is read
+packages/core/src/engine/engine.ts:2575:   * verbatim from the {@link runExclusive} skeleton; the session bundle is read
+packages/core/src/engine/engine.ts:2635:      getSessionContinuation: (sessionId) =>
+packages/core/src/engine/engine.ts:2710:   * {@link runExclusive} skeleton; the goal slots, judge-context buffer and usage
+packages/core/src/engine/engine.ts:3011:   * {@link runExclusive} skeleton; returns the combined hook-injected messages
+packages/core/src/engine/engine.ts:3104:   * tool defs for this run. Extracted verbatim from the {@link runExclusive}
+packages/core/src/engine/engine.ts:3327:   * object) from the per-run locals gathered in {@link runExclusive}. Extracted
+packages/core/src/engine/engine.ts:3328:   * verbatim from the orchestration skeleton so `runExclusive` stays a readable

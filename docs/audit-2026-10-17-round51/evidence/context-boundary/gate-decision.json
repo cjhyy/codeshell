@@ -1,0 +1,15 @@
+{
+  "capturedUTC": "2026-10-17T17:16:38.938298+00:00",
+  "targetSameSHAExplicitFullFound": false,
+  "exactObjectsCompactlyInspected": 44,
+  "canonicalQualifiersActuallyRead": "R28 inventory; R44 incidental/unknown; R50 frontier hash-only and original candidate row; no explicit full/readScope/reviewMode/inspectionScope reading. Derived history-locators are not semantic evidence.",
+  "noUnreadOrFirstEverGuarantee": true,
+  "oldCause": {
+    "total": 118,
+    "retained": 100,
+    "cap": 100,
+    "allWindowsRead": false
+  },
+  "historicalMDContextsActualRead": 2,
+  "decision": "Continue ordinary target/render/DTO selected dependencies. No new hypothesis assumed."
+}

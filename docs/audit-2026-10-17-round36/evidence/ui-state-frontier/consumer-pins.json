@@ -1,0 +1,37 @@
+{
+  "capturedUTC": "2026-10-17T12:39:32.472855+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/toastState.test.ts",
+      "bytes": 6103,
+      "lineCount": 162,
+      "sha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de",
+      "timing": "before direct source read; filename inventory only preceded pin",
+      "initialSemanticReadSha256": "8ad62d756bd387dabf0747dd9d2190242b47c91c0d343e9d2f71e2686b04b3de"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.tsx",
+      "bytes": 8260,
+      "lineCount": 249,
+      "sha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf",
+      "timing": "before direct source read; filename inventory only preceded pin",
+      "initialSemanticReadSha256": "31fd38f629833327a0c06fc0f3355cd7f51122e1e2a8be9de3c1dafb136e24bf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+      "bytes": 3880,
+      "lineCount": 17,
+      "sha256": "9022effde5fc7e271e6e50abbc5cfc461e29129b62d891891d5bdccbc3ed575f",
+      "timing": "before direct full/selected read; history scanner contexts preceded prior-report pin",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-source-manifest.json",
+      "bytes": 6585,
+      "lineCount": 166,
+      "sha256": "61b0c036cc553c602abd4f8ccdb474fac7d022d41556b56b3f8e51d0055cba72",
+      "timing": "before direct full/selected read; history scanner contexts preceded prior-report pin",
+      "initialSemanticReadSha256": null
+    }
+  ]
+}

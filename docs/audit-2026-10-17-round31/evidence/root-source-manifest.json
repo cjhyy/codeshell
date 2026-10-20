@@ -1,0 +1,136 @@
+{
+  "baseline": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "originalParentBaseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "files": [
+    {
+      "path": "packages/tui/src/render/searchHighlight.ts",
+      "bytes": 1738,
+      "lineCount": 52,
+      "sha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          52
+        ]
+      ],
+      "coveredLineCount": 52,
+      "initialSemanticReadSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "firstDurableSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "finishSha256": "fe3a51f19a9eb00c6dc22cce46237eab9fc4d43d31af8ab0f55a2880fa3f8beb",
+      "pinTiming": "Before declared semantic reading"
+    },
+    {
+      "path": "packages/tui/src/render/searchMatches.ts",
+      "bytes": 1895,
+      "lineCount": 56,
+      "sha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "coveredLineCount": 56,
+      "initialSemanticReadSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "firstDurableSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "finishSha256": "3d30ef5d165852e4067123f3d2dc1bb6cf15b16112b4eda6bb8f885f56ca8d7f",
+      "pinTiming": "Before declared semantic reading"
+    },
+    {
+      "path": "packages/tui/src/render/screen.ts",
+      "bytes": 49323,
+      "lineCount": 1486,
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          130
+        ]
+      ],
+      "coveredLineCount": 130,
+      "initialSemanticReadSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "firstDurableSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "finishSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "pinTiming": "Before declared semantic reading"
+    },
+    {
+      "path": "packages/tui/src/render/render-to-screen.ts",
+      "bytes": 7445,
+      "lineCount": 198,
+      "sha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          125,
+          198
+        ]
+      ],
+      "coveredLineCount": 74,
+      "initialSemanticReadSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "firstDurableSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "finishSha256": "9cd9c0ae55b13e2fb4c2e0c23cf5fa276153c62316d2bd519cf73527eedd663b",
+      "pinTiming": "Before declared semantic reading"
+    },
+    {
+      "path": "packages/tui/src/render/ink.tsx",
+      "bytes": 89185,
+      "lineCount": 1968,
+      "sha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1280,
+          1345
+        ]
+      ],
+      "coveredLineCount": 66,
+      "initialSemanticReadSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "firstDurableSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "finishSha256": "2615127b29eca41b4f0f2efcfc5a506e2fa9cd42effa25907b662ec779029d26",
+      "pinTiming": "Before declared semantic reading"
+    },
+    {
+      "path": "tests/search-highlight.test.ts",
+      "bytes": 4161,
+      "lineCount": 143,
+      "sha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          143
+        ]
+      ],
+      "coveredLineCount": 143,
+      "initialSemanticReadSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "firstDurableSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "finishSha256": "9ff1641c5c6a6316849f522c5a26298ebe3177700ed593f6ba444ab9a671928e",
+      "pinTiming": "Before declared semantic reading"
+    },
+    {
+      "path": "packages/tui/src/render/warn.ts",
+      "bytes": 309,
+      "lineCount": 9,
+      "sha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "coveredLineCount": 9,
+      "initialSemanticReadSha256": null,
+      "firstDurableSha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "finishSha256": "449569309050515af9459d625631b02db26a2cfe0724a83e51c0b527f2ed197a",
+      "pinTiming": "First durable hash after full warn source read; initial remains null."
+    }
+  ],
+  "sameSemanticReadingAsPrep": true,
+  "newSemanticReadsDuringFormalization": 0,
+  "readLines": 530,
+  "note": "Original7source rows reused once; warn first durable pin remains after-read/null. External primary references are separate and do not prove an installed runtime version."
+}

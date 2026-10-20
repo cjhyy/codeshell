@@ -1,0 +1,24 @@
+{
+  "at": "2026-10-17T18:57:45.174461+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/sessions/SessionsView.tsx",
+      "bytes": 35181,
+      "sha256": "d99bd76d03fb2cf15d44a3faf4a80577f50cefbf1a7ad85dcb7fdfc949bfbf66",
+      "lineCount": 829
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useSessionHistorySync.ts",
+      "bytes": 5389,
+      "sha256": "46208d004433ecee2993c7db0a5ac60492f7d09f9ee1ce1aa3628f9016a65b31",
+      "lineCount": 127
+    },
+    {
+      "path": "packages/web/app/HubSessions.tsx",
+      "bytes": 29167,
+      "sha256": "ba90415e1a7e30b42fe478fc9a525423da949f31c45906429559bb3e73ee005f",
+      "lineCount": 772
+    }
+  ],
+  "timing": "before these selected product bodies/snippets"
+}

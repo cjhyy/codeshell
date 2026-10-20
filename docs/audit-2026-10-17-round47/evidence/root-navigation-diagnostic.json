@@ -1,0 +1,9 @@
+{
+  "scope": "Filename/metadata selection only, before prep61/62 delegation",
+  "toolChunk": "c839cc",
+  "originalOutputTokens": 19062,
+  "maxOutputTokens": 4200,
+  "toolWarning": "Warning: truncated output (original token count: 19062), total output lines353",
+  "stdoutCapture": "Original clipped output retained in tool transcript; no full first stdout file was captured. Only visible exact cost-context and adapter-factory rows were used; no all353 reading claim or product source body.",
+  "productRuns": 0
+}

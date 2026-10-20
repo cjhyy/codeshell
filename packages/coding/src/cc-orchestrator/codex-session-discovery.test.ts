@@ -71,6 +71,26 @@ describe("discoverCodexSessions", () => {
     expect(discoverCodexSessions(cwd, home)[0]?.firstMessage).toBe("修复房间输入显示");
   });
 
+  it("uses the genuine title after Page context in sync and async discovery", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const cwd = "/tmp/myproj";
+    const emptyPage =
+      '<external_codex_apps_open_page>{"page_id":null}</external_codex_apps_open_page>';
+    const selectedPage =
+      '<external_codex_apps_open_page>{"page_id":"page-123"}</external_codex_apps_open_page>';
+    writeRollout(home, "2026/06/24", "rollout-page-context-title.jsonl", [
+      metaLine("id-page-context-title", cwd, "2026-06-24T03:31:03.000Z"),
+      userItem(emptyPage),
+      userItem(selectedPage),
+      userItem(`${emptyPage}\n${selectedPage}\n修复 Page 上下文显示`),
+    ]);
+
+    expect(discoverCodexSessions(cwd, home)[0]?.firstMessage).toBe("修复 Page 上下文显示");
+    const listed = await listCodexSessionsForCwds([cwd], home);
+    expect(listed.total).toBe(1);
+    expect(listed.sessions[0]?.firstMessage).toBe("修复 Page 上下文显示");
+  });
+
   it("filters out sessions whose session_meta.cwd differs", () => {
     const home = mkdtempSync(join(tmpdir(), "codex-home-"));
     writeRollout(home, "2026/06/24", "rollout-a.jsonl", [

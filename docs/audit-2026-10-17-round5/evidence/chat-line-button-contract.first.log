@@ -1,0 +1,15 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round5/evidence/chat-line-button-contract.test.ts:
+{"case":"line_native_label_contract","documentedTemplateLabelMaximum":20,"receipts":[{"inputLabelLength":20,"projectedLabelLength":20,"messageCount":2},{"inputLabelLength":21,"projectedLabelLength":21,"messageCount":2},{"inputLabelLength":80,"projectedLabelLength":80,"messageCount":2},{"inputLabelLength":81,"projectedLabelLength":null,"messageCount":1}]}
+(pass) current ordinary Mimi reply path keeps LINE labels beyond the documented 20-character template limit [1.26ms]
+{"case":"line_native_uri_contract","documentedUriMaximum":1000,"receipts":[{"inputUriLength":1000,"projectedUriLength":1000,"messageCount":2},{"inputUriLength":1001,"projectedUriLength":1001,"messageCount":2},{"inputUriLength":2048,"projectedUriLength":2048,"messageCount":2},{"inputUriLength":2049,"projectedUriLength":null,"messageCount":1}]}
+(pass) current ordinary Mimi reply path keeps LINE action URIs beyond the documented 1000-character limit
+{"case":"shared_chunking_controls","inputLength":2960,"receipts":[{"maximum":2,"chunkCount":1690,"largestChunk":2},{"maximum":17,"chunkCount":182,"largestChunk":17},{"maximum":1800,"chunkCount":2,"largestChunk":1798}]}
+(pass) shared ordinary chunking retains Unicode and whitespace within the requested limit [1.86ms]
+
+ 3 pass
+ 0 fail
+ 46 expect() calls
+Ran 3 tests across 1 file. [66.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

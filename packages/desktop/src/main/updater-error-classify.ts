@@ -5,7 +5,9 @@
  */
 
 export function isReadOnlyInstallError(message: string): boolean {
-  return /read-only volume|move the application|move .* out of the Downloads directory/i.test(message);
+  return /read-only volume|move the application|move .* out of the Downloads directory/i.test(
+    message,
+  );
 }
 
 /**
@@ -36,10 +38,7 @@ export function isUpdateFeedConnectivityError(message: string): boolean {
  * now".
  */
 export function isNoUpdateManifestError(message: string): boolean {
-  return (
-    /HttpError:\s*404/i.test(message) ||
-    /\b404\b/.test(message) ||
-    /Cannot find (latest-\S*\.yml|channel)/i.test(message) ||
-    /latest-\S*\.yml/i.test(message)
-  );
+  // Generic/GitHub providers wrap a missing channel with its actual HttpError.
+  // A URL/filename (or an arbitrary 404 inside it) is not an HTTP status.
+  return /(?:^\s*|\bHttpError:\s*)404(?:\s|$)/i.test(message);
 }

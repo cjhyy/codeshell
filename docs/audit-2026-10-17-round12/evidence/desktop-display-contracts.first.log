@@ -1,0 +1,24 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts:
+{"scenario":"mode-only","raw":"diff --git a/run.sh b/run.sh\nold mode 100644\nnew mode 100755\n","files":[{"oldPath":null,"newPath":null,"status":"modified","hunks":[]}]}
+(pass) ordinary header-only patch identity observations > mode-only modified file loses both header paths [3.80ms]
+{"scenario":"empty-files","raw":"diff --git a/empty.txt b/empty.txt\nnew file mode 100644\nindex 0000000..e69de29\ndiff --git a/gone.txt b/gone.txt\ndeleted file mode 100644\nindex e69de29..0000000\n","files":[{"oldPath":null,"newPath":null,"status":"added","hunks":[]},{"oldPath":null,"newPath":null,"status":"deleted","hunks":[]}]}
+(pass) ordinary header-only patch identity observations > empty added and deleted files retain status but lose identity [0.06ms]
+{"scenario":"binary-notice","raw":"diff --git a/image.png b/image.png\nindex 1234567..7654321 100644\nBinary files a/image.png and b/image.png differ\n","files":[{"oldPath":null,"newPath":null,"status":"modified","hunks":[]}]}
+(pass) ordinary header-only patch identity observations > binary notice without text hunk also loses identity
+(pass) ordinary header-only patch identity observations > ordinary textual hunk control has both paths and numbered contents [1.19ms]
+{"scenario":"unicode-card-label","max":70,"input":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀tail","actual":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\ud83d…","tailUnits":[55357,8230],"normalized":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx�…"}
+(pass) tool-card text display observations and controls > real positive card limit 70 splits a valid emoji pair [1.63ms]
+{"scenario":"unicode-card-label","max":80,"input":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀tail","actual":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\ud83d…","tailUnits":[55357,8230],"normalized":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx�…"}
+(pass) tool-card text display observations and controls > real positive card limit 80 splits a valid emoji pair [0.03ms]
+{"scenario":"unicode-card-label","max":90,"input":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀tail","actual":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\ud83d…","tailUnits":[55357,8230],"normalized":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx�…"}
+(pass) tool-card text display observations and controls > real positive card limit 90 splits a valid emoji pair
+(pass) tool-card text display observations and controls > short Unicode, safe emoji boundary, ASCII and BMP text controls [0.03ms]
+(pass) tool-card text display observations and controls > ordinary neighbouring metadata helpers preserve their documented values [2.21ms]
+
+ 9 pass
+ 0 fail
+ 41 expect() calls
+Ran 9 tests across 1 file. [163.00ms]
+Completed Bun shard: 9 tests, 0 skipped; 0 failures.

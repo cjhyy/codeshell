@@ -1,0 +1,698 @@
+{
+  "createdUTC": "2026-10-17T18:46:47.803478+00:00",
+  "role": "Directed ordinary static network source recheck, prior canonical full overlap, not blind unread frontier",
+  "rootReportedBaselineOnly": "ae7bd786f133f9c42d212d41110b54eb18c4a9e4",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lines": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          5,
+          13
+        ],
+        [
+          15,
+          20
+        ],
+        [
+          34,
+          38
+        ],
+        [
+          51,
+          67
+        ],
+        [
+          96,
+          106
+        ],
+        [
+          118,
+          124
+        ],
+        [
+          221,
+          223
+        ]
+      ],
+      "semanticLines": 59,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          38
+        ],
+        [
+          51,
+          67
+        ],
+        [
+          96,
+          126
+        ],
+        [
+          211,
+          227
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        15,
+        17,
+        18,
+        19,
+        20,
+        40,
+        46,
+        51,
+        52,
+        53,
+        55,
+        56,
+        57,
+        58,
+        61,
+        62,
+        64,
+        65,
+        66,
+        69,
+        70,
+        73,
+        74,
+        75,
+        77,
+        78,
+        79,
+        80,
+        103,
+        111,
+        112,
+        113,
+        115,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        124,
+        127,
+        134,
+        176,
+        178,
+        181,
+        190,
+        208,
+        210
+      ],
+      "uniqueDisplayedLines": 122,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          2
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          21,
+          33
+        ],
+        [
+          40,
+          40
+        ],
+        [
+          46,
+          46
+        ],
+        [
+          69,
+          70
+        ],
+        [
+          73,
+          75
+        ],
+        [
+          77,
+          80
+        ],
+        [
+          107,
+          117
+        ],
+        [
+          125,
+          127
+        ],
+        [
+          134,
+          134
+        ],
+        [
+          176,
+          176
+        ],
+        [
+          178,
+          178
+        ],
+        [
+          181,
+          181
+        ],
+        [
+          190,
+          190
+        ],
+        [
+          208,
+          208
+        ],
+        [
+          210,
+          220
+        ],
+        [
+          224,
+          227
+        ]
+      ],
+      "purpose": "Directed network-only question on canonical same-SHA old full. Ordinary event metadata, ring cap, recent slice, URL/error projection bounds, options limit and result mapping. SafeUrl only string projection, not security certification. DOM/performance and timeout/lifecycle source shown by locator are navigation only, old DIAG-R10-01 not reopened.",
+      "initialSemanticReadSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "finishBytes": 8534,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "historicalOverlap": "R33 original exact same-SHA full confirmed for target inspector/contracts; necessary selected consumers also known old overlap. No new unique coverage claimed."
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "bytes": 1183,
+      "lines": 36,
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          17
+        ],
+        [
+          24,
+          36
+        ]
+      ],
+      "semanticLines": 30,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          36
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 36,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          18,
+          23
+        ]
+      ],
+      "purpose": "Options/result/page-port DTO and factory interface. Host authorization paragraph19–23 navigation only; no target/permission/native mechanism review. Full display is selected purpose, not new whole-module semantics.",
+      "initialSemanticReadSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "finishBytes": 1183,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "historicalOverlap": "R33 original exact same-SHA full confirmed for target inspector/contracts; necessary selected consumers also known old overlap. No new unique coverage claimed."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/browser-inspect.ts",
+      "bytes": 2272,
+      "lines": 50,
+      "sha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          5,
+          7
+        ],
+        [
+          10,
+          14
+        ],
+        [
+          16,
+          25
+        ],
+        [
+          28,
+          50
+        ]
+      ],
+      "semanticLines": 41,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 50,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          4
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          26,
+          27
+        ]
+      ],
+      "purpose": "Actual ordinary tool input mode/max_entries/selector validation→maxEntries clamp and inspect result JSON stringify. Tool permission/authorized-target/trust descriptions and imports navigation only.",
+      "initialSemanticReadSha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "finishBytes": 2272,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "historicalOverlap": "R33 original exact same-SHA full confirmed for target inspector/contracts; necessary selected consumers also known old overlap. No new unique coverage claimed."
+    },
+    {
+      "path": "packages/core/src/tool-system/browser-bridge.ts",
+      "bytes": 17657,
+      "lines": 466,
+      "sha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          210,
+          225
+        ]
+      ],
+      "semanticLines": 16,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          210,
+          227
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        210,
+        211,
+        212,
+        215,
+        218,
+        220,
+        234
+      ],
+      "uniqueDisplayedLines": 19,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          226,
+          227
+        ],
+        [
+          234,
+          234
+        ]
+      ],
+      "purpose": "Core options/result DTO matches common inspector; BrowserBridge/target lifecycle not audited.",
+      "initialSemanticReadSha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "finishBytes": 17657,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "historicalOverlap": "R33 original exact same-SHA full confirmed for target inspector/contracts; necessary selected consumers also known old overlap. No new unique coverage claimed."
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "bytes": 668,
+      "lines": 10,
+      "sha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          9,
+          10
+        ]
+      ],
+      "semanticLines": 2,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          10
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 10,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          8
+        ]
+      ],
+      "purpose": "Actual injected Puppeteer/Playwright page wrapper forwards to same inspector factory. Platform type imports/auth lifecycle comments navigation only, no browser/library execution.",
+      "initialSemanticReadSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "finishBytes": 668,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "historicalOverlap": "R33 original exact same-SHA full confirmed for target inspector/contracts; necessary selected consumers also known old overlap. No new unique coverage claimed."
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "bytes": 37488,
+      "lines": 1091,
+      "sha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          624,
+          624
+        ],
+        [
+          628,
+          629
+        ],
+        [
+          631,
+          631
+        ],
+        [
+          633,
+          633
+        ]
+      ],
+      "semanticLines": 5,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          624,
+          636
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        8,
+        9,
+        624,
+        629,
+        633,
+        743
+      ],
+      "uniqueDisplayedLines": 16,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          8,
+          9
+        ],
+        [
+          625,
+          627
+        ],
+        [
+          630,
+          630
+        ],
+        [
+          632,
+          632
+        ],
+        [
+          634,
+          636
+        ],
+        [
+          743,
+          743
+        ]
+      ],
+      "purpose": "Actual inspector lazy creation/options/result forwarding and failure mode field. enqueue/checkActive/failure/native transport mechanisms only call boundaries/navigation, not certified.",
+      "initialSemanticReadSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "finishBytes": 37488,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "historicalOverlap": "R33 original exact same-SHA full confirmed for target inspector/contracts; necessary selected consumers also known old overlap. No new unique coverage claimed."
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "bytes": 5243,
+      "lines": 137,
+      "sha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          18,
+          31
+        ],
+        [
+          36,
+          49
+        ]
+      ],
+      "semanticLines": 28,
+      "sourceKind": "test-declarations",
+      "displayedLineRanges": [
+        [
+          18,
+          49
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        17,
+        18,
+        21,
+        23,
+        29,
+        33,
+        36,
+        39,
+        40,
+        42,
+        47,
+        48,
+        53,
+        55,
+        59,
+        66,
+        74,
+        80,
+        91,
+        93,
+        101,
+        102,
+        106,
+        109,
+        111,
+        113,
+        118,
+        122,
+        130
+      ],
+      "uniqueDisplayedLines": 50,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          17,
+          17
+        ],
+        [
+          32,
+          35
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          55,
+          55
+        ],
+        [
+          59,
+          59
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          74,
+          74
+        ],
+        [
+          80,
+          80
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          93,
+          93
+        ],
+        [
+          101,
+          102
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          109,
+          109
+        ],
+        [
+          111,
+          111
+        ],
+        [
+          113,
+          113
+        ],
+        [
+          118,
+          118
+        ],
+        [
+          122,
+          122
+        ],
+        [
+          130,
+          130
+        ]
+      ],
+      "purpose": "Two partial existing declarations for URL projection and120response→100record output. FakePage event objects/URL strings only read as test intent, no fixture/function/test/browser execution. Other titles/assertions only locator/navigation.",
+      "initialSemanticReadSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "finishBytes": 5243,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "historicalOverlap": "R33 original exact same-SHA full confirmed for target inspector/contracts; necessary selected consumers also known old overlap. No new unique coverage claimed."
+    },
+    {
+      "path": "packages/browser-devtools/README.md",
+      "bytes": 2940,
+      "lines": 56,
+      "sha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          35,
+          36
+        ],
+        [
+          43,
+          44
+        ]
+      ],
+      "semanticLines": 4,
+      "sourceKind": "contract-document",
+      "displayedLineRanges": [
+        [
+          1,
+          56
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 56,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          34
+        ],
+        [
+          37,
+          42
+        ],
+        [
+          45,
+          56
+        ]
+      ],
+      "purpose": "Only network metadata recent bounded-recorder ordinary contract. DOM/performance, host authorization, private content and transport comments displayed but excluded from network semantic conclusion.",
+      "initialSemanticReadSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "finishBytes": 2940,
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "historicalOverlap": "R33 original exact same-SHA full confirmed for target inspector/contracts; necessary selected consumers also known old overlap. No new unique coverage claimed."
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionStatus": "Prior actual AGENTS5/CODESHELL217 reading carried unchanged; repeated hash not new reading.",
+  "totals": {
+    "semanticFiles": 8,
+    "full": 0,
+    "selected": 8,
+    "productSemanticLines": 153,
+    "testDeclarationSemanticLines": 28,
+    "contractDocumentSemanticLines": 4,
+    "semanticLines": 185,
+    "uniqueDisplayedLinesSummedAcrossFiles": 359,
+    "sourceAndInstructionPins": 10,
+    "partialExistingTestDeclarationsRead": 2,
+    "testTitlesNavigationOnly": 5,
+    "testsExecuted": 0
+  },
+  "boundary": "Whole-byte pins, full body display or old full records do not imply new complete source semantics. Network cap/projection only; DOM/permission/real data and browser/CDP/native mechanisms not reviewed or executed."
+}

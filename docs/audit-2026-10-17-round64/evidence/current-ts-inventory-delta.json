@@ -1,0 +1,11 @@
+{
+  "originalPaths": 4643,
+  "currentFilteredPaths": 4646,
+  "addedPaths": [
+    "docs/audit-2026-10-17-round57/evidence/static-path.test.ts",
+    "docs/audit-2026-10-17-round64/evidence/attachment-shared-path.test.ts",
+    "packages/core/src/capability-control/service.literal-override.test.ts"
+  ],
+  "removedPaths": [],
+  "addedPathsOutsideOriginalDenominator": true
+}

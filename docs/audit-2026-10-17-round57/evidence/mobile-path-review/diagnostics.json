@@ -1,0 +1,27 @@
+{
+  "firstNonzero": {
+    "toolChunk": "9c73e6",
+    "exitCode": 2,
+    "actualFailingSearchArgv": [
+      "rg",
+      "--files",
+      "packages/desktop/public",
+      "packages/desktop/src/mobile"
+    ],
+    "stderr": "rg: packages/desktop/public: No such file or directory (os error 2)",
+    "meaning": "Guessed public root missing; preceding leaf/config/caller displays succeeded. Actual publicDir learned from config and inventoried separately; no product retry."
+  },
+  "toolOutputTruncations": [],
+  "manualMetadataCaps": [
+    {
+      "toolChunk": "70c38c",
+      "projectionContexts": 6,
+      "prefixCharsPerContext": 350,
+      "notFullContextsRead": true
+    }
+  ],
+  "lateSourcePins": [],
+  "productFailures": [],
+  "originalToolTranscriptAuthoritative": true,
+  "metadataGeneratorFirstError": "metadata-first-error.json, tool4f20c3 parse exit1 before statements; original first script preserved, brace-only fix, generator then exit0, no product retry."
+}

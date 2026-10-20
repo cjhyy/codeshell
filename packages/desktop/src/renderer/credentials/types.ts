@@ -15,6 +15,8 @@ export interface CredentialView {
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
     autoRefreshFromBrowser?: boolean;
+    recordSchemaVersion?: 2;
+    linkRecipeId?: import("@cjhyy/code-shell-link").LinkRecipeId;
     linkProvider?: string;
     linkConnectionMethod?: string;
     linkExecutionRuntime?: "local" | "server";
@@ -23,8 +25,9 @@ export interface CredentialView {
       | "github-cli"
       | "cli-session"
       | "browser-oauth"
-      | "remote-link";
-    linkExecutionBackend?: "http-token" | "cli" | "remote";
+      | "remote-link"
+      | "mcp-oauth";
+    linkExecutionBackend?: "http-token" | "cli" | "remote" | "mcp";
     agentExposable?: boolean;
     linkAccountId?: string;
     linkAccountLabel?: string;

@@ -1,0 +1,52 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/image-byte-probe.ts",
+      "bytes": 12022,
+      "sha256": "e744a050a06249ea20f04d6b0bdf37c00e9c317ec024341d1530214b8b0bd133",
+      "lines": 326,
+      "atUTC": "2026-10-17T21:05:26.288138+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target source before body"
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "bytes": 27944,
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "lines": 887,
+      "atUTC": "2026-10-17T21:05:26.289243+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target source before body"
+    },
+    {
+      "path": "packages/server/src/client-message-id.ts",
+      "bytes": 257,
+      "sha256": "ed31c575dd7ee8c5b5cfa98d9476f39efa98b44bafc0df047e7aabc88f552f17",
+      "lines": 8,
+      "atUTC": "2026-10-17T21:05:26.289555+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target source before body"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "atUTC": "2026-10-17T21:05:26.290038+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "instruction hash reuse"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "atUTC": "2026-10-17T21:05:26.290399+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "instruction hash reuse"
+    }
+  ],
+  "sourceSemanticsRead": 0,
+  "rootReportedBaselineOnly": "5fa6a076db90682733c33fd46e1f473f9214d196",
+  "GitVerified": false
+}

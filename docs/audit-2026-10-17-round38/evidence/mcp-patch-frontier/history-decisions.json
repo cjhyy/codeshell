@@ -1,0 +1,36 @@
+{
+  "fullInventoryFiles": 3318,
+  "initialQueries": {
+    "targets": 196,
+    "patch-contract": 286,
+    "old-failed": 0
+  },
+  "initialCap": 100,
+  "initialRetained": {
+    "targets": 100,
+    "patch-contract": 100,
+    "old-failed": 0
+  },
+  "initialSemanticContextLimits": "First25 target contexts read; no claim that capped broad100/100 contexts were all semantically read. Full metadata matching enumerated every file/value.",
+  "focusedQueries": {
+    "exact-helper": 13,
+    "args-roundtrip": 84,
+    "rename-extra-fields": 0
+  },
+  "focusedCap": null,
+  "all97FocusedContextsRead": true,
+  "McpSectionMatchingObjectRows": 10,
+  "all10ObjectRowsRead": true,
+  "focusedDriftFromInitialInventory": 0,
+  "dedupConclusion": "No exact existing MCP editor args-array -> unquoted join -> reparse issue found in the full matching queries/retained contexts; generic argument quoting/CLI/security records are not automatically same cause. Not a universal claim that no human reviewed it.",
+  "priorSameVersionCoverage": "Round30 McpSection21 selected lines1092–1112 only in current same-SHA semantic row; helper ranking/inventory and old existing-test receipts do not establish first-ever unread or current runtime pass.",
+  "datedDifferenceFromFuture37": {
+    "addedFrozen35": 47,
+    "addedFrozen36": 55,
+    "removed": 0,
+    "sharedChangedPaths": [
+      "docs/todo/release-real-operations-2026-10-16.md"
+    ]
+  },
+  "oldFailureSKIPContinues": true
+}

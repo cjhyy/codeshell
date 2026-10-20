@@ -1,0 +1,55 @@
+91:  * Validate + read a batch of files into ImageAttachment. Returns the
+92:  * accepted attachments and any per-file errors. Callers surface errors
+93:  * in a banner — they never throw, so a paste of mixed content (one
+94:  * image + some text) doesn't kill the whole drop.
+95:  */
+96: export async function buildAttachments(
+97:   files: File[],
+98:   existing: ImageAttachment[],
+99: ): Promise<{ accepted: ImageAttachment[]; errors: AttachmentError[] }> {
+100:   const errors: AttachmentError[] = [];
+101:   const accepted: ImageAttachment[] = [];
+102: 
+103:   for (const file of files) {
+104:     if (accepted.length + existing.length >= ATTACHMENT_LIMITS.maxImagesPerMessage) {
+105:       errors.push({
+106:         kind: "too-many",
+107:         message: tr("chat.attachment.tooMany", {
+108:           max: ATTACHMENT_LIMITS.maxImagesPerMessage,
+109:           name: file.name || tr("chat.attachment.unnamed"),
+110:         }),
+111:       });
+112:       continue;
+113:     }
+114:     if (!ATTACHMENT_LIMITS.allowedMimes.has(file.type)) {
+115:       errors.push({
+116:         kind: "wrong-type",
+117:         message: tr("chat.attachment.wrongType", {
+118:           type: file.type || tr("chat.attachment.unknownType"),
+119:           name: file.name || tr("chat.attachment.unnamed"),
+120:         }),
+121:       });
+122:       continue;
+123:     }
+124:     if (file.size > ATTACHMENT_LIMITS.maxBytesPerImage) {
+125:       errors.push({
+126:         kind: "too-large",
+127:         message: tr("chat.attachment.tooLarge", {
+128:           name: file.name || tr("chat.attachment.unnamed"),
+129:           mb: ATTACHMENT_LIMITS.maxBytesPerImage / 1024 / 1024,
+130:         }),
+131:       });
+132:       continue;
+133:     }
+134:     try {
+135:       const dataUrl = await readFileAsDataUrl(file);
+136:       accepted.push({
+137:         id: nextId(),
+138:         name: file.name || "image",
+139:         mime: file.type,
+140:         dataUrl,
+141:         size: file.size,
+142:       });
+143:     } catch (e) {
+144:       errors.push({
+145:         kind: "read-failed",

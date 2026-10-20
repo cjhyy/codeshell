@@ -20,14 +20,24 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [connectGitHub, setConnectGitHub] = useState(true);
+  const [connectGitHub, setConnectGitHub] = useState(false);
+  const [githubLinkDefaultCheck, setGitHubLinkDefaultCheck] = useState<
+    "checking" | "ready" | "failed"
+  >("checking");
+  const githubLinkDefaultOverrideRef = useRef(false);
   const [busy, setBusy] = useState(false);
+  const [logoutUnconfirmed, setLogoutUnconfirmed] = useState(false);
   const busyRef = useRef(false);
   const statusRevisionRef = useRef(0);
   const accountIdentityRef = useRef("");
   const authorityGenerationRef = useRef(0);
   const [authorityGeneration, setAuthorityGeneration] = useState(0);
   const applyStatus = (next: CloudAccountStatus) => {
+    if (next.state === "signed-in") {
+      githubLinkDefaultOverrideRef.current = true;
+      setConnectGitHub(false);
+    }
+    if (next.account) setLogoutUnconfirmed(false);
     const identity =
       next.state === "signed-in" && next.account ? `${next.origin}\n${next.account.id}` : "";
     if (accountIdentityRef.current !== identity) {
@@ -71,6 +81,43 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
       off();
     };
   }, []);
+  // Inspect only saved, masked global Link records. Presence preserves the
+  // user's existing connection even when its secret or authorization needs repair.
+  useEffect(() => {
+    let active = true;
+    let settled = false;
+    const finish = (hasSavedGitHub?: boolean) => {
+      if (!active || settled) return;
+      settled = true;
+      clearTimeout(timer);
+      setGitHubLinkDefaultCheck(hasSavedGitHub === undefined ? "failed" : "ready");
+      if (!githubLinkDefaultOverrideRef.current) setConnectGitHub(hasSavedGitHub === false);
+    };
+    const timer = setTimeout(() => finish(), 3_000);
+    void Promise.resolve()
+      .then(() => window.codeshell.credentials.list(""))
+      .then((credentials) =>
+        finish(
+          credentials.some((credential) => {
+            if (
+              credential.storeScope === "project" ||
+              (credential.type !== "link" && credential.type !== "oauth")
+            )
+              return false;
+            const provider =
+              credential.meta?.linkProvider ??
+              credential.meta?.oauthProvider ??
+              (credential.id === "github-oauth" ? "github" : undefined);
+            return provider === "github";
+          }),
+        ),
+      )
+      .catch(() => finish());
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, []);
   // The account form is opened explicitly; the persistent sidebar and local
   // sign-in snapshot never contact the service. Debounce edits and fence replies
   // so capabilities from a previous address cannot enable this one's buttons.
@@ -98,6 +145,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const capabilityCheckFailed = service?.origin === serviceOrigin && service.failed;
   const githubLinkAvailable =
     capabilities?.githubEnabled === true && capabilities.githubLinkEnabled === true;
+  const githubLinkDefaultPending = githubLinkDefaultCheck === "checking";
   const githubConnectionPending = status.githubConnection?.state === "pending";
   const act = async (
     work: () => Promise<unknown>,
@@ -134,6 +182,22 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
     }
   };
   const pending = busy || status.state === "signing-in" || githubConnectionPending;
+  const logout = () => {
+    const generation = authorityGenerationRef.current;
+    return act(async () => {
+      const result = await window.codeshell.cloudAccount.logout();
+      // A result for the previous session must not describe a newer signed-in
+      // account as signed out while another window has already authenticated.
+      if (accountIdentityRef.current && generation !== authorityGenerationRef.current) return;
+      setLogoutUnconfirmed(result.revocation === "unconfirmed");
+      if (result.revocation === "unconfirmed") {
+        toast({
+          message: t("settingsX.cloudAccount.logoutUnconfirmed"),
+          durationMs: 10_000,
+        });
+      }
+    });
+  };
   const validUsername = /^[a-z0-9][a-z0-9._-]{2,63}$/i.test(username.trim());
   const canSubmit =
     !!origin.trim() &&
@@ -150,79 +214,97 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   };
   return (
     <section
-      className={`flex min-w-0 flex-col gap-3 ${embedded ? "" : "mb-6"}`}
+      className={`flex min-w-0 flex-col gap-6 ${embedded ? "" : "mb-6 w-full max-w-3xl"}`}
       aria-label={t("settingsX.cloudAccount.title")}
     >
       {!embedded && (
-        <>
-          <h3 className="m-0 text-[0.95rem] font-semibold">{t("settingsX.cloudAccount.title")}</h3>
-          <p className="text-sm text-muted-foreground">{t("settingsX.cloudAccount.optional")}</p>
-        </>
-      )}
-      <p role="status" className="text-sm">
-        {statusLoadFailed
-          ? t("settingsX.cloudAccount.unavailable")
-          : pending && passwordOperation
-            ? t("settingsX.cloudAccount.submitting")
-            : t(`settingsX.cloudAccount.state_${status.state}`)}
-      </p>
-      {status.githubConnection && (
-        <div
-          role="status"
-          aria-label={t("settingsX.cloudAccount.githubConnection")}
-          className="space-y-1 text-sm"
-        >
-          <p className="font-medium">{t("settingsX.cloudAccount.githubConnection")}</p>
-          <p
-            className={
-              status.githubConnection.state === "failed"
-                ? "text-status-err"
-                : "text-muted-foreground"
-            }
-          >
-            {t(`settingsX.cloudAccount.githubConnection_${status.githubConnection.state}`)}
+        <div className="space-y-2">
+          <h3 className="m-0 text-base font-semibold">{t("settingsX.cloudAccount.title")}</h3>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {t("settingsX.cloudAccount.optional")}
           </p>
         </div>
       )}
-      {operationError && (
-        <p role="alert" className="text-sm text-status-err">
-          {operationError}
+      <div className="space-y-3">
+        <p role="status" className="text-sm leading-6">
+          {statusLoadFailed
+            ? t("settingsX.cloudAccount.unavailable")
+            : pending && passwordOperation
+              ? t("settingsX.cloudAccount.submitting")
+              : t(`settingsX.cloudAccount.state_${status.state}`)}
         </p>
-      )}
-      {!capabilities ? (
-        <div className="space-y-2 text-sm text-muted-foreground" role="status">
-          <p>
-            {t(
-              !serviceOrigin
-                ? "settingsX.cloudAccount.enterOrigin"
-                : capabilityCheckFailed
-                  ? "settingsX.cloudAccount.capabilitiesFailed"
-                  : "settingsX.cloudAccount.checking",
-            )}
-          </p>
-          {capabilityCheckFailed && (
-            <Button
-              variant="outline"
-              disabled={pending}
-              onClick={() => setCheckVersion((v) => v + 1)}
+        {status.githubConnection && (
+          <div
+            role="status"
+            aria-label={t("settingsX.cloudAccount.githubConnection")}
+            className="space-y-1 text-sm leading-6"
+          >
+            <p className="font-medium">{t("settingsX.cloudAccount.githubConnection")}</p>
+            <p
+              className={
+                status.githubConnection.state === "failed"
+                  ? "text-status-err"
+                  : "text-muted-foreground"
+              }
             >
-              {t("settingsX.cloudAccount.checkAgain")}
-            </Button>
-          )}
-        </div>
-      ) : !capabilities.githubEnabled || (!status.account && !capabilities.registrationAllowed) ? (
-        <div className="space-y-1 text-sm text-muted-foreground" role="status">
-          {!capabilities.githubEnabled && <p>{t("settingsX.cloudAccount.githubUnavailable")}</p>}
-          {!status.account && !capabilities.registrationAllowed && (
-            <p>{t("settingsX.cloudAccount.registrationUnavailable")}</p>
-          )}
-        </div>
-      ) : null}
-      {status.account ? (
-        <div className="space-y-2 text-sm">
-          <p className="break-all">
-            {status.account.displayName || status.account.username} · {status.origin}
+              {t(`settingsX.cloudAccount.githubConnection_${status.githubConnection.state}`)}
+            </p>
+          </div>
+        )}
+        {operationError && (
+          <p role="alert" className="text-sm text-status-err">
+            {operationError}
           </p>
+        )}
+        {logoutUnconfirmed && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {t("settingsX.cloudAccount.logoutUnconfirmed")}
+          </p>
+        )}
+        {!capabilities ? (
+          <div className="space-y-2 text-sm text-muted-foreground" role="status">
+            <p>
+              {t(
+                !serviceOrigin
+                  ? "settingsX.cloudAccount.enterOrigin"
+                  : capabilityCheckFailed
+                    ? "settingsX.cloudAccount.capabilitiesFailed"
+                    : "settingsX.cloudAccount.checking",
+              )}
+            </p>
+            {capabilityCheckFailed && (
+              <Button
+                variant="outline"
+                disabled={pending}
+                onClick={() => setCheckVersion((v) => v + 1)}
+              >
+                {t("settingsX.cloudAccount.checkAgain")}
+              </Button>
+            )}
+          </div>
+        ) : !capabilities.githubEnabled ||
+          (!status.account && !capabilities.registrationAllowed) ? (
+          <div className="space-y-1 text-sm text-muted-foreground" role="status">
+            {!capabilities.githubEnabled && <p>{t("settingsX.cloudAccount.githubUnavailable")}</p>}
+            {!status.account && !capabilities.registrationAllowed && (
+              <p>{t("settingsX.cloudAccount.registrationUnavailable")}</p>
+            )}
+          </div>
+        ) : null}
+      </div>
+      {status.account ? (
+        <div className="space-y-6 text-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 space-y-1">
+              <p className="break-words text-base font-semibold">
+                {status.account.displayName || status.account.username}
+              </p>
+              <p className="break-all text-xs leading-5 text-muted-foreground">{status.origin}</p>
+            </div>
+            <Button variant="outline" disabled={pending} onClick={() => void logout()}>
+              {t("settingsX.cloudAccount.logout")}
+            </Button>
+          </div>
           {status.state === "signed-in" && status.origin && (
             <CloudAccountProfile
               key={`profile:${authorityGeneration}`}
@@ -233,15 +315,11 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               current={() => authorityGenerationRef.current === authorityGeneration}
             />
           )}
-          <p className="text-muted-foreground">{t("settingsX.cloudAccount.linkDescription")}</p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              disabled={pending}
-              onClick={() => void act(() => window.codeshell.cloudAccount.logout())}
-            >
-              {t("settingsX.cloudAccount.logout")}
-            </Button>
+          <div className="space-y-3 border-t border-border pt-6">
+            <h4 className="font-medium">{t("settingsX.cloudAccount.loginMethods")}</h4>
+            <p className="leading-6 text-muted-foreground">
+              {t("settingsX.cloudAccount.linkDescription")}
+            </p>
             <Button
               variant="outline"
               disabled={pending || !capabilities?.githubEnabled}
@@ -265,8 +343,8 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
           )}
         </div>
       ) : (
-        <div className="max-w-lg space-y-3">
-          <label className="block space-y-1 text-sm">
+        <div className="w-full max-w-lg space-y-5">
+          <label className="block space-y-2 text-sm">
             {t("settingsX.cloudAccount.origin")}
             <Input
               value={origin}
@@ -277,11 +355,16 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               autoComplete="url"
             />
           </label>
-          <div className="space-y-2 border-b border-border/70 pb-4">
+          <div className="space-y-3 border-b border-border/70 pb-6">
             <Button
               type="button"
               className="w-full"
-              disabled={pending || !origin.trim() || !capabilities?.githubEnabled}
+              disabled={
+                pending ||
+                (githubLinkAvailable && githubLinkDefaultPending) ||
+                !origin.trim() ||
+                !capabilities?.githubEnabled
+              }
               onClick={() =>
                 void act(() =>
                   window.codeshell.cloudAccount.signInWithGitHub({
@@ -298,25 +381,35 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
                 checked={githubLinkAvailable && connectGitHub}
-                disabled={pending || !githubLinkAvailable}
-                onChange={(event) => setConnectGitHub(event.target.checked)}
+                disabled={pending || githubLinkDefaultPending || !githubLinkAvailable}
+                onChange={(event) => {
+                  githubLinkDefaultOverrideRef.current = true;
+                  setConnectGitHub(event.target.checked);
+                }}
                 aria-describedby={`${helpId}-github-connection`}
               />
               {t("settingsX.cloudAccount.connectGitHub")}
             </label>
-            <p id={`${helpId}-github-connection`} className="text-xs text-muted-foreground">
+            <p
+              id={`${helpId}-github-connection`}
+              className="text-xs leading-5 text-muted-foreground"
+            >
               {t(
                 !capabilities
                   ? "settingsX.cloudAccount.connectGitHubChecking"
                   : !capabilities.githubEnabled
                     ? "settingsX.cloudAccount.githubUnavailable"
-                    : githubLinkAvailable
-                      ? "settingsX.cloudAccount.connectGitHubDescription"
-                      : "settingsX.cloudAccount.connectGitHubUnavailable",
+                    : !githubLinkAvailable
+                      ? "settingsX.cloudAccount.connectGitHubUnavailable"
+                      : githubLinkDefaultPending
+                        ? "settingsX.cloudAccount.connectGitHubDefaultChecking"
+                        : githubLinkDefaultCheck === "failed"
+                          ? "settingsX.cloudAccount.connectGitHubDefaultUnavailable"
+                          : "settingsX.cloudAccount.connectGitHubDescription",
               )}
             </p>
             {capabilities?.githubEnabled && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs leading-5 text-muted-foreground">
                 {t(
                   capabilities.registrationAllowed
                     ? "settingsX.cloudAccount.githubCreatesAccount"
@@ -358,7 +451,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
             </Button>
           </div>
           <form
-            className="space-y-3"
+            className="space-y-4"
             // canSubmit validates the trimmed username, including when Enter
             // submits a pasted value before the input has lost focus.
             noValidate
@@ -372,7 +465,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               signIn(mode);
             }}
           >
-            <label className="block space-y-1 text-sm">
+            <label className="block space-y-2 text-sm">
               {t("settingsX.cloudAccount.username")}
               <Input
                 name="username"
@@ -393,7 +486,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
                 {t("settingsX.cloudAccount.usernameHelp")}
               </p>
             )}
-            <label className="block space-y-1 text-sm">
+            <label className="block space-y-2 text-sm">
               {t("settingsX.cloudAccount.password")}
               <Input
                 name="password"
@@ -409,7 +502,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
             </label>
             {mode === "register" && (
               <>
-                <label className="block space-y-1 text-sm">
+                <label className="block space-y-2 text-sm">
                   {t("settingsX.cloudAccount.confirmPassword")}
                   <Input
                     name="password-confirmation"
@@ -458,11 +551,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
         </Button>
       ) : null}
       {status.state === "storage-error" ? (
-        <Button
-          className="self-start"
-          variant="outline"
-          onClick={() => void act(() => window.codeshell.cloudAccount.logout())}
-        >
+        <Button className="self-start" variant="outline" onClick={() => void logout()}>
           {t("settingsX.cloudAccount.logout")}
         </Button>
       ) : null}

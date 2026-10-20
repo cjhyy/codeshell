@@ -1,0 +1,20 @@
+{
+  "capturedUTC": "2026-10-17T16:54:37.781841+00:00",
+  "decision": "No explicit canonical same-SHA full reading claim found; continue bounded ordinary list/selection/click source review. Not evidence of never read.",
+  "rowsActuallyInspected": 7,
+  "oldCauseBoundedWindowsActuallyRead": 29,
+  "retainedCapPerQuery": 100,
+  "canonicalQualifierCheck": "All exact path/SHA objects are inventories or derived incidental claims, with no full/readScope/reviewMode/inspectionScope object for target. R43 draft-frontier is selected caller reading; its component closing tag appears in old source excerpt, not a target module full claim.",
+  "priorOverlap": "R43 ordinary controlled composer/keyboard is already selected, old R04/D5 excluded. Current follow-up can re-read necessary caller selected ranges without claiming first coverage.",
+  "coverageAliasesChecked": [
+    "scope",
+    "readScope",
+    "reviewMode",
+    "inspectionScope",
+    "review",
+    "coverage",
+    "purpose",
+    "role"
+  ],
+  "indexCaveat": "Unknown/no-row/pin-only/derived claims are not unread proof or new source semantics."
+}

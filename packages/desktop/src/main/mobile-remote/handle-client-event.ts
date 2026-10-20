@@ -387,6 +387,7 @@ export async function handleClientEvent(
       text,
       attachments: event.attachments,
       clientMessageId: event.clientMessageId,
+      modelTraceSource: event.modelTraceSource,
       permissionMode,
       runId,
       bridge,

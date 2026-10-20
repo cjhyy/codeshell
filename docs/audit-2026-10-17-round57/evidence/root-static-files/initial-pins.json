@@ -1,0 +1,20 @@
+{
+  "atUTC": "2026-10-17T18:54:19.200001+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/static-files.ts",
+      "bytes": 950,
+      "lines": 27,
+      "sha256": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.ts",
+      "bytes": 9561,
+      "lines": 202,
+      "sha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "productExecution": 0
+}

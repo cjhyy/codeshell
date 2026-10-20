@@ -1,0 +1,12 @@
+{
+  "productAttempts": 0,
+  "productReruns": 0,
+  "notes": [
+    "First assembly failed to parse because of an extra closing parenthesis; original script exact bytes are preserved as txt and first transcript diagnostic recorded. Only metadata script corrected.",
+    "Prep40/41/42 scopes grouped into formal40, source histories/timestamps/IDs not renamed or backfilled.",
+    "Original aggregate input set excludes UTF8 independent and shortcut; separate supplement covers them.",
+    "Relative tmp sibling report link is supported by a transparent Root wrapper, frozen original bytes unchanged.",
+    "Root business-network/runtime counters exclude separately recorded Git metadata fetch; no zero total traffic claim.",
+    "Source-only old candidate update is not runtime verification, original candidate classification unchanged."
+  ]
+}

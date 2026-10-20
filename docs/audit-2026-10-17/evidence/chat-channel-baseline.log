@@ -1,0 +1,11 @@
+bun test v1.3.11 (af24e281)
+
+packages/chat/src/channel.test.ts:
+(pass) built-in channel capabilities > declares every configured adapter in one capability matrix [2.16ms]
+(pass) built-in channel capabilities > uses granular kinds while preserving legacy third-party adapters [0.07ms]
+
+ 2 pass
+ 0 fail
+ 58 expect() calls
+Ran 2 tests across 1 file. [119.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

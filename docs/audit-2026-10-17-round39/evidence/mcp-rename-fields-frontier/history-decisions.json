@@ -1,0 +1,49 @@
+{
+  "inventoryFiles": 3413,
+  "markdown": 1352,
+  "json": 2061,
+  "stringLeaves": 887511,
+  "scalarLeaves": 1329022,
+  "exactArchivePaths": 169,
+  "parseErrors": 0,
+  "excludedMutableFuture": [
+    "docs/audit-2026-10-17-round38/**",
+    "docs/audit-2026-10-17-round39/**"
+  ],
+  "includesFrozen37": true,
+  "initialQueries": {
+    "exact-fields": 12,
+    "mcp-rename": 9,
+    "field-retention": 4
+  },
+  "initialContextCap": null,
+  "initial25ContextsFullyRead": true,
+  "focusedFilenameContextsRetained": 147,
+  "focusedContextCap": null,
+  "focused147AllSemanticallyRead": false,
+  "focusedCompleteSemanticRangeZeroBased": [
+    [
+      108,
+      146
+    ]
+  ],
+  "focusedOtherContexts": "Partial navigation only due overbroad output; no all-context coverage claim. Direct file/path objects separately selected and read.",
+  "initialBroadDirectStringMatchingObjectCount": 69,
+  "narrowDirectFilePathObjectCount": 12,
+  "narrow12ObjectsRead": true,
+  "focusedDriftFromInitialInventory": [],
+  "oldCauseDecisions": [
+    "May30 MCP headers display delimiter is a different old issue; direct old rows and verifier explanation accept both delimiters.",
+    "September11 rename work asserts atomic rename, disabled state, deletion markers and editable fields; does not establish supported startup/result extras retention. Old dynamic pass statements are historical claims, not current validation.",
+    "Prior inventories and same-SHA Round30 McpSection1092–1112/21lines do not establish full semantic coverage or first-ever unread.",
+    "Round4 inline image archive/compaction issue concerns result/context serialization, not rename of supported server configuration.",
+    "Mutable38 excluded from this full scan; known MCP-R38-01 args array-to-text roundtrip is separate formatter/parser repair, not this whitelist/new-key replacement. Prior38 source reading is carried context only, not frozen37 history."
+  ],
+  "noveltyConclusion": "No exact same-cause supported-field-loss-on-MCP-rename issue found in complete metadata matching gate and the bounded contexts/direct objects read. This is not a claim every historical document was semantically read.",
+  "datedDeltaFromFuture38": {
+    "addedFrozen37": 95,
+    "removed": 0,
+    "sharedChanged": 0
+  },
+  "oldFailedExecutionDirections": "remain SKIP, none reopened"
+}

@@ -1,0 +1,32 @@
+{
+  "reusedCoverageFiles": [
+    "/tmp/codeshell-audit-round28-coverage-frontier/package-inventory.json",
+    "/tmp/codeshell-audit-round28-coverage-frontier/coverage-index.json"
+  ],
+  "newFullInventoryScans": 0,
+  "selectedMainSources": [
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "bytes": 2732,
+      "lines": 101,
+      "firstFilesystemSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "coveragePrepSha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "matchesEarlierCoverageSnapshot": true,
+      "structuredCoverageStatus": "current-sha-pin-only-no-semantic-coverage",
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "historicalFullSemanticReadingNotInferred": true
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "bytes": 7513,
+      "lines": 207,
+      "firstFilesystemSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "coveragePrepSha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "matchesEarlierCoverageSnapshot": true,
+      "structuredCoverageStatus": "current-sha-pin-only-no-semantic-coverage",
+      "firstPinBeforeThisTaskSemanticRead": true,
+      "historicalFullSemanticReadingNotInferred": true
+    }
+  ],
+  "reason": "Ordinary Run enqueue/serial drain and Web transcript snapshot/live merge data states; no invocation of real tasks, callbacks, SDK/barrels, Git, network, models or authority checks."
+}

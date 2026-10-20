@@ -1,17 +1,20 @@
-import React, { memo, useState, useEffect, useRef } from "react";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import React, { memo, useState, useEffect, useId } from "react";
+import { ChevronRight, ChevronDown, LoaderCircle } from "lucide-react";
 import { ToolCard } from "../tool-cards";
 import { ToolGroupCard } from "./ToolGroupCard";
 import { ThinkingMessageView } from "./ThinkingMessageView";
 import { AgentMessageView } from "./AgentMessageView";
 import { ContextBoundaryView } from "./ContextBoundaryView";
-import { GoalProgressView } from "./GoalProgressView";
+import { GoalProgressView, type GoalExtendOpts } from "./GoalProgressView";
 import { StreamingMarkdown } from "./StreamingMarkdown";
-import { processGroupLabel, type RenderedTurnProcessGroup } from "./streamGroups";
+import { processGroupDuration, type RenderedTurnProcessGroup } from "./streamGroups";
 import { AgentGroupCard } from "./AgentGroupCard";
 import { isSystemReminderText } from "../contextSelection";
 import { SystemReminderTask } from "./SystemReminderTask";
 import type { MarkdownRootStatus } from "../Markdown";
+import type { UserMessage } from "../types";
+import { useT } from "../i18n/I18nProvider";
+import { useAnchoredLayoutChange } from "../chat/TranscriptScrollContext";
 
 interface Props {
   /** Rendered shape: inner items may include an AgentGroup (foldAgentGroups). */
@@ -22,6 +25,7 @@ interface Props {
   sessionId?: string | null;
   sessionMainRootId?: string | null;
   rootStatus?: MarkdownRootStatus;
+  onExtendGoal?: (opts: GoalExtendOpts) => void;
 }
 
 /**
@@ -42,13 +46,13 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
 }
 
 /**
- * Codex-style "已处理 X m Y s ⌄" — wraps a whole turn from just after
+ * A turn's activity disclosure, from just after
  * the user message through its last tool call (lead-in + mid-run
- * narration ride inside). Only the user bubble and the post-tool final
- * summary live OUTSIDE this card (rendered by the caller).
+ * narration ride inside). Consumed user follow-ups separate those activity
+ * surfaces; the initial user bubble and final summary are rendered by the caller.
  *
- * Live turn: defaults to OPEN with a 1s elapsed ticker. Closed turn:
- * defaults to CLOSED with static total wall time.
+ * A newly mounted live turn opens; history starts closed. Completion freezes
+ * its clock while retaining the current disclosure and reading position.
  */
 function TurnProcessGroupCardImpl({
   group,
@@ -57,22 +61,14 @@ function TurnProcessGroupCardImpl({
   sessionId,
   sessionMainRootId,
   rootStatus,
+  onExtendGoal,
 }: Props) {
   const [open, setOpen] = useState(group.isLive);
-  const prevIsLiveRef = useRef(group.isLive);
+  const detailsId = useId();
+  const { t } = useT();
+  const anchoredChange = useAnchoredLayoutChange();
 
-  // Force-collapse only the process card whose own clean turn just transitioned
-  // from live to closed. Older closed groups may have been manually expanded;
-  // a later turnEpoch bump (background wakeup / next turn) must not fold them
-  // again. Interrupted (stopped) turns still render flat; see showHeader below.
-  useEffect(() => {
-    const wasLive = prevIsLiveRef.current;
-    if (wasLive && !group.isLive && !group.stopped && group.completedCleanly !== false)
-      setOpen(false);
-    prevIsLiveRef.current = group.isLive;
-  }, [group.isLive, group.stopped, group.completedCleanly]);
-
-  // Codex-style "已处理 X m Y s" header. Live turn: tick every 1s from the
+  // Live turn: tick every 1s from the
   // run start, including model work before the first tool. Closed turn uses
   // the frozen backend duration, with source timestamp fallback for old history.
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -89,22 +85,37 @@ function TurnProcessGroupCardImpl({
       ? undefined
       : Math.max(0, nowMs - startedAt)
     : group.durationMs;
-  const label = processGroupLabel(elapsedMs);
+  const duration = processGroupDuration(elapsedMs);
+  const label = t(group.isLive ? "msg.process.processRunning" : "msg.process.processCompleted");
 
-  // An interrupted turn never collapses behind the "已处理 Xs ⌄" header — its
+  // An interrupted turn never collapses behind the activity disclosure — its
   // produced content shows flat. The elapsed time + "你在 Ns 后停止了" marker is
   // rendered separately by TurnEndMessageView (the turn_end sibling outside this
   // group), so we deliberately drop the header here to avoid a duplicate marker.
   const showHeader = !group.stopped;
   const itemsVisible = group.stopped || open;
-  // A consumed user steer belongs to this running turn, but remains a user
-  // request when its surrounding tools are collapsed. Keep the same bubble
-  // visible after reload without exposing pending drafts or internal wakeups.
-  const visibleItems = dedupeById(group.items).filter(
-    (item) =>
-      itemsVisible ||
-      (item.kind === "user" && !!item.steerId && !item.pending && !isSystemReminderText(item.text)),
-  );
+  // Keep the engine's single turn intact while presenting user requests between
+  // activity surfaces. Reserve pending requests' boundaries so confirmation does
+  // not remount later tools or lose their disclosure/focus. Their bubbles still
+  // belong to the queue until consumed.
+  type Part =
+    | { kind: "activity"; id: string; items: RenderedTurnProcessGroup["items"] }
+    | { kind: "user"; message: UserMessage };
+  let activity: Extract<Part, { kind: "activity" }> = {
+    kind: "activity",
+    id: "leading",
+    items: [],
+  };
+  const parts: Part[] = [activity];
+  for (const item of dedupeById(group.items)) {
+    if (item.kind === "user" && item.text !== "" && !isSystemReminderText(item.text)) {
+      parts.push({ kind: "user", message: item });
+      activity = { kind: "activity", id: `after:${item.id}`, items: [] };
+      parts.push(activity);
+    } else {
+      activity.items.push(item);
+    }
+  }
   const toolNames = group.items.flatMap((item) => {
     if (item.kind === "tool") return [item.toolName];
     if (item.kind === "tool_group") {
@@ -113,116 +124,156 @@ function TurnProcessGroupCardImpl({
     return [];
   });
 
-  return (
-    <div className="px-4 py-1" data-message-kind="process" data-tool-names={toolNames.join(" ")}>
-      {showHeader && (
-        <button
-          type="button"
-          className={`flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground${
-            open ? " border-b border-border pb-1" : ""
-          }`}
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-        >
-          {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          <span>{label}</span>
-        </button>
-      )}
-      {visibleItems.length > 0 && (
-        <div className={showHeader ? "mt-1 flex flex-col gap-1" : "flex flex-col gap-1"}>
-          {visibleItems.map((m) => {
-            if (m.kind === "tool_group") {
-              return (
-                <ToolGroupCard
-                  key={m.id}
-                  group={m}
-                  turnEpoch={turnEpoch}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  sessionMainRootId={sessionMainRootId}
-                  rootStatus={rootStatus}
-                  defaultOpen
-                />
-              );
-            }
-            if (m.kind === "tool") {
-              return (
-                <ToolCard
-                  key={m.id}
-                  message={m}
-                  turnEpoch={turnEpoch}
-                  cwd={cwd}
-                  sessionId={sessionId}
-                  sessionMainRootId={sessionMainRootId}
-                  rootStatus={rootStatus}
-                />
-              );
-            }
-            if (m.kind === "assistant") {
-              // Empty assistant = nothing to draw (only text renders here).
-              // Replay makes tool-only turns done:true text:"" — suppress
-              // those too, not just streaming empties. See AssistantMessageView.
-              if (m.text === "") return null;
-              return (
-                <div key={m.id} className="py-1 text-sm">
-                  {/* Inline assistant text belongs to the MAIN agent of this
-                      turn — same session, same cwd the card already holds — so
-                      forward it (matches AssistantMessageView). Relative image
-                      paths / path links now resolve here too (stage 0b). */}
-                  <StreamingMarkdown
-                    text={m.text}
-                    done={m.done}
-                    cwd={cwd ?? null}
-                    sessionId={sessionId}
-                    sessionMainRootId={sessionMainRootId}
-                    rootStatus={rootStatus}
-                  />
-                </div>
-              );
-            }
-            if (m.kind === "user") {
-              if (isSystemReminderText(m.text)) {
-                return <SystemReminderTask key={m.id} text={m.text} />;
-              }
-              // A steer / goal-wakeup / cron续接 spliced into a still-live turn
-              // lands INSIDE this group (injected user is not a turn boundary,
-              // see streamGroups foldTurnProcess). It must render as a
-              // right-aligned user bubble here — without this branch the
-              // confirmed steer hit `return null` and visibly vanished after
-              // being consumed (regression: steer bubble disappears).
-              // BUT a still-pending optimistic steer is owned by the queued-input
-              // panel (visible + revocable there until steer_injected flips it to
-              // pending:false). Rendering it here too would double it and show it
-              // as already-in-transcript before the engine consumed it. Only draw
-              // the CONFIRMED bubble; the panel handles the pending one.
-              if (m.pending || m.text === "") return null;
-              return (
-                <div key={m.id} className="flex min-w-0 max-w-full flex-col items-end py-1">
-                  <div className="min-w-0 max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
-                    <div className="whitespace-pre-wrap break-words">{m.text}</div>
-                  </div>
-                </div>
-              );
-            }
-            if (m.kind === "thinking") {
-              return <ThinkingMessageView key={m.id} message={m} />;
-            }
-            if (m.kind === "agent") {
-              return <AgentMessageView key={m.id} message={m} />;
-            }
-            if (m.kind === "agent_group") {
-              return <AgentGroupCard key={m.id} group={m} />;
-            }
-            if (m.kind === "context_boundary") {
-              return <ContextBoundaryView key={m.id} message={m} />;
-            }
-            if (m.kind === "goal_progress") {
-              return <GoalProgressView key={m.id} message={m} />;
-            }
-            return null;
-          })}
+  const renderActivity = (m: RenderedTurnProcessGroup["items"][number]) => {
+    if (m.kind === "tool_group") {
+      return (
+        <ToolGroupCard
+          key={m.id}
+          group={m}
+          turnEpoch={turnEpoch}
+          cwd={cwd}
+          sessionId={sessionId}
+          sessionMainRootId={sessionMainRootId}
+          rootStatus={rootStatus}
+          defaultOpen
+        />
+      );
+    }
+    if (m.kind === "tool") {
+      return (
+        <ToolCard
+          key={m.id}
+          message={m}
+          turnEpoch={turnEpoch}
+          cwd={cwd}
+          sessionId={sessionId}
+          sessionMainRootId={sessionMainRootId}
+          rootStatus={rootStatus}
+        />
+      );
+    }
+    if (m.kind === "assistant") {
+      // Empty assistant = nothing to draw (only text renders here).
+      // Replay makes tool-only turns done:true text:"" — suppress
+      // those too, not just streaming empties. See AssistantMessageView.
+      if (m.text === "") return null;
+      return (
+        <div key={m.id} className="cs-process-narration">
+          {/* Inline assistant text belongs to the MAIN agent of this
+            turn — same session, same cwd the card already holds — so
+            forward it (matches AssistantMessageView). Relative image
+            paths / path links now resolve here too (stage 0b). */}
+          <StreamingMarkdown
+            text={m.text}
+            done={m.done}
+            cwd={cwd ?? null}
+            sessionId={sessionId}
+            sessionMainRootId={sessionMainRootId}
+            rootStatus={rootStatus}
+          />
         </div>
-      )}
+      );
+    }
+    if (m.kind === "user") {
+      return isSystemReminderText(m.text) ? <SystemReminderTask key={m.id} text={m.text} /> : null;
+    }
+    if (m.kind === "thinking") {
+      return <ThinkingMessageView key={m.id} message={m} />;
+    }
+    if (m.kind === "agent") {
+      return <AgentMessageView key={m.id} message={m} />;
+    }
+    if (m.kind === "agent_group") {
+      return <AgentGroupCard key={m.id} group={m} />;
+    }
+    if (m.kind === "context_boundary") {
+      return <ContextBoundaryView key={m.id} message={m} />;
+    }
+    if (m.kind === "goal_progress") {
+      return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
+    }
+    return null;
+  };
+  const activityNodes = parts.map((part) =>
+    part.kind === "activity" && itemsVisible ? part.items.map(renderActivity).filter(Boolean) : [],
+  );
+  const controlledIds = parts
+    .flatMap((part, index) =>
+      part.kind === "activity" && (index === 0 || activityNodes[index].length > 0)
+        ? [`${detailsId}-${index}`]
+        : [],
+    )
+    .join(" ");
+
+  return (
+    <div
+      className="cs-process min-w-0 max-w-full px-4 py-1"
+      data-message-kind="process"
+      data-tool-names={toolNames.join(" ")}
+    >
+      {parts.map((part, index) => {
+        if (part.kind === "user") {
+          if (part.message.pending || (!itemsVisible && !part.message.steerId)) return null;
+          return (
+            <div
+              key={`user:${part.message.id}`}
+              className="cs-process-user"
+              data-steer-message={part.message.id}
+            >
+              <div className="min-w-0 max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
+                <div className="whitespace-pre-wrap break-words">{part.message.text}</div>
+              </div>
+            </div>
+          );
+        }
+        const nodes = activityNodes[index];
+        const header = index === 0 && showHeader;
+        if (!header && nodes.length === 0) return null;
+        return (
+          <div key={part.id} className="cs-process-surface">
+            {header && (
+              <button
+                type="button"
+                className="cs-process-heading"
+                onClick={(event) => anchoredChange(event.currentTarget, () => setOpen((v) => !v))}
+                aria-expanded={open}
+                aria-controls={controlledIds}
+              >
+                <span className="cs-process-label">
+                  {group.isLive && (
+                    <LoaderCircle
+                      size={13}
+                      className="animate-spin motion-reduce:animate-none"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {label}
+                </span>
+                {duration && (
+                  <span
+                    className="cs-process-duration"
+                    aria-label={t("msg.process.processDurationAccessible", { time: duration })}
+                  >
+                    {duration}
+                  </span>
+                )}
+                {open ? (
+                  <ChevronDown className="cs-process-chevron" size={13} aria-hidden="true" />
+                ) : (
+                  <ChevronRight className="cs-process-chevron" size={13} aria-hidden="true" />
+                )}
+              </button>
+            )}
+            <div
+              id={`${detailsId}-${index}`}
+              className="cs-process-content"
+              hidden={nodes.length === 0}
+            >
+              {nodes}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

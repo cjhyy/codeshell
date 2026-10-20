@@ -1,0 +1,40 @@
+{
+  "baseline": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse.md",
+      "bytes": 2420,
+      "sha256": "b7a3d8791320f2d4db315718012dc84ff5fbcc90eafae050096253f8f27b05fa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-initial-pins.json",
+      "bytes": 1110,
+      "sha256": "edc0c4f6b02e8aec06dad5d9b9bd7ea8ef164e9793107c8f73aa74ef7901bb56"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-prior-pins.json",
+      "bytes": 772,
+      "sha256": "f877213ebf60f7ad3d5cf471cb4713e813fb3b5cf7a78e00538f167f625f9319"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-source-manifest.json",
+      "bytes": 4974,
+      "sha256": "18eb33bf4cef6adaa832a56b935378a3d79507aa80e3b27bc68cda9db9bcebbf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-validation.json",
+      "bytes": 323,
+      "sha256": "22144f05694a2b3fe94f97b0a37680993fab1061ae5b1d11dbcd6a00660f0c42"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-checks.json",
+      "bytes": 5048,
+      "sha256": "bbbdaf8dde6336a3b5f093011f4572377422772459da0625f1308cae91e28c2c"
+    }
+  ],
+  "selfExcluded": true,
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "productExecution": false
+}

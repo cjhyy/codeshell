@@ -1,0 +1,18 @@
+{
+  "actualRootFreshQueryReadAll": false,
+  "freshCounts": {
+    "translator": 181,
+    "tombstone-transcript": 32,
+    "fallback-placeholder": 14
+  },
+  "contextCapEach": 80,
+  "new77DeltaCounts": {
+    "translator": 90,
+    "tombstone-transcript": 5,
+    "fallback-placeholder": 0
+  },
+  "new77FocusedBoundedContextsRead": 5,
+  "meaning": "All5 new77 revocation contexts read; old lifecycle descriptions/table copies, not existing bug classification. Translator90 saved contexts not all read. Root44 separate3696 gate read41 focused contexts and direct F01/R20 metadata reports; no whole historical scalar exhaustion.",
+  "newRootProductSemanticReadsDuringFormalAssembly": 0,
+  "productRuns": 0
+}

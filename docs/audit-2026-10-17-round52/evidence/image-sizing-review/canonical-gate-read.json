@@ -1,0 +1,19 @@
+{
+  "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+  "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+  "pointer": "/files/9",
+  "originalObject": {
+    "path": "packages/desktop/src/renderer/chat/compress.ts",
+    "bytes": 8303,
+    "sha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+    "lines": 218,
+    "pinnedUTC": "2026-10-17T16:48:11.087524+00:00",
+    "coverage": "hash-only",
+    "selectedLineRanges": [],
+    "displayedLineRanges": [],
+    "semanticLineCount": 0,
+    "displayedLineCount": 0,
+    "initialPinIsSemanticReadProof": false,
+    "endingSha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50"
+  }
+}

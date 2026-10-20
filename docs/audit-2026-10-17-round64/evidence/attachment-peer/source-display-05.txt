@@ -1,0 +1,28 @@
+98: interface ManifestRecord {
+99:   event: "staged" | "sent" | "removedFromDraft" | "cleanup";
+122: export const DRAFT_ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;
+123: export const SENT_ATTACHMENT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+177: export async function stageImageDataUrl(
+256:   const existing = await findExistingSessionFile(sessionDir, sha16);
+295:   await appendManifest(sessionDir, { event: "staged", status: "draft", ...meta });
+316:   const existing = await findExistingSessionFile(sessionDir, sha16);
+352:   await appendManifest(sessionDir, { event: "staged", status: "draft", ...meta });
+368:     await appendManifest(sessionDir, {
+409:       } else if ((record.event === "removedFromDraft" || record.event === "cleanup") && record.id) {
+420: export async function cleanupAttachments(input: AttachmentCleanupInput): Promise<{
+453:       const ttl = isSent ? SENT_ATTACHMENT_TTL_MS : DRAFT_ATTACHMENT_TTL_MS;
+459:       await appendManifest(sessionDir, {
+476:   await cleanupAttachments({ cwd, sessionId }).catch(() => undefined);
+690: async function findExistingSessionFile(sessionDir: string, sha16: string): Promise<string | null> {
+708: async function appendManifest(sessionDir: string, record: ManifestRecord): Promise<void> {
+717: async function readManifest(sessionDir: string): Promise<ManifestRecord[]> {
+749:           return parseManifestRecord(JSON.parse(line) as unknown);
+754:       .filter((record): record is ManifestRecord => !!record)
+761: function parseManifestRecord(value: unknown): ManifestRecord | null {
+767:       raw.event !== "removedFromDraft" &&
+807:   return raw as unknown as ManifestRecord;
+835: function recordToMeta(record: ManifestRecord): InputAttachmentMeta | null {
+866: async function manifestFilesInside(records: ManifestRecord[], root: string): Promise<string[]> {
+875: function latestAttachmentState(records: ManifestRecord[]): Map<string, ManifestRecord> {
+876:   const latest = new Map<string, ManifestRecord>();
+884:     if (record.event === "removedFromDraft" || record.event === "cleanup") latest.delete(record.id);

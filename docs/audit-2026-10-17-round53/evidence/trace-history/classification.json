@@ -1,0 +1,35 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "decision": "Finite negative only for listed ordinary query/consumer/assertion selections, substantial known prior overlap. No entire adapter/Store/UI/Host or repository correctness claim.",
+  "rejectedOrBoundedHypotheses": [
+    {
+      "subject": "Ordinary false/0 values and bounded numeric/string query fields",
+      "decision": "No counterexample: validator uses value/type checks and own DTO, not truthy field omission."
+    },
+    {
+      "subject": "Normal nextCursor propagation",
+      "decision": "Actual Desktop supplies returned cursor with limit100 and sessions limit50; HTTP decodes strings/booleans/numbers then leaf validates/forwards. Sorting/cursor algorithm in Store is not newly read or executed."
+    },
+    {
+      "subject": "Session grouping/category page behavior",
+      "decision": "Two existing test assertion selections declare expected ordinary group/filter/post-cursor output; static intent only, not pass evidence."
+    }
+  ],
+  "excludedBoundaries": [
+    "workspace authority/admission/visibility118–201",
+    "Host/HTTP authentication and connection machinery",
+    "real trace/config/session/account files",
+    "FS/prune/locks/persistence",
+    "native/permissions/identity/custody",
+    "provider/model",
+    "complete async UI lifecycle",
+    "old Codexparse/NDJSON/timer failed runtime directions"
+  ]
+}

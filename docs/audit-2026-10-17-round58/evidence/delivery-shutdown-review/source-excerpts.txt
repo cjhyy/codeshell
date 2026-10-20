@@ -1,0 +1,1451 @@
+packages/chat/src/delivery-queue.ts
+3: import { chmod, lstat, mkdir, open, readdir, rename, rm, writeFile } from "node:fs/promises";
+19:    * `load()` is a function), so it stayed in memory only — while the adapter had
+30: /** Attachment metadata persisted in place of the un-serializable `load()`. */
+93:  * this queue has atomically recorded them; processing happens out of band with
+94:  * per-target ordering and retry. Lazy attachment functions stay in-memory.
+95:  */
+96: export class DeliveryQueue {
+97:   private readonly pending: DeliveryRecord[] = [];
+98:   /** Enqueues that reserved capacity while attachments are materialized outside the mutation lock. */
+99:   private readonly preparing = new Map<string, string | undefined>();
+100:   /** Same-target inputs enter the queue in arrival order, even when media loads slowly. */
+101:   private readonly preparationByTarget = new Map<string, Promise<void>>();
+102:   private readonly completed = new Map<string, number>();
+103:   private readonly inFlight = new Set<string>();
+104:   private readonly targetInFlight = new Map<string, number>();
+105:   private mutation = Promise.resolve();
+106:   private retryTimer?: ReturnType<typeof setTimeout>;
+107:   private persistRetryTimer?: ReturnType<typeof setTimeout>;
+108:   /** Terminal records whose spool may be deleted after a successful state retry. */
+109:   private readonly persistRetryCleanups = new Map<
+110:     string,
+111:     { entry: DeliveryRecord; message: ChannelMessage }
+112:   >();
+113:   private stopped = true;
+114: 
+115:   constructor(
+116:     private readonly config: DeliveryQueueConfig,
+117:     private readonly deliver: (adapterId: string, message: ChannelMessage) => Promise<void>,
+118:     private readonly onError: (error: unknown, message: ChannelMessage) => void,
+119:   ) {}
+120: 
+121:   async start(): Promise<void> {
+122:     this.stopped = false;
+123:     if (this.config.path) {
+124:       await this.load();
+125:       // Reclaim spool files no surviving record points at.
+126:       await this.sweepOrphanedSpool();
+127:     }
+128:     this.pump();
+129:   }
+130: 
+131:   stop(): void {
+132:     this.stopped = true;
+133:     if (this.retryTimer) clearTimeout(this.retryTimer);
+134:     this.retryTimer = undefined;
+135:     if (this.persistRetryTimer) clearTimeout(this.persistRetryTimer);
+136:     this.persistRetryTimer = undefined;
+137:   }
+138: 
+139:   status(): DeliveryQueueStatus {
+140:     const now = Date.now();
+141:     return {
+142:       pending: this.pending.length,
+143:       inFlight: this.inFlight.size,
+149:     if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
+150:     const dedupeKey = deliveryDedupeKey(message);
+151:     const id = randomUUID();
+152:     const target = targetKey(message);
+153:     let previousPreparation: Promise<void> | undefined;
+154:     let preparation: Promise<void> | undefined;
+155:     let releasePreparation: (() => void) | undefined;
+156:     const reserved = await this.withMutation(async () => {
+157:       if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
+158:       this.pruneCompleted();
+159:       if (
+160:         dedupeKey &&
+161:         (this.completed.has(dedupeKey) ||
+162:           this.pending.some((entry) => entry.dedupeKey === dedupeKey) ||
+163:           [...this.preparing.values()].some((candidate) => candidate === dedupeKey))
+164:       ) {
+165:         return false;
+166:       }
+167:       if (this.pending.length + this.preparing.size >= this.config.maxPending) {
+168:         throw new DeliveryBackpressureError(this.config.maxPending);
+169:       }
+170:       this.preparing.set(id, dedupeKey);
+171:       previousPreparation = this.preparationByTarget.get(target);
+172:       preparation = new Promise<void>((resolve) => {
+173:         releasePreparation = resolve;
+174:       });
+175:       this.preparationByTarget.set(target, preparation);
+176:       return true;
+177:     });
+178:     if (!reserved) return "duplicate";
+179: 
+180:     // attachment.load() may perform an unbounded network read. The reservation
+181:     // above preserves dedupe/backpressure, while doing the I/O here prevents one
+182:     // slow attachment from blocking every enqueue and terminal state write.
+183:     const spooled = await this.spoolAttachments(id, message);
+184:     await previousPreparation;
+185:     let record: DeliveryRecord | undefined;
+186:     try {
+187:       await this.withMutation(async () => {
+188:         try {
+189:           if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
+190:           const persistent = Boolean(
+191:             this.config.path && (!message.attachments?.length || spooled !== undefined),
+192:           );
+193:           const safeMessage = persistent
+194:             ? serializableMessage(message, this.rehydrateAttachments(spooled))
+195:             : message;
+196:           record = {
+197:             id,
+198:             ...(dedupeKey ? { dedupeKey } : {}),
+199:             adapterId,
+200:             message: safeMessage,
+201:             attempts: 0,
+202:             nextAttemptAt: Date.now(),
+203:             persistent,
+204:             ...(spooled ? { spooled } : {}),
+205:           };
+206:           this.pending.push(record);
+207:           if (persistent) await this.persist();
+208:         } catch (error) {
+209:           if (record) {
+210:             const index = this.pending.findIndex((candidate) => candidate.id === record?.id);
+211:             if (index >= 0) this.pending.splice(index, 1);
+212:           }
+213:           throw error;
+214:         } finally {
+215:           this.preparing.delete(id);
+216:         }
+217:       });
+218:     } catch (error) {
+219:       await this.discardSpool(
+220:         record ?? {
+221:           id,
+222:           adapterId,
+223:           message,
+224:           attempts: 0,
+225:           nextAttemptAt: 0,
+226:           persistent: false,
+227:           ...(spooled ? { spooled } : {}),
+228:         },
+229:       );
+230:       throw error;
+231:     } finally {
+232:       releasePreparation?.();
+233:       if (this.preparationByTarget.get(target) === preparation) {
+234:         this.preparationByTarget.delete(target);
+235:       }
+236:     }
+237:     this.pump();
+238:     return "queued";
+239:   }
+240: 
+241:   private pump(): void {
+242:     if (this.stopped) return;
+243:     if (this.retryTimer) clearTimeout(this.retryTimer);
+244:     this.retryTimer = undefined;
+245:     const now = Date.now();
+246:     while (this.inFlight.size < this.config.maxConcurrent) {
+247:       const entry = this.pending.find((candidate) => {
+248:         if (this.inFlight.has(candidate.id) || candidate.nextAttemptAt > now) return false;
+249:         return (
+250:           (this.targetInFlight.get(targetKey(candidate.message)) ?? 0) < this.config.maxPerTarget
+251:         );
+252:       });
+253:       if (!entry) break;
+254:       this.inFlight.add(entry.id);
+255:       const key = targetKey(entry.message);
+256:       this.targetInFlight.set(key, (this.targetInFlight.get(key) ?? 0) + 1);
+257:       void this.process(entry);
+258:     }
+259:     const next = this.pending
+260:       .filter((entry) => !this.inFlight.has(entry.id) && entry.nextAttemptAt > now)
+261:       .reduce<
+262:         number | undefined
+263:       >((earliest, entry) => (earliest === undefined ? entry.nextAttemptAt : Math.min(earliest, entry.nextAttemptAt)), undefined);
+264:     if (next !== undefined) {
+265:       this.retryTimer = setTimeout(() => this.pump(), Math.max(1, next - Date.now()));
+266:       this.retryTimer.unref?.();
+267:     }
+268:   }
+269: 
+270:   private async process(entry: DeliveryRecord): Promise<void> {
+271:     let error: unknown;
+272:     try {
+273:       await this.deliver(entry.adapterId, entry.message);
+274:     } catch (caught) {
+275:       error = caught;
+276:       this.onError(caught, entry.message);
+277:     }
+278: 
+279:     const terminal = error === undefined || error instanceof UnroutableDeliveryError;
+280:     try {
+281:       await this.withMutation(async () => {
+282:         this.inFlight.delete(entry.id);
+283:         const key = targetKey(entry.message);
+284:         const targetCount = (this.targetInFlight.get(key) ?? 1) - 1;
+285:         if (targetCount <= 0) this.targetInFlight.delete(key);
+286:         else this.targetInFlight.set(key, targetCount);
+287: 
+288:         if (terminal) {
+289:           // Success, or a permanently unroutable record: drop it so a message
+290:           // that can never be delivered does not retry (and re-log) forever.
+291:           const index = this.pending.findIndex((candidate) => candidate.id === entry.id);
+292:           if (index >= 0) this.pending.splice(index, 1);
+293:           if (error === undefined && entry.dedupeKey)
+294:             this.completed.set(entry.dedupeKey, Date.now());
+295:         } else {
+296:           entry.attempts += 1;
+297:           entry.nextAttemptAt =
+298:             Date.now() +
+299:             Math.min(
+300:               this.config.retryMaxMs,
+301:               this.config.retryBaseMs * 2 ** Math.min(entry.attempts - 1, 10),
+302:             );
+303:         }
+304:         this.pruneCompleted();
+305:         // Persist the terminal removal BEFORE deleting attachment bytes. If the
+306:         // state write fails, the durable record still has everything needed for
+307:         // at-least-once recovery after a crash.
+308:         if (entry.persistent) await this.persist();
+309:         if (terminal) await this.discardSpool(entry);
+310:       });
+311:     } catch (persistError) {
+312:       this.onError(persistError, entry.message);
+313:       this.schedulePersistRetry(entry.message, terminal ? entry : undefined);
+314:     }
+315:     this.pump();
+316:   }
+317: 
+320:     if (this.stopped || !this.config.path || this.persistRetryTimer) return;
+324:       if (this.stopped) return;
+325:       void this.withMutation(async () => {
+326:         await this.persist();
+364:       await ensureRealDirectory(dir);
+367:         const bytes = await attachment.load();
+373:         await writeFile(target, bytes, { mode: 0o600, flag: "wx" });
+427:    * Runs once at load(), when the set of live records is exactly known.
+482:   private async load(): Promise<void> {
+483:     if (!this.config.path) return;
+484:     try {
+485:       const parsed = JSON.parse(
+486:         await readBoundedRegularFile(
+487:           this.config.path,
+488:           MAX_DELIVERY_STATE_BYTES,
+489:           "Chat Gateway inbox",
+490:         ),
+491:       ) as DeliveryStateFile;
+492:       if (
+493:         parsed.version !== 1 ||
+494:         !Array.isArray(parsed.pending) ||
+495:         parsed.pending.length > this.config.maxPending ||
+496:         !parsed.completed ||
+497:         typeof parsed.completed !== "object" ||
+498:         Array.isArray(parsed.completed)
+499:       ) {
+500:         throw new Error("invalid delivery state root");
+501:       }
+502:       for (const entry of parsed.pending) {
+503:         if (!validStoredEntry(entry, this.config.maxSpooledAttachmentBytes ?? 16 * 1024 * 1024)) {
+504:           continue;
+505:         }
+506:         // Turn spooled metadata back into real attachments whose load() reads
+507:         // the file. This is the whole point of the spool: after a restart the
+508:         // upstream will not resend, so the bytes have to come from disk.
+509:         const restored = this.rehydrateAttachments(entry.spooled);
+510:         this.pending.push({
+511:           ...entry,
+512:           message: restored ? { ...entry.message, attachments: restored } : entry.message,
+513:           persistent: true,
+514:           nextAttemptAt: Date.now(),
+515:         });
+516:       }
+517:       const completed = Object.entries(parsed.completed);
+518:       if (completed.length > MAX_COMPLETED_KEYS) throw new Error("too many completed deliveries");
+519:       for (const [key, timestamp] of completed) {
+520:         if (
+521:           key.length <= 16_384 &&
+522:           typeof timestamp === "number" &&
+523:           Number.isSafeInteger(timestamp) &&
+524:           timestamp >= 0
+525:         ) {
+526:           this.completed.set(key, timestamp);
+527:         }
+528:       }
+529:       this.pruneCompleted();
+530:     } catch (error) {
+531:       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+532:         throw new Error(`无法读取 Chat Gateway inbox：${String(error)}`, { cause: error });
+533:       }
+534:     }
+535:   }
+536: 
+537:   private async persist(): Promise<void> {
+538:     const path = this.config.path;
+539:     if (!path) return;
+540:     const state: DeliveryStateFile = {
+541:       version: 1,
+542:       pending: this.pending
+543:         .filter((entry) => entry.persistent)
+544:         .map(({ persistent: _persistent, ...entry }) => {
+545:           // Never write live attachments: JSON drops their `load()`, leaving a
+546:           // record that claims attachments it cannot produce — and whose
+547:           // presence would stop the loader from rehydrating from the spool.
+548:           // `entry.spooled` is the durable representation.
+549:           if (!entry.message.attachments?.length) return entry;
+550:           const { attachments: _attachments, ...message } = entry.message;
+551:           return { ...entry, message };
+552:         }),
+553:       completed: Object.fromEntries(this.completed),
+554:     };
+555:     const serialized = `${JSON.stringify(state)}\n`;
+556:     if (Buffer.byteLength(serialized, "utf8") > MAX_DELIVERY_STATE_BYTES) {
+557:       throw new DeliveryBackpressureError(this.config.maxPending);
+558:     }
+559:     const parent = dirname(path);
+560:     await ensureRealDirectory(parent);
+561:     await assertSafeRegularTarget(path);
+562:     const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
+563:     try {
+564:       await writeFile(temporary, serialized, { encoding: "utf-8", mode: 0o600, flag: "wx" });
+565:       await rename(temporary, path);
+566:       await chmod(path, 0o600).catch(() => undefined);
+567:     } catch (error) {
+568:       await rm(temporary, { force: true }).catch(() => undefined);
+569:       throw error;
+570:     }
+571:   }
+572: 
+573:   private pruneCompleted(): void {
+574:     const cutoff = Date.now() - this.config.completedTtlMs;
+575:     for (const [key, timestamp] of this.completed) {
+576:       if (timestamp < cutoff) this.completed.delete(key);
+577:     }
+578:   }
+579: 
+580:   private async withMutation<T>(operation: () => Promise<T>): Promise<T> {
+581:     const previous = this.mutation;
+582:     let release!: () => void;
+583:     this.mutation = new Promise<void>((resolve) => {
+584:       release = resolve;
+585:     });
+586:     await previous;
+587:     try {
+588:       return await operation();
+589:     } finally {
+590:       release();
+591:     }
+592:   }
+593: }
+609:   // Drop `attachments` before serializing: each carries a `load()` closure that
+612:   // RECORD instead, and rehydrated into real load() functions on restart.
+619:   // Use the bytes already accepted into the durable inbox. The original load()
+700: async function ensureRealDirectory(path: string): Promise<void> {
+701:   await mkdir(path, { recursive: true, mode: 0o700 });
+702:   await assertRealDirectory(path);
+703: }
+704: 
+705: async function assertRealDirectory(path: string): Promise<void> {
+706:   const info = await lstat(path);
+707:   if (info.isSymbolicLink() || !info.isDirectory()) {
+708:     throw new Error(`Chat Gateway storage path is not a real directory: ${path}`);
+709:   }
+710: }
+711: 
+712: async function assertSafeRegularTarget(path: string): Promise<void> {
+713:   try {
+714:     const info = await lstat(path);
+715:     if (info.isSymbolicLink() || !info.isFile()) {
+716:       throw new Error(`Chat Gateway storage target is not a regular file: ${path}`);
+717:     }
+718:   } catch (error) {
+719:     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+720:   }
+721: }
+722: 
+723: async function readBoundedRegularFile(
+724:   path: string,
+725:   maxBytes: number,
+726:   label: string,
+727: ): Promise<string> {
+738:     return await handle.readFile("utf8");
+765:     return await handle.readFile();
+
+packages/chat/src/bound-session-chat.ts
+1: /**
+2:  * Routes a conversation that has entered a Work Session, ahead of Mimi.
+3:  *
+4:  * This middleware sits between the deterministic remote commands and
+5:  * createMimiPetChat. When the host reports no binding for the conversation it
+6:  * calls next() and Mimi handles the message exactly as before; when there is a
+7:  * binding it terminates the chain, and the message goes to the Session instead
+8:  * of the manager.
+9:  *
+10:  * Two properties matter more than they look:
+11:  *
+12:  * - Leaving is decided by the host, never by a model. /mimi has
+13:  *   to work when the worker is wedged or the bound Session is unreachable,
+14:  *   otherwise a user can be stuck inside a Session with no way out.
+15:  * - The reply for an accepted message is not this middleware's job. A Session
+16:  *   turn can take minutes, far longer than an inbound HTTP request should be
+17:  *   held open, so acceptance is acknowledged immediately and the real answer
+18:  *   comes back later through the durable outbox.
+19:  */
+20: 
+21: import type { ChatMiddleware } from "./chat-gateway.js";
+22: import type { ChannelMessage } from "./channel.js";
+23: 
+24: /** What the host decided to do with one inbound message. */
+25: export type BoundSessionDisposition =
+26:   | { kind: "not-bound" }
+27:   | { kind: "accepted"; notice?: string }
+28:   | { kind: "left"; text: string }
+29:   | { kind: "status"; text: string }
+30:   | { kind: "suspended"; text: string };
+31: 
+32: export interface BoundSessionControlClient {
+33:   /**
+34:    * Hand one inbound message to the host's bridge. Returns what happened so
+35:    * the middleware can decide whether to stop or fall through to Mimi.
+36:    */
+37:   routeBoundSessionMessage(input: {
+38:     channel: string;
+39:     target: string;
+40:     senderId: string;
+41:     messageId?: string;
+42:     text: string;
+43:     isDirectMessage: boolean;
+44:   }): Promise<BoundSessionDisposition>;
+45: }
+46: 
+47: export interface BoundSessionChatOptions {
+48:   desktop: BoundSessionControlClient;
+49:   /**
+50:    * Whether this conversation is a private chat. Group chats cannot be bound
+51:    * in Phase 1, and the adapter is the only thing that knows which is which.
+52:    */
+53:   isDirectMessage?(message: ChannelMessage): boolean;
+54: }
+55: 
+56: /**
+57:  * A conversation is only addressable when both target and sender are known.
+58:  * Without them two anonymous messages on one channel are indistinguishable,
+59:  * and a reply could reach the wrong person, so such a message is left to Mimi.
+60:  */
+61: function isAddressable(message: ChannelMessage): boolean {
+62:   return Boolean(message.target?.trim() && message.senderId?.trim());
+63: }
+64: 
+65: export function createBoundSessionChat(options: BoundSessionChatOptions): ChatMiddleware {
+66:   const isDirectMessage =
+67:     options.isDirectMessage ?? ((message) => message.isDirectMessage === true);
+68:   return async ({ message, reply }, next) => {
+69:     if (!message.text.trim() && !message.attachments?.length) return next();
+70:     if (!isAddressable(message)) return next();
+71: 
+72:     // A transport timeout is ambiguous: the Work Session may already have
+73:     // accepted this message. Leave retry to the durable inbox instead of also
+74:     // handing the same message to Mimi.
+75:     const disposition = await options.desktop.routeBoundSessionMessage({
+76:       channel: message.channel,
+77:       target: message.target,
+78:       senderId: message.senderId,
+79:       ...(message.messageId ? { messageId: message.messageId } : {}),
+80:       text: message.text,
+81:       isDirectMessage: isDirectMessage(message),
+82:     });
+83: 
+84:     switch (disposition.kind) {
+85:       case "not-bound":
+86:         return next();
+87:       case "accepted":
+88:         // The Session's answer arrives later through the outbox. Only an
+89:         // explicit notice (the stale-binding reminder) is sent now.
+90:         if (disposition.notice) await reply({ text: disposition.notice });
+91:         return;
+92:       case "left":
+93:       case "status":
+94:       case "suspended":
+95:         await reply({ text: disposition.text });
+96:         return;
+97:     }
+98:   };
+99: }
+
+packages/chat/src/cli.ts
+1: #!/usr/bin/env node
+2: 
+3: import { resolve } from "node:path";
+4: import { createInterface } from "node:readline/promises";
+5: import { stdin, stdout } from "node:process";
+6: import qrcode from "qrcode-terminal";
+7: import { createChannelAdapterAsync } from "./adapter-factory.js";
+8: import {
+9:   ChatGateway,
+10:   createAllowlistMiddleware,
+11:   createRateLimitMiddleware,
+12: } from "./chat-gateway.js";
+13: import { defaultGatewayConfigPath, loadGatewayConfig } from "./config.js";
+14: import { DesktopControlClient } from "./desktop-control-client.js";
+15: import { createBoundSessionChat } from "./bound-session-chat.js";
+16: import {
+17:   CODE_SHELL_REMOTE_COMMANDS,
+18:   createCodeShellRemoteCommands,
+19:   createMimiPetChat,
+20:   MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET,
+21: } from "./gateway.js";
+22: import { loginCodeShellWechat } from "./wechat-login.js";
+23: import { defaultWechatDataDirectory } from "./wechat-storage.js";
+24: import { acquireGatewayInstanceLock } from "./instance-lock.js";
+25: import { renderWebhookIngress, type IngressFormat } from "./ingress.js";
+26: import { GatewayServiceManager } from "./service-manager.js";
+27: import { runPlatformCanary } from "./platform-canary.js";
+28: import { createDesktopNotificationHandler } from "./notification-relay.js";
+29: import {
+30:   FileNotificationDeliveryProgressStore,
+31:   notificationDeliveryProgressPath,
+32: } from "./notification-progress.js";
+33: 
+34: const CHAT_HELP = `用法：
+35:   code-shell-chat [--config /path/config.json]
+36:   code-shell-chat wechat login [--config /path/config.json] [--credentials-dir /path]
+37:   code-shell-chat service install|uninstall|status [--config /path/config.json]
+38:   code-shell-chat ingress print --host chat.example.com [--format caddy|nginx]
+39:   code-shell-chat canary [--config /path/config.json]
+40: 
+41: 选项：
+42:   -h, --help  显示帮助并退出`;
+43: 
+44: async function main(args = process.argv.slice(2)): Promise<void> {
+45:   if (args.includes("--help") || args.includes("-h")) {
+46:     console.log(CHAT_HELP);
+47:     return;
+48:   }
+49:   if (args[0] === "wechat" && args[1] === "login") {
+50:     await loginWechat(readWechatLoginOptions(args.slice(2)));
+51:     return;
+52:   }
+53:   if (args[0] === "service") {
+54:     await manageService(args.slice(1));
+55:     return;
+56:   }
+57:   if (args[0] === "ingress" && args[1] === "print") {
+58:     printIngress(args.slice(2));
+59:     return;
+60:   }
+61:   if (args[0] === "canary") {
+62:     await runCanary(args.slice(1));
+63:     return;
+64:   }
+65: 
+66:   const configPath = readConfigPath(args);
+67:   const config = loadGatewayConfig({ configPath });
+68:   const lease = acquireGatewayInstanceLock(config.runtime.lockPath, "code-shell-chat CLI");
+69:   const shutdown = new AbortController();
+70:   const stop = () => shutdown.abort();
+71:   process.once("SIGINT", stop);
+72:   process.once("SIGTERM", stop);
+73:   try {
+74:     const desktop = new DesktopControlClient(config.desktop);
+75:     const adapters = await Promise.all(
+76:       config.channels.map((channel) =>
+77:         createChannelAdapterAsync(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),
+78:       ),
+79:     );
+80:     const gateway = new ChatGateway({
+81:       adapters,
+82:       webhook: config.webhook,
+83:       delivery: {
+84:         path: config.runtime.inboxPath,
+85:         maxPending: config.runtime.maxPending,
+86:         maxConcurrent: config.runtime.maxConcurrent,
+87:         maxPerTarget: Math.max(
+88:           config.runtime.maxPerTarget,
+89:           MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET,
+90:         ),
+91:       },
+92:       adapterRestart: {
+93:         baseMs: config.runtime.adapterRestartBaseMs,
+94:         maxMs: config.runtime.adapterRestartMaxMs,
+95:       },
+96:     });
+97:     gateway.use(
+98:       createAllowlistMiddleware(
+99:         Object.fromEntries(
+100:           config.channels.map((channel) => [
+101:             channel.channel,
+102:             { targetIds: channel.allowedTargetIds, userIds: channel.allowedUserIds },
+103:           ]),
+104:         ),
+105:       ),
+106:     );
+107:     gateway.use(createRateLimitMiddleware(config.runtime.maxMessagesPerUserPerMinute));
+108:     gateway.use(createCodeShellRemoteCommands({ desktop }));
+109:     gateway.use(createBoundSessionChat({ desktop }));
+110:     gateway.use(createMimiPetChat({ desktop, channels: adapters }));
+111: 
+112:     console.log(
+113:       `[code-shell-chat] gateway 已启动：${config.channels.map(({ channel }) => channel).join(", ")}`,
+114:     );
+115:     const gatewayTask = gateway.run(shutdown.signal);
+116:     const notificationTask = desktop.watchEvents(
+117:       shutdown.signal,
+118:       createDesktopNotificationHandler(adapters, config.notifications, {
+119:         progressStore: new FileNotificationDeliveryProgressStore(
+120:           notificationDeliveryProgressPath(config.runtime.eventCursorPath),
+121:         ),
+122:         authorizeTarget: ({ channel, target }) => {
+123:           const current = loadGatewayConfig({ configPath });
+124:           return current.channels.some(
+125:             (configured) =>
+126:               configured.channel === channel && configured.allowedTargetIds.includes(target),
+127:           );
+128:         },
+129:       }),
+130:       {
+131:         checkpointPath: config.runtime.eventCursorPath,
+132:         onError: (error) =>
+133:           console.error(
+134:             `[code-shell-chat] Desktop 通知等待重试：${error instanceof Error ? error.message : String(error)}`,
+135:           ),
+136:       },
+137:     );
+138:     await Promise.all([gatewayTask, notificationTask]);
+139:   } finally {
+140:     shutdown.abort();
+141:     process.off("SIGINT", stop);
+142:     process.off("SIGTERM", stop);
+143:     lease.release();
+144:   }
+145: }
+146: 
+147: async function runCanary(args: string[]): Promise<void> {
+160:   const lease = acquireGatewayInstanceLock(config.runtime.lockPath, "code-shell-chat canary");
+185:   } finally {
+186:     lease.release();
+241:   const shutdown = new AbortController();
+242:   const stop = () => shutdown.abort();
+251:       signal: shutdown.signal,
+266:         } finally {
+275:   } finally {
+276:     shutdown.abort();
+286:     const flag = args[index];
+287:     const value = args[index + 1];
+288:     if (!value || (flag !== "--config" && flag !== "--credentials-dir")) {
+289:       throw new Error(
+290:         "用法：code-shell-chat wechat login [--config /path/config.json] [--credentials-dir /path]",
+291:       );
+292:     }
+293:     if (flag === "--config") configPath = value;
+294:     else credentialsDir = value;
+295:   }
+296:   return {
+297:     configPath: resolve(configPath ?? defaultGatewayConfigPath()),
+298:     credentialsDir: resolve(credentialsDir ?? defaultWechatDataDirectory()),
+299:     customCredentialsDir: credentialsDir !== undefined,
+300:   };
+301: }
+302: 
+303: function readConfigPath(args: string[]): string | undefined {
+304:   if (args.length === 0) return undefined;
+305:   if (args[0] === "--config" && args[1] && args.length === 2) return args[1];
+306:   throw new Error(
+307:     "用法：code-shell-chat [--config /path/config.json] | code-shell-chat wechat login | code-shell-chat service install|uninstall|status | code-shell-chat ingress print | code-shell-chat canary",
+308:   );
+309: }
+310: 
+311: function readOptionalConfigFlag(args: string[]): string | undefined {
+312:   if (args.length === 0) return undefined;
+313:   if (args[0] === "--config" && args[1] && args.length === 2) return args[1];
+314:   throw new Error("仅支持 --config /path/config.json");
+315: }
+316: 
+317: main().catch((error) => {
+318:   console.error(`[code-shell-chat] ${error instanceof Error ? error.message : String(error)}`);
+319:   process.exitCode = 1;
+320: });
+
+packages/chat/src/chat-gateway.ts
+90:       ((error, message) => {
+91:         console.error(
+92:           `[chat] ${message.channel} message failed: ${error instanceof Error ? error.message : String(error)}`,
+93:         );
+94:       });
+95:   }
+96: 
+97:   use(middleware: ChatMiddleware): this {
+98:     this.middleware.push(middleware);
+99:     return this;
+100:   }
+101: 
+102:   async dispatch(adapter: ChannelAdapter, message: ChannelMessage): Promise<void> {
+103:     if (message.channel !== adapter.channel) {
+104:       throw new Error(
+105:         `Adapter ${adapter.channel} emitted a message for channel ${message.channel}`,
+106:       );
+107:     }
+108:     const context: ChatContext = {
+109:       message,
+110:       adapter,
+111:       reply: (outgoing) => adapter.send(message.target, outgoing),
+112:     };
+113:     let index = -1;
+114:     const next = async (position: number): Promise<void> => {
+115:       if (position <= index) throw new Error("Chat middleware called next() more than once");
+116:       index = position;
+117:       const current = this.middleware[position];
+118:       if (current) await current(context, () => next(position + 1));
+119:     };
+120:     await next(0);
+121:   }
+122: 
+123:   async run(signal: AbortSignal): Promise<void> {
+124:     if (this.startedAt) throw new Error("ChatGateway is already running");
+125:     this.startedAt = Date.now();
+126:     const ownedAbort = new AbortController();
+127:     const stopOwned = () => ownedAbort.abort();
+128:     if (signal.aborted) ownedAbort.abort();
+129:     else signal.addEventListener("abort", stopOwned, { once: true });
+130: 
+131:     const webhooks: WebhookRegistration[] = [];
+132:     const adapterById = new Map<string, ChannelAdapter>();
+133:     // Key adapters by a per-channel ordinal (channel:0, channel:1, …) rather
+134:     // than the global array index. Delivery-queue records persist this id and
+135:     // are replayed on the next run; a global index would shift when an
+136:     // unrelated channel is removed from config, orphaning durable messages
+137:     // against an id that no longer maps to their adapter.
+138:     const perChannelCount = new Map<string, number>();
+139:     for (const adapter of this.adapters) {
+140:       const ordinal = perChannelCount.get(adapter.channel) ?? 0;
+141:       perChannelCount.set(adapter.channel, ordinal + 1);
+142:       adapterById.set(`${adapter.channel}:${ordinal}`, adapter);
+143:     }
+144:     const queue = new DeliveryQueue(
+145:       this.delivery,
+146:       async (adapterId, message) => {
+147:         const adapter = adapterById.get(adapterId);
+148:         if (!adapter) {
+149:           // A durable record survived a config change that removed its adapter.
+150:           // Signal unroutable so the queue drops it instead of retrying forever.
+151:           throw new UnroutableDeliveryError(`Chat adapter no longer exists: ${adapterId}`);
+152:         }
+153:         await this.dispatch(adapter, message);
+154:       },
+155:       this.onError,
+156:     );
+157:     this.queue = queue;
+158:     await queue.start();
+159: 
+160:     const runners: Promise<void>[] = [];
+161:     for (const [adapterId, adapter] of adapterById) {
+162:       const handler = (message: ChannelMessage) =>
+163:         queue.enqueue(adapterId, message).then(() => undefined);
+164:       if (isWebhookChannelAdapter(adapter)) webhooks.push({ adapter, handler });
+165:       runners.push(this.superviseAdapter(adapterId, adapter, handler, ownedAbort.signal));
+166:     }
+167:     // Only bind the ingress host:port when a channel actually needs a webhook
+168:     // route. A polling-only config (e.g. Telegram/Discord) must not open an
+169:     // HTTP listener — doing so unexpectedly exposes a port and fails startup
+170:     // outright when that port is already taken.
+171:     if (webhooks.length > 0) {
+172:       runners.push(
+173:         new WebhookIngressServer(this.webhook, webhooks, () => this.healthSnapshot()).run(
+174:           ownedAbort.signal,
+175:         ),
+176:       );
+177:     }
+178:     try {
+179:       await Promise.all(runners);
+180:     } finally {
+181:       ownedAbort.abort();
+182:       queue.stop();
+183:       this.queue = undefined;
+184:       this.startedAt = undefined;
+185:       signal.removeEventListener("abort", stopOwned);
+186:     }
+187:   }
+188: 
+189:   healthSnapshot(): Record<string, unknown> {
+190:     const adapters = [...this.adapterStates.values()];
+191:     return {
+192:       status: adapters.every(({ state }) => state === "running") ? "ready" : "degraded",
+193:       startedAt: this.startedAt,
+194:       adapters,
+195:       inbox: this.queue?.status() ?? { pending: 0, inFlight: 0, delayed: 0 },
+196:     };
+197:   }
+198: 
+199:   private async superviseAdapter(
+200:     id: string,
+201:     adapter: ChannelAdapter,
+202:     handler: (message: ChannelMessage) => Promise<void>,
+203:     signal: AbortSignal,
+204:   ): Promise<void> {
+205:     let attempts = 0;
+206:     while (!signal.aborted) {
+207:       this.setAdapterState({ id, channel: adapter.channel, state: "starting", attempts });
+208:       try {
+209:         this.setAdapterState({ id, channel: adapter.channel, state: "running", attempts });
+210:         await adapter.run(handler, signal);
+211:         if (signal.aborted) break;
+212:         throw new Error("adapter exited unexpectedly");
+213:       } catch (error) {
+214:         if (signal.aborted) break;
+215:         attempts += 1;
+216:         const delay = Math.min(
+217:           this.adapterRestart.maxMs,
+218:           this.adapterRestart.baseMs * 2 ** Math.min(attempts - 1, 10),
+219:         );
+220:         this.setAdapterState({
+221:           id,
+222:           channel: adapter.channel,
+223:           state: "backoff",
+224:           attempts,
+225:           error: error instanceof Error ? error.message : String(error),
+226:         });
+227:         await abortableDelay(delay, signal);
+228:       }
+229:     }
+230:     this.setAdapterState({ id, channel: adapter.channel, state: "stopped", attempts });
+231:   }
+232: 
+233:   private setAdapterState(state: AdapterRuntimeState): void {
+234:     this.adapterStates.set(state.id, state);
+235:     this.onAdapterState?.({ ...state });
+236:   }
+237: }
+238: 
+239: /** Deny-by-default allowlist middleware for multi-channel gateways. */
+240: export function createAllowlistMiddleware(
+241:   rules: Readonly<Record<string, ChatAllowlistRule>>,
+242: ): ChatMiddleware {
+243:   const normalized = new Map(
+244:     Object.entries(rules).map(([channel, rule]) => [
+245:       channel,
+246:       {
+247:         targets: new Set(rule.targetIds),
+248:         users: rule.userIds ? new Set(rule.userIds) : undefined,
+249:       },
+250:     ]),
+251:   );
+252:   return async ({ message }, next) => {
+253:     const rule = normalized.get(message.channel);
+254:     if (!rule?.targets.has(message.target)) return;
+255:     if (rule.users && rule.users.size > 0 && !rule.users.has(message.senderId)) return;
+256:     await next();
+257:   };
+258: }
+259: 
+260: /** Fixed-window per-sender limiter; rejected messages never reach expensive middleware. */
+261: export function createRateLimitMiddleware(
+262:   maxMessages: number,
+263:   windowMs = 60_000,
+264:   onLimited?: (message: ChannelMessage) => void,
+265: ): ChatMiddleware {
+
+packages/chat/src/gateway.ts
+27:   desktop: Pick<DesktopControlClient, "petChat">;
+65:         const opened = await options.desktop.open();
+84:         await options.desktop.close();
+89:       const status = await options.desktop.status();
+129: export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {
+130:   // DeliveryQueue retries the same platform message after adapter.send fails.
+131:   // Cache the fully materialized reply (including attachment bytes) before the
+132:   // first send so retrying cannot re-run Mimi or any already-executed host
+133:   // action. Failed desktop/materialization work is evicted and remains retryable.
+134:   const replies = new Map<string, MimiCachedReply>();
+135:   const configuredChannels = options.channels ?? [];
+136:   return async ({ message, adapter, reply }) => {
+137:     if (!message.text.trim() && !message.attachments?.length) return;
+138:     const cacheKey = mimiReplyCacheKey(message);
+139:     let cacheEntry: MimiCachedReply | undefined;
+140:     let outgoing: OutgoingMessage[];
+141:     try {
+142:       if (!cacheKey) {
+143:         outgoing = await buildMimiOutgoingReplies(
+144:           options,
+145:           message,
+146:           channelCapabilities(adapter),
+147:           configuredChannels,
+148:         );
+149:       } else {
+150:         const cached = replies.get(cacheKey);
+151:         if (cached) {
+152:           // Refresh insertion order so active retries are not the first evicted.
+153:           replies.delete(cacheKey);
+154:           replies.set(cacheKey, cached);
+155:           cacheEntry = cached;
+156:           outgoing = await cached.outgoing;
+157:         } else {
+158:           const pending = buildMimiOutgoingReplies(
+159:             options,
+160:             message,
+161:             channelCapabilities(adapter),
+162:             configuredChannels,
+163:           );
+164:           const entry: MimiCachedReply = {
+165:             outgoing: pending,
+166:             nextSendIndex: 0,
+167:           };
+168:           replies.set(cacheKey, entry);
+169:           cacheEntry = entry;
+170:           while (replies.size > MIMI_REPLY_CACHE_MAX_ENTRIES) {
+171:             const oldest = replies.keys().next().value;
+172:             if (typeof oldest !== "string") break;
+173:             replies.delete(oldest);
+174:           }
+175:           pending.catch(() => {
+176:             if (replies.get(cacheKey) === entry) replies.delete(cacheKey);
+177:           });
+178:           outgoing = await pending;
+179:         }
+180:       }
+181:     } catch (error) {
+182:       if (error instanceof DesktopControlUnavailableError) {
+183:         // Preserve accepted work on ambiguous disconnects. The durable inbox
+184:         // retries with the same message identity and recovers the real reply.
+185:         throw error;
+186:       }
+187:       if (error instanceof DesktopControlOperationError) {
+188:         await reply({ text: `Mimi Pet 处理失败：${error.message}` });
+189:         return;
+190:       }
+191:       await reply({
+192:         text: `Mimi Pet 处理失败：${error instanceof Error ? error.message : String(error)}`,
+193:       });
+194:       return;
+195:     }
+196:     // Adapter failures must escape to DeliveryQueue. Catching them above would
+197:     // turn a failed real reply into a successful generic error and lose it.
+198:     const sendOutgoing = async () => {
+199:       let index = cacheEntry?.nextSendIndex ?? 0;
+200:       while (index < outgoing.length) {
+201:         await reply(outgoing[index]!);
+202:         index += 1;
+203:         if (cacheEntry) cacheEntry.nextSendIndex = index;
+204:       }
+205:     };
+206:     // Sharing model work alone is insufficient: overlapping deliveries can
+207:     // both observe nextSendIndex=0 while the first platform send is in flight.
+208:     // Share that send too, including its failure, then let a later queue retry
+209:     // resume from the first unfinished chunk.
+210:     const sendTask = cacheEntry ? (cacheEntry.sendTask ??= sendOutgoing()) : sendOutgoing();
+211:     try {
+212:       await sendTask;
+213:       // DeliveryQueue now owns a durable completed-message dedupe record.
+214:       // Keep memory proportional to failed/in-flight sends, not successful chat.
+215:       if (cacheKey && cacheEntry && replies.get(cacheKey) === cacheEntry) {
+216:         replies.delete(cacheKey);
+217:       }
+218:     } finally {
+219:       if (cacheEntry?.sendTask === sendTask) cacheEntry.sendTask = undefined;
+220:     }
+221:   };
+222: }
+223: 
+224: async function buildMimiOutgoingReplies(
+225:   options: MimiPetChatOptions,
+226:   message: ChannelMessage,
+227:   capabilities: ChannelCapabilities,
+228:   configuredChannels: readonly ChannelAdapter[],
+229: ): Promise<OutgoingMessage[]> {
+230:   const attachments = await materializeChatAttachments(message.attachments);
+231:   const result = await options.desktop.petChat({
+232:     message: message.text,
+233:     ...(attachments.length > 0 ? { attachments } : {}),
+234:     origin: {
+235:       channel: message.channel,
+236:       target: message.target,
+237:       senderId: message.senderId,
+238:       isDirectMessage: message.isDirectMessage === true,
+239:       ...(message.messageId ? { messageId: message.messageId } : {}),
+240:       capabilities,
+241:       channels: gatewayChannelCatalog(message.channel, capabilities, configuredChannels),
+242:     },
+243:   });
+244:   if (result.suppressReply) return [];
+245:   const chunks = splitNotificationTextForChannel(
+246:     result.text || "Mimi Pet 已处理，但没有返回文字内容。",
+
+packages/chat/src/desktop-control-client.ts
+50: const MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES = 64 * 1024;
+51: const MAX_DESKTOP_EVENT_CHECKPOINT_BYTES = 16 * 1024;
+52: 
+53: export class DesktopControlUnavailableError extends Error {
+54:   constructor(message = "桌面端未在线") {
+55:     super(message);
+56:     this.name = "DesktopControlUnavailableError";
+57:   }
+58: }
+59: 
+60: export class DesktopControlOperationError extends Error {
+61:   constructor(message: string) {
+62:     super(message);
+63:     this.name = "DesktopControlOperationError";
+64:   }
+65: }
+66: 
+67: export class DesktopControlClient {
+68:   private readonly fetchFn: typeof fetch;
+69:   private readonly spawnFn: SpawnFn;
+70:   private readonly readDescriptorFn: () => Promise<string>;
+71:   private readonly sleepFn: (ms: number) => Promise<void>;
+72: 
+73:   constructor(
+74:     private readonly config: DesktopGatewayConfig,
+75:     opts: DesktopControlClientOptions = {},
+76:   ) {
+77:     this.fetchFn = opts.fetch ?? fetch;
+78:     this.spawnFn = opts.spawn ?? spawn;
+79:     this.readDescriptorFn =
+80:       opts.readDescriptor ?? (() => readSecureDescriptor(this.config.descriptorPath));
+81:     this.sleepFn = opts.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+82:   }
+83: 
+84:   async open(): Promise<MobileRemoteOpenResult> {
+85:     await this.ensureDesktopAvailable();
+86:     return this.request<MobileRemoteOpenResult>("POST", "/v1/open", 120_000);
+87:   }
+88: 
+89:   async close(): Promise<void> {
+90:     await this.request<{ closed: boolean }>("POST", "/v1/close", 15_000);
+91:   }
+92: 
+93:   status(): Promise<MobileRemoteStatus> {
+94:     return this.request<MobileRemoteStatus>("GET", "/v1/status", 5_000);
+95:   }
+96: 
+97:   pairingUrl(): Promise<{ pairingUrl: string; expiresAt: number }> {
+98:     return this.request("POST", "/v1/pairing-url", 10_000);
+99:   }
+100: 
+101:   async petChat(input: PetChatRequest): Promise<PetChatResult> {
+102:     await this.ensureDesktopAvailable();
+103:     type Pending = { pending: true; requestId: string };
+104:     let result = await this.request<PetChatResult | Pending>(
+105:       "POST",
+106:       "/v1/pet/chat/start",
+107:       30_000,
+108:       input,
+109:     );
+110:     while (result && typeof result === "object" && "pending" in result && result.pending === true) {
+111:       if (typeof result.requestId !== "string" || !/^[a-f0-9-]{36}$/.test(result.requestId)) {
+112:         throw new DesktopControlUnavailableError("桌面端返回了无效请求标识，消息将重试");
+113:       }
+114:       result = await this.request<PetChatResult | Pending>(
+115:         "GET",
+116:         `/v1/pet/chat/result/${result.requestId}?waitMs=25000`,
+117:         35_000,
+118:       );
+119:     }
+120:     if (
+121:       !result ||
+122:       typeof result !== "object" ||
+123:       !("text" in result) ||
+124:       typeof result.text !== "string" ||
+125:       !("petSessionId" in result) ||
+126:       typeof result.petSessionId !== "string" ||
+127:       !result.petSessionId
+128:     ) {
+129:       throw new DesktopControlUnavailableError("桌面端未返回完整的 Mimi 结果，消息将重试");
+130:     }
+131:     return result;
+132:   }
+133: 
+151:   events(after = 0, waitMs = 25_000, signal?: AbortSignal): Promise<DesktopControlEventPage> {
+160:       signal,
+165:     signal: AbortSignal,
+166:     handle: (event: DesktopControlEvent, context: DesktopEventContext) => Promise<void>,
+167:     options: DesktopEventWatchOptions = {},
+168:   ): Promise<void> {
+169:     const saved = options.checkpointPath
+170:       ? await readEventCheckpoint(options.checkpointPath)
+171:       : undefined;
+172:     let streamId = saved?.streamId;
+173:     let cursor = saved?.cursor ?? 0;
+174:     let retryMs = options.retryBaseMs ?? 1_000;
+175:     const retryMaxMs = options.retryMaxMs ?? 30_000;
+176:     let recovering = false;
+177:     while (!signal.aborted) {
+178:       try {
+179:         const page = await this.events(cursor, 25_000, signal);
+180:         if ((streamId !== undefined && streamId !== page.streamId) || page.resetCursor === true) {
+181:           // Reset before reading a replacement/rolled-back outbox or a high old
+182:           // cursor could mask new events forever.
+183:           streamId = page.streamId;
+184:           cursor = 0;
+185:           continue;
+186:         }
+187:         streamId = page.streamId;
+188:         for (const event of page.events) {
+189:           if (signal.aborted) return;
+190:           await handle(event, { streamId });
+191:           const nextCursor = Math.max(cursor, event.id);
+192:           if (options.checkpointPath) {
+193:             await writeEventCheckpoint(options.checkpointPath, {
+194:               version: 1,
+195:               streamId,
+196:               cursor: nextCursor,
+197:             });
+198:           }
+199:           // Advance the acknowledgement cursor only after its durable
+200:           // checkpoint succeeds. Otherwise a failed checkpoint write followed
+201:           // by another poll could make Desktop prune an event this process
+202:           // cannot prove it consumed across a restart.
+203:           cursor = nextCursor;
+204:         }
+205:         cursor = Math.max(cursor, page.cursor);
+206:         if (recovering) {
+207:           recovering = false;
+208:           options.onRecovered?.();
+209:         }
+210:         retryMs = options.retryBaseMs ?? 1_000;
+211:       } catch (error) {
+212:         if (signal.aborted) return;
+213:         recovering = true;
+214:         options.onError?.(error);
+215:         await Promise.race([this.sleepFn(retryMs), waitForAbort(signal)]);
+216:         retryMs = Math.min(retryMaxMs, retryMs * 2);
+217:       }
+218:     }
+260:     path: string,
+261:     timeoutMs: number,
+262:     payload?: unknown,
+263:     signal?: AbortSignal,
+264:   ): Promise<T> {
+265:     let descriptor: DesktopControlDescriptor;
+266:     try {
+267:       descriptor = parseDescriptor(await this.readDescriptorFn());
+268:     } catch (error) {
+269:       if (error instanceof DesktopControlUnavailableError) throw error;
+270:       throw new DesktopControlUnavailableError(
+271:         `无法读取桌面端控制信息：${error instanceof Error ? error.message : String(error)}`,
+272:       );
+273:     }
+274: 
+275:     const controller = new AbortController();
+276:     const abortRequest = (): void => controller.abort();
+277:     if (signal?.aborted) controller.abort();
+278:     else signal?.addEventListener("abort", abortRequest, { once: true });
+279:     const timer = setTimeout(() => controller.abort(), timeoutMs);
+280:     try {
+281:       const response = await this.fetchFn(`${descriptor.baseUrl}${path}`, {
+282:         method,
+283:         headers: {
+284:           authorization: `Bearer ${descriptor.token}`,
+285:           ...(payload === undefined ? {} : { "content-type": "application/json" }),
+286:         },
+287:         ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+288:         signal: controller.signal,
+289:       });
+290:       // Keep the deadline and caller cancellation active until the body has
+291:       // arrived too. A dropped body is an ambiguous delivery, so the durable
+292:       // inbox must retry the same message rather than acknowledge an error.
+293:       const body = await response.json();
+294:       if (!response.ok) {
+295:         if (response.status === 503 || response.status === 502 || response.status === 504) {
+296:           throw new DesktopControlUnavailableError(
+297:             typeof body?.message === "string" ? body.message : "桌面端暂时不可用，消息将重试",
+298:           );
+299:         }
+300:         throw new DesktopControlOperationError(
+301:           typeof body?.message === "string"
+302:             ? body.message
+303:             : `桌面端操作失败（HTTP ${response.status}）`,
+304:         );
+305:       }
+306:       return body as T;
+307:     } catch (error) {
+308:       if (
+309:         error instanceof DesktopControlOperationError ||
+310:         error instanceof DesktopControlUnavailableError
+311:       ) {
+312:         throw error;
+313:       }
+314:       throw new DesktopControlUnavailableError(
+315:         `无法连接桌面端：${error instanceof Error ? error.message : String(error)}`,
+316:       );
+317:     } finally {
+318:       clearTimeout(timer);
+319:       signal?.removeEventListener("abort", abortRequest);
+320:     }
+321:   }
+324: async function waitForAbort(signal: AbortSignal): Promise<void> {
+325:   if (signal.aborted) return;
+327:     signal.addEventListener("abort", () => resolve(), { once: true }),
+
+packages/chat/src/instance-lock.ts
+1: import { randomUUID } from "node:crypto";
+2: import {
+3:   chmodSync,
+4:   closeSync,
+5:   constants,
+6:   fstatSync,
+7:   lstatSync,
+8:   mkdirSync,
+9:   openSync,
+10:   readFileSync,
+11:   rmSync,
+12:   writeFileSync,
+13: } from "node:fs";
+14: import { dirname } from "node:path";
+15: 
+16: const MAX_LOCK_FILE_BYTES = 64 * 1024;
+17: const MAX_LOCK_OWNER_CHARS = 256;
+18: 
+19: interface GatewayLockRecord {
+20:   version: 1;
+21:   pid: number;
+22:   owner: string;
+23:   token: string;
+24:   startedAt: number;
+25: }
+26: 
+27: export interface GatewayInstanceLease {
+28:   readonly path: string;
+29:   readonly owner: string;
+30:   release(): void;
+31: }
+32: 
+33: export class GatewayAlreadyRunningError extends Error {
+34:   constructor(
+35:     readonly path: string,
+36:     readonly current?: Readonly<Pick<GatewayLockRecord, "pid" | "owner" | "startedAt">>,
+37:   ) {
+38:     super(
+39:       current
+40:         ? `Chat Gateway 已由 ${current.owner} 运行（PID ${current.pid}）`
+41:         : `Chat Gateway 已在运行（锁文件：${path}）`,
+42:     );
+43:     this.name = "GatewayAlreadyRunningError";
+44:   }
+45: }
+46: 
+47: /**
+48:  * Cross-process single-owner lease shared by the CLI and Desktop lifecycle.
+49:  * A dead owner's lock is reclaimed, while a live or unreadable lock fails
+50:  * closed so two processes can never consume the same platform updates.
+51:  */
+52: export function acquireGatewayInstanceLock(path: string, owner: string): GatewayInstanceLease {
+53:   if (!path || !owner) throw new Error("gateway lock path and owner are required");
+54:   if (owner.length > MAX_LOCK_OWNER_CHARS || /[\0\r\n]/u.test(owner)) {
+55:     throw new Error("gateway lock owner is invalid");
+56:   }
+57:   const parent = dirname(path);
+58:   mkdirSync(parent, { recursive: true, mode: 0o700 });
+59:   const parentInfo = lstatSync(parent);
+60:   if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
+61:     throw new Error("gateway lock parent must be a real directory");
+62:   }
+63: 
+64:   const record: GatewayLockRecord = {
+65:     version: 1,
+66:     pid: process.pid,
+67:     owner,
+68:     token: randomUUID(),
+69:     startedAt: Date.now(),
+70:   };
+71: 
+72:   for (let attempt = 0; attempt < 3; attempt++) {
+73:     let fd: number | undefined;
+74:     let created = false;
+75:     try {
+76:       fd = openSync(path, "wx", 0o600);
+77:       created = true;
+78:       writeFileSync(fd, `${JSON.stringify(record)}\n`, "utf-8");
+79:       closeSync(fd);
+80:       fd = undefined;
+81:       if (process.platform !== "win32") chmodSync(path, 0o600);
+82:       let released = false;
+83:       return {
+84:         path,
+85:         owner,
+86:         release: () => {
+87:           if (released) return;
+88:           released = true;
+89:           removeOwnedLock(path, record.token);
+90:         },
+91:       };
+92:     } catch (error) {
+93:       if (fd !== undefined) closeSync(fd);
+94:       if (created) rmSync(path, { force: true });
+95:       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+96:       const existing = readLock(path);
+97:       if (!existing || isProcessAlive(existing.pid)) {
+98:         throw new GatewayAlreadyRunningError(
+99:           path,
+100:           existing
+101:             ? { pid: existing.pid, owner: existing.owner, startedAt: existing.startedAt }
+102:             : undefined,
+103:         );
+104:       }
+105:       // Only reclaim a well-formed lock whose process is demonstrably gone.
+106:       removeOwnedLock(path, existing.token);
+107:     }
+108:   }
+109:   throw new GatewayAlreadyRunningError(path);
+110: }
+111: 
+112: function readLock(path: string): GatewayLockRecord | undefined {
+113:   let fd: number | undefined;
+114:   try {
+115:     const entry = lstatSync(path);
+116:     if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_LOCK_FILE_BYTES) {
+117:       return undefined;
+118:     }
+119:     fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+120:     const opened = fstatSync(fd);
+121:     if (!opened.isFile() || opened.size > MAX_LOCK_FILE_BYTES) return undefined;
+122:     const value = JSON.parse(readFileSync(fd, "utf-8")) as Partial<GatewayLockRecord>;
+123:     if (
+124:       value.version !== 1 ||
+125:       !Number.isSafeInteger(value.pid) ||
+126:       (value.pid ?? 0) <= 0 ||
+127:       typeof value.owner !== "string" ||
+128:       value.owner.length === 0 ||
+129:       value.owner.length > MAX_LOCK_OWNER_CHARS ||
+130:       /[\0\r\n]/u.test(value.owner) ||
+131:       typeof value.token !== "string" ||
+132:       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+133:         value.token,
+134:       ) ||
+135:       typeof value.startedAt !== "number"
+136:     ) {
+137:       return undefined;
+138:     }
+139:     return value as GatewayLockRecord;
+140:   } catch {
+141:     return undefined;
+142:   } finally {
+143:     if (fd !== undefined) closeSync(fd);
+144:   }
+145: }
+146: 
+147: function isProcessAlive(pid: number): boolean {
+148:   try {
+149:     process.kill(pid, 0);
+150:     return true;
+151:   } catch (error) {
+152:     return (error as NodeJS.ErrnoException).code === "EPERM";
+153:   }
+154: }
+155: 
+156: function removeOwnedLock(path: string, token: string): void {
+157:   const current = readLock(path);
+158:   if (current?.token === token) rmSync(path, { force: true });
+159: }
+
+packages/chat/src/config.ts
+150:   lockPath: string;
+151:   inboxPath: string;
+154:   maxConcurrent: number;
+155:   maxPerTarget: number;
+288:       maxConcurrent: 4,
+289:       maxPerTarget: 1,
+333:       startupTimeoutMs: readPositiveNumber(raw.desktop?.startupTimeoutMs, 5 * 60_000) ?? 30_000,
+334:     },
+335:     webhook: {
+336:       host: readNonEmptyString(raw.webhook?.host) ?? "127.0.0.1",
+337:       port: readPort(raw.webhook?.port) ?? 8787,
+338:       maxBodyBytes: readPositiveNumber(raw.webhook?.maxBodyBytes, 16 * 1024 * 1024) ?? 1_048_576,
+339:     },
+340:     runtime: {
+341:       lockPath:
+342:         readNonEmptyString(raw.runtime?.lockPath) ??
+343:         join(resolveHome(env), ".code-shell", "im-gateway", "gateway.lock"),
+344:       inboxPath:
+345:         readNonEmptyString(raw.runtime?.inboxPath) ??
+346:         join(resolveHome(env), ".code-shell", "im-gateway", "inbox.json"),
+347:       eventCursorPath:
+348:         readNonEmptyString(raw.runtime?.eventCursorPath) ??
+349:         join(resolveHome(env), ".code-shell", "im-gateway", "desktop-events.json"),
+350:       maxPending: readPositiveInteger(raw.runtime?.maxPending, 100_000) ?? 1_000,
+351:       maxConcurrent: readPositiveInteger(raw.runtime?.maxConcurrent, 64) ?? 4,
+352:       maxPerTarget: readPositiveInteger(raw.runtime?.maxPerTarget, 16) ?? 1,
+353:       maxMessagesPerUserPerMinute:
+354:         readPositiveInteger(raw.runtime?.maxMessagesPerUserPerMinute, 100_000) ?? 20,
+355:       adapterRestartBaseMs:
+356:         readPositiveInteger(raw.runtime?.adapterRestartBaseMs, 24 * 60 * 60_000) ?? 1_000,
+357:       adapterRestartMaxMs:
+358:         readPositiveInteger(raw.runtime?.adapterRestartMaxMs, 24 * 60 * 60_000) ?? 30_000,
+359:     },
+
+packages/chat/src/telegram.ts
+61:   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+73:   private readonly sleepFn: (ms: number, signal: AbortSignal) => Promise<void>;
+84:     this.sleepFn = opts.sleep ?? abortableDelay;
+91:   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+92:     let offset: number | undefined;
+93:     let retryMs = 1_000;
+94: 
+95:     while (!signal.aborted) {
+96:       try {
+97:         const updates = await this.call<TelegramUpdate[]>(
+98:           "getUpdates",
+99:           {
+100:             offset,
+101:             timeout: 30,
+102:             allowed_updates: ["message"],
+103:           },
+104:           signal,
+105:         );
+106:         retryMs = 1_000;
+107:         for (const update of updates) {
+108:           const nextOffset = Math.max(offset ?? 0, update.update_id + 1);
+109:           if (isStale(update, this.now(), this.maxMessageAgeMs)) {
+110:             offset = nextOffset;
+111:             continue;
+112:           }
+113:           const message = toChannelMessage(update, (fileId, signal) =>
+114:             this.downloadFile(fileId, signal),
+115:           );
+116:           if (!message) {
+117:             offset = nextOffset;
+118:             continue;
+119:           }
+120:           try {
+121:             await handler(message);
+122:             // Commit the platform cursor only after ChatGateway has durably
+123:             // accepted the delivery. A full/broken inbox is retried by Telegram.
+124:             offset = nextOffset;
+125:           } catch (error) {
+126:             this.log(
+127:               `Telegram update ${update.update_id} 处理失败，${retryMs}ms 后重试：${this.redact(formatError(error))}`,
+128:             );
+129:             // Back off before re-polling. The offset is intentionally NOT
+130:             // advanced, so getUpdates returns the same pending batch instantly;
+131:             // without a delay the loop would hot-spin and hammer the API (and
+132:             // spam the log) until Telegram rate-limits us. Mirror the outer
+133:             // error path's backoff so a persistently-full inbox settles down.
+134:             await this.sleepFn(retryMs, signal).catch(() => undefined);
+135:             retryMs = Math.min(retryMs * 2, 30_000);
+136:             break;
+137:           }
+138:         }
+139:       } catch (error) {
+140:         if (signal.aborted) return;
+141:         this.log(
+142:           `Telegram long polling 失败，${retryMs}ms 后重试：${this.redact(formatError(error))}`,
+143:         );
+144:         await this.sleepFn(retryMs, signal).catch(() => undefined);
+145:         retryMs = Math.min(retryMs * 2, 30_000);
+146:       }
+193:   private async call<T>(method: string, body: unknown, signal: AbortSignal): Promise<T> {
+198:       signal,
+203:   private async callMultipart<T>(method: string, body: FormData, signal: AbortSignal): Promise<T> {
+207:       signal,
+225:   private async downloadFile(fileId: string, signal?: AbortSignal): Promise<Uint8Array> {
+229:       signal ?? AbortSignal.timeout(30_000),
+234:       { signal: signal ?? AbortSignal.timeout(30_000) },
+263:   download: (fileId: string, signal?: AbortSignal) => Promise<Uint8Array>,
+285:   download: (fileId: string, signal?: AbortSignal) => Promise<Uint8Array>,
+312:     load: (signal) => download(media.file_id, signal),
+347: async function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
+348:   if (signal.aborted) return;
+351:     signal.addEventListener("abort", done, { once: true });
+354:       signal.removeEventListener("abort", done);

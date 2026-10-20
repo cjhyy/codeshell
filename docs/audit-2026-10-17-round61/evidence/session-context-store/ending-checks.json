@@ -1,0 +1,100 @@
+{
+  "atUTC": "2026-10-17T20:12:19.464089+00:00",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "beforeSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+      "beforeSha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3",
+      "endingSha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3",
+      "endingBytes": 6343,
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.test.ts",
+      "beforeSha256": "f937e91242a66a509d87d4dceafbc47d273bb8c7852d979b57452d57a5b90409",
+      "endingSha256": "f937e91242a66a509d87d4dceafbc47d273bb8c7852d979b57452d57a5b90409",
+      "endingBytes": 8764,
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/index.ts",
+      "beforeSha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+      "endingSha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+      "endingBytes": 3131,
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/shared/mcp-bridge.ts",
+      "beforeSha256": "854be8bf5965c9f8d87bd320d536236c22b8d1a139a0aaf59645b9d2bfcf0c36",
+      "endingSha256": "854be8bf5965c9f8d87bd320d536236c22b8d1a139a0aaf59645b9d2bfcf0c36",
+      "endingBytes": 17292,
+      "unchanged": true
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/session-factory.ts",
+      "beforeSha256": "1ffadf1130ee90eafdf7e71846306bf27e6a0ba16d83524a0f92364f97894e69",
+      "endingSha256": "1ffadf1130ee90eafdf7e71846306bf27e6a0ba16d83524a0f92364f97894e69",
+      "endingBytes": 11004,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/external-runtime-service.ts",
+      "beforeSha256": "1d1384b11762ccf216f6cb6447cb91c93597807a53a6757a6d43a1472ab18b37",
+      "endingSha256": "1d1384b11762ccf216f6cb6447cb91c93597807a53a6757a6d43a1472ab18b37",
+      "endingBytes": 65714,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "beforeSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "endingSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "endingBytes": 12061422,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "beforeSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "endingSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "endingBytes": 2055917,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "beforeSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+      "endingSha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+      "endingBytes": 18621,
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "beforeSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "endingSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "endingBytes": 841639,
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round157-composition-lifetime/history-batch.json",
+      "beforeSha256": "97861ae2e150de7a080d891724516900d9fdbed271d790c6e59cad05ef0c03c9",
+      "endingSha256": "97861ae2e150de7a080d891724516900d9fdbed271d790c6e59cad05ef0c03c9",
+      "endingBytes": 1654647,
+      "unchanged": true
+    }
+  ],
+  "sourceInstructionChecks": 8,
+  "boundedCanonicalSharedMetadataChecks": 5,
+  "allUnchanged": true,
+  "scope": "Not a full history rescan/ending rehash of 6244 historical documents; no Git/frozen blob verification."
+}

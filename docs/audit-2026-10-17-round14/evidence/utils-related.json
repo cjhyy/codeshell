@@ -1,0 +1,27 @@
+{
+  "frozenBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "related": [
+    {
+      "id": "UTIL-R14-R1",
+      "title": "Core tool argument summary has the already recorded UTF-16 truncation mechanism",
+      "relatedTo": "DESKTOP-R12-01",
+      "source": "packages/core/src/utils/toolDisplay.ts",
+      "lines": [
+        95,
+        96,
+        114,
+        115
+      ],
+      "status": "related-static-only-not-new-formal",
+      "reason": "Core truncate slices by UTF-16 code units at ordinary 60/88-character bounds, paralleling the previously recorded Desktop utility defect. Ordinary Agent descriptions, Bash commands and Unicode file names are consumers; no new runtime or UI evidence was obtained.",
+      "evidence": [
+        "evidence/utils-cache-format-controls.test.ts",
+        "evidence/utils-skip-note.md"
+      ],
+      "limits": [
+        "The corresponding fixture was never executed and retains the wrong import path.",
+        "The previous Desktop finding/fix does not establish that this different Core helper has been dynamically validated or fixed."
+      ]
+    }
+  ]
+}

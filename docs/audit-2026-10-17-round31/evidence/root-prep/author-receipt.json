@@ -1,0 +1,60 @@
+{
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 1245,
+      "sha256": "52d6b7561bcb737149f7484b295560f4f72f2f2d2a94fdb625ae990273b40d07"
+    },
+    {
+      "path": "consumer-pins.json",
+      "bytes": 772,
+      "sha256": "713e2f37abb49f877ccb32a46765f912f33374aeb51c293137554640bcbe05c2"
+    },
+    {
+      "path": "external-sources.json",
+      "bytes": 1077,
+      "sha256": "76fa65ed7cf936ea9f96dec78522840a3941d45402ca5071e18d289af5188f33"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3299,
+      "sha256": "ba982defb5a6503ef8e7eaf3329fe09d034c655b0d7227ddc132cc12da9e3d6f"
+    },
+    {
+      "path": "history.json",
+      "bytes": 592310,
+      "sha256": "4e290303c6663dd7633b33353b50234cde73d5d28c994d22097623ffd3f72bc8"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 810,
+      "sha256": "405cc1a4569e4d1fb7105306758f8508702626d87e3347f5bbc192c7223fdacd"
+    },
+    {
+      "path": "proposal.md",
+      "bytes": 2388,
+      "sha256": "a009637080e840a659a9419144599b920b89b8d6ff2891609f8d996a957a52a0"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 4977,
+      "sha256": "5ac9361250436100932d54e9256d057de576f4317fd0c215c367e5526bb3a5df"
+    },
+    {
+      "path": "test-source-pin.json",
+      "bytes": 197,
+      "sha256": "ceca17f33db9a6c4d402735bedc638b09ce0286b677d68b8783b0d9ab97692ad"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 395,
+      "sha256": "910920cff5d4af716c30138e6925ef4a470db4aaf617b2b871ec99297ca4df8c"
+    }
+  ],
+  "selfExcluded": true,
+  "artifactCount": 10,
+  "formal": 0,
+  "candidates": 1,
+  "related": 0,
+  "productExecution": false
+}

@@ -1,0 +1,99 @@
+{
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "replacementCount": 0,
+  "ordinaryNegatives": [
+    {
+      "area": "event sequence/payload",
+      "evidence": "append increments once and adds the same sequence to stored envelope and payload; producer sends item.payload; get keeps retained order and filters >afterSequence; consumer buffers by numeric sequence and ignores prior sequence values"
+    },
+    {
+      "area": "bounded retained history",
+      "evidence": "leaf independently enforces event-count and serialized-byte limits by removing oldest items; get exposes truncated rather than claiming full output; real tool consumer treats truncation as explicit failure"
+    },
+    {
+      "area": "terminal receipt retention",
+      "evidence": "add prunes expired records and applies per-bucket/global retention bounds; completion mutates terminal DTO then stores it; get prunes before lookup; advertised limits mean evicted/expired history is not a promise of durable complete history"
+    },
+    {
+      "area": "ordinary output item size",
+      "evidence": "actual stdout/stderr path slices MAX_EVENT_CHARS=processLimits.maxEventChars before emit; no arbitrary oversized payload/invalid state used to manufacture a gap",
+      "limit": "Not a theorem that arbitrary native error messages or all potential payload producers are bounded; no large-pressure scenario expanded"
+    }
+  ],
+  "notEstablished": [
+    "No ordinary new source-level bug in the selected producer→state→get→consumer data chain",
+    "No claim all process lifecycle/timer/native/authorization behavior is correct",
+    "No semantic proof of never previously reviewed; unknown/no-row stays unknown",
+    "No runtime verification or test pass"
+  ],
+  "history": {
+    "snapshotFiles": 3581,
+    "markdown": 1369,
+    "json": 2212,
+    "jsonStringLeaves": 1030881,
+    "jsonScalarLeaves": 1550274,
+    "archivePaths": 169,
+    "parseErrors": 0,
+    "includeFrozen39": true,
+    "excludeMutableFuture": [
+      40,
+      41,
+      42,
+      43
+    ],
+    "initialQueryHits": {
+      "translator": 84,
+      "process-state": 5,
+      "translator-current-sha": 1,
+      "process-state-current-sha": 1
+    },
+    "initialCap": 80,
+    "retainedTranslator": 80,
+    "processStatePathValuesActuallyRead": 5,
+    "processStateHashValuesActuallyRead": 1,
+    "unusedTranslatorHashValueRead": 1,
+    "coverageRowsMetadataRead": 36,
+    "focusedQueries": {
+      "exact-names": {
+        "hits": 0,
+        "cap": 80,
+        "retained": 0
+      },
+      "replay-loss": {
+        "hits": 0,
+        "cap": 80,
+        "retained": 0
+      },
+      "replay-fields": {
+        "hits": 1,
+        "cap": 80,
+        "retained": 1
+      }
+    },
+    "focusedBoundedWindowRead": 1,
+    "focusedSameInventoryDrift": [],
+    "semanticExhaustionClaim": false
+  },
+  "existingTests": {
+    "file": "packages/server/src/panels/process-state.test.ts",
+    "linesRead": 55,
+    "syntacticTestCalls": 2,
+    "runs": 0,
+    "declaredIntent": [
+      "expiry/per-bucket/global receipt bounds",
+      "event count/byte bounds and terminal sequence"
+    ]
+  },
+  "validation": {
+    "product": 0,
+    "tests": 0,
+    "languageFixtures": 0,
+    "timerPromiseOrBufferFixtures": 0,
+    "realBusinessFilesNativeNetworkModelProcessIdentityPermissionExperiments": 0,
+    "git": 0
+  }
+}

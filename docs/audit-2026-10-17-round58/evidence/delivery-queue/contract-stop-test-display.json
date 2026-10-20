@@ -1,0 +1,67 @@
+[
+  {
+    "path": "packages/chat/src/channel.ts",
+    "bytes": 7027,
+    "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+    "displayedLineRanges": [
+      [
+        109,
+        193
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json or prior-canonical-read.json",
+    "displayAt": "2026-10-17T19:24:00.907583+00:00"
+  },
+  {
+    "path": "packages/chat/src/cli.ts",
+    "bytes": 11645,
+    "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+    "displayedLineRanges": [
+      [
+        120,
+        145
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json or prior-canonical-read.json",
+    "displayAt": "2026-10-17T19:24:00.908774+00:00"
+  },
+  {
+    "path": "packages/chat/src/delivery-queue.test.ts",
+    "bytes": 18029,
+    "sha256": "14338213d386fd4ea2ff12c6202f6c1d2bbe4b7f8694f2182830bfe2e91228ff",
+    "displayedLineRanges": [
+      [
+        34,
+        104
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json or prior-canonical-read.json",
+    "displayAt": "2026-10-17T19:24:00.909237+00:00"
+  },
+  {
+    "path": "packages/chat/src/bound-session-chat.test.ts",
+    "bytes": 4481,
+    "sha256": "51fb1b92c9506431403e0883582a8c6e1be940a26deb3b9aeb567a774cd4e081",
+    "displayedLineRanges": [
+      [
+        68,
+        94
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json or prior-canonical-read.json",
+    "displayAt": "2026-10-17T19:24:00.909599+00:00"
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+    "bytes": 31923,
+    "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+    "displayedLineRanges": [
+      [
+        140,
+        151
+      ]
+    ],
+    "pinReference": "adjacent-initial-pins.json or prior-canonical-read.json",
+    "displayAt": "2026-10-17T19:24:00.910146+00:00"
+  }
+]

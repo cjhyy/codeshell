@@ -1,0 +1,20 @@
+packages/core/src/engine/runtime.ts:72:  ownEngine(close: () => Promise<void>): Dispose {
+packages/core/src/engine/runtime.ts:151:        await this.lifetime.dispose();
+packages/core/src/engine/engine.ts:365:  private moduleReady!: Promise<void>;
+packages/core/src/engine/engine.ts:608:      .dispose()
+packages/core/src/engine/engine.ts:611:      .dispose()
+packages/core/src/engine/engine.ts:820:      this.moduleReady = createPrivateServices(
+packages/core/src/engine/engine.ts:831:      if (this.runtime) this.lifetime.own(this.runtime.ownEngine(() => this.dispose()));
+packages/core/src/engine/engine.ts:832:      // Constructors remain synchronous. run()/ready()/dispose() observe the same failure.
+packages/core/src/engine/engine.ts:833:      void this.moduleReady.catch(() => {});
+packages/core/src/engine/engine.ts:836:        .dispose()
+packages/core/src/engine/engine.ts:845:    return this.moduleReady;
+packages/core/src/engine/engine.ts:889:    this.activeRunScope!.own(dispose);
+packages/core/src/engine/engine.ts:1492:          await this.activeRunScope?.dispose();
+packages/core/src/engine/engine.ts:1882:      for (const dispose of watchDisposers) dispose();
+packages/core/src/engine/engine.ts:2102:            await this.activeRunScope?.dispose();
+packages/core/src/engine/engine.ts:2644:            await child.dispose();
+packages/core/src/engine/engine.ts:4004:  dispose(): Promise<void> {
+packages/core/src/engine/engine.ts:4010:    if (this.moduleActivationPending) void this.lifetime.dispose().catch(() => {});
+packages/core/src/engine/engine.ts:4014:        await this.moduleReady;
+packages/core/src/engine/engine.ts:4017:          await this.lifetime.dispose();

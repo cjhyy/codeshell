@@ -1,0 +1,46 @@
+{
+  "checkedAtUTC": "2026-10-17T14:25:22.656150+00:00",
+  "kind": "artifact metadata only, no repeated full input byte scan",
+  "files": [],
+  "inputArtifactFiles": 42,
+  "inputReceiptRecords": 39,
+  "inputRelativeLinks": 21,
+  "ownReviewArtifactLinks": [
+    {
+      "artifact": "checks.json",
+      "exists": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-core-data-frontier/report.md",
+      "exists": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-process-state-review/review.md",
+      "exists": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round43-process-state-display-supplement/review.md",
+      "exists": true
+    },
+    {
+      "artifact": "metadata-check.first-diagnostic.json",
+      "exists": true
+    },
+    {
+      "artifact": "metadata-check.second-diagnostic.json",
+      "exists": true
+    },
+    {
+      "artifact": "metadata-check.correction.json",
+      "exists": true
+    }
+  ],
+  "allLinksExist": true,
+  "rangeCounts": "author291semantic/456display,peer222semantic/357display;159body+16existingnav=175",
+  "originalFrozenSourceMetadataSelfConsistent": true,
+  "falseMismatchInferenceRetracted": true,
+  "firstAndSecondOwnCheckerDiagnosticsPreserved": true,
+  "productSourceReads": 0,
+  "newProductSemanticReadLines": 0,
+  "GitCommands": 0
+}

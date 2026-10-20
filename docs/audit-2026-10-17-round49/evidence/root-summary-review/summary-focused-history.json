@@ -1,0 +1,344 @@
+{
+  "atUTC": "2026-10-17T16:21:20.327367+00:00",
+  "historyFiles": 4492,
+  "counts": {
+    "summary-functions": 1,
+    "known-cost-flags": 4,
+    "cost-id": 64
+  },
+  "hits": {
+    "summary-functions": [
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/elapsed-review/source-excerpts.json",
+        "at": "$[\"files\"][0][\"display\"][0][\"text\"]",
+        "context": "import { FullscreenModeContext, INITIAL_FULLSCREEN_MODE } from \"./fullscreen-mode.js\";\nimport { AgentClient } from \"@cjhyy/code-shell-core\";\nimport { formatUsageCost } from \"@cjhyy/code-shell-core\";\nimport { useSessionUsage } from \"./hooks/useSessionUsage.js\";\nimport { PermissionPrompt } from \"./components/PermissionPrompt.js\";\nimport type { ModelEntry } from \"./components/ModelSelector.js\";\nimport type { ProviderManagerEntry } from \"./components/ModelManager.js\";\nimport type { SessionPickerEntry } from \"./com"
+      }
+    ],
+    "known-cost-flags": [
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-excerpts.json",
+        "at": "$[\"snapshots\"][1][\"text\"]",
+        "context": "r;\n    output: number;\n    cacheRead: number;\n    cacheWrite: number;\n    cachePricesEstimated: true;\n  } | null;\n}\n\nexport interface UsageTotals {\n  notSentRequests?: number;\n  requests: number;\n  promptTokens: number;\n  completionTokens: number;\n  totalTokens: number;\n  cacheReadTokens: number;\n  cacheCreationTokens: number;\n  knownEstimatedCostUsd: number;\n  unknownCostRequests: number;\n  unknownUsageRequests: number;\n}\n\nexport interface UsageSummary extends UsageTotals {\n  version: 1;\n  scope: \"runtime\" | "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-excerpts.json",
+        "at": "$[\"snapshots\"][1][\"text\"]",
+        "context": "mber;\n  completionTokens: number;\n  totalTokens: number;\n  cacheReadTokens: number;\n  cacheCreationTokens: number;\n  knownEstimatedCostUsd: number;\n  unknownCostRequests: number;\n  unknownUsageRequests: number;\n}\n\nexport interface UsageSummary extends UsageTotals {\n  version: 1;\n  scope: \"runtime\" | \"session\" | \"store\";\n  sessionId?: string;\n  includesChildren: boolean;\n  partial: boolean;\n  persistenceErrors: number;\n  invalidReceipts: number;\n  scannedReceipts: number;\n  nextCursor?: string;\n  byModel: Array<Usa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/source-excerpts.json",
+        "at": "$[\"files\"][2][\"displayedText\"][0][\"text\"]",
+        "context": "r;\n    output: number;\n    cacheRead: number;\n    cacheWrite: number;\n    cachePricesEstimated: true;\n  } | null;\n}\n\nexport interface UsageTotals {\n  notSentRequests?: number;"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/source-excerpts.json",
+        "at": "$[\"files\"][5][\"displayedText\"][1][\"text\"]",
+        "context": "tions));\n    expect(calls).toBe(2);\n    expect(new Set(ids).size).toBe(2);\n    expect(ledger.summary().requests).toBe(2);\n    expect(ledger.summary().unknownCostRequests).toBe(1);\n    expect(ledger.summary().unknownUsageRequests).toBe(1);\n    expect(ledger.summary().knownEstimatedCostUsd).toBe(0);\n  } finally {"
+      }
+    ],
+    "cost-id": [
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/root-dedup.json",
+        "at": "$[\"hits\"][\"addressed_old_sources\"][8][\"context\"]",
+        "context": " 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/README.md",
+        "at": "$",
+        "context": "d8/findings.json) | image/jpg alias提前返回跳过客户端每图大小检查 |\n| P3 | [ATT-R9-01](../audit-2026-10-17-round9/findings.json) | 空格工作区中的完整产物路径被截断成错误附件路径 |\n| P3 | [COST-R9-01](../audit-2026-10-17-round9/findings.json) | 独立CostTracker记录丢失完整模型标识并采用错误估价 |\n| P3 | [SESSION-R9-01](../audit-2026-10-17-round9/findings.json) | 超工具调用上限的完成会话留下未配对持久化调用并阻断full fork |\n| P3 | [DIAG-R10-01](../audit-2026-10-17-round10/findings.json) | DOM bounded traversal eagerly enumerates complete child collections before queue cap |\n| P3 | [PET-R1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/evidence/catalog-review/checks.json",
+        "at": "$[\"canonicalMetadataDocuments\"][8][\"idsInOriginalOrder\"][1]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+        "at": "$[\"findings\"][86][\"id\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/ALL-ISSUES.md",
+        "at": "$",
+        "context": "过客户端每图大小检查 |\n| [ATT-R9-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round9/findings.json) | P3 | 空格工作区中的完整产物路径被截断成错误附件路径 |\n| [COST-R9-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round9/findings.json) | P3 | 独立CostTracker记录丢失完整模型标识并采用错误估价 |\n| [SESSION-R9-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-17-round9/findings.json) | P3 | 超工具调用上限的完成会话留下未配对持久化调用并阻断full fork |\n| [DIAG-R10-01](/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-20"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/decisions.json",
+        "at": "$[\"oldExclusions\"][0]",
+        "context": "COST-R9-01 standalone CostTracker full model identifier loss is a historical recorded issue; its bound-ledger comparison and old execution counts are not this run."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cause-selected.json",
+        "at": "$[\"contexts\"][0][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cause-selected.json",
+        "at": "$[\"contexts\"][0][\"context\"]",
+        "context": " 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对调用并阻断 full fork | 实际 Facade/TurnLoop/Transcript/SessionManager + fake client/executor；25 调用对照正常，排除 resume/send 必失败 |\n\n[工具目录报告](tools.md)保留同名 definition-only 注册继续使用旧 executor 的候选。fake ex"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cause-selected.json",
+        "at": "$[\"contexts\"][1][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cause-selected.json",
+        "at": "$[\"contexts\"][1][\"context\"]",
+        "context": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cause-selected.json",
+        "at": "$[\"contexts\"][2][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cause-selected.json",
+        "at": "$[\"contexts\"][2][\"context\"]",
+        "context": "9c07274adedf4fd50403105f1b1f`。本方向 **1 项确认 P3、0 个候选**。2 个首次 guarded shard 共 **28 pass、79 expect、0 fail、0 skipped**，其中新增 5 项，既有纯数据基线 23 项。只记录，不修产品。\n\n## COST-R9-01：独立 CostTracker 记录后丢失完整模型标识，累计估价错误（P3）\n\n`packages/core/src/cost-tracker.ts:115` 把 `record(model, ...)` 的完整标识替换成 canonical 名称。后续 `getEstimatedCost()`（`:148`）再按已截断的名称查价。完整 OpenRouter `vendor/model` 名称属于明确支持的输入：本模块 `:36–46` 说明完整标识优先查 snapshot，`data/model-metadata.ts:103–105` 说明此类名称从 snapshot 定价；`CostTracker` 仍在公共 SDK `index.ts:759` 导出。\n\n[实际 fixture](e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-contexts.json",
+        "at": "$[\"hits\"][\"display_contract\"][34][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-contexts.json",
+        "at": "$[\"hits\"][\"display_contract\"][34][\"context\"]",
+        "context": " 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"literalCasefoldedTerms\"][\"old_tracker\"][0]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][0][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][0][\"context\"]",
+        "context": " 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][1][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][1][\"context\"]",
+        "context": "d8/findings.json) | image/jpg alias提前返回跳过客户端每图大小检查 |\n| P3 | [ATT-R9-01](../audit-2026-10-17-round9/findings.json) | 空格工作区中的完整产物路径被截断成错误附件路径 |\n| P3 | [COST-R9-01](../audit-2026-10-17-round9/findings.json) | 独立CostTracker记录丢失完整模型标识并采用错误估价 |\n| P3 | [SESSION-R9-01](../audit-2026-10-17-round9/findings.json) | 超工具调用上限的完成会话留下未配对持久化调用并阻断full fork |\n| P3 | [DIAG-R10-01](../audit-2026-10-17-round10/findings.json) | DOM bounded traversal eagerly enumerates complete child collections before queue cap |\n| P3 | [PET-R1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][2][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][2][\"context\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][3][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][3][\"context\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][4][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][4][\"context\"]",
+        "context": " 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对调用并阻断 full fork | 实际 Facade/TurnLoop/Transcript/SessionManager + fake client/executor；25 调用对照正常，排除 resume/send 必失败 |\n\n[工具目录报告](tools.md)保留同名 definition-only 注册继续使用旧 executor 的候选。fake ex"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][5][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][5][\"context\"]",
+        "context": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][6][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][6][\"context\"]",
+        "context": "COST-R9-01 full OpenRouter identity lost after record: no matching earlier bug found. Keyword search is bounded record evidence, not semantic proof of exhaustive novelty."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][7][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][7][\"context\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][8][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][8][\"context\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][9][\"needle\"]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-cost-causes.json",
+        "at": "$[\"hits\"][\"old_tracker\"][9][\"context\"]",
+        "context": "9c07274adedf4fd50403105f1b1f`。本方向 **1 项确认 P3、0 个候选**。2 个首次 guarded shard 共 **28 pass、79 expect、0 fail、0 skipped**，其中新增 5 项，既有纯数据基线 23 项。只记录，不修产品。\n\n## COST-R9-01：独立 CostTracker 记录后丢失完整模型标识，累计估价错误（P3）\n\n`packages/core/src/cost-tracker.ts:115` 把 `record(model, ...)` 的完整标识替换成 canonical 名称。后续 `getEstimatedCost()`（`:148`）再按已截断的名称查价。完整 OpenRouter `vendor/model` 名称属于明确支持的输入：本模块 `:36–46` 说明完整标识优先查 snapshot，`data/model-metadata.ts:103–105` 说明此类名称从 snapshot 定价；`CostTracker` 仍在公共 SDK `index.ts:759` 导出。\n\n[实际 fixture](e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history.json",
+        "at": "$[\"method\"][\"literalCasefoldedNeedles\"][\"display_contract\"][0]",
+        "context": "cost-r9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/report.md",
+        "at": "$",
+        "context": "SHA 全文证据。loaded-module/preflight import 引用不是正文阅读或 pass。排名和 no-row 也不是未读证明。[whole row gate](history-gate-selected.json)\n\n补充旧因检索沿用同一 dated4255文件集而非借旧扫描：COST-R9-01命中10，context-family64，budget/429特定词0，均低于每组100上限。实际选读保留的3个旧 tracker 窗口；旧 R9 限定独立、未绑定 CostTracker 丢失完整模型标识并估价错误，未把该已录根因重新计数。旧运行数量、bound-ledger 对照及 native/失败日志都仅是历史文本，不是本轮执行或覆盖证据。特定词0不证明相关领域无旧问题。[focused cause scan](history-cost-causes.json)、[selected old windows](history-cause-selected.json)\n\n普通实际链条：`LLMClientBase` 构造时把 config.provider/model 赋给只读字段；u"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/classification.json",
+        "at": "$[\"oldCauseExclusions\"][0][\"id\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/gate-decision.json",
+        "at": "$[\"oldCauseExcluded\"][0][\"id\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][3][\"context\"]",
+        "context": " 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][7][\"context\"]",
+        "context": "d8/findings.json) | image/jpg alias提前返回跳过客户端每图大小检查 |\n| P3 | [ATT-R9-01](../audit-2026-10-17-round9/findings.json) | 空格工作区中的完整产物路径被截断成错误附件路径 |\n| P3 | [COST-R9-01](../audit-2026-10-17-round9/findings.json) | 独立CostTracker记录丢失完整模型标识并采用错误估价 |\n| P3 | [SESSION-R9-01](../audit-2026-10-17-round9/findings.json) | 超工具调用上限的完成会话留下未配对持久化调用并阻断full fork |\n| P3 | [DIAG-R10-01](../audit-2026-10-17-round10/findings.json) | DOM bounded traversal eagerly enumerates complete child collections before queue cap |\n| P3 | [PET-R1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][8][\"context\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][9][\"context\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][26][\"context\"]",
+        "context": " 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对调用并阻断 full fork | 实际 Facade/TurnLoop/Transcript/SessionManager + fake client/executor；25 调用对照正常，排除 resume/send 必失败 |\n\n[工具目录报告](tools.md)保留同名 definition-only 注册继续使用旧 executor 的候选。fake ex"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][27][\"context\"]",
+        "context": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][28][\"context\"]",
+        "context": "COST-R9-01 full OpenRouter identity lost after record: no matching earlier bug found. Keyword search is bounded record evidence, not semantic proof of exhaustive novelty."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][29][\"context\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][43][\"context\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/history-contexts.json",
+        "at": "$[\"oldCause\"][45][\"context\"]",
+        "context": "9c07274adedf4fd50403105f1b1f`。本方向 **1 项确认 P3、0 个候选**。2 个首次 guarded shard 共 **28 pass、79 expect、0 fail、0 skipped**，其中新增 5 项，既有纯数据基线 23 项。只记录，不修产品。\n\n## COST-R9-01：独立 CostTracker 记录后丢失完整模型标识，累计估价错误（P3）\n\n`packages/core/src/cost-tracker.ts:115` 把 `record(model, ...)` 的完整标识替换成 canonical 名称。后续 `getEstimatedCost()`（`:148`）再按已截断的名称查价。完整 OpenRouter `vendor/model` 名称属于明确支持的输入：本模块 `:36–46` 说明完整标识优先查 snapshot，`data/model-metadata.ts:103–105` 说明此类名称从 snapshot 定价；`CostTracker` 仍在公共 SDK `index.ts:759` 导出。\n\n[实际 fixture](e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/review.md",
+        "at": "$",
+        "context": "/16仅“Selected implementation/excerpt read”而非sameSHA full；R28/R44派生pin/unknown不构成未读证明。未发现sameSHA旧full门槛，所以进入正文，见[gate decision](gate-decision.json)。\n\n旧COST-R9-01是未绑定standalone CostTracker丢完整model identifier并估价错误；本轮不重报、不借旧执行结果。历史79命中均保留，不声称语义读尽所有历史文档/机器scalar；实际用于判断的是全部精确path/SHA object的压缩元数据、11个SHA窗口、canonical旧finding及其原scope。预算/429/真实重试方向未重开。\n\n[源码清单](source-manifest.json)：7个selected文件、329语义行=295产品+34测试；8个产品/测试文件累计唯一显示523行（含1个navigation-only model-traces文件），0 full。context全167行显示，普通语义162行；crypto import/hash"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/delivery-review/checks.json",
+        "at": "$[\"comparisons\"][\"canonicalSequence\"][86]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/candidate.json",
+        "at": "$[\"dedup\"]",
+        "context": "ory, literal path/hash and focused ordinary elapsed/cost queries. No exact same-condition old issue established in actually read bounded windows. Old COST-R9-01 model-id pricing, old ctx run/runs and permanent rendering/import failures excluded; this does not prove all history semantically exhausted."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/history-focused-selected.json",
+        "at": "$[\"rows\"][13][\"text\"]",
+        "context": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/history-focused.json",
+        "at": "$[\"contexts\"][\"cost-model\"][25][\"text\"]",
+        "context": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/report.md",
+        "at": "$",
+        "context": "字面/AND，runStart1、status+elapsed3、background+elapsed31、cost-model50，cap30 保存1/3/30/30；实际选读[14个有限窗口](history-focused-selected.json)，不把命中或保存 cap 当历史穷尽。旧 COST-R9-01 模型 ID 定价、旧非 REPL ctx run/runs、i18n/diff/终端渲染与既有失败动态方向不重报。[原扫描方法](history-method.py)保留。\n\n## 诊断、时点和冻结\n\n首次 focused 选读显示 6512 tokens 超过6200输出限，命令 exit0；[首诊断](history-selected.first-output-diagnostic.json)与完整 selected JSON保留，随后仅补读被省略的 index24 窗口，无产品错误或重跑。registry360–370 意外显示相邻363–369 lease字段，仅360–362/370登记普通语义，不再进入机制。\n\nRoot 最初报告 c3a9ece…，后报告2735100…仅新增"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/user-catalog-draft/checks.json",
+        "at": "$[\"rows\"][86][\"id\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/evidence/user-catalog-draft/draft.md",
+        "at": "$",
+        "context": "TT-R9-01](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round9/findings.json) | P3 | 空格工作区中的完整产物路径被截断成错误附件路径 |\n| [COST-R9-01](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round9/findings.json) | P3 | 独立CostTracker记录丢失完整模型标识并采用错误估价 |\n| [SESSION-R9-01](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round9/findings.json) | P3 | 超工具调用上限的完成会话留下未配对持久化调用并阻断full fork |\n| [DIAG-R10-01](/Users/admin/.codex/wo"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round48/recorded-findings-catalog.json",
+        "at": "$[\"findings\"][86][\"id\"]",
+        "context": "COST-R9-01"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/README.md",
+        "at": "$",
+        "context": " 实际证据与影响范围 |\n| --- | --- | --- |\n| [ATT-R9-01](attachments.md) | 工作区路径含空格时，产物卡得到截断的错误路径 | 生产 detector + 自有临时文件；正确原路径仍在结果文本，生成器/UI/native 传播只静态追踪 |\n| [COST-R9-01](usage.md) | 独立 CostTracker 丢失完整模型标识，累计与持久化采用错误估价 | 公共 standalone SDK + 冻结数据；绑定 UsageLedger 的正常对照正确，排除主流程账本和实际账单 |\n| [SESSION-R9-01](session.md) | 超过工具调用上限后，持久化留未配对调用并阻断 full fork | 实际 Facade/TurnLoop/Transcript/SessionManager + fake client/executor；25 调用对照正常，排除 resume/send 必失败 |\n\n[工具目录报告](tools.md)保留同名 definition-only 注册继续使用旧 executor 的候选。fake ex"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/cross-review-usage.md",
+        "at": "$",
+        "context": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone "
+      }
+    ]
+  },
+  "contextCap": 60,
+  "scope": "Focused cause query over same frozen4492 recursive JSON values/MD text; counts/retained windows not all read. No product execution."
+}

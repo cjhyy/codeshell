@@ -1,0 +1,11 @@
+{
+  "baseline": "524c0827a480132119b637aa87e16f0eab9895f3",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productReruns": 0
+  },
+  "mode": "Static ordinary trace/cache data review and old-full gates; independent targeted tool-result formatting and path review. No product execution. Zero product/helper/fixture/test/React/clock/timer/model/native/business-network/auth/custody experiments; Git binding/integration metadata separately recorded."
+}

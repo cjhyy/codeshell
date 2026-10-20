@@ -1,0 +1,2998 @@
+{
+  "format": [
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "locator": "markdown-text",
+      "valueChars": 96025,
+      "contextStart": 39525,
+      "contextEnd": 40675,
+      "text": " LSP\n\n`src/lsp/**` 包括：\n\n- `manager.ts`：LSP manager。\n- `client.ts`：LSP client。\n- `servers.ts`：server 定义。\n- `root-path.ts`：root path 解析。\n\nLSP 能力可用于代码智能、诊断、符号等。\n\n### 18.3 Runtime safe spawn\n\n`src/runtime/safe-spawn.ts` 封装安全子进程执行。Hook runner、plugin、git、shell 工具等需要执行外部命令时应优先走这类封装，避免环境变量、cwd、stdio、信号处理不一致。\n\n### 18.4 Utils\n\n`src/utils/**` 是通用工具集合，包括：\n\n- `format.ts`\n- `theme.ts`\n- `toolDisplay.ts`\n- `debug.ts`\n- `env.ts`\n- `envUtils.ts`\n- `execFileNoThrow.ts`\n- `lockfile.ts`\n- `memoize.ts`\n- `semver.ts`\n- `sliceAnsi.ts`\n- `intl.ts`\n- `earlyInput.ts`\n- `systemTheme.ts`\n- `task-sanitizer.ts`\n\n这些工具被 CLI/UI/core 多处复用。修改时要注意它们可能是跨层依赖。\n\n## 19. 状态与成本统计模块\n\n### 19.1 `state.ts`\n\n`src/state.ts` 是 process-wide 状态兼容层，包含：\n\n- sessionId / cwd / projectRoot。\n- interactive/headless 标记。\n- model override。\n- token counters。\n- per-model usage。\n- API duration。\n- lines changed。\n- turn hook/tool/classifier duration。\n- telemetry counter stubs。\n- remote mode / sdk betas 等状态。\n\n它的设计像是从产品层抽出来的轻量全局状态，很多函数是 no-op/stub，保证 core 不强依赖 UI/telemetry 实现。\n\n风险：全局 mutable state 在多 Engine、多 session、嵌入式 server 场景容易串扰。尤其 token/cost/per-model usage 如果没有 session isolation，UI 展示可能混多个 run",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/archive/core-modules/utils.md",
+      "locator": "markdown-text",
+      "valueChars": 8186,
+      "contextStart": 1508,
+      "contextEnd": 2658,
+      "text": "inguishes spawn failure (`code: null`) from non-zero exit. |\n| `memoize.ts` | Minimal `memoize(fn, resolver)` (lodash-shaped) with a `.cache` Map; in-tree to drop the lodash dependency. |\n| `semver.ts` | Thin re-export of `semver`'s `gt`/`gte`/`lt`. |\n| `task-sanitizer.ts` | `detectPastedNoise` — flags ANSI/box-drawing-heavy pasted task text. |\n| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |\n| `intl.ts` | Locale/timezone/segmenter helpers (`getRelativeTimeFormat`, `getTimeZone`, `getWordSegmenter`, `lastGrapheme`, …). |\n| `env.ts` | Host/runtime/platform detection (`env`, `getHostPlatform`, `getRuntime`, `getPackageManager`, `isWSL`, global dir helpers). |\n| `envUtils.ts` | Env-var parsing & policy (`isEnvTruthy`, `parseEnvVars`, AWS/Vertex region helpers, `isInProtectedNamespace`). |\n| `earlyInput.ts` | Capture/replay stdin typed before the UI is ready (`startCapturingEarlyInput`/`consumeEarlyInput`/…). |\n| `toolDisplay.ts` | Tool-call display helpers (`formatToolArgs`, `singleLine`, `MAX_LINE_WIDTH`, `TOOL_DOT_COLORS`). |\n| `debug.ts` ",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/archive/core-risk-signal-index.md",
+      "locator": "markdown-text",
+      "valueChars": 13440,
+      "contextStart": 12918,
+      "contextEnd": 13440,
+      "text": ".ts` | `catch {`×17, `writeFileSync`×3, `join(`×5, `spawn`×5, `exec`×5, `timeout`×2 |\n| `utils/earlyInput.ts` | `catch {`×1 |\n| `utils/env.ts` | `as any`×2, `catch {`×2, `join(`×8, `exec`×2, `timeout`×3 |\n| `utils/envUtils.ts` | `join(`×3, `throw new Error`×1 |\n| `utils/execFileNoThrow.ts` | `as any`×1, `spawn`×3, `exec`×13, `timeout`×3 |\n| `utils/format.ts` | `join(`×1 |\n| `utils/intl.ts` | `catch {`×1 |\n| `utils/sliceAnsi.ts` | `exec`×1 |\n| `utils/systemTheme.ts` | `exec`×2 |\n| `utils/toolDisplay.ts` | `join(`×1 |\n",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "locator": "/67/file",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "locator": "/15/file",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "locator": "/67/file",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "locator": "/138/file",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/round2_section.md",
+      "locator": "markdown-text",
+      "valueChars": 10425,
+      "contextStart": 3030,
+      "contextEnd": 4180,
+      "text": "ther: (1) Subscribe to LSP diagnostic notifications and collect results until no new one… |\n| ⬜ | 🟡 中 | 正确性 | `core/tool-system/sandbox/seatbelt.ts:115-116` | Incomplete escape sequence handling in SBPL profile path quoting | Escape backslashes before double quotes: return `\"${path.replace(/\\\\/g, '\\\\\\\\').replace(/\"… |\n| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |\n| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/Markdown.tsx:108-113` | Uncleanable timer may cause memory leak warning on unmount | Use useEffect with a cleanup that aborts the timer, or store the timeout ID in a useRef an… |\n| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/TopBar.tsx:98-107` | Div with onFocus/onBlur handlers is not keyboard-focusable | Add tabIndex={0} to the div at line 98 to make it keyboard-focusable so focus/blur handler… |\n| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/messages/fileChangeAggregator.ts:12-14` | countLines() counts trailing newline as extra line, inconsistent with linesOf() | Make countLines() cons",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/548",
+      "valueChars": 57,
+      "contextStart": 0,
+      "contextEnd": 57,
+      "text": "packages/core/src/session/output-journal-backup-format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/732",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/2399",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "locator": "/hits/utils/0/snippet",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "heavy pasted task text. |\n| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |\n| `intl.ts` | Locale/timezone/segmenter helpers (`getRelativeTimeFormat`, `getTimeZone`, `getWordSegmenter`, `lastGrapheme`, …). |\n| `env.ts` | Host/runtime/platform detection (`env`, `getHostPlatform`, ",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "locator": "/hits/utils/1/snippet",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "e: boolean; reason: string; cleaned: string };\n\n// format.ts (re-exported from core index)\nfunction formatDuration(ms: number, opts?: { hideTrailingZeros?: boolean; mostSignificantOnly?: boolean }): string;\nfunction formatTokens(n: number): string;\n```\n\n## 怎么用 / How to use\n\nAcquiring a run lock (from `run/RunLock.ts`):\n\n```ts\nimport { lock, check, unlock } from \"../utils/",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "locator": "/hits/utils/8/snippet",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "turn `\"${path.replace(/\\\\/g, '\\\\\\\\').replace(/\"… |\n| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |\n| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/Markdown.tsx:108-113` | Uncleanable timer may cause memory leak wa",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "locator": "/hits/utils/14/snippet",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e.",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "locator": "/hits/utils/19/snippet",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e.",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/10/text",
+      "valueChars": 13,
+      "contextStart": 0,
+      "contextEnd": 13,
+      "text": "- `format.ts`",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/25/text",
+      "valueChars": 144,
+      "contextStart": 0,
+      "contextEnd": 144,
+      "text": "| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/32/text",
+      "valueChars": 42,
+      "contextStart": 0,
+      "contextEnd": 42,
+      "text": "// format.ts (re-exported from core index)",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/41/text",
+      "valueChars": 193,
+      "contextStart": 0,
+      "contextEnd": 193,
+      "text": "- **`format.ts` is leaf-safe (no Ink).** Width-aware truncation lives elsewhere (`./truncate.ts`); keep Ink/terminal-rendering concerns out of this module so formatters stay usable in any host.",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/43/text",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "| `utils/format.ts` | `join(`×1 |",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/51/text",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/56/text",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/62/text",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/77/text",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/87/text",
+      "valueChars": 220,
+      "contextStart": 0,
+      "contextEnd": 220,
+      "text": "| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/95/text",
+      "valueChars": 57,
+      "contextStart": 0,
+      "contextEnd": 57,
+      "text": "packages/core/src/session/output-journal-backup-format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/96/text",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/102/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/105/text",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/106/text",
+      "valueChars": 63,
+      "contextStart": 0,
+      "contextEnd": 63,
+      "text": "- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/110/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/111/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/112/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/113/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/143/text",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "heavy pasted task text. |\n| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |\n| `intl.ts` | Locale/timezone/segmenter helpers (`getRelativeTimeFormat`, `getTimeZone`, `getWordSegmenter`, `lastGrapheme`, …). |\n| `env.ts` | Host/runtime/platform detection (`env`, `getHostPlatform`, ",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/144/text",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "e: boolean; reason: string; cleaned: string };\n\n// format.ts (re-exported from core index)\nfunction formatDuration(ms: number, opts?: { hideTrailingZeros?: boolean; mostSignificantOnly?: boolean }): string;\nfunction formatTokens(n: number): string;\n```\n\n## 怎么用 / How to use\n\nAcquiring a run lock (from `run/RunLock.ts`):\n\n```ts\nimport { lock, check, unlock } from \"../utils/",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/151/text",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "turn `\"${path.replace(/\\\\/g, '\\\\\\\\').replace(/\"… |\n| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |\n| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/Markdown.tsx:108-113` | Uncleanable timer may cause memory leak wa",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/156/text",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e.",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/161/text",
+      "valueChars": 374,
+      "contextStart": 0,
+      "contextEnd": 374,
+      "text": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e.",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/201/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/202/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/251/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/252/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/253/text",
+      "valueChars": 39,
+      "contextStart": 0,
+      "contextEnd": 39,
+      "text": "../../../packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/254/text",
+      "valueChars": 90,
+      "contextStart": 0,
+      "contextEnd": 90,
+      "text": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/255/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/256/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/257/text",
+      "valueChars": 203,
+      "contextStart": 0,
+      "contextEnd": 203,
+      "text": "`658b8c6fcdad0e9d4bfe8809c5adf6f95f19580d` 的 format.ts 改为在 base 已以 `/` 结尾时直接使用 base，静态消除了 WEB-R8-01 的双分隔符。保留原冻结复现并单列“并行 main 源级已修复，runtimeRetested=false”。另外五项直接 finding 源码未变；没有将此源码一致性写成在新 main 重新验证其运行行为。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/261/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/262/text",
+      "valueChars": 124,
+      "contextStart": 0,
+      "contextEnd": 124,
+      "text": "- Source: `packages/web/src/lib/format.ts:20`, with normalization at `:12–14` and project/group consumers at `:39–42,62–63`.",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/293/text",
+      "valueChars": 104,
+      "contextStart": 0,
+      "contextEnd": 104,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/299/text",
+      "valueChars": 104,
+      "contextStart": 0,
+      "contextEnd": 104,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/305/text",
+      "valueChars": 104,
+      "contextStart": 0,
+      "contextEnd": 104,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/311/text",
+      "valueChars": 104,
+      "contextStart": 0,
+      "contextEnd": 104,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/317/text",
+      "valueChars": 104,
+      "contextStart": 0,
+      "contextEnd": 104,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/323/text",
+      "valueChars": 104,
+      "contextStart": 0,
+      "contextEnd": 104,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/329/text",
+      "valueChars": 104,
+      "contextStart": 0,
+      "contextEnd": 104,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/335/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/341/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/347/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/353/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/359/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/365/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/371/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/378/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/384/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/390/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/396/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/402/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/408/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/414/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/420/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/426/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/432/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/438/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/444/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/450/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/456/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/462/text",
+      "valueChars": 96,
+      "contextStart": 0,
+      "contextEnd": 96,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/463/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/464/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/467/text",
+      "valueChars": 15,
+      "contextStart": 0,
+      "contextEnd": 15,
+      "text": "utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/495/text",
+      "valueChars": 78,
+      "contextStart": 0,
+      "contextEnd": 78,
+      "text": "- Modify `packages/desktop/src/mobile/lib/format.ts` — 导出 `sameCwd`(目前是私有)供组件用",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/496/text",
+      "valueChars": 38,
+      "contextStart": 0,
+      "contextEnd": 38,
+      "text": "### Task B1: 导出 sameCwd from format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/497/text",
+      "valueChars": 53,
+      "contextStart": 0,
+      "contextEnd": 53,
+      "text": "- Modify: `packages/desktop/src/mobile/lib/format.ts`",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/498/text",
+      "valueChars": 87,
+      "contextStart": 0,
+      "contextEnd": 87,
+      "text": "In `packages/desktop/src/mobile/lib/format.ts`, change the private `sameCwd` (currently",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/499/text",
+      "valueChars": 49,
+      "contextStart": 0,
+      "contextEnd": 49,
+      "text": "git add packages/desktop/src/mobile/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "locator": "/matches/522/text",
+      "valueChars": 70,
+      "contextStart": 0,
+      "contextEnd": 70,
+      "text": "- **session 列表**:`SessionList`(现客户端 `groupByProject`,`format.ts`)改为只渲染",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+      "locator": "/sources/3/path",
+      "valueChars": 33,
+      "contextStart": 0,
+      "contextEnd": 33,
+      "text": "packages/core/src/utils/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/4/text",
+      "valueChars": 124,
+      "contextStart": 0,
+      "contextEnd": 124,
+      "text": "- Source: `packages/web/src/lib/format.ts:20`, with normalization at `:12–14` and project/group consumers at `:39–42,62–63`.",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/7/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/9/text",
+      "valueChars": 39,
+      "contextStart": 0,
+      "contextEnd": 39,
+      "text": "../../../packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/10/text",
+      "valueChars": 90,
+      "contextStart": 0,
+      "contextEnd": 90,
+      "text": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/21/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/23/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/26/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/29/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/30/text",
+      "valueChars": 70,
+      "contextStart": 0,
+      "contextEnd": 70,
+      "text": "- **session 列表**:`SessionList`(现客户端 `groupByProject`,`format.ts`)改为只渲染",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/format/32/text",
+      "valueChars": 30,
+      "contextStart": 0,
+      "contextEnd": 30,
+      "text": "packages/web/src/lib/format.ts",
+      "wholeValueIncluded": true
+    }
+  ],
+  "mobile-history": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/2009",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/projection/5/text",
+      "valueChars": 492,
+      "contextStart": 0,
+      "contextEnd": 492,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/projection/6/text",
+      "valueChars": 318,
+      "contextStart": 0,
+      "contextEnd": 318,
+      "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/projection/8/text",
+      "valueChars": 318,
+      "contextStart": 0,
+      "contextEnd": 318,
+      "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/projection/34/text",
+      "valueChars": 318,
+      "contextStart": 0,
+      "contextEnd": 318,
+      "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/projection/53/text",
+      "valueChars": 492,
+      "contextStart": 0,
+      "contextEnd": 492,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `session_user_message`/`steer_injected`，这种旧信封不会被清洗；[Workbench.tsx:622](../../packages/web/app/Workbench.tsx:622) 直接显示 text。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "locator": "/matches/projection/62/text",
+      "valueChars": 318,
+      "contextStart": 0,
+      "contextEnd": 318,
+      "text": "已核生产hook→unavailable→legacy→session.history→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/review-cron-room.md",
+      "locator": "markdown-text",
+      "valueChars": 2853,
+      "contextStart": 1184,
+      "contextEnd": 2334,
+      "text": " 命令上界与实际输出 EOF 的差别，刷新 receipt。修订版 9 个 source pins 的 frozen/current SHA、全部 selected 范围、19 个作者 artifact bytes/hash、10 个报告链接均通过。报告 SHA `effb7e7025be96b82a073dbef8da517a3e53751fae286fc2018ec3b4cd3eae34`；最终作者 receipt SHA `e19299489306dd4f36d7efbdb9e97e39f4a7c9a5b42f2737af2d1ad5aab072ba`。没有 fixture、source 或 raw 改动，没有产品重跑。\n\nRoom 的实际 fixture 只导入无 import 的 mobile-history.ts，使用 owned reader 与 JSON 数据。四项普通投影控制检查 session 传参/空值、顺序、stream 原对象及 readonly/interleaving；另两项为 owned deferred 与主动 reject 控制，不能当真实并发会话/磁盘故障。helper 的公开接口和注释、实际 handler 调用、transcript reader 的 user/stream 产出选段能支持这些有限输入形状，但不证明端到端手机恢复、renderer、真实 reader、身份或完整元数据合同。\n\nRoom 首次 raw SHA `ef82f0429bdd43e631ccc958dd6b57e138e61d90317be663bcb5ba8e96c1fc0b` 与 exit/validation 一致；日志 6 pass / 0 fail / 13 expect、Completed / 0 skipped，exit0、1 attempt、0 rerun，全部 focused，既有测试通过数 0。collector 用排他创建保存 raw/exit。Codex parser 和含审批的既有 16-case suite 未在 fixture import 中出现，运行尝试为 0；旧 R3 baseline/file_change/MCP/null、R84 附件/正文/元数据投影、旧 Unicode/fallback/mapper 根因都未重跑或升级。源码旧版本注释不是当前安装 CLI producer 合同，作者没有据手写新协议输入宣称新 bug。\n\nRoom 完成交付后核对：7 个 source pins（作者声明 4 full / 3 selected）的 frozen/current SHA、selected 范围、23 ",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-callers-navigation.json",
+      "locator": "/commands/0/stdout",
+      "valueChars": 5028,
+      "contextStart": 0,
+      "contextEnd": 1042,
+      "text": "packages/desktop/src/main/mobile-remote/handle-client-event.ts:2:  buildSessionHistory,\npackages/desktop/src/main/mobile-remote/handle-client-event.ts:557:      const events = await buildSessionHistory(event.sessionId, getSessionTranscript);\npackages/server/src/mobile-remote/mobile-history.ts:27:export async function buildSessionHistory(\npackages/server/src/mobile-remote/codex-parse.ts:27:export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {\npackages/server/src/mobile-remote/codex-parse.ts:117: * knowledge lives in one file — parseCodexJsonLine deliberately drops\npackages/server/src/mobile-remote/codex-parse.ts:121:export function extractThreadId(line: string): string | undefined {\npackages/server/src/mobile-remote/codex-room-agent.ts:5:import { parseCodexJsonLine, extractThreadId } from \"./codex-parse.js\";\npackages/server/src/mobile-remote/codex-room-agent.ts:34: * STDOUT (handled by parseCodexJsonLine), but some (e.g. resuming a missing\npackages/server/src/mobile-remote/codex-room-agent.ts:142:        // C",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-callers-navigation.json",
+      "locator": "/commands/1/stdout",
+      "valueChars": 3451,
+      "contextStart": 2728,
+      "contextEnd": 3451,
+      "text": "g\npackages/coding/src/tools/apply-patch/LICENSE-codex\ndocs/core-deep-dive/publish-assets/v2-00/v2-00-mobile-codex-loop.jpg\ndocs/archive/research-cc-vs-codex-image-handling.md\ndocs/archive/review-2026-07-09/23-codex-unpushed-12-review.md\ndocs/architecture/15-codex-harness-comparison-and-roadmap.md\ndocs/archive/architecture/18-core-vs-cc-vs-codex.md\npackages/server/src/mobile-remote/mobile-history.ts\npackages/server/src/mobile-remote/codex-parse.ts\npackages/server/src/mobile-remote/codex-room-agent.ts\npackages/server/src/mobile-remote/codex-room-agent.test.ts\npackages/server/src/mobile-remote/room-history.test.ts\npackages/server/src/mobile-remote/room-history.ts\npackages/server/src/mobile-remote/codex-parse.test.ts\n",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/3/context",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/42/context",
+      "valueChars": 262,
+      "contextStart": 0,
+      "contextEnd": 262,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/43/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/s",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/44/context",
+      "valueChars": 278,
+      "contextStart": 0,
+      "contextEnd": 278,
+      "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/45/context",
+      "valueChars": 278,
+      "contextStart": 0,
+      "contextEnd": 278,
+      "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/46/context",
+      "valueChars": 278,
+      "contextStart": 0,
+      "contextEnd": 278,
+      "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/47/context",
+      "valueChars": 262,
+      "contextStart": 0,
+      "contextEnd": 262,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/48/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/s",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/49/context",
+      "valueChars": 278,
+      "contextStart": 0,
+      "contextEnd": 278,
+      "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/69/context",
+      "valueChars": 262,
+      "contextStart": 0,
+      "contextEnd": 262,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/70/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/s",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/71/context",
+      "valueChars": 278,
+      "contextStart": 0,
+      "contextEnd": 278,
+      "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/72/context",
+      "valueChars": 278,
+      "contextStart": 0,
+      "contextEnd": 278,
+      "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/74/context",
+      "valueChars": 328,
+      "contextStart": 0,
+      "contextEnd": 328,
+      "text": "Proposed minimal code-review location: `packages/server/src/mobile-remote/mobile-history.ts:34-35`, where every FoldItem user becomes `{type:\"user_message\",text:item.text}`. The upstream reader at `packages/desktop/src/main/transcript-reader.ts:255-262` chooses displayText or raw text ContentBlocks and carries no attachment su",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/76/context",
+      "valueChars": 162,
+      "contextStart": 0,
+      "contextEnd": 162,
+      "text": "r.ts:1602`、`packages/core/src/protocol/server.ts:1663`）。mobile 目前借 desktop `sessions-service` 读取历史（`packages/desktop/src/main/mobile-remote/mobile-history.ts:1`）。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/78/context",
+      "valueChars": 82,
+      "contextStart": 0,
+      "contextEnd": 82,
+      "text": "- `mobile-history.ts:34–35` 进一步只构造 `{type:\"user_message\",text:item.text}`，也没有附件字段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/79/context",
+      "valueChars": 262,
+      "contextStart": 0,
+      "contextEnd": 262,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/80/context",
+      "valueChars": 324,
+      "contextStart": 0,
+      "contextEnd": 324,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/s",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/81/context",
+      "valueChars": 278,
+      "contextStart": 0,
+      "contextEnd": 278,
+      "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/82/context",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/83/context",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/91/context",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/92/context",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/93/context",
+      "valueChars": 278,
+      "contextStart": 0,
+      "contextEnd": 278,
+      "text": "ory→真实Main dispatcher/reader/server builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/95/context",
+      "valueChars": 82,
+      "contextStart": 0,
+      "contextEnd": 82,
+      "text": "- `mobile-history.ts:34–35` 进一步只构造 `{type:\"user_message\",text:item.text}`，也没有附件字段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/96/context",
+      "valueChars": 328,
+      "contextStart": 0,
+      "contextEnd": 328,
+      "text": "Proposed minimal code-review location: `packages/server/src/mobile-remote/mobile-history.ts:34-35`, where every FoldItem user becomes `{type:\"user_message\",text:item.text}`. The upstream reader at `packages/desktop/src/main/transcript-reader.ts:255-262` chooses displayText or raw text ContentBlocks and carries no attachment su",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/98/context",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/99/context",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/101/context",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/103/context",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/112/context",
+      "valueChars": 231,
+      "contextStart": 0,
+      "contextEnd": 231,
+      "text": "- 普通桌面会话历史没有发现单条文本裁剪：`packages/desktop/src/main/mobile-remote/mobile-history.ts:14-24` 直接把 transcript reader 的 FoldItems 转成 reducer events；`packages/desktop/src/main/transcript-reader.ts:139-145` 把 assistant 内容作为 `text_delta` 原样回放。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/113/context",
+      "valueChars": 229,
+      "contextStart": 0,
+      "contextEnd": 229,
+      "text": "- server 普通 session history 是磁盘 transcript 全量折叠：`packages/desktop/src/main/mobile-remote/mobile-history.ts:14-24`；main handler 在 `packages/desktop/src/main/index.ts:821-824` 返回 `{ type:\"session.history.ok\", events }`。协议没有 cursor。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/exact/114/context",
+      "valueChars": 170,
+      "contextStart": 0,
+      "contextEnd": 170,
+      "text": "- 长断线 fallback：`packages/desktop/src/main/rawTranscript.ts`、`packages/desktop/src/main/mobile-remote/mobile-history.ts`、`packages/desktop/src/main/mobile-remote/types.ts`",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/history_projection/42/context",
+      "valueChars": 375,
+      "contextStart": 0,
+      "contextEnd": 375,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/history_projection/49/context",
+      "valueChars": 375,
+      "contextStart": 0,
+      "contextEnd": 375,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "locator": "/hits/history_projection/149/context",
+      "valueChars": 375,
+      "contextStart": 0,
+      "contextEnd": 375,
+      "text": "最小审查位置：[mobile-history.ts:34](../../packages/server/src/mobile-remote/mobile-history.ts:34)。该处将 FoldItem 用户内容直接构造成 `{type:\"user_message\",text:item.text}`；上游 [transcript-reader.ts:255](../../packages/desktop/src/main/transcript-reader.ts:255) 取 displayText 或原始文本块，没有输出附件摘要。浏览器 [userMessageDisplay.ts:153](../../packages/web/src/lib/userMessageDisplay.ts:153) 的正常投影入口只处理 `sessi",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-navigation.json",
+      "locator": "/commands/3/stdout",
+      "valueChars": 2736,
+      "contextStart": 0,
+      "contextEnd": 854,
+      "text": "packages/server/src/mobile-remote/mobile-chat-turn.ts\npackages/server/src/mobile-remote/mobile-history.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.ts\npackages/server/src/mobile-remote/access-passcode.test.ts\npackages/server/src/mobile-remote/remote-host-manager.ts\npackages/server/src/mobile-remote/room-manager.test.ts\npackages/server/src/mobile-remote/trusted-device-store.ts\npackages/server/src/mobile-remote/mobile-chat-turn.test.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.test.ts\npackages/server/src/mobile-remote/mobile-limits.ts\npackages/server/src/mobile-remote/resident-agent.test.ts\npackages/server/src/mobile-remote/mobile-client-event-validator.test.ts\npackages/server/src/mobile-remote/pairing.test.ts\npackages/server/src/mobile-remote/tunnel-manager.ts\npackages/server/src/mobile-remote/viewer-identity.ts\npackage",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-preflight.json",
+      "locator": "/source",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-preflight.json",
+      "locator": "/fixtureImports/1",
+      "valueChars": 150,
+      "contextStart": 0,
+      "contextEnd": 150,
+      "text": "import { buildSessionHistory } from \"/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/src/mobile-remote/mobile-history.ts\";",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-source-checks.json",
+      "locator": "/commands/1/argv/2",
+      "valueChars": 92,
+      "contextStart": 0,
+      "contextEnd": 92,
+      "text": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1:packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+      "locator": "/files/1/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "locator": "/files/12/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/room-data-report.md",
+      "locator": "markdown-text",
+      "valueChars": 3814,
+      "contextStart": 0,
+      "contextEnd": 1019,
+      "text": "# Mobile 历史与 Codex room 数据叶子复核\n\n冻结点 `c1d007ed0af1eca9b56b32fabbb0ea2401037ee1`。本方向 **0 新正式问题、0 新候选、0 新关联**；一个首次 guarded shard 完整通过 **6 pass / 13 expect / 0 fail / 0 skipped**，全部为 focused。只记录，没有产品/Git 写。\n\n## 实际验证\n\n完整读取 [mobile-history.ts](../../packages/server/src/mobile-remote/mobile-history.ts#L1) 的 41 行。它没有 import；fixture 只绝对路径导入真实 `buildSessionHistory`，用自有 JSON 对象和 reader 回调，不导入真实 reader、Core、room store 或平台服务。[首跑 fixture](evidence/room-data-mobile-history.test.ts)、[raw](evidence/room-data-first.raw.log)、[exit](evidence/room-data-first.exit.json) 与 [preflight](evidence/room-data-preflight.json) 保留具体输入、命令和 hash；raw/exit 先保存后阅读，exit0、Completed，一次尝试、无重跑或修复。\n\n四项普通投影控制检查选定 sessionId 只传一次与空结果、普通文字顺序、stream event 对象原样保留、readonly 输入下的 user/stream 交错及不变性。另两项使用 owned deferred Promise 与主动拒绝的回调，分别控制调用间输出独立和同一 Error 传播；没有 timer、真实并发会话、文件错误、持久化、手机或 UI 验证，不能把这些人工边界控制当作普通生产故障。\n\n普通消费者只静态确认：[handle-client-event.ts:19](../../packages/desktop/src/main/mobile-remote/handle-client-event.ts#L19) 导入 transcript reader，557–563 ",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "locator": "/files/64/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "locator": "/workerSourceChecks/12/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "locator": "/workerSourceChecks/62/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "locator": "/files/8",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/15/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/16/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/30/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/57/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/102/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/103/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/104/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/106/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/108/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/109/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/111/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/112/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/166/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/167/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "locator": "/matches/user-display/178/excerpt",
+      "valueChars": 248,
+      "contextStart": 0,
+      "contextEnd": 248,
+      "text": "erver builder→reducer→Workbench接线；`session.list`静态分支没有journal存在筛选，fixture实际直接选择known seed，没有完整侧栏/OS导航覆盖。最小行号 `mobile-history.ts:34`、`transcript-reader.ts:255`、`userMessageDisplay.ts:153`、`Workbench.tsx:622`准确。先前质量稿有更完整source-chain，保留为08:19起的历史反证阶段。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/881/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "locator": "/rankedCandidates/235/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3511/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+      "locator": "/hits/rect_clip_terms/40/context",
+      "valueChars": 231,
+      "contextStart": 0,
+      "contextEnd": 231,
+      "text": "- 普通桌面会话历史没有发现单条文本裁剪：`packages/desktop/src/main/mobile-remote/mobile-history.ts:14-24` 直接把 transcript reader 的 FoldItems 转成 reducer events；`packages/desktop/src/main/transcript-reader.ts:139-145` 把 assistant 内容作为 `text_delta` 原样回放。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+      "locator": "/hits/rect_clip_terms/123/context",
+      "valueChars": 1052,
+      "contextStart": 44,
+      "contextEnd": 1052,
+      "text": "义排版 class，在 `:47-64` 把完整 `text` 交给 `ReactMarkdown`。这里没有 `max-height`、`line-clamp`、`truncate`、`overflow-hidden` 或手动截断。\n- `.mobile-message-assistant` CSS 在 `packages/desktop/src/mobile/styles.css:124-127`，只设置左边框和背景渐变；没有高度限制或裁切规则。消息流容器在 `MessageStream.tsx:157` 使用 `overflow-y-auto`，是正常纵向滚动。\n- 普通桌面会话历史没有发现单条文本裁剪：`packages/desktop/src/main/mobile-remote/mobile-history.ts:14-24` 直接把 transcript reader 的 FoldItems 转成 reducer events；`packages/desktop/src/main/transcript-reader.ts:139-145` 把 assistant 内容作为 `text_delta` 原样回放。\n- mobile reducer 对实时文本没有截断：`packages/desktop/src/renderer/lib/streamReducer.ts:164-175` 对 `text_delta` 做字符串追加；`assistant_text` 在 `:491-516` 直接保存 `event.text`。\n- 明确的数据层截断点在 CC/Codex 历史回放：\n  - Claude Code 历史：`packages/core/src/cc-orchestrator/session-history.ts:56` 把 user text 切到 4000 字符，`:61` 把 assistant text 切到 4000 字符。\n  - Codex 历史：`packages/core/src/cc-orchestrator/codex-session-history.ts:54-58` 把 user/assistant text 切到 4000 字符。\n  - mobile 打开 CC 会话时在 `packages/desktop/src/mobile/h",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/history-contexts.json",
+      "locator": "/codex-parse/21/text",
+      "valueChars": 1190,
+      "contextStart": 0,
+      "contextEnd": 1042,
+      "text": "packages/desktop/src/main/mobile-remote/handle-client-event.ts:2:  buildSessionHistory,\npackages/desktop/src/main/mobile-remote/handle-client-event.ts:557:      const events = await buildSessionHistory(event.sessionId, getSessionTranscript);\npackages/server/src/mobile-remote/mobile-history.ts:27:export async function buildSessionHistory(\npackages/server/src/mobile-remote/codex-parse.ts:27:export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {\npackages/server/src/mobile-remote/codex-parse.ts:117: * knowledge lives in one file — parseCodexJsonLine deliberately drops\npackages/server/src/mobile-remote/codex-parse.ts:121:export function extractThreadId(line: string): string | undefined {\npackages/server/src/mobile-remote/codex-room-agent.ts:5:import { parseCodexJsonLine, extractThreadId } from \"./codex-parse.js\";\npackages/server/src/mobile-remote/codex-room-agent.ts:34: * STDOUT (handled by parseCodexJsonLine), but some (e.g. resuming a missing\npackages/server/src/mobile-remote/codex-room-agent.ts:142:        // C",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/history-contexts.json",
+      "locator": "/codex-parse/22/text",
+      "valueChars": 721,
+      "contextStart": 0,
+      "contextEnd": 721,
+      "text": "packages/coding/src/tools/apply-patch/LICENSE-codex\ndocs/core-deep-dive/publish-assets/v2-00/v2-00-mobile-codex-loop.jpg\ndocs/archive/research-cc-vs-codex-image-handling.md\ndocs/archive/review-2026-07-09/23-codex-unpushed-12-review.md\ndocs/architecture/15-codex-harness-comparison-and-roadmap.md\ndocs/archive/architecture/18-core-vs-cc-vs-codex.md\npackages/server/src/mobile-remote/mobile-history.ts\npackages/server/src/mobile-remote/codex-parse.ts\npackages/server/src/mobile-remote/codex-room-agent.ts\npackages/server/src/mobile-remote/codex-room-agent.test.ts\npackages/server/src/mobile-remote/room-history.test.ts\npackages/server/src/mobile-remote/room-history.ts\npackages/server/src/mobile-remote/codex-parse.test.ts\n",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/third-selection-history.json",
+      "locator": "/hits/parse.ts/61/excerpt",
+      "valueChars": 1200,
+      "contextStart": 0,
+      "contextEnd": 1042,
+      "text": "packages/desktop/src/main/mobile-remote/handle-client-event.ts:2:  buildSessionHistory,\npackages/desktop/src/main/mobile-remote/handle-client-event.ts:557:      const events = await buildSessionHistory(event.sessionId, getSessionTranscript);\npackages/server/src/mobile-remote/mobile-history.ts:27:export async function buildSessionHistory(\npackages/server/src/mobile-remote/codex-parse.ts:27:export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {\npackages/server/src/mobile-remote/codex-parse.ts:117: * knowledge lives in one file — parseCodexJsonLine deliberately drops\npackages/server/src/mobile-remote/codex-parse.ts:121:export function extractThreadId(line: string): string | undefined {\npackages/server/src/mobile-remote/codex-room-agent.ts:5:import { parseCodexJsonLine, extractThreadId } from \"./codex-parse.js\";\npackages/server/src/mobile-remote/codex-room-agent.ts:34: * STDOUT (handled by parseCodexJsonLine), but some (e.g. resuming a missing\npackages/server/src/mobile-remote/codex-room-agent.ts:142:        // C",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14136/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14136/directSourcePathsInObject/0",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14137/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14137/directSourcePathsInObject/0",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14138/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14138/directSourcePathsInObject/0",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14139/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14139/directSourcePathsInObject/0",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14140/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14140/directSourcePathsInObject/0",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14141/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14141/directSourcePathsInObject/0",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14142/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14142/directSourcePathsInObject/0",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/3833/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/3833/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "locator": "/fullPaths/228",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/3834/path",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "locator": "/dated49/fullPaths/232",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "locator": "/current51/fullPaths/228",
+      "valueChars": 51,
+      "contextStart": 0,
+      "contextEnd": 51,
+      "text": "packages/server/src/mobile-remote/mobile-history.ts",
+      "wholeValueIncluded": true
+    }
+  ],
+  "format-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+      "locator": "/files/1/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "locator": "/files/52/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+      "locator": "/workerSourceChecks/1/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "locator": "/files/10/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "locator": "/files/40/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "locator": "/files/40/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "locator": "/files/40/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "locator": "/workerSourceChecks/14/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/1031/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/1031/claims/1/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/4054/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/39/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/40/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/41/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/43/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/44/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/44/immediateParentForExactValue/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/44/immediateParentForExactValue/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/45/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/47/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/47/immediateParentForExactValue/claims/1/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/48/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_path/55/immediateParentForExactValue/inspectedMainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/43/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/44/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/45/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/47/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/48/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/48/immediateParentForExactValue/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/48/immediateParentForExactValue/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/49/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/51/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/51/immediateParentForExactValue/claims/1/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/52/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_filename/59/immediateParentForExactValue/inspectedMainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/0/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/0/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/0/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/1/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/1/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/1/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/2/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/2/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/2/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/3/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/3/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/3/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/4/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/4/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/4/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/4/immediateParentForExactValue/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/4/immediateParentForExactValue/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/5/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/5/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/5/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/5/immediateParentForExactValue/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/5/immediateParentForExactValue/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/6/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/6/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/6/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/6/immediateParentForExactValue/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/6/immediateParentForExactValue/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/7/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/7/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/7/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/8/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/8/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/8/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/8/immediateParentForExactValue/claims/1/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/9/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/9/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/9/immediateParentForExactValue/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/10/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/10/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/10/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/11/needle",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/11/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/source_sha/11/immediateParentForExactValue/inspectedMainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/format_contract/139/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/format_contract/143/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/hits/format_contract/144/immediateParentForExactValue/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/0/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/1/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/2/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/3/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/4/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/4/row/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/4/row/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/5/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/6/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/6/row/claims/1/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/7/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "locator": "/samePathShaRows/8/row/inspectedMainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-decisions.json",
+      "locator": "/method/literalCasefoldedNeedles/source_sha/0",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-decisions.json",
+      "locator": "/firstCandidateExclusion/sourceEvidence/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "locator": "/rows/22/context",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "locator": "/samePathShaRows/0/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "locator": "/samePathShaRows/1/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "locator": "/samePathShaRows/2/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "locator": "/samePathShaRows/3/row/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "wholeValueIncluded": true
+    }
+  ],
+  "mobile-history-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-preflight.json",
+      "locator": "/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-source-checks.json",
+      "locator": "/commands/1/stdoutSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+      "locator": "/files/1/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-source-manifest.json",
+      "locator": "/files/1/frozenSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "locator": "/files/12/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "locator": "/files/64/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "locator": "/files/64/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "locator": "/files/64/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "locator": "/workerSourceChecks/12/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "locator": "/workerSourceChecks/62/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/881/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/881/claims/0/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "locator": "/files/881/claims/1/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "locator": "/rankedCandidates/235/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3511/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14136/sourceHashFields/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14136/sourceHashFields/frozenSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14139/sourceHashFields/sourceSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14140/sourceHashFields/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14140/sourceHashFields/currentSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14140/sourceHashFields/mainSha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14141/sourceHashFields/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "locator": "/claims/14142/sourceHashFields/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "locator": "/files/3833/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "locator": "/files/3833/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "locator": "/files/3834/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/reproductions/legacy-history-round24/observed.json",
+      "locator": "/sourceManifest/15/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/legacy-history-round24/observed.json",
+      "locator": "/sourceManifest/15/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.observed.json",
+      "locator": "/sourceManifest/15/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/first-authorized.source-manifest.json",
+      "locator": "/sourceManifest/15/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.observed.json",
+      "locator": "/sourceManifest/15/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-legacy-history-round24/second-authorized.source-manifest.json",
+      "locator": "/sourceManifest/15/sha256",
+      "valueChars": 64,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "wholeValueIncluded": true
+    }
+  ]
+}

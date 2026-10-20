@@ -1,0 +1,147 @@
+{
+  "addedFiles": 96,
+  "counts": {
+    "fields": 14,
+    "rename-field": 8,
+    "field-rename": 3
+  },
+  "hits": {
+    "fields": [
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+        "at": "$[\"hits\"][\"rect_clip_terms\"][127][\"context\"]",
+        "context": "试/续办需要 Sessions 查询或描述；有相同实际目标和兼容工作区才复用。不能单凭共同 URL 判断相同任务，也不能单凭不同标题排除。\n\n## 3. MCP 初始化可靠性与故障可见性\n\n配置新增 connectTimeoutMs（默认 30 秒，上限 120 秒）与 connectRetries（默认 1，上限 2）。重试只覆盖初始化超时；配置错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+        "at": "$[\"hits\"][\"rect_clip_terms\"][127][\"context\"]",
+        "context": "复用。不能单凭共同 URL 判断相同任务，也不能单凭不同标题排除。\n\n## 3. MCP 初始化可靠性与故障可见性\n\n配置新增 connectTimeoutMs（默认 30 秒，上限 120 秒）与 connectRetries（默认 1，上限 2）。重试只覆盖初始化超时；配置错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务。其他 transport 保持既有协议。\n\n日志提供 server"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/classification.json",
+        "at": "$[\"unpromotedBoundaries\"][0][\"detail\"]",
+        "context": "Schema extras connectTimeoutMs/connectRetries/inlineImages are outside editor-authored fields and rename writes a new key; no additional ordinary producer/field retention contract investigation completed. Initial belief that loader drops them was refuted by mcpServersFromSettings raw spread. Do not upgrade or count."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/classification.json",
+        "at": "$[\"unpromotedBoundaries\"][0][\"detail\"]",
+        "context": "Schema extras connectTimeoutMs/connectRetries/inlineImages are outside editor-authored fields and rename writes a new key; no additional ordinary producer/field retention contract investigation completed. Initial belief that loader drops them was refuted by mcpServersFromSettings raw spread. Do not upgrade or count."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/classification.json",
+        "at": "$[\"unpromotedBoundaries\"][0][\"detail\"]",
+        "context": "Schema extras connectTimeoutMs/connectRetries/inlineImages are outside editor-authored fields and rename writes a new key; no additional ordinary producer/field retention contract investigation completed. Initial belief that loader drops them was refuted by mcpServersFromSettings raw spread. Do not upgrade or count."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/focused-history.json",
+        "at": "$[\"patterns\"][\"rename-extra-fields\"]",
+        "context": "(?:rename|重命名).{0,140}(?:connectTimeoutMs|connectRetries|inlineImages|MCP|mcp)|(?:connectTimeoutMs|connectRetries|inlineImages).{0,100}(?:rename|重命名)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/focused-history.json",
+        "at": "$[\"patterns\"][\"rename-extra-fields\"]",
+        "context": "(?:rename|重命名).{0,140}(?:connectTimeoutMs|connectRetries|inlineImages|MCP|mcp)|(?:connectTimeoutMs|connectRetries|inlineImages).{0,100}(?:rename|重命名)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/focused-history.json",
+        "at": "$[\"patterns\"][\"rename-extra-fields\"]",
+        "context": "(?:rename|重命名).{0,140}(?:connectTimeoutMs|connectRetries|inlineImages|MCP|mcp)|(?:connectTimeoutMs|connectRetries|inlineImages).{0,100}(?:rename|重命名)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/focused-history.json",
+        "at": "$[\"patterns\"][\"rename-extra-fields\"]",
+        "context": "(?:rename|重命名).{0,140}(?:connectTimeoutMs|connectRetries|inlineImages|MCP|mcp)|(?:connectTimeoutMs|connectRetries|inlineImages).{0,100}(?:rename|重命名)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/focused-history.json",
+        "at": "$[\"patterns\"][\"rename-extra-fields\"]",
+        "context": "(?:rename|重命名).{0,140}(?:connectTimeoutMs|connectRetries|inlineImages|MCP|mcp)|(?:connectTimeoutMs|connectRetries|inlineImages).{0,100}(?:rename|重命名)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/focused-history.json",
+        "at": "$[\"patterns\"][\"rename-extra-fields\"]",
+        "context": ".{0,140}(?:connectTimeoutMs|connectRetries|inlineImages|MCP|mcp)|(?:connectTimeoutMs|connectRetries|inlineImages).{0,100}(?:rename|重命名)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+        "at": "$",
+        "context": "ture、writer、import或任何测试。本 negative仅覆盖所列普通字段合同。\n\nrename extras保持**未完成边界**，不计candidate：schema393–396包含connectTimeoutMs/connectRetries/inlineImages等 editor未编写字段；尚未完成独立普通producer/字段保留合同。最初猜测 loader丢字段已被1756–1769的 raw spread反证，透明保留该纠正，不升级、也不作完整 rename正确性结论。\n\n## 去重与时间边界\n\n完整 metadata库存含 docs/bugs下 MD与递归 JSON value scalar、归档；3318文件=1342 MD+1976 JSON，807880 string leaves、1193828 scalar leaves，169 exact archive/_archive路径，0 parse错误。排除当时 mutable37/future38，纳入已冻结36；inventor"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+        "at": "$",
+        "context": "t或任何测试。本 negative仅覆盖所列普通字段合同。\n\nrename extras保持**未完成边界**，不计candidate：schema393–396包含connectTimeoutMs/connectRetries/inlineImages等 editor未编写字段；尚未完成独立普通producer/字段保留合同。最初猜测 loader丢字段已被1756–1769的 raw spread反证，透明保留该纠正，不升级、也不作完整 rename正确性结论。\n\n## 去重与时间边界\n\n完整 metadata库存含 docs/bugs下 MD与递归 JSON value scalar、归档；3318文件=1342 MD+1976 JSON，807880 string leaves、1193828 scalar leaves，169 exact archive/_archive路径，0 parse错误。排除当时 mutable37/future38，纳入已冻结36；inventory canonical SHA"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+        "at": "$",
+        "context": "ve仅覆盖所列普通字段合同。\n\nrename extras保持**未完成边界**，不计candidate：schema393–396包含connectTimeoutMs/connectRetries/inlineImages等 editor未编写字段；尚未完成独立普通producer/字段保留合同。最初猜测 loader丢字段已被1756–1769的 raw spread反证，透明保留该纠正，不升级、也不作完整 rename正确性结论。\n\n## 去重与时间边界\n\n完整 metadata库存含 docs/bugs下 MD与递归 JSON value scalar、归档；3318文件=1342 MD+1976 JSON，807880 string leaves、1193828 scalar leaves，169 exact archive/_archive路径，0 parse错误。排除当时 mutable37/future38，纳入已冻结36；inventory canonical SHA256为`c5e2c0be"
+      }
+    ],
+    "rename-field": [
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/aggregate-review/review.md",
+        "at": "$",
+        "context": "istry先split再join压缩引号内多空格、plugin tokenizer丢空quoted位置参数，分别有不同producer/修复处；旧失败fixture继续SKIP，不复跑、不借pass。rename loader最初丢字段猜测被raw spread反证，不能顺带升级extra fields。材料没有留下阻断本项普通链路的反证；正式ID/分级仍归Root。\n\nSource metadata rows按inbox7、geometry9pins、Root2、MCP parent9、独立reviewer9分别核range界限及union，均与声明行数一致，同路径声明SHA无冲突。原691/471/281/1207/686行分开保存，不加为独有覆盖。geometry仅5语义文件，另4hash-only；独立MCP仅7语义，另2hash-only。Root281语义中McpSection219行；其326显示行另有107相邻/导航，first宽manifest原件保留。inbox旧全文prose无leafSHA，首次test显示315与实际93普通test选读分开；R31旧候选分类不改"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/classification.json",
+        "at": "$[\"unpromotedBoundaries\"][0][\"detail\"]",
+        "context": "Schema extras connectTimeoutMs/connectRetries/inlineImages are outside editor-authored fields and rename writes a new key; no additional ordinary producer/field retention contract investigation completed. Initial belief that loader drops them was refuted by mcpServersFromSettings raw spread. Do not upgrade or count."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/focused-history.json",
+        "at": "$[\"patterns\"][\"rename-extra-fields\"]",
+        "context": "(?:rename|重命名).{0,140}(?:connectTimeoutMs|connectRetries|inlineImages|MCP|mcp)|(?:connectTimeoutMs|connectRetries|inlineImages).{0,100}(?:rename|重命名)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+        "at": "$",
+        "context": "ttingsPatch.test.ts)全文114行，仅阅读6个测试声明及其意图；未执行其 FS fixture、writer、import或任何测试。本 negative仅覆盖所列普通字段合同。\n\nrename extras保持**未完成边界**，不计candidate：schema393–396包含connectTimeoutMs/connectRetries/inlineImages等 editor未编写字段；尚未完成独立普通producer/字段保留合同。最初猜测 loader丢字段已被1756–1769的 raw spread反证，透明保留该纠正，不升级、也不作完整 rename正确性结论。\n\n## 去重与时间边界\n\n完整 metadata库存含 docs/bugs下 MD与递归 JSON value scalar、归档；3318文件=1342 MD+1976 JSON，807880 string leaves、1193828 scalar leaves，169 exact archive/_archive路径，0 parse错误。排除当时 mutable37/future38，纳入已冻结36；inventory canonical SHA256为`c5e2c0bec2f174e8d132a1de1a7b644d72ca573aa1f4f41f3c489b0738f5"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+        "at": "$",
+        "context": "读初始前25 target contexts，不冒称全部 capped broad contexts已读。后续无cap focused exact-helper13、args-roundtrip84、rename-extra-fields0，全部97 contexts与10个McpSection历史object rows已读，初始库存到focused无漂移。\n\n- May30 MCP旧记录涉及 header显示 `KEY=VALUE`/`Key: Value`分隔符，当前parser兼容、headers初始化明确传 `\": \"`；并非 args数组丢边界。\n- CLI-R4-01 / TARGET-R26-R1在TUI registry先split(/\\s+/)再join，压缩已有引号 command文本内部多个空格。现问题是独立MCP表单从结构化数组初始化为无引号文本；旧模块修复不会修复这里。旧首个fixture import失败仍SKIP，未重跑；[Round26旧报告](/Users/admin/.codex/wor"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/review-aggregate.md",
+        "at": "$",
+        "context": "显示不计入281。Root first manifest的宽显示范围未删，final收窄说明并无产品重读/重试。helper的普通tombstones/map删除/数组复制范围是有限negative，rename未编写schema字段仍为下一方向未完成边界，不塞入当前候选。\n\n收件箱[报告](inbox-model-frontier/review.md)只支持普通DTO分组/排序/标签与Page消费链范围的negative。585产品+93普通test行、旧hosts13行分开；315行test虽整份显示，70–291的邻接导航/身份场景不作新合同。旧hosts明确全文覆盖但未提供leaf同版SHA，当前重读不称全新。R31逐cell/whole-query旧候选没有被whole-value实现或普通Page消费自动升级；未建立独立caseless-substring合同，不泛称全Unicode没有问题。\n\n几何[报告](geometry-frontier/review.md)完整读97行helper及普通有限非负矩形/"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/root-mcp-frontier/review.md",
+        "at": "$",
+        "context": "，不能扩大到override。现有name/command校验、savePending和editor mount guard不提供quote-preserving序列化，也没有在未修改时跳过args。rename额外schema字段是另一未完成边界，本Root意见不升级该线索。\n\nRoot读前pin早于本次direct display，但已见peer精确摘录，initialSemanticReadSha保持null。首次source-manifest反映较宽显示范围，final另列实际语义范围与107相邻行；没有回填首次时间。首个txt快照仍留在本tmp目录，其精确bytes/text也编码保存到source-excerpts.json，正式copy可仅保留JSON编码。\n\n历史全库3318扫描和精确旧因上下文由parent负责，Root不冒称自己重做完整扫描。旧MCP headers的分隔符显示、R26 TUI先split再join的双空格、R8插件空quoted token是不同producer/模块/修复处；仍需"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/findings.json",
+        "at": "$[\"findings\"][0][\"classificationNote\"]",
+        "context": "Single P3 static opinion shared by author, Root and independent reviewer; no duplicate item. Rename extra-fields remains an uncompleted boundary, not a candidate."
+      }
+    ],
+    "field-rename": [
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/classification.json",
+        "at": "$[\"unpromotedBoundaries\"][0][\"detail\"]",
+        "context": "Schema extras connectTimeoutMs/connectRetries/inlineImages are outside editor-authored fields and rename writes a new key; no additional ordinary producer/field retention contract investigation completed. Initial belief that loader drops them was refuted by mcpServersFromSettings raw spread. Do not upgrade or count."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/focused-history.json",
+        "at": "$[\"patterns\"][\"rename-extra-fields\"]",
+        "context": "(?:rename|重命名).{0,140}(?:connectTimeoutMs|connectRetries|inlineImages|MCP|mcp)|(?:connectTimeoutMs|connectRetries|inlineImages).{0,100}(?:rename|重命名)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+        "at": "$",
+        "context": "ture、writer、import或任何测试。本 negative仅覆盖所列普通字段合同。\n\nrename extras保持**未完成边界**，不计candidate：schema393–396包含connectTimeoutMs/connectRetries/inlineImages等 editor未编写字段；尚未完成独立普通producer/字段保留合同。最初猜测 loader丢字段已被1756–1769的 raw spread反证，透明保留该纠正，不升级、也不作完整 rename正确性结论。\n\n## 去重与时间边界\n\n完整 metadata库存含 docs/bugs下 MD与递归 JSON value scalar、归档；3318文件=1342 MD+1976 JSON，807880 string leaves、1193828 scalar leaves，169 exact archive/_archive路径，0 parse错误。排除当时 mutable37/future38，纳入已冻结36；inventory canonical SHA256为`c5e2c0bec2f174e8d132a1de1a7b644d72ca573aa1f4f41f3c489b0738f58b8f`。初始query196/286/0，cap100，保留100/100/0；只语义阅读初始前"
+      }
+    ]
+  },
+  "contextCapEach": 80,
+  "productRuns": 0,
+  "limitations": [
+    "Fresh frozen38 exact inventory delta, bounded regex queries, not history semantic exhaustion.",
+    "Round38 rename extras was an explicitly uncompleted boundary, not a formal finding or candidate. Root39 may complete that same boundary rather than claim this word presence is a duplicate formal issue."
+  ]
+}

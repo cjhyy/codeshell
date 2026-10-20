@@ -1,0 +1,59 @@
+{
+  "files": [
+    {
+      "path": "initial-pins.json",
+      "bytes": 1455,
+      "sha256": "901fbb0d5a0227c6b3b314ec61c4508b20c3a841e7c174f244625eb66d3b8316"
+    },
+    {
+      "path": "review.md",
+      "bytes": 2787,
+      "sha256": "ffe8a1d5d99dba20e1a10959457c02e3da8cc4d5af35145aa6992fe94654b4ad"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 13587,
+      "sha256": "287e2edb5bd34a6bd0c5a30f867feccd6f628c0ce10c436628684061015797f6"
+    },
+    {
+      "path": "source-manifest.first.json",
+      "bytes": 1587,
+      "sha256": "2148ce0a9e5461bd093cb0758b4f0011dcc33ef3c05b13937ee959c0551dea65"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 2724,
+      "sha256": "2e5270378c033ce0bbbd472bb49ca36d082269e25f6206d68e59d73c7ec10355"
+    },
+    {
+      "path": "source-reader.py",
+      "bytes": 1966,
+      "sha256": "cccc5eb8b3a3e25916d2815e5a25f49d4f1b241e0533f409bc554df4c76ca880"
+    },
+    {
+      "path": "source-supplement.json",
+      "bytes": 3155,
+      "sha256": "3544291f218698cca0dbcf85118ec1f226ac28c32abc35068c428892b7e366b2"
+    },
+    {
+      "path": "source-supplement2.json",
+      "bytes": 2395,
+      "sha256": "d4552a08aca2e2a6cbeca942ebfec64f33ab9ae50e2545836912a11e3333ce84"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 405,
+      "sha256": "c774f4c172e1e02ef7eb700f3289f62b3a5156ca8662d86b351d321d6261a5c6"
+    }
+  ],
+  "excludedSnapshots": [
+    {
+      "path": "source-excerpts.txt",
+      "bytes": 12735,
+      "sha256": "ff0dc9a2ad1bbc2c7179ea8f9dfba4690000122917a80689f4aaae0c7c5832fb",
+      "equivalentEncoding": "source-excerpts.json",
+      "reason": "Exact text bytes recoverable from JSON; original tmp bytes remain unchanged. Formal copy excludes only this snapshot."
+    }
+  ],
+  "productRuns": 0
+}

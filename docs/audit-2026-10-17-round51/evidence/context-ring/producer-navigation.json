@@ -1,0 +1,49 @@
+{
+  "navigationAfterDedicatedPins": true,
+  "commands": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "ContextRing|contextTokens|maxContext|cumulativePrompt|singleTurnPrompt",
+        "packages/desktop/src/renderer/ChatView.tsx"
+      ],
+      "exitCode": 0,
+      "stdout": "31:import { ContextRing } from \"./chat/ContextRing\";\n218:  contextTokens: number;\n220:  singleTurnPromptTokens?: number;\n223:  cumulativePromptTokens?: number;\n433:  contextTokens,\n435:  singleTurnPromptTokens,\n438:  cumulativePromptTokens,\n2408:                      <ContextRing\n2409:                        used={contextTokens}\n2412:                        singleTurnPromptTokens={singleTurnPromptTokens}\n2415:                        cumulativePromptTokens={cumulativePromptTokens}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "contextTokens|cumulativePrompt|singleTurnPrompt|maxContext",
+        "packages/desktop/src/renderer/App.tsx"
+      ],
+      "exitCode": 0,
+      "stdout": "1542:        // Backfill maxContextTokens/supportsVision for connections whose\n1548:          (o) => o.maxContextTokens === undefined || o.supportsVision === undefined,\n1563:                maxContextTokens: o.maxContextTokens ?? r.maxContextTokens,\n2675:                    contextTokens={state.promptTokens}\n2677:                      modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens\n2679:                    singleTurnPromptTokens={state.singleTurnPromptTokens}\n2682:                    cumulativePromptTokens={state.cumulativePromptTokens}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "contextTokens|cumulativePrompt|singleTurnPrompt|maxContext",
+        "packages/desktop/src/renderer/types.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "365:  singleTurnPromptTokens: number;\n370:  cumulativePromptTokens: number;\n415:  singleTurnPromptTokens: number;\n428:  singleTurnPromptTokens: 0,\n431:  cumulativePromptTokens: 0,\n449:    ? Math.max(left.cumulativePromptTokens, right.cumulativePromptTokens)\n450:    : primary.cumulativePromptTokens;\n459:    cumulativePromptTokens: prompt,\n1038:        singleTurnPromptTokens: previous?.singleTurnPromptTokens ?? 0,\n1057:      singleTurnPromptTokens: 0,\n1094:    singleTurnPromptTokens: next.singleTurnPromptTokens,\n1877:        event.cumulativePromptTokens !== undefined || event.sessionPromptTokens !== undefined;\n1879:        event.singleTurnPromptTokens !== undefined ||\n1892:              singleTurnPromptTokens: 0,\n1895:              cumulativePromptTokens: 0,\n1909:              singleTurnPromptTokens: event.singleTurnPromptTokens ?? event.promptTokens,\n1918:              const cumulativePromptTokens =\n1919:                event.cumulativePromptTokens ?? event.sessionPromptTokens ?? 0;\n1925:                cumulativePromptTokens,\n1928:                sessionPromptTokens: cumulativePromptTokens,\n2311:          singleTurnPromptTokens: 0,\n2346:    state.singleTurnPromptTokens > 0 ||\n2353:      promptTokens: state.singleTurnPromptTokens,\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "formatTok",
+        "packages/desktop/src/renderer/messages/TurnUsageMessageView.tsx"
+      ],
+      "exitCode": 0,
+      "stdout": "4:import { formatTok } from \"../chat/ContextRing\";\n31:            {t(\"msg.turnUsage.tokens\", { count: formatTok(promptTokens) })}\n42:                <dd className=\"font-medium tabular-nums text-foreground/80\">{formatTok(value)}</dd>\n",
+      "stderr": ""
+    }
+  ]
+}

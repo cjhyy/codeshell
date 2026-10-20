@@ -1,0 +1,14 @@
+{
+  "sourceBase": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "candidates": [],
+  "excluded": [
+    {
+      "direction": "visibility:hidden ancestor pruning",
+      "reason": "Already CDP-R3-03; not revalidated or counted new."
+    },
+    {
+      "direction": "Performance summary is not globally chronological/recent",
+      "reason": "No contract promises recent N or a global sort; no finding."
+    }
+  ]
+}

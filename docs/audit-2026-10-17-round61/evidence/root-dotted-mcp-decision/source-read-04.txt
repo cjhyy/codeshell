@@ -1,0 +1,163 @@
+
+packages/core/src/settings/manager.ts
+  338:         if (source.name !== "project" && source.name !== "local") continue;
+  339:         const data = { ...source.data };
+  340:         for (const field of DANGEROUS_PROJECT_FIELDS) {
+  341:           if (field in data) delete data[field];
+  342:         }
+  343:         this.sources[index] = Object.freeze({ ...source, data });
+  344:       }
+  345:     }
+  346: 
+  347:     // Deep merge
+  348:     const raw = this.deepMerge();
+  349: 
+  350:     // Auto-migrate legacy models[] in the user settings file. Runs directly
+  351:     // on the user-scope file (not the merged result), because the merge
+  352:     // collapses provenance and the migration needs to write back to a
+  353:     // single physical file. Gated on readUser: under non-full scope we must
+  354:     // not read — let alone rewrite — the host's ~/.code-shell/settings.json.
+  355:     const userPath = join(this.userConfigDir(), "settings.json");
+  356:     if (readUser && resolveConfigPath(userPath) === userPath) {
+  357:       try {
+  358:         // Read-only loads must retain preceding in-memory version migrations.
+  359:         // Ordinary loads preserve their existing disk reread before model migration.
+  360:         if (options?.persistMigrations !== false) this.clearSourceOrigin("user");
+  361:         const userSource = this.sources.find((source) => source.name === "user");
+  362:         const userRaw =
+  363:           options?.persistMigrations === false ? userSource?.data : parseConfigFile(userPath);
+  364:         if (!userRaw) throw new Error("invalid user settings");
+  365:         const result = migrateModels({
+  366:           providers: (userRaw.providers as never) ?? [],
+  367:           models: (userRaw.models as never) ?? [],
+  368:         });
+  369:         if (result.changed) {
+  370:           const migrated = {
+  371:             ...userRaw,
+  372:             providers: result.providers,
+  373:             models: result.models,
+  374:           };
+  375:           const sanitized = sanitizeSettingsObject(migrated);
+  376:           // Atomic write (tmp+rename) — a concurrent load must not see a
+  377:           // half-written file. File exists here (existsSync guard above).
+  378:           if (options?.persistMigrations !== false) {
+  379:             this.writeBackup(userPath);
+  380:             this.atomicWriteJson(userPath, sanitized);
+  381:           }
+  382:           // Re-deep-merge with the migrated user data so the validate
+  383:           // call sees the new shape rather than the legacy one.
+  384:           this.replaceSource("user", sanitized, userSource?.origin);
+  385:           const remerged = this.deepMerge();
+  386:           return this.validateMerged(remerged);
+  387:         }
+  388:       } catch {
+  389:         // Migration is best-effort — fall through to normal validate.
+  390:       }
+  391:     }
+  392: 
+  393:     return this.validateMerged(raw);
+  394:   }
+  395: 
+  396:   /**
+  397:    * Run the version-based migrations (migrate-config.ts MIGRATIONS) against a
+  398:    * single physical settings file. Best-effort: any read/parse/write error
+  399:    * falls through silently and the original source data is used as-is.
+  400:    * Writes back (with a .bak, like the models[] migration above) ONLY when a
+  401:    * step changed actual content — the configVersion stamp alone doesn't
+  402:    * justify touching the file. On write-back the in-memory source is updated
+  403:    * so this load() already sees the migrated shape.
+  404:    */
+  405:   private applyConfigMigration(path: string, sourceName: SettingsSourceName, persist = true): void {
+  406:     if (resolveConfigPath(path) !== path) return;
+  407:     try {
+  408:       const source = this.sources.find((s) => s.name === sourceName);
+  409:       // The opt-in read-only path migrates its actual same-buffer load. Ordinary
+  410:       // loads retain their historical reread, but cannot retain the old origin.
+  411:       const paired = !persist && source?.origin !== undefined;
+  412:       if (!paired) this.clearSourceOrigin(sourceName);
+  413:       const parsed = paired ? source.data : parseConfigFile(path);
+  414:       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+  415:       const raw = sanitizeSettingsObject(parsed as Record<string, unknown>);
+  416:       const result = migrateConfig(raw);
+  417:       if (!result.changed) return;
+  418:       // Compare content with the version stamp normalized away — stamp-only
+  419:       // changes are not persisted.
+  420:       const stripStamp = (c: Record<string, unknown>): Record<string, unknown> => {
+  421:         const { [CONFIG_VERSION_KEY]: _v, ...rest } = c;
+  422:         return rest;
+  423:       };
+  424:       if (JSON.stringify(stripStamp(raw)) === JSON.stringify(stripStamp(result.config))) return;
+  425:       // Atomic write (tmp+rename) so a concurrent load can't read a half-written
+  426:       // migrated file — matches the normal save path (atomicWriteJson). The file
+  427:       // exists here (existsSync guard above), so the recursive mkdir is a no-op.
+  428:       const sanitized = sanitizeSettingsObject(result.config as Record<string, unknown>);
+  429:       if (persist) {
+  430:         this.writeBackup(path);
+  431:         this.atomicWriteJson(path, sanitized);
+  432:       }
+  433:       this.replaceSource(sourceName, sanitized, paired ? source.origin : undefined);
+  434:     } catch {
+  435:       // Best-effort — fall through to normal merge/validate.
+  436:     }
+  437:   }
+  438: 
+  439:   /**
+  440:    * Get current effective settings.
+  441:    */
+  442:   get(): ValidatedSettings {
+  443:     if (!this.merged) return this.load();
+  444:     return this.merged;
+  445:   }
+ 1109: function merge(
+ 1110:   base: Record<string, unknown>,
+ 1111:   override: Record<string, unknown>,
+ 1112: ): Record<string, unknown> {
+ 1113:   const result: Record<string, unknown> = {};
+ 1114: 
+ 1115:   for (const [key, value] of Object.entries(base)) {
+ 1116:     if (isForbiddenSettingKeySegment(key)) continue;
+ 1117:     result[key] = value;
+ 1118:   }
+ 1119: 
+ 1120:   for (const [key, value] of Object.entries(override)) {
+ 1121:     if (isForbiddenSettingKeySegment(key)) {
+ 1122:       continue;
+ 1123:     } else if (value === null) {
+ 1124:       delete result[key];
+ 1125:     } else if (typeof value === "object" && !Array.isArray(value)) {
+ 1126:       const previous = result[key];
+ 1127:       result[key] = merge(
+ 1128:         previous && typeof previous === "object" && !Array.isArray(previous)
+ 1129:           ? (previous as Record<string, unknown>)
+ 1130:           : {},
+ 1131:         value as Record<string, unknown>,
+ 1132:       );
+ 1133:     } else {
+ 1134:       result[key] = value;
+ 1135:     }
+ 1136:   }
+ 1137: 
+ 1138:   return result;
+ 1139: }
+
+packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx
+  261:   const onProjectState = async (cap: CapabilityDescriptor, state: "inherit" | "on" | "off") => {
+  262:     const mutationCacheKey = cacheKey;
+  263:     setSavingId(cap.id);
+  264:     setError(null);
+  265:     try {
+  266:       for (const id of idsFor(cap)) {
+  267:         if (!configurationTarget) throw new Error("project capability target is unavailable");
+  268:         await window.codeshell.setCapabilityOverride(configurationTarget, id, state);
+  269:       }
+  270:       // Re-fetch so the row's effective value / source reflects the new overlay.
+  271:       await load();
+  272:     } catch (e) {
+  273:       if (activeCacheKeyRef.current === mutationCacheKey) {
+  274:         setError(e instanceof Error ? e.message : String(e));
+  275:       }
+  276:     } finally {
+  277:       if (activeCacheKeyRef.current === mutationCacheKey) setSavingId(null);
+  278:     }
+  279:   };
+  280: 

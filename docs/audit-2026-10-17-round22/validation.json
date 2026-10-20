@@ -1,0 +1,109 @@
+{
+  "baseline": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "totals": {
+    "firstBunShards": 3,
+    "completedCleanShards": 3,
+    "failedBunShards": 0,
+    "passedTests": 32,
+    "expectations": 76,
+    "failedTests": 0,
+    "skippedOrFilteredTests": 0,
+    "existingBaselineTests": 4,
+    "focusedTests": 28,
+    "directActualLeafCases": 32,
+    "manuallyMirroredConsumerTests": 0,
+    "productReruns": 0,
+    "terminalProductAttempts": 0
+  },
+  "runs": [
+    {
+      "log": "evidence/root-friendly.first.raw.log",
+      "exitFile": "evidence/root-friendly.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round22/evidence/root-friendly.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 12,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 25,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 12,
+      "scope": "Actual friendly error leaf + lightweight LLMRateLimitError; owned messages. Provider/SDK/wrapper/retry/TurnLoop static only. Mixed existing custody/transcript/auth suite unexecuted.",
+      "sha256": "742699bd682db2b595e7cf8d4471d774bc6b9dd2429a72e4486f04613b87c035"
+    },
+    {
+      "log": "evidence/budget-first.raw.log",
+      "exitFile": "evidence/budget-first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/engine/reactive-threshold.test.ts",
+        "docs/audit-2026-10-17-round22/evidence/budget-reactive-focused.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 17,
+      "skipped": 0,
+      "existingTests": 4,
+      "focusedTests": 4,
+      "scope": "Actual zero-import reactive threshold;4existing+4focused; token-budget old controls not rerun, consumer and document contradiction static only.",
+      "sha256": "98864a76576bdc9ccac2e45e6e0ea93d8f5fe5d3bd4d18d59c05ad432620baec"
+    },
+    {
+      "log": "evidence/title-session-leaf.raw.log",
+      "exitFile": "evidence/title-session-leaf.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round22/evidence/title-session-leaf.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 12,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 34,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 12,
+      "scope": "Actual type-only title leaf with owned callbacks/usage collectors/deferred Promises. No Engine/SDK/model/store/rename/IPC runtime; all existing mixed tests unexecuted.",
+      "sha256": "bf460abb7c6763bfe68091dd2c555116c1ed32658a430ccb340c7c29b9b76557"
+    }
+  ],
+  "notes": [
+    "All three first combined raw stdout/stderr and exit saved before inspection.0failed Bun shards/fixture repair/product retry/alternative validation.",
+    "ERROR-R22-01 is a narrowly scoped P3 cause/hint loss: actual helper and exception control plus static unconditional429 wrapper and official external error contract; no SDK429 instance/provider/TurnLoop execution.",
+    "One local Node package-export metadata resolver query failed, then SDK metadata direction skipped with0Bun/SDK runtime attempts. It does not establish missing package or Bun resolution failure. Leaf tests have no SDK dependency.",
+    "Terminal collector and history scanner receipts are metadata only, not product/test attempts; two source pins hash-only and unclassified banner arithmetic not runtime coverage.",
+    "Title fake callback error/deferred tests are owned boundary controls, not ordinary provider/Engine concurrency or manual rename evidence. Current titleManual/override guards static counterevidence.",
+    "Reactive existing4 plus focused4 are actual leaf controls; old token-budget finite/infinite and90percent sequence not rerun, old diminishing concern/docs wording not new issues.",
+    "No auth/custody/transcript special-case experiment; no real model, paid API, account, user data, business network, native/PTY, external message, security/permission/watchdog/identity or retry timer run.",
+    "No shared dependency/dist rebuild, build/typecheck/lint/full-suite/E2E claim. Scope-limited progress; repository audit continues."
+  ]
+}

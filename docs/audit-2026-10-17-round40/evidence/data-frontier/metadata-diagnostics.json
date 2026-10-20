@@ -1,0 +1,14 @@
+{
+  "diagnostics": [
+    {
+      "kind": "dated ranking selection output truncated",
+      "toolChunk": "76f58b",
+      "detail": "Metadata candidate ranking only; not a source semantic read or comprehensive ranking review. Actual leaf pinned separately and full current history gate required."
+    },
+    {
+      "kind": "irrelevant excluded-leaf broad context output truncated",
+      "toolChunk": "c95327",
+      "detail": "54 broad Markdown/strip contexts retained in full metadata pass; output exceeded budget. Not all54 semantically read. Exact17 leaf contexts already establish known R2-05 exclusion; replacement24 contexts and direct object printed completely in bounded output, no product retry."
+    }
+  ]
+}

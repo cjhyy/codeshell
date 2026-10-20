@@ -1,0 +1,55 @@
+{
+  "actualBoundedContexts": [
+    {
+      "query": "backup/oldcause",
+      "index": 0,
+      "path": "docs/archive/core-complete-review.md",
+      "pointer": "",
+      "scalarLength": 96025,
+      "offset": 72128,
+      "text": "y.ts`：\n\n- `saveSnapshot(filePath)` 使用 `resolve(filePath)` 得绝对路径。\n- 不存在文件返回 null。\n- hash 相同则跳过重复 snapshot。\n- backup 文件名：`Date.now()` + safeName。\n- `restore(snapshot)` 检查 `snapshot.backupPath` 存在，然后先保存当前状态，再 copy backup 到 `snapshot.filePath`。\n- `index.json` 保存 snapshots。\n\n风险：\n\n1. `backupPath/filePath` 来自 index 或传入 snapshot，restore 信任它们。\n2. 没有校验 backupPath 是否位于 historyDir 下。\n3. 没有校验 filePath 是否位于 workspace/cwd 下。\n4. backup 文件名在同毫秒、同 safeName 下理论可碰撞。\n5. Engine 只在 `on_tool_start` 对 `Write`/`Edit` 调 `saveSnapshot()`；`ApplyPatch`、Bash、Config、Memory 等副作用不会被 FileHistory 记录。\n\n### 29.4 RunStore 风险细化\n\n从 `RunManager.ts` 可确认：\n\n- 正常 `submit()` 使用 `nanoid(16)` 生成 runId。\n- `RunManager` 自己的 runId 来源安全。\n- 风险主要在 `FileRunStore` public API：如果外部绕过 RunManager 传入恶意 id，路径 join 需要校验。\n\nRunManager 状态机还有这些点：\n\n- `resume()` 在 active handle 存在时会把 waiting 状态转 running，然后 resolve approval/input。\n- 无 active handle 时转 queued 并重新 enqueue。\n- `recover()` 对 ",
+      "bounded": true
+    },
+    {
+      "query": "backup/oldcause",
+      "index": 1,
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "pointer": "/258/detail",
+      "scalarLength": 214,
+      "offset": 174,
+      "text": "`onStreamEvent`, `onApprovalRequest`, `onStatus`, and `onAgentLifecycle` (lines 135-162) all implement the same pattern: push to array, return unsubscribe function that uses indexOf/splice. This is duplicated code.",
+      "bounded": true
+    },
+    {
+      "query": "backup/oldcause",
+      "index": 2,
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "pointer": "",
+      "scalarLength": 12683,
+      "offset": 9973,
+      "text": "sweepIdle closes only idle non-busy sessions`，断言 busy session 保留。 | 低 |\n| `packages/desktop/src/renderer/types.ts:701` | `agent_start` 直接追加 AgentMessage 并覆盖 `agentMessageIndex`；没有像 `tool_use_start` 那样对重复事件做幂等保护。需人工确认上游是否保证 `agent_start` exactly-once。 | subagent 卡片创建和 agentId 到消息 index 的路由表。 | `rg \"duplicate.*agent_start|agent_start.*duplicate|agentMessageIndex|tombstone\" packages/desktop/src/renderer -g '*test.*'` 无命中；相反，移动端 `lib/streamReducer.test.ts:164` 明确覆盖了重复 `agent_start` 幂等。 | 若 live/replay overlap 或 provider 重放产生重复 `agent_start`，desktop 可能出现重复 subagent 卡、React key 冲突，后续 `text_delta/tool_result` 只挂到最后一张卡，前一张卡停留。 | `applyStreamEvent duplicate agent_start is idempotent`（若协议要求 exactly-once，则先补协议注释测试而不是改行为）：重复同一 `agentId` 后断言只有一张 agent 卡、index 稳定。 | 低（需人工确认） |\n\n## 已有良好覆盖的区域\n\n- `packages/desktop/src/main/parseStreamLine.ts:15` 覆盖充分：`parseStreamLine.test.ts` 覆盖有效 stream event、response/其它 method、缺失/空 `sessionId`、缺 ev",
+      "bounded": true
+    },
+    {
+      "query": "backup/oldcause",
+      "index": 3,
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/548",
+      "scalarLength": 57,
+      "offset": 41,
+      "text": "packages/core/src/session/output-journal-backup-format.ts",
+      "bounded": true
+    },
+    {
+      "query": "backup/oldcause",
+      "index": 69,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/407/path",
+      "scalarLength": 57,
+      "offset": 41,
+      "text": "packages/core/src/session/output-journal-backup-format.ts",
+      "bounded": true
+    }
+  ],
+  "limit": "Only these five windows and two canonical raw objects reviewed; first compact presenter was truncated. Source/SHA/path projections are metadata, not whole historical source semantic review."
+}

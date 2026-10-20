@@ -1,0 +1,24 @@
+{
+  "ranges": [
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "start": 449,
+      "end": 451,
+      "text": "      if (editRef.current === owner) setEdit({ kind: \"closed\" });\n      void runProbe([next], true);\n    });"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "start": 649,
+      "end": 666,
+      "text": "          const probe = probes[s.name];\n          const loading = loadingProbe.has(s.name);\n          return (\n            <McpCard\n              key={s.name}\n              server={s}\n              probe={probe}\n              loading={loading}\n              pending={mutationBusy}\n              groupedByPlugin={groupedByPlugin}\n              onToggle={() => runAction(() => toggleServer(s))}\n              onTest={() => void testOne(s)}\n              onEdit={() => setEdit({ kind: \"edit\", original: s.name })}\n              onOverride={() => setEdit({ kind: \"override\", original: s.name })}\n              onRemove={() => runAction(() => removeServer(s.name))}\n              onViewTools={(opener) => {\n                detailOpener.current = opener;\n                setToolsViewer(probe ?? null);"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "start": 1300,
+      "end": 1320,
+      "text": "\n  const submit = () => {\n    if (savePending.current || oauthBusy || !editorMounted.current) return;\n    const trimmedName = name.trim();\n    // Override mode locks identity fields, so skip their validation — the user\n    // only supplies env/credential supplements for an existing plugin server.\n    if (!isOverride) {\n      if (!trimmedName) return setValidationError(t(\"settingsX.mcp.nameEmpty\"));\n      if (otherNames.includes(trimmedName))\n        return setValidationError(t(\"settingsX.mcp.nameDuplicate\"));\n      if (isStdio) {\n        if (!command.trim()) return setValidationError(t(\"settingsX.mcp.stdioNeedsCommand\"));\n      } else {\n        if (!url.trim()) return setValidationError(t(\"settingsX.mcp.needsUrl\", { transport }));\n        try {\n          new URL(url.trim());\n        } catch {\n          return setValidationError(t(\"settingsX.mcp.urlInvalid\"));\n        }\n      }\n    }"
+    }
+  ],
+  "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+  "productRuns": 0
+}

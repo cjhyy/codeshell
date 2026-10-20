@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-10-17T17:03:16.592939+00:00",
+  "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+  "displayedLineRanges": [
+    [
+      306,
+      317
+    ],
+    [
+      507,
+      563
+    ]
+  ],
+  "excerpts": [
+    {
+      "start": 306,
+      "end": 317,
+      "text": "306: function isToolish(item: Message | ToolGroup): boolean {\n307:   return item.kind === \"tool\" || item.kind === \"tool_group\";\n308: }\n309: \n310: /**\n311:  * Scan forward from `from` (exclusive) until we hit a tool or a hard\n312:  * break, allowing only transparent items in between. Returns true if\n313:  * the next non-transparent item is a tool — meaning the current run\n314:  * can absorb [from..next_tool) as inner items.\n315:  *\n316:  * The lookahead only walks past transparent messages; the moment it\n317:  * sees anything else (user, system, agent, etc.) it answers \"no,"
+    },
+    {
+      "start": 507,
+      "end": 563,
+      "text": "507:       stopped,\n508:       items: innerItems,\n509:     });\n510: \n511:     // Closed turn: the final summary after the last tool stays inline.\n512:     if (!isLive) {\n513:       for (let i = lastTool + 1; i < end; i++) out.push(items[i]!);\n514:     }\n515:   }\n516:   return out;\n517: }\n518: \n519: function latestAssistantIsDone(\n520:   items: Array<Message | ToolGroup>,\n521:   start: number,\n522:   end: number,\n523: ): boolean {\n524:   for (let i = end - 1; i > start; i--) {\n525:     const item = items[i]!;\n526:     if (item.kind === \"assistant\") return item.done;\n527:   }\n528:   return false;\n529: }\n530: \n531: function turnHasCompleted(items: Array<Message | ToolGroup>, start: number, end: number): boolean {\n532:   for (let i = start + 1; i < end; i++) {\n533:     if (items[i]!.kind === \"turn_end\") return true;\n534:   }\n535:   const anchor = items[start];\n536:   if (anchor?.kind === \"user\" && anchor.turnTiming) {\n537:     return anchor.turnTiming.completed === true || anchor.turnTiming.completedAt !== undefined;\n538:   }\n539:   // Compatibility for old snapshots without lifecycle metadata. A completed\n540:   // commentary segment before an in-flight tool cannot finish the whole run.\n541:   let runningTool = false;\n542:   forEachTool(items.slice(start + 1, end), (tool) => {\n543:     if (tool.status === \"running\" || tool.status === \"queued\") runningTool = true;\n544:   });\n545:   return !runningTool && latestAssistantIsDone(items, start, end);\n546: }\n547: \n548: /** True when the turn slice [start+1, end) contains a turn_end reason=\"stopped\"\n549:  *  — i.e. the user interrupted this turn. */\n550: function turnWasStopped(items: Array<Message | ToolGroup>, start: number, end: number): boolean {\n551:   for (let i = start + 1; i < end; i++) {\n552:     const item = items[i]!;\n553:     if (item.kind === \"turn_end\" && item.reason === \"stopped\") return true;\n554:   }\n555:   return false;\n556: }\n557: \n558: function forEachTool(items: Array<Message | ToolGroup>, visit: (t: ToolMessage) => void): void {\n559:   for (const it of items) {\n560:     if (it.kind === \"tool\") visit(it);\n561:     else if (it.kind === \"tool_group\") {\n562:       for (const inner of it.items) {\n563:         if (inner.kind === \"tool\") visit(inner);"
+    }
+  ]
+}

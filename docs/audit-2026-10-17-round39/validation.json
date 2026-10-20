@@ -1,0 +1,11 @@
+{
+  "baseline": "42683054b1eea00d76e3ed18817766be3047c110",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productReruns": 0
+  },
+  "mode": "Static ordinary supported MCP fields across full-editor rename only. Metadata source readers/scanners and byte checks are not product validation."
+}

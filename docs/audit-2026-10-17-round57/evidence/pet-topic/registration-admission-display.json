@@ -1,0 +1,12 @@
+{
+  "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+  "sha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+  "displayedLineRanges": [
+    [
+      272,
+      305
+    ]
+  ],
+  "pinReference": "registration-store-pin-navigation.json",
+  "displayAt": "2026-10-17T19:01:27.447986+00:00"
+}

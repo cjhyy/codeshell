@@ -186,4 +186,20 @@ describe("titleFromWire", () => {
     expect(title).toBe("修一下登录");
     expect(title).not.toContain("codeshell-annotations");
   });
+
+  test("multiline annotation framing never leaks into session titles", () => {
+    const anchors: Anchor[] = [
+      {
+        id: "multiline-title",
+        kind: "file",
+        label: "example.ts:10",
+        locator: { 文件: "example.ts" },
+        comment: "first\nreason: comment content\n[2] 文件 · not-an-entry",
+      },
+    ];
+    expect(titleFromWire(encodeAnchorsForWire("按评论修改", anchors))).toBe("按评论修改");
+    expect(titleFromWire(encodeAnchorsForWire("", anchors))).toBe("");
+    const withImage = encodeAttachmentsForWire(encodeAnchorsForWire("", anchors), [img()]);
+    expect(titleFromWire(withImage)).toBe("[图片]");
+  });
 });

@@ -1,0 +1,163 @@
+{
+  "atUTC": "2026-10-17T17:00:21.101219+00:00",
+  "parentInventory": "history.json",
+  "filesCheckedSameBytes": 4693,
+  "pattern": "GoalProgressView|goal\\.extend\\.failed|setClicked\\(|再续.{0,40}(?:失败|提前|成功)|(?:延长|续跑).{0,40}(?:失败|成功)",
+  "count": 30,
+  "retained": 30,
+  "cap": 100,
+  "errors": [],
+  "hits": [
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "at": "$",
+      "context": "system/executor.ts:540` |\n| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop.ts:1061` |\n\n关键校正：`ToolExecutor.resultsToMessages()` 不是当前 TurnLoop 主链路；主链路使用 `toolResultToBlock()`。`resultsToMessages()` 仍在 `executor.ts` 中保留，但本轮 `rg` 未发现源码调用，仅旧架构文档引用，见本文件 N-09。\n\n## 2. 权限判定模型\n\n### 2.1 权限输入\n\n`PermissionClassifier` 的直接输入只有 `toolName`、`args`、`rules`、`defa"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "at": "$",
+      "context": "un|No active run to extend\" packages/core/src packages/desktop/src -g '*test.*'` 无命中；相邻 `goalGet` 有 `server.goalget.test.ts`，`goalClear` 只有 desktop no-child fallback 测试。 | 若回归，用户点击延长 goal 可能静默失败、路由到错 session，或 legacy host 无法延长。 | `server goalExtend routes to named chat session and returns limits`；`server goalExtend returns InvalidParams when session has no active run`；`server goalExtend supports legacyEngine fallback`；断言错误 code 和返回 limits。 | 中 |\n| `packages/core/src/tool-system/registry.ts:107`、`packages/core/src/tool-system/registry.ts:117`、`packages/core/src/tool-system/registry.ts:166` | `ToolRegistry.executeTool` 已 abort 快退、超时 abort、父 signal cascade、异常归一化为 `ToolResult`。 | 所有工具执行的最后"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "at": "$[\"source_inventory\"][1553]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][2776][\"path\"]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+      "at": "$[\"hits\"][\"ordinary-projection\"][23][\"excerpt\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop.ts:1061` |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+      "at": "$[\"hits\"][\"ordinary-projection\"][71][\"excerpt\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-dedup.json",
+      "at": "$[\"hits\"][\"ordinary-projection\"][73][\"excerpt\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+      "at": "$[\"hits\"][\"ordinary-projection\"][23][\"excerpt\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop.ts:1061` |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+      "at": "$[\"hits\"][\"ordinary-projection\"][67][\"excerpt\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+      "at": "$[\"hits\"][\"ordinary-projection\"][69][\"excerpt\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][11105][\"path\"]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][11105][\"directSourcePathsInObject\"][0]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][11106][\"path\"]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][11106][\"directSourcePathsInObject\"][0]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "at": "$[\"files\"][3096][\"path\"]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "at": "$[\"files\"][3096][\"path\"]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "at": "$[\"unknownPaths\"][2835]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "at": "$[\"files\"][3097][\"path\"]",
+      "context": "packages/desktop/src/renderer/messages/GoalProgressView.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup-corpus.json",
+      "at": "$[\"matches\"][13][\"context\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/providers-dedup.json",
+      "at": "$[\"rows\"][52][\"match\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][52][\"matches\"][2][\"text\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop.ts:1061` |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][117][\"matches\"][2][\"text\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "at": "$[\"hits\"][118][\"matches\"][12][\"text\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-error-flag-dedup.json",
+      "at": "$[\"hits\"][8][\"text\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop.ts:1061` |"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-error-flag-dedup.json",
+      "at": "$[\"hits\"][21][\"text\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-error-flag-dedup.json",
+      "at": "$[\"hits\"][24][\"text\"]",
+      "context": "| 17 | tool_result 回填 | TurnLoop 把每个结果转 `ContentBlock.tool_result`，保留 `is_error`；写 transcript；发 `StreamEvent.tool_result`；异步发 `tool_summary`。 | 进入 S12 工具后续跑判定。 | summary 失败只 warn，不影响主链。 | `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1021`、`packages/core/src/engine/turn-loop.ts:1034`、`packages/core/src/engine/turn-loop.ts:1037`、`packages/core/src/engine/turn-loop."
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-audit.md",
+      "at": "$",
+      "context": "le/branch 均存在，失败回滚后均不存在，Session.workspace 仍指向删除路径，且只有一次成功 workspace:changed 广播。\n\n限定条件应保留：需要两次创建前置检查重叠；若第二次在第一次 branch 创建后才到达，前置拒绝可能避免错误回滚。非提交内容损失还要求其在成功创建之后、失败回滚之前写入；测试为确定性地观察这个条件而延长了失败回包窗口，没有证明普通双 Enter 一定给用户留下同样长的编辑时间。P1 的依据是可达的破坏性错误回滚，而非已测得的高发生率。\n\n既有日志：`worktree-duplicate-create.test.tsx.log`，2 pass / 0 fail / 15 assertions。测试分开验证 UI 双请求与真实 Main/Git 后果，没有把二者宣称为同一 Electron 端到端操作。\n\n## D1/R06：原生 run 错误回包\n\n**核心结论成立。** `preload/index.ts:263–267` 用完整 JSON-RPC envelope resolve pending RPC；`:548` 的 run 直接返回 `rpc(...)`。`renderer/modelSwitchRun.ts` 原样返回 run 结果，无隐式 unwrap。普通 send 的 `useRunController.ts:486–497` 和 Quick Chat 的 `:639–644` 却从顶层读 `reason/text`，既看不到 envelope 内的 `result.rea"
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "at": "$",
+      "context": "ktop/src/renderer/messages/FilesChangedCard.tsx)                           | 170                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/GoalProgressView.tsx](../../packages/desktop/src/renderer/messages/GoalProgressView.tsx)                           | 37                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/TurnEndMessageView.tsx](../../packages/desktop/src/renderer/messages/TurnEndMessageView.tsx)                       | 7                            | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/fileChangeAggregator.ts](../../packages/desktop/src/renderer/messages/fileCh"
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "at": "$",
+      "context": "        | 170                          | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/GoalProgressView.tsx](../../packages/desktop/src/renderer/messages/GoalProgressView.tsx)                           | 37                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/TurnEndMessageView.tsx](../../packages/desktop/src/renderer/messages/TurnEndMessageView.tsx)                       | 7                            | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/messages/fileChangeAggregator.ts](../../packages/desktop/src/renderer/messages/fileChangeAggregator.ts)                     | 315                       "
+    },
+    {
+      "path": "docs/todo/pet-work-reliability-audit-2026-09-20.md",
+      "at": "$",
+      "context": "公开空 reusableSessions，拒绝复用，并不传 targetSessionId；因此第一任务部分完成后第二任务必然新建。续跑参数缺证据时还会静默丢弃 session_id，Host 错误分支也退回新建。 | 已确认的核心衔接缺陷。 | 自动续办绑定原任务 sessionId/workspace；保留原始目标、约束和最新 checkpoint。显式续跑无效必须返回错误，不准静默新建。覆盖不存在/忙碌/跨工作区/启动失败反馈。 | 已实现，回归验证见下文 |\n| R6 | 首次新任务到 100 轮，被系统要求只能写最终总结；无工具回复分支仍返回 completed。 | 已确认。 | 预算耗尽返回已有 max_turns 原因；与正常提前完成区分，并检查上层状态传播。 | 已实现，回归验证见下文 |\n| R7 | 新截图只进入一次模型请求，随后被替换成“已处理”占位；截图与批量清单之间隔着多轮搜索。像素是否转成准确数据没有检查。 | 上下文机制已确认；不能据此声称模型从未看到图片。 | 有界保留近期图片；超界占位明确像素已省略，可重新加载，不暗示完成识别。提示精确标识先提取、核验后再写操作。测试保留/过期/容量/恢复兼容。 | 已实现，回归验证见下文 |\n| R8 | 第二次任务第 269/270 行生成的表至少 20 行不符截图；第 274 行 shell 对空 TSV 列发生移位，并把缺 HTTP 状态默认归为 404；第 282/283 行实际操作含表外仓库。 | 会话证据已确认；这些临时脚本并非仓库产品代码。 | 通用证据规则约束：外部写操作对象必须来自可追溯原文；解析或传输错误不能当业务 4"
+    }
+  ],
+  "productRuns": 0
+}

@@ -1,0 +1,320 @@
+{
+  "captureAtUTC": "2026-10-17T15:53:25.037261+00:00",
+  "captureTiming": "After actual displays, all first pins and finish hashes equal; no retroactive pre-read capture claim",
+  "files": [
+    {
+      "path": "packages/core/src/cost-ledger/context.ts",
+      "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "selectedText": [
+        {
+          "range": [
+            1,
+            1
+          ],
+          "text": "import { AsyncLocalStorage } from \"node:async_hooks\";"
+        },
+        {
+          "range": [
+            3,
+            3
+          ],
+          "text": "import type { TokenUsage } from \"../types.js\";"
+        },
+        {
+          "range": [
+            5,
+            133
+          ],
+          "text": "import type { UsageIdentity, UsagePurpose, UsageReceipt } from \"./types.js\";\n\nexport interface UsageOwner {\n  ledger: UsageLedger;\n  sessionId: string;\n  accountingSessionId: string;\n  runId?: string;\n  ancestors: readonly string[];\n  ancestorAccountingIds: readonly string[];\n  purpose: UsagePurpose;\n}\n\nconst owners = new AsyncLocalStorage<UsageOwner>();\nconst attempts = new AsyncLocalStorage<{\n  owner: UsageOwner;\n  identity: UsageIdentity;\n  receipts: UsageReceipt[];\n  latest?: UsageReceipt;\n  latestIdentity?: UsageAttemptIdentity;\n}>();\n\ntype UsageAttemptIdentity = Pick<\n  UsageReceipt,\n  \"requestId\" | \"runtimeId\" | \"sessionId\" | \"accountingSessionId\" | \"runId\" | \"purpose\"\n>;\n\nfunction account<T>(owner: UsageOwner, operation: () => T): T | undefined {\n  try {\n    return operation();\n  } catch {\n    try {\n      owner.ledger.noteAccountingFailure();\n    } catch {\n      /* Accounting cannot fail a paid call. */\n    }\n    return undefined;\n  }\n}\n\nexport function currentUsageOwner(): UsageOwner | undefined {\n  return owners.getStore();\n}\n\n/** Correlate a transport-boundary observer without exposing the owner or request content. */\nexport function currentUsageAttempt():\n  | Pick<\n      UsageReceipt,\n      \"requestId\" | \"runtimeId\" | \"sessionId\" | \"accountingSessionId\" | \"runId\" | \"purpose\"\n    >\n  | undefined {\n  const receipt = attempts.getStore()?.latestIdentity ?? attempts.getStore()?.latest;\n  if (!receipt) return undefined;\n  const { requestId, runtimeId, sessionId, accountingSessionId, runId, purpose } = receipt;\n  return Object.freeze({ requestId, runtimeId, sessionId, accountingSessionId, runId, purpose });\n}\n\nexport function withUsageOwner<T>(owner: UsageOwner, operation: () => T): T {\n  return owners.run(owner, operation);\n}\n\nexport function withUsagePurpose<T>(purpose: UsagePurpose, operation: () => T): T {\n  const owner = currentUsageOwner();\n  return owner ? withUsageOwner({ ...owner, purpose }, operation) : operation();\n}\n\n/** Accounting failures are contained by the ledger and never escape into provider retries. */\nexport async function withUsageAttempt<T>(\n  identity: UsageIdentity,\n  enabled: boolean,\n  operation: () => Promise<T>,\n): Promise<T> {\n  const owner = currentUsageOwner();\n  if (!owner || !enabled) return attempts.exit(operation);\n  const call = {\n    owner,\n    identity,\n    receipts: [] as UsageReceipt[],\n    latest: undefined as UsageReceipt | undefined,\n    latestIdentity: undefined as UsageAttemptIdentity | undefined,\n  };\n  return attempts.run(call, async () => {\n    try {\n      const result = await operation();\n      for (const receipt of call.receipts)\n        account(owner, () =>\n          owner.ledger.finish(receipt, receipt.outcome === \"failed\" ? \"failed\" : \"completed\"),\n        );\n      return result;\n    } catch (error) {\n      for (const receipt of call.receipts)\n        account(owner, () => owner.ledger.finish(receipt, \"failed\"));\n      throw error;\n    }\n  });\n}\n\nexport function recordOwnedUsage(identity: UsageIdentity, usage: TokenUsage | null): void {\n  const attempt = attempts.getStore();\n  if (attempt) {\n    if (!attempt.latest) {\n      attempt.latest = account(attempt.owner, () =>\n        attempt.owner.ledger.begin(\n          attempt.owner,\n          identity,\n          undefined,\n          attempt.latestIdentity?.requestId,\n        ),\n      );\n      if (attempt.latest) attempt.receipts.push(attempt.latest);\n    }\n    if (attempt.latest)\n      account(attempt.owner, () => attempt.owner.ledger.settle(attempt.latest!, usage));\n    return;\n  }\n  // Custom providers using recordUsage retain one receipt per reported request.\n  const owner = currentUsageOwner();\n  if (!owner) return;\n  account(owner, () => {\n    const receipt = owner.ledger.begin(owner, identity);\n    owner.ledger.settle(receipt, usage);\n    owner.ledger.finish(receipt, \"completed\");\n  });\n}\n\n/** One receipt per SDK call of configured fetch; retries hidden inside that fetch are unobservable. */\nexport function usageTrackingFetch(underlying: typeof globalThis.fetch): typeof globalThis.fetch {\n  return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {\n    const call = attempts.getStore();\n    if (!call) return underlying(input, init);"
+        },
+        {
+          "range": [
+            137,
+            167
+          ],
+          "text": "    call.latestIdentity = Object.freeze({\n      requestId,\n      runtimeId: call.owner.ledger.runtimeId,\n      sessionId: call.owner.sessionId,\n      accountingSessionId: call.owner.accountingSessionId,\n      ...(call.owner.runId ? { runId: call.owner.runId } : {}),\n      purpose: call.owner.purpose,\n    });\n    call.latest = undefined;\n    const receipt = account(call.owner, () =>\n      call.owner.ledger.begin(call.owner, call.identity, undefined, requestId),\n    );\n    if (!receipt) return underlying(input, init);\n    call.receipts.push(receipt);\n    call.latest = receipt;\n    try {\n      const response = await underlying(input, init);\n      if (!response.ok) account(call.owner, () => call.owner.ledger.finish(receipt, \"failed\"));\n      return response;\n    } catch (error) {\n      account(call.owner, () => call.owner.ledger.finish(receipt, \"failed\"));\n      throw error;\n    }\n  }) as typeof globalThis.fetch;\n}\n\n/** Called only before the underlying transport; accounting failures cannot mask preflight failures. */\nexport function markCurrentUsageAttemptNotSent(): void {\n  const call = attempts.getStore();\n  if (call?.latest) account(call.owner, () => call.owner.ledger.markNotSent(call.latest!));\n}"
+        }
+      ],
+      "displayedText": [
+        {
+          "range": [
+            1,
+            167
+          ],
+          "text": "import { AsyncLocalStorage } from \"node:async_hooks\";\nimport { createHash, randomUUID } from \"node:crypto\";\nimport type { TokenUsage } from \"../types.js\";\nimport type { UsageLedger } from \"./store.js\";\nimport type { UsageIdentity, UsagePurpose, UsageReceipt } from \"./types.js\";\n\nexport interface UsageOwner {\n  ledger: UsageLedger;\n  sessionId: string;\n  accountingSessionId: string;\n  runId?: string;\n  ancestors: readonly string[];\n  ancestorAccountingIds: readonly string[];\n  purpose: UsagePurpose;\n}\n\nconst owners = new AsyncLocalStorage<UsageOwner>();\nconst attempts = new AsyncLocalStorage<{\n  owner: UsageOwner;\n  identity: UsageIdentity;\n  receipts: UsageReceipt[];\n  latest?: UsageReceipt;\n  latestIdentity?: UsageAttemptIdentity;\n}>();\n\ntype UsageAttemptIdentity = Pick<\n  UsageReceipt,\n  \"requestId\" | \"runtimeId\" | \"sessionId\" | \"accountingSessionId\" | \"runId\" | \"purpose\"\n>;\n\nfunction account<T>(owner: UsageOwner, operation: () => T): T | undefined {\n  try {\n    return operation();\n  } catch {\n    try {\n      owner.ledger.noteAccountingFailure();\n    } catch {\n      /* Accounting cannot fail a paid call. */\n    }\n    return undefined;\n  }\n}\n\nexport function currentUsageOwner(): UsageOwner | undefined {\n  return owners.getStore();\n}\n\n/** Correlate a transport-boundary observer without exposing the owner or request content. */\nexport function currentUsageAttempt():\n  | Pick<\n      UsageReceipt,\n      \"requestId\" | \"runtimeId\" | \"sessionId\" | \"accountingSessionId\" | \"runId\" | \"purpose\"\n    >\n  | undefined {\n  const receipt = attempts.getStore()?.latestIdentity ?? attempts.getStore()?.latest;\n  if (!receipt) return undefined;\n  const { requestId, runtimeId, sessionId, accountingSessionId, runId, purpose } = receipt;\n  return Object.freeze({ requestId, runtimeId, sessionId, accountingSessionId, runId, purpose });\n}\n\nexport function withUsageOwner<T>(owner: UsageOwner, operation: () => T): T {\n  return owners.run(owner, operation);\n}\n\nexport function withUsagePurpose<T>(purpose: UsagePurpose, operation: () => T): T {\n  const owner = currentUsageOwner();\n  return owner ? withUsageOwner({ ...owner, purpose }, operation) : operation();\n}\n\n/** Accounting failures are contained by the ledger and never escape into provider retries. */\nexport async function withUsageAttempt<T>(\n  identity: UsageIdentity,\n  enabled: boolean,\n  operation: () => Promise<T>,\n): Promise<T> {\n  const owner = currentUsageOwner();\n  if (!owner || !enabled) return attempts.exit(operation);\n  const call = {\n    owner,\n    identity,\n    receipts: [] as UsageReceipt[],\n    latest: undefined as UsageReceipt | undefined,\n    latestIdentity: undefined as UsageAttemptIdentity | undefined,\n  };\n  return attempts.run(call, async () => {\n    try {\n      const result = await operation();\n      for (const receipt of call.receipts)\n        account(owner, () =>\n          owner.ledger.finish(receipt, receipt.outcome === \"failed\" ? \"failed\" : \"completed\"),\n        );\n      return result;\n    } catch (error) {\n      for (const receipt of call.receipts)\n        account(owner, () => owner.ledger.finish(receipt, \"failed\"));\n      throw error;\n    }\n  });\n}\n\nexport function recordOwnedUsage(identity: UsageIdentity, usage: TokenUsage | null): void {\n  const attempt = attempts.getStore();\n  if (attempt) {\n    if (!attempt.latest) {\n      attempt.latest = account(attempt.owner, () =>\n        attempt.owner.ledger.begin(\n          attempt.owner,\n          identity,\n          undefined,\n          attempt.latestIdentity?.requestId,\n        ),\n      );\n      if (attempt.latest) attempt.receipts.push(attempt.latest);\n    }\n    if (attempt.latest)\n      account(attempt.owner, () => attempt.owner.ledger.settle(attempt.latest!, usage));\n    return;\n  }\n  // Custom providers using recordUsage retain one receipt per reported request.\n  const owner = currentUsageOwner();\n  if (!owner) return;\n  account(owner, () => {\n    const receipt = owner.ledger.begin(owner, identity);\n    owner.ledger.settle(receipt, usage);\n    owner.ledger.finish(receipt, \"completed\");\n  });\n}\n\n/** One receipt per SDK call of configured fetch; retries hidden inside that fetch are unobservable. */\nexport function usageTrackingFetch(underlying: typeof globalThis.fetch): typeof globalThis.fetch {\n  return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {\n    const call = attempts.getStore();\n    if (!call) return underlying(input, init);\n    const requestId = createHash(\"sha256\")\n      .update(JSON.stringify([call.owner.ledger.namespace, \"provider\", randomUUID()]))\n      .digest(\"hex\");\n    call.latestIdentity = Object.freeze({\n      requestId,\n      runtimeId: call.owner.ledger.runtimeId,\n      sessionId: call.owner.sessionId,\n      accountingSessionId: call.owner.accountingSessionId,\n      ...(call.owner.runId ? { runId: call.owner.runId } : {}),\n      purpose: call.owner.purpose,\n    });\n    call.latest = undefined;\n    const receipt = account(call.owner, () =>\n      call.owner.ledger.begin(call.owner, call.identity, undefined, requestId),\n    );\n    if (!receipt) return underlying(input, init);\n    call.receipts.push(receipt);\n    call.latest = receipt;\n    try {\n      const response = await underlying(input, init);\n      if (!response.ok) account(call.owner, () => call.owner.ledger.finish(receipt, \"failed\"));\n      return response;\n    } catch (error) {\n      account(call.owner, () => call.owner.ledger.finish(receipt, \"failed\"));\n      throw error;\n    }\n  }) as typeof globalThis.fetch;\n}\n\n/** Called only before the underlying transport; accounting failures cannot mask preflight failures. */\nexport function markCurrentUsageAttemptNotSent(): void {\n  const call = attempts.getStore();\n  if (call?.latest) account(call.owner, () => call.owner.ledger.markNotSent(call.latest!));\n}"
+        }
+      ],
+      "additionalNavigationSnippets": []
+    },
+    {
+      "path": "packages/core/src/llm/client-base.ts",
+      "sha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "selectedText": [
+        {
+          "range": [
+            63,
+            64
+          ],
+          "text": "    this.provider = config.provider;\n    this.model = config.model;"
+        },
+        {
+          "range": [
+            75,
+            83
+          ],
+          "text": "    this.fetch = usageTrackingFetch(\n      requestBoundaryFetch(\n        modelTraceFetch(defaults?.fetch ?? globalThis.fetch),\n        currentUsageAttempt,\n        markCurrentUsageAttemptNotSent,\n      ),\n    );\n    this.initClient();\n    this.enableUsageAccounting();"
+        },
+        {
+          "range": [
+            90,
+            149
+          ],
+          "text": "  /** Also supports directly constructed SDK clients; the factory rechecks class fields. */\n  enableUsageAccounting(): void {\n    const original = this.createMessage;\n    if (typeof original !== \"function\" || accountingWrappers.has(original)) return;\n    const wrapped = (options: CreateMessageOptions) =>\n      withModelTrace(\n        {\n          provider: this.provider,\n          providerKind: this.config.providerKind ?? this.provider,\n          model: this.model,\n          temperature: this.temperature,\n          maxTokens: this.maxTokens,\n          parameters: {\n            reasoning: this.config.reasoning,\n            extraBody: this.config.extraBody,\n            serviceTier: this.config.serviceTier,\n          },\n        },\n        options,\n        () => this.withUsageAccounting(options, () => original.call(this, options)),\n      );\n    accountingWrappers.add(wrapped);\n    this.createMessage = wrapped;\n  }\n\n  protected recordUsage(usage: TokenUsage, options?: CreateMessageOptions, reported = true): void {\n    if (options?.requestVisible !== false) {\n      this.usage.records.push(usage);\n      this.usage.totalPromptTokens += usage.promptTokens;\n      this.usage.totalCompletionTokens += usage.completionTokens;\n      this.usage.totalTokens += usage.totalTokens;\n      this.usage.totalCacheReadTokens += usage.cacheReadTokens ?? 0;\n      this.usage.totalCacheCreationTokens += usage.cacheCreationTokens ?? 0;\n      this.usage.requestCount++;\n    }\n    if (options?.billingEnabled !== false) {\n      recordOwnedUsage(this.usageIdentity(), reported ? usage : null);\n      try {\n        LLMClientBase.onUsage?.(this.model, usage);\n      } catch {\n        // An observer failure must never retry an already billed provider request.\n        logger.warn(\"llm.usage_observer_failed\");\n      }\n    }\n  }\n\n  private usageIdentity() {\n    return { provider: this.provider, model: this.model, providerKind: this.config.providerKind };\n  }\n\n  /** A streamed usage snapshot updates its receipt without incrementing foreground totals. */\n  protected recordAttemptUsage(usage: TokenUsage, options?: CreateMessageOptions): void {\n    if (options?.billingEnabled !== false) recordOwnedUsage(this.usageIdentity(), usage);\n  }\n\n  /** Host accounting wrapper; provider wire parameters are unchanged. */\n  withUsageAccounting<T>(options: CreateMessageOptions, operation: () => Promise<T>): Promise<T> {\n    const track = () =>\n      withUsageAttempt(this.usageIdentity(), options.billingEnabled !== false, operation);\n    return options.usagePurpose ? withUsagePurpose(options.usagePurpose, track) : track();"
+        }
+      ],
+      "displayedText": [
+        {
+          "range": [
+            61,
+            155
+          ],
+          "text": "    defaults?: ClientDefaults,\n  ) {\n    this.provider = config.provider;\n    this.model = config.model;\n    // No `?? 8192` fallback: when the model's output ceiling is unknown we keep\n    // `undefined` so each provider decides (OpenAI omits the field and lets the\n    // endpoint use its own max; Anthropic, where max_tokens is required, supplies\n    // a conservative default at request time). Forcing 8192 here truncated long\n    // outputs — a streamed tool-arg JSON cut off mid-token → \"Missing file_path\".\n    this.maxTokens = config.maxTokens;\n    this.temperature = defaults?.temperature ?? 0.3;\n    this.timeout = defaults?.timeout ?? 120_000;\n    this.retryMaxAttempts = defaults?.retryMaxAttempts ?? 3;\n    this.imageDetail = defaults?.imageDetail;\n    this.fetch = usageTrackingFetch(\n      requestBoundaryFetch(\n        modelTraceFetch(defaults?.fetch ?? globalThis.fetch),\n        currentUsageAttempt,\n        markCurrentUsageAttemptNotSent,\n      ),\n    );\n    this.initClient();\n    this.enableUsageAccounting();\n  }\n\n  protected abstract initClient(): void;\n\n  abstract createMessage(options: CreateMessageOptions): Promise<LLMResponse>;\n\n  /** Also supports directly constructed SDK clients; the factory rechecks class fields. */\n  enableUsageAccounting(): void {\n    const original = this.createMessage;\n    if (typeof original !== \"function\" || accountingWrappers.has(original)) return;\n    const wrapped = (options: CreateMessageOptions) =>\n      withModelTrace(\n        {\n          provider: this.provider,\n          providerKind: this.config.providerKind ?? this.provider,\n          model: this.model,\n          temperature: this.temperature,\n          maxTokens: this.maxTokens,\n          parameters: {\n            reasoning: this.config.reasoning,\n            extraBody: this.config.extraBody,\n            serviceTier: this.config.serviceTier,\n          },\n        },\n        options,\n        () => this.withUsageAccounting(options, () => original.call(this, options)),\n      );\n    accountingWrappers.add(wrapped);\n    this.createMessage = wrapped;\n  }\n\n  protected recordUsage(usage: TokenUsage, options?: CreateMessageOptions, reported = true): void {\n    if (options?.requestVisible !== false) {\n      this.usage.records.push(usage);\n      this.usage.totalPromptTokens += usage.promptTokens;\n      this.usage.totalCompletionTokens += usage.completionTokens;\n      this.usage.totalTokens += usage.totalTokens;\n      this.usage.totalCacheReadTokens += usage.cacheReadTokens ?? 0;\n      this.usage.totalCacheCreationTokens += usage.cacheCreationTokens ?? 0;\n      this.usage.requestCount++;\n    }\n    if (options?.billingEnabled !== false) {\n      recordOwnedUsage(this.usageIdentity(), reported ? usage : null);\n      try {\n        LLMClientBase.onUsage?.(this.model, usage);\n      } catch {\n        // An observer failure must never retry an already billed provider request.\n        logger.warn(\"llm.usage_observer_failed\");\n      }\n    }\n  }\n\n  private usageIdentity() {\n    return { provider: this.provider, model: this.model, providerKind: this.config.providerKind };\n  }\n\n  /** A streamed usage snapshot updates its receipt without incrementing foreground totals. */\n  protected recordAttemptUsage(usage: TokenUsage, options?: CreateMessageOptions): void {\n    if (options?.billingEnabled !== false) recordOwnedUsage(this.usageIdentity(), usage);\n  }\n\n  /** Host accounting wrapper; provider wire parameters are unchanged. */\n  withUsageAccounting<T>(options: CreateMessageOptions, operation: () => Promise<T>): Promise<T> {\n    const track = () =>\n      withUsageAttempt(this.usageIdentity(), options.billingEnabled !== false, operation);\n    return options.usagePurpose ? withUsagePurpose(options.usagePurpose, track) : track();\n  }\n\n  getUsage(): LLMUsageTracker {\n    return { ...this.usage };\n  }\n"
+        }
+      ],
+      "additionalNavigationSnippets": [
+        {
+          "line": 10,
+          "text": "import { currentUsageAttempt, markCurrentUsageAttemptNotSent } from \"../cost-ledger/context.js\";"
+        },
+        {
+          "line": 13,
+          "text": "  recordOwnedUsage,"
+        },
+        {
+          "line": 14,
+          "text": "  usageTrackingFetch,"
+        },
+        {
+          "line": 15,
+          "text": "  withUsageAttempt,"
+        },
+        {
+          "line": 16,
+          "text": "  withUsagePurpose,"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "selectedText": [
+        {
+          "range": [
+            1,
+            47
+          ],
+          "text": "import type { TokenUsage } from \"../types.js\";\n\nexport type UsagePurpose =\n  | \"main\"\n  | \"aux_summary\"\n  | \"tool_summary\"\n  | \"goal_judge\"\n  | \"title\"\n  | \"context_package\"\n  | \"manual_compact\"\n  | \"subagent\"\n  | \"external\";\n\nexport interface UsageIdentity {\n  provider: string;\n  model: string;\n  providerKind?: string;\n}\n\nexport interface UsageReceipt extends UsageIdentity {\n  version: 1;\n  requestId: string;\n  namespace: string;\n  runtimeId: string;\n  sessionId: string;\n  accountingSessionId: string;\n  runId?: string;\n  ancestors: string[];\n  ancestorAccountingIds: string[];\n  purpose: UsagePurpose;\n  source: \"provider\" | string;\n  startedAt: number;\n  settledAt?: number;\n  outcome: \"pending\" | \"completed\" | \"failed\";\n  /** A preflight rejection proves no handoff to fetch; legacy receipts leave this absent. */\n  transmission?: \"not-sent\";\n  usage: TokenUsage | null;\n  estimatedCostUsd: number | null;\n  pricing: {\n    source: \"model-metadata\" | \"openrouter-snapshot\";\n    input: number;\n    output: number;\n    cacheRead: number;\n    cacheWrite: number;\n    cachePricesEstimated: true;\n  } | null;\n}"
+        }
+      ],
+      "displayedText": [
+        {
+          "range": [
+            1,
+            50
+          ],
+          "text": "import type { TokenUsage } from \"../types.js\";\n\nexport type UsagePurpose =\n  | \"main\"\n  | \"aux_summary\"\n  | \"tool_summary\"\n  | \"goal_judge\"\n  | \"title\"\n  | \"context_package\"\n  | \"manual_compact\"\n  | \"subagent\"\n  | \"external\";\n\nexport interface UsageIdentity {\n  provider: string;\n  model: string;\n  providerKind?: string;\n}\n\nexport interface UsageReceipt extends UsageIdentity {\n  version: 1;\n  requestId: string;\n  namespace: string;\n  runtimeId: string;\n  sessionId: string;\n  accountingSessionId: string;\n  runId?: string;\n  ancestors: string[];\n  ancestorAccountingIds: string[];\n  purpose: UsagePurpose;\n  source: \"provider\" | string;\n  startedAt: number;\n  settledAt?: number;\n  outcome: \"pending\" | \"completed\" | \"failed\";\n  /** A preflight rejection proves no handoff to fetch; legacy receipts leave this absent. */\n  transmission?: \"not-sent\";\n  usage: TokenUsage | null;\n  estimatedCostUsd: number | null;\n  pricing: {\n    source: \"model-metadata\" | \"openrouter-snapshot\";\n    input: number;\n    output: number;\n    cacheRead: number;\n    cacheWrite: number;\n    cachePricesEstimated: true;\n  } | null;\n}\n\nexport interface UsageTotals {\n  notSentRequests?: number;"
+        }
+      ],
+      "additionalNavigationSnippets": []
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "selectedText": [
+        {
+          "range": [
+            488,
+            494
+          ],
+          "text": "export interface TokenUsage {\n  promptTokens: number;\n  completionTokens: number;\n  totalTokens: number;\n  cacheReadTokens?: number;\n  cacheCreationTokens?: number;\n}"
+        }
+      ],
+      "displayedText": [
+        {
+          "range": [
+            488,
+            509
+          ],
+          "text": "export interface TokenUsage {\n  promptTokens: number;\n  completionTokens: number;\n  totalTokens: number;\n  cacheReadTokens?: number;\n  cacheCreationTokens?: number;\n}\n\n// ─── Input Compilation ────────────────────────────────────────────\n\nexport interface CompiledInput {\n  messages: Message[];\n  rawText: string;\n  options: InputOptions;\n}\n\nexport interface InputOptions {\n  slashCommand?: string;\n  attachments?: Attachment[];\n  mentionedFiles?: string[];\n  images?: ImageAttachment[];\n  allowedTools?: string[];"
+        }
+      ],
+      "additionalNavigationSnippets": []
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "selectedText": [
+        {
+          "range": [
+            1957,
+            1961
+          ],
+          "text": "    const billingOwner = this.usageOwnerForSession(\n      session.state.sessionId,\n      runId,\n      this.config.isSubAgent ? \"subagent\" : \"main\",\n    );"
+        },
+        {
+          "range": [
+            1966,
+            1968
+          ],
+          "text": "    return withEngineRunTrace(session.state, cwd, runId, options, () =>\n      withUsageOwner(billingOwner, () =>\n        runWithSid(session.state.sessionId, async () => {"
+        }
+      ],
+      "displayedText": [
+        {
+          "range": [
+            1375,
+            1400
+          ],
+          "text": "          );\n        }\n        conversation = next.slice(0, fitLength);\n        const remainder = next.slice(fitLength);\n        if (remainder) pending[0] = remainder;\n        else pending.shift();\n        break;\n      }\n      const sourceState = sourceSessionId\n        ? this.sessionManager.readSessionState(sourceSessionId)\n        : undefined;\n      const response = await withEngineAuxiliaryModelTrace(\n        sourceState,\n        \"context_package\",\n        () =>\n          withUsageOwner(billingOwner, () =>\n            client.createMessage({\n              systemPrompt,\n              messages: [\n                {\n                  role: \"user\",\n                  content: buildContextPackagePromptFromSerialized(conversation, summary),\n                },\n              ],\n              tools: [],\n              maxTokens: CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,"
+        },
+        {
+          "range": [
+            1945,
+            1976
+          ],
+          "text": "            after: archived.after,\n          });\n        }\n      } catch (error) {\n        logger.warn(\"engine.pre_run_archive.failed\", {\n          sessionId: session.state.sessionId,\n          segmentId: options.archiveBeforeCurrentTurn.segmentId,\n          error: error instanceof Error ? error.message : String(error),\n        });\n      }\n    }\n    this.stampRunToolContext(toolCtx, session, options);\n    const billingOwner = this.usageOwnerForSession(\n      session.state.sessionId,\n      runId,\n      this.config.isSubAgent ? \"subagent\" : \"main\",\n    );\n    session.state.costState = this.usageCostState(session.state.sessionId);\n    session.state.stateRevision = this.sessionManager.updateSessionState(session.state.sessionId, {\n      costState: session.state.costState,\n    });\n    return withEngineRunTrace(session.state, cwd, runId, options, () =>\n      withUsageOwner(billingOwner, () =>\n        runWithSid(session.state.sessionId, async () => {\n          const hookMessages = profile?.disableHooks\n            ? []\n            : await this.runSessionStartHooks({\n                session,\n                task,\n                cwd,\n                runPermissionMode,\n                resumedFromDisk,"
+        }
+      ],
+      "additionalNavigationSnippets": [
+        {
+          "line": 116,
+          "text": "import { withUsageOwner, type UsageOwner } from \"../cost-ledger/context.js\";"
+        },
+        {
+          "line": 4489,
+          "text": "          () => withUsageOwner(owner, () => summarize(prompt, signal)),"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "selectedText": [
+        {
+          "range": [
+            257,
+            270
+          ],
+          "text": "test(\"disabled nested billing clears the parent's HTTP attempt context\", async () => {\n  const { withUsageAttempt, usageTrackingFetch, recordOwnedUsage } = await import(\"./context.js\");\n  const ledger = new UsageLedger();\n  const tracked = usageTrackingFetch((async () => jsonResponse()) as typeof fetch);\n  await withUsageOwner(ledger.owner(\"parent\"), () =>\n    withUsageAttempt(identity, true, async () => {\n      await tracked(\"http://localhost/parent\");\n      recordOwnedUsage(identity, usage);\n      await withUsageAttempt(identity, false, () => tracked(\"http://localhost/unbilled\"));\n    }),\n  );\n  expect(ledger.summary().requests).toBe(1);\n  expect(ledger.summary().unknownUsageRequests).toBe(0);\n});"
+        }
+      ],
+      "displayedText": [
+        {
+          "range": [
+            251,
+            277
+          ],
+          "text": "  expect(calls).toBe(2);\n  expect(ledger.summary().requests).toBe(2);\n  expect(ledger.summary().promptTokens).toBe(200);\n  expect(ledger.summary().unknownUsageRequests).toBe(0);\n});\n\ntest(\"disabled nested billing clears the parent's HTTP attempt context\", async () => {\n  const { withUsageAttempt, usageTrackingFetch, recordOwnedUsage } = await import(\"./context.js\");\n  const ledger = new UsageLedger();\n  const tracked = usageTrackingFetch((async () => jsonResponse()) as typeof fetch);\n  await withUsageOwner(ledger.owner(\"parent\"), () =>\n    withUsageAttempt(identity, true, async () => {\n      await tracked(\"http://localhost/parent\");\n      recordOwnedUsage(identity, usage);\n      await withUsageAttempt(identity, false, () => tracked(\"http://localhost/unbilled\"));\n    }),\n  );\n  expect(ledger.summary().requests).toBe(1);\n  expect(ledger.summary().unknownUsageRequests).toBe(0);\n});\n\ntest(\"identical SIDs in different identity stores stay separate in one Runtime\", () => {\n  const ledger = new UsageLedger();\n  for (const scope of [\"alice\", \"bob\"]) {\n    const receipt = ledger.begin(ledger.owner(\"same\", undefined, [], \"main\", scope), identity);\n    ledger.settle(receipt, usage);\n    ledger.finish(receipt, \"completed\");"
+        },
+        {
+          "range": [
+            283,
+            322
+          ],
+          "text": "});\n\ntest(\"direct SDK construction accounts real localhost retry attempts and explicitly reported zero usage\", async () => {\n  const { OpenAIClient } = await import(\"../llm/providers/openai.js\");\n  const { currentUsageAttempt } = await import(\"./context.js\");\n  const ledger = new UsageLedger();\n  const ids: string[] = [];\n  let calls = 0;\n  const server = Bun.serve({\n    hostname: \"127.0.0.1\",\n    port: 0,\n    fetch() {\n      calls++;\n      if (calls === 1)\n        return new Response('{\"error\":{\"message\":\"retry\"}}', {\n          status: 500,\n          headers: { \"content-type\": \"application/json\", \"retry-after-ms\": \"1\" },\n        });\n      return jsonResponse({ usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } });\n    },\n  });\n  try {\n    const client = new OpenAIClient(\n      { ...identity, apiKey: \"synthetic\", baseUrl: `http://127.0.0.1:${server.port}/v1` },\n      {\n        retryMaxAttempts: 1,\n        fetch: ((...args: Parameters<typeof fetch>) => {\n          ids.push(currentUsageAttempt()!.requestId);\n          return fetch(...args);\n        }) as typeof fetch,\n      },\n    );\n    await withUsageOwner(ledger.owner(\"source\"), () => client.createMessage(options));\n    expect(calls).toBe(2);\n    expect(new Set(ids).size).toBe(2);\n    expect(ledger.summary().requests).toBe(2);\n    expect(ledger.summary().unknownCostRequests).toBe(1);\n    expect(ledger.summary().unknownUsageRequests).toBe(1);\n    expect(ledger.summary().knownEstimatedCostUsd).toBe(0);\n  } finally {"
+        }
+      ],
+      "additionalNavigationSnippets": [
+        {
+          "line": 7,
+          "text": "import { withUsageOwner } from \"./context.js\";"
+        },
+        {
+          "line": 159,
+          "text": "  const response = await withUsageOwner(ledger.owner(\"source\"), () =>"
+        },
+        {
+          "line": 187,
+          "text": "  await withUsageOwner(ledger.owner(\"source\"), () => client.createMessage(options));"
+        },
+        {
+          "line": 207,
+          "text": "    withUsageOwner(ledger.owner(\"source\"), () => client.createMessage(options)),"
+        },
+        {
+          "line": 239,
+          "text": "  await withUsageOwner(ledger.owner(\"source\"), async () => {"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/model-request-boundary/accounting.test.ts",
+      "sha256": "4ac2ec636f1330e45bb83afbacacae8deedbaca54a94ce9b256d0582e139f740",
+      "selectedText": [
+        {
+          "range": [
+            20,
+            36
+          ],
+          "text": "test(\"physical attempt identity remains available when accounting fails before fetch\", async () => {\n  const ledger = new UsageLedger();\n  ledger.begin = () => {\n    throw new Error(\"synthetic ledger failure\");\n  };\n  const owner = ledger.owner(\"same-sid\");\n  let observed: ReturnType<typeof currentUsageAttempt>;\n  let sends = 0;\n  const fetch = usageTrackingFetch(async () => {\n    observed = currentUsageAttempt();\n    sends++;\n    return new Response(\"{}\");\n  });\n  await withUsageOwner(owner, () =>\n    withUsageAttempt(identity, true, () => fetch(\"http://fixture.invalid\")),\n  );\n  expect(sends).toBe(1);"
+        },
+        {
+          "range": [
+            38,
+            40
+          ],
+          "text": "  expect(observed!.accountingSessionId).toBe(owner.accountingSessionId);\n  expect(ledger.summary().partial).toBe(true);\n});"
+        }
+      ],
+      "displayedText": [
+        {
+          "range": [
+            1,
+            45
+          ],
+          "text": "import { expect, test } from \"bun:test\";\nimport { UsageLedger } from \"../cost-ledger/store.js\";\nimport {\n  currentUsageAttempt,\n  markCurrentUsageAttemptNotSent,\n  usageTrackingFetch,\n  withUsageAttempt,\n  withUsageOwner,\n} from \"../cost-ledger/context.js\";\nimport {\n  ModelRequestBoundaryError,\n  requestBoundaryFetch,\n  withModelRequestBoundary,\n  withProviderRequestProjection,\n} from \"./context.js\";\nimport { createEphemeralModelRequestSigner } from \"./access.js\";\nimport { Transcript } from \"../session/transcript.js\";\n\nconst identity = { provider: \"openai\", model: \"synthetic-model\" };\ntest(\"physical attempt identity remains available when accounting fails before fetch\", async () => {\n  const ledger = new UsageLedger();\n  ledger.begin = () => {\n    throw new Error(\"synthetic ledger failure\");\n  };\n  const owner = ledger.owner(\"same-sid\");\n  let observed: ReturnType<typeof currentUsageAttempt>;\n  let sends = 0;\n  const fetch = usageTrackingFetch(async () => {\n    observed = currentUsageAttempt();\n    sends++;\n    return new Response(\"{}\");\n  });\n  await withUsageOwner(owner, () =>\n    withUsageAttempt(identity, true, () => fetch(\"http://fixture.invalid\")),\n  );\n  expect(sends).toBe(1);\n  expect(observed!.requestId).toMatch(/^[a-f0-9]{64}$/);\n  expect(observed!.accountingSessionId).toBe(owner.accountingSessionId);\n  expect(ledger.summary().partial).toBe(true);\n});\n\ntest(\"preflight rejection records known not-sent zero usage instead of unknown billed usage\", async () => {\n  const ledger = new UsageLedger();\n  const owner = ledger.owner(\"same-sid\");\n  const transcript = Transcript.inMemory(\"synthetic-owner\");"
+        }
+      ],
+      "additionalNavigationSnippets": [
+        {
+          "line": 47,
+          "text": "  const fetch = usageTrackingFetch("
+        },
+        {
+          "line": 53,
+          "text": "      currentUsageAttempt,"
+        },
+        {
+          "line": 54,
+          "text": "      markCurrentUsageAttemptNotSent,"
+        },
+        {
+          "line": 59,
+          "text": "    withUsageOwner(owner, () =>"
+        },
+        {
+          "line": 60,
+          "text": "      withUsageAttempt(identity, true, () =>"
+        }
+      ]
+    }
+  ],
+  "navigationOnly": {
+    "path": "packages/core/src/model-traces/context.ts",
+    "bytes": 33874,
+    "lines": 944,
+    "sha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+    "pinBeforeBodyOrLineNavigation": true,
+    "coverage": "navigation-only",
+    "selectedLineRanges": [],
+    "coveredLineCount": 0,
+    "additionalNavigationSnippetLines": [
+      6,
+      493
+    ],
+    "displayedLineCountIncludingNavigation": 2,
+    "scope": "Only import/currentUsageAttempt requestId locator; randomUUID/model trace mechanisms not followed.",
+    "finishFilesystemSHA": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+    "finishEqualsFirst": true
+  }
+}

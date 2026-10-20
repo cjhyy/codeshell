@@ -1,0 +1,75 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "refreshedMain": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "changedSelectedSources": [
+    {
+      "path": ".github/workflows/desktop-ui-acceptance.yml",
+      "frozenSha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+      "mainSha256": "79d0953ded71e6cba80813201ad9be3fa13e1d5d0fa3ee7a03fd48f5a4b9595f",
+      "frozenBytes": 32518,
+      "mainBytes": 33037
+    },
+    {
+      "path": "docs/todo/release-real-operations-2026-10-16.md",
+      "frozenSha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+      "mainSha256": "3a8e251255d41687f76056ed3aaacd75726f213b1b8d533b1ad4c2305e9a35d9",
+      "frozenBytes": 134232,
+      "mainBytes": 150208
+    }
+  ],
+  "externalPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/scripts/e2e-review-diff-path-operations.mjs",
+    "packages/desktop/scripts/e2e-startup-operation-cycles.mjs",
+    "packages/desktop/scripts/electron-keychain-preflight.mjs",
+    "packages/desktop/scripts/review-operation-diagnostics.mjs",
+    "packages/desktop/scripts/review-operation-diagnostics.test.mjs"
+  ],
+  "readScope": [
+    "Workflow complete9insertions patch inspected,addReviewdiagnosticsteststep6lines+artifactpaths3lines.",
+    "Release document numstat125insertions/0deletions,unified1diff first115outputlines read;remainingnewtext notclaimedread.",
+    "Other5changedscriptpaths not newlyauditedthisbatch;newnativepreflight/Reviewdiagnostics notrun orreclassified.",
+    "Secondrefresh e7543..70d2e:2commits/2paths;release diff first112outputlines inspected,other review-operation-diagnostics.test.mjs change metadata only. Cumulative7commits/7paths,workflow+9,release+214;no new native/test execution or fix verification."
+  ],
+  "status": "Concurrent source/document updates,notnewfixverification;no findings inthisbatch. FrozenreadingandfinalcurrentSHAseparate.",
+  "productAttempts": 0,
+  "productTestsRerun": false,
+  "previousRefresh": {
+    "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+    "refreshedMain": "e7543a56805d992dec936b9c8df07e4ce7e2a709",
+    "changedSelectedSources": [
+      {
+        "path": ".github/workflows/desktop-ui-acceptance.yml",
+        "frozenSha256": "2c96462d66574a53dbea7abc5c48947e1f9bf940d623d1fcf5c77a6830b9eae9",
+        "mainSha256": "79d0953ded71e6cba80813201ad9be3fa13e1d5d0fa3ee7a03fd48f5a4b9595f",
+        "frozenBytes": 32518,
+        "mainBytes": 33037
+      },
+      {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "frozenSha256": "05dee081b826d0fffccd2a1535381fdbd4bb86f30d4d998fda8d1aeba3af22e9",
+        "mainSha256": "64df6ba66611c30888a4862af1f35c653bafdc3795aed96a04cc7067433094fb",
+        "frozenBytes": 134232,
+        "mainBytes": 143430
+      }
+    ],
+    "externalPaths": [
+      ".github/workflows/desktop-ui-acceptance.yml",
+      "docs/todo/release-real-operations-2026-10-16.md",
+      "packages/desktop/scripts/e2e-review-diff-path-operations.mjs",
+      "packages/desktop/scripts/e2e-startup-operation-cycles.mjs",
+      "packages/desktop/scripts/electron-keychain-preflight.mjs",
+      "packages/desktop/scripts/review-operation-diagnostics.mjs",
+      "packages/desktop/scripts/review-operation-diagnostics.test.mjs"
+    ],
+    "readScope": [
+      "Workflow complete9insertions patch inspected,addReviewdiagnosticsteststep6lines+artifactpaths3lines.",
+      "Release document numstat125insertions/0deletions,unified1diff first115outputlines read;remainingnewtext notclaimedread.",
+      "Other5changedscriptpaths not newlyauditedthisbatch;newnativepreflight/Reviewdiagnostics notrun orreclassified."
+    ],
+    "status": "Concurrent source/document updates,notnewfixverification;no findings inthisbatch. FrozenreadingandfinalcurrentSHAseparate.",
+    "productAttempts": 0,
+    "productTestsRerun": false
+  }
+}

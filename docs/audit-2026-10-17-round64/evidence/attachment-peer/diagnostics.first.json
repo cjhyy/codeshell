@@ -1,0 +1,21 @@
+{
+  "ownMetadataFailures": 0,
+  "ownProductFailures": 0,
+  "sourceDisplayTruncations": [
+    {
+      "sourceDisplays": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "toolOriginalTokens": 2244,
+      "toolOutputLines": 203,
+      "savedRawDisplaysBeforePrint": true,
+      "clippedArea": "preload source-display10 one declaration line946; independently recaptured941–946 as source-display13 before reporting",
+      "note": "All displayed source files saved before print; all other submitted target text visible in original. Not a product run/retry."
+    }
+  ],
+  "filenameInventoryScope": "Initial desktop/evidence inventory did not contain server attachment-service; subsequent packages filename inventory found canonical service/test. No missing-path execution or guessed source read.",
+  "notReadOrRun": "Filename-only fixture/browser test paths incidentally listed; their bodies not read or executed. No read of author mutable report or author scripts."
+}

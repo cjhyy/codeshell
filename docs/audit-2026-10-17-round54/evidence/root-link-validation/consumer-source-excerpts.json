@@ -1,0 +1,141 @@
+{
+  "captureAfterActualDisplay": true,
+  "files": [
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "displayedLineRanges": [
+        [
+          1,
+          21
+        ],
+        [
+          43,
+          69
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1,
+          "end": 21,
+          "text": "1: /** Portable, reviewed operation contracts. These definitions never contain credentials or code. */\n2: export interface LinkValueSchema {\n3:   readonly type?: \"object\" | \"array\" | \"string\" | \"number\" | \"integer\" | \"boolean\" | \"null\";\n4:   readonly properties?: Readonly<Record<string, LinkValueSchema>>;\n5:   readonly required?: readonly string[];\n6:   readonly additionalProperties?: boolean;\n7:   readonly items?: LinkValueSchema;\n8:   readonly minLength?: number;\n9:   readonly maxLength?: number;\n10:   readonly minimum?: number;\n11:   readonly maximum?: number;\n12:   readonly minItems?: number;\n13:   readonly maxItems?: number;\n14:   readonly enum?: readonly (string | number | boolean | null)[];\n15:   /** Only reviewed, bounded patterns from the built-in catalog are accepted. */\n16:   readonly pattern?: string;\n17:   readonly anyOf?: readonly LinkValueSchema[];\n18:   readonly oneOf?: readonly LinkValueSchema[];\n19: }\n20: \n21: export interface LinkResourcePolicy {"
+        },
+        {
+          "start": 43,
+          "end": 69,
+          "text": "43: export interface LinkOperationContract {\n44:   readonly operationId: string;\n45:   readonly providerId: string;\n46:   /** Unqualified v1 wire name: lower-case letters and underscores only. */\n47:   readonly action: string;\n48:   readonly effect: \"read\" | \"write\";\n49:   readonly executors: readonly (\"api\" | \"mcp\" | \"cli\")[];\n50:   readonly inputSchema: LinkValueSchema;\n51:   readonly outputSchema: LinkValueSchema;\n52:   readonly resourcePolicy: LinkResourcePolicy;\n53:   readonly content?: {\n54:     readonly kind: string;\n55:     readonly coverage: \"summary\" | \"requested-subtree\" | \"selected-resource\" | \"page\";\n56:   };\n57:   readonly defaults: Readonly<Record<string, string | number | boolean>>;\n58:   readonly limits: {\n59:     readonly inputBytes: number;\n60:     readonly responseBytes: number;\n61:     readonly inputDepth: number;\n62:     readonly responseDepth: number;\n63:   };\n64:   readonly repeatability: \"read-only\" | \"verified-write-once\";\n65:   /** Existing adapters perform these canonicalizations after structural validation. */\n66:   readonly normalization: readonly string[];\n67: }\n68: \n69: export type LinkRecipeId = \"api-token\" | \"api-oauth\" | \"cli-session\" | \"broker-oauth\" | \"mcp-oauth\";"
+        }
+      ]
+    },
+    {
+      "path": "packages/link/src/operations.ts",
+      "displayedLineRanges": [
+        [
+          8,
+          30
+        ],
+        [
+          82,
+          97
+        ],
+        [
+          104,
+          131
+        ],
+        [
+          280,
+          310
+        ],
+        [
+          330,
+          349
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 8,
+          "end": 30,
+          "text": "8: const text = (maxLength = 300, minLength = 1): LinkValueSchema => ({\n9:   type: \"string\",\n10:   minLength,\n11:   maxLength,\n12: });\n13: const flag: LinkValueSchema = { type: \"boolean\" };\n14: // Existing v1 adapters accept numeric strings and clamp pagination. Keep that behavior.\n15: const integer: LinkValueSchema = { anyOf: [{ type: \"integer\", minimum: 1 }, text(100)] };\n16: const number: LinkValueSchema = { anyOf: [{ type: \"number\" }, text(100)] };\n17: const list = (items: LinkValueSchema = { type: \"object\" }, maxItems = 100): LinkValueSchema => ({\n18:   type: \"array\",\n19:   items,\n20:   maxItems,\n21: });\n22: const object = (\n23:   properties: Record<string, LinkValueSchema>,\n24:   required: string[] = [],\n25: ): LinkValueSchema => ({ type: \"object\", properties, required, additionalProperties: false });\n26: const output = (\n27:   properties: Record<string, LinkValueSchema>,\n28:   required: string[] = [],\n29: ): LinkValueSchema => ({ type: \"object\", properties, required, additionalProperties: true });\n30: const listOutput = (key: string, max = 100) =>"
+        },
+        {
+          "start": 82,
+          "end": 97,
+          "text": "82: const repo = { owner: text(100), repo: text(100) };\n83: const file = { file_url_or_key: text(4096), file_key: text(200) };\n84: const fileInput = (\n85:   properties: Record<string, LinkValueSchema> = {},\n86:   required: string[] = [],\n87: ): LinkValueSchema => ({\n88:   ...object({ ...file, ...properties }, required),\n89:   oneOf: [{ required: [\"file_url_or_key\"] }, { required: [\"file_key\"] }],\n90: });\n91: const fileResource = inputResource(\"files\", [\"file_url_or_key\", \"file_key\"], {\n92:   kind: \"identifier-or-url\",\n93:   urlHosts: [\"figma.com\", \"www.figma.com\"],\n94:   urlPathIndex: 1,\n95: });\n96: const nodeList: LinkValueSchema = { anyOf: [text(20_000), list(text(200), 50)] };\n97: "
+        },
+        {
+          "start": 104,
+          "end": 131,
+          "text": "104:   inputSchema: LinkValueSchema,\n105:   outputSchema: LinkValueSchema,\n106:   resourcePolicy = filtered(provider, action),\n107:   options: Options = {},\n108: ): LinkOperationContract {\n109:   const effect = options.effect ?? \"read\";\n110:   return {\n111:     operationId: `${provider}.${action}`,\n112:     providerId: provider,\n113:     action,\n114:     effect,\n115:     executors:\n116:       options.executors ??\n117:       ([\"github\", \"gitlab\", \"notion\", \"todoist\", \"vercel\"].includes(provider)\n118:         ? [\"api\", \"cli\"]\n119:         : [\"api\"]),\n120:     inputSchema,\n121:     outputSchema,\n122:     resourcePolicy,\n123:     defaults: options.defaults ?? {},\n124:     limits: {\n125:       inputBytes: action === \"create_issue\" ? 256 * 1024 : 65_536,\n126:       responseBytes: provider === \"figma\" ? 8 * 1024 * 1024 : 1024 * 1024,\n127:       inputDepth: 20,\n128:       responseDepth: 256,\n129:     },\n130:     repeatability: effect === \"write\" ? \"verified-write-once\" : \"read-only\",\n131:     normalization: options.normalization ?? [],"
+        },
+        {
+          "start": 280,
+          "end": 310,
+          "text": "280:     \"list_issues\",\n281:     object({ limit: integer }),\n282:     listOutput(\"issues\"),\n283:     undefined,\n284:     pagination,\n285:   ),\n286:   operation(\n287:     \"figma\",\n288:     \"get_file\",\n289:     fileInput(),\n290:     output({ pages: list({}, 100), truncated: flag }, [\"pages\", \"truncated\"]),\n291:     fileResource,\n292:     {\n293:       defaults: { depth: 1 },\n294:       content: { kind: \"application/vnd.figma.summary+json\", coverage: \"summary\" },\n295:       normalization: [\n296:         \"summary only; no document; at most 100 pages; reject all depth/full/ids parameters\",\n297:       ],\n298:     },\n299:   ),\n300:   operation(\n301:     \"figma\",\n302:     \"read_design_content\",\n303:     fileInput({\n304:       ids: nodeList,\n305:       node_ids: nodeList,\n306:       version: text(200),\n307:       depth: integer,\n308:       geometry: { enum: [\"paths\"] },\n309:       plugin_data: nodeList,\n310:       branch_data: flag,"
+        },
+        {
+          "start": 330,
+          "end": 349,
+          "text": "330:     },\n331:   ),\n332:   operation(\n333:     \"figma\",\n334:     \"get_nodes\",\n335:     fileInput({\n336:       ids: nodeList,\n337:       node_ids: nodeList,\n338:       version: text(200),\n339:       depth: integer,\n340:       geometry: { enum: [\"paths\"] },\n341:       plugin_data: nodeList,\n342:     }),\n343:     {\n344:       ...output({ nodes: { type: \"object\" }, truncated: flag }),\n345:       anyOf: [{ required: [\"nodes\"] }, { required: [\"err\"] }],\n346:     },\n347:     fileResource,\n348:     {\n349:       content,"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/links/link-action-tool.ts",
+      "displayedLineRanges": [
+        [
+          412,
+          420
+        ],
+        [
+          609,
+          617
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 412,
+          "end": 420,
+          "text": "412:     if (providerId === \"github\" && actionId === \"set_starred\")\n413:       params = githubSetStarredParameters(params);\n414:     if (providerId === \"github\" && actionId === \"update_issue\")\n415:       params = githubIssueStateParameters(params);\n416:     validateLinkOperationInput(contract, params);\n417:     const recipeId = resolveLinkRecipeId(connection.credential.meta ?? {});\n418:     if (!recipeId)\n419:       throw new LinkOperationError(\"unsupported_contract\", \"The connection recipe is unsupported.\");\n420:     const groups = connection.credential.meta?.linkResourceGroups;"
+        },
+        {
+          "start": 609,
+          "end": 617,
+          "text": "609:           authKind: \"token\",\n610:         });\n611:       }\n612:       assertConnected();\n613:       assertLinkOperationResult(contract, data);\n614:       data = filterLinkOperationResult(contract, data, operationAuthorization);\n615:       return data;\n616:     };\n617:     let operation: Awaited<ReturnType<typeof verifiedGithubCreateIssue>>[\"receipt\"] | undefined;"
+        }
+      ]
+    },
+    {
+      "path": "packages/link/src/operations.test.ts",
+      "displayedLineRanges": [
+        [
+          27,
+          61
+        ],
+        [
+          85,
+          99
+        ],
+        [
+          181,
+          201
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 27,
+          "end": 61,
+          "text": "27:   test(\"the complete catalog equals the committed immutable snapshot\", () => {\n28:     expect(\n29:       Object.fromEntries(LINK_OPERATION_CONTRACTS.map((item) => [item.operationId, item])),\n30:     ).toEqual(\n31:       JSON.parse(readFileSync(new URL(\"../contracts/operations.v1.json\", import.meta.url), \"utf8\")),\n32:     );\n33:     expect(new Set(LINK_OPERATION_CONTRACTS.map((item) => item.operationId)).size).toBe(\n34:       LINK_OPERATION_CONTRACTS.length,\n35:     );\n36:     for (const contract of LINK_OPERATION_CONTRACTS) {\n37:       expect(contract.action).toMatch(/^[a-z_]+$/);\n38:       expect(Object.isFrozen(contract.inputSchema)).toBe(true);\n39:       expect(contract.resourcePolicy.group).toBeTruthy();\n40:       expect(contract.effect === \"write\").toBe(contract.repeatability === \"verified-write-once\");\n41:     }\n42:   });\n43:   test(\"legacy Figma summary and explicit content have separate contracts\", () => {\n44:     const legacy = getLinkOperationContract(\"figma\", \"get_file\")!;\n45:     const content = getLinkOperationContract(\"figma\", \"read_design_content\")!;\n46:     expect(legacy.defaults.depth).toBe(1);\n47:     expect(content.defaults.depth).toBe(2);\n48:     expect(() => assertLinkOperationResult(content, { pages: [] })).toThrow();\n49:     expect(() =>\n50:       assertLinkOperationResult(getLinkOperationContract(\"figma\", \"get_nodes\")!, {}),\n51:     ).toThrow();\n52:     validateLinkOperationInput(legacy, { file_key: \"file\" });\n53:     expect(() => validateLinkOperationInput(legacy, { file_key: \"file\", depth: 2 })).toThrow();\n54:     validateLinkOperationInput(content, {\n55:       file_url_or_key: \"https://figma.com/design/file/name\",\n56:       depth: \"2\",\n57:     });\n58:     expect(() =>\n59:       validateLinkOperationInput(content, { file_key: \"file\", file_url_or_key: \"other\" }),\n60:     ).toThrow();\n61:   });"
+        },
+        {
+          "start": 85,
+          "end": 99,
+          "text": "85:   test(\"full Figma results preserve deep JSON nodes and arbitrary nested data keys\", () => {\n86:     let node: Record<string, unknown> = JSON.parse(\n87:       '{\"constructor\":\"design metadata\",\"__proto__\":{\"name\":\"plain data\"}}',\n88:     );\n89:     for (let depth = 0; depth < 100; depth++) node = { children: [node] };\n90:     assertLinkOperationResult(getLinkOperationContract(\"figma\", \"read_design_content\")!, {\n91:       document: node,\n92:     });\n93:     for (let depth = 0; depth < 30; depth++) node = { children: [node] };\n94:     expect(() =>\n95:       assertLinkOperationResult(getLinkOperationContract(\"figma\", \"read_design_content\")!, {\n96:         document: node,\n97:       }),\n98:     ).toThrow();\n99:   });"
+        },
+        {
+          "start": 181,
+          "end": 201,
+          "text": "181:   test(\"inputs and results are bounded before adapters can use them\", () => {\n182:     const contract = getLinkOperationContract(\"github\", \"get_starred\")!;\n183:     expect(() =>\n184:       validateLinkOperationInput(contract, {\n185:         owner: \"a\",\n186:         repo: \"b\",\n187:         endpoint: \"https://attacker.test\",\n188:       }),\n189:     ).toThrow();\n190:     for (const key of [\"toString\", \"valueOf\", \"hasOwnProperty\"])\n191:       expect(() =>\n192:         validateLinkOperationInput(contract, { owner: \"a\", repo: \"b\", [key]: \"unknown\" }),\n193:       ).toThrow();\n194:     expect(() =>\n195:       validateLinkOperationInput(contract, JSON.parse('{\"owner\":\"a\",\"repo\":\"b\",\"__proto__\":{}}')),\n196:     ).toThrow();\n197:     assertLinkOperationResult(contract, { starred: true });\n198:     expect(() => assertLinkOperationResult(contract, { starred: \"yes\" })).toThrow();\n199:     expect(() =>\n200:       assertLinkOperationResult(contract, { starred: true, data: \"x\".repeat(1024 * 1024) }),\n201:     ).toThrow();"
+        }
+      ]
+    }
+  ]
+}

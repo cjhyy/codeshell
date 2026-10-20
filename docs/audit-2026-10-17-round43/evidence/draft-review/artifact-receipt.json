@@ -1,0 +1,89 @@
+{
+  "frozenUTC": "2026-10-17T14:39:30.522225+00:00",
+  "scope": "Only exact /tmp/codeshell-audit-round47-chatview-review artifacts; excludes receipt self. No repository/product/Git writes. Do not alter after freeze.",
+  "files": [
+    {
+      "path": "history-contexts.json",
+      "bytes": 536342,
+      "sha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8"
+    },
+    {
+      "path": "history-decisions.json",
+      "bytes": 2003,
+      "sha256": "883f9a9cc960c3108182126afecf12bfb30ae5da0104a2156dc366f3aadab4b2"
+    },
+    {
+      "path": "history-finish-check.json",
+      "bytes": 358,
+      "sha256": "9e74c062798c3ebd88c35d1aa55303a54f466420ad5981c98b66181b8db8e2a7"
+    },
+    {
+      "path": "history-focused.json",
+      "bytes": 327744,
+      "sha256": "4e25135927eddee1fb4b28674f1d434bda91adde1f6f5b9b270327e39b9bcc0b"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 829139,
+      "sha256": "b0a8b67b49275bc9b2c6e293ddd3422b335d1740d690673d5c76d51b8a05539c"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 242637,
+      "sha256": "e57a496872d4b9cbce3a4d58b9391f1382769875ae08ede11273aabb6fa5b34d"
+    },
+    {
+      "path": "history-old-cause-selected.json",
+      "bytes": 11513,
+      "sha256": "b7aa321262e2e7449a1eefec264bfa8a6f7c81634027cfb28576b9ebaf5322b8"
+    },
+    {
+      "path": "history-selected-contexts.json",
+      "bytes": 64479,
+      "sha256": "34dd0d579fabda44520c4b6856b721922dff9f6166e7b6b6c85605db8c29e275"
+    },
+    {
+      "path": "history.json",
+      "bytes": 829495,
+      "sha256": "fe0b7c0c2b682c8c541c9082b41d919b9cfb67b65505e72a7a644d78d0c2fde9"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 2582,
+      "sha256": "b1edb59cc9d78de71111cbb8c1acc8b4bda45e96e2f1a14b789a0dd6225e64e5"
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 2354,
+      "sha256": "99a0aac09754c8aa346a7cdbbc0e1432a533acb36f5fb17598f3858bff588821"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 1073,
+      "sha256": "2eb8af65298db9246fb38828b5f1ce5e5f4ce64635ab4b80820264e69eb2d26d"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4360,
+      "sha256": "15e6c7ac964cb2771f05a0c6536920d609b5977cb517bf1015b17c1916a5a28f"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5561,
+      "sha256": "f7c6134c4474ae5aba68019a7d04bb8804c45b350292fa3aa70963476ddb2b25"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 8318,
+      "sha256": "392f2c8518079a981b5fa8afcc5fa2331c8c73dd52ca83f390c3c1c1b18f7de9"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 774,
+      "sha256": "089fc66173fce8f476be1bda66abc1ad90e17a5949465083a97119d8f1c67b2a"
+    }
+  ],
+  "artifactCountExcludingSelf": 16,
+  "totalFilesIncludingSelf": 17,
+  "productAttempts": 0
+}

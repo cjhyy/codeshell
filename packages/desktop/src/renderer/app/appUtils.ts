@@ -1,9 +1,11 @@
 import type { MobilePermissionMode } from "../../preload/types";
 import type { OpenCliSessionRequest } from "../cc-room/types";
 import type { ImageAttachment } from "../chat/attachments";
+import type { ComposerMetadata } from "../chat/composerMetadata";
 import type { PermissionMode } from "../chat/PermissionPill";
 import type { MessagesReducerState } from "../types";
 import type { PanelTab } from "../view";
+import type { SubagentSelection } from "../subagents/SubagentNavigation";
 import { loadPanelState, NO_REPO_KEY } from "../transcripts";
 
 export function stablePromptHash(text: string): string {
@@ -46,6 +48,7 @@ export function fromMobilePermissionMode(mode: MobilePermissionMode): Permission
 export interface ComposerDraftState {
   text: string;
   attachments: ImageAttachment[];
+  metadata?: ComposerMetadata;
 }
 
 export type ComposerDraftsMap = Record<string, ComposerDraftState>;
@@ -70,6 +73,7 @@ export interface PanelBucketState {
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  subagentSelection?: SubagentSelection;
 }
 
 export function emptyPanelBucketState(): PanelBucketState {

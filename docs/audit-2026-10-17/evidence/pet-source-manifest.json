@@ -1,0 +1,104 @@
+{
+  "baseline": "ab8b03f86ad38835939d4125b56bf4513cae7f15",
+  "productionSources": [
+    {
+      "path": "packages/pet/src/disclosure/search.ts",
+      "sha256": "cb82b97d6e4451150260bec768e066622392d4bc475501d0ce29f0c006ee580c",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/disclosure/catalog.ts",
+      "sha256": "0572efc5e4223ddb5cf5821a62730af875c4836159a1192636cdc57f3e63b9b4",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/disclosure/jsonl.ts",
+      "sha256": "4c8f5d475999f0b019b417451f9edb6e255e014c43287fff75161574dccf1e57",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/disclosure/latest-result.ts",
+      "sha256": "f5cc8062097b673b459d5ce9821986a7d4bcd37c6d0eea2c946a8d568f3d6645",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/disclosure/todo-snapshot.ts",
+      "sha256": "ee603a46b8be11e91fab26abd1e1003568497abb35034bec10e9e35e0585e3d0",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/sessions-tool.ts",
+      "sha256": "41436bc932e70fef53d66946165b8f04eea32f868ffec2970a29221d417da8de",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/session-index.ts",
+      "sha256": "fe1cfe727bc25f94892e668b5d3dd1f31dd6269f253e1188c766abc4fe9f7389",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/projection-extension.ts",
+      "sha256": "f2944215f93c5277edc8e0b030955dc0df71d7d13490e66ceba91fc74614a688",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/topic-segment.ts",
+      "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/segment-closure.ts",
+      "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/im-session-list.ts",
+      "sha256": "31eb8b275e505df25849e9133d16c09750b708eb099b0db94cb24fd9b87e229b",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/session-visit-receipt.ts",
+      "sha256": "93594162fdec0789e71434aa5d96ebe751fed2ee186eb9e7ad0e476a9f8a655f",
+      "matchesFrozenGitBlob": true
+    },
+    {
+      "path": "packages/pet/src/context-recall.ts",
+      "sha256": "c5d8aad70fcb73fcd303641950ffbf70e4aa4d19a5b01cba528b7c973bf2a742",
+      "matchesFrozenGitBlob": true
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/audit-2026-10-17/evidence/pet-projection-segment.log",
+      "sha256": "1f235f401b40d7efb58fba793d0f440355c34566aacdd10ef95a2971b5640885"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/pet-projection-segment.test.ts",
+      "sha256": "f351d04d4c85985673fd5b1192fcf2e66ea583992849f570eb32588fc0b80c22"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/pet-search-json-text.log",
+      "sha256": "b1b3fe5774c1b56f0299131502d95a8061de76576a307262e265d6d9d0e0f0a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/pet-search-json-text.test.ts",
+      "sha256": "8d66f3b11c6fc06945fc342f855c2e7bd7e2f5b72585e22803cf408774d23617"
+    }
+  ],
+  "dynamic": {
+    "shards": 2,
+    "tests": 6,
+    "expect": 18,
+    "failures": 0,
+    "skipped": 0,
+    "allFirstRunLogsPreserved": true
+  },
+  "scope": {
+    "realNetwork": false,
+    "realMessages": false,
+    "realModels": false,
+    "nativeProcesses": false,
+    "realIpc": false,
+    "ownedTemporaryDirectoriesRemoved": true
+  }
+}

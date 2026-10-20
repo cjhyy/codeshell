@@ -1,0 +1,12 @@
+{
+  "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+  "sha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+  "displayedLineRanges": [
+    [
+      1,
+      302
+    ]
+  ],
+  "pinReference": "host-consumer-initial-pins.json",
+  "displayAt": "2026-10-17T18:55:33.442123+00:00"
+}

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "async send|async call|throw new Error",
+    "packages/chat/src/telegram.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "150:  async send(target: string, message: OutgoingMessage): Promise<void> {\n180:          throw new Error(\"Telegram 待发送图片的类型不受支持\");\n193:  private async call<T>(method: string, body: unknown, signal: AbortSignal): Promise<T> {\n203:  private async callMultipart<T>(method: string, body: FormData, signal: AbortSignal): Promise<T> {\n217:      throw new Error(`Telegram ${method} 返回无效 JSON（HTTP ${response.status}）`);\n220:      throw new Error(result.description ?? `Telegram ${method} 失败（HTTP ${response.status}）`);\n231:    if (!file.file_path) throw new Error(\"Telegram getFile 未返回文件路径\");\n236:    if (!response.ok) throw new Error(`Telegram 文件下载失败（HTTP ${response.status}）`);\n319:    throw new Error(\"Telegram 附件超过大小限制\");\n322:    if (bytes.byteLength > maxBytes) throw new Error(\"Telegram 附件超过大小限制\");\n334:      throw new Error(\"Telegram 附件超过大小限制\");\n",
+  "stderr": ""
+}

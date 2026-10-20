@@ -25,6 +25,28 @@ const projects: MobileProjectMeta[] = [
   { path: "/Users/x/proj", name: "proj", addedAt: 2 },
 ];
 
+test("SessionList selected project cannot match another case-distinct Host root", () => {
+  const html = renderToStaticMarkup(
+    <SessionList
+      sessions={[
+        { id: "upper", title: "Owned UPPER history", cwd: "/srv/Example", updatedAt: 1 },
+        { id: "lower", title: "Owned lower history", cwd: "/srv/example", updatedAt: 2 },
+      ]}
+      projects={[
+        { id: "upper", name: "Upper", path: "/srv/Example", pathCaseSensitive: true },
+        { id: "lower", name: "Lower", path: "/srv/example", pathCaseSensitive: true },
+      ]}
+      activeProjectId="lower"
+      activeProjectCwd="/srv/example"
+      onSelect={() => {}}
+      onNew={() => {}}
+      onRefresh={() => {}}
+    />,
+  );
+  expect(html).toContain("Owned lower history");
+  expect(html).not.toContain("Owned UPPER history");
+});
+
 test("SessionList 显示标题/项目名/automation 标", () => {
   const html = renderToStaticMarkup(
     <SessionList

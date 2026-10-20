@@ -1,0 +1,15 @@
+64:  workId: string;
+66:  description: string;
+68:  workKind: "agent" | "shell" | "video" | "cc";
+78:  finishedAt: number;
+129:  readonly description: string;
+237:  description: string;
+387:    kind: "result",
+396:      workId: item.agentId,
+398:      description: item.description,
+412:      finishedAt: item.enqueuedAt,
+421:    description: () => envelope.payload.description,
+423:    workKind: () => envelope.payload.workKind,
+974:    description: payload.description,
+976:    ...(payload.workKind !== "agent" ? { workKind: payload.workKind } : {}),
+999:    description: item.description,

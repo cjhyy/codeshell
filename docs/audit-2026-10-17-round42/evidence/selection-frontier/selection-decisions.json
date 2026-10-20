@@ -1,0 +1,45 @@
+{
+  "counts": {
+    "newProductSemanticReads": 0,
+    "findings": 0,
+    "candidates": 0,
+    "related": 0,
+    "coverageRowsRead": 29,
+    "historicalMarkdownReportsRead": 2,
+    "historicalPreflightRead": 1
+  },
+  "decisions": [
+    {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "decision": "not-selected-before-product-body",
+      "reason": "Prior R23 explicit incidental full display, no semantic review; authority/identity/security contract was excluded. Root does not reopen this mechanism or decode its product body."
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "sha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "decision": "not-selected-before-product-body",
+      "reason": "R8 same-SHA converter metadata/command conversion coverage and fixture preflight already exist. Completeness of prior semantic range not proved; avoid redundant old selected direction, do not claim full/unread or reopen R6 failed frontmatter runtime."
+    },
+    {
+      "path": "packages/core/src/plugins/installer/codex/convertSkills.ts",
+      "sha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8",
+      "decision": "not-selected-before-product-body",
+      "reason": "R8 same-SHA converter metadata/command conversion coverage and fixture preflight already exist. Completeness of prior semantic range not proved; avoid redundant old selected direction, do not claim full/unread or reopen R6 failed frontmatter runtime."
+    },
+    {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "sha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "decision": "not-selected-before-product-body",
+      "reason": "Same-SHA R15 migration-source-manifest scope explicitly full static read. R28 unknown/pin-only ranking is insufficient and overridden by direct historical scope."
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "decision": "not-selected-before-product-body",
+      "reason": "Same-SHA R4 review:full and R21 scope Full static source. Excluded before product body despite R28 unknown/pin-only ranking."
+    }
+  ],
+  "historyContextReadScope": "Only29 collected path-matched objects fully read;10-query saved match contexts not all read. Path counts9/45/48/96/44 and SHA10/8/6/12/10, cap60. No historical fixture/test/log execution.",
+  "productRuns": 0
+}

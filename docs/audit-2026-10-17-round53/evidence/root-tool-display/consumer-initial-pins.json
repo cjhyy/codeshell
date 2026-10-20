@@ -1,0 +1,33 @@
+{
+  "atUTC": "2026-10-17T17:51:27.111831+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "bytes": 5744,
+      "lines": 163,
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "beforeCurrentBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/tui/src/cli/output/terminal-ui.ts",
+      "bytes": 7091,
+      "lines": 235,
+      "sha256": "f274a3b1dd282503cc6aa7ae745b76069631d062c0b7edf7965c9e5b96e308ec",
+      "beforeCurrentBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "bytes": 13567,
+      "lines": 407,
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "beforeCurrentBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.ts",
+      "bytes": 4080,
+      "lines": 121,
+      "sha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+      "beforeCurrentBodyAndLineNavigation": true
+    }
+  ]
+}

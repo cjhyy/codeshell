@@ -1,0 +1,4 @@
+docs/audit-2026-10-17-round50/evidence/scroll-review/source-excerpts.txt 29 b'93: '
+Traceback (most recent call last):
+  File "<stdin>", line 7, in <module>
+AssertionError: b'93: '

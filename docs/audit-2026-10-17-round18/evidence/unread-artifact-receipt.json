@@ -1,0 +1,77 @@
+{
+  "baseCommit": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "pathBase": "docs/audit-2026-10-17-round18",
+  "formalCount": 0,
+  "candidateCount": 1,
+  "relatedCount": 0,
+  "artifacts": [
+    {
+      "path": "evidence/unread-candidates.json",
+      "bytes": 1985,
+      "sha256": "1ce5a09e90a03b05f2508f053ed8aae220c3ed73a6a8c5367604b9bf302aeb1e"
+    },
+    {
+      "path": "evidence/unread-dedup.json",
+      "bytes": 18255,
+      "sha256": "397f84be9c56ac2c6740af6ef3954d81ad2328a39bad33b0e26f62f2e551fa4d"
+    },
+    {
+      "path": "evidence/unread-dedup.py",
+      "bytes": 3075,
+      "sha256": "6a0662551f906f22a568aac4b3b77c1ade2c431443c427054f2bada2fc188a8b"
+    },
+    {
+      "path": "evidence/unread-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "evidence/unread-preflight.json",
+      "bytes": 658,
+      "sha256": "4665ad822414e7fa50f11054e83957d60842df2760ae2ffe314ea61b3d911a9f"
+    },
+    {
+      "path": "evidence/unread-pure.first.exit.json",
+      "bytes": 324,
+      "sha256": "45ba1b05948296c5c49dd2128cbad1d42ec06283e75ab2b5e63c0fec61e4668c"
+    },
+    {
+      "path": "evidence/unread-pure.first.raw.log",
+      "bytes": 1335,
+      "sha256": "6f477992665d7710d6b3144e1d3d7a09172901cd418a98619dcc81f1f488d255"
+    },
+    {
+      "path": "evidence/unread-pure.test.ts",
+      "bytes": 4465,
+      "sha256": "1b09f1c3798c3e5b4f4fd98888f8033b73b759e97c288746c3fc93916e9b9b89"
+    },
+    {
+      "path": "evidence/unread-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "evidence/unread-source-manifest.json",
+      "bytes": 4175,
+      "sha256": "9078b671a805a698f8ec44499e5bf51f602db3ccb14d2416793ffedf59497908"
+    },
+    {
+      "path": "evidence/unread-validation.json",
+      "bytes": 1593,
+      "sha256": "6f3d81359643e902d0759da762f8d47003314c632cc0c5e0d506ba739bbc8925"
+    },
+    {
+      "path": "unread.md",
+      "bytes": 5693,
+      "sha256": "03bf50585b504667977ac4fb54c4f1f493a4b261b32088ec92dd4f11b86514ad"
+    }
+  ],
+  "artifactCountExcludingSelf": 12,
+  "sourcePinCount": 10,
+  "notes": [
+    "No product or Git writes; only own report/evidence.",
+    "First output and exit preserved before inspection; no reruns.",
+    "One supplementary rg display was truncated; authoritative complete dedup is structured JSON, followed by specific historical paragraphs.",
+    "No runtime/navigation/preflight failures."
+  ]
+}

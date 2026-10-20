@@ -22,6 +22,23 @@ function lintStdin(filename: string, source: string) {
 
 describe("ESLint CodeShell package boundary guards", () => {
   it(
+    "allows only the portable Link public contract in Core",
+    () => {
+      const allowed = lintStdin(
+        "packages/core/src/__lint_link_contract_probe__.ts",
+        'export { FIGMA_MCP_SERVER_URL } from "@cjhyy/code-shell-link";',
+      );
+      expect(allowed.status).toBe(0);
+      const denied = lintStdin(
+        "packages/core/src/__lint_link_private_probe__.ts",
+        'export { internal } from "@cjhyy/code-shell-link/internal";',
+      );
+      expect(denied.status).not.toBe(0);
+      expect(denied.stdout).toContain("core source must use relative self-imports");
+    },
+    LINT_PROBE_TIMEOUT_MS,
+  );
+  it(
     "keeps optimization lab on the extension contract",
     () => {
       const result = lintStdin(

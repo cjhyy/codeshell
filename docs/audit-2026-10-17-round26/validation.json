@@ -1,0 +1,26 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "totals": {
+    "firstBunShards": 0,
+    "completedCleanShards": 0,
+    "failedBunShards": 0,
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "runtimeImports": 0,
+    "fixturesWritten": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "failedTests": 0,
+    "skippedOrFilteredTests": 0,
+    "existingBaselineTests": 0,
+    "focusedTests": 0,
+    "productReruns": 0
+  },
+  "runs": [],
+  "notes": [
+    "Bothformal findingsarestaticdirectproducer/callervalueflow;no nativebusinessGit/branchmutation orReact/UI/modelrun.",
+    "Source-derivedargv/Selectstate not actualobservedruntime. Existingtestsaredeclarations only;0executionsnot a green gate.",
+    "RootGitmetadata/workflow anddocument hashesdistinctfrombusinessproductexecution. OldCLI-R4-01 remainscandidateandfailedgroupSKIP;currentreviewconsumeronlyoldrelated,notnewformal.",
+    "Priornegativeprep12+targetprep8copies onlyprovenance/hashrechecks;notnewfullreads. FirstsemanticSHAabsentinoneprep retainedasnull,no retroactiveclaim."
+  ]
+}

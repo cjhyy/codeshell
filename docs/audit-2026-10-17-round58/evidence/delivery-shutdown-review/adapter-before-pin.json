@@ -1,0 +1,9 @@
+{
+  "path": "packages/chat/src/telegram.ts",
+  "bytes": 12790,
+  "lineCount": 362,
+  "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+  "pinnedAtUTC": "2026-10-17T19:30:02.912509+00:00",
+  "timing": "before own body/nav; filenamecf65a4",
+  "scopeIntent": "One normal polling adapter can return on abort after handler already only enqueued, not wait out-of-band queue consumer."
+}

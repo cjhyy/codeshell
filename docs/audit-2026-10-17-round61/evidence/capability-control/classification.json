@@ -1,0 +1,97 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "disposition": "bounded-negative-with-one-previously-documented-dotted-token-cause-exclusion",
+  "ordinaryReadProgress": [
+    "Descriptors retain disabled entries when passed full inventories; control token/settings key mode is explicit. User writes use control modes, project inherit removes a key, and project/profile/local value folds operate per token.",
+    "Actual Desktop settings wrapper constructs a fresh configured-on-disk service, not a live MCP connection. Renderer forwards project state and reloads descriptors; registry activation correctness is not inferred."
+  ],
+  "oldCauseExclusions": [
+    {
+      "label": "dotted-name overlay write/read shape",
+      "canonical": "docs/archive/bug-followups-2026-08-13.md",
+      "lines": [
+        36,
+        45
+      ],
+      "originalCause": "Allowed dot in name embedded in capabilityOverrides.<bucket>.<name>; setDottedSetting splits into nested objects while overlay expects a flat literal-key record. Original document covers plugin/Skill direct install-capability producer.",
+      "currentObservation": "MCP name producer/literal record projection and CapabilityService.setOverride show the same dotted-token write/read shape in another bucket/caller. This is preserved as prior cause evidence, not a new formal ID or newrelated count.",
+      "normalExampleForReasoning": "A nonempty unique server name team.docs is accepted by the shown editor/schema and projected as mcp:team.docs. Service builds capabilityOverrides.mcp.team.docs, whereas overlay reads mcp[team.docs]. No helper or settings command executed.",
+      "sourceRanges": {
+        "packages/desktop/src/renderer/settings/McpSection.tsx": [
+          [
+            444,
+            453
+          ],
+          [
+            1320,
+            1337
+          ],
+          [
+            1393,
+            1395
+          ],
+          [
+            1459,
+            1467
+          ]
+        ],
+        "packages/core/src/capability-control/project.ts": [
+          [
+            57,
+            81
+          ]
+        ],
+        "packages/core/src/capability-control/service.ts": [
+          [
+            151,
+            164
+          ]
+        ],
+        "packages/core/src/settings/manager.ts": [
+          [
+            83,
+            91
+          ],
+          [
+            145,
+            155
+          ],
+          [
+            572,
+            584
+          ]
+        ],
+        "packages/core/src/capability-control/overlay.ts": [
+          [
+            55,
+            64
+          ]
+        ]
+      },
+      "unverifiedCurrentScenario": "Full IPC token validation and actual reload/disk schema behavior were intentionally not read or exercised after exact prior-cause gate; do not claim a newly confirmed end-to-end desktop no-op."
+    },
+    {
+      "label": "old F-07 constructor frozen registry vs mid-session enable",
+      "canonical": "docs/archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md:69–108",
+      "disposition": "Prior limitation retained; not re-audited as Root composition/activation work or new UI/runtime claim."
+    },
+    {
+      "label": "old P1-20 untrusted project on over global off",
+      "canonical": "bugs/2026-07-13-repo-audit.md:185–190",
+      "disposition": "Prior permission issue excluded; no trust/enforcement experiment or certification."
+    }
+  ],
+  "limitations": [
+    "0 new does not certify all overlay/control/layer provenance or live registry correctness.",
+    "globalEnabled here is projection of the supplied SettingsManager.get baseline, not an independently certified raw user-only layer.",
+    "No arbitrary invalid DTO/missing host/synthetic identity or real permission/settings experiment.",
+    "Old same-SHA overlay full and supporting old/source overlap are retained; no first-read or global unique coverage claims."
+  ]
+}

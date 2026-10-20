@@ -1,0 +1,141 @@
+{
+  "base": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "files": [
+    {
+      "path": "packages/web/scripts/test-auth-boundary-browser.mjs",
+      "coverage": "full static only",
+      "selectedLineRanges": [
+        [
+          1,
+          1035
+        ]
+      ],
+      "readingChunks": [
+        [
+          1,
+          350
+        ],
+        [
+          351,
+          700
+        ],
+        [
+          701,
+          1035
+        ]
+      ],
+      "lineCount": 1035,
+      "bytes": 38352,
+      "sha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "frozenSha256": "61320d56e136d892c6885adc78ab55dec20b1e0629021276bd63ecf585061505",
+      "matchesFrozen": true,
+      "note": "Full static scene; four ordered Auth operations and setup/failure/cleanup/receipt only; no account/browser/server/helper import or execution."
+    },
+    {
+      "path": "packages/web/scripts/test-auth-boundary-browser.lifecycle.test.mjs",
+      "coverage": "full static only",
+      "selectedLineRanges": [
+        [
+          1,
+          315
+        ]
+      ],
+      "readingChunks": [
+        [
+          1,
+          315
+        ]
+      ],
+      "lineCount": 315,
+      "bytes": 11184,
+      "sha256": "71c043fa3a74d01c0afa32fc648ab52e86eb53ff2dd95cf0d3ac986b0ed8f5bc",
+      "frozenSha256": "71c043fa3a74d01c0afa32fc648ab52e86eb53ff2dd95cf0d3ac986b0ed8f5bc",
+      "matchesFrozen": true,
+      "note": "Full static existing8test declarations; no AST/VM/FS/test execution."
+    },
+    {
+      "path": "packages/web/scripts/test-service-worker-browser.mjs",
+      "coverage": "full static only",
+      "selectedLineRanges": [
+        [
+          1,
+          722
+        ]
+      ],
+      "readingChunks": [
+        [
+          1,
+          360
+        ],
+        [
+          361,
+          722
+        ]
+      ],
+      "lineCount": 722,
+      "bytes": 27094,
+      "sha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "frozenSha256": "ae2208d233005b87dbdcd1c0acdff389359aa6d7af417c4e319545bfa3a64814",
+      "matchesFrozen": true,
+      "note": "Full static eleven-operation scene, exported gates and CLI entry; no SW/browser/proxy/cleanup execution."
+    },
+    {
+      "path": "packages/web/scripts/test-service-worker-browser.test.mjs",
+      "coverage": "full static only",
+      "selectedLineRanges": [
+        [
+          1,
+          210
+        ]
+      ],
+      "readingChunks": [
+        [
+          1,
+          210
+        ]
+      ],
+      "lineCount": 210,
+      "bytes": 8518,
+      "sha256": "c1c0166491c37fc236608b849b6a2a33fa7f7f2de90b1b6028932d8e9e07755b",
+      "frozenSha256": "c1c0166491c37fc236608b849b6a2a33fa7f7f2de90b1b6028932d8e9e07755b",
+      "matchesFrozen": true,
+      "note": "Full static existing9test declarations; no imports/unit/FS/actual CLI refusal run."
+    },
+    {
+      "path": "packages/web/scripts/test-subagent-state-browser.mjs",
+      "coverage": "full static only",
+      "selectedLineRanges": [
+        [
+          1,
+          799
+        ]
+      ],
+      "readingChunks": [
+        [
+          1,
+          280
+        ],
+        [
+          281,
+          560
+        ],
+        [
+          561,
+          799
+        ]
+      ],
+      "lineCount": 799,
+      "bytes": 32008,
+      "sha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "frozenSha256": "ff634f3c6b406250e5629f268fe71036368511409f5667ce05bb60ff09f2d197",
+      "matchesFrozen": true,
+      "note": "Full static eightcase/two viewport scene, monitor/ledger/cleanup/receipt chain; no reducer/browser/worker/server execution."
+    }
+  ],
+  "fullReadSourceCount": 5,
+  "selectedReadSourceCount": 0,
+  "sourceLineTotal": 3081,
+  "productRuntimeAttempts": 0,
+  "testsRun": 0,
+  "note": "All five scene/test sources read contiguously. Shared helper implementation not selected or executed; separate audit owns it. Full static is not full semantic/transitive/OS/runtime verification."
+}

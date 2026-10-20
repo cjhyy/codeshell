@@ -1,0 +1,13 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round10/evidence/root-run-data.test.ts:
+(pass) round10 checkpoint heuristic and ordinary data controls > a negative test-status sentence still matches the documented keyword heuristic [2.89ms]
+(pass) round10 checkpoint heuristic and ordinary data controls > positive phase detection deduplicates one phase and keeps structured text [0.04ms]
+(pass) round10 checkpoint heuristic and ordinary data controls > final turn boundary preserves session pointer, tool names and periodic summary [0.51ms]
+(pass) round10 ordinary store filters before paging and preserves independent disk values [44.17ms]
+
+ 4 pass
+ 0 fail
+ 15 expect() calls
+Ran 4 tests across 1 file. [279.00ms]
+Completed Bun shard: 4 tests, 0 skipped; 0 failures.

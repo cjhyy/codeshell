@@ -1,0 +1,28 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round19/evidence/simplediff-focused.test.ts:
+(pass) round19 simple diff ordinary owned text > source and target text projections survive small normal edits [2.24ms]
+(pass) round19 simple diff ordinary owned text > CRLF-only differences intentionally collapse to identical previews [0.12ms]
+(pass) round19 simple diff ordinary owned text > ordinary changed CRLF text has normalized context and markers
+(pass) round19 simple diff ordinary owned text > empty contents remain an empty preview with one split token
+(pass) round19 simple diff ordinary owned text > empty to nonempty text and reverse expose split-token markers
+(pass) round19 simple diff ordinary owned text > trailing newline changes remain visible through blank split tokens
+(pass) round19 simple diff ordinary owned text > interior blank lines retain an explicit addition or removal
+(pass) round19 simple diff ordinary owned text > zero and one context preserve every change and compact only unchanged rows [0.28ms]
+(pass) round19 simple diff ordinary owned text > two changes have separate or merged context without duplicate rows [0.08ms]
+(pass) round19 simple diff ordinary owned text > a literal gap character stays distinguishable through its line marker [0.02ms]
+
+packages/core/src/session/simple-diff.test.ts:
+(pass) diffLines > identical → all context lines [0.62ms]
+(pass) diffLines > a changed middle line shows -old +new with context
+(pass) diffLines > pure addition
+(pass) diffLines > pure deletion
+(pass) renderDiffPreview > identical → empty string
+(pass) renderDiffPreview > shows the change with +/- markers [0.26ms]
+(pass) renderDiffPreview > elides far-away context with a gap marker
+
+ 17 pass
+ 0 fail
+ 57 expect() calls
+Ran 17 tests across 2 files. [58.00ms]
+Completed Bun shard: 17 tests, 0 skipped; 0 failures.

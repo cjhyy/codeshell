@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/tmp/codeshell-audit-round105-character-full-gate-review/verify-metadata.py", line 32, in <module>
+    assert allChecks
+           ^^^^^^^^^
+AssertionError

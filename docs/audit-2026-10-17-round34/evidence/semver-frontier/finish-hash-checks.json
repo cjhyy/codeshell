@@ -1,0 +1,52 @@
+{
+  "checkedUTC": "2026-10-17T12:25:14.386421+00:00",
+  "sourceAndMetadataChecks": [
+    {
+      "path": "packages/core/src/utils/semver.ts",
+      "initialSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "currentSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "unchanged": true
+    },
+    {
+      "path": "packages/tui/src/render/terminal.ts",
+      "initialSha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c",
+      "currentSha256": "de4b0de65e8989d6c44b108fb5b426d8433cbcea33a1b6ef3e34db5642de5c6c",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/updater.ts",
+      "initialSha256": "0d51a491f87043c21a6b3a7cae9306374f2eaae45d157d70fe1b7e8eb75a10f8",
+      "currentSha256": "0d51a491f87043c21a6b3a7cae9306374f2eaae45d157d70fe1b7e8eb75a10f8",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "initialSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "currentSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/version.test.ts",
+      "initialSha256": "23bffbcbbe977d2fbfceba753672445347bb7ff70db82fb2517f10d5d11e5fda",
+      "currentSha256": "23bffbcbbe977d2fbfceba753672445347bb7ff70db82fb2517f10d5d11e5fda",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/index.exports.test.ts",
+      "initialSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "currentSha256": "461081c4a68fb8a13f9dd10f76f491a9b913b3cc299f96ce1c325f6ea9f5744c",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "initialSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "currentSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "unchanged": true
+    }
+  ],
+  "checks": 7,
+  "allSourceAndMetadataUnchanged": true,
+  "historyDriftReceipt": "history-drift-checks.json",
+  "productAttempts": 0,
+  "gitCommands": 0
+}

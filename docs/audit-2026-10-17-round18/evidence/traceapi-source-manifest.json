@@ -1,0 +1,120 @@
+{
+  "base": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "files": [
+    {
+      "path": "packages/web/src/model-trace-api.ts",
+      "frozenSha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "currentSha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "matchesFrozen": true,
+      "bytes": 2466,
+      "ranges": [
+        "1-72 (full source)"
+      ],
+      "kind": "actual runtime leaf: ordinary successful queries/get/config only; excluded negative boundary branches not tested",
+      "lineCount": 72
+    },
+    {
+      "path": "packages/web/src/model-trace-api.test.ts",
+      "frozenSha256": "35a25b4d02bfc10a598491b2a6477689b5128c8365d0541199860ccf54e6f8cd",
+      "currentSha256": "35a25b4d02bfc10a598491b2a6477689b5128c8365d0541199860ccf54e6f8cd",
+      "matchesFrozen": true,
+      "bytes": 2622,
+      "ranges": [
+        "1-42 ordinary case (selected contract); full first read also displayed excluded later snippets"
+      ],
+      "kind": "source only; whole test file not executed; displayed excluded portions not reviewed",
+      "lineCount": 66
+    },
+    {
+      "path": "packages/core/src/model-traces/types.ts",
+      "frozenSha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+      "currentSha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+      "matchesFrozen": true,
+      "bytes": 6231,
+      "ranges": [
+        "1-105",
+        "97-153",
+        "210-214"
+      ],
+      "kind": "source type declarations only; no Core runtime import",
+      "lineCount": 214
+    },
+    {
+      "path": "packages/web/src/components/ModelTraceExplorer.tsx",
+      "frozenSha256": "773c83917377c4652b9f2a96d7e97db05330a6813a419abd11807e5bc4f5659b",
+      "currentSha256": "773c83917377c4652b9f2a96d7e97db05330a6813a419abd11807e5bc4f5659b",
+      "matchesFrozen": true,
+      "bytes": 38195,
+      "ranges": [
+        "252-426 ordinary API consumers selected; remaining component not reviewed"
+      ],
+      "kind": "source only; no component import/render/browser execution",
+      "lineCount": 913
+    },
+    {
+      "path": "docs/model-observability.md",
+      "frozenSha256": "df179afb4282d7e98464e4605f957a847177c658a01d2f3dee3babedab20564b",
+      "currentSha256": "df179afb4282d7e98464e4605f957a847177c658a01d2f3dee3babedab20564b",
+      "matchesFrozen": true,
+      "bytes": 7122,
+      "ranges": [
+        "1-118 (full document; originally read up to line 145)"
+      ],
+      "kind": "local contract source only",
+      "lineCount": 118
+    },
+    {
+      "path": "packages/web/package.json",
+      "frozenSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "currentSha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+      "matchesFrozen": true,
+      "bytes": 3638,
+      "ranges": [
+        "1-77 (full file; originally read up to line 100)"
+      ],
+      "kind": "package metadata only; no dependency install/build",
+      "lineCount": 77
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true,
+      "bytes": 233,
+      "ranges": [
+        "1-8 (full source)"
+      ],
+      "kind": "guard entry read and executed for one owned shard",
+      "lineCount": 8
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "frozenSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "currentSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "matchesFrozen": true,
+      "bytes": 6518,
+      "ranges": [],
+      "kind": "metadata byte pin only; invoked by guarded runner; not source-audited in this direction",
+      "lineCount": 152
+    },
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "bytes": 17639,
+      "ranges": [
+        "full file"
+      ],
+      "kind": "repository instructions read; not product bug coverage",
+      "lineCount": 217
+    }
+  ],
+  "limitations": [
+    "SHA inventory is selected-file pinning, not evidence of entire-file or transitive coverage.",
+    "Core source was read only as declarations; emitted type-only imports cause no Core runtime execution in this fixture."
+  ],
+  "metadataAdjustments": [
+    "First metadata generation guessed document/package range endpoints as 116/86; the first link/range review showed actual 118/77 lines. Corrected to authoritative line counts without running any product validation again."
+  ]
+}

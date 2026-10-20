@@ -1,0 +1,106 @@
+{
+  "frozenUTC": "2026-10-17T13:18:42.628448+00:00",
+  "directory": "/tmp/codeshell-audit-round37-history-supplement",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 6213,
+      "sha256": "46b4c2485c058f362bdaea8ec0194aefc57d6aaeed16dcba45555fe1627e8208"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1374,
+      "sha256": "974deafe96ea8cce7c08bbac58f941c61182a9b511ada4a115ff185f6634fc28"
+    },
+    {
+      "path": "inventory-comparison.json",
+      "bytes": 21957,
+      "sha256": "c23051e420bf843063a6fd82fcaa6de8f1bff5c0974643dd0a4f1789681b2b16"
+    },
+    {
+      "path": "new-delta-md-contexts.json",
+      "bytes": 3453,
+      "sha256": "e1c5358d04b2cabc885500d3fd52d1f400e8a10cb224ffad1b64fdfd96d5fb4c"
+    },
+    {
+      "path": "query-method.py",
+      "bytes": 5568,
+      "sha256": "90a7b97e02a40d7bc5a0af3a1701a5f314ca8619a029e67fd6a023824f85fa08"
+    },
+    {
+      "path": "query-results.json",
+      "bytes": 1282080,
+      "sha256": "b218716d4491136aa1ccc8847db3b49c1d9587dd44a34e30045d4ca817c14bfd"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3602,
+      "sha256": "4d05ebcb284edbaedda0cba0838b6d35740d97a3215fc0557bf687c04376bba9"
+    },
+    {
+      "path": "selected-contexts.json",
+      "bytes": 31445,
+      "sha256": "f54137411b5da69bcce25728666240bbac51dedcab5b7e978f19c4cd8af798b7"
+    },
+    {
+      "path": "window-results.json",
+      "bytes": 582022,
+      "sha256": "588aae7ba72e90a21fc47e68429a32f51b67de604256d3ab8941ed135426f44c"
+    }
+  ],
+  "fileCountExcludingSelf": 9,
+  "role": "metadata-only historical dedup supplement for existingMARKETPLACE-R37-01",
+  "newFindingIds": 0,
+  "productSourceSemanticRows": 0,
+  "productSourceSemanticLines": 0,
+  "historicalFullUnitsActuallyRead": 25,
+  "extraNewDeltaMDParagraphsRead": 3,
+  "inputCorpus": 3318,
+  "oldCorpus": 3216,
+  "newFrozen35And36Paths": 102,
+  "sharedDatedChanges": 1,
+  "allFormalCorpusFinishUnchanged": true,
+  "productRuns": 0,
+  "tests": 0,
+  "fixtures": 0,
+  "git": 0,
+  "reportLinks": [
+    {
+      "target": "initial-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "inventory-comparison.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "query-method.py",
+      "existsOrSelf": true
+    },
+    {
+      "target": "query-results.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "window-results.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "selected-contexts.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "new-delta-md-contexts.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "checks.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "existsOrSelf": true
+    }
+  ]
+}

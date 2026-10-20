@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/tmp/codeshell-audit-20261018-round64-finalize.py", line 38, in <module>
+    assert len(raw_paths)==0 and sorted(name for name in paths if name.endswith('.log'))==raw_paths
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

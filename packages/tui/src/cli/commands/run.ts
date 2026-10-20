@@ -27,6 +27,7 @@ import { createRenderer, type OutputFormat } from "../output/renderer.js";
 import type { LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import { defaultSandboxConfig, type SandboxConfig } from "@cjhyy/code-shell-core/internal";
+import { configureModelTracing } from "@cjhyy/code-shell-core/internal";
 import {
   buildNotificationMessage,
   buildNotificationSummary,
@@ -88,6 +89,10 @@ export async function runCommand(options: RunOptions): Promise<void> {
   // Load settings — host terminal entrypoint reads the full hierarchy.
   const settingsManager = new SettingsManager(cwd, "full");
   const settings = settingsManager.get();
+  configureModelTracing({
+    storageDir: join(settings.session.storageDir ?? sessionsRoot(), ".model-traces"),
+    source: "tui",
+  });
 
   // Resolve the text model from the unified catalog
   // (modelConnections[]/credentials[]/defaults). The seed Engine re-resolves

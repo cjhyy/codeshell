@@ -1,0 +1,33 @@
+{
+  "baseline": "c9056c8047a8e75ab2469e59bf1d3fedd9ad7272",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "cleanRuns": 0,
+    "failedRuns": 0,
+    "pass": 0,
+    "fail": 0,
+    "skipped": 0,
+    "expect": 0,
+    "existingTests": 0,
+    "focusedTests": 0,
+    "productImports": 0,
+    "constructors": 0,
+    "powerShellAttempts": 0,
+    "installerAttempts": 0,
+    "productProcessAttempts": 0,
+    "productReruns": 0
+  },
+  "actualScope": "Deep static source/contract/dataflow and read-only audit metadata only. Fiveassigned files full2041lines; no product/testexecution.",
+  "selectedDependencies": [
+    "inventory/integrity fullsource only",
+    "buildreceipt/localconfiguration/UIstep+final/workflow/priordocs selectedsource only"
+  ],
+  "excluded": [
+    "No importing orrunning anytargethelper/driver/test/PowerShell/installer/uninstaller/process/native/auth/custody/security/permission/model/network logic.",
+    "No mocks,fixtures,sourceextraction,simulatedattacks,OSprobe,stress,realfilebusinessmutation oractualCIjob.",
+    "No oldfailedroute recovery,build/lint/typecheck/fullsuite,receipt-onlysuccessclaim."
+  ],
+  "evidenceBoundary": "No productraw/exit existsfor thisdirection; priorruns/testcounts are priorcontract/scope only andnotcurrentexecution. Source/read-only Git/JSON/rg metadata isnotproductvalidation."
+}

@@ -1,3 +1,6 @@
+import { beforeAll as installHostFixture } from "bun:test";
+import { installTestLinkProviders } from "../../../../tests/helpers/link-providers.js";
+installHostFixture(installTestLinkProviders);
 import { describe, expect, test } from "bun:test";
 import type { CredentialAccess, CredentialMetadata } from "../credentials/access.js";
 import type { CliLinkProviderId, CliLinkStatus } from "./cli.js";

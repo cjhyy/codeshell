@@ -1,0 +1,38 @@
+{
+  "parentReportedBaseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "files": [
+    {
+      "name": "entry-decision.json",
+      "path": "/tmp/codeshell-audit-round31-search-entry/entry-decision.json",
+      "bytes": 2215,
+      "sha256": "2156b9006f9ee0f0088d0649e16aa783645928ee466b2d80e02ee401d9658a10"
+    },
+    {
+      "name": "reference-navigation.txt",
+      "path": "/tmp/codeshell-audit-round31-search-entry/reference-navigation.txt",
+      "bytes": 3473,
+      "sha256": "ade381cb4b572830f546b7bd983e1da82e92ead56bb7c0861fb2e01c2e07f237"
+    },
+    {
+      "name": "report.md",
+      "path": "/tmp/codeshell-audit-round31-search-entry/report.md",
+      "bytes": 3570,
+      "sha256": "2f188286b824e6c7f6a508389cf397d4d01493a8e8b8d24cc7a1e5dc72703c3c"
+    },
+    {
+      "name": "source-manifest.json",
+      "path": "/tmp/codeshell-audit-round31-search-entry/source-manifest.json",
+      "bytes": 10096,
+      "sha256": "05364da766fb5bf218a11d16e2bd47db16c4564a6a1e9bac62c914af40a64626"
+    }
+  ],
+  "artifactCount": 4,
+  "selfExcluded": true,
+  "newFormalFindings": 0,
+  "newCandidateFindings": 0,
+  "newRelatedFindings": 0,
+  "ordinaryProductionEntryEstablished": false,
+  "existingParentCandidateNotUpgraded": true,
+  "productExecutions": 0,
+  "gitCommands": 0
+}

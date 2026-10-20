@@ -1,0 +1,52 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/panels/resources/clone.ts",
+      "bytes": 4395,
+      "sha256": "d6f14fc6e4e4aa970907e4b275694f8ce59daaa6ae736feff097a414124725c9",
+      "lines": 114,
+      "atUTC": "2026-10-17T20:49:58.325120+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target source before body"
+    },
+    {
+      "path": "packages/server/src/panels/resources/storage.ts",
+      "bytes": 4053,
+      "sha256": "de74f5ccaa902ce091969da7612dce1ab3650cf47c59232296e1f9534b070e07",
+      "lines": 112,
+      "atUTC": "2026-10-17T20:49:58.326320+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target source before body"
+    },
+    {
+      "path": "packages/server/src/panels/resources/directories.ts",
+      "bytes": 3764,
+      "sha256": "4a0740ca54f8ffc24443e6d81583d82580dddddc74c5baa18344f05456a8b53e",
+      "lines": 119,
+      "atUTC": "2026-10-17T20:49:58.326945+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "target source before body"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "atUTC": "2026-10-17T20:49:58.327342+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "instruction hash reuse"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "atUTC": "2026-10-17T20:49:58.327707+00:00",
+      "beforeBodyAndLineNavigation": true,
+      "role": "instruction hash reuse"
+    }
+  ],
+  "sourceSemanticsRead": 0,
+  "rootReportedBaselineOnly": "9874f8abdfce0ade5bb058d26e026b10f173a129",
+  "GitVerified": false
+}

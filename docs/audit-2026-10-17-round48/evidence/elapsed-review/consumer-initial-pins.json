@@ -1,0 +1,34 @@
+{
+  "capturedUTC": "2026-10-17T15:57:12.263749+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "lines": 445,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "pinBeforeSourceBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.test.ts",
+      "bytes": 3146,
+      "lines": 73,
+      "sha256": "a7c58ab2cca9cb07faccdb28c326fd636085dd3b049285ac28b759ebc34cdc9a",
+      "pinBeforeSourceBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.phase0.test.ts",
+      "bytes": 7628,
+      "lines": 200,
+      "sha256": "1df453525ef6edb05665798aa21fd42500d9bb810d3cc0471124d15551735a49",
+      "pinBeforeSourceBodyAndLineNavigation": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.test.tsx",
+      "bytes": 710,
+      "lines": 23,
+      "sha256": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "pinBeforeSourceBodyAndLineNavigation": true
+    }
+  ],
+  "scope": "Actual rg filenames; registry import still to confirm from source"
+}

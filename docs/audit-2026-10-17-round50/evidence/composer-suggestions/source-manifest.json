@@ -1,0 +1,452 @@
+{
+  "role": "Independent bounded ordinary UI source/data reviewer; not browser/DOM/runtime validator.",
+  "rootReportedBaselineOnly": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "bytes": 3310,
+      "lines": 101,
+      "sha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          11,
+          30
+        ],
+        [
+          54,
+          101
+        ]
+      ],
+      "semanticLines": 68,
+      "displayedLineRanges": [
+        [
+          1,
+          101
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 101,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          10
+        ],
+        [
+          31,
+          53
+        ]
+      ],
+      "scope": "Ordinary option ID, listbox/active descendant association source, dependency fields, focus-interception markup and children contract. Anchor geometry31–53 and imports1–10 navigation/adjacency only; no DOM/browser/React/focus timing validation.",
+      "initialSemanticReadSha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+      "bytes": 13960,
+      "lines": 370,
+      "sha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          31,
+          34
+        ],
+        [
+          47,
+          53
+        ],
+        [
+          158,
+          193
+        ],
+        [
+          199,
+          370
+        ]
+      ],
+      "semanticLines": 219,
+      "displayedLineRanges": [
+        [
+          1,
+          370
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 370,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          30
+        ],
+        [
+          35,
+          46
+        ],
+        [
+          54,
+          157
+        ],
+        [
+          194,
+          198
+        ]
+      ],
+      "scope": "Ordinary item discriminant and selected/callback props, filtered list slices, stable flat-list order and matching section offsets, callback propagation and option IDs/onPick.16–30 imports,35–46 Host/config props,55–157 IPC/search/timer/authority adjacency and194–198 scroll effect are display/navigation only. Helper implementations and actual native/authority operations not reviewed.",
+      "initialSemanticReadSha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429",
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "lines": 2622,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          271,
+          278
+        ],
+        [
+          780,
+          784
+        ],
+        [
+          842,
+          872
+        ],
+        [
+          953,
+          985
+        ],
+        [
+          1341,
+          1407
+        ],
+        [
+          2149,
+          2226
+        ],
+        [
+          2230,
+          2233
+        ],
+        [
+          2253,
+          2258
+        ]
+      ],
+      "semanticLines": 232,
+      "displayedLineRanges": [
+        [
+          271,
+          282
+        ],
+        [
+          842,
+          872
+        ],
+        [
+          953,
+          985
+        ],
+        [
+          1341,
+          1413
+        ],
+        [
+          2128,
+          2228
+        ],
+        [
+          2230,
+          2260
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        16,
+        70,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        492,
+        496,
+        497,
+        779,
+        780,
+        781,
+        782,
+        783,
+        784,
+        1024,
+        1028,
+        1070,
+        1071,
+        1073,
+        1077,
+        1078,
+        1083,
+        1087,
+        1098,
+        1103,
+        1113,
+        1116,
+        1129,
+        1135,
+        1137,
+        1140,
+        1142,
+        1153,
+        1154,
+        1158,
+        1214,
+        1417,
+        1421,
+        1428,
+        2285,
+        2456,
+        2513,
+        2560,
+        2603
+      ],
+      "uniqueDisplayedLines": 329,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          74,
+          80
+        ],
+        [
+          279,
+          282
+        ],
+        [
+          492,
+          492
+        ],
+        [
+          496,
+          497
+        ],
+        [
+          779,
+          779
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1028,
+          1028
+        ],
+        [
+          1070,
+          1071
+        ],
+        [
+          1073,
+          1073
+        ],
+        [
+          1077,
+          1078
+        ],
+        [
+          1083,
+          1083
+        ],
+        [
+          1087,
+          1087
+        ],
+        [
+          1098,
+          1098
+        ],
+        [
+          1103,
+          1103
+        ],
+        [
+          1113,
+          1113
+        ],
+        [
+          1116,
+          1116
+        ],
+        [
+          1129,
+          1129
+        ],
+        [
+          1135,
+          1135
+        ],
+        [
+          1137,
+          1137
+        ],
+        [
+          1140,
+          1140
+        ],
+        [
+          1142,
+          1142
+        ],
+        [
+          1153,
+          1154
+        ],
+        [
+          1158,
+          1158
+        ],
+        [
+          1214,
+          1214
+        ],
+        [
+          1408,
+          1413
+        ],
+        [
+          1417,
+          1417
+        ],
+        [
+          1421,
+          1421
+        ],
+        [
+          1428,
+          1428
+        ],
+        [
+          2128,
+          2148
+        ],
+        [
+          2227,
+          2228
+        ],
+        [
+          2234,
+          2252
+        ],
+        [
+          2259,
+          2260
+        ],
+        [
+          2285,
+          2285
+        ],
+        [
+          2456,
+          2456
+        ],
+        [
+          2513,
+          2513
+        ],
+        [
+          2560,
+          2560
+        ],
+        [
+          2603,
+          2603
+        ]
+      ],
+      "scope": "Real slash/mention ordinary query open/reset/clamp, list and selected-index state, keyboard mapping, actual child props/option callbacks and textarea change/key handler binding. Plugin/builtin execution, applyMentionPick replacement implementation, native attachment/Host mechanisms, submit behavior and all React event timing remain call boundaries or adjacent display only.",
+      "initialSemanticReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "finishSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "finishMatchesInitial": true,
+      "fullFileReadingClaimed": false,
+      "firstEverReadingClaimed": false,
+      "knownCanonicalPriorSelectedOverlap": {
+        "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/source-manifest.json",
+        "pointer": "/files/0",
+        "sameSha256": true,
+        "ranges": [
+          [
+            783,
+            784
+          ],
+          [
+            1341,
+            1407
+          ],
+          [
+            2230,
+            2233
+          ],
+          [
+            2253,
+            2258
+          ]
+        ],
+        "lines": 79,
+        "scope": "At least this exact prior selected overlap; not an exhaustive claim of prior consumer coverage."
+      }
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionStatus": "Prior CODESHELL217/AGENTS5 reading carried under unchanged SHA, not newly counted.",
+  "counts": {
+    "semanticFiles": 3,
+    "full": 0,
+    "selected": 3,
+    "semanticLines": 519,
+    "productSemanticLines": 519,
+    "testSemanticLines": 0,
+    "uniqueDisplayedLines": 800,
+    "testsExecuted": 0,
+    "testDeclarationsRead": 0
+  },
+  "consumerCoverageLimits": "Canonical R43 exact ChatView sameSHA selected overlap preserved. Consumer readings are necessary current contract excerpts, not assertions of first reading/unread frontier; other historical consumer fullness not independently adjudicated before consumer displays.",
+  "sourceExcerptTiming": "Post-read capture, not before reading; every initial source pin preceded body and line navigation.",
+  "capturedUTC": "2026-10-17T16:57:43.787855+00:00"
+}

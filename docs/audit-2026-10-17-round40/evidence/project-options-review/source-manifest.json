@@ -1,0 +1,255 @@
+{
+  "prepOnly": true,
+  "parentRootContextSupplied": "42683054 (parent frozen artifact context only, not a new verified baseline)",
+  "formalBaseline": null,
+  "gitBindingPerformed": false,
+  "finishedAtUTC": "2026-10-17T13:48:33.536812+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+      "bytes": 3885,
+      "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "lineCount": 101,
+      "initialPinArtifact": "initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:45:09.516831+00:00",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+        "bytes": 3885,
+        "lineCount": 101,
+        "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+        "pinBeforeThisReviewBodyRead": true
+      },
+      "finishBytes": 3885,
+      "finishSha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          101
+        ]
+      ],
+      "coveredLineCount": 101,
+      "sourceKind": "product",
+      "initialBeforeAnyContentReadSha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "initialSelectedBodyReadSha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "role": "One active leaf: option list, labels and current/select/cwd string mapping, not path admission or actual project registry."
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+      "bytes": 48293,
+      "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+      "lineCount": 1237,
+      "initialPinArtifact": "consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:46:07.850180+00:00",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+        "bytes": 48293,
+        "lineCount": 1237,
+        "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+        "pinBeforeSelectedBodyRead": true,
+        "navigationBeforeDedicatedPinLines": [
+          25,
+          317,
+          1096
+        ],
+        "initialBeforeAnyContentReadSha256": null,
+        "timingNote": "Only navigation locator lines preceded this dedicated pin; preserve distinction from selected body read."
+      },
+      "finishBytes": 48293,
+      "finishSha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          578,
+          590
+        ],
+        [
+          1092,
+          1110
+        ],
+        [
+          1130,
+          1152
+        ]
+      ],
+      "coveredLineCount": 55,
+      "sourceKind": "product",
+      "initialBeforeAnyContentReadSha256": null,
+      "initialSelectedBodyReadSha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+      "role": "Ordinary props/job/cwd patch DTO, inherited label or editable Select branch, helper value conversion and option map. The actual root/project identity branch1111–1129 was printed but is outside mechanism review, no correctness conclusion. Unrelated60–88 time/status locator and adjacent570–577/591–610 not audited."
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "bytes": 4376,
+      "sha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+      "lineCount": 107,
+      "initialPinArtifact": "consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:46:07.850180+00:00",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+        "bytes": 4376,
+        "lineCount": 107,
+        "sha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+        "pinBeforeSelectedBodyRead": true,
+        "navigationBeforeDedicatedPinLines": [
+          8
+        ],
+        "initialBeforeAnyContentReadSha256": null,
+        "timingNote": "Only navigation locator lines preceded this dedicated pin; preserve distinction from selected body read."
+      },
+      "finishBytes": 4376,
+      "finishSha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          107
+        ]
+      ],
+      "coveredLineCount": 107,
+      "sourceKind": "test",
+      "initialBeforeAnyContentReadSha256": null,
+      "initialSelectedBodyReadSha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+      "role": "Full existing source107lines, 13 it declarations, text only; not current test passes."
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+      "bytes": 3130,
+      "sha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "lineCount": 78,
+      "initialPinArtifact": "consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:46:07.850180+00:00",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+        "bytes": 3130,
+        "lineCount": 78,
+        "sha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+        "pinBeforeSelectedBodyRead": true,
+        "navigationBeforeDedicatedPinLines": [],
+        "initialBeforeAnyContentReadSha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+        "timingNote": "Pinned before body read in this review."
+      },
+      "finishBytes": 3130,
+      "finishSha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          37,
+          64
+        ]
+      ],
+      "coveredLineCount": 28,
+      "sourceKind": "product",
+      "initialBeforeAnyContentReadSha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "initialSelectedBodyReadSha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "role": "Existing no-project predicate only. Full78lines printed, but other normalization/matchProjectIdForCwd and platform code not assessed as identity or registry mechanisms."
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+      "bytes": 21013,
+      "sha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+      "lineCount": 523,
+      "initialPinArtifact": "resource-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:47:13.988162+00:00",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+        "bytes": 21013,
+        "lineCount": 523,
+        "sha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+        "pinBeforeThisReviewBodyRead": true
+      },
+      "finishBytes": 21013,
+      "finishSha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          144,
+          146
+        ],
+        [
+          403,
+          405
+        ]
+      ],
+      "coveredLineCount": 6,
+      "sourceKind": "product",
+      "initialBeforeAnyContentReadSha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+      "initialSelectedBodyReadSha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+      "role": "Chinese/English noProject resource fields only. Adjacent weekday/transcript lines printed but not in audited range; no translator/UI state execution."
+    }
+  ],
+  "instructionFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "initialPinArtifact": "initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:45:09.516831+00:00",
+      "prepRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "lineCount": 217,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "pinBeforeThisReviewBodyRead": true
+      },
+      "finishBytes": 17639,
+      "finishSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "coverage": "full repeated instruction read",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCount": 217
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "initialPinArtifact": "initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:45:09.516831+00:00",
+      "prepRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "lineCount": 5,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "pinBeforeThisReviewBodyRead": true
+      },
+      "finishBytes": 206,
+      "finishSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false,
+      "coverage": "hash-only carried instruction context",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0
+    }
+  ],
+  "counts": {
+    "semanticFiles": 5,
+    "fullFiles": 2,
+    "selectedFiles": 3,
+    "productAndTestLines": 297,
+    "productLines": 190,
+    "testDeclarationLines": 107,
+    "testCasesRead": 13,
+    "instructionPins": 2,
+    "repeatedInstructionReadLinesThisReview": 217
+  },
+  "allInitialFinishStable": true,
+  "coverageLimits": "Inclusive1-based ranges count audited ordinary source once per this reviewer; same-SHA author overlap is not globally unique reading. Additional printed identity, platform, time/status, permission-type and transcript resource neighbors are not audited. No stripMarkdown source body read or additional exclusion source hash check performed."
+}

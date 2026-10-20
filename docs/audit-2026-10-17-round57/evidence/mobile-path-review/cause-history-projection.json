@@ -1,0 +1,46 @@
+{
+  "source": "/tmp/codeshell-audit-round135-static-files/cause-history.json",
+  "scope": "Specific static/mobile encoded URI old-cause machine navigation, not full semantic dedup. JSON value strings only, current57 excluded by original inventory.",
+  "totalMatches": 66,
+  "matchedFileCount": 29,
+  "cap": 100,
+  "retainedTargetProjection": [
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "/hits/source_path/59/context",
+      "context": "-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-contexts.json",
+      "location": "/hits/source_filename/63/context",
+      "context": "trip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "/rows/8/context",
+      "context": "-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/history-selected-contexts.json",
+      "location": "/rows/16/context",
+      "context": "trip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+      "location": "/commentbox/3/text",
+      "context": "生产 `encodeAnchorsForWire` 保留完整评论，但 `extractAnnotations` 按行解析，只把 `评论:` 当作单行字段。第二行无冒号被丢掉，第三行变成 locator `{ key: \"reason\", value: \"该字段是评论内容\" }`；显示评论只剩 `第一行说明`。\n- 影响：历史消息里的用户评论被截断/误分类，用户复核先前要求时看到不完整甚至错误的定位信息。模型实际收到的 wire 保留全文，因此不声称请求文本或磁盘数据已丢失。\n- 证据：`evidence/ui-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/Mess",
+      "valueTruncated": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round53/evidence/web-format-gate/history-gate.json",
+      "location": "/directSourceRows/144/row/context",
+      "context": "-annotation-roundtrip.test.ts` 相对导入并调用真实生产编解码；包含单行对照，完整输出见 `evidence/ui-annotation-roundtrip.log`。动态证据为纯函数投影，Textarea 与消息卡为静态可达接线，未运行 React/Electron UI。\n- 旧记录核查：2026-10-16 findings 与 2026-10-12 主报告/remaining 报告及 `docs/archive/todo/review-ui-v2.md` 未检出 `extractAnnotations` / `encodeAnchorsForWire` / 多行评论同项（有限查重）。\n\n## 第三轮：Web / Mobile 项目归属纯函数\n\n静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。\n\n## UI-02 [P2，条件触发] Web / Mobile 对 POSIX cwd 一律转小写，不同项目被合并并可能生成错误新会话目标\n\n- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。\n- 触发条件：连接大小写敏感文件系统的 ",
+      "valueTruncated": true
+    }
+  ],
+  "actualRead": "Only compact metadata rows/selected canonical context. Machine hit projection is not all cause semantics."
+}

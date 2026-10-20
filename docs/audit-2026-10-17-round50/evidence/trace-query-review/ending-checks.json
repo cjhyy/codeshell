@@ -1,0 +1,74 @@
+{
+  "capturedUTC": "2026-10-17T16:50:46.236237+00:00",
+  "sourcePins": [
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/model-traces/store.ts",
+      "initialSha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "endingBytes": 23181,
+      "endingSha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/model-traces/store.test.ts",
+      "initialSha256": "58fbf77e8021ee91211fc1275aff1fb0315934dbdbc7751342fd45677fdf012e",
+      "endingBytes": 14622,
+      "endingSha256": "58fbf77e8021ee91211fc1275aff1fb0315934dbdbc7751342fd45677fdf012e",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/model-traces/types.ts",
+      "initialSha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+      "endingBytes": 6231,
+      "endingSha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/server/src/model-trace-history.ts",
+      "initialSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "endingBytes": 9402,
+      "endingSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+      "initialSha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "endingBytes": 36755,
+      "endingSha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/model-traces/sessions.test.ts",
+      "initialSha256": "a7b0ed309b87a93f39eef3269cb6db43d1c6b52bda4fa7e5e288cfcc4eb7f346",
+      "endingBytes": 8848,
+      "endingSha256": "a7b0ed309b87a93f39eef3269cb6db43d1c6b52bda4fa7e5e288cfcc4eb7f346",
+      "matchesInitial": true
+    }
+  ],
+  "allSourcePinsMatch": true,
+  "history": {
+    "originalCount": 4693,
+    "endingCount": 4693,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "sameFilter": "(^|/)audit-2026-10-17-round(?:[5-9][0-9]|[1-9][0-9]{2,})(/|$)",
+    "originalInventoryUnmodified": true
+  },
+  "ownGitOperations": 0,
+  "rootReportedBaselineOnly": "7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b",
+  "scope": "Source bytes/instruction pins and dated history member bytes only; no product runtime or Git. Ending hash is not a second semantic reading."
+}

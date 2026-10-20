@@ -1,0 +1,30 @@
+{
+  "frozenUTC": "2026-10-17T17:05:47.318637+00:00",
+  "directory": "/tmp/codeshell-audit-round93-packet-review",
+  "selfExcluded": "reviewer-receipt.json",
+  "role": "Packet metadata integrity review;85/88 own-author self-check;0new product-source semantics",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 185459,
+      "sha256": "93065b4c156a054749aa3d32ed3b331f7d85c0d82466c1e716c3502e7b9e9560"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3443,
+      "sha256": "32ceec46ef4f9d6c823296ac4266d8e998a6c082e7f8f758e5b199f6ca3186d5"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 8627,
+      "sha256": "120bde03e81d8497e8aec941fd7a6d00199c4e591f3b770d3dda4b8dae044625"
+    }
+  ],
+  "filesCountExcludingSelf": 3,
+  "sourceFiles": [],
+  "newFormal": 0,
+  "newCandidate": 0,
+  "newRelated": 0,
+  "productExecutions": 0,
+  "Git": 0
+}

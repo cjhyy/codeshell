@@ -1,0 +1,17 @@
+{
+  "ownedOutput": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier",
+  "prepOnly": true,
+  "rootSuppliedContext": "bbad45be04dacfecb29cba04ed51caf167fe4e53",
+  "formalBaseline": null,
+  "rootProposedFindingId": "MCP-R39-01",
+  "sourceFrozenByFilesystemShaOnlyNotGit": true,
+  "ordinaryScope": "Supported unedited per-server startup/result options during existing user-added server full editor rename, with actual manual config producer/read/merge/caller and same-name counterexample.",
+  "excludedScope": [
+    "real configuration or server operations",
+    "credentials/auth/permission or identity lifecycle audit",
+    "plugin override defect speculation",
+    "generic arbitrary field preservation guarantees",
+    "all-save behavior claim"
+  ],
+  "prior38DirectoryUntouched": true
+}

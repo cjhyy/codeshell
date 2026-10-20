@@ -1,0 +1,72 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "c39eb6f987b7bd5d740fee6d8ab5b46718f9c9af",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T19:46:49.771032+00:00",
+      "coverage": "hash-only before product body/navigation"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T19:46:49.771926+00:00",
+      "coverage": "hash-only before product body/navigation"
+    },
+    {
+      "path": "packages/core/src/session/subagent-continuation.ts",
+      "bytes": 2345,
+      "lines": 63,
+      "sha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+      "pinAt": "2026-10-17T19:46:49.772428+00:00",
+      "coverage": "hash-only before product body/navigation"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lines": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "pinAt": "2026-10-17T19:46:49.773322+00:00",
+      "coverage": "hash-only before product body/navigation"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "lines": 1571,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "pinAt": "2026-10-17T19:46:49.774262+00:00",
+      "coverage": "hash-only before product body/navigation"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "bytes": 109429,
+      "lines": 2841,
+      "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+      "pinAt": "2026-10-17T19:46:49.775070+00:00",
+      "coverage": "hash-only before product body/navigation"
+    },
+    {
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "bytes": 16481,
+      "lines": 441,
+      "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "pinAt": "2026-10-17T19:46:49.775855+00:00",
+      "coverage": "hash-only before product body/navigation"
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "bytes": 11804,
+      "lines": 292,
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "pinAt": "2026-10-17T19:46:49.776505+00:00",
+      "coverage": "hash-only before product body/navigation"
+    }
+  ],
+  "scope": "Independent selected source review of already-known Root148 ordinary creation/storage/terminal restore; not blind initial source discovery. Instructions same-SHA carry forward."
+}

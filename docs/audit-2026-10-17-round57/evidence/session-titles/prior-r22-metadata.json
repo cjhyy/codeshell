@@ -1,0 +1,44 @@
+{
+  "createdAt": "2026-10-17T19:00:17.327240+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-source-manifest.json",
+      "bytes": 8023,
+      "sha256": "38c2c7e69747906ccd77eece9cb1fca7e0d3ae17e9226195361c734ae6d12cc7",
+      "readJsonPointers": [
+        "/sources/9"
+      ],
+      "canonicalRow": {
+        "path": "packages/server/src/session-titles-store.ts",
+        "frozenSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "currentSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+        "matchesFrozen": true,
+        "coverage": "selected",
+        "ranges": [
+          [
+            120,
+            189
+          ]
+        ],
+        "lineCount": 189,
+        "note": "separate override store static only; no filesystem/lock execution"
+      },
+      "firstHashTiming": "same own earlier input read before bounded JSON output"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/title-report.md",
+      "readLineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "initialSha256": null,
+      "firstHashTiming": "late after bounded old-MD display; not backfilled as before-read pin",
+      "bytes": 4527,
+      "sha256": "781d87b52602f82d429a30b42d3f957aff5d1d37ec82e77d41ff7262bf9434a6",
+      "lineCount": 15
+    }
+  ],
+  "purpose": "Exact old source overlap and existing dual-title/manual-guard counterevidence, not reused runtime evidence."
+}

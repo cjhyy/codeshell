@@ -1,0 +1,20 @@
+{
+  "totals": {
+    "semanticFiles": 9,
+    "fullProductFiles": 4,
+    "selectedProductFiles": 3,
+    "selectedTestFiles": 2,
+    "productSemanticLines": 1155,
+    "testDeclarationLines": 50,
+    "bodyDisplayedLines": 1388,
+    "bodyPlusNavigationDisplayedLines": 1438,
+    "navigationOnlySourceFiles": 1,
+    "instructionHashOnly": 2,
+    "testsExecuted": 0,
+    "newUniqueCoverageClaim": false
+  },
+  "endingSourceInstructionCanonicalPins": 15,
+  "allUnchanged": true,
+  "sharedHistorySame": true,
+  "classification": "0/0/0"
+}

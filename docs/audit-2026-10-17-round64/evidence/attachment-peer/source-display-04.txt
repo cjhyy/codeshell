@@ -1,0 +1,231 @@
+1: import { createHash } from "node:crypto";
+2: import { constants as fsConstants } from "node:fs";
+3: import {
+4:   appendFile,
+5:   lstat,
+6:   mkdir,
+7:   open,
+8:   readdir,
+9:   realpath,
+10:   rename,
+11:   rm,
+12:   stat,
+13:   writeFile,
+14: } from "node:fs/promises";
+15: import { basename, extname, join, relative, resolve, sep } from "node:path";
+16: import { sanitizeImageBytes } from "./image-byte-probe.js";
+17: 
+18: export type InputAttachmentKind = "image" | "file" | "directory";
+19: 
+20: export type InputAttachmentOrigin =
+21:   | "paste"
+22:   | "os-drop"
+23:   | "file-panel"
+24:   | "picker"
+25:   | "mention"
+26:   | "generated"
+27:   | "mobile"
+28:   | "im-gateway"
+29:   | "tool";
+30: 
+31: export interface InputAttachmentMeta {
+32:   id: string;
+33:   sessionId: string;
+34:   kind: InputAttachmentKind;
+35:   origin: InputAttachmentOrigin;
+36:   path: string;
+37:   absPath: string;
+38:   relPath?: string;
+39:   mime?: string;
+40:   size: number;
+41:   sha256: string;
+42:   originalName?: string;
+43:   createdAt: number;
+44:   sourcePath?: string;
+45:   width?: number;
+46:   height?: number;
+47:   vision?: {
+48:     include: boolean;
+49:     mediaPath?: string;
+50:     detail?: "low" | "standard" | "high";
+51:   };
+52:   directory?: {
+53:     treePath?: string;
+54:     truncated?: boolean;
+55:     entryCount?: number;
+56:   };
+57: }
+58: 
+59: export interface StageImageDataUrlInput {
+60:   cwd: string;
+61:   sessionId: string;
+62:   name?: string;
+63:   mime?: string;
+64:   dataUrl: string;
+65:   origin: InputAttachmentOrigin;
+66: }
+67: 
+68: export interface StageImageBytesInput {
+69:   cwd: string;
+70:   sessionId: string;
+71:   name?: string;
+72:   mime: string;
+73:   bytes?: Uint8Array;
+74:   sourceFile?: string;
+75:   origin: InputAttachmentOrigin;
+76: }
+77: 
+78: export interface StageFileBytesInput {
+79:   cwd: string;
+80:   sessionId: string;
+81:   name?: string;
+82:   mime?: string;
+83:   bytes: Uint8Array;
+84:   origin: InputAttachmentOrigin;
+85: }
+86: 
+87: export interface AttachmentCleanupInput {
+88:   cwd: string;
+89:   sessionId?: string;
+90:   now?: number;
+240:   assertAttachmentLabels(input);
+241:   const cwd = await resolveExistingDirectory(input.cwd, "cwd");
+242:   assertSafeSessionId(input.sessionId);
+243:   if (buffer.byteLength > MAX_STAGED_IMAGE_BYTES) {
+244:     throw new Error(`image attachment exceeds size limit (${formatBytes(MAX_STAGED_IMAGE_BYTES)})`);
+245:   }
+246:   const sanitized = sanitizeImageBytes(mime, buffer);
+247:   buffer = sanitized.bytes;
+248:   const image = sanitized.image;
+249: 
+250:   const attachmentsRoot = await ensureAttachmentsRoot(cwd);
+251:   const sessionDir = await ensureSessionDir(attachmentsRoot, input.sessionId);
+252:   const sha256 = createHash("sha256").update(buffer).digest("hex");
+253:   const sha16 = sha256.slice(0, 16);
+254:   const ext = IMAGE_MIME_EXT[mime] ?? ".bin";
+255:   const safeBase = safeSlug(input.name, "image");
+256:   const existing = await findExistingSessionFile(sessionDir, sha16);
+257:   const filename = existing ?? `${sha16}-${safeBase}${ext}`;
+258:   const absPath = await safeJoin(sessionDir, filename, sessionDir);
+259: 
+260:   if (!existing) {
+261:     const tmpPath = await safeJoin(
+262:       sessionDir,
+263:       `.${filename}.${process.pid}.${Date.now()}.tmp`,
+264:       sessionDir,
+265:     );
+266:     await writeFile(tmpPath, buffer, { flag: "wx" });
+267:     try {
+268:       await rename(tmpPath, absPath);
+269:     } catch (error) {
+270:       await rm(tmpPath, { force: true }).catch(() => undefined);
+271:       throw error;
+272:     }
+273:   }
+274: 
+275:   const relPath = normalizePath(relative(cwd, absPath));
+276:   const createdAt = Date.now();
+277:   idCounter += 1;
+278:   const meta: InputAttachmentMeta = {
+279:     id: `att_${sha16}_${idCounter.toString(36)}`,
+280:     sessionId: input.sessionId,
+281:     kind: "image",
+282:     origin: input.origin,
+283:     path: relPath,
+284:     absPath,
+285:     relPath,
+350:     createdAt,
+351:   };
+352:   await appendManifest(sessionDir, { event: "staged", status: "draft", ...meta });
+353:   return meta;
+354: }
+355: 
+356: export async function markAttachmentsSent(
+357:   cwd: string,
+358:   sessionId: string,
+359:   attachments: InputAttachmentMeta[],
+360: ): Promise<void> {
+361:   if (attachments.length === 0) return;
+362:   const resolvedCwd = await resolveExistingDirectory(cwd, "cwd");
+363:   assertSafeSessionId(sessionId);
+364:   const sessionDir = await ensureSessionDir(await ensureAttachmentsRoot(resolvedCwd), sessionId);
+365:   const sentAt = Date.now();
+366:   for (const attachment of attachments) {
+367:     if (attachment.sessionId !== sessionId) continue;
+368:     await appendManifest(sessionDir, {
+369:       event: "sent",
+370:       id: attachment.id,
+371:       sessionId,
+372:       kind: attachment.kind,
+373:       origin: attachment.origin,
+374:       path: attachment.path,
+375:       absPath: attachment.absPath,
+376:       relPath: attachment.relPath,
+377:       mime: attachment.mime,
+378:       size: attachment.size,
+379:       sha256: attachment.sha256,
+380:       originalName: attachment.originalName,
+381:       sentAt,
+382:       status: "sent",
+383:     });
+384:   }
+385: }
+386: 
+387: export async function listRecentAttachments(
+388:   input: AttachmentInspectInput,
+389: ): Promise<InputAttachmentMeta[]> {
+390:   const cwd = await resolveExistingDirectory(input.cwd, "cwd");
+435:     if (!sessionDir) continue;
+436:     const records = await readManifest(sessionDir);
+437:     if (input.sessionId) {
+438:       const files = await manifestFilesInside(records, root);
+439:       for (const file of files) {
+440:         await rm(file, { force: true }).catch(() => undefined);
+441:         removed.push(file);
+442:       }
+443:       await rm(sessionDir, { recursive: true, force: true }).catch(() => undefined);
+444:       sessionsRemoved.push(sessionId);
+445:       continue;
+446:     }
+447: 
+448:     const latest = latestAttachmentState(records);
+449:     for (const state of latest.values()) {
+450:       const createdAt = state.createdAt ?? 0;
+451:       const sentAt = state.sentAt;
+452:       const isSent = typeof sentAt === "number";
+453:       const ttl = isSent ? SENT_ATTACHMENT_TTL_MS : DRAFT_ATTACHMENT_TTL_MS;
+454:       const basis = isSent ? sentAt : createdAt;
+455:       if (!basis || now - basis < ttl) continue;
+456:       if (!state.absPath || !(await pathExistsInside(state.absPath, root))) continue;
+457:       await rm(state.absPath, { force: true }).catch(() => undefined);
+458:       removed.push(state.absPath);
+459:       await appendManifest(sessionDir, {
+460:         event: "cleanup",
+461:         id: state.id,
+462:         sessionId,
+463:         absPath: state.absPath,
+464:         relPath: state.relPath,
+465:         path: state.path,
+865: 
+866: async function manifestFilesInside(records: ManifestRecord[], root: string): Promise<string[]> {
+867:   const files = new Set<string>();
+868:   for (const record of records) {
+869:     if (!record.absPath) continue;
+870:     if (await pathExistsInside(record.absPath, root)) files.add(record.absPath);
+871:   }
+872:   return [...files];
+873: }
+874: 
+875: function latestAttachmentState(records: ManifestRecord[]): Map<string, ManifestRecord> {
+876:   const latest = new Map<string, ManifestRecord>();
+877:   for (const record of records) {
+878:     if (!record.id) continue;
+879:     if (record.event === "staged") latest.set(record.id, record);
+880:     if (record.event === "sent") {
+881:       const prev = latest.get(record.id) ?? record;
+882:       latest.set(record.id, { ...prev, ...record, status: "sent" });
+883:     }
+884:     if (record.event === "removedFromDraft" || record.event === "cleanup") latest.delete(record.id);
+885:   }
+886:   return latest;
+887: }

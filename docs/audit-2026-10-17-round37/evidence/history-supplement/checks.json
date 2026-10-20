@@ -1,0 +1,144 @@
+{
+  "finishedUTC": "2026-10-17T13:18:08.287947+00:00",
+  "files": [],
+  "newProductSourceSemanticReads": 0,
+  "newProductSourceLines": 0,
+  "initialArtifactPinChecks": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round37/evidence/root-history.json",
+      "bytes": 827111,
+      "sha256": "fcd8b542a2b4cb5ea122f5809ba62b191b7124d90062d6ba680c7fba29db8151",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/history.json",
+      "bytes": 814642,
+      "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-initial-pins.json",
+      "bytes": 708024,
+      "sha256": "85f89fedaa4b1bb10564f1daab7021bf6dc21ddc315fe7bb44b3f495f4e303ea",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history.json",
+      "bytes": 717288,
+      "sha256": "8576d62f35c680f16bc9a3ac5f25f4480e28bc85d964e5e0d2d57de67bf20fb2",
+      "unchanged": true
+    }
+  ],
+  "corpusFinish": {
+    "exactFormalInventory": 3318,
+    "allUnchanged": true,
+    "changed": [],
+    "newlyCreatedPathsNotAdded": true
+  },
+  "actualContextReading": {
+    "selectedUnitCount": 25,
+    "all25CompleteUnitsRead": true,
+    "collisionWindowsRepresented": 53,
+    "extraNewFrozen35And36MDParagraphsRead": 3,
+    "batches": [
+      {
+        "indices": [
+          0,
+          7
+        ],
+        "chunk": "c7e833"
+      },
+      {
+        "indices": [
+          8,
+          16
+        ],
+        "chunk": "e30ce6"
+      },
+      {
+        "indices": [
+          17,
+          24
+        ],
+        "chunk": "1cf870"
+      }
+    ],
+    "strongParagraphUnitLocatorsRead": 10,
+    "giantStrongParagraphOrJsonUnitBodiesNotRead": true,
+    "wholeMdCooccurrence22FilesReadAsLocatorsOnly": true,
+    "allRetainedCountsNotEquivalentToAllContextsRead": true
+  },
+  "firstPassCounts": {
+    "quoted-local-marketplace": 52,
+    "admitted-name-local": 165,
+    "uninstall-local-marketplace": 128,
+    "collision-local-marketplace": 36,
+    "exact-cause-cooccurrence": 10,
+    "local-suffix-uninstall": 35
+  },
+  "firstPassCap": 200,
+  "firstPassAllUnitLocatorsRetained": true,
+  "firstPassBoundedTextRetention": "Full unit retained when<=1800 chars; longer unit only hash/locator plus excerpt. Initial full-unit draft was bounded before freeze; no source history rescan.",
+  "windowCounts": {
+    "quoted-local-marketplace": 132,
+    "admitted-name-local": 270,
+    "uninstall-local-marketplace": 238,
+    "collision-local-marketplace": 53,
+    "exact-cause-cooccurrence": 0,
+    "local-suffix-uninstall": 60
+  },
+  "windowRetained": {
+    "quoted-local-marketplace": 132,
+    "admitted-name-local": 200,
+    "uninstall-local-marketplace": 200,
+    "collision-local-marketplace": 53,
+    "exact-cause-cooccurrence": 0,
+    "local-suffix-uninstall": 60
+  },
+  "windowCap": 200,
+  "windowDerivation": {
+    "input": "All186 unique first-pass unit locators; all matching firstpass groups were under cap200; original full unit text was available in mutable metadata result before bounded packaging.",
+    "step": "For each literal local occurrence in normalized lower text, take original text range[max(0,position-300),min(length,position+305)]; apply same literal/AND predicates. Count each occurrence once per query; copied contexts and overlapping windows may repeat.",
+    "output": "window-results.json; first-pass long fullUnit text replaced with bounded excerpt/hash/locator to avoid duplicate giant historical scalars.",
+    "queryLanguage": "Literal string contains/AND only; no regex escapes, no product/language fixture evaluation."
+  },
+  "limitedDedupConclusion": "No exact previous cause found in these full-corpus queries and actually read contexts for admitted marketplace registry name local -> suffix/catalog -> direct-local uninstall misroute. No absolute semantic exhaustion or originality proof.",
+  "oldCauseExclusions": [
+    {
+      "cause": "truthy local/null direct-local old UI routing/overwrite",
+      "evidence": "All selected25 contexts and new3 frozen35 MD paragraphs",
+      "difference": "Old records describe supporting actual direct-local installs or old local marker routed to marketplace; they do not establish admitted actual marketplace named local being misclassified."
+    },
+    {
+      "cause": "R52 cacheversion local invalid update",
+      "evidence": "Previously frozen37 aggregate/history background; not re-read as whole old source report here",
+      "difference": "local names a version cache directory and invalid update replacement, not registered marketplace origin discriminator."
+    },
+    {
+      "cause": "PROFILE sourceToRepoKey",
+      "evidence": "Previously frozen37 independent/aggregate background; no new65line source report reading claimed",
+      "difference": "owner/repository separator loss in profile cache key, different producer/consumer contract."
+    }
+  ],
+  "correction": "Parent original double-escape allegation was a display-layer misdiagnosis. Original stored patterns/source bytes and receipts remain preserved. This supplement does not repeat it as a regex fault. Independent focused queries also had actual single backslashes. New literal/AND queries avoid this presentation ambiguity.",
+  "parentRootStaleProse": "root-history.limitations mentions3263 and older2988/3063; directcomparison uses actual3318/old3216 arrays. Root reports its separate metadata-notes clarifies the comparisons; this review does not edit parent artifacts.",
+  "metadataFailures": [],
+  "metadataNavigationLimit": [
+    {
+      "chunk": "0d2708",
+      "exitCode": 0,
+      "stdoutTruncated": true,
+      "scope": "Collision locator console output only; actual25 complete unit reading subsequently performed via three bounded batches, no hidden console text claimed."
+    }
+  ],
+  "runtime": {
+    "product": 0,
+    "productImports": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "installUninstallCatalog": 0,
+    "reactBrowserDOMNative": 0,
+    "httpNetwork": 0,
+    "git": 0
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "c6a85ac1b69329f35bc1f6ff34d08070f91b1d96",
+  "branchReported": "codex/audit/build-assets-round60-20261018",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T19:54:20.643008+00:00",
+      "coverage": "hash-only before source body/line-navigation"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T19:54:20.645969+00:00",
+      "coverage": "hash-only before source body/line-navigation"
+    },
+    {
+      "path": "scripts/copy-assets.mjs",
+      "bytes": 2079,
+      "lines": 60,
+      "sha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+      "pinAt": "2026-10-17T19:54:20.646874+00:00",
+      "coverage": "hash-only before source body/line-navigation"
+    }
+  ],
+  "instructions": "Previously read instructions reused on same SHA; no new instruction semantic count."
+}

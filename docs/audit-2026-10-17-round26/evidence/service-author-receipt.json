@@ -1,0 +1,76 @@
+{
+  "baseline": "6d61f57ade1ef1b9fdc4d33020652007d995e7a7",
+  "report": "docs/audit-2026-10-17-round26/review-service-report.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "artifactCount": 11,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round26/review-service-report.md",
+      "bytes": 7752,
+      "sha256": "09f0c9788508a32c91aa401f890f51b72c6e96bd0e321cdd957b061cba00c42a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-decisions.json",
+      "bytes": 5257,
+      "sha256": "841c5205eaf62586fd222e8af35c456669a03429d03db661d54d70a7fda8a9fa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+      "bytes": 640559,
+      "sha256": "139f132c615782b657de7113733f3a0dfa1f45d92ccc8fc77993a71332ccbf8a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-dedup.py",
+      "bytes": 3964,
+      "sha256": "b4724ec71e96448383df1a7376020337cee7b3b872e2ce98f33023e73642eae9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-history-selected.json",
+      "bytes": 7616,
+      "sha256": "db51e7290556411374c7d9689fc2a6f0631347c2d604d296b149a8d2f3a6d71e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-metadata-notes.json",
+      "bytes": 2199,
+      "sha256": "f4a22aa20e776a4675d7b6ac1ef866fda24404ba6acf3b9f0da6c8dd28ee2449"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-source-manifest.json",
+      "bytes": 7673,
+      "sha256": "628a7c7474b4a4b67f945c80b178826f450229bf8dbbc5b746d163de9c1b9f24"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/service-validation.json",
+      "bytes": 717,
+      "sha256": "c501e4dd3ec9b45f92b78b2ff29ce5da3f460aa7840375182774192e32b759c3"
+    }
+  ],
+  "receiptExcludesItself": true,
+  "sourcePinCount": 18,
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "runtimeImports": 0,
+  "gitCommands": 0,
+  "productChanges": false,
+  "gitWrites": false,
+  "metadataLocalLinkCount": 22,
+  "metadataLocalLinkErrors": [],
+  "receiptTimeUtc": "2026-10-17T10:37:45.635883+00:00"
+}

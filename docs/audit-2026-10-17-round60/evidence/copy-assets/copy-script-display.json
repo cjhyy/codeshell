@@ -1,0 +1,13 @@
+{
+  "path": "scripts/copy-assets.mjs",
+  "sha256": "ffe1bf3b2db7164ccdebb9f93974694636815900e073a924fb7ffa90e4a0239a",
+  "displayAt": "2026-10-17T19:55:32.248884+00:00",
+  "displayedLineRanges": [
+    [
+      1,
+      60
+    ]
+  ],
+  "text": "1: #!/usr/bin/env node\n2: /**\n3:  * Cross-platform asset copy for build scripts (replaces `mkdir -p` + `cp` which\n4:  * don't exist on Windows cmd.exe). Copies files matching simple patterns into a\n5:  * dest dir, creating it recursively.\n6:  *\n7:  * Usage:\n8:  *   node scripts/copy-assets.mjs <destDir> <srcGlobOrDir> [<srcGlobOrDir> ...]\n9:  *\n10:  * Each src arg is either:\n11:  *   - a directory  → copied recursively into destDir (dir-to-dir)\n12:  *   - a glob like  `src/foo/*.md` → every matching file copied flat into destDir\n13:  *   - a plain file → copied into destDir\n14:  *\n15:  * Run from the package dir whose package.json invokes it (cwd-relative paths).\n16:  */\n17: import { cpSync, mkdirSync, readdirSync, statSync } from \"node:fs\";\n18: import { basename, dirname, join } from \"node:path\";\n19: \n20: const [, , destDir, ...srcs] = process.argv;\n21: if (!destDir || srcs.length === 0) {\n22:   console.error(\"usage: copy-assets.mjs <destDir> <src> [<src> ...]\");\n23:   process.exit(2);\n24: }\n25: \n26: mkdirSync(destDir, { recursive: true });\n27: \n28: for (const src of srcs) {\n29:   const star = src.indexOf(\"*\");\n30:   if (star === -1) {\n31:     // plain file or directory\n32:     let isDir = false;\n33:     try {\n34:       isDir = statSync(src).isDirectory();\n35:     } catch {\n36:       console.error(`copy-assets: source not found: ${src}`);\n37:       process.exit(1);\n38:     }\n39:     // dir → dir/<name> (mirrors `cp -r dir destParent/`); file → destDir/<name>\n40:     const target = join(destDir, basename(src));\n41:     cpSync(src, target, { recursive: true });\n42:   } else {\n43:     // glob like \"src/prompt/sections/*.md\" — only a trailing \"*.<ext>\" segment\n44:     const dir = dirname(src);\n45:     const pat = basename(src); // e.g. \"*.md\"\n46:     const ext = pat.startsWith(\"*\") ? pat.slice(1) : pat; // \".md\"\n47:     let files = [];\n48:     try {\n49:       files = readdirSync(dir).filter((f) => f.endsWith(ext));\n50:     } catch {\n51:       console.error(`copy-assets: source dir not found: ${dir}`);\n52:       process.exit(1);\n53:     }\n54:     if (files.length === 0) {\n55:       console.error(`copy-assets: glob matched no files: ${src}`);\n56:       process.exit(1);\n57:     }\n58:     for (const f of files) cpSync(join(dir, f), join(destDir, f));\n59:   }\n60: }",
+  "pinReference": "initial-pins.json"
+}

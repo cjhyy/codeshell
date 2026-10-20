@@ -1,0 +1,33 @@
+{
+  "capturedUTC": "2026-10-17T17:02:30.832309+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lines": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/protocol/dispatch.ts",
+      "bytes": 8824,
+      "lines": 228,
+      "sha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/protocol/types.ts",
+      "bytes": 26529,
+      "lines": 730,
+      "sha256": "01ed12b45ec6ac61688ab57659dfea9aff45f303ca064ef088f328bd48634b1f",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 93752,
+      "lines": 2479,
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

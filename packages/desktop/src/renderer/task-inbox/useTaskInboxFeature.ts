@@ -13,10 +13,11 @@ interface Params {
   sessionIndices: Record<string, SessionIndex>;
   selectSession(projectId: string | null, sessionId: string): void;
   openDiskSession(session: DiskSessionMeta): Promise<void>;
+  openHistorySession?(sessionId: string): Promise<"opened" | "unavailable" | "cancelled">;
   openPetTarget(request: PetOpenSessionRequest): Promise<boolean>;
   petSnapshot: { version: number; generation: number } | null;
   openPetPage(): void;
-  setRunsInitialRunId: Dispatch<SetStateAction<string | null>>;
+  onOpenTrace: (sessionId?: string, traceId?: string) => void;
 }
 
 /** Owns Task Center visibility and the transient destination selected by its cards. */
@@ -26,10 +27,11 @@ export function useTaskInboxFeature({
   sessionIndices,
   selectSession,
   openDiskSession,
+  openHistorySession,
   openPetTarget,
   petSnapshot,
   openPetPage,
-  setRunsInitialRunId,
+  onOpenTrace,
 }: Params) {
   const { t } = useT();
   const [taskInboxEnabled, setTaskInboxEnabled] = useState(true);
@@ -63,6 +65,7 @@ export function useTaskInboxFeature({
       selectSession,
       listDiskSessions: (options) => window.codeshell.listDiskSessions(options),
       openDiskSession,
+      openHistorySession,
       openMimiSession: (sessionId) =>
         openPetTarget({
           agentSessionId: sessionId,
@@ -85,8 +88,7 @@ export function useTaskInboxFeature({
         setView((current) => ({ ...current, viewMode: "automation" }));
       },
       openRun: (runId) => {
-        setRunsInitialRunId(runId);
-        setView((current) => ({ ...current, viewMode: "runs" }));
+        onOpenTrace(record.sessionId, runId);
       },
     });
     if (!opened) throw new Error(t("taskInbox.openUnavailable"));

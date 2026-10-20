@@ -1,0 +1,129 @@
+{
+  "formalFindings": [],
+  "candidates": [
+    {
+      "id": "CHAT-R138-C1",
+      "proposedPriority": "P2",
+      "status": "static-candidate-pending-independent-review-and-root-decision",
+      "title": "CLI释放网关lease后旧投递仍写整份队列快照，可撤销新实例已ACK消息的持久记录",
+      "source": "packages/chat/src/delivery-queue.ts",
+      "line": 131,
+      "lines": [
+        131,
+        137
+      ],
+      "companionSourceRanges": {
+        "packages/chat/src/delivery-queue.ts": [
+          [
+            241,
+            315
+          ],
+          [
+            537,
+            592
+          ]
+        ],
+        "packages/chat/src/chat-gateway.ts": [
+          [
+            144,
+            186
+          ]
+        ],
+        "packages/chat/src/cli.ts": [
+          [
+            66,
+            96
+          ],
+          [
+            115,
+            144
+          ],
+          [
+            317,
+            320
+          ]
+        ],
+        "packages/chat/src/gateway.ts": [
+          [
+            224,
+            244
+          ]
+        ],
+        "packages/chat/src/desktop-control-client.ts": [
+          [
+            101,
+            118
+          ],
+          [
+            258,
+            291
+          ],
+          [
+            316,
+            321
+          ]
+        ],
+        "packages/chat/src/instance-lock.ts": [
+          [
+            76,
+            90
+          ],
+          [
+            156,
+            159
+          ]
+        ]
+      },
+      "normalTimeline": [
+        "Old CLI with the same normal config durably accepts text A. Its Mimi petChat request remains pending; inbound adapter and idle notification watcher are otherwise healthy.",
+        "SIGINT/SIGTERM aborts inbound polling/watch. ChatGateway waits adapter runners then invokes non-awaitable queue.stop; CLI finally releases the file lease. The entry has no process.exit, and the active petChat request does not receive that shutdown signal.",
+        "A new CLI starts with the same config/inbox, obtains the released lease, reloads pending A, then durably enqueues and ACKs distinct normal text B. A/B may be long-running; no fabricated invalid DTO or rejection is required.",
+        "Old A resolves while the old request/timer is still live. Its process completion removes A and persists the old instance pending/completed arrays, which do not contain B; the atomic rename can replace the new durable snapshot without B.",
+        "B can remain in new-instance memory and a later new-instance persist may restore it. If that instance exits abnormally before a restoring write, the next load cannot recover B from the overwritten inbox."
+      ],
+      "expected": "Accepted durable inbox entries remain recoverable across process restart; releasing single-writer ownership must not permit a prior owner to rewrite stale durable state.",
+      "impactLimit": "Source-level durable-state overwrite, not observed platform delivery or guaranteed permanent loss. Duplicate A alone is permitted at-least-once behavior and is not this candidate. No runtime/process/network/timer/FS fixture was executed.",
+      "rootPromotionNotWrittenIntoAuthorCounts": true
+    }
+  ],
+  "relatedFindings": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 1,
+    "newRelated": 0
+  },
+  "oldCauseExclusions": [
+    {
+      "id": "SWC-01",
+      "cause": "adapter account ordinal routing after reordering; not stale writer ownership"
+    },
+    {
+      "id": "SWC-02",
+      "cause": "dedupe key omits account; distinct B does not rely on collision"
+    },
+    {
+      "id": "SWC-03",
+      "cause": "attachment spool error memory fallback; candidate uses ordinary durable text without spool failure"
+    },
+    {
+      "id": "C8",
+      "cause": "earlier retry overtaken by later message within an active queue; no owner handoff/snapshot replacement"
+    },
+    {
+      "id": "CHAT-R11-01",
+      "cause": "notification-progress first rejected loadTask remains cached; independent old formal, not this queue ownership race"
+    }
+  ],
+  "validation": {
+    "productCalls": 0,
+    "imports": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "realProcessesOrAccounts": 0,
+    "network": 0,
+    "Git": 0,
+    "peer143FinalReportUsed": false,
+    "peer144FinalReportUsed": false
+  },
+  "scopeCaution": "Exact same-cause absence is bounded to actual old canonical reads; shared path/SHA hits are not exhaustive cause review. Root has separate independent source and historical reviewers."
+}

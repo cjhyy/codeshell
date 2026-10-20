@@ -1,0 +1,40 @@
+{
+  "type": "Root metadata draft inspection only",
+  "firstResponse": {
+    "chunk_id": "381ce9",
+    "exitCode": 1,
+    "output": "Traceback (most recent call last):\n  File \"<stdin>\", line 2, in <module>\nAssertionError\n"
+  },
+  "cause": "An unnecessary pre-run draft newline-replacement assertion found no two-backslash pattern. No assembler/product was executed and no file was changed by that failed call.",
+  "observedSaveSourceRepr": "\"def save(name,value):(OUT/name).write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\\\\n')\"",
+  "productAttempts": 0,
+  "productReruns": 0,
+  "sourceDeltaAnchorCorrection": {
+    "firstDescription": "old6446 from context hunk",
+    "actualPatchHunk": "@@ -6447,0 +6448,8 @@",
+    "actualInsertion": "After old6447;new6448–6455",
+    "reason": "Independent reviewer checked the exact zero-context patch insertion, rather than the earlier context hunk start.",
+    "productAttempts": 0,
+    "productReruns": 0
+  },
+  "firstStageWhitespaceFailure": {
+    "firstResponse": {
+      "chunk_id": "81dc52",
+      "exitCode": 1,
+      "output": "Traceback (most recent call last):\n  File \"/tmp/codeshell-audit-20261017-round25-finalize.py\", line 52, in <module>\n    assert full.returncode==nonlog.returncode==0\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    },
+    "fullWhitespaceCheck": {
+      "exitCode": 2,
+      "output": "docs/audit-2026-10-17-round25/evidence/worktrees-before.txt:84: new blank line at EOF.\n"
+    },
+    "nonLogWhitespaceCheck": {
+      "exitCode": 2,
+      "output": "docs/audit-2026-10-17-round25/evidence/worktrees-before.txt:84: new blank line at EOF.\n"
+    },
+    "firstStageReceipt": "/tmp/codeshell-audit-20261017-round25-stage-verification.first.json",
+    "firstStageReceiptSha256": "76e297abec495aba471f724c69fcdab2e4312623b83555e2eb29b66de4bdc4d3",
+    "action": "Replaced owned worktrees-before.txt metadata with JSON preserving exactstdout including separator,bytes andSHA. Only own audit indexpaths unstaged/rebuilt;productraw/fixture/exit unchanged;no product rerun.",
+    "productAttempts": 0,
+    "productReruns": 0
+  }
+}

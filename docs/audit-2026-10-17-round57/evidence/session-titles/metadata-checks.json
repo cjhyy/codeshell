@@ -1,0 +1,22 @@
+{
+  "at": "2026-10-17T19:00:17.344524+00:00",
+  "kind": "own stdlib metadata only; not product validation",
+  "rangeSubsetAndEOFChecks": true,
+  "canonicalDisplayUnionChecks": true,
+  "sourceSameSHA11": true,
+  "boundedMetadataSameSHA4": true,
+  "reportLinkCount": 9,
+  "reportLinks": [
+    "source-manifest.json",
+    "prior-canonical.json",
+    "prior-report-metadata.json",
+    "prior-r22-metadata.json",
+    "history-projection.json",
+    "classification.json",
+    "diagnostics.json",
+    "ending.json",
+    "artifact-receipt.json"
+  ],
+  "receiptSelfLinkWillExistAtFreeze": true,
+  "sourceOrTestsExecuted": false
+}

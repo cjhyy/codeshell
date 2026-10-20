@@ -1,0 +1,47 @@
+35: describe("GitHub Panel App Git ref resolution", () => {
+36:   test("resolves the default HEAD through one bounded Git advertisement, without the API", async () => {
+37:     let calls = 0;
+38:     const commit = await resolveGitHubPanelAppCommit(source, {
+39:       fetch: async (url, init) => {
+40:         calls++;
+41:         expect(String(url)).toBe(
+42:           "https://github.com/acme/panels.git/info/refs?service=git-upload-pack",
+43:         );
+44:         expect(init?.redirect).toBe("error");
+45:         expect(init?.credentials).toBe("omit");
+46:         expect(init?.signal).toBeInstanceOf(AbortSignal);
+47:         expect(new Headers(init?.headers).has("Git-Protocol")).toBe(false);
+48:         return response();
+49:       },
+50:     });
+51:     expect(commit).toBe(head);
+52:     expect(calls).toBe(1);
+53:   });
+54: 
+55:   test.each([
+56:     ["main", head],
+57:     ["feature/editor", other],
+58:     ["refs/heads/main", head],
+59:     ["v1.0", other],
+60:     ["refs/tags/v1.0", other],
+61:   ])(
+62:     "resolves %s, including peeled annotated tags and branch precedence",
+63:     async (ref, expected) => {
+64:       expect(
+65:         await resolveGitHubPanelAppCommit({ ...source, ref }, { fetch: async () => response() }),
+66:       ).toBe(expected);
+67:     },
+68:   );
+69: 
+70:   test("accepts an explicit SHA without any network request", async () => {
+71:     expect(
+72:       await resolveGitHubPanelAppCommit(
+73:         { ...source, ref: other.toUpperCase() },
+74:         {
+75:           fetch: async () => {
+76:             throw new Error("unexpected network");
+77:           },
+78:         },
+79:       ),
+80:     ).toBe(other);
+81:   });

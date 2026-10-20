@@ -1,0 +1,9 @@
+{
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "notes": [
+    "DIAG-R10-01 same source cause excluded via peer",
+    "CDP-R3-03 old cause excluded via peer"
+  ]
+}

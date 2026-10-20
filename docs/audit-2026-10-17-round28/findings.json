@@ -1,0 +1,97 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "count": 1,
+  "findings": [
+    {
+      "id": "STREAMING-R28-01",
+      "priority": "P3",
+      "title": "Streaming rich Markdown re-splits a closed fenced code block at an internal blank line",
+      "classification": "formal static source finding; no dynamic parse/render observation",
+      "source": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "lineStart": 143,
+      "lineEnd": 148,
+      "ordinaryTrigger": "The throttledText contains this ordinary assistant text while done=false and streamingRichRender remains its default true.",
+      "contract": "The source declares every chunk a self-contained block group including closed code blocks, and the leaf explicitly avoids dividing fenced blocks. Ordinary assistant text can contain a closed code block with an internal blank line and more prose still streaming.",
+      "cause": "The leaf fence-aware safe split is followed by unconditional prefix.split(/\\n{2,}/).map(trim), with no fence context. Every result becomes a separate Markdown document.",
+      "staticCase": {
+        "sourceText": "```js\nconst a = 1;\n\nconst b = 2;\n```\n\nstill typing",
+        "condition": "The throttledText contains this ordinary assistant text while done=false and streamingRichRender remains its default true.",
+        "sourceDerivedStablePrefix": "```js\nconst a = 1;\n\nconst b = 2;\n```",
+        "sourceDerivedActiveTail": "\nstill typing",
+        "sourceDerivedChunkTexts": [
+          "```js\nconst a = 1;",
+          "const b = 2;\n```"
+        ],
+        "derivation": "splitStreamingMarkdown retains the closed fence as one stable prefix; splitIntoChunks then splits its internal blank line, trims, and invokes one independent StreamMarkdownChunk/ReactMarkdown per fragment.",
+        "actualRuntimeObservation": false,
+        "exactHtmlNotObserved": true
+      },
+      "producerAnchors": [
+        {
+          "path": "packages/desktop/src/renderer/types.ts",
+          "ranges": [
+            [
+              1080,
+              1101
+            ],
+            [
+              1153,
+              1197
+            ]
+          ],
+          "meaning": "Normal stream start creates done:false; text_delta appends original text without sanitizing/removing code-block blank lines."
+        },
+        {
+          "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+          "ranges": [
+            [
+              50,
+              70
+            ]
+          ],
+          "meaning": "Nonempty ordinary assistant text and done flag forwarded; rich streaming is not disabled."
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+          "ranges": [
+            [
+              81,
+              123
+            ]
+          ],
+          "meaning": "Closed fence with internal blank line stays wholly in stablePrefix when following prose is active tail."
+        },
+        {
+          "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+          "ranges": [
+            [
+              40,
+              68
+            ],
+            [
+              112,
+              148
+            ],
+            [
+              167,
+              172
+            ]
+          ],
+          "meaning": "Default rich stream uses chunker and one ReactMarkdown per chunk; done:true forwards full text directly to Markdown and bypasses chunker."
+        }
+      ],
+      "impact": "During rich streaming only, one complete fenced code block is fed as two incomplete independent Markdown fragments, so code-block structure is not preserved. Final done rendering bypasses the split and can restore the complete block. This helper does not change stored message text, files or clipboard; stream code-copy controls are intentionally absent.",
+      "counterevidence": [
+        "No internal blank line means this particular split does not bisect the closed block. A still-open fence remains activeTail plain text, which is a different protected path.",
+        "done:true immediately forwards original complete text to Markdown; streamingRichRender:false is a full raw-pre fallback. This is not a final/persisted content-loss claim.",
+        "A response that completes before the affected rich-stream frame need not show the issue; ordinary longer responses can remain done:false after closing a block. No actual throttle timing or UI was measured.",
+        "The known C2 reference links/footnotes issue and R19 prompt fixed-fence family are separate and not re-counted."
+      ],
+      "validation": "0 product/import/test/fixture/React/browser/parser/VM/native/Git/network/model runs. All chunk strings and value flow are manually source-derived, not logged helper output. Existing18 leaf+8 component test declarations were read only.",
+      "dedup": "2677 prior docs/bugs MD+recursive JSON value-scalar files, including169 exact archive/_archive paths; current28 excluded. Navigation35/67/2/3 all retained. The two code-chunk-bug word matches are unrelated done/error prose and an old cwd fix; no exact splitIntoChunks record found in that complete35-match group. Prior walkthrough and plan describe two-stage split but do not report this internal closed-fence re-split. Search is not semantic exhaustion.",
+      "fixed": false
+    }
+  ]
+}

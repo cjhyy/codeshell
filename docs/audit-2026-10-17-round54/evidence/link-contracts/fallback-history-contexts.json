@@ -1,0 +1,730 @@
+{
+  "targetPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1882",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/5/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/23/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/792/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3288/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/5/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/68/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13235/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13235/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13236/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13236/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13237/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13237/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13238/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13238/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3610/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3610/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3290",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3611/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    }
+  ],
+  "targetSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/5/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/5/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/23/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/23/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/792/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/792/claims/0/sourceSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3288/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/5/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/68/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13235/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13235/sourceHashFields/frozenSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13237/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13237/sourceHashFields/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13238/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3610/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3610/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3611/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "completeScalar": true
+    }
+  ],
+  "targetFilename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1882",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/5/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/23/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/792/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3288/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/5/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/68/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13235/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13235/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13236/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13236/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13237/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13237/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13238/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13238/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3610/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3610/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3290",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3611/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/1882",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/history-selected.json",
+      "pointer": "/records/1/value/5/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/link-prep/inventory.json",
+      "pointer": "/paths/23/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "pointer": "/matches/old-cli/19/location",
+      "kind": "json-value-scalar",
+      "offset": 21,
+      "context": "$[0][\"distinctionFromHL01\"]",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "pointer": "/matches/old-cli/25/location",
+      "kind": "json-value-scalar",
+      "offset": 37,
+      "context": "$[\"observations\"][0][\"distinctionFromHL01\"]",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/review-root-frontier.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 918,
+      "context": "-frontier-source-manifest.json) 的 **11 pins / 513 declared read lines** 均与当前文件byte/SHA、总行数及合法range相同；6个源码/test全文304行、4个消费者selected161行、旧报告全文48行，合计513。此次完整重读了这些声明范围，不把Engine5072行、skills scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽；这些是occurrence数量，不能换成文件数或已确认问题数。\n\n归档口径差异亦已独立核实：路径component严格等于`archive`或`_archive`有 **169** 条；lowercase整路径包含substring `archive`有 **174** 条。Root dedup的169与本方向早先snapshot recheck的174使用不同定义，不应直接拼成一个统一总数。全部实际库存都保留这些路径，差异不意味着漏扫归档。该事实交Root在聚合QC说明，本review不改冻结作者文件。\n\n报告 **11个本地Markdown链接及所带行号** 全部存在/合法；validation runs为空，0执行计数与独立Runtime失败方向分账；locator错误的metadata摘录明确标注人工转录，",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-dedup.json",
+      "pointer": "/contexts/leadingTrim/7/at",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "$[0].distinctionFromHL01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/root-frontier-dedup.json",
+      "pointer": "/contexts/leadingTrim/8/at",
+      "kind": "json-value-scalar",
+      "offset": 33,
+      "context": "$.observations[0].distinctionFromHL01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/root-frontier-report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1067,
+      "context": "ce/root-frontier-source-manifest.json)，全文字节固定不意味着周围调用链也全文审完。\n\n`memoize` 同时检查 `get` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Link69 /trim13，contexts 各最多25；保存完整2596文件 SHA 库存，关键词搜索不等于语义穷尽。查询中显示的旧HL-01/HL-02与直接旧报告阅读足以排除本次重复。\n\n[validation](evidence/root-frontier-validation.json) 的 runs 为空；[metadata notes](evidence/root-frontier-metadata-notes.json) 记录一次猜测旧报告路径失败，已按库存定位，不是产品失败或重跑。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "pointer": "/files/792/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3288/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "pointer": "/sources/5/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "pointer": "/files/68/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/history.json",
+      "pointer": "/hits/updater-contract/0/context",
+      "kind": "json-value-scalar",
+      "offset": 319,
+      "context": "lls scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/history.json",
+      "pointer": "/hits/updater-contract/1/context",
+      "kind": "json-value-scalar",
+      "offset": 419,
+      "context": "` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Li",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/selected-history-contexts.json",
+      "pointer": "/matches/75/context",
+      "kind": "json-value-scalar",
+      "offset": 319,
+      "context": "lls scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/selected-history-contexts.json",
+      "pointer": "/matches/76/context",
+      "kind": "json-value-scalar",
+      "offset": 419,
+      "context": "` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Li",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/selected-history-contexts.json",
+      "pointer": "/additionalTargetedInspected/3/context",
+      "kind": "json-value-scalar",
+      "offset": 319,
+      "context": "lls scanner477行或linked service264行的完整SHA当成全文阅读；冻结Git绑定是Root的证据，本review未调用Git。\n\n静态负结果边界成立：memoize的get+has保留cached undefined，fn同步throw在set前；两个resolver选段不足以证明新的rejected Promise生命周期问题。semver只委托库，不能从wrapper的0执行推出库语义正确。cwd工具有明确catch fallback；sanitizer有明确noise启发式和Engine提示分支，Root没有拿无真实任务反例的怀疑凑候选，也没有恢复旧skills/ANSI/i18n动态方向。\n\n`file-selection.ts`公共text仍trim后用于params；selectedFiles/sourceFor选段把该params带入adapter和source identity。这与全文读过的 [Round3 HL-01](../../audit-2026-10-17-round3/host-link.md:7) 同一producer/consumer原因，当前只登记旧关联准确。默认label的UTF16 slice是已有HL-02，未被另算新bug。现有test声明的“exact paths”不是本轮运行证明，Root没有操作真实provider/grant/account。\n\n[dedup](root-frontier-dedup.json) 的完整 **2596文件库存** 独立逐字节SHA重核全部未变；重新递归JSON value scalar并逐occurrence计regex，得到1250 MD、1346 JSON、468104 string values、676635 scalar values，0解析问题，命中精确为memoize1145、sanitizer87、cwd50、Link69、trim13，与保存结果一致。各contexts最多25条，不代表全部context已语义穷尽",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/semver-frontier/selected-history-contexts.json",
+      "pointer": "/additionalTargetedInspected/4/context",
+      "kind": "json-value-scalar",
+      "offset": 419,
+      "context": "` 和 `has`，所以 cached `undefined` 有明确反证；同步 fn 抛出发生在 `cache.set` 前。可缓存 rejected Promise 是泛型 API 的可能使用方式，但本次选读的两个 resolver/调用点不足以证明新的 Promise 拒绝问题，且旧 rejected-promise 原因已有历史记录，因此不凑候选。`semver` 只委托库，未测试库语义。cwd 两函数用明确 catch fallback；没有真实 filesystem/工作区场景证据支持新缺陷。sanitizer 是显式输入噪音启发式，Engine 根据 `isNoise` 返回提示；当前没有新具体合法任务被误判的证据，也不重开既有 ANSI/i18n/skills 失败方向。\n\n**ROOT-R27-R1 → HL-01（旧关联）**：[Link resolver](../../packages/link/src/file-selection.ts:7) 的公共 `text()` 仍 trim path 后参与 params 与 source identity。这就是 [旧 host-link 报告](../audit-2026-10-17-round3/host-link.md:7) 已收录的精确 GitHub 文件路径首尾空格丢失原因，不是新bug。旧 HL-02 默认label的 UTF16 slice 也仍是旧原因。既有 test 名称写“exact paths”不能当本轮已执行通过。没有真实 provider、账户或 grant 操作。\n\n[历史去重](evidence/root-frontier-dedup.json) 覆盖 docs/bugs 的1250 Markdown +1346 JSON、468104 string values /676635 scalar values，含档案、排除本轮目录，0解析错误。各查询总命中 memoize1145 /sanitizer87 /cwd50 /Li",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13235/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13235/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13236/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13236/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13237/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13237/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13238/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/13238/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3610/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3610/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3290",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3611/path",
+      "kind": "json-value-scalar",
+      "offset": 9,
+      "context": "packages/link/src/operations.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+      "pointer": "/causeContexts/glob-wrong-count/23/pointer",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "/0/distinctionFromHL01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+      "pointer": "/causeContexts/glob-wrong-count/24/pointer",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "/observations/0/distinctionFromHL01",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-tool-display/focused-history.json",
+      "pointer": "/hits/glob-count-cause/17/at",
+      "kind": "json-value-scalar",
+      "offset": 21,
+      "context": "$[0][\"distinctionFromHL01\"]",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-tool-display/focused-history.json",
+      "pointer": "/hits/glob-count-cause/18/at",
+      "kind": "json-value-scalar",
+      "offset": 37,
+      "context": "$[\"observations\"][0][\"distinctionFromHL01\"]",
+      "completeScalar": true
+    }
+  ]
+}

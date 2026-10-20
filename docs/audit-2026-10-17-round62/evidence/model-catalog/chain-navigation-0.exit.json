@@ -1,0 +1,1 @@
+{"exitCode": 0, "command": ["rg", "-n", "genInstancesFromConnections|resolveInstance|paramValues|defaultModel|applyParams|resolveImageProvider|resolveVideoProvider", "packages/core/src/tool-system/builtin/generate-image.ts", "packages/core/src/tool-system/builtin/generate-video.ts"]}

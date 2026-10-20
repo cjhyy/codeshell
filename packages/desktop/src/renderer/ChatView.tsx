@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Archive,
   CornerDownRight,
@@ -13,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { MessageStream, type ContextPackageCreatedHandler } from "./MessageStream";
+import type { SubagentSelection } from "./subagents/SubagentNavigation";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
@@ -23,6 +32,7 @@ import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { WelcomeSuggestions } from "./chat/WelcomeSuggestions";
 import { BranchPicker } from "./chat/BranchPicker";
+import { useComposerCaretRestore } from "./chat/useComposerCaretRestore";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
 import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
@@ -36,6 +46,7 @@ import type {
   RendererConfigurationTarget,
 } from "../preload/types";
 import {
+  ATTACHMENT_LIMITS,
   buildAttachments,
   decodeWireForDisplay,
   encodeAttachmentsForWire,
@@ -50,8 +61,14 @@ import {
   pathForRendererFile,
 } from "./chat/localFilePaths";
 import { compressBatch, type ImageDetail } from "./chat/compress";
+import { emptyComposerMetadata, type ComposerMetadata } from "./chat/composerMetadata";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
-import { ComposerSuggestions } from "./chat/ComposerSuggestions";
+import {
+  bindMentionReference,
+  currentMentionReferences,
+  reconcileMentionReferences,
+} from "./chat/mentionReferences";
+import { ComposerSuggestions, suggestionOptionId } from "./chat/ComposerSuggestions";
 import { detectMention } from "./chat/mention";
 import {
   buildLoopCommandPrompt,
@@ -73,8 +90,25 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { MarkdownRootStatus } from "./Markdown";
 import { ChatLinkResources, type ChatLinkReadHandler } from "./chat/ChatLinkResources";
-import { composerLinkResources, type ChatLinkResourceIntent } from "./chat/linkResourceIntents";
+import {
+  chatLinkReadOutcome,
+  chatLinkRequiredMcpRequest,
+  composerLinkResources,
+  type ChatLinkResourceIntent,
+} from "./chat/linkResourceIntents";
 import { isDraftBucket } from "./transcripts";
+
+export interface AttachmentSelection {
+  isCurrent: () => boolean;
+  prepare: () => { cwd: string; sessionId: string; quickChatClaimId?: string } | null;
+  updateAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
+  appendImages: (
+    images: ImageAttachment[],
+    overflowMessage: string,
+    validationMessages: string[],
+  ) => void;
+  updateMetadata?: React.Dispatch<React.SetStateAction<ComposerMetadata>>;
+}
 
 interface Props {
   /** Quick chats reuse the normal composer but omit durable-session controls. */
@@ -103,6 +137,7 @@ interface Props {
   engineSessionId?: string | null;
   liveTurnActive?: boolean;
   onContextPackageCreated?: ContextPackageCreatedHandler;
+  onViewSubagent?: (selection: SubagentSelection) => void;
   contextSelectionRequest?: number;
   sendBucket?: string;
   /** Explicit file-read clicks are checked against the owner's live active-session ref. */
@@ -173,6 +208,8 @@ interface Props {
     /** Ephemeral side-chat generation; main validates it before/after disk IO. */
     quickChatClaimId?: string;
   } | null;
+  /** Captures the main composer's live owner before any file read or compression. */
+  onBeginAttachmentSelection?: () => AttachmentSelection | null;
   /** Provider-agnostic image clarity; drives renderer-side downscale before send. */
   imageDetail?: ImageDetail;
   pendingApproval?: ApprovalRequestEnvelope | null;
@@ -234,6 +271,9 @@ interface Props {
   onDraftChange: React.Dispatch<React.SetStateAction<string>>;
   attachments: ImageAttachment[];
   onAttachmentsChange: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
+  imageComposer?: import("./chat/useQuickChatImages").QuickChatImageComposer;
+  composerMetadata?: ComposerMetadata;
+  onComposerMetadataChange?: React.Dispatch<React.SetStateAction<ComposerMetadata>>;
   /** Comment anchors pinned from the panels; shown as chips above the composer. */
   anchors?: Anchor[];
   onRemoveAnchor?: (id: string) => void;
@@ -374,6 +414,7 @@ export function ChatView({
   engineSessionId,
   liveTurnActive,
   onContextPackageCreated,
+  onViewSubagent,
   contextSelectionRequest,
   sendBucket,
   onReadLinkResource,
@@ -396,6 +437,7 @@ export function ChatView({
   onExtendGoal,
   onAttachImagePath,
   onPrepareAttachmentSession,
+  onBeginAttachmentSelection,
   imageDetail,
   pendingApproval,
   approvalEpoch = 0,
@@ -432,6 +474,9 @@ export function ChatView({
   onDraftChange,
   attachments,
   onAttachmentsChange,
+  imageComposer,
+  composerMetadata,
+  onComposerMetadataChange,
   anchors = [],
   onRemoveAnchor,
   onClearAnchors,
@@ -444,19 +489,109 @@ export function ChatView({
   const liveDraftStash = useRef<string>("");
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const suggestionListboxId = useId();
+  const { cancelCaretRestore, restoreCaret } = useComposerCaretRestore(
+    textareaRef,
+    draft,
+    JSON.stringify([activeProjectId, engineSessionId, variant]),
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [localComposerMetadata, setLocalComposerMetadata] = useState(() =>
+    emptyComposerMetadata(draft),
+  );
+  const {
+    attachmentError: metadataAttachmentError,
+    inputReferences,
+    mentionReferences,
+    localFilePaths,
+  } = composerMetadata ?? localComposerMetadata;
+  const attachmentError = imageComposer ? imageComposer.attachmentError : metadataAttachmentError;
+  const updateMetadata = onComposerMetadataChange ?? setLocalComposerMetadata;
+  function updateMetadataField<K extends keyof ComposerMetadata>(
+    key: K,
+    next: React.SetStateAction<ComposerMetadata[K]>,
+    selection?: AttachmentSelection | null,
+  ): void {
+    if (key === "attachmentError" && imageComposer) {
+      imageComposer.setAttachmentError(next as React.SetStateAction<string | null>);
+      return;
+    }
+    const update = (current: ComposerMetadata): ComposerMetadata => {
+      const value =
+        typeof next === "function"
+          ? (next as (value: ComposerMetadata[K]) => ComposerMetadata[K])(current[key])
+          : next;
+      return value === current[key] ? current : { ...current, [key]: value };
+    };
+    if (selection?.updateMetadata) selection.updateMetadata(update);
+    else updateMetadata(update);
+  }
+  const setAttachmentError: React.Dispatch<React.SetStateAction<string | null>> = (next) =>
+    updateMetadataField("attachmentError", next);
+  const setInputReferences: React.Dispatch<React.SetStateAction<InputAttachmentMeta[]>> = (next) =>
+    updateMetadataField("inputReferences", next);
+  const setMentionReferences: React.Dispatch<
+    React.SetStateAction<ComposerMetadata["mentionReferences"]>
+  > = (next) => updateMetadataField("mentionReferences", next);
+  const setLocalFilePaths: React.Dispatch<React.SetStateAction<string[]>> = (next) =>
+    updateMetadataField("localFilePaths", next);
   const [dragOver, setDragOver] = useState(false);
   const [contextSelectionOpen, setContextSelectionOpen] = useState(false);
   // Lightbox for staged attachment thumbnails (click to zoom). Mirrors
   // MessageStream's gallery zoom.
   const [zoomed, setZoomed] = useState<{ items: LightboxItem[]; index: number } | null>(null);
-  const setDraft = onDraftChange;
-  const setAttachments = onAttachmentsChange;
-  const [inputReferences, setInputReferences] = useState<InputAttachmentMeta[]>([]);
-  const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
+  const setDraft = useCallback<Props["onDraftChange"]>(
+    (next) => {
+      cancelCaretRestore();
+      onDraftChange(next);
+    },
+    [cancelCaretRestore, onDraftChange],
+  );
+  const setAttachments = imageComposer?.setAttachments ?? onAttachmentsChange;
+  const mentionEditSelection = useRef<{ draft: string; start: number; end: number } | null>(null);
+  const captureMentionEditSelection = (target = textareaRef.current) => {
+    const start = target?.selectionStart ?? draft.length;
+    mentionEditSelection.current = { draft, start, end: target?.selectionEnd ?? start };
+  };
+  useEffect(() => {
+    setMentionReferences((current) => reconcileMentionReferences(current, draft));
+  }, [draft]);
+  const referencesForDraft = () =>
+    currentMentionReferences(mentionReferences, draft).reduce(appendReference, inputReferences);
   const toast = useToast();
   const [linkIntents, setLinkIntents] = useState<ChatLinkResourceIntent[]>([]);
+  const linkProvenance = useRef<ChatLinkResourceIntent[]>([]);
+  const resolvedMcpRequests = useRef(new Set<string>());
+  const mcpRequestKey = (intent: ChatLinkResourceIntent) =>
+    `${intent.bucket}:${intent.cwd}:${intent.clientMessageId}:${intent.resourceId}:${intent.mcpRequest?.toolCallId}`;
+  const sameLinkIntent = (left: ChatLinkResourceIntent, right: ChatLinkResourceIntent) =>
+    left.bucket === right.bucket &&
+    left.cwd === right.cwd &&
+    left.clientMessageId === right.clientMessageId &&
+    left.resourceId === right.resourceId &&
+    left.backend === right.backend &&
+    left.mcpRequest?.toolCallId === right.mcpRequest?.toolCallId;
+  const consumeLinkIntent = (consumed: ChatLinkResourceIntent, reason?: "dismissed") => {
+    if (consumed.mcpRequest) resolvedMcpRequests.current.add(mcpRequestKey(consumed));
+    if (reason === "dismissed")
+      linkProvenance.current = linkProvenance.current.filter(
+        (intent) =>
+          intent.bucket !== consumed.bucket ||
+          intent.cwd !== consumed.cwd ||
+          intent.clientMessageId !== consumed.clientMessageId ||
+          intent.resourceId !== consumed.resourceId,
+      );
+    setLinkIntents((previous) => previous.filter((intent) => !sameLinkIntent(intent, consumed)));
+  };
+  const setLinkResumeConnection = (
+    target: ChatLinkResourceIntent,
+    resumeConnection: ChatLinkResourceIntent["resumeConnection"],
+  ) =>
+    setLinkIntents((previous) =>
+      previous.map((intent) =>
+        sameLinkIntent(intent, target) ? { ...intent, resumeConnection } : intent,
+      ),
+    );
   const rememberLinkSubmission = (text: string) => {
     if (variant !== "main" || !sendBucket || !onReadLinkResource) return {};
     const resources = composerLinkResources(text);
@@ -468,6 +603,20 @@ export function ChatView({
     const targetBucket = prepared.bucket;
     const cwd = prepared.cwd;
     const clientMessageId = crypto.randomUUID();
+    const submitted = resources.map((resource) => ({
+      ...resource,
+      clientMessageId,
+      bucket: targetBucket,
+      cwd,
+    }));
+    linkProvenance.current = [
+      ...linkProvenance.current.filter(
+        (intent) =>
+          intent.bucket !== targetBucket ||
+          !resources.some((resource) => resource.resourceId === intent.resourceId),
+      ),
+      ...submitted,
+    ].slice(-20);
     setLinkIntents((previous) =>
       [
         ...previous.filter(
@@ -475,12 +624,7 @@ export function ChatView({
             intent.bucket !== targetBucket ||
             !resources.some((resource) => resource.resourceId === intent.resourceId),
         ),
-        ...resources.map((resource) => ({
-          ...resource,
-          clientMessageId,
-          bucket: targetBucket,
-          cwd,
-        })),
+        ...submitted,
       ].slice(-20),
     );
     return { clientMessageId, bucket: targetBucket };
@@ -792,13 +936,7 @@ export function ChatView({
         current.trim().length > 0 ? `${current}\n\n${composerSeed}` : composerSeed,
       );
       onComposerSeedConsumed?.(composerSeedNonce ?? 0);
-      requestAnimationFrame(() => {
-        const ta = textareaRef.current;
-        if (ta) {
-          ta.focus();
-          ta.setSelectionRange(ta.value.length, ta.value.length);
-        }
-      });
+      restoreCaret("end");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [composerSeedNonce]);
@@ -860,7 +998,11 @@ export function ChatView({
       ? t("chat.composer.placeholderCompacting")
       : busy
         ? t("chat.composer.placeholderBusy")
-        : t("chat.composer.placeholderIdle");
+        : t(
+            variant === "quickChat"
+              ? "panels.quickChat.placeholder"
+              : "chat.composer.placeholderIdle",
+          );
 
   const closeMention = (): void => {
     setMention(null);
@@ -899,30 +1041,35 @@ export function ChatView({
   const addLocalFilePaths = (
     paths: readonly string[],
     origin: "os-drop" | "file-panel" | "picker",
+    selection = onBeginAttachmentSelection?.(),
   ): void => {
+    if (onBeginAttachmentSelection && !selection?.isCurrent()) return;
     const normalized = normalizeLocalFilePaths(paths);
     if (normalized.length === 0) return;
     const combined = normalizeLocalFilePaths([...localFilePaths, ...normalized]);
     const accepted = combined.filter((path) => !localFilePaths.includes(path));
     if (accepted.length === 0) return;
-    setLocalFilePaths(combined);
+    updateMetadataField("localFilePaths", combined, selection);
 
-    const attachmentContext = onPrepareAttachmentSession?.();
+    const attachmentContext = selection ? selection.prepare() : onPrepareAttachmentSession?.();
     if (!attachmentContext) return;
-    setInputReferences((current) =>
-      accepted.reduce(
-        (references, path) =>
-          appendReference(
-            references,
-            referenceFromAbsPath(
-              path,
-              attachmentContext.cwd ?? conversationRoot,
-              attachmentContext.sessionId ?? engineSessionId,
-              origin,
+    updateMetadataField(
+      "inputReferences",
+      (current) =>
+        accepted.reduce(
+          (references, path) =>
+            appendReference(
+              references,
+              referenceFromAbsPath(
+                path,
+                attachmentContext.cwd ?? conversationRoot,
+                attachmentContext.sessionId ?? engineSessionId,
+                origin,
+              ),
             ),
-          ),
-        current,
-      ),
+          current,
+        ),
+      selection,
     );
   };
 
@@ -935,6 +1082,8 @@ export function ChatView({
 
   const applyMentionPick = (item: MentionItem): void => {
     if (!mention) return;
+    const selection = onBeginAttachmentSelection?.();
+    if (onBeginAttachmentSelection && !selection?.isCurrent()) return;
     const ta = textareaRef.current;
     const caret = ta?.selectionStart ?? draft.length;
     const before = draft.slice(0, mention.start);
@@ -945,42 +1094,51 @@ export function ChatView({
         : item.kind === "recent"
           ? `@${item.attachment.path} `
           : `@${item.file.path} `;
+    const next = before + insertion + after;
     if (item.kind === "file") {
-      const attachmentContext = onPrepareAttachmentSession?.();
-      setInputReferences((cur) =>
-        appendReference(
-          cur,
-          referenceFromFileHit(
-            item.file,
-            attachmentContext?.cwd ?? conversationRoot,
-            attachmentContext?.sessionId ?? engineSessionId,
+      const attachmentContext = selection ? selection.prepare() : onPrepareAttachmentSession?.();
+      updateMetadataField(
+        "mentionReferences",
+        (cur) =>
+          bindMentionReference(
+            cur,
+            next,
+            before.length,
+            before.length + insertion.length - 1,
+            referenceFromFileHit(
+              item.file,
+              attachmentContext?.cwd ?? conversationRoot,
+              attachmentContext?.sessionId ?? engineSessionId,
+            ),
           ),
-        ),
+        selection,
       );
     } else if (item.kind === "recent") {
-      setInputReferences((cur) => appendReference(cur, item.attachment));
+      updateMetadataField(
+        "mentionReferences",
+        (cur) =>
+          bindMentionReference(
+            cur,
+            next,
+            before.length,
+            before.length + insertion.length - 1,
+            item.attachment,
+          ),
+        selection,
+      );
     }
-    const next = before + insertion + after;
     setDraft(next);
     closeMention();
     // After React paints, restore caret to the end of the inserted token.
     const nextCaret = before.length + insertion.length;
-    requestAnimationFrame(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(nextCaret, nextCaret);
-      }
-    });
+    restoreCaret(nextCaret, next);
   };
 
   const completeSlashCommand = (item: SlashCommandItem): void => {
     const nextDraft = completedSlashCommandDraft(item);
     setDraft(nextDraft);
     closeSlash();
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(nextDraft.length, nextDraft.length);
-    });
+    restoreCaret(nextDraft.length, nextDraft);
   };
 
   const expandPluginSlashCommand = async (
@@ -1005,10 +1163,7 @@ export function ChatView({
       setHistoryCursor(-1);
       liveDraftStash.current = "";
       toast({ message: t("chat.slash.pluginExpanded"), variant: "success" });
-      requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(result.prompt.length, result.prompt.length);
-      });
+      restoreCaret(result.prompt.length, result.prompt);
     } catch (error) {
       if (!mountedRef.current) return;
       toast({
@@ -1033,6 +1188,7 @@ export function ChatView({
       onCompactCommand();
       setDraft("");
       setInputReferences([]);
+      setMentionReferences({ draft: "", bindings: [] });
       setLocalFilePaths([]);
       setAttachmentError(null);
       setHistoryCursor(-1);
@@ -1096,7 +1252,7 @@ export function ChatView({
     );
     const displayWithAnchors = encodeAnchorsForWire(displayWithLocalFiles, anchors);
     const displayPayload = encodeAttachmentsForWire(displayWithAnchors, attachments);
-    const runAttachments = [...toRunAttachments(attachments), ...inputReferences];
+    const runAttachments = [...toRunAttachments(attachments), ...referencesForDraft()];
     // Only the text actually submitted by this composer contributes authorization candidates.
     // Attachment paths, injected prompts, tool results and replayed messages cannot register one.
     const linkSubmission = rememberLinkSubmission(text);
@@ -1121,8 +1277,11 @@ export function ChatView({
       setHistory(pushHistory(activeProjectId, withLocalFiles));
     }
     setDraft("");
+    closeMention();
+    closeSlash();
     setAttachments([]);
     setInputReferences([]);
+    setMentionReferences({ draft: "", bindings: [] });
     setLocalFilePaths([]);
     setAttachmentError(null);
     setHistoryCursor(-1);
@@ -1130,16 +1289,31 @@ export function ChatView({
     onClearAnchors?.();
   };
 
-  const acceptFiles = async (files: File[], origin: "paste" | "os-drop" | "picker") => {
+  const attachmentSelectionIsCurrent = (selection: AttachmentSelection | null | undefined) =>
+    mountedRef.current && (!onBeginAttachmentSelection || Boolean(selection?.isCurrent()));
+
+  const acceptFiles = async (
+    files: File[],
+    origin: "paste" | "os-drop" | "picker",
+    selection?: AttachmentSelection | null,
+  ) => {
     if (composerDisabled || compacting) return;
     if (files.length === 0) return;
     if (!localRuntime) {
       await onSelectRemoteFiles?.(files);
       return;
     }
-    setAttachmentError(null);
+    if (selection === undefined) selection = onBeginAttachmentSelection?.();
+    const imageSelection = imageComposer?.beginSelection();
+    const selectionIsCurrent = () =>
+      attachmentSelectionIsCurrent(selection) &&
+      (!imageComposer || Boolean(imageSelection?.isCurrent()));
+    if (!selectionIsCurrent()) return;
+    if (imageSelection) imageSelection.setAttachmentError(null);
+    else updateMetadataField("attachmentError", null, selection);
     const { accepted, errors } = await buildAttachments(files, attachments);
-    if (!mountedRef.current) return;
+    if (!selectionIsCurrent()) return;
+    let attachmentErrorsCommitted = false;
     if (accepted.length > 0) {
       // Compress before staging so the chip thumbnail and the wire
       // payload share the same bytes — keeps the UI honest about what
@@ -1147,8 +1321,9 @@ export function ChatView({
       // back to the original if encoding fails (engine policy still
       // gates oversize bytes downstream).
       const compressed = await compressBatch(accepted, imageDetail);
-      if (!mountedRef.current) return;
-      const context = onPrepareAttachmentSession?.();
+      if (!selectionIsCurrent()) return;
+      const context = selection ? selection.prepare() : onPrepareAttachmentSession?.();
+      if (!selectionIsCurrent()) return;
       if (!context) {
         errors.push({
           kind: "staging-failed",
@@ -1182,10 +1357,24 @@ export function ChatView({
               };
             }),
           );
-          if (!mountedRef.current) return;
-          setAttachments((cur) => [...cur, ...staged]);
+          if (!selectionIsCurrent()) return;
+          if (selection) {
+            selection.appendImages(
+              staged,
+              t("chat.attachment.tooManySimple", { max: ATTACHMENT_LIMITS.maxImagesPerMessage }),
+              errors.map((error) => error.message),
+            );
+            attachmentErrorsCommitted = true;
+          } else if (imageSelection) {
+            imageSelection.appendImages(
+              staged,
+              t("chat.attachment.tooManySimple", { max: ATTACHMENT_LIMITS.maxImagesPerMessage }),
+              errors.map((error) => error.message),
+            );
+            attachmentErrorsCommitted = true;
+          } else setAttachments((cur) => [...cur, ...staged]);
         } catch (e) {
-          if (!mountedRef.current) return;
+          if (!selectionIsCurrent()) return;
           errors.push({
             kind: "staging-failed",
             message: t("chat.attachment.stagingFailed", {
@@ -1195,13 +1384,16 @@ export function ChatView({
         }
       }
     }
-    if (mountedRef.current && errors.length > 0) {
-      setAttachmentError(errors.map((e) => e.message).join("；"));
+    if (!attachmentErrorsCommitted && selectionIsCurrent() && errors.length > 0) {
+      const message = errors.map((e) => e.message).join("；");
+      if (imageSelection) imageSelection.setAttachmentError(message);
+      else updateMetadataField("attachmentError", message, selection);
     }
   };
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     if (compacting) return;
+    captureMentionEditSelection(e.currentTarget);
     const imageFiles = filesFromClipboard(e.clipboardData?.items ?? null);
     if (imageFiles.length === 0) return;
     e.preventDefault();
@@ -1221,7 +1413,9 @@ export function ChatView({
       await onSelectRemoteFiles?.(files);
       return;
     }
-    setAttachmentError(null);
+    const selection = onBeginAttachmentSelection?.();
+    if (!attachmentSelectionIsCurrent(selection)) return;
+    updateMetadataField("attachmentError", null, selection);
     const images: File[] = [];
     const paths: string[] = [];
     const unavailable: string[] = [];
@@ -1237,16 +1431,21 @@ export function ChatView({
       }
     }
 
-    if (images.length > 0) await acceptFiles(images, origin);
-    if (!mountedRef.current) return;
-    if (paths.length > 0) addLocalFilePaths(paths, origin);
+    if (images.length > 0) await acceptFiles(images, origin, selection);
+    if (!attachmentSelectionIsCurrent(selection)) return;
+    if (paths.length > 0) addLocalFilePaths(paths, origin, selection);
     if (unavailable.length > 0) {
-      setAttachmentError(t("chat.composer.filePathUnavailable", { names: unavailable.join("、") }));
+      updateMetadataField(
+        "attachmentError",
+        t("chat.composer.filePathUnavailable", { names: unavailable.join("、") }),
+        selection,
+      );
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (isComposing || e.nativeEvent.isComposing) return;
+    if (e.key === "Backspace" || e.key === "Delete") captureMentionEditSelection(e.currentTarget);
 
     if (slash) {
       if (e.key === "Escape") {
@@ -1356,6 +1555,23 @@ export function ChatView({
       break;
     }
   }
+  const previousQuestion = useRef<string | null>(null);
+  const stickyQuestionRef = useRef<HTMLDivElement>(null);
+  const questionComposerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const hadQuestion = previousQuestion.current !== null;
+    previousQuestion.current = openAsk?.requestId ?? null;
+    const composer = textareaRef.current;
+    if (
+      hadQuestion &&
+      !openAsk &&
+      document.activeElement === document.body &&
+      composer?.getClientRects().length
+    ) {
+      composer.focus({ preventScroll: true });
+    }
+  }, [openAsk?.requestId]);
 
   // A truly new/draft chat has no messages AND isn't mid-hydration. An existing
   // session being hydrated also has messages.length === 0 for a frame, but must
@@ -1404,10 +1620,58 @@ export function ChatView({
         />
       </div>
     ) : null;
+  const linkReadOutcomes = useMemo(
+    () =>
+      new Map(
+        linkIntents
+          .filter((intent) => intent.bucket === sendBucket && intent.cwd === conversationRoot)
+          .map((intent) => [intent, chatLinkReadOutcome(intent, messages)]),
+      ),
+    [linkIntents, messages, sendBucket, conversationRoot],
+  );
+  useEffect(() => {
+    const consumed = new Set(
+      [...linkReadOutcomes]
+        .filter(([, outcome]) => outcome === "succeeded")
+        .map(([intent]) => intent),
+    );
+    setLinkIntents((previous) => {
+      let changed = false;
+      const next = previous.flatMap((intent) => {
+        if (consumed.has(intent)) {
+          if (intent.mcpRequest) resolvedMcpRequests.current.add(mcpRequestKey(intent));
+          changed = true;
+          return [];
+        }
+        return [intent];
+      });
+      for (const source of linkProvenance.current) {
+        if (source.bucket !== sendBucket || source.cwd !== conversationRoot) continue;
+        const request = chatLinkRequiredMcpRequest(source, messages);
+        if (!request) continue;
+        const candidate = { ...source, backend: "mcp" as const, mcpRequest: request };
+        if (resolvedMcpRequests.current.has(mcpRequestKey(candidate))) continue;
+        const existing = next.findIndex(
+          (intent) =>
+            intent.bucket === source.bucket &&
+            intent.cwd === source.cwd &&
+            intent.clientMessageId === source.clientMessageId &&
+            intent.resourceId === source.resourceId,
+        );
+        if (existing !== -1 && next[existing].mcpRequest?.toolCallId === request.toolCallId)
+          continue;
+        if (existing !== -1) next.splice(existing, 1, candidate);
+        else next.push(candidate);
+        changed = true;
+      }
+      return changed ? next : previous;
+    });
+  }, [linkReadOutcomes, sendBucket, conversationRoot, messages]);
   const visibleLinkIntents = linkIntents.filter(
     (intent) =>
       intent.bucket === sendBucket &&
       intent.cwd === conversationRoot &&
+      linkReadOutcomes.get(intent) !== "succeeded" &&
       messages.some(
         (message) =>
           message.kind === "user" &&
@@ -1423,10 +1687,78 @@ export function ChatView({
         intents={visibleLinkIntents}
         busy={busy || compacting}
         onRead={onReadLinkResource}
+        onConsumed={consumeLinkIntent}
+        onResumeConnectionChange={setLinkResumeConnection}
+        readFailed={(intent) => linkReadOutcomes.get(intent) === "failed"}
+        readBusy={(intent) => linkReadOutcomes.get(intent) === "in-progress"}
       />
     ) : null;
 
   const showStickyApproval = !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
+  // Keep the composer bound while the request exists. Tying this mode to
+  // inline visibility makes its resizing feed back into IntersectionObserver.
+  const hasPendingInteraction = !!openAsk || (!!pendingApproval && !!onApprovalDecide);
+  useEffect(() => {
+    if (
+      (!hasPendingInteraction && variant !== "main") ||
+      contextSelectionOpen ||
+      typeof ResizeObserver === "undefined"
+    )
+      return;
+    const newChatScroller =
+      questionComposerRef.current?.closest<HTMLDivElement>(".cs-new-chat") ?? null;
+    const scrollers = [
+      stickyQuestionRef.current,
+      questionComposerRef.current,
+      newChatScroller,
+    ].filter((element): element is HTMLDivElement => element !== null);
+    const ensureFocusedVisible = (): void => {
+      const focused = document.activeElement;
+      if (!(focused instanceof HTMLElement)) return;
+      // New chats nest the composer inside the welcome scroller. Align the
+      // focused control from the inner scroller out so neither clips it.
+      for (const scroller of scrollers) {
+        if (!scroller.contains(focused)) continue;
+        const bounds = scroller.getBoundingClientRect();
+        const target = focused.getBoundingClientRect();
+        if (bounds.height <= 0) continue;
+        // A long textarea may fill the entire visible slice. Keep that slice;
+        // smaller controls need to remain fully visible after a dock resize.
+        if (
+          target.height > bounds.height &&
+          target.top < bounds.bottom &&
+          target.bottom > bounds.top
+        )
+          continue;
+        if (target.top < bounds.top) scroller.scrollTop += target.top - bounds.top;
+        else if (target.bottom > bounds.bottom) scroller.scrollTop += target.bottom - bounds.bottom;
+      }
+    };
+    const observer = new ResizeObserver(ensureFocusedVisible);
+    scrollers.forEach((element) => {
+      observer.observe(element);
+      // Portaled menus may restore focus after the resize observer has run.
+      element.addEventListener("focusin", ensureFocusedVisible);
+    });
+    // Queue or draft growth can move a focused action without changing the
+    // already bounded scroller's size. Observe its content as well.
+    const composer = questionComposerRef.current?.querySelector(".cs-chat-composer");
+    if (composer) observer.observe(composer);
+    ensureFocusedVisible();
+    return () => {
+      observer.disconnect();
+      scrollers.forEach((element) => element.removeEventListener("focusin", ensureFocusedVisible));
+    };
+  }, [
+    hasPendingInteraction,
+    openAsk?.requestId,
+    showStickyApproval,
+    pendingApproval?.requestId,
+    contextSelectionOpen,
+    variant,
+    isNewChat,
+    queuedInputItems.length,
+  ]);
 
   // Show ALL queued items, not a 2-item slice — the old slice(0, 2) is what
   // made 引导 look like it "只能打断 2 句": only the first two ever rendered a
@@ -1503,6 +1835,8 @@ export function ChatView({
       }
       data-mode={isNewChat ? "new" : "active"}
       data-chat-variant={variant}
+      data-queued-input={queuedInputItems.length > 0 ? "true" : undefined}
+      data-pending-interaction={!contextSelectionOpen && hasPendingInteraction ? "true" : undefined}
       data-theme-surface={variant === "main" ? "chat" : undefined}
       onDragEnter={onChatDragEnter}
       onDragOver={onChatDragOver}
@@ -1591,6 +1925,7 @@ export function ChatView({
             rootStatus={conversationRootStatus}
             sendEpoch={sendEpoch}
             onContextPackageCreated={onContextPackageCreated}
+            onViewSubagent={onViewSubagent}
             onContextSelectionChange={setContextSelectionOpen}
             contextSelectionRequest={contextSelectionRequest}
           />
@@ -1598,11 +1933,15 @@ export function ChatView({
       )}
 
       {!contextSelectionOpen && (openAsk || showStickyApproval) && (
-        <div className="cs-chat-sticky w-full min-w-0">
+        <div ref={stickyQuestionRef} className="cs-chat-sticky w-full min-w-0">
           {/* AskUserMessageView carries its own column padding so it lines up
               with the message stream; ApprovalCard has none of its own. */}
           {openAsk && (
-            <AskUserMessageView message={openAsk} onAnswer={onAskUserAnswer ?? (() => undefined)} />
+            <AskUserMessageView
+              key={openAsk.requestId}
+              message={openAsk}
+              onAnswer={onAskUserAnswer ?? (() => undefined)}
+            />
           )}
           {showStickyApproval && pendingApproval && onApprovalDecide && (
             <div className="px-4">
@@ -1617,29 +1956,33 @@ export function ChatView({
         </div>
       )}
 
-      {/*
-        New-chat mode centers the whole hero group — welcome text, composer,
-        and project picker — in the empty stream space instead of pinning the
-        composer to the bottom. The flex-1 wrapper claims that space and
-        justify-center pulls the group to the middle; the composer is width-
-        capped so it reads as a centered hero. In active mode this wrapper is
-        absent (the MessageStream owns flex-1) and the composer stays pinned
-        at the bottom as a plain p-3 block.
-      */}
+      {/* Main/pet drafts center their welcome and composer together. Quick chat
+          keeps its composer at the bottom, with a separately scrolling welcome
+          so a short side panel can still reach every input control. */}
       <div
         className={
           contextSelectionOpen
             ? "hidden"
             : isNewChat
               ? cn(
-                  "flex min-w-0 max-w-full flex-1 flex-col items-center px-4",
-                  variant === "main" ? "cs-new-chat" : "justify-center",
+                  "flex min-w-0 max-w-full flex-1 flex-col items-center",
+                  variant === "main"
+                    ? "cs-new-chat px-4"
+                    : variant === "quickChat"
+                      ? "min-h-0"
+                      : "justify-center px-4",
                 )
               : "contents"
         }
       >
         {isNewChat && welcomeNode && (
-          <div className="mb-5 flex w-full min-w-0 shrink-0 flex-col items-center">
+          <div
+            className={
+              variant === "quickChat"
+                ? "cs-quick-chat-welcome flex min-h-0 w-full min-w-0 flex-1 flex-col items-center overflow-y-auto px-5"
+                : "mb-5 flex w-full min-w-0 shrink-0 flex-col items-center"
+            }
+          >
             {welcomeNode}
           </div>
         )}
@@ -1650,14 +1993,18 @@ export function ChatView({
             collapsing the input row by row. Pinning shrink to 0 keeps it at its
             content height regardless of how tall the stream gets. */}
         <div
-          className={
-            isNewChat
-              ? "w-full min-w-0 max-w-2xl shrink-0 p-3"
-              : cn(
-                  "min-w-0 shrink-0 p-3",
-                  variant === "main" ? "mx-auto w-full max-w-3xl" : "max-w-full",
-                )
-          }
+          ref={questionComposerRef}
+          className={cn(
+            "cs-chat-composer-wrap",
+            variant === "quickChat"
+              ? "cs-quick-chat-composer-wrap w-full min-w-0 shrink-0 p-3"
+              : isNewChat
+                ? "w-full min-w-0 max-w-2xl shrink-0 p-3"
+                : cn(
+                    "min-w-0 shrink-0 p-3",
+                    variant === "main" ? "mx-auto w-full max-w-3xl" : "max-w-full",
+                  ),
+          )}
         >
           {queuedInputItems.length > 0 && (
             <div className="mb-2 rounded-2xl border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
@@ -1736,15 +2083,19 @@ export function ChatView({
           */}
           <div
             className={
-              // sm:min-w-[300px]: stop the composer collapsing into an unusable
-              // sliver when a side panel squeezes the desktop chat; keep phones
-              // at min-w-0 so wide message content cannot force horizontal page
-              // overflow. Keep this card out of the container-query tree: putting
+              // Keep the preferred desktop minimum within the main pane's real
+              // width, including a new-chat column's extra padding. Keep this
+              // card out of the container-query tree: putting
               // container-type on the textarea's ancestor has collapsed the
               // composer during session/dock reflow.
-              "cs-chat-composer min-w-0 max-w-full border sm:min-w-[300px]" +
+              "cs-chat-composer min-w-0 max-w-full border" +
+              (variant === "quickChat"
+                ? ""
+                : variant === "main"
+                  ? " sm:min-w-[min(300px,100%)]"
+                  : " sm:min-w-[300px]") +
               (variant === "main" ? "" : " bg-card") +
-              (variant === "main" ? "" : " rounded-xl p-2 shadow-sm") +
+              (variant === "pet" ? " rounded-xl p-2 shadow-sm" : "") +
               (dragOver ? " ring-2 ring-primary/40" : "")
             }
             data-theme-surface={variant === "main" ? "composer" : undefined}
@@ -1902,6 +2253,7 @@ export function ChatView({
             <div className="relative">
               {mention && (
                 <MentionPopover
+                  listboxId={suggestionListboxId}
                   anchorRef={textareaRef}
                   cwd={configurationAvailable ? conversationRoot : null}
                   rootId={configurationAvailable ? conversationRootId : null}
@@ -1922,6 +2274,7 @@ export function ChatView({
               )}
               {slash && (
                 <ComposerSuggestions
+                  id={suggestionListboxId}
                   anchorRef={textareaRef}
                   label={t("chat.slash.ariaLabel")}
                   selected={slashSelected}
@@ -1931,12 +2284,13 @@ export function ChatView({
                     {t("chat.slash.commands")}
                   </div>
                   {slashItems.length > 0 ? (
-                    <ul className="space-y-0.5">
+                    <ul role="presentation" className="space-y-0.5">
                       {slashItems.map((item, idx) => {
                         const active = idx === slashSelected;
                         return (
                           <li
                             key={item.name}
+                            id={suggestionOptionId(suggestionListboxId, `slash:${item.name}`)}
                             className={cn(
                               "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
                               active && "bg-accent text-accent-foreground",
@@ -1978,9 +2332,29 @@ export function ChatView({
               )}
               <Textarea
                 ref={textareaRef}
+                aria-label={t("chat.composer.inputLabel")}
+                aria-autocomplete="list"
+                aria-haspopup="listbox"
                 value={draft}
+                onBeforeInput={(e) => captureMentionEditSelection(e.currentTarget)}
+                onCut={(e) => captureMentionEditSelection(e.currentTarget)}
                 onChange={(e) => {
                   const value = e.target.value;
+                  const selection = mentionEditSelection.current;
+                  mentionEditSelection.current = null;
+                  setMentionReferences((current) =>
+                    reconcileMentionReferences(
+                      reconcileMentionReferences(current, draft),
+                      value,
+                      selection?.draft === draft
+                        ? {
+                            start: selection.start,
+                            end: selection.end,
+                            caret: e.target.selectionStart ?? value.length,
+                          }
+                        : undefined,
+                    ),
+                  );
                   setDraft(value);
                   if (historyCursor !== -1) setHistoryCursor(-1);
                   const caret = e.target.selectionStart ?? value.length;
@@ -2024,7 +2398,11 @@ export function ChatView({
                 rows={1}
                 className={cn(
                   "max-h-[200px] w-full resize-none rounded-none border-0 bg-transparent px-2 py-1.5 text-sm leading-relaxed shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:opacity-60",
-                  isNewChat && variant === "main" ? "min-h-[72px]" : "min-h-[36px]",
+                  isNewChat && variant === "main"
+                    ? "min-h-[72px]"
+                    : variant === "quickChat"
+                      ? "min-h-[60px]"
+                      : "min-h-[36px]",
                 )}
               />
             </div>
@@ -2082,7 +2460,12 @@ export function ChatView({
             )}
 
             <div className="@container/composer-controls mt-1 min-h-8 w-full min-w-0">
-              <div className="flex min-w-0 items-center justify-between gap-2">
+              <div
+                className={cn(
+                  "flex min-w-0 items-center justify-between gap-2",
+                  variant === "quickChat" && "flex-wrap",
+                )}
+              >
                 <div className="flex min-w-0 items-center gap-1.5">
                   {variant !== "pet" && (localRuntime || onSelectRemoteFiles) && (
                     <Button
@@ -2107,6 +2490,7 @@ export function ChatView({
                       value={permissionMode}
                       onChange={onPermissionChange}
                       disabled={controlsDisabled}
+                      compact={variant === "quickChat"}
                     />
                   )}
                   {localRuntime && variant === "main" && (
@@ -2118,7 +2502,12 @@ export function ChatView({
                   )}
                 </div>
 
-                <div className="flex min-w-0 items-center justify-end gap-1.5">
+                <div
+                  className={cn(
+                    "flex min-w-0 items-center justify-end gap-1.5",
+                    variant === "quickChat" && "ml-auto",
+                  )}
+                >
                   {variant === "main" && (
                     <div data-composer-control="context-usage">
                       <ContextRing
@@ -2139,6 +2528,7 @@ export function ChatView({
                     options={modelOptions}
                     onSelect={onModelChange}
                     disabled={controlsDisabled}
+                    compact={variant === "quickChat"}
                   />
                   {/* 语音输入(听写):点击录音 → 再点停止 → 转写填进输入框(不自动发)。
                     idle=Mic / recording=红色 Square 脉冲 / transcribing=spinner。 */}
@@ -2212,7 +2602,7 @@ export function ChatView({
                           const displayPayload = encodeAttachmentsForWire(withAnchors, attachments);
                           const runAttachments = [
                             ...toRunAttachments(attachments),
-                            ...inputReferences,
+                            ...referencesForDraft(),
                           ];
                           onForceSend(withAnchors, {
                             ...(sendBucket ? { bucket: sendBucket } : {}),
@@ -2224,8 +2614,11 @@ export function ChatView({
                             setHistory(pushHistory(activeProjectId, withLocalFiles));
                           }
                           setDraft("");
+                          closeMention();
+                          closeSlash();
                           setAttachments([]);
                           setInputReferences([]);
+                          setMentionReferences({ draft: "", bindings: [] });
                           setLocalFilePaths([]);
                           setAttachmentError(null);
                           onClearAnchors?.();
@@ -2313,11 +2706,7 @@ export function ChatView({
                 setHistoryCursor(-1);
                 closeMention();
                 closeSlash();
-                requestAnimationFrame(() => {
-                  const textarea = textareaRef.current;
-                  textarea?.focus();
-                  textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
-                });
+                restoreCaret("end");
               }}
             />
           )}

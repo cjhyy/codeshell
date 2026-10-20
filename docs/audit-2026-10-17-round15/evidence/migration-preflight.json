@@ -1,0 +1,31 @@
+{
+  "kind": "metadata-only before first product test",
+  "frozen": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "paths": [
+    {
+      "path": "packages/core/src/settings/migrate-config.ts",
+      "bytes": 5819,
+      "sha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "bytes": 6234,
+      "sha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-config-pure.test.ts",
+      "bytes": 3173,
+      "sha256": "6f2b9efcaa22ba65c0a1808de02bbb3ef0e92e1eab3f95aabc0f8bf37888a6a7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-source-pure.test.ts",
+      "bytes": 3542,
+      "sha256": "9d6c5e9dee43cc66c011e769136f9048ca5d3c1fc3c8cc18d8d3a1cc6ac63032"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d"
+    }
+  ]
+}

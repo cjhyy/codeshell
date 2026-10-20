@@ -1,0 +1,21 @@
+{
+  "atUTC": "2026-10-17T21:14:39.697797+00:00",
+  "selectedSubsetOfActualDisplay": true,
+  "allRangesAtOrBelowActualEOF": true,
+  "allEndingPinsUnchanged": true,
+  "allLocalReportLinksPresentOrReceiptSelfLink": true,
+  "reportLinks": [
+    "source-display-01.txt",
+    "source-display-02.txt",
+    "source-display-03.txt",
+    "source-manifest.json",
+    "diagnostics.json",
+    "history-limits.json",
+    "classification.json",
+    "validation.json",
+    "ending-checks.json",
+    "reviewer-receipt.json"
+  ],
+  "sourceAndEvidenceCountsSeparated": true,
+  "rootRuntimeNotAttributedToPeer": true
+}

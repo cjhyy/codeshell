@@ -1,0 +1,8 @@
+{
+  "createdAt": "2026-10-17T18:55:59.208422+00:00",
+  "source": "/tmp/codeshell-audit-round135-static-files/history-batch.json",
+  "bytes": 1250596,
+  "sha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f",
+  "rootReportedFrozen": true,
+  "rootReportedCohort": "5676MD/JSON,frozen56included57+excluded;recursiveJSONvalues+archives;0parseerrors; no author method executed"
+}

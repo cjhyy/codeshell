@@ -1,0 +1,1 @@
+{"atUTC": "2026-10-17T17:04:18.078267+00:00", "parentInventory": "history.json", "filesCheckedSameBytes": 4693, "pattern": "再续.{0,100}(?:按钮|分组|丢失)|(?:approaching_limit|GoalProgressView).{0,120}(?:group|onExtend|process)|(?:onExtend|过程分组|工具分组|turn_process_group).{0,100}(?:GoalProgress|goal_progress|再续)", "count": 0, "retained": 0, "cap": 100, "errors": [], "productRuns": 0}

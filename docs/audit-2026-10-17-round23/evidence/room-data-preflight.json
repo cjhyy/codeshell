@@ -1,0 +1,18 @@
+{
+  "frozenHead": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "actualHead": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "source": "packages/server/src/mobile-remote/mobile-history.ts",
+  "sourceSha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+  "frozenShowExit": 0,
+  "matchesFrozen": true,
+  "actualLeafRuntimeImports": [],
+  "fixtureImports": [
+    "import { describe, expect, test } from \"bun:test\";",
+    "import { buildSessionHistory } from \"/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/src/mobile-remote/mobile-history.ts\";"
+  ],
+  "fixtureBytes": 3491,
+  "fixtureSha256": "761b60e00e5688ed60c8ca25b2097c5a0eb1599e5ee13497732784ff90ff17d3",
+  "codexDynamicAttempts": 0,
+  "existingSuitesRun": 0,
+  "excluded": "Codex old cases/baseline and approval case not rerun; no mobile-history direct existing tests found in literal references. Room/desktop tests import storage/identity dependencies and are not executed."
+}

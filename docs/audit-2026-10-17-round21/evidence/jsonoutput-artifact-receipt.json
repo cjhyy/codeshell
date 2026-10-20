@@ -1,0 +1,97 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "report": "docs/audit-2026-10-17-round21/json-output.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup-decisions.json",
+      "sha256": "dceaa3df16dfc451befc444b4161fd210695342ad1fa64163e003a008cc9e39c",
+      "bytes": 2486
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup.json",
+      "sha256": "5dc4c600193ece5b49b5ebe4f3bd0858dbb3f94d1e1f60764c1404e80ed6538b",
+      "bytes": 640338
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup.py",
+      "sha256": "50fed868ed0bd0d308cc5e0d725beaf02aa9d60e779d7fbd822e1771beacb7b5",
+      "bytes": 2721
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-findings.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-first.exit.json",
+      "sha256": "1bdc3db814737426c8bffa8a03e511f08eaf456f495203f560c39247c502f841",
+      "bytes": 463
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-first.raw.log",
+      "sha256": "9ae029f5f48607a73d6278713c544c5bb5fe35f033ebddb82e8ec392550545aa",
+      "bytes": 1498
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-focused.test.ts",
+      "sha256": "926e318c1b01f2834e39b01e9165039572b6eabcf090c8a4e62e1e6898f3b07c",
+      "bytes": 6647
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-metadata-notes.json",
+      "sha256": "2bcb64d3dfe7bd41cf6414e5deea675621a0c25cdfbbc66d7519d4e2fcdce5bd",
+      "bytes": 2064
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-preflight.json",
+      "sha256": "c25798cdc9f7130b739e68e7f5ee5430b026b943f8921c44016617725060c8fb",
+      "bytes": 1656
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-receipt.py",
+      "sha256": "0548d8e7102c8a7d71b19618e251f022677e04817230d98b0a28698290e683b0",
+      "bytes": 2532
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-related.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-source-manifest.json",
+      "sha256": "5a205fa421fcc7f3889e9217f658db885e4000e0297dc31af63929ec863774ea",
+      "bytes": 5674
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-validation.json",
+      "sha256": "bbf2ddd470e693326a1817f66b2923e62510cabccefd809f228ddd5d8a021e2f",
+      "bytes": 2170
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/json-output.md",
+      "sha256": "568c22bee1843f385ee30f6e7a60e4155d7b6b12ec855830b4d11bfe83d8ccbc",
+      "bytes": 4915
+    }
+  ],
+  "selfExcluded": true,
+  "rawLogsPreservedVerbatim": true,
+  "rawAndExitSavedBeforeInspection": true,
+  "metadataOnlyReview": {
+    "reportLinksChecked": 19,
+    "allTargetsExist": true,
+    "referencedLinesInBounds": true,
+    "sourceCurrentHashesChecked": 12,
+    "fixtureUnchangedSincePreflight": true,
+    "rawMatchesExitReceipt": true,
+    "artifactHashesChecked": 15
+  },
+  "limitations": "Receipt self excluded; source/hash/link verification only; no product reruns."
+}

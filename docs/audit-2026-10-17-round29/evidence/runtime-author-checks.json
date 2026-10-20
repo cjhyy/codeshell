@@ -1,0 +1,144 @@
+{
+  "baseline": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "atUTC": "2026-10-17T11:39:35.820970+00:00",
+  "sourceFinishChecks": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2"
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "bytes": 2732,
+      "sha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2"
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "bytes": 7513,
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e"
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "bytes": 2451,
+      "sha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58"
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "bytes": 38404,
+      "sha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d"
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.test.ts",
+      "bytes": 9383,
+      "sha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88"
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1"
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829"
+    },
+    {
+      "path": "packages/web/src/hooks/mobileOutputClient.ts",
+      "bytes": 14977,
+      "sha256": "e4213070c19b9212727b8d97c0718e86fb65ca421642dd004b07c61d4c961289"
+    },
+    {
+      "path": "packages/web/app/chat.ts",
+      "bytes": 8615,
+      "sha256": "f90114c7369dc929e8900b9c7faa4a647deeafdeeb724638238073c80c80e0a9"
+    }
+  ],
+  "sourcePinCount": 10,
+  "prepCopyChecks": [
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/README.md",
+      "bytes": 1613,
+      "sha256": "2dda988b1f4ae4007d933f1074b13cb6650e7d656e6433f77f66f38b9e70a806",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/artifact-receipt.json",
+      "bytes": 3030,
+      "sha256": "9b3813ef49874e34dbe4078f2ee3a5d3900d5e966174778765db7c03046cf0e5",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/consumer-initial-pin.json",
+      "bytes": 282,
+      "sha256": "cd8fcc451aafb731025bc0d9ed2997c906d80a39ef814a4ace4340f00d534397",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/extra-initial-pins.json",
+      "bytes": 2109,
+      "sha256": "efa55c39e3fbd227f574ac3b06d0f88640b6376c7fa3619cb5c9f527e66ae19f",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/finish-hash-checks.json",
+      "bytes": 1855,
+      "sha256": "f179aa4068d05f2d4ff0ac804c16fca2d5f84b3f17948e001545c374f1ebc6bf",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history-decisions.json",
+      "bytes": 4543,
+      "sha256": "cc0e7f7bcaa411f421097b72a69b19d149317b3458bc989ba2365aa1d7431530",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history-method.py",
+      "bytes": 3475,
+      "sha256": "5df8e637e3ee04592cbbbb0b938dfa04ffb93f82d6b5934a01940cdf8e896852",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/history.json",
+      "bytes": 651772,
+      "sha256": "fc1700f90f30909f4f78955dff6d25fa510954c2f65b8470ffd95857330ae290",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/initial-pins.json",
+      "bytes": 1680,
+      "sha256": "73f75f2ecd43d0c6d00ad866b77c80b6fd8df87b65eb0288583eda6999bed686",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/proposal.json",
+      "bytes": 1627,
+      "sha256": "e2afbd4334b66eae30a70b7b507bb628911bf354056a5144cfc02d867f87a987",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/selection.json",
+      "bytes": 1509,
+      "sha256": "d1adf923dce8c111001429ac2298cf7c582c86ff86f1f3c94f2911ed17a774f2",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/source-manifest.json",
+      "bytes": 8114,
+      "sha256": "d3e722359c0b80bae5bca66544fc61baf87191fb0b5b6ff081e38dd226dd460a",
+      "originalStillByteIdentical": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/runtime-prep/validation.json",
+      "bytes": 515,
+      "sha256": "073e583356b806d4c74062cef05075b8c04ecd22c86cafaafea9c68ed368a36f",
+      "originalStillByteIdentical": true
+    }
+  ],
+  "prepCopyCount": 13,
+  "reportLocalLinksChecked": 25,
+  "authorReceiptLinkDeferredUntilCreation": true,
+  "newSemanticSourceReads": 0,
+  "productRuns": 0,
+  "gitCommands": 0,
+  "scope": "Only filesystem bytes/declared ranges/local MD links; no product correctness or Git object verification."
+}

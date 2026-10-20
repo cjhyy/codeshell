@@ -1,3 +1,4 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import {
@@ -25,6 +26,7 @@ import {
   type OAuthTokens,
 } from "@cjhyy/code-shell-core";
 import { MCP_OAUTH_PROFILES, type McpOAuthProfile } from "./mcp-oauth-profiles.js";
+import { assertMcpOAuthCredentialBinding } from "@cjhyy/code-shell-core/internal";
 
 export type McpOAuthLoginInput =
   | { source: "catalog"; profileId: string; credentialId?: string }
@@ -59,7 +61,39 @@ type OAuthFailureStage =
   | "authorization"
   | "discovery_registration"
   | "authorization_callback"
-  | "token_exchange";
+  | "token_exchange"
+  | "credential_verification";
+
+export type McpOAuthVerificationStage =
+  | "credential_binding"
+  | "mcp_initialize"
+  | "tool_discovery"
+  | "account_verification"
+  | "capability_verification";
+
+export type McpOAuthVerificationReason =
+  | "binding_mismatch"
+  | "cancelled"
+  | "network_error"
+  | "http_error"
+  | "protocol_error"
+  | "tool_unavailable"
+  | "invalid_pagination"
+  | "response_too_large"
+  | "account_tool_error"
+  | "account_identity_unavailable"
+  | "no_read_capabilities";
+
+/** Only Host-generated, fixed diagnostic fields survive provider error normalization. */
+export class McpOAuthVerificationError extends Error {
+  constructor(
+    readonly verificationStage: McpOAuthVerificationStage,
+    readonly reason: McpOAuthVerificationReason,
+    readonly status?: number,
+  ) {
+    super("MCP connection verification failed");
+  }
+}
 
 interface McpOAuthServiceOptions {
   store?: CredentialStore;
@@ -87,6 +121,15 @@ interface LoginSpec {
   tokenEndpoint?: string;
   revocationEndpoint?: string;
   scopes?: string[];
+  registrationClientName?: string;
+}
+
+/** Host connection adapters may validate and atomically adopt a candidate themselves. */
+export interface HostMcpOAuthLoginOptions {
+  signal?: AbortSignal;
+  callbackTimeoutMs?: number;
+  onAuthorizationUrl?: (url: string, expiresAt: string) => Promise<void> | void;
+  validateCredential?: (credential: Credential, signal?: AbortSignal) => Promise<Credential>;
 }
 
 class NormalizedOAuthError extends Error {
@@ -117,6 +160,8 @@ export class McpOAuthServiceError extends Error {
     message: string,
     readonly stage: OAuthFailureStage,
     readonly status?: number,
+    readonly verificationStage?: McpOAuthVerificationStage,
+    readonly reason?: McpOAuthVerificationReason,
   ) {
     super(`MCP_OAUTH_${code.toUpperCase()}: ${message}`);
   }
@@ -197,6 +242,22 @@ function internalStatus(error: unknown): number | undefined {
 
 function publicOAuthError(error: unknown, fallbackStage: OAuthFailureStage): McpOAuthServiceError {
   if (error instanceof McpOAuthServiceError) return error;
+  if (error instanceof McpOAuthVerificationError) {
+    const code =
+      error.reason === "network_error"
+        ? "network_error"
+        : error.status !== undefined && error.status >= 500
+          ? "server_error"
+          : "protocol_error";
+    return new McpOAuthServiceError(
+      code,
+      "MCP connection verification failed",
+      "credential_verification",
+      error.status,
+      error.verificationStage,
+      error.reason,
+    );
+  }
   const stage = error instanceof OAuthStageError ? error.stage : fallbackStage;
   const message = internalErrorMessage(error);
   const status = internalStatus(error);
@@ -292,7 +353,9 @@ async function startLoopbackCallback(expectedState: string): Promise<{
       return;
     }
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end("<h1>Authorization successful</h1><p>You can close this window.</p>");
+    res.end(
+      "<h1>Authorization received / 已收到授权</h1><p>Return to CodeShell to see the verification result. 请返回 CodeShell 查看核验结果。</p>",
+    );
     finish(undefined, authorizationCode);
   });
   await new Promise<void>((resolve, rejectListen) => {
@@ -323,7 +386,7 @@ export class McpOAuthService {
     string,
     Promise<{ accessToken: string; expiresAt?: string }>
   >();
-  private readonly logins = new Map<string, Promise<McpOAuthActionResult>>();
+  private readonly logins = new Map<string, Promise<unknown>>();
   private readonly generations = new Map<string, number>();
   private readonly loggingOut = new Set<string>();
   private readonly logouts = new Map<string, Promise<{ removed: true; remoteRevoked: boolean }>>();
@@ -339,8 +402,46 @@ export class McpOAuthService {
   }
 
   async login(input: McpOAuthLoginInput): Promise<McpOAuthActionResult> {
+    return this.runLogin(input, {}, (spec, result, generation) => ({
+      credential: this.saveLogin(spec, result.secret, result.meta, generation),
+    }));
+  }
+
+  /** Returns a Host-only candidate; the Link owner performs its reviewed CAS commit. */
+  async authorizeCredential(
+    input: McpOAuthLoginInput,
+    options: HostMcpOAuthLoginOptions,
+  ): Promise<Credential> {
+    return this.runLogin(input, options, async (spec, result, generation) => {
+      const minted = this.loginCredential(spec, result.secret, result.meta);
+      try {
+        options.signal?.throwIfAborted();
+        const candidate = options.validateCredential
+          ? await options.validateCredential(minted, options.signal)
+          : minted;
+        options.signal?.throwIfAborted();
+        if (!this.isCurrentGeneration(spec.credentialId, generation))
+          throw new StaleOAuthOperationError();
+        return candidate;
+      } catch (error) {
+        await this.revokeDetachedCredential(minted).catch(() => false);
+        throw error;
+      }
+    });
+  }
+
+  private async runLogin<T>(
+    input: McpOAuthLoginInput,
+    options: HostMcpOAuthLoginOptions,
+    complete: (
+      spec: LoginSpec,
+      result: { secret: OAuthCredentialSecret; meta: Partial<NonNullable<Credential["meta"]>> },
+      generation: number,
+    ) => T | Promise<T>,
+  ): Promise<T> {
     let stage: OAuthFailureStage = "validation";
     try {
+      options.signal?.throwIfAborted();
       const requested = this.loginSpec(input);
       validateOAuthEndpoint(requested.serverUrl, "MCP server URL");
       this.assertLoginCredentialOwnership(requested);
@@ -366,7 +467,9 @@ export class McpOAuthService {
         );
       }
 
-      const explicit = Boolean(spec.clientId && spec.authorizationEndpoint && spec.tokenEndpoint);
+      const explicit =
+        Boolean(spec.clientId && spec.authorizationEndpoint && spec.tokenEndpoint) &&
+        (input.source !== "catalog" || Boolean(requested.authorizationEndpoint));
       stage = explicit ? "authorization" : "discovery_registration";
       // A login supersedes every operation based on the prior token set. The
       // generation check prevents a detached old refresh from saving, while
@@ -375,10 +478,12 @@ export class McpOAuthService {
       const generation = this.generationOf(spec.credentialId) + 1;
       this.generations.set(spec.credentialId, generation);
       this.refreshes.delete(spec.credentialId);
-      const operation = (async (): Promise<McpOAuthActionResult> => {
-        const result = explicit ? await this.explicitLogin(spec) : await this.discoveryLogin(spec);
-        const credential = this.saveLogin(spec, result.secret, result.meta, generation);
-        return { credential };
+      const operation = (async (): Promise<T> => {
+        const result = explicit
+          ? await this.explicitLogin(spec, options)
+          : await this.discoveryLogin(spec, options);
+        stage = "credential_verification";
+        return complete(spec, result, generation);
       })();
       const pending = operation.finally(() => {
         if (this.logins.get(spec.credentialId) === pending) {
@@ -393,19 +498,26 @@ export class McpOAuthService {
         stage: normalized.stage,
         code: normalized.code,
         ...(normalized.status === undefined ? {} : { status: normalized.status }),
+        ...(normalized.verificationStage
+          ? { verificationStage: normalized.verificationStage }
+          : {}),
+        ...(normalized.reason ? { reason: normalized.reason } : {}),
       });
       throw normalized;
     }
   }
 
   async refresh(credentialId: string): Promise<McpOAuthActionResult> {
-    await this.resolveAccessToken(safeCredentialId(credentialId), { forceRefresh: true });
+    const id = safeCredentialId(credentialId);
+    const serverUrl = this.oauthCredential(id).meta?.mcpServerUrl;
+    if (!serverUrl) throw this.unavailable(id);
+    await this.resolveAccessToken(id, { serverUrl, forceRefresh: true });
     return { credential: this.masked(credentialId) };
   }
 
   async resolveAccessToken(
     credentialId: string,
-    opts: { forceRefresh?: boolean } = {},
+    opts: { serverUrl: string; forceRefresh?: boolean },
   ): Promise<{ accessToken: string; expiresAt?: string }> {
     const id = safeCredentialId(credentialId);
     if (this.loggingOut.has(id)) throw this.unavailable(id);
@@ -417,6 +529,12 @@ export class McpOAuthService {
     const generation = this.generationOf(id);
     const cred = this.oauthCredential(id);
     const secret = parseOAuthCredentialSecret(cred.secret!);
+    assertMcpOAuthCredentialBinding(cred, opts.serverUrl, secret);
+    if (
+      linkConnectionMetadata(cred.meta).linkExecutionBackend === "mcp" &&
+      cred.meta?.linkOAuthState === "reconnect"
+    )
+      throw new NormalizedOAuthError(`OAuth credential "${id}" requires login`, "invalid_grant");
     const decision = shouldRefreshOAuthCredential(secret, { now: this.now });
     if (!opts.forceRefresh && decision === "no") {
       return { accessToken: secret.accessToken, expiresAt: secret.expiresAt };
@@ -426,7 +544,8 @@ export class McpOAuthService {
     }
 
     const inflight = this.refreshes.get(id);
-    const operation = inflight ?? this.performRefresh(id, Boolean(opts.forceRefresh), generation);
+    const operation =
+      inflight ?? this.performRefresh(id, Boolean(opts.forceRefresh), generation, opts.serverUrl);
     const pending = inflight
       ? operation
       : operation.finally(() => {
@@ -434,11 +553,25 @@ export class McpOAuthService {
         });
     if (!inflight) this.refreshes.set(id, pending);
     try {
-      return await pending;
+      const result = await pending;
+      const current = this.oauthCredential(id);
+      assertMcpOAuthCredentialBinding(
+        current,
+        opts.serverUrl,
+        parseOAuthCredentialSecret(current.secret!),
+      );
+      return result;
     } catch (err) {
       if (!this.isCurrentGeneration(id, generation)) throw this.unavailable(id);
+      const current = this.oauthCredential(id);
+      assertMcpOAuthCredentialBinding(
+        current,
+        opts.serverUrl,
+        parseOAuthCredentialSecret(current.secret!),
+      );
+      if (current.secret !== cred.secret) throw this.unavailable(id);
       const trulyExpired = secret.expiresAt ? Date.parse(secret.expiresAt) <= this.now() : false;
-      if (!opts.forceRefresh && !trulyExpired) {
+      if (!opts.forceRefresh && !trulyExpired && normalizedErrorCode(err) !== "invalid_grant") {
         return { accessToken: secret.accessToken, expiresAt: secret.expiresAt };
       }
       throw err;
@@ -459,11 +592,52 @@ export class McpOAuthService {
     return pending;
   }
 
+  /** Best-effort provider cleanup after a Host has already removed local authority. */
+  async revokeDetachedCredential(credential: Credential): Promise<boolean> {
+    if (
+      credential.type !== "oauth" ||
+      !credential.secret ||
+      linkConnectionMetadata(credential.meta).linkExecutionBackend === "remote"
+    )
+      throw new Error("OAuth credential is unavailable");
+    const secret = parseOAuthCredentialSecret(credential.secret);
+    const detachedTokens = new Set([secret.accessToken, secret.refreshToken].filter(Boolean));
+    for (const saved of this.store.list("full")) {
+      if (saved.type !== "oauth" || !saved.secret) continue;
+      let active: OAuthCredentialSecret;
+      try {
+        active = parseOAuthCredentialSecret(saved.secret);
+      } catch {
+        continue;
+      }
+      // Providers can reuse tokens for a fresh connection ID. Token matching is
+      // only a cleanup veto; it never supplies authority for another connection.
+      if (
+        detachedTokens.has(active.accessToken) ||
+        (active.refreshToken && detachedTokens.has(active.refreshToken))
+      )
+        return false;
+    }
+    if (!secret.revocationEndpoint) return false;
+    validateOAuthEndpoint(secret.revocationEndpoint, "revocation endpoint");
+    const token = secret.refreshToken ?? secret.accessToken;
+    const params = new URLSearchParams({ token });
+    params.set("token_type_hint", secret.refreshToken ? "refresh_token" : "access_token");
+    if (secret.clientId) params.set("client_id", secret.clientId);
+    if (secret.clientSecret) params.set("client_secret", secret.clientSecret);
+    const response = await this.fetchRevocation(secret.revocationEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    return response.ok;
+  }
+
   private async performLogout(
     id: string,
     originalCredential: Credential,
   ): Promise<{ removed: true; remoteRevoked: boolean }> {
-    let remoteRevoked = true;
+    let remoteRevoked: boolean;
     try {
       const inflightRefresh = this.refreshes.get(id);
       if (inflightRefresh) await inflightRefresh.catch(() => undefined);
@@ -511,6 +685,7 @@ export class McpOAuthService {
         tokenEndpoint: profile.tokenEndpoint,
         revocationEndpoint: profile.revocationEndpoint,
         scopes: profile.scopes,
+        registrationClientName: profile.registrationClientName,
       };
     }
     const serverName = input.serverName.trim();
@@ -585,7 +760,7 @@ export class McpOAuthService {
     if (!prior) return;
     const priorProvider = prior.meta?.oauthProvider;
     const sameProvider = priorProvider === spec.provider;
-    let sameServer = false;
+    let sameServer: boolean;
     try {
       const priorServer = prior.meta?.mcpServerUrl;
       sameServer =
@@ -601,7 +776,10 @@ export class McpOAuthService {
     }
   }
 
-  private async explicitLogin(spec: LoginSpec): Promise<{
+  private async explicitLogin(
+    spec: LoginSpec,
+    options: HostMcpOAuthLoginOptions = {},
+  ): Promise<{
     secret: OAuthCredentialSecret;
     meta: Partial<NonNullable<Credential["meta"]>>;
   }> {
@@ -616,24 +794,36 @@ export class McpOAuthService {
           scopes: spec.scopes,
           resource: spec.serverUrl,
         },
-        { openExternal: this.options.openExternal, fetch: this.fetchFn },
+        {
+          openExternal: options.onAuthorizationUrl
+            ? (url) =>
+                options.onAuthorizationUrl!(
+                  url,
+                  new Date(this.now() + (options.callbackTimeoutMs ?? 120_000)).toISOString(),
+                )
+            : this.options.openExternal,
+          fetch: this.fetchFn,
+          signal: options.signal,
+          timeoutMs: options.callbackTimeoutMs,
+        },
       );
     } catch (error) {
       throw new OAuthStageError("authorization", error);
     }
+    const issuer = spec.issuer ?? new URL(spec.tokenEndpoint!).origin;
     return {
       secret: this.secretFromTokens(tokens, {
         clientId: spec.clientId,
         clientSecret: spec.clientSecret,
         clientRegistration: spec.clientRegistration,
-        issuer: spec.issuer,
+        issuer,
         tokenEndpoint: spec.tokenEndpoint,
         revocationEndpoint: spec.revocationEndpoint,
         resource: spec.serverUrl,
         scopes: spec.scopes,
       }),
       meta: {
-        issuer: spec.issuer,
+        issuer,
         authUrl: spec.authorizationEndpoint,
         tokenEndpoint: spec.tokenEndpoint,
         revocationEndpoint: spec.revocationEndpoint,
@@ -644,7 +834,10 @@ export class McpOAuthService {
     };
   }
 
-  private async discoveryLogin(spec: LoginSpec): Promise<{
+  private async discoveryLogin(
+    spec: LoginSpec,
+    options: HostMcpOAuthLoginOptions = {},
+  ): Promise<{
     secret: OAuthCredentialSecret;
     meta: Partial<NonNullable<Credential["meta"]>>;
   }> {
@@ -657,6 +850,8 @@ export class McpOAuthService {
         "discovery_registration",
       );
     }
+    options.signal?.throwIfAborted();
+    const timeoutMs = Math.max(1, Math.min(10 * 60_000, options.callbackTimeoutMs ?? 120_000));
     const state = randomBytes(16).toString("hex");
     const callback = await startLoopbackCallback(state);
     let tokens: SdkOAuthTokens | undefined;
@@ -666,7 +861,7 @@ export class McpOAuthService {
       : undefined;
     let discovery: OAuthDiscoveryState | undefined;
     const clientMetadata: OAuthClientMetadata = {
-      client_name: "CodeShell",
+      client_name: spec.registrationClientName ?? "CodeShell",
       redirect_uris: [callback.redirectUrl],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
@@ -687,7 +882,13 @@ export class McpOAuthService {
       },
       redirectToAuthorization: async (url) => {
         validateOAuthEndpoint(url.toString(), "authorization endpoint");
-        await this.options.openExternal(url.toString());
+        options.signal?.throwIfAborted();
+        if (options.onAuthorizationUrl)
+          await options.onAuthorizationUrl(
+            url.toString(),
+            new Date(this.now() + timeoutMs).toISOString(),
+          );
+        else await this.options.openExternal(url.toString());
       },
       saveCodeVerifier: (next) => {
         verifier = next;
@@ -700,29 +901,50 @@ export class McpOAuthService {
     };
     const safeFetch = (async (url: string | URL, init?: RequestInit) => {
       validateOAuthEndpoint(url.toString(), "OAuth discovery endpoint");
-      return this.fetchFn(url, init);
+      options.signal?.throwIfAborted();
+      return this.fetchFn(url, {
+        ...init,
+        ...(options.signal
+          ? {
+              signal: init?.signal
+                ? AbortSignal.any([init.signal, options.signal])
+                : options.signal,
+            }
+          : {}),
+      });
     }) as typeof fetch;
     let callbackTimeout: ReturnType<typeof setTimeout> | undefined;
     let stage: OAuthFailureStage = "discovery_registration";
+    let onAbort: (() => void) | undefined;
+    const aborted = new Promise<never>((_resolve, reject) => {
+      onAbort = () => reject(options.signal?.reason ?? new Error("OAuth authorization aborted"));
+      options.signal?.addEventListener("abort", onAbort, { once: true });
+      if (options.signal?.aborted) onAbort();
+    });
+    // Discovery can fail before the callback race starts; its abort stays handled.
+    void aborted.catch(() => {});
     try {
       const first = await auth(provider, {
         serverUrl: spec.serverUrl,
+        scope: spec.scopes?.join(" "),
         fetchFn: safeFetch as never,
       });
       if (first !== "REDIRECT") throw new Error("OAuth discovery did not start authorization");
       stage = "authorization_callback";
       const authorizationCode = await Promise.race([
         callback.code,
+        aborted,
         new Promise<never>((_resolve, reject) => {
           callbackTimeout = setTimeout(
             () => reject(new Error("OAuth authorization timed out")),
-            120_000,
+            timeoutMs,
           );
         }),
       ]);
       stage = "token_exchange";
       await auth(provider, {
         serverUrl: spec.serverUrl,
+        scope: spec.scopes?.join(" "),
         authorizationCode,
         fetchFn: safeFetch as never,
       });
@@ -730,6 +952,7 @@ export class McpOAuthService {
       throw new OAuthStageError(stage, error);
     } finally {
       if (callbackTimeout) clearTimeout(callbackTimeout);
+      if (onAbort) options.signal?.removeEventListener("abort", onAbort);
       callback.close();
     }
     if (!tokens) throw new Error("OAuth token exchange returned no tokens");
@@ -821,7 +1044,17 @@ export class McpOAuthService {
     if (!this.isCurrentGeneration(spec.credentialId, generation)) {
       throw new StaleOAuthOperationError();
     }
-    this.store.save("user", {
+    this.store.save("user", this.loginCredential(spec, secret, discoveredMeta));
+    this.changed();
+    return this.masked(spec.credentialId);
+  }
+
+  private loginCredential(
+    spec: LoginSpec,
+    secret: OAuthCredentialSecret,
+    discoveredMeta: Partial<NonNullable<Credential["meta"]>>,
+  ): Credential {
+    return {
       id: spec.credentialId,
       type: "oauth",
       label: spec.label,
@@ -832,18 +1065,18 @@ export class McpOAuthService {
         mcpServerName: spec.serverName,
         mcpServerUrl: spec.serverUrl,
       },
-    });
-    this.changed();
-    return this.masked(spec.credentialId);
+    };
   }
 
   private async performRefresh(
     id: string,
     force: boolean,
     generation: number,
+    serverUrl: string,
   ): Promise<{ accessToken: string; expiresAt?: string }> {
     const cred = this.oauthCredential(id);
     const secret = parseOAuthCredentialSecret(cred.secret!);
+    assertMcpOAuthCredentialBinding(cred, serverUrl, secret);
     if (!force && shouldRefreshOAuthCredential(secret, { now: this.now }) === "no") {
       return { accessToken: secret.accessToken, expiresAt: secret.expiresAt };
     }
@@ -870,16 +1103,25 @@ export class McpOAuthService {
         now: this.now(),
       });
       const latest = this.credentialForGeneration(id, generation);
-      this.store.save("user", {
-        ...latest,
-        secret: JSON.stringify(next),
-        meta: {
-          ...latest.meta,
-          lastRefreshAt: new Date(this.now()).toISOString(),
-          lastRefreshFailedAt: undefined,
-          lastRefreshErrorCode: undefined,
-        },
-      });
+      assertMcpOAuthCredentialBinding(
+        latest,
+        serverUrl,
+        parseOAuthCredentialSecret(latest.secret!),
+      );
+      if (latest.secret !== cred.secret) throw new StaleOAuthOperationError();
+      if (
+        !this.store.compareAndSwap("user", id, latest, {
+          ...latest,
+          secret: JSON.stringify(next),
+          meta: {
+            ...latest.meta,
+            lastRefreshAt: new Date(this.now()).toISOString(),
+            lastRefreshFailedAt: undefined,
+            lastRefreshErrorCode: undefined,
+          },
+        })
+      )
+        throw new StaleOAuthOperationError();
       this.changed();
       return { accessToken: next.accessToken, expiresAt: next.expiresAt };
     } catch (err) {
@@ -888,14 +1130,29 @@ export class McpOAuthService {
       }
       const code = normalizedErrorCode(err);
       const latest = this.credentialForGeneration(id, generation);
-      this.store.save("user", {
-        ...latest,
-        meta: {
-          ...latest.meta,
-          lastRefreshFailedAt: new Date(this.now()).toISOString(),
-          lastRefreshErrorCode: code,
-        },
-      });
+      assertMcpOAuthCredentialBinding(
+        latest,
+        serverUrl,
+        parseOAuthCredentialSecret(latest.secret!),
+      );
+      if (latest.secret !== cred.secret) throw this.unavailable(id);
+      if (
+        !this.store.compareAndSwap("user", id, latest, {
+          ...latest,
+          meta: {
+            ...latest.meta,
+            lastRefreshFailedAt: new Date(this.now()).toISOString(),
+            lastRefreshErrorCode: code,
+            ...(code === "invalid_grant" &&
+            latest.meta?.linkProvider === "figma" &&
+            linkConnectionMetadata(latest.meta).linkExecutionBackend === "mcp" &&
+            linkConnectionMetadata(latest.meta).linkAuthSource === "mcp-oauth"
+              ? { linkOAuthState: "reconnect" as const }
+              : {}),
+          },
+        })
+      )
+        throw this.unavailable(id);
       this.changed();
       throw new NormalizedOAuthError(
         code === "invalid_grant"
@@ -911,7 +1168,7 @@ export class McpOAuthService {
     if (
       !cred ||
       cred.type !== "oauth" ||
-      cred.meta?.linkExecutionBackend === "remote" ||
+      linkConnectionMetadata(cred.meta).linkExecutionBackend === "remote" ||
       !cred.secret
     ) {
       throw new Error(`OAuth credential "${id}" is unavailable`);
@@ -952,7 +1209,7 @@ export class McpOAuthService {
     if (
       !credential ||
       credential.type !== "oauth" ||
-      credential.meta?.linkExecutionBackend === "remote" ||
+      linkConnectionMetadata(credential.meta).linkExecutionBackend === "remote" ||
       !credential.secret
     ) {
       throw new StaleOAuthOperationError();

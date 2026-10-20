@@ -77,6 +77,50 @@ describe("CredentialStore + EncryptionCipher", () => {
     expect(store.resolve("t1")?.secret).toBe("s3cret"); // decrypts cleanly
   });
 
+  for (const failure of ["unsupported", "unavailable"] as const) {
+    test(`a Link state update preserves a neighbor whose cipher is ${failure}`, () => {
+      const cipher = new FakeCipher();
+      const original = new CredentialStore(dir, cipher);
+      original.save("user", {
+        id: "locked",
+        type: "oauth",
+        label: "Unavailable account",
+        secret: "recoverable-neighbor-secret",
+      });
+      original.save("user", {
+        id: "active",
+        type: "oauth",
+        label: "Active account",
+        secret: "active-grant",
+        meta: { linkRemoteState: "connected" },
+      });
+      const locked = JSON.parse(readFileSync(credPath(), "utf8")).credentials[0];
+      const blocked: EncryptionCipher = {
+        encrypt: (value) => cipher.encrypt(value),
+        canDecrypt: (value) => failure !== "unsupported" || value !== locked.secret,
+        decrypt: (value) => {
+          if (value === locked.secret) throw new Error("fixture cipher unavailable");
+          return cipher.decrypt(value);
+        },
+      };
+      const store = new CredentialStore(dir, blocked);
+      const reviewed = store.resolve("active")!;
+      expect(
+        store.compareAndSwap("user", "active", reviewed, {
+          ...reviewed,
+          meta: { ...reviewed.meta, linkRemoteState: "reconnect" },
+        }),
+      ).toBe(true);
+      const disk = JSON.parse(readFileSync(credPath(), "utf8"));
+      expect(disk.credentials.find((entry: { id: string }) => entry.id === "locked")).toEqual(
+        locked,
+      );
+      expect(original.resolve("locked")?.secret).toBe("recoverable-neighbor-secret");
+      expect(original.resolve("active")?.meta?.linkRemoteState).toBe("reconnect");
+      expect(readFileSync(credPath(), "utf8")).not.toContain("active-grant");
+    });
+  }
+
   test("PlaintextCipher keeps secrets readable (tagged) — current default behavior", () => {
     const store = new CredentialStore(dir, new PlaintextCipher());
     store.save("user", { id: "t2", type: "token", label: "T2", secret: "abc123" });

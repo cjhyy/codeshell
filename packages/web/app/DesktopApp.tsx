@@ -7,7 +7,7 @@ import {
 } from "../src/hooks/useRemoteApp.js";
 import { deviceStore } from "../src/lib/storage.js";
 import { generateSecret } from "../src/lib/deviceCredential.js";
-import { projectForCwd } from "../src/lib/format.js";
+import { projectForCwd, sameProjectPath } from "../src/lib/format.js";
 import {
   MOBILE_MAX_ATTACHMENTS,
   MOBILE_MAX_ATTACHMENT_TOTAL_BYTES,
@@ -117,7 +117,7 @@ function selectedTargetCwd(
 function targetForCwd(app: RemoteApp, cwd: string | null): MobileSessionCreateTarget {
   if (cwd === null) return { projectId: null };
   const project = projectForCwd(cwd, app.projects);
-  const root = project?.roots?.find((item) => item.path === cwd);
+  const root = project?.roots?.find((item) => sameProjectPath(item.path, cwd, project));
   return project?.id ? { projectId: project.id, ...(root ? { rootId: root.id } : {}) } : cwd;
 }
 
@@ -330,8 +330,10 @@ export function useDesktopController(
     turnCount: 0,
   }));
   const running =
-    app.chat.run === "running" || app.chat.run === "waiting" || app.approvals.length > 0;
-  const send = (): boolean => {
+    app.chat.run === "running" ||
+    app.chat.run === "waiting" ||
+    app.approvals.some((approval) => !approval.asynchronous);
+  const send = (options?: { modelTraceSource?: string }): boolean => {
     if (sendingRef.current || app.status !== "online" || running || app.activeRoom?.observing)
       return false;
     if ((app.activeCwd ?? app.activeProjectCwd ?? null) !== workspaceCwd) {
@@ -360,7 +362,11 @@ export function useDesktopController(
     setSendingId(id);
     setError("");
     void app
-      .sendChat({ text: submitted.draft.text, attachments })
+      .sendChat({
+        text: submitted.draft.text,
+        attachments,
+        ...(options?.modelTraceSource ? { modelTraceSource: options.modelTraceSource } : {}),
+      })
       .then((accepted) => {
         if (!accepted) {
           if (pendingNewSend.current === pending) pendingNewSend.current = null;
@@ -481,6 +487,7 @@ export function useDesktopController(
     approvals: app.approvals.map((approval) => ({
       id: approval.requestId,
       sessionId: approval.roomId ? undefined : approval.sessionId,
+      ...(approval.asynchronous ? { asynchronous: true } : {}),
     })),
     approvalCount: (id) => app.approvals.filter((approval) => approval.sessionId === id).length,
     approvalContent: app.approvals.map((approval) => (

@@ -1,4 +1,25 @@
-import type { ToolDefinition } from "../types.js";
+import type { SessionToolSelection, ToolDefinition } from "../types.js";
+
+/** Persisted loading hints are bounded data, never proof of tool eligibility. */
+export function normalizeSessionToolSelection(value: unknown): SessionToolSelection | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const { version, names } = value as SessionToolSelection;
+  if (
+    version !== 1 ||
+    !Array.isArray(names) ||
+    names.length > 4096 ||
+    names.some(
+      (name) =>
+        typeof name !== "string" ||
+        !name ||
+        name.length > 512 ||
+        name.trim() !== name ||
+        /[\u0000-\u001f\u007f]/u.test(name),
+    )
+  )
+    return undefined;
+  return { version: 1, names: [...new Set(names)] };
+}
 
 /** Eligible tool definitions and schema loading state owned by one Engine run. */
 export class RunToolSurface {
@@ -6,13 +27,25 @@ export class RunToolSurface {
   private readonly selectedNames = new Set<string>();
   private catalog: readonly ToolDefinition[] = Object.freeze([]);
   private catalogByName = new Map<string, ToolDefinition>();
+  private readonly onSelectionChanged?: (selection: SessionToolSelection) => void;
 
-  constructor(initialToolNames?: readonly string[]) {
+  constructor(
+    initialToolNames?: readonly string[],
+    options: {
+      selection?: unknown;
+      onSelectionChanged?: (selection: SessionToolSelection) => void;
+    } = {},
+  ) {
     this.initialToolNames = initialToolNames ? [...initialToolNames] : undefined;
+    for (const name of normalizeSessionToolSelection(options.selection)?.names ?? []) {
+      this.selectedNames.add(name);
+    }
+    this.onSelectionChanged = options.onSelectionChanged;
   }
 
   /** Replace eligibility with the run's latest authorized, rewritten definitions. */
   updateCatalog(definitions: readonly ToolDefinition[]): void {
+    const previousSize = this.selectedNames.size;
     const byName = new Map<string, ToolDefinition>();
     for (const definition of definitions) {
       byName.set(definition.name, cloneFrozen(definition));
@@ -31,6 +64,7 @@ export class RunToolSurface {
       // ToolSearch returns later, these schemas retain their run-local load order.
       for (const name of byName.keys()) this.selectedNames.add(name);
     }
+    if (this.selectedNames.size !== previousSize) this.onSelectionChanged?.(this.getSelection());
   }
 
   getCatalog(): readonly ToolDefinition[] {
@@ -38,6 +72,7 @@ export class RunToolSurface {
   }
 
   select(names: readonly string[]): { selected: string[]; unavailable: string[] } {
+    const previousSize = this.selectedNames.size;
     const selected: string[] = [];
     const unavailable: string[] = [];
     for (const name of new Set(names)) {
@@ -48,7 +83,13 @@ export class RunToolSurface {
         unavailable.push(name);
       }
     }
+    if (this.selectedNames.size !== previousSize) this.onSelectionChanged?.(this.getSelection());
     return { selected, unavailable };
+  }
+
+  /** Include temporarily unavailable names so restoration retains the original order. */
+  getSelection(): SessionToolSelection {
+    return { version: 1, names: [...this.selectedNames] };
   }
 
   /** A provider receives an immutable copy, never the live catalog or loading state. */

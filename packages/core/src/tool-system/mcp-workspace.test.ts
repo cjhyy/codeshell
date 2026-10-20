@@ -269,7 +269,7 @@ describe("MCP workspace transport isolation", () => {
     await expect(manager.readResource("browser", "test://workspace")).rejects.toThrow(
       "requires a workspace context",
     );
-    expect(await manager.listResources()).toEqual([]);
+    await expect(manager.listResources()).rejects.toThrow("requires a workspace context");
     const unconnected = context("a/sub");
     expect(
       (await registry.executeTool("mcp_browser_take_snapshot", {}, { ctx: unconnected })).isError,

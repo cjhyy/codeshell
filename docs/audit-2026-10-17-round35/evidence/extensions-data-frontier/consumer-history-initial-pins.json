@@ -1,0 +1,52 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/PanelsTab.tsx",
+      "bytes": 51799,
+      "sha256": "3e0b07d3fe53e0a0596021f5b4a4384e0a15bde60ede91ebfec5bb9738937d51",
+      "lines": 1293,
+      "pinTimeUTC": "2026-10-17T12:32:23.891970+00:00",
+      "purpose": "before source or focused history content reading in this prep"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PanelsTab.test.ts",
+      "bytes": 2154,
+      "sha256": "5cc9f665f95631fa7ae90f11af59358c33e7a6f81e52fe12d9bcbf58f2256ace",
+      "lines": 63,
+      "pinTimeUTC": "2026-10-17T12:32:23.893150+00:00",
+      "purpose": "before source or focused history content reading in this prep"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "lines": 530,
+      "pinTimeUTC": "2026-10-17T12:32:23.893665+00:00",
+      "purpose": "before source or focused history content reading in this prep"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "bytes": 129321,
+      "sha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b",
+      "lines": 3430,
+      "pinTimeUTC": "2026-10-17T12:32:23.894230+00:00",
+      "purpose": "before source or focused history content reading in this prep"
+    },
+    {
+      "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+      "bytes": 5879,
+      "sha256": "471686d840e144dfdfa2b27bbbbe428abc04f97b1e5bab09affe5deaa6d663f5",
+      "lines": 72,
+      "pinTimeUTC": "2026-10-17T12:32:23.894448+00:00",
+      "purpose": "before source or focused history content reading in this prep"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "bytes": 28861,
+      "sha256": "8c7d16bab5218d53379f40408a68da5a58bd87b45cd9029a972ea405d930da80",
+      "lines": 720,
+      "pinTimeUTC": "2026-10-17T12:32:23.894857+00:00",
+      "purpose": "before source or focused history content reading in this prep"
+    }
+  ]
+}

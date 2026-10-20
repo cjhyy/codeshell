@@ -1,0 +1,1435 @@
+{
+  "capturedAtUTC": "2026-10-17T14:59:30.817448+00:00",
+  "phase": "frozen",
+  "scope": "Future formal44 prep metadata only; neither source review nor future Git/README certification",
+  "files": [],
+  "inputPackages": [
+    {
+      "label": "author48",
+      "directory": "/tmp/codeshell-audit-round48-ui-data-frontier",
+      "fileCount": 25,
+      "receiptRows": 24,
+      "files": [
+        {
+          "path": "artifact-receipt.json",
+          "bytes": 4229,
+          "sha256": "a6ffc05d173821bd26cc1226102365bbd579430e429afdb94d97014d1b933198",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 1070,
+          "sha256": "3b9e289da47862990946de0d36c174880cfe3c38020e1448dcc9744fa6041162",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "dto-producer-initial-pins.json",
+          "bytes": 1148,
+          "sha256": "25de805945505011557a893c16bc6d0294208e345b30f854c4a16824de96330a",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "ending-source-checks.json",
+          "bytes": 2674,
+          "sha256": "3a909f8a6fd9cae66bbe4a214aa23c5e3ee3196572936a62f3ad0de85301d903",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 51365,
+          "sha256": "a54d344a9c8860a27941e78eb3c8e00ca932959fad9fac1fac5be85ed7be34f0",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history-decisions.json",
+          "bytes": 3615,
+          "sha256": "e8b513352657c6150124b83cc7fb8bf2b4d3705837dcf846927b5a957cf209f5",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history-finish-check.json",
+          "bytes": 317,
+          "sha256": "11369f5a38c4ff6b1f56031df79c238e3c481107eabbefe5f6f997c1c50ecf21",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history-initial-pins.json",
+          "bytes": 850314,
+          "sha256": "3340179fb0868ecb9a4beca389c5e964a7678b8652ea893f190196e563447434",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history-inventory.raw.txt",
+          "bytes": 248941,
+          "sha256": "d1c43581fd635507aa956a262639b3f006b09af25408f745ece0a428c2128be6",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history-selected-contexts.json",
+          "bytes": 39177,
+          "sha256": "832e5b28dcb412d95f389f2aab8ee422f1c1498310875c56bcc804c9a791f9b0",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history.json",
+          "bytes": 851585,
+          "sha256": "a45d7d047a9a008eb2f1611b3a31f6dda5f190826419f7874085345c2abd25aa",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "links-check.json",
+          "bytes": 1276,
+          "sha256": "03a738790e631aae7d4afaecd3aa08915bbe81264384c83be3386e6fc3cb17ae",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "metadata-diagnostics.json",
+          "bytes": 716,
+          "sha256": "bca5ab502d607e2c9ecb14be16231f7229177bc3bc76ba725fa8287f83cb86ca",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "replacement-history-contexts.json",
+          "bytes": 78052,
+          "sha256": "74c5c5347ba635588c093c2b22364306d1f0952cdd6fecb135f29b7dde3b1dfd",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "replacement-history-initial-pins.json",
+          "bytes": 850314,
+          "sha256": "813178a34f8f2813123233ffdd042f2e2c3e3f23d8890077fd9df57219e2bfa6",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "replacement-history-inventory.raw.txt",
+          "bytes": 248941,
+          "sha256": "06f1b05023e8559fa6427caccedb89124ed36c4ee31b68831a409923240c9a4d",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "replacement-history-selected-contexts.json",
+          "bytes": 44640,
+          "sha256": "b0a98eeaa3af6a4ee8988a88f9496826663a19a6c5c0c96477e86016d661c863",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "replacement-history.json",
+          "bytes": 851537,
+          "sha256": "55f6beb1756983bef353a4510866c2081a600ed9cff0327a11bcedc3331adaaa",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "report.md",
+          "bytes": 5245,
+          "sha256": "836f1ad8962892b5c32dad72003338fafc08c9382a1b4f37e3696dc8a3952643",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "scan-history.py",
+          "bytes": 5563,
+          "sha256": "3b86f0584e73937878b81195368015a6edad57bdf21eecf2fd6b743f7b1ad5a1",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "scan-replacement-history.py",
+          "bytes": 5582,
+          "sha256": "c561f0e407ac90cee180399e5cc55e33a0f3673ab938bb31848b6ee974a9b95c",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "selection-pins.json",
+          "bytes": 3378,
+          "sha256": "e42542dc7c01007f27618789fb8278a897acc8c15aaf8cf4d9945d9433ccc429",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "source-excerpts.json",
+          "bytes": 33547,
+          "sha256": "5fca162014af579a20e7596801928ee0a79d49b8ba3119544f421970df8e1473",
+          "opaqueNotDecoded": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 18315,
+          "sha256": "96371e407c2e9bacdc4576cd994e6d404b6482916de74036d69706682a91fa72",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "validation.json",
+          "bytes": 1146,
+          "sha256": "78e6bb180fe94f339df609fec55be26819dadb3e7f928846ddd4f71e93096897",
+          "opaqueNotDecoded": false
+        }
+      ],
+      "allReceiptRowsMatch": true,
+      "rangeRows": [
+        {
+          "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+          "coverage": "hash-only",
+          "sourceShaFromFrozenManifest": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+          "selectedLineRanges": [],
+          "semanticLines": 0,
+          "canonicalDisplayRanges": [],
+          "additionalNavigationSingletons": [],
+          "canonicalDisplayLines": 0,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+          "coverage": "selected",
+          "sourceShaFromFrozenManifest": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "selectedLineRanges": [
+            [
+              19,
+              101
+            ],
+            [
+              142,
+              174
+            ],
+            [
+              258,
+              289
+            ],
+            [
+              334,
+              460
+            ],
+            [
+              498,
+              550
+            ]
+          ],
+          "semanticLines": 328,
+          "canonicalDisplayRanges": [
+            [
+              1,
+              174
+            ],
+            [
+              250,
+              460
+            ],
+            [
+              480,
+              480
+            ],
+            [
+              487,
+              487
+            ],
+            [
+              490,
+              550
+            ]
+          ],
+          "additionalNavigationSingletons": [
+            480,
+            487
+          ],
+          "canonicalDisplayLines": 448,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/ThemeAudioSection.tsx",
+          "coverage": "hash-only",
+          "sourceShaFromFrozenManifest": "7e2ebf2d0e85a736ac43d17ceb75a6cabd1bd51a0e3f4092dada5801cb71725a",
+          "selectedLineRanges": [],
+          "semanticLines": 0,
+          "canonicalDisplayRanges": [],
+          "additionalNavigationSingletons": [],
+          "canonicalDisplayLines": 0,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/renderer/shell/SearchBar.tsx",
+          "coverage": "hash-only",
+          "sourceShaFromFrozenManifest": "93ca17a8b83731744ea60d3cc66c97d5253fb1b7d57b436847123efded8253e2",
+          "selectedLineRanges": [],
+          "semanticLines": 0,
+          "canonicalDisplayRanges": [],
+          "additionalNavigationSingletons": [],
+          "canonicalDisplayLines": 0,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+          "coverage": "selected",
+          "sourceShaFromFrozenManifest": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+          "selectedLineRanges": [
+            [
+              47,
+              69
+            ],
+            [
+              161,
+              177
+            ],
+            [
+              192,
+              249
+            ]
+          ],
+          "semanticLines": 98,
+          "canonicalDisplayRanges": [
+            [
+              1,
+              86
+            ],
+            [
+              105,
+              105
+            ],
+            [
+              150,
+              252
+            ]
+          ],
+          "additionalNavigationSingletons": [
+            105
+          ],
+          "canonicalDisplayLines": 190,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+          "coverage": "navigation-only",
+          "sourceShaFromFrozenManifest": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+          "selectedLineRanges": [],
+          "semanticLines": 0,
+          "canonicalDisplayRanges": [
+            [
+              1,
+              1
+            ],
+            [
+              24,
+              24
+            ],
+            [
+              26,
+              30
+            ],
+            [
+              34,
+              34
+            ],
+            [
+              38,
+              38
+            ],
+            [
+              73,
+              73
+            ],
+            [
+              92,
+              92
+            ],
+            [
+              155,
+              155
+            ]
+          ],
+          "additionalNavigationSingletons": [
+            1,
+            24,
+            26,
+            27,
+            28,
+            29,
+            30,
+            34,
+            38,
+            73,
+            92,
+            155
+          ],
+          "canonicalDisplayLines": 12,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/ExtensionsPage.tsx",
+          "coverage": "selected",
+          "sourceShaFromFrozenManifest": "a532030f03846f7b261f73dd89e15a2a38d2519a85ab3b5f3b48c5892de71ee7",
+          "selectedLineRanges": [
+            [
+              90,
+              110
+            ]
+          ],
+          "semanticLines": 21,
+          "canonicalDisplayRanges": [
+            [
+              1,
+              1
+            ],
+            [
+              21,
+              21
+            ],
+            [
+              25,
+              26
+            ],
+            [
+              35,
+              36
+            ],
+            [
+              47,
+              47
+            ],
+            [
+              54,
+              54
+            ],
+            [
+              86,
+              86
+            ],
+            [
+              90,
+              110
+            ]
+          ],
+          "additionalNavigationSingletons": [
+            1,
+            21,
+            25,
+            26,
+            35,
+            36,
+            47,
+            54,
+            86
+          ],
+          "canonicalDisplayLines": 30,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/main/marketplace-service.ts",
+          "coverage": "selected",
+          "sourceShaFromFrozenManifest": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+          "selectedLineRanges": [
+            [
+              118,
+              137
+            ],
+            [
+              180,
+              186
+            ],
+            [
+              245,
+              256
+            ],
+            [
+              284,
+              312
+            ],
+            [
+              314,
+              319
+            ]
+          ],
+          "semanticLines": 74,
+          "canonicalDisplayRanges": [
+            [
+              20,
+              20
+            ],
+            [
+              99,
+              138
+            ],
+            [
+              140,
+              140
+            ],
+            [
+              142,
+              142
+            ],
+            [
+              168,
+              169
+            ],
+            [
+              180,
+              186
+            ],
+            [
+              188,
+              188
+            ],
+            [
+              231,
+              231
+            ],
+            [
+              241,
+              241
+            ],
+            [
+              245,
+              260
+            ],
+            [
+              264,
+              265
+            ],
+            [
+              268,
+              268
+            ],
+            [
+              275,
+              275
+            ],
+            [
+              284,
+              312
+            ],
+            [
+              314,
+              324
+            ],
+            [
+              515,
+              515
+            ],
+            [
+              518,
+              518
+            ]
+          ],
+          "additionalNavigationSingletons": [
+            20,
+            140,
+            142,
+            168,
+            169,
+            188,
+            231,
+            241,
+            264,
+            265,
+            268,
+            275,
+            515,
+            518
+          ],
+          "canonicalDisplayLines": 117,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/main/marketplace-service.test.ts",
+          "coverage": "navigation-only",
+          "sourceShaFromFrozenManifest": "5a01d7838157270678ef5dc0a4b425de94fe33989bba7bd7b5e89d434172169b",
+          "selectedLineRanges": [],
+          "semanticLines": 0,
+          "canonicalDisplayRanges": [
+            [
+              8,
+              8
+            ],
+            [
+              53,
+              53
+            ],
+            [
+              55,
+              55
+            ],
+            [
+              81,
+              81
+            ]
+          ],
+          "additionalNavigationSingletons": [
+            8,
+            53,
+            55,
+            81
+          ],
+          "canonicalDisplayLines": 4,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/preload/types.d.ts",
+          "coverage": "selected",
+          "sourceShaFromFrozenManifest": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+          "selectedLineRanges": [
+            [
+              863,
+              882
+            ],
+            [
+              2068,
+              2077
+            ],
+            [
+              2093,
+              2094
+            ]
+          ],
+          "semanticLines": 32,
+          "canonicalDisplayRanges": [
+            [
+              863,
+              883
+            ],
+            [
+              2068,
+              2081
+            ],
+            [
+              2093,
+              2098
+            ]
+          ],
+          "additionalNavigationSingletons": [],
+          "canonicalDisplayLines": 41,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "AGENTS.md",
+          "coverage": "hash-only",
+          "sourceShaFromFrozenManifest": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "selectedLineRanges": [],
+          "semanticLines": 0,
+          "canonicalDisplayRanges": [],
+          "additionalNavigationSingletons": [],
+          "canonicalDisplayLines": 0,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "CODESHELL.md",
+          "coverage": "hash-only",
+          "sourceShaFromFrozenManifest": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "selectedLineRanges": [],
+          "semanticLines": 0,
+          "canonicalDisplayRanges": [],
+          "additionalNavigationSingletons": [],
+          "canonicalDisplayLines": 0,
+          "currentProductBytesOpened": false
+        }
+      ],
+      "semanticLines": 553,
+      "displayLines": 842,
+      "relativeMarkdownLinks": [
+        {
+          "source": "report.md",
+          "target": "selection-pins.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "consumer-initial-pins.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "dto-producer-initial-pins.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "history-decisions.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "source-manifest.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "source-excerpts.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "history.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "replacement-history.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "history-finish-check.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "metadata-diagnostics.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "validation.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "report.md",
+          "target": "artifact-receipt.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        }
+      ],
+      "history": {
+        "inventory": {
+          "discovered": 3869,
+          "included": 3869,
+          "excluded": 0,
+          "md": 1391,
+          "json": 2478,
+          "bytes": 161815595,
+          "jsonStringValues": 1255894,
+          "jsonScalarValues": 1896731,
+          "jsonParseErrors": [],
+          "archiveBySubstring": 175,
+          "includesFrozenRound42": true
+        },
+        "initialCounts": {
+          "source_path": 10,
+          "source_filename": 14,
+          "source_sha": 14,
+          "notification_history": 21
+        },
+        "replacementCounts": {
+          "source_path": 13,
+          "source_filename": 25,
+          "source_sha": 18,
+          "market_list": 2
+        },
+        "samePathAndByteCorpus": true,
+        "notTwoDistinctCorpora": true
+      }
+    },
+    {
+      "label": "peer48",
+      "directory": "/tmp/codeshell-audit-round48-notification-review",
+      "fileCount": 18,
+      "receiptRows": 17,
+      "receiptName": "reviewer-receipt.json",
+      "files": [
+        {
+          "path": "classification.json",
+          "bytes": 1938,
+          "sha256": "e4807f7ef1feac5b0f844ca84cd3b92dcb22e2510f4ce3439a9cb472a470b462",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 742,
+          "sha256": "98e4faad126914a5eb56191e57d22abecce399e3ce6a038c766ae630f5d50672",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "coverage-gate-rows.json",
+          "bytes": 7531,
+          "sha256": "1cd89a962f88fe213b9f71d94c0f53312271adb53fa0e7b5768f9a49538acd3f",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "dto-initial-pins.json",
+          "bytes": 754,
+          "sha256": "2ebad27bec952402ce667f43ccc944ff65247f68da049941df3d331f04a4a80a",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "dto-range-drift-check.json",
+          "bytes": 2921,
+          "sha256": "4a9a520406570ae53f56990274b385948ddb6ab8a69c1036035f8f57f5a3a800",
+          "opaqueNotDecoded": true
+        },
+        {
+          "path": "ending-checks.first.json",
+          "bytes": 5680,
+          "sha256": "286fe16d6eda8f84249aadbab7027befddca4dd6ea040707af29990e18c798ca",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "ending-checks.json",
+          "bytes": 6059,
+          "sha256": "f75711cfa36ce56345331b318d4b91dfa5cfe3cc7d9c3d1d38e907ba5798ce4d",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 27677,
+          "sha256": "938485cce16dbfdc4f7219c5d60bb89c518b7b003aebebe6abb2d76bf516a382",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3793,
+          "sha256": "b85761b939531a7cde3207b35a91bc5305179255a088671651c10a35c36022c0",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "history.json",
+          "bytes": 768834,
+          "sha256": "207037d1a3fce38d9a389a8d62b907435a11b28818afad25bb85ac6ad7e44336",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 867,
+          "sha256": "33960e18956ed7a8bdcbad0c906015817aceaba0c537b8f73d4c391583bdf345",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "metadata-diagnostics.json",
+          "bytes": 1893,
+          "sha256": "0c7b4bbd535616d5f3b9233b1d5709cebfb76bc091f12e0c8da6059e729a2ea6",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "review.md",
+          "bytes": 4477,
+          "sha256": "90bc33f8265e7c6026f63ffd66ba97556aa46bf7d42849d028887c83e6fceafe",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "reviewer-receipt.json",
+          "bytes": 3935,
+          "sha256": "0366c918a1dc034183c3d8b9479adf24b564781e0f8e0a773ebc78a7c4ac5eec",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "source-excerpts.first.json",
+          "bytes": 36611,
+          "sha256": "cf924a9ad8502c8e6e9e5c5d4cd779205198c923cffc93e30cbf5e85aa280dd2",
+          "opaqueNotDecoded": true
+        },
+        {
+          "path": "source-excerpts.json",
+          "bytes": 37099,
+          "sha256": "3dc9deea1bd68bf0cba42d0575fbcf5ffa1c1ea4eddf23466feb5f5bec64a9ff",
+          "opaqueNotDecoded": true
+        },
+        {
+          "path": "source-manifest.first.json",
+          "bytes": 9852,
+          "sha256": "a7e5c165469637f9247f91b29468b5ef4b8c79a171300408118d5dac8329c286",
+          "opaqueNotDecoded": false
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 10723,
+          "sha256": "85bcddb4af3e95f19b61810a1f1adbabea103ac569f31be32a0ea0579c658cd8",
+          "opaqueNotDecoded": false
+        }
+      ],
+      "allReceiptRowsMatch": true,
+      "rangeRows": [
+        {
+          "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+          "coverage": "selected",
+          "sourceShaFromReadTimeManifest": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "endingSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "fullFileUnchangedInPeerCheck": true,
+          "readTimeBytes": 20235,
+          "endingBytes": 20235,
+          "selectedLineRanges": [
+            [
+              19,
+              101
+            ],
+            [
+              142,
+              174
+            ],
+            [
+              258,
+              289
+            ],
+            [
+              334,
+              388
+            ],
+            [
+              420,
+              455
+            ],
+            [
+              498,
+              533
+            ],
+            [
+              542,
+              550
+            ]
+          ],
+          "semanticLines": 284,
+          "displayedLineRanges": [
+            [
+              1,
+              174
+            ],
+            [
+              258,
+              290
+            ],
+            [
+              334,
+              455
+            ],
+            [
+              498,
+              550
+            ]
+          ],
+          "displayedLines": 382,
+          "boundFromFrozenManifest": 550,
+          "rangeBoundsCheckedWhereProvided": true,
+          "selectedDisplayedRangesUnchangedReported": null,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+          "coverage": "selected",
+          "sourceShaFromReadTimeManifest": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+          "initialSemanticReadSha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+          "endingSha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+          "fullFileUnchangedInPeerCheck": true,
+          "readTimeBytes": 9977,
+          "endingBytes": 9977,
+          "selectedLineRanges": [
+            [
+              47,
+              69
+            ],
+            [
+              127,
+              131
+            ],
+            [
+              161,
+              178
+            ],
+            [
+              192,
+              223
+            ],
+            [
+              247,
+              249
+            ]
+          ],
+          "semanticLines": 81,
+          "displayedLineRanges": [
+            [
+              47,
+              79
+            ],
+            [
+              127,
+              135
+            ],
+            [
+              157,
+              252
+            ]
+          ],
+          "displayedLines": 138,
+          "boundFromFrozenManifest": 252,
+          "rangeBoundsCheckedWhereProvided": true,
+          "selectedDisplayedRangesUnchangedReported": null,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+          "coverage": "selected",
+          "sourceShaFromReadTimeManifest": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+          "initialSemanticReadSha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+          "endingSha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+          "fullFileUnchangedInPeerCheck": true,
+          "readTimeBytes": 8445,
+          "endingBytes": 8445,
+          "selectedLineRanges": [
+            [
+              10,
+              19
+            ],
+            [
+              24,
+              29
+            ],
+            [
+              36,
+              47
+            ],
+            [
+              62,
+              71
+            ],
+            [
+              131,
+              152
+            ],
+            [
+              159,
+              163
+            ],
+            [
+              169,
+              180
+            ]
+          ],
+          "semanticLines": 77,
+          "displayedLineRanges": [
+            [
+              1,
+              73
+            ],
+            [
+              122,
+              180
+            ]
+          ],
+          "displayedLines": 132,
+          "boundFromFrozenManifest": 212,
+          "rangeBoundsCheckedWhereProvided": true,
+          "selectedDisplayedRangesUnchangedReported": null,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/main/marketplace-service.ts",
+          "coverage": "selected",
+          "sourceShaFromReadTimeManifest": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+          "initialSemanticReadSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+          "endingSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+          "fullFileUnchangedInPeerCheck": true,
+          "readTimeBytes": 20169,
+          "endingBytes": 20169,
+          "selectedLineRanges": [
+            [
+              75,
+              86
+            ],
+            [
+              118,
+              137
+            ],
+            [
+              180,
+              186
+            ],
+            [
+              245,
+              256
+            ],
+            [
+              314,
+              320
+            ],
+            [
+              322,
+              330
+            ],
+            [
+              332,
+              334
+            ],
+            [
+              336,
+              340
+            ]
+          ],
+          "semanticLines": 75,
+          "displayedLineRanges": [
+            [
+              75,
+              101
+            ],
+            [
+              118,
+              137
+            ],
+            [
+              180,
+              186
+            ],
+            [
+              245,
+              256
+            ],
+            [
+              314,
+              342
+            ]
+          ],
+          "displayedLines": 95,
+          "boundFromFrozenManifest": 612,
+          "rangeBoundsCheckedWhereProvided": true,
+          "selectedDisplayedRangesUnchangedReported": null,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/preload/types.d.ts",
+          "coverage": "selected",
+          "sourceShaFromReadTimeManifest": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+          "initialSemanticReadSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+          "endingSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+          "fullFileUnchangedInPeerCheck": false,
+          "readTimeBytes": 102234,
+          "endingBytes": 102370,
+          "selectedLineRanges": [
+            [
+              863,
+              883
+            ],
+            [
+              2068,
+              2081
+            ],
+            [
+              2083,
+              2085
+            ],
+            [
+              2087,
+              2094
+            ]
+          ],
+          "semanticLines": 46,
+          "displayedLineRanges": [
+            [
+              863,
+              883
+            ],
+            [
+              2068,
+              2094
+            ]
+          ],
+          "displayedLines": 48,
+          "boundFromFrozenManifest": 2982,
+          "rangeBoundsCheckedWhereProvided": true,
+          "selectedDisplayedRangesUnchangedReported": true,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/review.md",
+          "coverage": "selected",
+          "sourceShaFromReadTimeManifest": "a516fab53cb19b4e472c67dcd00e7280ee3954f9e02e8fa17e5b78cc2e290600",
+          "initialSemanticReadSha256": "a516fab53cb19b4e472c67dcd00e7280ee3954f9e02e8fa17e5b78cc2e290600",
+          "endingSha256": "a516fab53cb19b4e472c67dcd00e7280ee3954f9e02e8fa17e5b78cc2e290600",
+          "fullFileUnchangedInPeerCheck": true,
+          "readTimeBytes": 4860,
+          "endingBytes": 4860,
+          "selectedLineRanges": [
+            [
+              9,
+              9
+            ],
+            [
+              14,
+              14
+            ],
+            [
+              21,
+              21
+            ]
+          ],
+          "semanticLines": 3,
+          "displayedLineRanges": [
+            [
+              9,
+              9
+            ],
+            [
+              14,
+              14
+            ],
+            [
+              21,
+              21
+            ]
+          ],
+          "displayedLines": 3,
+          "boundFromFrozenManifest": null,
+          "rangeBoundsCheckedWhereProvided": false,
+          "selectedDisplayedRangesUnchangedReported": null,
+          "currentProductBytesOpened": false
+        },
+        {
+          "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+          "coverage": "hash-only",
+          "sourceShaFromReadTimeManifest": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+          "initialSemanticReadSha256": null,
+          "endingSha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+          "fullFileUnchangedInPeerCheck": true,
+          "readTimeBytes": 7842,
+          "endingBytes": 7842,
+          "selectedLineRanges": [],
+          "semanticLines": 0,
+          "displayedLineRanges": [],
+          "displayedLines": 0,
+          "boundFromFrozenManifest": 193,
+          "rangeBoundsCheckedWhereProvided": true,
+          "selectedDisplayedRangesUnchangedReported": null,
+          "currentProductBytesOpened": false
+        }
+      ],
+      "productSemanticLines": 563,
+      "priorReportSemanticLines": 3,
+      "totalSemanticLines": 566,
+      "productDisplayedLines": 795,
+      "priorReportDisplayedLines": 3,
+      "relativeMarkdownLinks": [
+        {
+          "source": "review.md",
+          "target": "source-manifest.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "source-excerpts.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "initial-pins.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "consumer-initial-pins.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "dto-initial-pins.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "history.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "history-method.py",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "history-contexts.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "coverage-gate-rows.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "classification.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "ending-checks.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "dto-range-drift-check.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "metadata-diagnostics.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        },
+        {
+          "source": "review.md",
+          "target": "reviewer-receipt.json",
+          "exists": true,
+          "canonicalInsideInput": true
+        }
+      ],
+      "role": "Independent current MarketList review before reading author report; same reviewer authored old R36 NotificationHistory scope, so reused exclusion is not second independent R36 review."
+    }
+  ],
+  "counts": {
+    "inputFiles": 43,
+    "receiptRows": 41,
+    "inputRelativeMarkdownLinks": 26,
+    "opaqueSourceOrRangeEvidenceArtifacts": 4
+  },
+  "allFrozenArtifactReceiptRowsMatch": true,
+  "allRelativeInputLinksInsideCanonicalDirectory": true,
+  "classification": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0,
+    "uniquePriorScopeDeferrals": 1,
+    "priorScope": "R36 NotificationHistory selected152, notfull193; not a newly excluded formal bug",
+    "oldR37NamespaceCauseReopened": false
+  },
+  "rangePolicy": "Canonical displayed union includes separately recorded additionalNavigationSnippetLines; semantic coverage stays separate from navigation and hash-only.",
+  "metadataRangeUnion": {
+    "basedOnReadTimePathShaRangesOnly": true,
+    "productSemanticLines": 680,
+    "priorReportSemanticLines": 3,
+    "testSemanticLines": 0,
+    "notNewReadingOrCurrentWholeVersionProof": true
+  },
+  "sourceVersionDrift": {
+    "peerPins": 7,
+    "fullFileUnchanged": 6,
+    "changedFullFile": 1,
+    "types": {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "coverage": "selected",
+      "sourceShaFromReadTimeManifest": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "initialSemanticReadSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "endingSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "fullFileUnchangedInPeerCheck": false,
+      "readTimeBytes": 102234,
+      "endingBytes": 102370,
+      "selectedLineRanges": [
+        [
+          863,
+          883
+        ],
+        [
+          2068,
+          2081
+        ],
+        [
+          2083,
+          2085
+        ],
+        [
+          2087,
+          2094
+        ]
+      ],
+      "semanticLines": 46,
+      "displayedLineRanges": [
+        [
+          863,
+          883
+        ],
+        [
+          2068,
+          2094
+        ]
+      ],
+      "displayedLines": 48,
+      "boundFromFrozenManifest": 2982,
+      "rangeBoundsCheckedWhereProvided": true,
+      "selectedDisplayedRangesUnchangedReported": true,
+      "currentProductBytesOpened": false
+    },
+    "priorDisplayedRangesReportedUnchanged": [
+      [
+        863,
+        883
+      ],
+      [
+        2068,
+        2094
+      ]
+    ],
+    "wholeFileEqualityClaimed": false,
+    "fragmentEqualityReperformedByThisAggregator": false,
+    "evidenceArtifact": "peer48/dto-range-drift-check.json (opaque hash only)",
+    "firstInactiveMetadataFilesPreserved": [
+      "source-manifest.first.json",
+      "ending-checks.first.json",
+      "source-excerpts.first.json"
+    ],
+    "activeReadTimeShaKeptSeparateFromEnding": true
+  },
+  "datedHistory": {
+    "initialSameCorpus": true,
+    "files": 3869,
+    "md": 1391,
+    "json": 2478,
+    "strings": 1255894,
+    "scalars": 1896731,
+    "includedFrozenThrough": 42,
+    "excludedExactRounds": [
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "notCountedAs7738DistinctFiles": true,
+    "authorEnding": "Original3869 set/bytes unchanged at earlier author ending; do not project that to later peer ending.",
+    "peerEnding": {
+      "count": 3869,
+      "sameExclusionAsInitial": true,
+      "added": [],
+      "removed": [],
+      "changed": [
+        {
+          "path": "docs/todo/release-real-operations-2026-10-16.md",
+          "beforeBytes": 199956,
+          "beforeSha256": "8c1b9ca1624268007d7c7c6b92af69c58b619e20cc8cc991b4de1676a12c2db3",
+          "endingBytes": 212262,
+          "endingSha256": "f654cd5e3acdacf39eb2156514322d048d5ea1d548daad46fd9504060d7f470e"
+        }
+      ],
+      "allInitialInventoryUnchanged": false
+    },
+    "archiveDefinitions": {
+      "author": "175 substring archiv /162 exact archive or archives",
+      "peer": "169 exact archive/_archive"
+    },
+    "noCurrentRepositoryHistoryBytesRead": true
+  },
+  "capAndDiagnostics": {
+    "author": "Initial10/14/14/21, replacement13/25/18/2 cap160 retained; initial49unique contexts fully displayed, replacement10scope rows read; verbose replacement truncated, no all-retained claim. Bounded test-locator rg exit1 is no-match, not test failure.",
+    "peer": "Notification10/14 and Market16/18 cap100 retained;26path windows+19explicit scope rows, not all SHA windows. Wrong types.ts pin/locator exit1 and guessed old-report path miss preserved; first writer ending/read SHA mix corrected only in active metadata, three originals retained.",
+    "metadataDiagnosticsDoNotBecomeProductRuns": true
+  },
+  "rootReportedVersionContextOnly": "Root reports formal43 ending refresh from c2db to 07e5791b1fc1ad1fcfd5c55c2913d8a45f1b20cb; 22 incoming paths include preload/types.d.ts and release TODO. Supplied context only; reviewer ran no Git.",
+  "formal44GitOrFutureReadmeCertified": false,
+  "newSourceBytesOpened": 0,
+  "newSourceSemanticLines": 0,
+  "sourceExcerptsOrDtoRangeEvidenceDecoded": 0,
+  "gitCommands": 0,
+  "productRuns": 0,
+  "tests": 0,
+  "fixtures": 0,
+  "metadataErrors": []
+}

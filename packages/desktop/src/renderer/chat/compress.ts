@@ -115,11 +115,7 @@ export async function compressIfNeeded(
   const cap = capForDetail(detail);
   try {
     const img = await loadImage(att.dataUrl);
-    const { width, height } = scaledDimensions(
-      img.naturalWidth,
-      img.naturalHeight,
-      cap,
-    );
+    const { width, height } = scaledDimensions(img.naturalWidth, img.naturalHeight, cap);
     // Already at/under the cap AND within bytes → nothing to gain, keep original
     // (avoids needlessly re-encoding a small PNG of code into lossy JPEG).
     if (width === img.naturalWidth && height === img.naturalHeight && att.size <= TARGET_BYTES) {
@@ -184,7 +180,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 /**
  * Long-edge clamp that preserves aspect ratio. If the image is already
  * within the cap, returns its natural dimensions unchanged — important
- * so screenshots of code stay readable.
+ * so screenshots of code stay readable. A downsampled short edge stays at
+ * least one pixel so a thin image cannot become a zero-dimension canvas.
  */
 export function scaledDimensions(
   w: number,
@@ -193,9 +190,9 @@ export function scaledDimensions(
 ): { width: number; height: number } {
   if (w <= cap && h <= cap) return { width: w, height: h };
   if (w >= h) {
-    return { width: cap, height: Math.round((h * cap) / w) };
+    return { width: cap, height: Math.max(1, Math.round((h * cap) / w)) };
   }
-  return { width: Math.round((w * cap) / h), height: cap };
+  return { width: Math.max(1, Math.round((w * cap) / h)), height: cap };
 }
 
 function canvasToBlob(

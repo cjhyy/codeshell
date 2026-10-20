@@ -1,0 +1,14 @@
+{
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "oldCauseExclusions": [
+    {
+      "id": "COST-R9-01",
+      "reason": "Previously recorded unbound standalone CostTracker/full model identifier estimation issue, not re-reported. Current ordinary LLMBase identity DTO passes provider/model/providerKind in inspected source."
+    }
+  ],
+  "sameSHAOldFullGateExclusions": 0,
+  "conclusion": "Finite negative for inspected ordinary context/DTO/callback ranges only; no all-Node/SDK/context/ledger/native/identity correctness claim",
+  "author61InputsReadOrRequested": false
+}

@@ -1,0 +1,28 @@
+{
+  "formal": 0,
+  "candidate": 1,
+  "related": 0,
+  "candidates": [
+    {
+      "id": "STATIC-R135-C1",
+      "proposedPriority": "P3",
+      "title": "Percent-encoded space-named static file is looked up as literal percent bytes",
+      "location": {
+        "path": "packages/server/src/mobile-remote/mobile-static.ts",
+        "start": 27,
+        "end": 31
+      },
+      "status": "Retain candidate: actual handler counterexample reproduced, current normal product asset producer unestablished.",
+      "cause": "Raw req URL mobileAssetPath does not decode, resolveSafe receives assets/icon%20one.svg rather than real assets/icon one.svg.",
+      "evidence": "Single guarded unit shard: actual serveMobile plus real owned files/Writable sink, 3tests/8expect/0failure. The green test asserts existing wrong404; not a fix or real browser/HTTP deployment.",
+      "normalProducerLimit": "Independent137 checking actual public assets and source entry. Do not promote merely because a custom test root can contain arbitrary names.",
+      "excluded": [
+        "headless/control static callers already decode",
+        "old realpath/symlink escape cause",
+        "unproven HTTPS dev URL support",
+        "stream error/race question not exercised",
+        "q=0 Accept semantics not investigated"
+      ]
+    }
+  ]
+}

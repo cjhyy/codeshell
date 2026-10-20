@@ -1,0 +1,45 @@
+{
+  "role": "Directed static network contract/source reviewer, not runtime verifier",
+  "executions": {
+    "product": 0,
+    "helpers": 0,
+    "imports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "Browser": 0,
+    "CDP": 0,
+    "DOM": 0,
+    "UI": 0,
+    "timers": 0,
+    "native": 0,
+    "models": 0,
+    "network": 0,
+    "Git": 0,
+    "realHeadersOrUserData": 0
+  },
+  "sourceDisplayChunks": [
+    "60bcce",
+    "57917f",
+    "1e4ccc",
+    "9911ff",
+    "ac6f5d"
+  ],
+  "testStatus": "Two partial existing FakePage declarations intent only; no emission/eval/test or SDK imported/executed. Five titles navigation only.",
+  "historyMode": "Own targeted46 raw hits plus3 original canonical JSON containers; Root shared5584batch projected inspector329/contracts235 cap100 each, not own corpus scalar rerun.",
+  "oldRuns": "No borrowed old5pass/24expect or guarded results; old DOM/VM failed directions stay skipped.",
+  "scopeTotals": {
+    "semanticFiles": 8,
+    "full": 0,
+    "selected": 8,
+    "productSemanticLines": 153,
+    "testDeclarationSemanticLines": 28,
+    "contractDocumentSemanticLines": 4,
+    "semanticLines": 185,
+    "uniqueDisplayedLinesSummedAcrossFiles": 359,
+    "sourceAndInstructionPins": 10,
+    "partialExistingTestDeclarationsRead": 2,
+    "testTitlesNavigationOnly": 5,
+    "testsExecuted": 0
+  },
+  "metadataWarning": "568376 exit0 own Python SyntaxWarning preserved, active script whitespace correction only; no rerun."
+}

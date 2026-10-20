@@ -1,0 +1,37 @@
+48:   | { ok: true; id: string; packageDigest: string }
+49:   | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
+50: > {
+51:   try {
+52:     const installed = await installReviewedLocalPanelApp(
+53:       input.source,
+54:       input.reviewToken,
+55:       new Date().toISOString(),
+56:       { overwrite: input.overwrite === true },
+57:     );
+58:     panelAppUpdateService.invalidate(installed.id);
+59:     if (!installed.packageDigest) throw new Error("Installed Panel package has no content digest");
+60:     return { ok: true, id: installed.id, packageDigest: installed.packageDigest };
+88: 
+89: export async function installPanelAppUpdateForUi(input: {
+90:   id: string;
+91:   reviewToken: string;
+92: }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }> {
+93:   try {
+94:     const installed = await installReviewedPanelAppUpdate(
+95:       input.id,
+96:       input.reviewToken,
+97:       new Date().toISOString(),
+98:     );
+99:     panelAppUpdateService.invalidate(installed.id);
+100:     return { ok: true, id: installed.id };
+101:   } catch (error) {
+105:       ...(error instanceof PanelAppReviewChangedError ? { previewChanged: true as const } : {}),
+106:       error: message,
+107:     };
+108:   }
+109: }
+110: 
+111: export async function uninstallPanelAppForUi(id: string): Promise<void> {
+112:   await uninstallPanelApp(id);
+113:   panelAppUpdateService.invalidate(id);
+114: }

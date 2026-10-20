@@ -1,0 +1,22 @@
+{
+  "frozenCommit": "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39",
+  "candidates": [],
+  "excluded": [
+    {
+      "id": "CAT-R10-X1",
+      "title": "Cache-derived context values lose provenance / possible refresh stickiness",
+      "file": "packages/core/src/llm/model-pool.ts",
+      "line": 147,
+      "status": "static direction skipped, not a new candidate",
+      "reason": "Missing authoritative refresh trigger contract; inferred-context provenance already discussed in docs/refactor/_archive/goal-judge-context-refactor-FINAL.md:129. Caller-reading command failed and was not retried."
+    },
+    {
+      "id": "CAT-R10-X2",
+      "title": "Overlapping parent/child param wire paths",
+      "file": "packages/core/src/model-catalog/params.ts",
+      "line": 32,
+      "status": "excluded",
+      "reason": "No normal shipped producer or declared overlap precedence requirement established; do not manufacture a bug from schema-accepted conflicts."
+    }
+  ]
+}

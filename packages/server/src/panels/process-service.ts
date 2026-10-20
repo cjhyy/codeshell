@@ -4,6 +4,8 @@ import { constants, lstatSync, realpathSync } from "node:fs";
 import { access, realpath, stat } from "node:fs/promises";
 import { basename, delimiter, extname, join } from "node:path";
 import { killProcessGroup } from "@cjhyy/code-shell-core/extension";
+import { PanelModelTraceChannel } from "./model-trace-channel.js";
+import type { PanelModelTraceService, PanelModelTraceOwner } from "./model-traces.js";
 import { verifyProcessEntry } from "./process-entry.js";
 import {
   appendProcessEvent,
@@ -78,6 +80,7 @@ interface EntryGrant extends OwnedGrant {
 }
 
 interface RunningProcess {
+  modelTraceChannel?: PanelModelTraceChannel;
   guestId: number;
   child: ChildProcess;
   lifetime: ReturnType<typeof setTimeout>;
@@ -94,6 +97,9 @@ interface RunningProcess {
 }
 
 export interface PanelAppProcessServiceOptions {
+  /** Dedicated descriptor only for a verified installed package entry. */
+  modelTraces?: PanelModelTraceService;
+  modelTraceOwner?(owner: PanelProcessOwner): Omit<PanelModelTraceOwner, "ownerKey"> | undefined;
   /** Host lease from before async preparation until the actual process group has exited. */
   acquireExecution?(owner: PanelProcessOwner): () => void;
   env?: NodeJS.ProcessEnv;
@@ -705,12 +711,22 @@ export class PanelAppProcessService {
       if (!this.options.allowAuthorizedProcessWithoutPrompt)
         this.approvedExecutables.add(approvalKey);
       const processId = randomUUID();
+      const modelTraceOwner =
+        entry && this.options.modelTraces ? this.options.modelTraceOwner?.(owner) : undefined;
+      // Never inherit a caller's descriptor claim for an ordinary executable.
+      delete env.CODESHELL_MODEL_TRACE_FD;
+      if (modelTraceOwner) env.CODESHELL_MODEL_TRACE_FD = "3";
       const child = spawn(executable.path, args, {
         cwd,
         detached: process.platform !== "win32",
         env,
         shell: false,
-        stdio: [input.stdin === "pipe" ? "pipe" : "ignore", "pipe", "pipe"],
+        stdio: [
+          input.stdin === "pipe" ? "pipe" : "ignore",
+          "pipe",
+          "pipe",
+          ...(modelTraceOwner ? ["pipe" as const] : []),
+        ],
         windowsHide: true,
       });
       const record: ProcessRecord = {
@@ -790,6 +806,27 @@ export class PanelAppProcessService {
         }),
       };
       this.processes.set(processId, running);
+      if (modelTraceOwner && this.options.modelTraces) {
+        const channel = new PanelModelTraceChannel({
+          service: this.options.modelTraces,
+          owner: {
+            ...modelTraceOwner,
+            ownerKey: `process:${processId}`,
+            traceId: modelTraceOwner.traceId ?? processId,
+          },
+          isAuthorized: async () => {
+            try {
+              await this.authorize(owner, epoch);
+              return this.processes.get(processId) === running && !running.termination;
+            } catch {
+              return false;
+            }
+          },
+        });
+        running.modelTraceChannel = channel;
+        child.stdio[3]?.on("data", (chunk: Buffer) => channel.write(chunk));
+        child.stdio[3]?.on("error", () => channel.abort("failed"));
+      }
       let checkingInputs = false;
       const inputChecks = fileArgumentHandles.some(
         (handle) => this.fileArguments.get(handle)?.validate,
@@ -833,6 +870,7 @@ export class PanelAppProcessService {
               });
             }
           }
+          await running.modelTraceChannel?.finish(record.cancelRequested ? "cancelled" : "failed");
           finishExit({ code: finalCode, signal });
           this.retiring.delete(processId);
           if (this.processes.get(processId)?.child !== child) return;
@@ -1081,6 +1119,7 @@ export class PanelAppProcessService {
 
   private terminate(running: RunningProcess): void {
     if (running.termination) return;
+    running.modelTraceChannel?.abort();
     running.record.cancelRequested = true;
     running.record.status = "stopping";
     const pid = running.child.pid;

@@ -1,0 +1,89 @@
+{
+  "frozenUTC": "2026-10-17T16:59:17.325834+00:00",
+  "directory": "/tmp/codeshell-audit-round89-composer-suggestions",
+  "role": "Independent bounded ordinary UI static source/data reader; self metadata freeze, not runtime verifier.",
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 736,
+      "sha256": "38969bd27b7cf28848dad217192a15e7390c0d05d52ab7468634face95abf677"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 566,
+      "sha256": "d28e8f1b876a286daf7ef5540a44f5a0a2d5ca38cada6195af487c66fdf5fc2e"
+    },
+    {
+      "path": "coverage-gate-objects.json",
+      "bytes": 4357,
+      "sha256": "166a13d4ef91f3ecfb832e4566e1ed7af00218fb0665ff1d52ae5f6c95b72f37"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2013,
+      "sha256": "294bb94559143321585d688827cc122ff1f4ddf3d358af647b0d63c5d2014cb9"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 1102,
+      "sha256": "e34892375b9a03b12a4198128b746dcdbe657aea2fd73dbe38cd035aa7782bdd"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 36480,
+      "sha256": "b9976fb5a18c642e9130a956db9d243f3d1e53b861622f728cfa172fe938861d"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3836,
+      "sha256": "5f96211c398d593f9d0982dc610fc6e03626604d6dbd358fd09b162c3e209220"
+    },
+    {
+      "path": "history.json",
+      "bytes": 1040935,
+      "sha256": "9346878eca09dfe43a5eb1dee217c5c216e3b2633feae7bd917314f5f564765e"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1039,
+      "sha256": "f2e27789b25cc3b4e5f0efea4f1da98a1bf2b797522f52a11521b4ab3f7cffa8"
+    },
+    {
+      "path": "prior-overlap.json",
+      "bytes": 3111,
+      "sha256": "e35255d865ccb4ebc884bd46bfb5b602805fee284a8db5686fedccab14d283d5"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5935,
+      "sha256": "af7d651117ab616512018cc9b5bf2add41cc6af248f0646af31571f36b63e007"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 77123,
+      "sha256": "24f0354b6e49c902d988cff23eb6909675af9009a90ddc915abb499996110d63"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 9869,
+      "sha256": "4fb3048fae5f0347a406826428aa397315687991cb3b4c4cb04a622b6c47daad"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1419,
+      "sha256": "68b5bb7db69e52c513167143f521732cb38f263036ff9a087f19e7499c1c5334"
+    }
+  ],
+  "fileCountExcludingReceipt": 14,
+  "selfExcluded": true,
+  "reportMarkdownLinks": 14,
+  "allRelativeReportLinksExistIncludingReceiptByConstruction": true,
+  "sourcePinsChecked": 5,
+  "sourcePinsUnchanged": true,
+  "historyEndingMemberByteDrift": 0,
+  "newFormal": 0,
+  "newCandidate": 0,
+  "newRelated": 0,
+  "productExecutionCount": 0,
+  "ownGitOperations": 0
+}

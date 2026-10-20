@@ -1,0 +1,596 @@
+{
+  "scope": "all recursive prior docs and bugs MD and parsed JSON string leaves; current round excluded; archived directories included",
+  "statistics": {
+    "mdFiles": 1134,
+    "jsonFiles": 804,
+    "jsonStringLeaves": 239449,
+    "jsonScalarLeaves": 335081,
+    "errors": []
+  },
+  "patternMatches": {
+    "ingress": 3,
+    "channel": 6,
+    "media-kind": 62,
+    "outgoing-tracker": 0,
+    "file-selection": 27,
+    "host": 35
+  },
+  "retainedContextCapPerPattern": 40,
+  "matches": {
+    "ingress": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[73]",
+        "context": "packages/chat/src/ingress.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+        "location": "$.matches[21].hits[14].text",
+        "context": "packages/chat/src/ingress.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[48].hits[14].text",
+        "context": "packages/chat/src/ingress.ts"
+      }
+    ],
+    "channel": [
+      {
+        "path": "docs/audit-2026-10-17/chat-data.md",
+        "location": "14",
+        "context": "- **边界**：证明本地 production 数据转换和参数构造；没有真实 Slack 服务端/UI、账号或网络验证。参数含义来自 web 返回的官方搜索摘要/页面摘录，本分审没有成功打开此前小写 URL。这里采用 reply 的正常会话定位预期，不宣称 ChannelCapabilities 已承诺完整 Slack threads 支持。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-final-review.md",
+        "location": "25",
+        "context": "ods/chat.postMessage/)。这与原始 payload 结合可推出频道顶层定位；真实 Slack 服务端/UI 未执行。项目 `ChannelMessage.threadId?: string` 位于 `channel.ts:117`，但是 `ChannelCapabilities` 与 README 能力矩阵没有显式承诺完整 threads 支持：保留原线程是正常 reply 定位预期，不能改写成项目已有完整 thread 能力声明。没有发现本项目明确将线程回复到主频道规定为设计行为的文档。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+        "location": "$.matches.known_text_findings[7].excerpt",
+        "context": "- **边界**：证明本地 production 数据转换和参数构造；没有真实 Slack 服务端/UI、账号或网络验证。参数含义来自 web 返回的官方搜索摘要/页面摘录，本分审没有成功打开此前小写 URL。这里采用 reply 的正常会话定位预期，不宣称 ChannelCapabilities 已承诺完整 Slack threads 支持。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+        "location": "$.matches.known_text_findings[17].excerpt",
+        "context": "ods/chat.postMessage/)。这与原始 payload 结合可推出频道顶层定位；真实 Slack 服务端/UI 未执行。项目 `ChannelMessage.threadId?: string` 位于 `channel.ts:117`，但是 `ChannelCapabilities` 与 README 能力矩阵没有显式承诺完整 threads 支持：保留原线程是正常 reply 定位预期，不能改写成项目已有完整 thread 能力声明。没有发现本项目明确将线程"
+      },
+      {
+        "path": "docs/todo/im-gateway-research.md",
+        "location": "342",
+        "context": "interface ChannelCapabilities {"
+      },
+      {
+        "path": "docs/todo/im-gateway-research.md",
+        "location": "352",
+        "context": "  readonly capabilities: ChannelCapabilities;"
+      }
+    ],
+    "media-kind": [
+      {
+        "path": "docs/audit-2026-10-17/chat-data.md",
+        "location": "20",
+        "context": "- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/chat-data.md",
+        "location": "24",
+        "context": "- **动态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations /"
+      },
+      {
+        "path": "docs/audit-2026-10-17/chat-data.md",
+        "location": "25",
+        "context": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-final-review.md",
+        "location": "33",
+        "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[20].hits[3].excerpt",
+        "context": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations /"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[20].hits[4].excerpt",
+        "context": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[41].hits[1].excerpt",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[41].hits[2].excerpt",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[41].hits[3].excerpt",
+        "context": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[41].hits[4].excerpt",
+        "context": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations /"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[43].hits[1].excerpt",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[45].hits[1].excerpt",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-candidates.json",
+        "location": "$.excluded[4]",
+        "context": "未经契约支持的 mediaKind filename/MIME 冲突、并发同对象 delivery tracker 不计缺陷。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[19].hits[3].text",
+        "context": "- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[19].hits[4].text",
+        "context": "- **动态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations /"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[56].hits[0].text",
+        "context": "- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[56].hits[1].text",
+        "context": "- **动态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations /"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[59].hits[0].text",
+        "context": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations /"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+        "location": "$.matches[59].hits[1].text",
+        "context": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations /"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[104].text",
+        "context": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[109].text",
+        "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[117].text",
+        "context": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[118].text",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[119].text",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[120].text",
+        "context": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[122].text",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[123].text",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[199].text",
+        "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[248].text",
+        "context": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[249].text",
+        "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[250].text",
+        "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$.matches.attachments[2].text",
+        "context": "- **调用链**：adapter 的 remote file metadata → `remoteAttachment` → `safeAttachmentName` → `materializeChatAttachments` → `PetChatInputAttachment.name`。Slack/Discord/Teams/Mattermost 等 adapter 都使用这个共有 helper；本轮只动态证明共有转换，不宣称所有平台已实测。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$.matches.attachments[3].text",
+        "context": "- **动态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations /"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$.matches.attachments[4].text",
+        "context": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$.matches.attachments[5].text",
+        "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$.matches.attachments[6].text",
+        "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$.matches.attachments[7].text",
+        "context": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations /"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$.matches.attachments[8].text",
+        "context": "- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$.matches.attachments[9].text",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+        "location": "$.matches.attachments[10].text",
+        "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+      }
+    ],
+    "outgoing-tracker": [],
+    "file-selection": [
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "location": "$[118].title",
+        "context": "TOCTOU race condition in rollback when removing unlinked files"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[1877]",
+        "context": "packages/link/src/file-selection.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$.matches[33].hits[0].excerpt",
+        "context": "ges/link/src/file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$.hits.truncate_unicode[9].snippet",
+        "context": "file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$.hits.truncate_unicode[17].snippet",
+        "context": "file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "location": "$.hits.truncate_unicode[24].snippet",
+        "context": "file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "$.matches[173].text",
+        "context": "file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$.records[5].matches[0].match",
+        "context": "\"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$.records[5].matches[0].context",
+        "context": "\"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$.records[9].matches[0].match",
+        "context": "\"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$.records[9].matches[0].context",
+        "context": "\"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$.records[13].matches[0].match",
+        "context": "\"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "location": "$.records[13].matches[0].context",
+        "context": "\"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-receipts.json",
+        "location": "$.findings[0].source",
+        "context": "packages/link/src/file-selection.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-receipts.json",
+        "location": "$.findings[1].source",
+        "context": "packages/link/src/file-selection.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+        "location": "$.sources[4].path",
+        "context": "packages/link/src/file-selection.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/findings.json",
+        "location": "$.findings[4].source",
+        "context": "packages/link/src/file-selection.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/findings.json",
+        "location": "$.findings[5].source",
+        "context": "packages/link/src/file-selection.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/host-link.md",
+        "location": "9",
+        "context": "- **位置**：`packages/link/src/file-selection.ts:15`，由 `:42` 将路径传入共用 `text()`；普通 UI 在 `packages/desktop/src/renderer/credentials/LinkedFileSourcesDialog.tsx:26` 也先裁剪每行路径。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/host-link.md",
+        "location": "18",
+        "context": "- **位置**：`packages/link/src/file-selection.ts:90` 的 `defaultLabel.slice(-512)`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/host-link.md",
+        "location": "27",
+        "context": "- **HL-B1 · 已观察能力边界，不计 bug**：`docs/rate%2Ftable.md`、`docs/rate%5Ctable.md` 被 `file-selection.ts:46` 的 decode 后分段规则拒绝，而字面 `%20` 名称保留；fixture 第二项保留了这一结果。Core `links/http.ts:189` 的 `assertPathSegment()` 明确采用相同的原始/解码后双检查，`:215` 规定此格式经过每段验证后编码。尚无契约保证支持这两种字面表示，不能由“Git 文件名可能包含这些字符”直接推成产品 bug"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+        "location": "$.files[62].path",
+        "context": "packages/link/src/file-selection.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.logs[3].text",
+        "context": "\"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.settings-navigation[3].text",
+        "context": "\"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$.hits.sidebar-projection[11].text",
+        "context": "\"category\": \"correctness\", \"severity\": \"low\", \"confidence\": \"medium\", \"title\": \"TOCTOU race condition in rollback when removing unlinked files\", \"detail\": \"At line 276, existsSync(c.path) performs a synchronous check, but unlink() is asynchronous. Between the check and the unlink call, another process could delete the file, causi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$.hits.tokenizer[4].snippet",
+        "context": "ges/link/src/file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低"
+      },
+      {
+        "path": "docs/todo/claude-repository-optimization-2026-08-30.md",
+        "location": "232",
+        "context": "> # → resolveSafe rejects a symlinked file escaping the root:"
+      }
+    ],
+    "host": [
+      {
+        "path": "docs/audit-2026-10-16/core.md",
+        "location": "53",
+        "context": "既有 baseline shard：`node scripts/run-bun-test-shard.mjs --timeout 30000 packages/host/src/runtime.test.ts packages/host/src/ask-user-unavailable.test.ts packages/core/src/composition/lifetime.test.ts packages/core/src/composition/activation.test.ts packages/core/src/engine/run-finalize."
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[1872]",
+        "context": "packages/host/src/host-requests.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "location": "$.source_inventory[1874]",
+        "context": "packages/host/src/runtime.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[35].text",
+        "context": "既有 baseline shard：`node scripts/run-bun-test-shard.mjs --timeout 30000 packages/host/src/runtime.test.ts packages/host/src/ask-user-unavailable.test.ts packages/core/src/composition/lifetime.test.ts packages/core/src/composition/activation.test.ts packages/core/src/engine/run-finalize."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[38].text",
+        "context": "packages/host/src/host-requests.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[39].text",
+        "context": "packages/host/src/runtime.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[41].text",
+        "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[42].text",
+        "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[43].text",
+        "context": "packages/host/src/runtime.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[44].text",
+        "context": "packages/host/src/host-requests.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[45].text",
+        "context": "packages/host/src/runtime.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[48].text",
+        "context": "packages/host/src/host-requests.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[49].text",
+        "context": "packages/host/src/runtime.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[50].text",
+        "context": "packages/host/src/runtime.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[62].text",
+        "context": "hard：`node scripts/run-bun-test-shard.mjs --timeout 30000 packages/host/src/runtime.test.ts packages/host/src/ask-user-unavailable.test.ts packages/core/src/composition/lifetime.test.ts packages/core/src/composition/activation.test.ts packages/core/src/engine/run-finalize."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[113].text",
+        "context": "  packages/host/src/runtime.test.ts \\"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-dedup.json",
+        "location": "$.matches[114].text",
+        "context": "  packages/host/src/runtime.test.ts \\"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+        "location": "$.files[1].path",
+        "context": "packages/host/src/runtime.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+        "location": "$.files[2].path",
+        "context": "packages/host/src/host-requests.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+        "location": "$.files[4].path",
+        "context": "packages/host/src/runtime.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+        "location": "$.productImports[0]",
+        "context": "packages/host/src/runtime.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "location": "$.files[57].path",
+        "context": "packages/host/src/host-requests.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "location": "$.files[59].path",
+        "context": "packages/host/src/runtime.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+        "location": "$.files[60].path",
+        "context": "packages/host/src/runtime.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-receipts.json",
+        "location": "$.runs[1].command",
+        "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-receipts.json",
+        "location": "$.runs[1].actualShellCommand",
+        "context": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+        "location": "$.sources[0].path",
+        "context": "packages/host/src/runtime.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+        "location": "$.sources[1].path",
+        "context": "packages/host/src/host-requests.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+        "location": "$.sources[25].path",
+        "context": "packages/host/src/runtime.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+        "location": "$.files[54].path",
+        "context": "packages/host/src/host-requests.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+        "location": "$.files[56].path",
+        "context": "packages/host/src/runtime.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+        "location": "$.files[57].path",
+        "context": "packages/host/src/runtime.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round8/evidence/questions-dedup-inventory.json",
+        "location": "$.hits[138].excerpt",
+        "context": "hard：`node scripts/run-bun-test-shard.mjs --timeout 30000 packages/host/src/runtime.test.ts packages/host/src/ask-user-unavailable.test.ts packages/core/src/composition/lifetime.test.ts packages/core/src/composition/activation.test.ts packages/core/src/engine/run-finalize."
+      },
+      {
+        "path": "docs/todo/platform-first-version-plan.md",
+        "location": "112",
+        "context": "  packages/host/src/runtime.test.ts \\"
+      },
+      {
+        "path": "docs/todo/platform-first-version-plan.md",
+        "location": "156",
+        "context": "  packages/host/src/runtime.test.ts \\"
+      }
+    ]
+  },
+  "patterns": {
+    "ingress": "renderWebhookIngress|validateUpstream|ingress\\.ts|CHAT_WEBHOOK_PATHS",
+    "channel": "channelCapabilities|BUILTIN_CHANNEL_CAPABILITIES|supportsOutgoingAttachment|isWebhookChannelAdapter",
+    "media-kind": "mediaKind|safeAttachmentName|outgoingAttachments",
+    "outgoing-tracker": "OutgoingDeliveryTracker|plans\\.get\\(message\\)|multi.request adapter send",
+    "file-selection": "resolveLinkFileSelection|file-selection\\.ts|linked file",
+    "host": "packages/host/src/(?:runtime|host-requests)"
+  },
+  "limitations": "Keyword families aid dedup; caps bound retained contexts, not match counts; not exhaustive semantic proof."
+}

@@ -1,0 +1,198 @@
+{
+  "atUTC": "2026-10-17T19:57:33.540373+00:00",
+  "rootReportedBaselineOnly": "c6a85ac1b69329f35bc1f6ff34d08070f91b1d96",
+  "role": "Independent directed ordinary meta build path/config contract source review; known old full overlap, no new unique coverage claim",
+  "files": [
+    {
+      "path": "scripts/build-meta.ts",
+      "bytes": 1712,
+      "lines": 38,
+      "sha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "semanticLines": 38,
+      "displayedLineRanges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "uniqueDisplayedLines": 38,
+      "purpose": "Ordinary declared paths/content/config, never executed. Build-meta full source is explicit same-SHA R24/R31 prior overlap; compiler/runtime/native correctness not certified.",
+      "sameShaOldFull": true,
+      "newUniqueCoverageClaim": false,
+      "finishSha256": "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "lines": 129,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected-json-values",
+      "selectedJsonPointers": [
+        "/name",
+        "/type",
+        "/version",
+        "/main",
+        "/types",
+        "/bin",
+        "/exports",
+        "/files",
+        "/workspaces",
+        "/dependencies",
+        "/scripts/build",
+        "/scripts/build:server",
+        "/scripts/test:package-release"
+      ],
+      "selectedLineRanges": [],
+      "semanticLines": null,
+      "purpose": "Selected current package values for root meta build/exports/bin/files and core/TUI actual target declarations, not all package dependencies/platform support.",
+      "newUniqueCoverageClaim": false,
+      "finishSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "lines": 110,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected-json-values",
+      "selectedJsonPointers": [
+        "/name",
+        "/type",
+        "/main",
+        "/types",
+        "/bin",
+        "/exports",
+        "/files",
+        "/scripts/build",
+        "/scripts/copy-assets",
+        "/scripts/clean"
+      ],
+      "selectedLineRanges": [],
+      "semanticLines": null,
+      "purpose": "Selected current package values for root meta build/exports/bin/files and core/TUI actual target declarations, not all package dependencies/platform support.",
+      "newUniqueCoverageClaim": false,
+      "finishSha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "lines": 73,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected-json-values",
+      "selectedJsonPointers": [
+        "/name",
+        "/type",
+        "/main",
+        "/types",
+        "/bin",
+        "/exports",
+        "/files",
+        "/scripts/build",
+        "/scripts/clean"
+      ],
+      "selectedLineRanges": [],
+      "semanticLines": null,
+      "purpose": "Selected current package values for root meta build/exports/bin/files and core/TUI actual target declarations, not all package dependencies/platform support.",
+      "newUniqueCoverageClaim": false,
+      "finishSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/tsconfig.json",
+      "bytes": 554,
+      "lines": 22,
+      "sha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "semanticLines": 22,
+      "displayedLineRanges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "uniqueDisplayedLines": 22,
+      "purpose": "Ordinary declared paths/content/config, never executed. Build-meta full source is explicit same-SHA R24/R31 prior overlap; compiler/runtime/native correctness not certified.",
+      "sameShaOldFull": false,
+      "newUniqueCoverageClaim": false,
+      "finishSha256": "7c7d17bef9bfebfa151350309965f5ef6ae5fd400ed43dc1a2f22261f8e4f56c",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/tui/tsconfig.json",
+      "bytes": 917,
+      "lines": 34,
+      "sha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "semanticLines": 34,
+      "displayedLineRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "uniqueDisplayedLines": 34,
+      "purpose": "Ordinary declared paths/content/config, never executed. Build-meta full source is explicit same-SHA R24/R31 prior overlap; compiler/runtime/native correctness not certified.",
+      "sameShaOldFull": false,
+      "newUniqueCoverageClaim": false,
+      "finishSha256": "1eca07595562f62a88446ab22984e27f23a6d90b2118bcdf1c9d40d25f3ed24f",
+      "finishMatchesInitial": true
+    }
+  ],
+  "instructionHashOnlyFiles": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructions": "Prior actual AGENTS5/CODESHELL217 read carried under identical SHA, hash-only this task.",
+  "totals": {
+    "semanticFiles": 6,
+    "fullTextFiles": 3,
+    "selectedJsonDocuments": 3,
+    "textSemanticLines": 94,
+    "selectedJsonPointers": 32,
+    "testDeclarationsRead": 0,
+    "instructionHashOnly": 2,
+    "sourceEntryFilenameOnly": 2,
+    "declaredResourceFilenameOnly": 4,
+    "newUniqueCoverageClaim": false
+  },
+  "limits": "Full script/config source reading is not execution, native/permissions/platform certification, compiler output observation or package tarball/import/release validation. JSON lines not falsely counted from selected-value formatting."
+}

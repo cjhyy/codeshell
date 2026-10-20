@@ -1,0 +1,11 @@
+{
+  "type": "Static source locator miss;not product execution",
+  "firstResponse": {
+    "chunk_id": "ff2a4f",
+    "exit_code": 2,
+    "diagnostic": "rg: packages/core/src/tool-system/builtin/bash-output.ts: No such file or directory (os error 2)"
+  },
+  "action": "Skipped guessed locator. Actual rg --files inventory found bash-output-style.ts/test, not guessed implementation. No product import/test rerun or substitute authority execution.",
+  "productAttempts": 0,
+  "productReruns": 0
+}

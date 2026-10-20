@@ -1,0 +1,31 @@
+{
+  "createdAt": "2026-10-17T18:22:34.663070+00:00",
+  "sourceUniverse": 4643,
+  "frozen45Counts": {
+    "unknown": 4170,
+    "full": 304,
+    "selected": 169
+  },
+  "conservativeCurrentCarryForward": {
+    "unknown": 4171,
+    "full": 304,
+    "selected": 168
+  },
+  "afterConservative46to53": {
+    "unknown": 4171,
+    "full": 304,
+    "selected": 168
+  },
+  "changedPaths": 0,
+  "transitions": [],
+  "manifestDocuments": 64,
+  "sourceRowsConsidered": 511,
+  "acceptedClaims": 0,
+  "deferredOrRejectedRows": 511,
+  "limits": [
+    "No full-history scalar or MD-only reclassification; no author method execution or product body read.",
+    "Only explicit semantic whole/range records recognized. Hash/nav/display/first-full exclusions and ambiguous ancestor limits never upgrade full; complex or missing fields remain unconfirmed.",
+    "Same-source author/reviewer/formalization duplicates are deduplicated by path/SHA; no sum of line/file readings.",
+    "Full records retain original purpose and mechanism limits and are not all-contract completeness or runtime validation. Unknown is not unread/unfinished or bug count."
+  ]
+}

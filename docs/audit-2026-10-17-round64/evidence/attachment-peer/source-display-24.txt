@@ -1,0 +1,4 @@
+280: function toRunAttachments(images: ImageAttachment[]): InputAttachmentMeta[] {
+1188:     const runAttachments = [...toRunAttachments(attachments), ...referencesForDraft()];
+2498:                           const runAttachments = [
+2499:                             ...toRunAttachments(attachments),

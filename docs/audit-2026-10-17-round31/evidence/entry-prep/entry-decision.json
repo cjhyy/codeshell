@@ -1,0 +1,30 @@
+{
+  "parentReportedBaseline": "19efab9225723c76af447f8b9d9f65aace3b0780",
+  "ordinaryProductionQueryProducerEstablished": false,
+  "ordinaryAppHookUseEstablished": false,
+  "packagePublicSearchApiEstablished": false,
+  "onlyDirectNonemptyQuerySupplierFoundInReferenceInventory": "tests/search-highlight.test.ts:124–141 (parameterized source only, not executed)",
+  "internalDormantChain": [
+    "use-search-highlight.ts:48 setQuery -> Ink.setSearchHighlight1293",
+    "Ink.searchHighlightQuery186 initializes empty; setter1295 is the only textual assignment found",
+    "Ink.onRender719 passes the current field; scanElementSubtree1310 returns [] while empty",
+    "Ink.scanElementSubtree1336 -> scanPositions150 -> findRowSearchMatches13"
+  ],
+  "publicBoundary": [
+    "render/index.ts1–66 does not re-export useSearchHighlight or raw helpers",
+    "TUI src/index.ts1–9 exports VERSION only; package exports dot and ./cli only",
+    "root.ts46–60 Instance and67–71 Root types plus97–104/152–156 returned objects do not expose search setter/scan",
+    "Meta package exports dot only; build-meta.ts26–30 writes core export and TUI CLI shim, not search APIs"
+  ],
+  "leafConcernBoundary": "Parent-provided Greek contextual lowercase suspicion remains a helper-level static candidate/unused-API boundary. This entry subtask independently observes per-cell lowercase38 vs whole-query lowercase151/33 source only; it does not run a Greek string operation, ECMAScript evaluator or language implementation and does not claim observed wrong output.",
+  "classification": "No upgrade to production UI formal. No separate new candidate or related entry created by this subtask; parent owns existing Greek candidate classification.",
+  "newFormalFindings": 0,
+  "newCandidateFindings": 0,
+  "newRelatedFindings": 0,
+  "notClaimed": [
+    "No user actually missed a visible search hit; no rendered terminal/React/TTY observation.",
+    "Module-level export is not proof of supported package API or an actual App consumer.",
+    "Text reference inventory does not prove every dynamic/external/generated consumer absent.",
+    "Existing test source intent is not a test pass; no failed direction resumed."
+  ]
+}

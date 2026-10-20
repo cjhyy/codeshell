@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T13:47:13.988162+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+      "bytes": 21013,
+      "lineCount": 523,
+      "sha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+      "pinBeforeThisReviewBodyRead": true
+    }
+  ]
+}

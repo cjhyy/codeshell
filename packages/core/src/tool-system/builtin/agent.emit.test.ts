@@ -55,7 +55,9 @@ describe("agentTool — synchronous agent_end emission", () => {
     // agentTool returns from a normal spawn without waiting on any timer.
     const { ctx, events } = makeCtx(async () => "quick");
     const out = await agentTool({ description: "d", prompt: "p" }, ctx);
-    expect(out).toBe("quick");
+    expect(out).toMatch(/^agent_id: [A-Za-z0-9_-]+\b/m);
+    expect(out).toContain("AgentSendInput");
+    expect(out.endsWith("\n\nquick")).toBe(true);
     expect(events.filter((e) => e.type === "agent_start")).toHaveLength(1);
   });
 });

@@ -1,9 +1,18 @@
+import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { createHash, randomBytes } from "node:crypto";
 import { CredentialStore } from "../credentials/store.js";
 import type { Credential } from "../credentials/types.js";
+import { isCredentialSecretAvailable } from "../credentials/types.js";
 import { parseOAuthCredentialSecret } from "../credentials/oauth.js";
-import { asRecord, asArray } from "./http.js";
+import { logger } from "../logging/logger.js";
+import { asRecord, asArray, LinkProviderResponseTooLargeError } from "./http.js";
 import { requestOnce } from "./request-once.js";
+import {
+  FIGMA_RESPONSE_BYTES,
+  FIGMA_RESPONSE_TOO_LARGE,
+  FigmaContentUnavailableError,
+  UnsupportedFigmaFileTypeError,
+} from "./figma.js";
 import {
   getRemoteLinkProviderAdapter,
   LEGACY_GITHUB_ACTIONS,
@@ -19,30 +28,100 @@ import {
 const SCOPES = LEGACY_GITHUB_ACTIONS.map((id) => `github:${id}`);
 const pendingRefreshes = new Map<string, Promise<void>>();
 const consumedAttempts = new WeakSet<RemoteLinkAttempt>();
+const BROKER_ERROR_CODES = [
+  "invalid_request",
+  "invalid_grant",
+  "invalid_client",
+  "unauthorized_client",
+  "invalid_scope",
+  "unsupported_grant_type",
+  "access_denied",
+  "invalid_token",
+  "insufficient_scope",
+  "grant_revoked",
+  "connection_revoked",
+  "connection_changed",
+  "upstream_reauthorization_required",
+  "credential_state_unavailable",
+  "action_not_allowed",
+  "resource_not_allowed",
+  "invalid_parameters",
+  "invalid_connection",
+  "provider_not_configured",
+  "upstream_token_missing",
+  "upstream_account_missing",
+  "upstream_unavailable",
+  "upstream_response_too_large",
+  "figma_response_too_large",
+  "server_error",
+  "internal_error",
+  "temporarily_unavailable",
+] as const;
+type BrokerErrorCode = (typeof BROKER_ERROR_CODES)[number];
+type DiagnosticReason =
+  | "secret_unavailable"
+  | "invalid_secret"
+  | "binding_mismatch"
+  | "scope_mismatch"
+  | "resource_mismatch"
+  | "invalid_connection"
+  | "expired_after_refresh"
+  | "orphaned_refresh"
+  | "cas_mismatch"
+  | "state_write_failed";
+export interface RemoteLinkExecutionDiagnostic {
+  stage: "preflight" | "token_refresh" | "action" | "state_write";
+  outcome: "started" | "succeeded" | "failed" | "skipped";
+  code?: RemoteLinkError["code"];
+  reason?: DiagnosticReason;
+  httpStatus?: number;
+  brokerErrorCode?: BrokerErrorCode;
+  state?: "refreshing" | "connected" | "reconnect";
+}
 export class RemoteLinkError extends Error {
+  readonly httpStatus?: number;
+  readonly brokerErrorCode?: BrokerErrorCode;
+  readonly reason?: DiagnosticReason;
   constructor(
     readonly code:
       | "invalid_request"
       | "unavailable"
+      | "configuration_error"
+      | "refresh_outcome_unknown"
       | "reconnect"
       | "changed"
       | "forbidden"
       | "file_not_authorized"
+      | "unsupported_file_type"
+      | "response_too_large"
+      | "content_unavailable"
       | "busy",
+    diagnostic: Pick<
+      RemoteLinkExecutionDiagnostic,
+      "httpStatus" | "brokerErrorCode" | "reason"
+    > = {},
   ) {
     super(
       {
         invalid_request: "远程 Link 请求无效。",
         unavailable: "无法连接 Link 服务，请稍后重试。",
+        configuration_error: "Link 服务配置或刷新请求有误，请修正配置后重试；无需重新授权。",
+        refresh_outcome_unknown: "Link 刷新可能已消费令牌，无法安全重试，请重新连接。",
         reconnect: "Link 授权失效或刷新结果不明，请重新连接。",
         changed: "Link 连接已改变，请重新选择。",
         forbidden: "这个 Link 授权不允许该操作或资源。",
         file_not_authorized:
           "请先在 Figma 连接卡片中点击“添加文件”，粘贴文件链接并确认授权后再读取。",
+        unsupported_file_type: new UnsupportedFigmaFileTypeError().message,
+        response_too_large: FIGMA_RESPONSE_TOO_LARGE,
+        content_unavailable: new FigmaContentUnavailableError().message,
         busy: "Link 正在刷新授权；若重启后仍未完成，请重新连接。",
       }[code],
     );
     this.name = "RemoteLinkError";
+    this.httpStatus = diagnostic.httpStatus;
+    this.brokerErrorCode = diagnostic.brokerErrorCode;
+    this.reason = diagnostic.reason;
   }
 }
 export interface RemoteLinkConfiguration {
@@ -151,7 +230,9 @@ export function beginRemoteLinkAuthorization(
       resourceFiles = [...new Set(capabilities.resourceFiles.map(normalizeRemoteFigmaFileInput))];
       if (resourceFiles.length > 100 || JSON.stringify(resourceFiles).length > 20_000)
         throw new Error("Too many Figma files");
-    } catch {
+    } catch (error) {
+      if (error instanceof UnsupportedFigmaFileTypeError)
+        throw new RemoteLinkError("unsupported_file_type");
       throw new RemoteLinkError("invalid_request");
     }
     url.searchParams.set("resource_mode", resourceFiles.length ? "select" : "deferred");
@@ -170,27 +251,111 @@ export function beginRemoteLinkAuthorization(
   };
 }
 
+/** Read only a bounded, reviewed broker error enum; never retain provider messages. */
+async function brokerError(
+  response: Response,
+  transport: AbortController,
+): Promise<BrokerErrorCode | undefined> {
+  if (!response.body || !response.headers.get("content-type")?.includes("application/json")) return;
+  const reader = response.body.getReader();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const reading = (async () => {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 4096) return;
+      chunks.push(value);
+    }
+    const code = asRecord(JSON.parse(Buffer.concat(chunks).toString("utf8")))?.error;
+    return typeof code === "string" && (BROKER_ERROR_CODES as readonly string[]).includes(code)
+      ? (code as BrokerErrorCode)
+      : undefined;
+  })().catch(() => undefined);
+  try {
+    return await Promise.race([
+      reading,
+      new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), 500);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    transport.abort();
+    void reader.cancel().catch(() => {});
+    try {
+      reader.releaseLock();
+    } catch {
+      /* Preserve the known HTTP error. */
+    }
+  }
+}
 async function request(
   issuer: string,
   path: string,
   init: RequestInit,
+  maxResponseBytes = 2 * 1024 * 1024,
+  execution?: {
+    stage: "token_refresh" | "action";
+    report: (diagnostic: RemoteLinkExecutionDiagnostic) => void;
+  },
 ): Promise<Record<string, unknown>> {
+  const transport = new AbortController();
+  let httpStatus: number | undefined;
+  let brokerErrorCode: BrokerErrorCode | undefined;
+  execution?.report({ stage: execution.stage, outcome: "started" });
   try {
     const response = await requestOnce(new URL(path, origin(issuer)), {
       ...init,
       redirect: "error",
-      signal: init.signal
-        ? AbortSignal.any([init.signal, AbortSignal.timeout(20_000)])
-        : AbortSignal.timeout(20_000),
+      signal: AbortSignal.any([
+        ...(init.signal ? [init.signal] : []),
+        transport.signal,
+        AbortSignal.timeout(20_000),
+      ]),
     });
+    httpStatus = response.status;
     if (!response.ok) {
-      await response.body?.cancel();
+      brokerErrorCode = await brokerError(response, transport);
+      transport.abort();
+      void response.body?.cancel().catch(() => {});
+      if (maxResponseBytes === FIGMA_RESPONSE_BYTES && response.status === 413)
+        throw new RemoteLinkError("response_too_large", { httpStatus, brokerErrorCode });
+      if (execution?.stage === "token_refresh") {
+        // These broker OAuth rejections precede getRefreshToken/revokeToken.
+        // Do not broaden this to other 4xx: invalid_scope, for example, can be
+        // emitted after the rotating refresh token has already been consumed.
+        const rejectedBeforeConsumption =
+          (response.status === 400 || response.status === 401) &&
+          [
+            "invalid_request",
+            "invalid_client",
+            "unauthorized_client",
+            "unsupported_grant_type",
+          ].includes(brokerErrorCode ?? "");
+        const revoked =
+          (response.status === 400 || response.status === 401) &&
+          ["invalid_grant", "grant_revoked", "connection_revoked"].includes(brokerErrorCode ?? "");
+        throw new RemoteLinkError(
+          rejectedBeforeConsumption
+            ? "configuration_error"
+            : revoked
+              ? "reconnect"
+              : "refresh_outcome_unknown",
+          { httpStatus, brokerErrorCode },
+        );
+      }
       throw new RemoteLinkError(
-        response.status === 401 || response.status === 400
-          ? "reconnect"
-          : response.status === 403
-            ? "forbidden"
-            : "unavailable",
+        response.status === 400 && execution?.stage === "action"
+          ? "invalid_request"
+          : response.status === 401 || response.status === 400
+            ? "reconnect"
+            : response.status === 403
+              ? "forbidden"
+              : "unavailable",
+        { httpStatus, brokerErrorCode },
       );
     }
     if (!response.body) throw new RemoteLinkError("unavailable");
@@ -202,9 +367,15 @@ async function request(
         const { done, value } = await reader.read();
         if (done) break;
         size += value.byteLength;
-        if (size > 2 * 1024 * 1024) {
-          await reader.cancel();
-          throw new RemoteLinkError("unavailable");
+        if (size > maxResponseBytes) {
+          // Stop the physical request immediately. The Node/Web stream bridge's
+          // cancellation can settle late or reject; neither should replace the
+          // already known size error or hold a retry until the transport timeout.
+          transport.abort();
+          void reader.cancel().catch(() => {});
+          throw new RemoteLinkError(
+            maxResponseBytes === FIGMA_RESPONSE_BYTES ? "response_too_large" : "unavailable",
+          );
         }
         chunks.push(value);
       }
@@ -213,10 +384,21 @@ async function request(
     }
     const result = asRecord(JSON.parse(Buffer.concat(chunks).toString("utf8")));
     if (!result) throw new RemoteLinkError("unavailable");
+    execution?.report({ stage: execution.stage, outcome: "succeeded", httpStatus });
     return result;
   } catch (error) {
-    if (error instanceof RemoteLinkError) throw error;
-    throw new RemoteLinkError("unavailable");
+    const failure =
+      error instanceof RemoteLinkError
+        ? error
+        : new RemoteLinkError("unavailable", { httpStatus, brokerErrorCode });
+    execution?.report({
+      stage: execution.stage,
+      outcome: "failed",
+      code: failure.code,
+      httpStatus,
+      brokerErrorCode,
+    });
+    throw failure;
   }
 }
 function tokenBody(
@@ -393,8 +575,8 @@ export async function completeRemoteLinkAuthorization(
     meta: {
       linkProvider: providerId,
       linkConnectionMethod: "remote-link",
-      linkExecutionRuntime: "server",
-      linkExecutionBackend: "remote",
+      recordSchemaVersion: 2,
+      linkRecipeId: "broker-oauth",
       agentExposable: false,
       linkRemoteIssuer: config.issuer,
       linkRemoteConnectionId: connectionId,
@@ -445,8 +627,8 @@ export async function revokeRemoteLinkAuthorization(credential: Credential): Pro
 export function isRemoteLinkCredential(value: Pick<Credential, "type" | "meta">): boolean {
   return (
     value.type === "oauth" &&
-    value.meta?.linkExecutionRuntime === "server" &&
-    value.meta.linkExecutionBackend === "remote"
+    linkConnectionMetadata(value.meta).linkExecutionRuntime === "server" &&
+    linkConnectionMetadata(value.meta).linkExecutionBackend === "remote"
   );
 }
 export interface RemoteLinkActionRequest {
@@ -465,6 +647,8 @@ export async function executeRemoteLinkAction(
     signal?: AbortSignal;
     assertAuthorized?: () => void;
     now?: () => number;
+    /** Receives reviewed enums/status only; diagnostics never change execution. */
+    onDiagnostic?: (diagnostic: RemoteLinkExecutionDiagnostic) => void;
   } = {},
 ): Promise<unknown> {
   if (
@@ -487,6 +671,17 @@ export async function executeRemoteLinkAction(
   assertAuthorized();
   const store = options.store ?? new CredentialStore(input.cwd);
   const now = options.now ?? Date.now;
+  const report = (diagnostic: RemoteLinkExecutionDiagnostic) => {
+    try {
+      if (options.onDiagnostic) options.onDiagnostic({ ...diagnostic });
+      else if (diagnostic.outcome === "failed")
+        logger.warn("link.remote.execution", { ...diagnostic });
+      else logger.info("link.remote.execution", { ...diagnostic });
+    } catch {
+      /* Observability cannot alter authority or the operation result. */
+    }
+  };
+  report({ stage: "preflight", outcome: "started" });
   const read = () => {
     const current = store.resolve(input.id, input.scope);
     if (
@@ -499,8 +694,78 @@ export async function executeRemoteLinkAction(
       throw new RemoteLinkError("reconnect");
     return current;
   };
-  let current = read();
+  let current: Credential;
+  try {
+    current = read();
+  } catch (error) {
+    report({
+      stage: "preflight",
+      outcome: "failed",
+      code: error instanceof RemoteLinkError ? error.code : "unavailable",
+    });
+    throw error;
+  }
   const providerId = current.meta!.linkProvider ?? "";
+  const layer = store.list("project").some((item) => item.id === input.id) ? "project" : "user";
+  const writeState = (
+    expected: Credential,
+    state: "refreshing" | "connected" | "reconnect",
+    next?: Credential,
+  ) => {
+    // An undecryptable enc:* is custody, not a plaintext value that may be saved.
+    if (!isCredentialSecretAvailable(expected.secret)) {
+      report({
+        stage: "state_write",
+        outcome: "skipped",
+        state,
+        code: "reconnect",
+        reason: "secret_unavailable",
+      });
+      return;
+    }
+    let matched: boolean;
+    try {
+      matched = store.compareAndSwap(
+        layer,
+        input.id,
+        expected,
+        next ?? {
+          ...expected,
+          meta: { ...expected.meta, linkRemoteState: state },
+        },
+      );
+    } catch {
+      report({
+        stage: "state_write",
+        outcome: "failed",
+        state,
+        code: "unavailable",
+        reason: "state_write_failed",
+      });
+      throw new RemoteLinkError("unavailable", { reason: "state_write_failed" });
+    }
+    if (!matched) {
+      report({
+        stage: "state_write",
+        outcome: "failed",
+        state,
+        code: "changed",
+        reason: "cas_mismatch",
+      });
+      throw new RemoteLinkError("changed", { reason: "cas_mismatch" });
+    }
+    report({ stage: "state_write", outcome: "succeeded", state });
+  };
+  const preflight = <T>(credential: Credential, operation: () => T): T => {
+    try {
+      return operation();
+    } catch (error) {
+      const failure = error instanceof RemoteLinkError ? error : new RemoteLinkError("unavailable");
+      report({ stage: "preflight", outcome: "failed", code: failure.code, reason: failure.reason });
+      if (failure.code === "reconnect") writeState(credential, "reconnect");
+      throw failure;
+    }
+  };
   const assertAction = (credential: Credential) => {
     const adapter = getRemoteLinkProviderAdapter(providerId);
     if (
@@ -520,7 +785,7 @@ export async function executeRemoteLinkAction(
           : { repositories: credential.meta?.linkResourceLabels },
       );
     } catch {
-      throw new RemoteLinkError("reconnect");
+      throw new RemoteLinkError("reconnect", { reason: "resource_mismatch" });
     }
   };
   const prepare = (credential: Credential) => {
@@ -529,28 +794,36 @@ export async function executeRemoteLinkAction(
       return prepareRemoteLinkAction(providerId, input.action, input.params, resources(credential));
     } catch (error) {
       if (error instanceof RemoteLinkError) throw error;
+      if (error instanceof UnsupportedFigmaFileTypeError)
+        throw new RemoteLinkError("unsupported_file_type");
       if (error instanceof RemoteLinkResourceNotGrantedError)
         throw new RemoteLinkError("file_not_authorized");
       throw new RemoteLinkError("forbidden");
     }
   };
-  prepare(current);
-  const layer = store.list("project").some((item) => item.id === input.id) ? "project" : "user";
   const parse = (credential: Credential) => {
+    if (!isCredentialSecretAvailable(credential.secret))
+      throw new RemoteLinkError("reconnect", { reason: "secret_unavailable" });
     let value;
     try {
       value = parseOAuthCredentialSecret(credential.secret ?? "");
     } catch {
-      throw new RemoteLinkError("reconnect");
+      throw new RemoteLinkError("reconnect", { reason: "invalid_secret" });
+    }
+    let issuer: string | undefined;
+    try {
+      issuer = value.issuer ? origin(value.issuer) : undefined;
+    } catch {
+      throw new RemoteLinkError("reconnect", { reason: "binding_mismatch" });
     }
     if (
       !value.refreshToken ||
       !value.clientId ||
       !value.issuer ||
-      origin(value.issuer) !== credential.meta?.linkRemoteIssuer ||
+      issuer !== credential.meta?.linkRemoteIssuer ||
       !value.expiresAt
     )
-      throw new RemoteLinkError("reconnect");
+      throw new RemoteLinkError("reconnect", { reason: "binding_mismatch" });
     const scopes = typeof value.scope === "string" ? value.scope.split(/\s+/) : [];
     const capabilities = credential.meta?.linkCapabilityIds ?? [];
     const adapter = getRemoteLinkProviderAdapter(providerId)!;
@@ -567,7 +840,7 @@ export async function executeRemoteLinkAction(
       new Set(capabilities).size !== capabilities.length ||
       capabilities.some((capability) => !scopes.includes(capability.replace(".", ":")))
     )
-      throw new RemoteLinkError("reconnect");
+      throw new RemoteLinkError("reconnect", { reason: "scope_mismatch" });
     if (!scopes.includes(`${providerId}:${input.action}`)) throw new RemoteLinkError("forbidden");
     return value as typeof value & {
       refreshToken: string;
@@ -576,7 +849,10 @@ export async function executeRemoteLinkAction(
       expiresAt: string;
     };
   };
-  let secret = parse(current);
+  let secret = preflight(current, () => {
+    prepare(current);
+    return parse(current);
+  });
   assertAuthorized();
   if (
     Date.parse(secret.expiresAt) <= now() + 30_000 ||
@@ -585,7 +861,15 @@ export async function executeRemoteLinkAction(
     const key = createHash("sha256").update(secret.refreshToken).digest("hex");
     let pending = pendingRefreshes.get(key);
     if (!pending) {
-      if (current.meta?.linkRemoteState === "refreshing") throw new RemoteLinkError("busy");
+      if (current.meta?.linkRemoteState === "refreshing") {
+        report({
+          stage: "token_refresh",
+          outcome: "failed",
+          code: "busy",
+          reason: "orphaned_refresh",
+        });
+        throw new RemoteLinkError("busy", { reason: "orphaned_refresh" });
+      }
       const original = current,
         originalSecret = secret;
       pending = Promise.resolve()
@@ -594,8 +878,7 @@ export async function executeRemoteLinkAction(
             ...original,
             meta: { ...original.meta, linkRemoteState: "refreshing" },
           };
-          if (!store.compareAndSwap(layer, input.id, original, marked))
-            throw new RemoteLinkError("changed");
+          writeState(original, "refreshing", marked);
           try {
             const next = tokens(
               await request(
@@ -605,6 +888,8 @@ export async function executeRemoteLinkAction(
                   grant_type: "refresh_token",
                   refresh_token: originalSecret.refreshToken,
                 }),
+                undefined,
+                { stage: "token_refresh", report },
               ),
               now(),
               original.meta?.linkCapabilityIds?.map((capability) => capability.replace(".", ":")) ??
@@ -619,15 +904,36 @@ export async function executeRemoteLinkAction(
                 linkCapabilityIds: next.scope.split(" ").map((scope) => scope.replace(":", ".")),
               },
             };
-            if (!store.compareAndSwap(layer, input.id, marked, updated))
-              throw new RemoteLinkError("changed");
+            writeState(marked, "connected", updated);
           } catch (error) {
-            store.compareAndSwap(layer, input.id, marked, {
-              ...marked,
-              meta: { ...marked.meta, linkRemoteState: "reconnect" },
-            });
             if (error instanceof RemoteLinkError && error.code === "changed") throw error;
-            throw new RemoteLinkError("reconnect");
+            // A definite rejection before consumption leaves the same refresh
+            // token usable after the configuration is corrected. Every other
+            // unsuccessful rotation stays durably non-replayable, including a
+            // successful response whose replacement could not be validated.
+            const code =
+              error instanceof RemoteLinkError && error.code === "configuration_error"
+                ? "configuration_error"
+                : error instanceof RemoteLinkError &&
+                    error.code === "reconnect" &&
+                    (error.httpStatus === 400 || error.httpStatus === 401) &&
+                    ["invalid_grant", "grant_revoked", "connection_revoked"].includes(
+                      error.brokerErrorCode ?? "",
+                    )
+                  ? "reconnect"
+                  : "refresh_outcome_unknown";
+            if (code === "configuration_error") writeState(marked, "connected", original);
+            else writeState(marked, "reconnect");
+            const diagnostic =
+              error instanceof RemoteLinkError
+                ? {
+                    httpStatus: error.httpStatus,
+                    brokerErrorCode: error.brokerErrorCode,
+                    reason: error.reason,
+                  }
+                : {};
+            report({ stage: "token_refresh", outcome: "failed", code, ...diagnostic });
+            throw new RemoteLinkError(code, diagnostic);
           }
         })
         .finally(() => pendingRefreshes.delete(key));
@@ -636,11 +942,14 @@ export async function executeRemoteLinkAction(
     await pending;
     assertAuthorized();
     current = read();
-    secret = parse(current);
-    if (current.meta?.linkRemoteState !== "connected" || Date.parse(secret.expiresAt) <= now())
-      throw new RemoteLinkError("reconnect");
+    secret = preflight(current, () => {
+      const value = parse(current);
+      if (current.meta?.linkRemoteState !== "connected" || Date.parse(value.expiresAt) <= now())
+        throw new RemoteLinkError("reconnect", { reason: "expired_after_refresh" });
+      return value;
+    });
   }
-  const body = prepare(current);
+  const body = preflight(current, () => prepare(current));
   const authority = (credential: Credential) =>
     JSON.stringify({
       provider: credential.meta?.linkProvider,
@@ -653,8 +962,13 @@ export async function executeRemoteLinkAction(
       verifiedAt: credential.meta?.linkLastVerifiedAt,
     });
   const originalAuthority = authority(current);
-  const connection = string(current.meta?.linkRemoteConnectionId, 36);
-  if (!/^[a-f0-9-]{36}$/.test(connection)) throw new RemoteLinkError("reconnect");
+  const connection = preflight(current, () => {
+    const value = current.meta?.linkRemoteConnectionId;
+    if (typeof value !== "string" || !/^[a-f0-9-]{36}$/.test(value))
+      throw new RemoteLinkError("reconnect", { reason: "invalid_connection" });
+    return value;
+  });
+  report({ stage: "preflight", outcome: "succeeded" });
   assertAuthorized();
   let response: Record<string, unknown>;
   try {
@@ -670,13 +984,12 @@ export async function executeRemoteLinkAction(
         body: JSON.stringify(body),
         signal: options.signal,
       },
+      providerId === "figma" ? FIGMA_RESPONSE_BYTES : undefined,
+      { stage: "action", report },
     );
   } catch (error) {
     if (error instanceof RemoteLinkError && error.code === "reconnect") {
-      store.compareAndSwap(layer, input.id, current, {
-        ...current,
-        meta: { ...current.meta, linkRemoteState: "reconnect" },
-      });
+      writeState(current, "reconnect");
     }
     throw error;
   }
@@ -699,7 +1012,11 @@ export async function executeRemoteLinkAction(
       input.params,
       resources(latest),
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof FigmaContentUnavailableError)
+      throw new RemoteLinkError("content_unavailable");
+    if (error instanceof LinkProviderResponseTooLargeError)
+      throw new RemoteLinkError("response_too_large");
     throw new RemoteLinkError("unavailable");
   }
 }

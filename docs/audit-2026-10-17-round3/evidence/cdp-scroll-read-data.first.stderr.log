@@ -1,0 +1,12 @@
+
+docs/audit-2026-10-17-round3/evidence/cdp-scroll-read-data.test.ts:
+(pass) control: scroll bounds a single wheel to the selected viewport and reports offset progress [78.75ms]
+(pass) control: no progress returns NO_PROGRESS and does not resend wheel [1067.21ms]
+(pass) control: unknown canvas offset is checked through host-supplied local image signatures [76.71ms]
+(pass) control: readContent normalizes text and pages with a same-document cursor [1.08ms]
+(pass) control: malformed read cursors are rejected explicitly [0.11ms]
+
+ 5 pass
+ 0 fail
+ 13 expect() calls
+Ran 5 tests across 1 file. [1311.00ms]

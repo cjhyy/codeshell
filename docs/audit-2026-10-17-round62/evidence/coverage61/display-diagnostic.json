@@ -1,0 +1,19 @@
+{
+  "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+  "jsonPointer": "/files/7",
+  "path": "packages/desktop/src/main/capabilities-service.ts",
+  "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+  "actualRawByteEOF": 120,
+  "originalBodyAndTotalDisplayedLineRanges": [[40, 124]],
+  "originalBodyAndTotalDisplayedLineCount": 85,
+  "displayDisposition": "Range exceeds EOF by four requested lines; the original actual display total is not certified here. No renderer method or product body was read and no frozen input was changed.",
+  "originalSelectedLineRanges": [[51, 80], [114, 120]],
+  "selectedDisposition": "Both explicitly semantic selected intervals are within EOF, contain37 lines and match the original semantic count. This validity is distinct from the invalid display assertion.",
+  "migrationDisposition": "Conservatively defer the entire row. Other independent canonical records support this path; that does not repair or normalize this original row.",
+  "otherSupportingCanonicalRows": [
+    {"metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json", "jsonPointer": "/files/4"},
+    {"metadataPath": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json", "jsonPointer": "/files/8"}
+  ],
+  "productFindingDisposition": "No reassessment of MCP-R61-01 or runtime behavior; metadata-only coverage review.",
+  "productExecutions": 0
+}

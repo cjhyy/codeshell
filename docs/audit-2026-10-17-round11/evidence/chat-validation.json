@@ -1,0 +1,59 @@
+{
+  "sourceCommit": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "shards": [
+    {
+      "id": "chat-progress-load",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round11/evidence/chat-progress-load.test.ts"
+      ],
+      "exitCode": 0,
+      "pass": 4,
+      "expect": 33,
+      "fail": 0,
+      "skipped": 0,
+      "completed": true,
+      "kind": "focused characterization and controls",
+      "firstLog": "evidence/chat-progress-load.first.log",
+      "firstExit": "evidence/chat-progress-load.first.exit.json"
+    },
+    {
+      "id": "chat-channel-baseline",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/chat/src/channel.test.ts"
+      ],
+      "exitCode": 0,
+      "pass": 2,
+      "expect": 58,
+      "fail": 0,
+      "skipped": 0,
+      "completed": true,
+      "kind": "existing baseline",
+      "firstLog": "evidence/chat-channel-baseline.first.log",
+      "firstExit": "evidence/chat-channel-baseline.first.exit.json"
+    }
+  ],
+  "totals": {
+    "cleanShards": 2,
+    "pass": 6,
+    "expect": 91,
+    "fail": 0,
+    "skipped": 0,
+    "failedBunShards": 0,
+    "existingBaselinePass": 2,
+    "focusedPass": 4
+  },
+  "rawPolicy": "Each FIRST combined stdout/stderr was fully written and exit recorded before inspection; two executions only, no fixture repair or rerun. Expected injected store errors are asserted characterization, not shard failures.",
+  "nonBunSkips": [
+    "One guessed src/package.json navigation error; labeled tool-response transcription preserved, that path not retried.",
+    "Mattermost official source-tree fetch refused after unreadable docs; formatting direction skipped."
+  ],
+  "limitations": "No full build/typecheck/lint/suite. No platform, HTTP, real store fault, SDK/network, credentials, native process, user data or security/permission/custody behavior executed."
+}

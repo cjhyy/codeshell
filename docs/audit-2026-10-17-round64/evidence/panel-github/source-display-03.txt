@@ -1,0 +1,12 @@
+1: /** Enforce source-download deadlines even when a transport ignores AbortSignal. */
+2: export function withPanelSourceAbort<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+3:   return new Promise<T>((resolve, reject) => {
+4:     const abort = () => reject(signal.reason);
+5:     operation.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+6:     if (signal.aborted) {
+7:       abort();
+8:       return;
+9:     }
+10:     signal.addEventListener("abort", abort, { once: true });
+11:   });
+12: }

@@ -1,0 +1,128 @@
+{
+  "frozenHead": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "scope": "Only owned terminal-* artifacts and terminal-frontier.md; receipt excludes itself. Byte hashes, not product validation.",
+  "files": [
+    {
+      "path": "evidence/terminal-audit.py",
+      "bytes": 5278,
+      "sha256": "0bfb19e969b6d6292a1fc8c0c5ea2f9a256b47db0f067dbaa85a809d86a2b572"
+    },
+    {
+      "path": "evidence/terminal-banner-collector-exit.json",
+      "bytes": 371,
+      "sha256": "388bf7d2759276a88f0c8bf773901a978001a7650ae984986266053c719fa275"
+    },
+    {
+      "path": "evidence/terminal-banner-collector.txt",
+      "bytes": 450,
+      "sha256": "6469f6b6b8cb3420eaf6ef2c70b08ed72cf4b2820e657b573ed3cdf4346d9028"
+    },
+    {
+      "path": "evidence/terminal-banner-history.json",
+      "bytes": 43072,
+      "sha256": "54f5dc18ecff53922dc68cbef17a7e69aefea3c712f2f3768df04d2e8781c2f0"
+    },
+    {
+      "path": "evidence/terminal-banner-scan.py",
+      "bytes": 1663,
+      "sha256": "ab19de0ef9bffa60b02eecdae6168a8dbbde38c35ae228870260424a08d65616"
+    },
+    {
+      "path": "evidence/terminal-collector-exit.json",
+      "bytes": 376,
+      "sha256": "6267cd3235f170c02d28d452c49e3557b536ff6616b2cb8983853068e446dea5"
+    },
+    {
+      "path": "evidence/terminal-collector.txt",
+      "bytes": 2181,
+      "sha256": "96c6e5bb2c9d5d025ce2c31f322334b7bdf599ac42e71fc4069150f31b176b2b"
+    },
+    {
+      "path": "evidence/terminal-commands.json",
+      "bytes": 142682,
+      "sha256": "0761bd3b105a628fd8a622eefacabc7ee7253c0ae7f783b80beca3951a3112d8"
+    },
+    {
+      "path": "evidence/terminal-exports-navigation.json",
+      "bytes": 4652,
+      "sha256": "4ed91b146f67f07f995e784ae20a681b9759542982fcd6f830e5bed01f9a084a"
+    },
+    {
+      "path": "evidence/terminal-history.json",
+      "bytes": 197222,
+      "sha256": "fadd635036e998cd445f9a80e60c21f860ae01aa72b5eba4cfc88dd4e6dce930"
+    },
+    {
+      "path": "evidence/terminal-navigation.json",
+      "bytes": 1687,
+      "sha256": "11cdd2bc508db6c436d4131ff3b801b40f916788eaa85900d206dc29d36f3f65"
+    },
+    {
+      "path": "evidence/terminal-prep-proposal.json",
+      "bytes": 6048,
+      "sha256": "206a579cd89c2c1ef487b6f8565b3ca425d3c8267c0b784ae8340d8bf648ca8d"
+    },
+    {
+      "path": "evidence/terminal-prep-provenance.json",
+      "bytes": 2734,
+      "sha256": "3a9f3fce578989efeb01255d24f112992a98d65a5b6286ee3a3eb4314b4dcb88"
+    },
+    {
+      "path": "evidence/terminal-prep-selected-history.json",
+      "bytes": 2198,
+      "sha256": "36c7adee8ea4a386d913ef156b67b03e75801088ef648ae73e2a95b47fba32cb"
+    },
+    {
+      "path": "evidence/terminal-prep-sources.json",
+      "bytes": 2900,
+      "sha256": "4c23e045b584aaf7bcc3617db782b4077e6324c707f5be83c274e4d3da7a90d5"
+    },
+    {
+      "path": "evidence/terminal-reading.json",
+      "bytes": 3347,
+      "sha256": "2991ddc422f488608df5d0e5ac1595d2afc89ccaf005276aec70cc5258ffef35"
+    },
+    {
+      "path": "evidence/terminal-sources.json",
+      "bytes": 2470,
+      "sha256": "f6c2b649ac3520c21a7f3ff124674fe34aa7b278606090817bab3d9823874cc1"
+    },
+    {
+      "path": "evidence/terminal-summary.json",
+      "bytes": 1795,
+      "sha256": "5bb0b8a8a8d6d3b6004ceebde3c4281b896c47c2efd68e8424b5ea3f09b3fdd4"
+    },
+    {
+      "path": "terminal-frontier.md",
+      "bytes": 5297,
+      "sha256": "013c737653ef308e674f50331cf1aec1f1919cdb2d1a4b4e098320a14387c974"
+    }
+  ],
+  "sources": [
+    {
+      "path": "packages/tui/src/cli/output/terminal-ui.ts",
+      "frozenSha256": "f274a3b1dd282503cc6aa7ae745b76069631d062c0b7edf7965c9e5b96e308ec",
+      "readScope": "full static source"
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "frozenSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "readScope": "full static source"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "frozenSha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "readScope": "selected static source"
+    },
+    {
+      "path": "packages/core/src/protocol/types.ts",
+      "frozenSha256": "01ed12b45ec6ac61688ab57659dfea9aff45f303ca064ef088f328bd48634b1f",
+      "readScope": "hash-only prep revalidation; not read as coverage"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "readScope": "hash-only prep revalidation; not read as coverage"
+    }
+  ]
+}

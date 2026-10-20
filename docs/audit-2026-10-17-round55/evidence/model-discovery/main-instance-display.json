@@ -1,0 +1,11 @@
+{
+  "path": "packages/desktop/src/main/index.ts",
+  "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+  "displayRanges": [
+    [
+      6097,
+      6110
+    ]
+  ],
+  "pinReference": "entry-initial-pins.json"
+}

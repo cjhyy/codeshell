@@ -1,0 +1,6 @@
+{
+  "exitCode": 0,
+  "method": "independent-check.py",
+  "methodSHA256": "e5442115b8259ed8f546cf0e79f5847bf99fad69fbb16bad5011294000277517",
+  "kind": "metadata checker only; never product or adapter execution"
+}

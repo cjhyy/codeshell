@@ -1,0 +1,9 @@
+{
+  "path": "docs/audit-2026-10-17-round58/recorded-findings-catalog.json",
+  "formalRecords": 118,
+  "priorities": {
+    "P2": 45,
+    "P3": 73
+  },
+  "currentOpenCountCertified": false
+}

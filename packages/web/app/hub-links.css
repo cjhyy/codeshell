@@ -295,3 +295,14 @@
   flex-shrink: 0;
   white-space: nowrap;
 }
+
+.links-editor-error {
+  max-height: min(12rem, 40dvh);
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.links-editor-error:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

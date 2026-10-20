@@ -1,0 +1,401 @@
+[
+  {
+    "query": "mcp-nested-path",
+    "index": 0,
+    "document": "docs/architecture/12-package-boundaries-and-release-units.md",
+    "line": 235,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 1,
+    "document": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+    "line": 380,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 2,
+    "document": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+    "line": 407,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 3,
+    "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+    "line": 44,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 4,
+    "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+    "line": 45,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 5,
+    "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+    "line": 52,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 6,
+    "document": "docs/archive/review-2026-07-09/26-bg-completion-no-wake-root-cause.md",
+    "line": 169,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 7,
+    "document": "docs/archive/todo/fix-batch-3-2026-07-08.md",
+    "line": 16,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 8,
+    "document": "docs/archive/todo/review-core-2026-07-08.md",
+    "line": 79,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 9,
+    "document": "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+    "line": 73,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 18,
+    "document": "docs/audit-2026-10-17-round38/evidence/aggregate-review/review.md",
+    "line": 11,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 19,
+    "document": "docs/audit-2026-10-17-round38/evidence/mcp-args-review/review.md",
+    "line": 1,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 20,
+    "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+    "line": 9,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 21,
+    "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+    "line": 11,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 22,
+    "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+    "line": 30,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 23,
+    "document": "docs/audit-2026-10-17-round38/evidence/review-aggregate.md",
+    "line": 3,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 24,
+    "document": "docs/audit-2026-10-17-round38/evidence/review-aggregate.md",
+    "line": 13,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 25,
+    "document": "docs/audit-2026-10-17-round38/evidence/root-mcp-frontier/review.md",
+    "line": 5,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 26,
+    "document": "docs/audit-2026-10-17-round38/evidence/root-mcp-frontier/review.md",
+    "line": 13,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 29,
+    "document": "docs/audit-2026-10-17-round38/mcp-args.md",
+    "line": 8,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 35,
+    "document": "docs/audit-2026-10-17-round44/evidence/market-frontier/report.md",
+    "line": 10,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 36,
+    "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/review.md",
+    "line": 8,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 42,
+    "document": "docs/audit-2026-10-17-round9/tools.md",
+    "line": 17,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 43,
+    "document": "docs/superpowers/plans/2026-05-26-core-stabilization-followups.md",
+    "line": 321,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 44,
+    "document": "docs/superpowers/specs/2026-05-22-monorepo-split-design.md",
+    "line": 420,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 45,
+    "document": "docs/todo/codeshell-hub-iteration-design.md",
+    "line": 19,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 46,
+    "document": "docs/todo/github-link-local-first-tech-design.md",
+    "line": 1059,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 47,
+    "document": "docs/todo/panel-host-integration-and-server-isolation-2026-09-18.md",
+    "line": 24,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 48,
+    "document": "docs/todo/project-cloud-panels-delivery.md",
+    "line": 2002,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 49,
+    "document": "docs/todo/project-cloud-panels-delivery.md",
+    "line": 2018,
+    "location": "/text"
+  },
+  {
+    "query": "mcp-nested-path",
+    "index": 50,
+    "document": "docs/todo/workspace-crossfile-query-delivery.md",
+    "line": 31,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 0,
+    "document": "docs/architecture/12-package-boundaries-and-release-units.md",
+    "line": 235,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 1,
+    "document": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+    "line": 505,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 2,
+    "document": "docs/archive/architecture/14-engine-call-paths.md",
+    "line": 119,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 3,
+    "document": "docs/archive/architecture/15-current-review-and-bug-inventory.md",
+    "line": 179,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 4,
+    "document": "docs/archive/architecture/16-core-overall-design-standard.md",
+    "line": 417,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 5,
+    "document": "docs/archive/architecture/18-core-vs-cc-vs-codex.md",
+    "line": 68,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 6,
+    "document": "docs/archive/architecture/README.md",
+    "line": 16,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 7,
+    "document": "docs/archive/core-modules/lsp.md",
+    "line": 102,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 8,
+    "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+    "line": 45,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 9,
+    "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+    "line": 46,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 10,
+    "document": "docs/archive/todo/fix-batch-2-2026-07-08.md",
+    "line": 24,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 11,
+    "document": "docs/archive/todo/fix-batch-3-2026-07-08.md",
+    "line": 33,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 12,
+    "document": "docs/archive/todo/fix-batch-4-2026-07-08.md",
+    "line": 33,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 13,
+    "document": "docs/archive/todo/fix-batch-5-2026-07-08.md",
+    "line": 34,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 14,
+    "document": "docs/archive/todo/fix-batch-6-2026-07-08.md",
+    "line": 33,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 15,
+    "document": "docs/archive/todo/fix-batch-7-2026-07-08.md",
+    "line": 32,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 16,
+    "document": "docs/archive/todo/fix-batch-8-2026-07-08.md",
+    "line": 41,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 17,
+    "document": "docs/archive/todo/fix-batch-9-2026-07-08.md",
+    "line": 39,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 38,
+    "document": "docs/audit-2026-10-17-round38/evidence/mcp-args-review/review.md",
+    "line": 5,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 53,
+    "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+    "line": 9,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 54,
+    "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+    "line": 31,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 55,
+    "document": "docs/audit-2026-10-17-round38/evidence/review-aggregate.md",
+    "line": 3,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 56,
+    "document": "docs/audit-2026-10-17-round38/evidence/root-mcp-frontier/review.md",
+    "line": 7,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 59,
+    "document": "docs/audit-2026-10-17-round38/mcp-args.md",
+    "line": 5,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 81,
+    "document": "docs/audit-2026-10-17-round44/evidence/source-status-review/review.md",
+    "line": 8,
+    "location": "/text"
+  },
+  {
+    "query": "nested-mcp-path",
+    "index": 84,
+    "document": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/report.md",
+    "line": 11,
+    "location": "/text"
+  }
+]

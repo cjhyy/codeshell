@@ -1,0 +1,36 @@
+{
+  "diagnostics": [
+    {
+      "toolChunk": "c0c976",
+      "observedExitCode": 0,
+      "kind": "Metadata display truncated, original8755tokens, budget6500",
+      "scope": "unused translator candidate only",
+      "noProductAttempt": true,
+      "consequence": "Do not count all80 retained translator contexts as fully read; no semantic conclusions about the old native failed direction"
+    },
+    {
+      "kind": "Metadata context anchoring limitation",
+      "affectedQuery": "translator only; chosen process-state gate unaffected",
+      "reason": "Predicate allowed basename-only hit but initial context locator searched the full canonical path; when absent it anchored at0. Counts remain unit counts; some large MD saved windows show headers instead of basename vicinity",
+      "originalMethodAndContextsPreserved": true,
+      "notRegexEscapeDiagnosis": true,
+      "notUsedAsCoverageOrSameCauseProof": true
+    },
+    {
+      "kind": "AND query context limitation",
+      "query": "replay-fields",
+      "hits": 1,
+      "reason": "One large Markdown document contains process.get and truncated in separate chapters; initial window starts around model trace truncated text and is not a precise old-cause hit",
+      "followup": "Actual process.get contract lines96–99 selected under before-read history SHA, not whole39804-character document semantic reading"
+    }
+  ],
+  "productOrRuntimeFailures": [],
+  "oldFailedDirectionsReopened": false,
+  "rootContextOnly": {
+    "mainReported": "48bc (short only)",
+    "frozenThrough": 39,
+    "formal41and42NotBuilt": "Root supplied; their temp prep is planned for formal40",
+    "independentGit": false
+  },
+  "noPriorSnapshotsOrAuthorSourceModified": true
+}

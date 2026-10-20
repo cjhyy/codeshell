@@ -1,0 +1,34 @@
+{
+  "capturedUTC": "2026-10-17T15:39:27.500135+00:00",
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "classificationCounts": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "result": "bounded-negative",
+  "gate": {
+    "explicitSameShaFullFound": false,
+    "samePathShaRowsInspected": 12,
+    "noRowIsUnreadClaim": false,
+    "reviewScopeInspectionScopeChecked": "Entire exact-path/SHA source rows were inspected, including any review/scope/inspectionScope fields; these twelve only support inventory/hash/incidental/unknown statuses. MD basename references include different TUI modules and selected Web project wiring."
+  },
+  "oldCauseHandling": [
+    "R2-05 fenced-code pure-text copying belongs to Desktop stripMarkdown, not a new Web finding. Its old executions are historical text only.",
+    "Generic TUI MessageContent R2-06/R2-07 table/fence records and old width-cache design are different consumers; not reopened.",
+    "Unicode truncation, context routing, HTML/host/auth boundaries and clipboard platform mechanisms were not expanded into new issue claims."
+  ],
+  "counterevidence": [
+    "Workbench passes item.text/item.reasoning and !item.done to MessageContent; ordinary completed/streaming paths are explicit.",
+    "Reducer keeps normal text and reasoning separately, and seals assistant done state in final/turn-complete branches.",
+    "Settled content receives original text via ReactMarkdown; code display uses existing code children and a code-copy label; no ordinary source-backed new counterexample was established.",
+    "Tool result uses nullish fallback rather than replacing valid empty strings; full result and structured args remain distinct from truncated one-line summary."
+  ],
+  "limits": [
+    "No renderer, helper, clipboard, model, browser, real host, native, network or fixture execution.",
+    "Selected producer branches do not establish all Web history/transport/session behavior.",
+    "Displayed HTML/link/security branches and corresponding tests are not security review or observed pass."
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "toolChunk": "bb8b81",
+  "exitCode": 2,
+  "stage": "filename-only navigation after successful target source displays",
+  "commands": [
+    "sed -n 1,117p packages/server/src/model-trace-history.ts",
+    "sed -n 202,242p packages/server/src/model-trace-history.ts",
+    "rg --files packages/server -g *model*trace*",
+    "rg -l createModelTraceHistory|validateModelTrace(Query|Id)|validateTraceEvent packages/server/src packages/server/test packages/server/tests packages/desktop/src 2>/dev/null"
+  ],
+  "actualSearchArgv": [
+    "rg",
+    "-l",
+    "createModelTraceHistory|validateModelTrace(Query|Id)|validateTraceEvent",
+    "packages/server/src",
+    "packages/server/test",
+    "packages/server/tests",
+    "packages/desktop/src"
+  ],
+  "stderrSuppressedInOriginalCommand": true,
+  "note": "Guessed server/test and server/tests were not filename-confirmed. rg exit2 is metadata-navigation error, not product execution; source displays succeeded. No stderr claim. Subsequent source work uses actual filenames only."
+}

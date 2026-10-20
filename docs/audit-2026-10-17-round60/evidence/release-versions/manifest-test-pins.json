@@ -1,0 +1,122 @@
+[
+  {
+    "path": "tests/package-boundaries.test.ts",
+    "bytes": 14692,
+    "lines": 364,
+    "sha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+    "pinnedAtUTC": "2026-10-17T19:56:46.133944+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/arena/package.json",
+    "bytes": 1188,
+    "lines": 47,
+    "sha256": "f24032ba260b58e6a3ecd85f99a207bc79112c15e96a7d12f05f7fa4acf8a8cd",
+    "pinnedAtUTC": "2026-10-17T19:56:46.135131+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/browser-devtools/package.json",
+    "bytes": 910,
+    "lines": 34,
+    "sha256": "39e0f9861d873c034e7e9adcf2d652fad95ed99e74ca3613c946bddc856bf5fa",
+    "pinnedAtUTC": "2026-10-17T19:56:46.135514+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/cdp/package.json",
+    "bytes": 1146,
+    "lines": 40,
+    "sha256": "e27ca7299a2328e27274f7bf7e47a391da32bf89371404f97dded35db64da8b8",
+    "pinnedAtUTC": "2026-10-17T19:56:46.135871+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/chat/package.json",
+    "bytes": 2936,
+    "lines": 123,
+    "sha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+    "pinnedAtUTC": "2026-10-17T19:56:46.136281+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/coding/package.json",
+    "bytes": 1906,
+    "lines": 60,
+    "sha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+    "pinnedAtUTC": "2026-10-17T19:56:46.136899+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/core/package.json",
+    "bytes": 3452,
+    "lines": 110,
+    "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+    "pinnedAtUTC": "2026-10-17T19:56:46.137225+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/desktop/package.json",
+    "bytes": 13339,
+    "lines": 264,
+    "sha256": "a5d1d02d3534c1a5d54e7d5de6b26214af4e41287d96406eebe28cb4ff7e0fe9",
+    "pinnedAtUTC": "2026-10-17T19:56:46.137583+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/host/package.json",
+    "bytes": 923,
+    "lines": 38,
+    "sha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+    "pinnedAtUTC": "2026-10-17T19:56:46.137900+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/link/package.json",
+    "bytes": 951,
+    "lines": 37,
+    "sha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+    "pinnedAtUTC": "2026-10-17T19:56:46.138187+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/optimization-lab/package.json",
+    "bytes": 927,
+    "lines": 35,
+    "sha256": "be06b739f4838e434a0ad91563cdda72b1759ca518c49207ff526b0f05445a98",
+    "pinnedAtUTC": "2026-10-17T19:56:46.138515+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/pet/package.json",
+    "bytes": 1572,
+    "lines": 57,
+    "sha256": "18f6c17f1f71358ea845e143392efe79edff5a2def82d503c0e510032557734f",
+    "pinnedAtUTC": "2026-10-17T19:56:46.138823+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/server/package.json",
+    "bytes": 2789,
+    "lines": 90,
+    "sha256": "23685a75a5146710f81f35c0405b0cb460c5c7f221cffa24030fb77ce6571245",
+    "pinnedAtUTC": "2026-10-17T19:56:46.139157+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/tui/package.json",
+    "bytes": 2110,
+    "lines": 73,
+    "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+    "pinnedAtUTC": "2026-10-17T19:56:46.139494+00:00",
+    "timing": "before own body/nav"
+  },
+  {
+    "path": "packages/web/package.json",
+    "bytes": 3638,
+    "lines": 77,
+    "sha256": "3c8874a4efd28b84f484bdfe096d150a78aadfffb3bcc3d18f933d14b2f2507f",
+    "pinnedAtUTC": "2026-10-17T19:56:46.139807+00:00",
+    "timing": "before own body/nav"
+  }
+]

@@ -1,0 +1,114 @@
+{
+  "baseline": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "count": 4,
+  "candidates": [
+    {
+      "id": "DOCINPUT-R15-C1",
+      "title": "Two-byte PK / %P prefix classification may reject ordinary supported UTF-8 text",
+      "severity": null,
+      "status": "static-candidate-runtime-skipped",
+      "source": "packages/core/src/sources/documents/parse.ts",
+      "lines": [
+        397,
+        398,
+        403,
+        404
+      ],
+      "contract": "docs/todo/workspace-upload-document-index-delivery.md:7 supports UTF-8 Markdown/CSV/JSON",
+      "normalInputs": [
+        {
+          "filename": "review.md",
+          "text": "PK review notes\n项目进展：正常文本。\n"
+        },
+        {
+          "filename": "progress.csv",
+          "text": "%Progress,Task\n50,Implementation\n"
+        }
+      ],
+      "actualObserved": null,
+      "staticInference": "Before decodeText, either two-byte prefix causes an unsupported-format exception; shifted/lowercase prefixes do not meet that branch condition. No runtime observation or controls were executed.",
+      "runtimeSkip": "First metadata-only preflight asserted guessed root node_modules package.json paths and failed before fixture creation. No product import or Bun resolver tested; dynamic parser direction skipped.",
+      "dedup": "No same-cause formal/candidate located in full historical Markdown/parsed JSON inventory; existing Office and phonetic issues excluded.",
+      "limits": [
+        "No parser invocation",
+        "No worker/ReadSource/UI execution",
+        "No user artifact",
+        "No product dependency failure proven"
+      ]
+    },
+    {
+      "id": "MIG-R15-C1",
+      "title": "Source .git normalization edge observations",
+      "severity": null,
+      "status": "observed-pure-candidate-contract-incomplete",
+      "sources": [
+        {
+          "path": "packages/core/src/plugins/installer/parseSource.ts",
+          "lines": [
+            123,
+            124,
+            125,
+            182,
+            187
+          ]
+        },
+        {
+          "path": "packages/core/src/plugins/gitOps.ts",
+          "lines": [
+            206,
+            207
+          ]
+        }
+      ],
+      "observations": [
+        "HTTPS .git/ source preserves inferredName notes.git; no trailing slash control gives notes",
+        "github:owned/notes.git appends .git again; suffix-free shorthand control gives one .git"
+      ],
+      "actualFunction": "parseSource",
+      "fixture": "evidence/migration-source-pure.test.ts",
+      "rawLog": "evidence/migration-source-pure.first.log",
+      "exit": "evidence/migration-source-pure.first.exit.json",
+      "producerStaticOnly": "CLI plugin install forwards user source and consumes inferredName when --name absent",
+      "missingEvidence": "Current supported-input contract/normal application producer for these two boundary forms; no remote or clone validation",
+      "limits": [
+        "No Git command",
+        "No clone",
+        "No install",
+        "No CLI execution",
+        "No remote existence claim",
+        "No security or credential experiment"
+      ]
+    },
+    {
+      "id": "STEER-R15-C1",
+      "status": "candidate-no-severity",
+      "title": "Default steer id derived from current queue length can reuse a still-pending id after revocation",
+      "source": "packages/core/src/engine/engine.ts:1160",
+      "helperSource": "packages/core/src/engine/steer-queue.ts:58",
+      "contract": "Queue entries carry stable ids for individual pending-entry correlation and revocation; Engine id argument has a default.",
+      "actualEvidence": "Pure helper calls with the independently inspected default id expression create [steer-1(second), steer-1(third)]; removeSteerItem(..., steer-1) removes both.",
+      "producerEvidence": "Static Engine.enqueueSteer default expression and protocol pass-through only. No actual Engine execution or ordinary host caller omitting ids was established.",
+      "controls": "Distinct host ids revoke exactly one pending entry; FIFO drain and input-array preservation pass.",
+      "limits": [
+        "No UI, real active run, actual default-id allocation, protocol RPC or lost user work was reproduced.",
+        "Helpers intentionally accept caller-supplied ids; duplicate external ids alone are not a separate defect."
+      ]
+    },
+    {
+      "id": "IMAGE-R15-C1",
+      "status": "candidate-no-severity",
+      "title": "Equal opening/closing tag counts do not ensure all malformed inline-image markup is rejected",
+      "source": "packages/core/src/engine/parse-task.ts:142",
+      "contractSource": "packages/core/src/engine/parse-task.ts:127",
+      "actualEvidence": "Actual parseTaskWithImages accepts a closing tag before its only opening tag, returns unchanged text and hasImages false. A valid block plus the same malformed tail returns one image and leaves malformed tag text.",
+      "producerEvidence": "Hand-built malformed wire only. Static Desktop encoder always emits complete opener/body/closer blocks; no ordinary encoder or transport corruption producer of the reversed ordering was established.",
+      "controls": "True unbalanced opener and invalid data body throw ImageParseError; valid block parses; escaped attrs and source-order images pass.",
+      "limits": [
+        "No real image decode, staged file, provider input, actual byte loss or user-visible failure was reproduced.",
+        "Fixture base64 YQ== is parser syntax data, not a claim of a decodable PNG.",
+        "Reserved literal opener rejection is an explicit existing test policy; not promoted as a new bug."
+      ]
+    }
+  ],
+  "note": "One static parser candidate after unexecuted metadata skip; three bounded pure observations with incomplete ordinary input contracts/producers. No severity assigned."
+}

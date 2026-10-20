@@ -1,0 +1,113 @@
+{
+  "checks": [
+    {
+      "path": "evidence/memoize-frontier/review.md",
+      "bytes": 3359,
+      "sha256": "cd5f1723e6f62a3b5b790df6a321898a6db88e8c5f14b7af1aab661ec16e00f8",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/memoize-frontier/source-manifest.json",
+      "bytes": 15810,
+      "sha256": "73cff751cd0d04d3224becc54358f0e8c631b46b0880708606c50d7b7be95b71",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/memoize-frontier/reviewer-receipt.json",
+      "bytes": 2341,
+      "sha256": "b57ecfa1fb6323196f63948ca4ef276ecc04be4ce13dc830f8ca02c81ed1612a",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/semver-frontier/proposal.md",
+      "bytes": 3402,
+      "sha256": "fe6ca7bb317c36f42a395f390288ab04172ee78590d20af67b9fd51b24632a24",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/semver-frontier/source-manifest.json",
+      "bytes": 8112,
+      "sha256": "a7945beb1a55e096959aa42bd7f002a0af06fbe4661a0c89b5c1bcb32c8ef064",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/semver-frontier/author-receipt.json",
+      "bytes": 3092,
+      "sha256": "84b66a5946c48cf6e7308f2fb258186e235c7c018049e4cbc8dc0ddc59c7d605",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/renderer-status-frontier/report.md",
+      "bytes": 3211,
+      "sha256": "0e99f39b4374788d8287254d6ce5897b19838a3e00c2bd789b5a2c7ab0c15a35",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/renderer-status-frontier/source-manifest.json",
+      "bytes": 6090,
+      "sha256": "5a213c92fc99c6604cf01ac9aba943b7cef358438e5b1f92a9da8a4aa1d31c8b",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/renderer-status-frontier/artifact-receipt.json",
+      "bytes": 2308,
+      "sha256": "f970cf318d328d9ca3af002028bc7928be825c0735fc61872d022df803a74ce9",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/utf8-review/review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/utf8-review/source-manifest.json",
+      "bytes": 7548,
+      "sha256": "35d8d166d773a54310791965273d996c7b4989d19aa69e086f8ebc7fa60bad8b",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/utf8-review/author-receipt.json",
+      "bytes": 3768,
+      "sha256": "0b0b7cf6e890243e8a120c79794a6c000a91a573906982e2154b90534af9e765",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/utf8-frontier/source-manifest.json",
+      "bytes": 3551,
+      "sha256": "034e393e24e10e759c6d3319f9c3c7842073ce99f7b1e110c322dcabf690a464",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/utf8-frontier/author-receipt.json",
+      "bytes": 1957,
+      "sha256": "6230e23524f7ae6e4cb8944afffc882b0ab4c5946cc966e44ea3a9798734af17",
+      "matchesAuthorFreeze": true
+    },
+    {
+      "path": "evidence/aggregate-review/review.md",
+      "bytes": 2661,
+      "sha256": "28e931907d4faacf4055ab8dab9cc629143174ab6ec28e8fae5e7fd12a24ec72",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/source-checks.json",
+      "bytes": 40470,
+      "sha256": "6e6dff5aaa88f92e59aa09c89a0ee6175dd23667c313c044f51157bbe59ae500",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/author-receipt.json",
+      "bytes": 1638,
+      "sha256": "2487c26e8a59acb6d68e68841f35fabfe64f7e5c1e85d71f588e63b5fa728824",
+      "matchesWorkerFreezeMessage": true
+    }
+  ],
+  "productRuns": 0
+}

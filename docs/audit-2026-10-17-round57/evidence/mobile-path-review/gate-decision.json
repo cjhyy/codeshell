@@ -1,0 +1,53 @@
+{
+  "createdUTC": "2026-10-17T19:08:45.102033+00:00",
+  "sharedBatch": {
+    "pins": [
+      {
+        "path": "/tmp/codeshell-audit-round135-static-files/history-batch.json",
+        "bytes": 1250596,
+        "sha256": "2d0994ee37ae727dbba9408ff18afb3e55109fb2a8087dd1486e3ea2804add6f"
+      },
+      {
+        "path": "/tmp/codeshell-audit-round135-static-files/cause-history.json",
+        "bytes": 77867,
+        "sha256": "2b89e71d8f8280cfb4e7858a63c52003436d7d174b2c297b01424c6a405dd835"
+      }
+    ],
+    "scope": {
+      "atUTC": "2026-10-17T18:54:27.390693+00:00",
+      "historyFiles": 5676,
+      "excludedFormalAtOrAbove": 57,
+      "jsonValueScalarsVisited": 4212456,
+      "capPerTarget": 100,
+      "errors": []
+    },
+    "counts": {
+      "packages/server/src/static-files.ts": {
+        "totalMatches": 31,
+        "retainedHits": 31
+      },
+      "packages/server/src/mobile-remote/mobile-static.ts": {
+        "totalMatches": 34,
+        "retainedHits": 34
+      }
+    }
+  },
+  "causeMachine": "Parent66matches/29files capped100; target projection6 contexts, only first350char prefixes read, mostly unrelated nested annotation history. Does not assert semantic cause exhaustion.",
+  "ownHistoricalRole": "No author report/manifest or product fixture/runtime results read. Root shared path/SHA and cause metadata only; original current source contract and producer proof drive opinion. No whole-history scalar rerun or first-ever source reading claim.",
+  "ordinaryProducerEvidence": {
+    "publicDir": "packages/web/app/public via actual config16",
+    "publicFileCount": 4,
+    "publicNames": [
+      "icon.svg",
+      "manifest.webmanifest",
+      "offline.html",
+      "sw.js"
+    ],
+    "allPublicNamesASCII": true,
+    "sourceResourceFilenameCount": 208,
+    "specialNamePaths": [],
+    "scope": "Filename inventories only, not full dependency graph or emitted output guarantee.",
+    "entry": "mobile index→main imports real web DesktopApp; manifest icon and registerServiceWorker/public SW names are ASCII."
+  },
+  "independence": "Root hypothesis known, Root unit report supplied after independent initial source opinion; test result does not alter reachability judgment."
+}

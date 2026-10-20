@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFile, realpath, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { confinedWorkerEnvironment } from "../../../scripts/runtime-cost-smoke-isolation.mjs";
+import { verifyElectronMainIdentity } from "./electron-harness.mjs";
 
 /** Test-only bootstrap: Electron may discard NODE_OPTIONS, including for its Node worker. */
 export async function prepareConfinedElectronFixture({
@@ -128,7 +130,11 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
       CODESHELL_COST_SMOKE_GUARD_LOG: receiptFile,
     },
     async assertWorker(app, { requireWorker = true } = {}) {
-      const pid = app.process().pid;
+      const mainIdentity = await verifyElectronMainIdentity(app, {
+        executable: createRequire(import.meta.url)("electron"),
+        home: isolated.home,
+      });
+      const pid = mainIdentity.pid;
       const homeId = createHash("sha256").update(isolated.home).digest("hex");
       const deadline = Date.now() + 15_000;
       let lastReceipts;
@@ -166,7 +172,15 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
               ? "Electron fixture: Main and actual spawned worker network/home confinement verified"
               : "Electron fixture: Main network/home guard verified; no worker was created",
           );
-          return { mainPid: pid, homeId, receipts, spawned, workerCreated: spawned.length > 0 };
+          return {
+            mainPid: pid,
+            mainIdentity,
+            windowsTransport: app.__sourceWindowsTransport ?? null,
+            homeId,
+            receipts,
+            spawned,
+            workerCreated: spawned.length > 0,
+          };
         }
         await new Promise((done) => setTimeout(done, 100));
       } while (Date.now() < deadline);

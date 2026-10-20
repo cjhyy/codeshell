@@ -1,0 +1,51 @@
+{
+  "capturedUTC": "2026-10-17T16:19:06.277466+00:00",
+  "sourceChecks": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "same": true,
+      "lineCount": 217
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "same": true,
+      "lineCount": 5
+    },
+    {
+      "path": "packages/tui/src/ui/components/model-display.ts",
+      "bytes": 1001,
+      "sha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+      "initialSha256": "f55d2c41404c43abd91ee6c42cb61ce279007b399374f9dfdfe32c50b760d9cb",
+      "same": true,
+      "lineCount": 24
+    },
+    {
+      "path": "packages/tui/src/cli/parse-int-option.ts",
+      "bytes": 1051,
+      "sha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "initialSha256": "e6e08f76b8a05a876766e770f9882a44c17f7b41fd909767434c3a9388a5bdad",
+      "same": true,
+      "lineCount": 24
+    }
+  ],
+  "sourceAllSame": true,
+  "history": {
+    "initialIncluded": 4492,
+    "endingIncluded": 4492,
+    "initialExcluded": 0,
+    "endingExcluded": 0,
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "initialDatedSnapshotPreserved": true
+  },
+  "bodyReads": 0,
+  "productRuns": 0,
+  "gitCommands": 0
+}

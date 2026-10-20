@@ -1,0 +1,1312 @@
+{
+  "atUTC": "2026-10-17T19:28:57.815905+00:00",
+  "method": "One permitted metadata-only compound query over exact shared5850 inventory, archives retained, formal58+ absent from original inventory; JSON recursive value scalars only; doc coarse gate queue+lease+shutdown then leaf/window locators",
+  "inventoryOriginalAtUTC": "2026-10-17T19:16:56.757474+00:00",
+  "historyFiles": 5850,
+  "jsonValueScalarsVisited": 4251467,
+  "patterns": {
+    "queue": "delivery[-_ ]?queue|bound-session-chat|queue\\.stop",
+    "lease": "\\blease\\b|租约",
+    "shutdown": "queue\\.stop|shutdown|\\bstop\\b|drain|in[- ]?flight|排空|停机|停止队列",
+    "persist": "persist|snapshot|consumer|覆盖|快照|消费者"
+  },
+  "totalMatchingContexts": 126,
+  "matchingDocuments": 24,
+  "contextsAllThreeInSameWindowOrValue": 0,
+  "cap": 300,
+  "retainedContexts": 126,
+  "countsByDocument": {
+    "docs/audit-2026-10-16/inventory.json": 3,
+    "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json": 3,
+    "docs/audit-2026-10-17-round11/evidence/chat-dedup.json": 2,
+    "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json": 2,
+    "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json": 3,
+    "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json": 2,
+    "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json": 2,
+    "docs/audit-2026-10-17-round26/evidence/service-dedup.json": 2,
+    "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json": 1,
+    "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json": 5,
+    "docs/audit-2026-10-17-round32/evidence/taskparse-history.json": 2,
+    "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json": 2,
+    "docs/audit-2026-10-17-round36/evidence/root-history.json": 2,
+    "docs/audit-2026-10-17-round43/evidence/dataset-review/history.json": 2,
+    "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json": 54,
+    "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json": 5,
+    "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json": 5,
+    "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json": 5,
+    "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json": 5,
+    "docs/audit-2026-10-17-round54/evidence/root-link-validation/history.json": 3,
+    "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json": 5,
+    "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json": 5,
+    "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json": 5,
+    "docs/review-2026-10-12/validation/postdelivery-report-review/audit-c.raw.json": 1
+  },
+  "hits": [
+    {
+      "document": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/563",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/1898",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/1965",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "location": "/files/204/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "location": "/files/251/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "location": "/matches/9/hits/0/text",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "| MCP OAuth/IM Gateway/Mimi 进入 Session/浏览器 Profile 租约都未动手    | `mcp-oauth-service.ts`、`packages/chat`、`conversation-session-route-store.ts`、`browser-profile.ts`、`tab-control.ts` 已有实际接线与测试                                   | 索引的未动手状态过期；逐项仍需保留外部验证/后续扩展                                   |",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "location": "/matches/13/hits/0/text",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "| MCP OAuth/IM Gateway/Mimi 进入 Session/浏览器 Profile 租约都未动手    | `mcp-oauth-service.ts`、`packages/chat`、`conversation-session-route-store.ts`、`browser-profile.ts`、`tab-control.ts` 已有实际接线与测试                                   | 索引的未动手状态过期；逐项仍需保留外部验证/后续扩展                                   |",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "location": "/matches/55/hits/1/text",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "| `__ask_user__`          | —                                                 | 作为普通审批转给渲染进程，`packages/desktop/src/renderer/app/useHostSubscriptions.ts:734` 路由进聊天；Pet IM 路径另有 `packages/desktop/src/main/pet/pet-im-decisions.ts` | 当作普通审批广播并租约给 Web tab（`headless-server.ts` 的 `leases.add`；Web 侧 `packages/web/app/Hub",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json",
+      "location": "/inventory/1767/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round17/evidence/frontier-specific-dedup.json",
+      "location": "/inventory/1774/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "location": "/inventory/2203/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "location": "/inventory/2210/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "location": "/hits/package-build/5/excerpt",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "| **凭证管理 + 浏览器 Cookie 桥接** | 列/存/删/改元数据；枚举浏览器分区 Cookie，预览、导出临时 Netscape cookie lease、把 cookie 恢复到浏览器 | `packages/desktop/src/main/credentials-service.ts:51`，`packages/desktop/src/main/credentials-service.ts:68`，`packages/desktop/src/main/credentials-service.ts:90`，`packages/desktop/src/main/credentials-service.ts:125`，`packages/desktop/src/main/index.ts:1603` | Credentials 页保存 API key 或桥接浏览器登录态 |",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+      "location": "/inventory/2204/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+      "location": "/inventory/2211/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/inventory/2335/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "/inventory/2342/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+      "location": "/inventory/2339/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/service-dedup.json",
+      "location": "/inventory/2346/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "location": "/rankedCandidates/142/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/1162/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/3317/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/3318/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/3435/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/3436/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+      "location": "/inventory/2818/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+      "location": "/inventory/2825/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+      "location": "/inventory/2751/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+      "location": "/inventory/2758/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "location": "/inventory/3093/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "location": "/inventory/3100/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-review/history.json",
+      "location": "/inventory/3603/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-review/history.json",
+      "location": "/inventory/3610/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/1966/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/2299/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/2369/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/5138/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/5138/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/5139/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/5139/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/5910/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/5937/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/6001/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/6969/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13465/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13465/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13466/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13466/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13467/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13467/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13468/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13468/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13469/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13469/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13470/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13470/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13471/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13471/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13472/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13472/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13473/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13473/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13474/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13474/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13475/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13475/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13476/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13476/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13875/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13875/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13876/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13876/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13877/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13877/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13878/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13878/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13879/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13879/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13880/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/13880/directSourcePathsInObject/0",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14888/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/14949/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/15547/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/15570/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/15585/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/15709/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/15746/scopeFields/scope",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/1475/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/3639/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/3640/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/3757/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/3758/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/1475/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/3639/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/3640/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/3757/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/3758/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "location": "/unknownPaths/1346",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "location": "/unknownPaths/3306",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "location": "/unknownPaths/3307",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "location": "/unknownPaths/3415",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "location": "/unknownPaths/3416",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/1475/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/3640/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/3641/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/3758/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/3759/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round54/evidence/root-link-validation/history.json",
+      "location": "/inventory/5141/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/browser-profile-workspace-lease-design.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round54/evidence/root-link-validation/history.json",
+      "location": "/inventory/5148/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "docs/todo/cloud-controller-lease-2026-10-12.md",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round54/evidence/root-link-validation/history.json",
+      "location": "/hits/link-operation-validation-cause/19/context",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "返回与摘录支持本轮观察，但不能声称具备独立磁盘 raw/JUnit 审计链。\n\n第二轮额外静态阅读：`server/hub/{files,uploads,run-replay,approval-lease}`、headless server 请求准备/关联/完成与撤销接线；Panel resource directories/process file 导出；Link operation validation/runtime 适配；Web `auth/api-context`、panel resource upload/runtime polling、environment/website routing；Chat Matrix/Mattermost/Lark/WeCom/LINE/WhatsApp adapter。未从这些剩余静态路径新增未经验证的 bug，旧已知背压/ACK 等问题也没有因仅扫读而再声明为已动态通过。\n\n平台限制出现后父代理要求停止所有动态实验、构建和服务测试；从该通知起仅做已有文件读取与报告整理，没有重试被中止的操作。审查在此收尾，**不是已穷尽全部模块、所有平台或整个仓库行为**。本报告范围未运行真实外部账号、付费模型、真实平台消息、完整浏览器/Electron 或 Docker。SWC-06 继续保留明确触发前提；Mattermost self-ID 相似设计只作静态待审，不提升为验证项。\n",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "location": "/files/1475/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "location": "/files/3640/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "location": "/files/3641/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "location": "/files/3758/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "location": "/files/3759/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "location": "/files/1475/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "location": "/files/3640/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "location": "/files/3641/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "location": "/files/3758/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "location": "/files/3759/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "location": "/files/1475/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/core/src/session/output-storage-prototype/lease-fs.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "location": "/files/3640/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "location": "/files/3641/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/optimization-lab/src/lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "location": "/files/3758/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.test.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "location": "/files/3759/path",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "packages/server/src/hub/approval-lease.ts",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-c.raw.json",
+      "location": "/module_coverage/6/not_covered_as_systematic_review/2",
+      "kind": "document-coarse-compound-gated-json-value",
+      "context": "lease/runner/controller/store/ledger/evidence/grading/report",
+      "contextTruncated": false,
+      "allThreeInContext": false,
+      "persistOrConsumerInContext": false,
+      "notSemanticEvidence": "Machine locator; original canonical context must be read separately."
+    }
+  ],
+  "errors": [],
+  "datedByteDrift": [],
+  "limits": "Derived scan/claims/copies remain locators, not independent semantic evidence. Current document bytes and original dated inventory distinguished. No exhaustive old-cause absence claim.",
+  "productFiles": [],
+  "productExecution": 0,
+  "gitOperations": 0
+}

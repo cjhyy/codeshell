@@ -1,0 +1,113 @@
+{
+  "createdAt": "2026-10-17T18:10:37.073214+00:00",
+  "objects": [
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "bytes": 6963,
+      "sha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+      "pointer": "/files/9",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "bytes": 824,
+        "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "scope": "Full static leaf; old Mattermost Markdown candidate remains skipped, no runtime.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 28
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "bytes": 6963,
+      "sha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+      "pointer": "/files/6",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "bytes": 3512,
+        "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "scope": "Read command up to line120 displayed complete 93-line file; static only, no loader/bytes/materialization run.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 93
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "bytes": 8813,
+      "sha256": "186bb098e3d80c7936072948b00cd254bb72d71fc21e4ee1ad143bf607a98e7d",
+      "pointer": "/files/9",
+      "row": {
+        "path": "packages/chat/src/lifecycle.ts",
+        "frozenSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "currentSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+        "currentMatchesFrozen": true,
+        "scope": "full helper read; format candidate not tested"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "bytes": 8813,
+      "sha256": "186bb098e3d80c7936072948b00cd254bb72d71fc21e4ee1ad143bf607a98e7d",
+      "pointer": "/files/5",
+      "row": {
+        "path": "packages/chat/src/attachments.ts",
+        "frozenSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "currentSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+        "currentMatchesFrozen": true,
+        "scope": "full ordinary metadata helper read; no bytes loading execution"
+      }
+    }
+  ],
+  "markdown": [
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "bytes": 6965,
+      "sha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "selectedLineRanges": [
+        [
+          1,
+          7
+        ],
+        [
+          21,
+          21
+        ]
+      ],
+      "selectedLines": [
+        {
+          "line": 1,
+          "text": "# Chat 普通文本、附件元数据与通知进度审查（第十一批）"
+        },
+        {
+          "line": 2,
+          "text": ""
+        },
+        {
+          "line": 3,
+          "text": "冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本批只写报告、fixture 与证据，没有产品代码或 Git mutation。范围为 shared splitter、普通 Markdown 投影、channel 能力、附件元数据与内存通知进度；适配器只定向读取普通数据转换。未向平台或任何人发消息。"
+        },
+        {
+          "line": 4,
+          "text": ""
+        },
+        {
+          "line": 5,
+          "text": "## CHAT-R11-01 — P3：通知进度首次读取失败被缓存，后续自动重试不再读取已恢复的 store"
+        },
+        {
+          "line": 6,
+          "text": ""
+        },
+        {
+          "line": 7,
+          "text": "**位置与正常入口。** [notification-progress.ts:187](../../packages/chat/src/notification-progress.ts#L187) 的 `ensureLoaded()` 用 `loadTask ??=` 缓存首次加载 Promise；拒绝后没有清除。每次 `begin()` 在 [116 行](../../packages/chat/src/notification-progress.ts#L116) 都先等待同一 Promise。长期存活的通知 handler 在 [notification-relay.ts:97](../../packages/chat/src/notification-relay.ts#L97) 创建一个 progress 实例、在 123 行开始事件。CLI 的 [cli.ts:116](../../packages/chat/src/cli.ts#L116) 和 Desktop [im-gateway-service.ts:565](../../packages/desktop/src/main/im-gateway-service.ts#L565) 都只构造一次 File store/handler 后交给 watcher；两处明确显示“Desktop 通知等待重试”。File store [69–71 行](../../packages/chat/src/notification-progress.ts#L69) 将非 ENOENT 读取错误上抛，正常的读取 API 失败可以进入这个分支。"
+        },
+        {
+          "line": 21,
+          "text": "| CHAT-R11-C1，普通 Markdown button URL/标签转义 | [lifecycle.ts:14](../../packages/chat/src/lifecycle.ts#L14) 仅转义标签 `]`，URL 原样放入括号；合法 URL 含不配对括号、标签含反斜杠时的确切平台渲染仍未证明。官方 Mattermost 文档 open 无可读正文，官方源码树首次 fetch 被拒，立即 SKIP，未写产品 fixture、下载或换 parser 验证。只列静态候选。 |"
+        }
+      ]
+    }
+  ],
+  "decision": "Both permitted leaves excluded before current product body by original explicit same-SHA full-source declarations, preserving ordinary-helper/static-only/no loader/runtime limitations. Old version message-admission path references are navigation, not current same-cause proof."
+}

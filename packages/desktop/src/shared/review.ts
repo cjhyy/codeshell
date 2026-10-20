@@ -53,3 +53,15 @@ export interface ReviewGitCommit extends ReviewRepositoryIdentity {
   subject: string;
   relativeDate: string;
 }
+
+/** Read-only preparation; executing this draft remains a normal chat turn. */
+export type ReviewAiPromptRequest = (
+  | { kind: "git"; scope: ReviewGitDiffRequest }
+  | { kind: "snapshot"; diff: string; label?: string }
+) & { instructions?: string };
+
+export interface ReviewAiPromptResult {
+  prompt: string;
+  /** The draft explicitly reports incomplete coverage when this is true. */
+  truncated: boolean;
+}

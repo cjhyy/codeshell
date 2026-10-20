@@ -1,0 +1,1017 @@
+{
+  "selectedCount": 126,
+  "matches": [
+    {
+      "pattern": "utf8-cut",
+      "index": 0,
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "at": "$[\"source_inventory\"][532]",
+      "context": "packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 1,
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "at": "$[\"files\"][426]",
+      "context": "packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 2,
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "at": "$[\"files\"][427]",
+      "context": "packages/core/src/runtime/utf8-cut.test.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 3,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "at": "$[\"rankedCandidates\"][38][\"path\"]",
+      "context": "packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 4,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][1102][\"path\"]",
+      "context": "packages/core/src/runtime/utf8-cut.test.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 5,
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][1103][\"path\"]",
+      "context": "packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 6,
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "at": "$[\"relativeImports\"][234][\"resolved\"]",
+      "context": "packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 7,
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "at": "$[\"relativeImports\"][185][\"resolved\"]",
+      "context": "packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 8,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 9,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 10,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 11,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 12,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 13,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 14,
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "at": "$[\"final\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 15,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 16,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 17,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 18,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 19,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 20,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 21,
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "at": "$[\"final\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 22,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "at": "$[\"snapshot\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 23,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 24,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 25,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 26,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 27,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][2][\"normal\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 28,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"observations\"][2][\"afterIdleStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 29,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "at": "$[\"final\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 30,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "at": "$[\"snapshot\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 31,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"observations\"][0][\"preStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 32,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"observations\"][0][\"postStop\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 33,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"observations\"][0][\"afterEnable\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 34,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"observations\"][1][\"directSettled\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 35,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "at": "$[\"snapshot\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 36,
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "at": "$[\"snapshot\"][\"loadedWorkspaceModules\"][99]",
+      "context": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "utf8-cut",
+      "index": 37,
+      "path": "docs/review-remaining-2026-10-12/validation/core/core-inventory.json",
+      "at": "$[\"modules\"][28][\"productionFiles\"][11]",
+      "context": "runtime/utf8-cut.ts"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 11,
+      "path": "docs/audit-2026-10-16/root.md",
+      "at": "$",
+      "context": "回滚会损坏被删文件的字节和权限\n\n- 位置：`packages/coding/src/tools/apply-patch/applier.ts:112-122,278-289`。\n- 触发：第一 hunk 删除文件，后续 Add 写入失败（例如父路径实际是文件）。\n- 预期：默认原子模式拒绝补丁后原文件完全恢复。实际：Delete 的 snapshot 用 UTF-8 string 保存二进制；rollback 用 UTF-8 writeFile 重建，非法 UTF-8 字节变为替换字符，且 executable mode 也丢失。\n- 影响：明确返回失败、声称 all-or-nothing 的调用依然改变原始资源。二进制图片/资源可能永久损坏；文本脚本正文虽恢复，却不能执行。\n- 验证：`evidence/root-patch.test.ts` 后两项；临时二进制 `[89 50 4e 47 ff 00 80]` 的回滚字节与原件不等；另一用例恢复脚本文字后执行位为 0。后续失败由真实 ENOTDIR 引发，不 mock 文件系统。和 A01 的成功 move 是不同修复语义；本项将两种不完整 snapshot 表现合并计数。\n- 查重：旧两份审查索引未列此项。\n- 建议：删除/回滚 snapshot 保存 Buffer 和元数据，完整恢复；不能保证恢复时向调用者明确报出恢复失败。\n\n## A03 [P3] Git status 的首条未暂存路径被截掉首字符\n\n- 位置：`packages/coding/src/git/utils.ts:29-30,76-83`；调用方 `packages/coding/src/capability-runtime.ts:76-81`。\n- 触发：porcelain 第一行为常见的 ` M alpha.txt`。\n- 原因：通用 git helper 对整个 stdout `.trim()`，删除第一行状态列的空格；随后"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 12,
+      "path": "docs/audit-2026-10-17/evidence/quality-final-review.md",
+      "at": "$",
+      "context": "ngs 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。\n\n- TIME1 的近似旧条目为 05-30 `Silent default fallback masks invalid schedule configuration`，旧位置 `core/src/cron/scheduler.ts:131–136`，触发 interval `5mn` 后回退硬编码十分钟。本项是当前 `automation/cron-expr.ts` 忽略多余 range/step 段，具体输入、根因和修复位置不同，不作同项重复。\n- TIME2、CHD01、CHD02 在上述有限旧检索无同根因命中。10-16 SWC 的错 adapter/账号、队列与回环家族和本轮线程定位不同。\n- 唯一文字修正已由作者完成并只读复查：`chat-data.md` 的 Slack 主源 URL 原为小写 `chat.postmessage`，本次直开返回 404；现为规范大小写 `https://docs.slack.dev/reference/methods/chat.postMessage/`。报告也已准确限定官方搜索摘要/摘录的证据来源、未成功打开原小写 URL、reply 定位预期和 capabilities 非完整 threads 承诺；不影响本地动态收据。\n- 无需重跑测试或修改产品的阻断性修正项。\n\n## 最终索引核对\n\n根补入 CHD02 后，逐项只读核对 `findings.json`、README 和七份分报告：*"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 13,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][41][\"hits\"][1][\"excerpt\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 14,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][41][\"hits\"][2][\"excerpt\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 15,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][43][\"hits\"][1][\"excerpt\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 16,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][45][\"hits\"][1][\"excerpt\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 17,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][109][\"text\"]",
+      "context": "ngs 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 18,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][118][\"text\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 19,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][119][\"text\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 20,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][122][\"text\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 21,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][123][\"text\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 22,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][199][\"text\"]",
+      "context": "ngs 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 23,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][249][\"text\"]",
+      "context": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 24,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][250][\"text\"]",
+      "context": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 25,
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "at": "$[\"matches\"][\"attachments\"][5][\"text\"]",
+      "context": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 26,
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "at": "$[\"matches\"][\"attachments\"][6][\"text\"]",
+      "context": "indings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 27,
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "at": "$[\"matches\"][\"attachments\"][9][\"text\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 28,
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "at": "$[\"matches\"][\"attachments\"][10][\"text\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 29,
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "at": "$[\"matches\"][\"attachments\"][13][\"text\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 30,
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "at": "$[\"matches\"][\"attachments\"][14][\"text\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 31,
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "at": "$[\"matches\"][\"attachments\"][24][\"text\"]",
+      "context": "ngs 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 32,
+      "path": "docs/audit-2026-10-17-round14/evidence/web-dedup.json",
+      "at": "$[\"matches\"][\"attachments\"][26][\"text\"]",
+      "context": "ngs 33 条、05-30 findings 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 33,
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+      "at": "$[\"hits\"][\"signature\"][20][\"text\"]",
+      "context": "Shrink, rotation, same-size or longer prefix rewrite, malformed complete JSON/UTF-8, unsafe files, and oversized records latch a visible failure and a durable failed checkpoint. Restoring an old inode/prefix does not silently reactivate a failed checkpoint. A missing checkpoint with existing Room transcript provenance and a corrupt/mismatched checkpoint are barriers. Replacement transcript recovery requires explicit operator inspection/rebinding; this change deliberately does not erase a failure marker or write the external CLI file automatically. All transcript access is read-only."
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 71,
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "at": "$[\"records\"][20][\"matches\"][0][\"context\"]",
+      "context": "Shrink, rotation, same-size or longer prefix rewrite, malformed complete JSON/UTF-8, unsafe files, and oversized records latch a visible failure and a durable failed checkpoint. Restoring an old inode/prefix does not silently reactivate a failed checkpoint. A missing checkpoint with existing Room transcript provenance and a corrupt/mismatched checkpoint are barriers. Replacement transcript recovery requires explicit operator inspection/rebinding; this change deliberately does not erase a failure marker or write the external CLI file automatically. All transcript access is read-only."
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 72,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][3][\"context\"]",
+      "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 73,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][6][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 74,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][7][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 75,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][10][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 76,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][11][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 77,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][20][\"context\"]",
+      "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 78,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][22][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 79,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][23][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 80,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][25][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 81,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][26][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 82,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][27][\"context\"]",
+      "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 83,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][29][\"context\"]",
+      "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 84,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][30][\"context\"]",
+      "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 85,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][34][\"context\"]",
+      "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 86,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][35][\"context\"]",
+      "context": "s 296 条 / confirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 87,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][38][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 88,
+      "path": "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "at": "$[\"matches\"][\"media-kind\"][39][\"context\"]",
+      "context": "nfirmed 30 条 / backlog_confirmed 91 条；并查阅 10-12 automation-round5 和 goal-sleep-round20。检索包含 thread_ts、Slack thread/线程、safeAttachmentName、filename surrogate、附件名 Unicode/emoji、malformed cron/separator、CronCreate timezone/时区、toLocaleString 等。有限检索不是旧文档全量语义证明。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 0,
+      "path": "docs/archive/core-modules/lsp.md",
+      "at": "$",
+      "context": "s load-bearing.** `LSPClient.handleData` buffers `Buffer`s and slices by `Content-Length` **bytes**, never strings. Don't \"simplify\" it to `data.toString()` + string concat — that splits multibyte UTF-8 (CJK/emoji in identifiers or diagnostics) across chunks and desyncs the frame counter.\n- **One server per language, reused; lazy start.** `getClient` returns the live client if `ready` & alive; if `starting` it just `await`s a fixed 2s and returns whatever's there (no proper readiness signal). First call to an unstarted server pays spawn + `initialize` cost.\n- **30s per-request timeout.** `client.request` rejects with `LSP request \"<method>\" timed out` after 30s. Timers and the child are `unref()`'d so a hung server won't keep the Node event loop alive.\n- **Command-availability is a security gate, not just a check.** `isCommandAvailable` rej"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 3,
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "at": "$[2][\"detail\"]",
+      "context": "The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\"\\n\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead."
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 4,
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "at": "$[2][\"detail\"]",
+      "context": "The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\"\\n\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead."
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 5,
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "at": "$[2][\"detail\"]",
+      "context": "The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\"\\n\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead."
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 6,
+      "path": "docs/audit-2026-10-16/README.md",
+      "at": "$",
+      "context": "at.md) |\n| D01 | P2 | Git 中文/特殊文件名未解码，@ 搜索不到真实名或返回不可读路径 | [Desktop](desktop.md) |\n| D02 | P2 | 多根搜索先全局截断再筛当前根，当前根真实匹配会消失 | [Desktop](desktop.md) |\n| D03 | P2 | Native JSON-lines 每 chunk 解 UTF-8，合法分片会把中文/emoji 改成乱码 | [Desktop；仅 decoder](desktop.md) |\n| A11 | P2 | release --push 可在任务分支给未合入 main 的 HEAD 打发布 tag | [根脚本；仅静态](root.md) |\n| A03 | P3 | 首条未暂存 git status 前导空格被 trim，模型上下文中的文件名缺首字符 | [Coding](root.md) |\n| A04 | P3 | 合法提交标题里的竖线截断标题，并把作者/日期字段错位 | [Coding](root.md) |\n| A12 | P3 | 父代理最终正文为空时，JSON fallback 可能采用子代理 delta | [TUI](root.md) |\n| SWC-06 | P3 | 相同目录 mtime 下排序/游标 comparator 不一致，混合大小写会话分页漏项 | [Server；自然生产相等 mtime 未证明](server-web-chat.md) |\n\n## 验证收据\n\n新问题的聚焦测试为 **33 个不同测试**：root 12、Core 6、Desktop 6、Server/Chat 9。它们断言当前缺陷和正常对照，**通过不代表 bug 已修复**。Server/Chat 9 项只保留了原会话 stdout 的逐字摘录，未保留 runner 原始磁盘日志/JUnit；其余聚焦测试有当次重定向日志。全部用 guarde"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 7,
+      "path": "docs/audit-2026-10-16/desktop.md",
+      "at": "$",
+      "context": "server.ts:132,135,142` 接收 TCP chunk；Native relay 的 `chrome-native-protocol.ts:126-128` 接收相反方向 TCP chunk。\n- 触发：已授权 Chrome Native Messaging 连接传递包含中文或 emoji 的正常 JSON，loopback TCP 在一个 UTF-8 多字节字符内部切开 chunk。TCP 的合法分片边界没有字符对齐承诺；不需要畸形 JSON、未授权消息或恶意内容。\n- 预期：拼接接收到的字节后按完整 UTF-8 解码，得到原对象。实际：`中文 🐈` 在「中」第一个字节后切开会得到 `���文 🐈`，`JSON.parse` 仍然成功。这会把损坏值继续交付 request result/extension action，而非可诊断的解码错误。\n- 影响：Chrome 页面读取的非 ASCII 文本可随机乱码；反向输入的非 ASCII 文本也可能被改写。确证范围是共享 decoder 的数据完整性；没有声称特定真实浏览器操作在原生端到端实验中已输入错误。\n- 验证层级：**真实生产 decoder、逐字节边界动态复现**。包含中文和 emoji 的样本 7 个切分位置损坏；ASCII 的全部位置、完整 JSON 行、4 字节长度前缀的 `ChromeNativeMessageDecoder` 全部位置均保持原对象。没有启动真实 Chrome/Electron 或网络连接。\n- 是否已知：在旧 `docs/review-*` 查 `JsonLineDecoder` / UTF-8 分片 / 多字节 / 乱码，无同根因记录。\n\n## 验证收据\n\n命令：`node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-16/evidence/desktop-file-sea"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 8,
+      "path": "docs/audit-2026-10-16/desktop.md",
+      "at": "$",
+      "context": "28` 接收相反方向 TCP chunk。\n- 触发：已授权 Chrome Native Messaging 连接传递包含中文或 emoji 的正常 JSON，loopback TCP 在一个 UTF-8 多字节字符内部切开 chunk。TCP 的合法分片边界没有字符对齐承诺；不需要畸形 JSON、未授权消息或恶意内容。\n- 预期：拼接接收到的字节后按完整 UTF-8 解码，得到原对象。实际：`中文 🐈` 在「中」第一个字节后切开会得到 `���文 🐈`，`JSON.parse` 仍然成功。这会把损坏值继续交付 request result/extension action，而非可诊断的解码错误。\n- 影响：Chrome 页面读取的非 ASCII 文本可随机乱码；反向输入的非 ASCII 文本也可能被改写。确证范围是共享 decoder 的数据完整性；没有声称特定真实浏览器操作在原生端到端实验中已输入错误。\n- 验证层级：**真实生产 decoder、逐字节边界动态复现**。包含中文和 emoji 的样本 7 个切分位置损坏；ASCII 的全部位置、完整 JSON 行、4 字节长度前缀的 `ChromeNativeMessageDecoder` 全部位置均保持原对象。没有启动真实 Chrome/Electron 或网络连接。\n- 是否已知：在旧 `docs/review-*` 查 `JsonLineDecoder` / UTF-8 分片 / 多字节 / 乱码，无同根因记录。\n\n## 验证收据\n\n命令：`node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-16/evidence/desktop-file-search.test.ts`。guarded runner 创建隔离 HOME 并清除继承凭据。最终 **3 pass / 0 fail / 9 expect / 0 skipped / Completed**。\n"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 10,
+      "path": "docs/audit-2026-10-17/candidates-and-skips.md",
+      "at": "$",
+      "context": "s-progress-recovery-round3 第二项 |\n| Sleep abort acknowledgement | 首次 fake timer 复核成立，但旧报告已明确记录；不计新增，不声称任务继续执行 | [Scheduling 已知边界](scheduling-data.md)、time-sleep-data-round2 |\n| 文档旧 chunk / Unicode 重建 | 真实本地 worker 的正常控制通过，旧 hash 拒绝与新版引用正确；没有新增问题 | [Sources 收束](sources.md)、sources-local-document |\n| 先前平台中止的动态方向 | 不继续、也不变换方式重试；上一轮证据/缺口保持冻结 | [旧候选账本](../audit-2026-10-16/candidates.md) |\n\n辅助只读命令的不存在路径、未匹配 shell glob、官方 PackagePart 文档不可达均已在对应报告记录并跳过，不作为产品问题证据。Bun 的失败组原文件和首跑 stdout/stderr 原样保留；完整门禁统计只取 Completed 的零失败组。\n"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 11,
+      "path": "docs/audit-2026-10-17/chat-data.md",
+      "at": "$",
+      "context": "evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。\n- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。\n\n## 候选和排除\n\n- Discord `discord.ts:108-110` interaction 分支的每次 send 都 editReply，没有按 replied 在后续切换 follow-up，长回复可能覆盖前块。首次 fixture 在测试文件顶层 import `discord.js` 时依赖解析失败，未进入生产断言，故保留静态候选；不移除 import、不加 link、不改路径、不重跑（`chat-discord-chunks.log`：0 pass / 1 fail / 1 error，无 Completed）。\n- Bound Session bridge 的输入类型只携带 text，附件没有投影；查到 `docs/todo/mimi-chat-replay-2026-09-06.md:77`、`docs/todo/mimi-wechat-image-routi"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 12,
+      "path": "docs/audit-2026-10-17/evidence/quality-final-review.md",
+      "at": "$",
+      "context": "在首次内存 SDK fixture 中走通，两个不同 thread 都构造频道顶层 payload。普通回复的会话定位丢失足以支持 P2，不能扩大为真实 session 合并/跨账号/泄漏结论。 |\n| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |\n\nSlack 官方 `chat.postMessage` 对 thread_ts 的定义支持“携带父 ts 才在原线程回复”，参见[官方方法文档](https://docs.slack.dev/reference/methods/chat.postMessage/)。这与原始 payload 结合可推出频道顶层定位；真实 Slack 服务端/UI 未执行。项目 `ChannelMessage.threadId?: string` 位于 `channel.ts:117`，但是 `ChannelCapabilities` 与 README 能力矩阵没有显式承诺完整 threads 支持：保留原线程是正常 reply 定位预期，不能改写成项目已有完整 thread 能力声明。没有发现本项目明确将线程回复到主频道规定为设计行为的文档。\n\n首次成功收据：`chat-slack-thread.log` 1 test / 5 expect；`chat-text-metadata.log` 2 / 16；`chat-channel-baseline.log` 2 / 58。合计 **3 Completed shards / 5 te"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 15,
+      "path": "docs/audit-2026-10-17/sources.md",
+      "at": "$",
+      "context": "h><t>` 注音文本；第五个纯 parser observation 实测单元格“東京”被提取为“東京トウキョウ”。暂保留候选：尚未核对本项目是否有意把注音算作可搜索内容，不计正式缺陷。\n\n## 轮次二：检索、chunk、跨文件结果和其余 adapter\n\n已静态读取 `searchDocumentIndex/Indexes` 的 corpus 统一权重、chunk overlap 去重重建、UTF-8 byte cap 和 typed receipt 调用链、`local-files` 列举/读取、`mcp-resource` 与 `link` adapter 输出转换、catalog/binding 存储。未据此宣称这些路径无 bug。\n\n- 既有纯 local baseline：`truncate-utf8.test.ts`、`adapters/mcp-resource.test.ts`、`types.test.ts`，guarded 收据 `evidence/sources-pure-baseline.log`：15 tests / 44 expectations / 0 failures。\n- 待核语义候选：`index-store.ts:157-164` 将连续 Han+Latin+digit 合成一个 `word`，额外只切 CJK bigram；因此常见“使用Redis保存会话”“2026年预算”“OAuth2登录流程”用 `Redis` / `2026` / `OAuth2` 查询得到假阴性，带空格的同文可命中。已以纯 `searchDocumentIndex` 和 `searchDocumentIndexes` 动态确认对照（`evidence/sources-search.test.ts` 与 `.log`，3 tests / 10 expectations / 0 failures，含一个正常 overlap reconstruction 对照）；是否属"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 16,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][4][\"hits\"][0][\"excerpt\"]",
+      "context": "结果，不把 fake 当成平台成功验证。没有 `run()`、socket、账号、SDK 连接或服务器；默认 fetch 在首次 imports 前设为禁止网络的 callback，第一次测试 finally 恢复。全部请求始终使用显式注入 transport。同文件正常分块控制在 max 2/17/1800 下重建 Unicode/空白全文一致、分块在限内、没有孤立代理项。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 20,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][16][\"hits\"][0][\"excerpt\"]",
+      "context": "| 文档旧 chunk / Unicode 重建 | 真实本地 worker 的正常控制通过，旧 hash 拒绝与新版引用正确；没有新增问题 | [Sources 收束](sources.md)、sources-local-document |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 23,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][20][\"hits\"][3][\"excerpt\"]",
+      "context": "evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 27,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][41][\"hits\"][4][\"excerpt\"]",
+      "context": "evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 28,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][43][\"hits\"][0][\"excerpt\"]",
+      "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 29,
+      "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "at": "$[\"matches\"][45][\"hits\"][2][\"excerpt\"]",
+      "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 32,
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "at": "$",
+      "context": "\n每次仅运行 `node scripts/run-bun-test-shard.mjs --timeout 30000 FILE`；FIRST 合并 stdout/stderr 和 exit 均先完整落盘再读取，没有修 fixture 或重跑。4 项 focused 中包括 1 项缺陷 characterization、2 项恢复控制、1 项 shared splitter 控制；2 项是既有 channel 能力 baseline。splitter 控制在 max 2/17/1800/8000 下完整重建 Unicode/空白，块不超限且不拆开 UTF-16 代理对；不承诺 grapheme cluster 不分割。\n\n[validation](evidence/chat-validation.json)、[findings](evidence/chat-findings.json)、[candidates](evidence/chat-candidates.json)、[冻结源码 manifest](evidence/chat-source-manifest.json)、[材料收据](evidence/chat-artifact-receipt.json) 记录命令、首次计数与哈希。没有 full-suite、build、typecheck、lint、真实磁盘错误、生产 host、真实 SDK/platform、模型、网络、账号/用户数据、native process 或权限安全/custody 执行的结论。fixture 调用 watcher 原型方法时没有构造 client，不进入 request/descriptor/spawn/checkpoint 路径。\n"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 33,
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "at": "$[\"matches\"][19][\"hits\"][4][\"text\"]",
+      "context": "evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 34,
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "at": "$[\"matches\"][56][\"hits\"][1][\"text\"]",
+      "context": "evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 35,
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "at": "$[\"matches\"][59][\"hits\"][0][\"text\"]",
+      "context": "evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 36,
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "at": "$[\"matches\"][59][\"hits\"][1][\"text\"]",
+      "context": "evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 37,
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-findings.json",
+      "at": "$[\"findings\"][0][\"controls\"][3]",
+      "context": "共享 splitter 在最大长度 2/17/1800/8000 下完整重建 Unicode/空白并保留 UTF-16 对。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 40,
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "at": "$[\"patterns\"][\"truncate_unicode\"]",
+      "context": "(?:truncate|截断).{0,100}(?:surrogate|UTF.16|emoji|代理|Unicode)|(?:surrogate|UTF.16|emoji|代理|Unicode).{0,100}(?:truncate|截断)"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 44,
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "at": "$[\"hits\"][\"truncate_unicode\"][1][\"snippet\"]",
+      "context": "以支持 P2，不能扩大为真实 session 合并/跨账号/泄漏结论。 |\n| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |\n\nSlack 官方 `chat.postMessag"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 54,
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "at": "$[\"hits\"][\"truncate_unicode\"][12][\"snippet\"]",
+      "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 55,
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "at": "$[\"hits\"][\"truncate_unicode\"][13][\"snippet\"]",
+      "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 61,
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "at": "$[\"hits\"][\"truncate_unicode\"][20][\"snippet\"]",
+      "context": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 65,
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "at": "$[\"hits\"][\"truncate_unicode\"][31][\"snippet\"]",
+      "context": "\"uploads\",\n  \"resource\": \"brief.docx\",\n  \"query\": \"项目预算\",\n  \"limit\": 5\n}\n```\n\n查询在该文件的分块上运行本地词法评分，支持 Unicode 单词与中日韩字符二元词，无模型/嵌入请求。结果包含 `resourceId`、`sourceHash`、`format`、`parserVersion`、`extractionTruncated`、`totalMatches`、`hasMore` 和带部分标签/偏移/分数的 `matches`。用返回的分块 ID 再读：\n\n```json\n{\n  \"source\": \"project-uploads\",\n  \"scope\": \"uploads\",\n  \"resource\": \"brief.docx\",\n  \"chunk\": \"c_<返回的24位十六进制ID>\"\n}\n```\n\n`query` 和 `chunk` 互斥；`limit` 只用于查询，范围 1..20；这些参数仅适用于项目上传源。原有不带查询参"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 76,
+      "path": "docs/audit-2026-10-17-round12/patch.md",
+      "at": "$",
+      "context": "atch/applier.ts:217) 直接以 `chunk.oldLines` 搜索，并在第 236 行记录替换区间。该消费路径仅做静态追踪；本轮没有执行 applier、ApplyPatch 工具或文件写入，因而不声称实际文件已经被改错。\n- 对照：显式 `@@` 保留相同的空白 context；省略 `@@` 时非空白的首 context 正常保留；chunk 内部的空白 context 正常保留；Add 内容中的空格、tab、Unicode 和标点保持原样。\n- 查重：`docs/` 与 `bugs/` 全部历史 1,658 个 Markdown 与 parsed JSON（仅排除本轮目录），0 个解码/解析失败。[去重收据](evidence/patch-dedup.json) 保留文件哈希和匹配片段。首次按 audit/review/archive 路径筛选的 1,168 个文件子集也已原样保留；随后仅补充去重元数据到完整范围，见 [范围说明](evidence/patch-dedup-note.md)。旧 May 30 [parser finding](../archive/review-2026-05-30/findings.json) 的 `$[117]` 是“无 marker 的空行被接受”，对应当前 `parseUpdateChunk` 第 245–250 行；本项是合法、已有 marker 的空白 context 在进入该函数前被丢弃，触发条件、分支及所需修复不同。\n- 证据：[纯函数 fixture](evidence/patch-leading-context.test.ts)、[首次原始日志](evidence/patch-leading-context.first.log)、[首次退出收据](evidence/patch-leading-context.first.exit.json)。8 项测试通过，31 次断言，0 fail/skip；测试刻画冻结源码的错误输出与对照行为，不是修复后的回"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 80,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][108][\"text\"]",
+      "context": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 81,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][115][\"text\"]",
+      "context": "结果，不把 fake 当成平台成功验证。没有 `run()`、socket、账号、SDK 连接或服务器；默认 fetch 在首次 imports 前设为禁止网络的 callback，第一次测试 finally 恢复。全部请求始终使用显式注入 transport。同文件正常分块控制在 max 2/17/1800 下重建 Unicode/空白全文一致、分块在限内、没有孤立代理项。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 82,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][121][\"text\"]",
+      "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 83,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][124][\"text\"]",
+      "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 85,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][141][\"text\"]",
+      "context": "(?:truncate|截断).{0,100}(?:surrogate|UTF.16|emoji|代理|Unicode)|(?:surrogate|UTF.16|emoji|代理|Unicode).{0,100}(?:truncate|截断)"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 86,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][170][\"text\"]",
+      "context": "以支持 P2，不能扩大为真实 session 合并/跨账号/泄漏结论。 |\n| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |\n\nSlack 官方 `chat.postMessag"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 87,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][171][\"text\"]",
+      "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 88,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][172][\"text\"]",
+      "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 90,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][174][\"text\"]",
+      "context": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 91,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][196][\"text\"]",
+      "context": " `fetch` 是内存回调，transport 返回 HTTP 200 仅用于观察构造结果，不把 fake 当成平台成功验证。没有 `run()`、socket、账号、SDK 连接或服务器；默认 fetch 在首次 imports 前设为禁止网络的 callback，第一次测试 finally 恢复。全部请求始终使用显式注入 transport。同文件正常分块控制在 max 2/17/1800 下重建 Unicode/空白全文一致、分块在限内、没有孤立代理项。"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 92,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "at": "$[\"matches\"][198][\"text\"]",
+      "context": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 94,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+      "at": "$[\"matches\"][5][\"text\"]",
+      "context": "\"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 95,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+      "at": "$[\"matches\"][6][\"text\"]",
+      "context": "\"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 96,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-slice-dedup.json",
+      "at": "$[\"matches\"][7][\"text\"]",
+      "context": "\"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 97,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+      "at": "$[\"matches\"][20][\"text\"]",
+      "context": "\"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating "
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 98,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+      "at": "$[\"matches\"][21][\"text\"]",
+      "context": "\"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLin"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 99,
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-width-dedup.json",
+      "at": "$[\"matches\"][22][\"text\"]",
+      "context": "\"title\": \"Unbounded line counting can cause memory bloat\", \"detail\": \"The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\\\"\\\\n\\\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead.\", \"fix\": \"For large outputs, stream the result or count lines during split: use a custom split that counts lines up to maxLines without creating the full array, or use a more "
+    }
+  ],
+  "actualInspectedPrefix": 25,
+  "limit": "Displayed prefix only counted inspected; caps/totals not semantic exhaustion.",
+  "additionalTargetedInspected": [
+    {
+      "pattern": "stream-utf8",
+      "index": 0,
+      "path": "docs/archive/core-modules/runtime.md",
+      "at": "$",
+      "context": "s`) and `Engine.refreshRuntimeConfig`, a different module.\n\n## 文件 / Files\n\n| File | Purpose |\n| --- | --- |\n| `safe-spawn.ts` | Unified subprocess lifecycle wrapper: sandbox wrap, UTF-8 drain, per-stream byte cap, abort + timeout kill cascade, listener cleanup. Two entry points (`safeSpawn`, `safeSpawnShell`). |\n| `spawn-common.ts` | Primitives shared by foreground + background: `(file,args)` resolution under sandbox, env allowlist/deny hardening, project-env merge, single-child and process-group kill, platform shell selection. |\n| `background-shell.ts` | `BackgroundShellManager` + the `backgroundShellManager` singleton — session-scoped registry/lifecycle for detached `run_in_background` shells (spawn, read, kill, orphan recovery). |\n| `ring-file.ts` | `RingFile` — bounded wrap-around (last 8MB) output sink for a background shell; in-memory tail authoritative, mirrored to disk, with absolute-offset reads that survive wraparound. |\n| `output-cle"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 1,
+      "path": "docs/archive/core-modules/runtime.md",
+      "at": "$",
+      "context": "put is cleaned only when handed to the agent.** Raw bytes (with ANSI/colors) stay on disk for the user to `tail`; `cleanOutput` (ANSI strip + `\\r` progress fold) runs only inside `readOutput` before returning to the model, then a 16KB tail cap is applied.\n- **Per-session soft cap.** `spawnBackground` rejects past `MAX_SHELLS_PER_SESSION` (16) as a fork-bomb guard; handle the `{ ok: false }` branch.\n- **ESM `.js` import suffixes are required** (this is ESM core) and the test files import from `src/` — running tests against stale `dist` will mislead. Rebuild core before relying on `dist` consumers (TUI/desktop).\n- **No barrel file.** Import the specific source file; only `backgroundShellManager` is surfaced through the package root.\n"
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 2,
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "at": "$[100][\"detail\"]",
+      "context": "Reading package.json uses `execSync(\\\"cat package.json\\\", ...)` instead of the safer `readFileSync(join(ctx.cwd, 'package.json'), 'utf-8')`. While ctx.cwd is not directly user-controlled here, using shell commands for file operations increases attack surface unnecessarily."
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 3,
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "at": "$[73][\"detail\"]",
+      "context": "Reading package.json uses `execSync(\\\"cat package.json\\\", ...)` instead of the safer `readFileSync(join(ctx.cwd, 'package.json'), 'utf-8')`. While ctx.cwd is not directly user-controlled here, using shell commands for file operations increases attack surface unnecessarily."
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 4,
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "at": "$[73][\"verify_reason\"]",
+      "context": "available in the same file. The necessary imports (readFileSync from node:fs and join from node:path) are present at lines 9-10. Using readFileSync(join(ctx.cwd, 'package.json'), 'utf-8') would be more direct and avoid shell execution entirely. While ctx.cwd is internal application state (not directly attacker-influenced), the principle is sound: unnecessary shell invocation for simple file operations does add complexity and marginally increases attack surface."
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 5,
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "at": "$[100][\"detail\"]",
+      "context": "Reading package.json uses `execSync(\\\"cat package.json\\\", ...)` instead of the safer `readFileSync(join(ctx.cwd, 'package.json'), 'utf-8')`. While ctx.cwd is not directly user-controlled here, using shell commands for file operations increases attack surface unnecessarily."
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 6,
+      "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "at": "$[100][\"reason\"]",
+      "context": "available in the same file. The necessary imports (readFileSync from node:fs and join from node:path) are present at lines 9-10. Using readFileSync(join(ctx.cwd, 'package.json'), 'utf-8') would be more direct and avoid shell execution entirely. While ctx.cwd is internal application state (not directly attacker-influenced), the principle is sound: unnecessary shell invocation for simple file operations does add complexity and marginally increases attack surface."
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 7,
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "at": "$[145][\"detail\"]",
+      "context": "Reading package.json uses `execSync(\\\"cat package.json\\\", ...)` instead of the safer `readFileSync(join(ctx.cwd, 'package.json'), 'utf-8')`. While ctx.cwd is not directly user-controlled here, using shell commands for file operations increases attack surface unnecessarily."
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 8,
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "at": "$[42][\"detail\"]",
+      "context": "Reading package.json uses `execSync(\\\"cat package.json\\\", ...)` instead of the safer `readFileSync(join(ctx.cwd, 'package.json'), 'utf-8')`. While ctx.cwd is not directly user-controlled here, using shell commands for file operations increases attack surface unnecessarily."
+    },
+    {
+      "pattern": "stream-utf8",
+      "index": 9,
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "at": "$[42][\"verify_reason\"]",
+      "context": "available in the same file. The necessary imports (readFileSync from node:fs and join from node:path) are present at lines 9-10. Using readFileSync(join(ctx.cwd, 'package.json'), 'utf-8') would be more direct and avoid shell execution entirely. While ctx.cwd is internal application state (not directly attacker-influenced), the principle is sound: unnecessary shell invocation for simple file operations does add complexity and marginally increases attack surface."
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 0,
+      "path": "docs/archive/core-modules/lsp.md",
+      "at": "$",
+      "context": "s load-bearing.** `LSPClient.handleData` buffers `Buffer`s and slices by `Content-Length` **bytes**, never strings. Don't \"simplify\" it to `data.toString()` + string concat — that splits multibyte UTF-8 (CJK/emoji in identifiers or diagnostics) across chunks and desyncs the frame counter.\n- **One server per language, reused; lazy start.** `getClient` returns the live client if `ready` & alive; if `starting` it just `await`s a fixed 2s and returns whatever's there (no proper readiness signal). First call to an unstarted server pays spawn + `initialize` cost.\n- **30s per-request timeout.** `client.request` rejects with `LSP request \"<method>\" timed out` after 30s. Timers and the child are `unref()`'d so a hung server won't keep the Node event loop alive.\n- **Command-availability is a security gate, not just a check.** `isCommandAvailable` rej"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 1,
+      "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+      "at": "$",
+      "context": "ile_path/offset/limit`，见 `packages/core/src/tool-system/builtin/read.ts:13` 到 `packages/core/src/tool-system/builtin/read.ts:34`。\n- `Read` 只在文件超过 5MB 时拒绝；否则直接 `readFile(filePath, \"utf-8\")`，没有图片 MIME 检测或二进制降级，见 `packages/core/src/tool-system/builtin/read.ts:49` 到 `packages/core/src/tool-system/builtin/read.ts:64`。\n- `Glob` 只返回文件，`nodir: true`，且默认 `dot: false`，见 `packages/core/src/tool-system/builtin/glob.ts:44` 到 `packages/core/src/tool-system/builtin/glob.ts:51`。\n- `view_image` 已存在，描述为把本地图片文件或历史图片作为 base64 image ContentBlock 回传给 vision 模型，见 `packages/core/src/tool-system/builtin/view-image.ts:1` 到 `packages/core/src/tool-system/builtin/view-image.ts:13`。\n- `view_image` 支持 `path` 或 `imageNumber` 二选一，支持 PNG/JPEG/GIF/WebP，见 `packages/core/src/tool-system/builtin/view-image.ts:34` 到 `packages/core/src/tool-system/builtin/view-image.ts:56`。\n- `view_image(path)` 会按 ctx.cwd 解析相对路径，非 vision 模型时不读文件，见 `packages/core/src/tool-system/builtin/view-image."
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 2,
+      "path": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+      "at": "$",
+      "context": "。\n- `view_image` schema 可选增加 `detail`。\n- StreamEvent 无变化。\n\nTDD 测试点：\n\n- `packages/core/src/tool-system/builtin/read.test.ts`\n  - PNG 文件不返回二进制乱码，返回 mime/size/hash/view_image 提示。\n  - UTF-8 文本行为不变，offset/limit 行为不变。\n  - 大二进制只返回 metadata。\n- `packages/core/src/tool-system/builtin/view-image.test.ts`\n  - pathPolicy 仍由 executor 负责，直接工具测试聚焦格式/大小。\n  - 非 vision ctx 仍不读文件。\n  - 可选 thumbnail 策略不会超过 image policy 上限。\n\n回归风险面：\n\n- `Read` 计算 hash 会增加 IO 成本；只对图片/二进制做，文本不默认 hash。\n- 不要让 `Read` 自动把图片塞进 vision 上下文，避免工具语义从 read text 变成昂贵 vision。\n\n### Stage 5：结构化 `RunParams.attachments`，移除 base64-in-task 作为主路径\n\n改动文件：\n\n- `packages/core/src/protocol/types.ts`\n- `packages/core/src/protocol/client.ts`\n- `packages/core/src/protocol/server.ts`\n- `packages/core/src/protocol/chat-session.ts`\n- `packages/core/src/engine/engine.ts`\n- 新增 `packages/core/src/engine/input-attac"
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 3,
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "at": "$[2][\"detail\"]",
+      "context": "The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\"\\n\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead."
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 4,
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "at": "$[2][\"detail\"]",
+      "context": "The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\"\\n\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead."
+    },
+    {
+      "pattern": "byte-boundary",
+      "index": 5,
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "at": "$[2][\"detail\"]",
+      "context": "The execFileSafe function limits output to maxLines but splits the entire result string first (line 232: `raw.split(\"\\n\")`). For a 500KB grep result, this creates a full array in memory before slicing. If maxBuffer=512KB and the result is near that limit, splitting it can cause significant memory overhead."
+    }
+  ],
+  "additionalTargetedInspectedCount": 16,
+  "exactHelperShaMatchesInspected": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "at": "$[\"rankedCandidates\"][38][\"sha256\"]",
+      "context": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][1103][\"sha256\"]",
+      "context": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10"
+    }
+  ],
+  "sameShaReadGate": "Two exact SHA hits are R28 coverage-ranking/package-inventory metadata only. LoadedWorkspaceModules records are import facts. No prior same-SHA full semantic receipt identified in the inspected structured evidence; not proof the helper was never read."
+}

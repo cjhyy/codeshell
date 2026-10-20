@@ -1,0 +1,325 @@
+{
+  "prep": 135,
+  "rootReportedBaseline": "1ba606416f4fc94c081159bb3fd10e58cd8d87f0",
+  "files": [
+    {
+      "path": "packages/server/src/static-files.ts",
+      "bytes": 950,
+      "lines": 27,
+      "sha256": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+      "coverage": "full",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          27
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          27
+        ]
+      ],
+      "semanticLines": 27,
+      "scope": "All MIME mapping/lowercase/fallback logic. Prototype-looking extension not a normal extname result. Finite source reading, no all-platform correctness claim.",
+      "initialPinReference": "initial-pins.json",
+      "endingSha256": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.ts",
+      "bytes": 9561,
+      "lines": 202,
+      "sha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          24,
+          43
+        ],
+        [
+          46,
+          51
+        ],
+        [
+          73,
+          90
+        ],
+        [
+          93,
+          99
+        ],
+        [
+          102,
+          167
+        ],
+        [
+          177,
+          202
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          202
+        ]
+      ],
+      "semanticLines": 143,
+      "scope": "Ordinary raw URL→asset path→containment→MIME/cache/stream and dev proxy branch. Whole file displayed; stream races/authority/native custody and HTTPS support not certified; known old symlink escape excluded.",
+      "initialPinReference": "initial-pins.json",
+      "endingSha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+      "bytes": 25828,
+      "lines": 649,
+      "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          66,
+          86
+        ],
+        [
+          108,
+          120
+        ],
+        [
+          180,
+          229
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          66,
+          86
+        ],
+        [
+          108,
+          120
+        ],
+        [
+          180,
+          229
+        ]
+      ],
+      "semanticLines": 84,
+      "scope": "Exact /mobile route forwards raw IncomingMessage; built root and test override; outer auth/access policy not comprehensively reviewed.",
+      "initialPinReference": "consumer-before-pins.json",
+      "endingSha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca"
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "bytes": 66162,
+      "lines": 1690,
+      "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          697,
+          760
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          697,
+          760
+        ]
+      ],
+      "semanticLines": 64,
+      "scope": "Static caller already decodeSafelys URL pathname before resolveSafe; negative evidence against claiming same missing-decode cause in headless.",
+      "initialPinReference": "consumer-before-pins.json",
+      "endingSha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376"
+    },
+    {
+      "path": "packages/server/src/project-runtime/control-server.ts",
+      "bytes": 16984,
+      "lines": 410,
+      "sha256": "0f4afbdbd9bf02d787d5b0076b04b8ddf32fb91c30212164cf3250e5be2e9346",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          289,
+          334
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          289,
+          334
+        ]
+      ],
+      "semanticLines": 46,
+      "scope": "GET/HEAD static branch already decodeURIComponent with malformed-URI400; negative evidence.",
+      "initialPinReference": "consumer-before-pins.json",
+      "endingSha256": "0f4afbdbd9bf02d787d5b0076b04b8ddf32fb91c30212164cf3250e5be2e9346"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.test.ts",
+      "bytes": 7555,
+      "lines": 181,
+      "sha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+      "coverage": "selected",
+      "sourceKind": "existing-test-declaration",
+      "selectedLineRanges": [
+        [
+          8,
+          67
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          8,
+          67
+        ]
+      ],
+      "semanticLines": 60,
+      "scope": "Declarations only, not executed. First title-only navigation preceded dedicated pin; initialNavigationSha256 stays null, pin is before selected body only.",
+      "initialPinReference": "consumer-before-pins.json",
+      "endingSha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75"
+    },
+    {
+      "path": "packages/desktop/vite.mobile.config.ts",
+      "bytes": 1784,
+      "lines": 40,
+      "sha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51",
+      "coverage": "full-finite-config",
+      "sourceKind": "product-config",
+      "selectedLineRanges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "semanticLines": 40,
+      "scope": "Exact base/mobile publicDir/outDir and normal dev origin. No build/Vite execution; producer validation continued independently in137.",
+      "initialPinReference": "fixture-preflight-pins.json",
+      "endingSha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "lines": 8,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "coverage": "full-finite-runner",
+      "sourceKind": "test-infrastructure",
+      "selectedLineRanges": [
+        [
+          1,
+          8
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          8
+        ]
+      ],
+      "semanticLines": 8,
+      "scope": "Guarded runner entry and one-attempt dispatch inspected before first test.",
+      "initialPinReference": "fixture-preflight-pins.json",
+      "endingSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d"
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "bytes": 6559,
+      "lines": 152,
+      "sha256": "2556388a164e73757f5cb70ff25fdd3adcd22401cb1261af3b2d598f8282f858",
+      "coverage": "full-finite-runner",
+      "sourceKind": "test-infrastructure",
+      "selectedLineRanges": [
+        [
+          1,
+          152
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          152
+        ]
+      ],
+      "semanticLines": 152,
+      "scope": "Inspected HOME/config/credential allowlist, once-only spawn and complete JUnit validation before first test; not product lifecycle audit.",
+      "initialPinReference": "runner-module-pin.json",
+      "endingSha256": "2556388a164e73757f5cb70ff25fdd3adcd22401cb1261af3b2d598f8282f858"
+    },
+    {
+      "path": "bunfig.toml",
+      "bytes": 475,
+      "lines": 9,
+      "sha256": "c68a0066d926c1347730773f65032c5dbddf9827487add558eb830ac9bad69d6",
+      "coverage": "full-finite-config",
+      "sourceKind": "test-infrastructure",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "semanticLines": 9,
+      "scope": "Root preload/timeout preflight.",
+      "initialPinReference": "bunfig-pin.json",
+      "endingSha256": "c68a0066d926c1347730773f65032c5dbddf9827487add558eb830ac9bad69d6"
+    },
+    {
+      "path": "packages/core/test-setup.ts",
+      "bytes": 2214,
+      "lines": 44,
+      "sha256": "a153ddcf1017389aef04b587fd1fe7d348190dc8232ca2cdba3914a46dce942d",
+      "coverage": "full-finite-preload",
+      "sourceKind": "test-infrastructure",
+      "selectedLineRanges": [
+        [
+          1,
+          44
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          44
+        ]
+      ],
+      "semanticLines": 44,
+      "scope": "Only builtins and bun:test; wrapper already pins disposable home, no Core Engine/worker runtime import.",
+      "initialPinReference": "test-setup-pin.json",
+      "endingSha256": "a153ddcf1017389aef04b587fd1fe7d348190dc8232ca2cdba3914a46dce942d"
+    }
+  ],
+  "instructionHashOnlyFiles": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only carry-forward of previously actually read instructions",
+      "newSemanticLines": 0
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only carry-forward of previously actually read instructions",
+      "newSemanticLines": 0
+    }
+  ],
+  "overlap": "Path/SHA history queries are bounded navigation; no unique new coverage or historical unread assertion. Root before-body verification ranges separately in formal57 evidence/pet-root-before-pins.json are independent same-source review overlap, not these static path counts.",
+  "fixtureArtifact": "docs/audit-2026-10-17-round57/evidence/static-path.test.ts; new evidence file, not product baseline pin.",
+  "productAttempts": 1
+}

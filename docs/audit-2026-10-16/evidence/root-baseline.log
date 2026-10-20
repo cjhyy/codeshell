@@ -1,0 +1,311 @@
+bun test v1.3.11 (af24e281)
+
+packages/arena/src/capability.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'zod' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/arena/src/capability.ts'
+-------------------------------
+
+
+packages/arena/src/index.exports.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/arena/src/transitions.test.ts:
+(pass) claim transitions — unresolved sweep > markUnresolved succeeds from under_review [1.11ms]
+(pass) claim transitions — unresolved sweep > markUnresolved succeeds from proposed [0.04ms]
+(pass) claim transitions — unresolved sweep > markUnresolved still succeeds from contested [0.03ms]
+(pass) claim transitions — unresolved sweep > terminal states cannot transition to unresolved [0.06ms]
+(pass) claim transitions — unresolved sweep > the normal happy path is unaffected [0.03ms]
+
+packages/arena/src/arena-usage.test.ts:
+(pass) Arena usage accounting > returns usage aggregated across its multi-phase provider calls [3356.63ms]
+
+packages/optimization-lab/src/queries.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'zod' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/optimization-lab/src/queries.ts'
+-------------------------------
+
+
+packages/optimization-lab/src/store.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'zod' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/optimization-lab/src/store.ts'
+-------------------------------
+
+
+packages/optimization-lab/src/overfit-hints.test.ts:
+(pass) development overfit hints > Chinese source fragments, numbers and filenames are visible and deterministic [0.54ms]
+(pass) development overfit hints > original instructions and task objective are not treated as new examples
+(pass) development overfit hints > advisory output remains bounded for large repeated inputs [0.66ms]
+
+packages/optimization-lab/src/assertions.test.ts:
+(pass) hard assertions never inherit properties or accept unsafe paths [0.20ms]
+(pass) contains and exclusions are independent hard conditions
+
+packages/optimization-lab/src/candidate.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'zod' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/optimization-lab/src/candidate.ts'
+-------------------------------
+
+
+packages/optimization-lab/src/ledger.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/optimization-lab/src/controller.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'zod' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/optimization-lab/src/contracts/experiment.ts'
+-------------------------------
+
+
+packages/optimization-lab/src/index.exports.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'zod' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/optimization-lab/src/contracts/dataset.ts'
+-------------------------------
+
+
+packages/optimization-lab/src/lease.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/optimization-lab/src/module.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/optimization-lab/src/evidence.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'zod' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/optimization-lab/src/evidence.ts'
+-------------------------------
+
+
+packages/optimization-lab/src/grading.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find package 'zod' from '/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/optimization-lab/src/grading.ts'
+-------------------------------
+
+
+packages/optimization-lab/src/strategy.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/optimization-lab/src/store-paths.test.ts:
+(pass) store paths > keeps lab data under the isolated CodeShell home [1.12ms]
+(pass) store paths > gives a symlinked project the same key as its real path [1.70ms]
+
+packages/optimization-lab/src/report.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/coding/src/git/parse-log.test.ts:
+(pass) coding parseGitLog > parses well-formed --format=%H|%s|%an|%ci lines [0.16ms]
+(pass) coding parseGitLog > skips empty/whitespace lines
+(pass) coding parseGitLog > does not throw on a malformed line with no separators [0.51ms]
+
+packages/coding/src/git/worktree-setup.test.ts:
+(pass) coding selectPlatformScript > undefined scripts → undefined [0.32ms]
+(pass) coding selectPlatformScript > picks macos on darwin, linux on linux, windows on win32
+(pass) coding selectPlatformScript > falls back to default when the platform key is missing
+(pass) coding selectPlatformScript > platform key wins over default
+(pass) coding selectPlatformScript > blank/whitespace script is treated as absent (no fallback to it)
+(pass) runWorktreeSetup > no script → skipped, ok, no spawn [2.56ms]
+(pass) runWorktreeSetup > runs the script in the worktree root [28.48ms]
+(pass) runWorktreeSetup > non-zero exit → ok:false but does not throw (warns-but-continues) [23.95ms]
+(pass) runWorktreeSetup > layers shellEnv into the script environment [16.29ms]
+
+packages/coding/src/git/resolve-project-root.test.ts:
+(pass) coding resolveProjectRoot > a subdirectory of a git repo resolves to the repo top-level [70.76ms]
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+(pass) coding resolveProjectRoot > a non-git directory returns itself unchanged [39.52ms]
+(pass) coding resolveProjectRoot > a symlinked repo path resolves to the real repo root [65.97ms]
+(pass) coding resolveProjectRoot > uses the configured git.path override when resolving the project root [357.47ms]
+(pass) coding resolveProjectRoot > a non-existent path does not throw (falls back to the input) [1.72ms]
+
+packages/arena/src/context/read-file-limit.test.ts:
+(pass) read_file limit guard > reads from offset for `limit` lines [9.27ms]
+(pass) read_file limit guard > negative limit does not silently drop the file's tail [5.01ms]
+(pass) read_file limit guard > NaN limit falls back to default (not a crash / not empty) [5.09ms]
+
+packages/arena/src/context/within-root.test.ts:
+(pass) isWithinRoot > the root itself is within root
+(pass) isWithinRoot > a child path is within root
+(pass) isWithinRoot > a sibling with the root as a string prefix is NOT within root
+(pass) isWithinRoot > an unrelated path is not within root
+(pass) isWithinRoot > uses the platform separator, not a hardcoded slash
+
+packages/arena/src/iterate/critics-for-round.test.ts:
+(pass) IterativeArena.criticsForRound > original author is excluded while they hold the pen
+(pass) IterativeArena.criticsForRound > a promoted critic does not review their own draft
+(pass) IterativeArena.criticsForRound > rotation to the last critic likewise swaps the pool
+(pass) IterativeArena.criticsForRound > every participant is a valid author and is never their own critic [0.84ms]
+(pass) IterativeArena.criticsForRound > degenerate single-participant config still yields reviewers [0.05ms]
+
+packages/arena/src/strategies/extract-json-array.test.ts:
+(pass) extractJSONArray > extracts a single array [0.34ms]
+(pass) extractJSONArray > returns only the FIRST array when two are present [0.09ms]
+(pass) extractJSONArray > handles nested arrays (balanced, not smallest)
+(pass) extractJSONArray > respects ] inside strings
+(pass) extractJSONArray > prefers a fenced ```json block
+(pass) extractJSONArray > falls back to the original text when no array is present [0.11ms]
+
+packages/arena/src/providers/truncate.test.ts:
+(pass) provider truncate handles content with no newline > docs: a long single line cuts at the cap, not cap-1
+(pass) provider truncate handles content with no newline > repo: a long single line cuts at the cap, not cap-1
+(pass) provider truncate handles content with no newline > docs: short content is returned unchanged
+(pass) provider truncate handles content with no newline > docs: still cuts at the last newline when one exists
+
+packages/optimization-lab/src/contracts/experiment.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/optimization-lab/src/contracts/verdict-policy.test.ts:
+(pass) verdict policy > matches the eval harness contract it was copied from [5.80ms]
+
+packages/optimization-lab/src/contracts/dataset.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/optimization-lab/src/contracts/dataset-loader.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/optimization-lab/src/contracts/canonical-json.test.ts:
+(pass) canonicalJson > sorts every object's keys independently of insertion order [0.49ms]
+(pass) canonicalJson > preserves arrays, JSON scalars and special property names [0.09ms]
+(pass) canonicalJson > rejects non-JSON data: undefined
+(pass) canonicalJson > rejects non-JSON data: NaN [0.36ms]
+(pass) canonicalJson > rejects non-JSON data: Infinity
+(pass) canonicalJson > rejects non-JSON data: -Infinity
+(pass) canonicalJson > rejects non-JSON data: 1n
+(pass) canonicalJson > rejects non-JSON data: Symbol(x) [0.22ms]
+(pass) canonicalJson > rejects non-JSON data: [Function] [0.07ms]
+(pass) canonicalJson > rejects non-JSON data: 2026-10-16T15:17:56.318Z [0.05ms]
+(pass) canonicalJson > rejects non-JSON data: Map {} [0.09ms]
+(pass) canonicalJson > rejects non-JSON data: Set {} [0.02ms]
+(pass) canonicalJson > rejects sparse arrays, additional array keys, symbols and getters [0.10ms]
+(pass) canonicalJson > rejects cycles but accepts a shared JSON object
+(pass) canonicalJson > hashes equal values to the same sha256
+
+packages/optimization-lab/src/contracts/dataset-freeze.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+-------------------------------
+
+
+packages/optimization-lab/src/providers/transport.test.ts:
+(pass) openai actual client stays tool-free and records authoritative usage [325.68ms]
+(pass) anthropic actual client stays tool-free and records authoritative usage [280.94ms]
+(pass) strict selected connection never falls back to a usable default [260.73ms]
+(pass) actual compatibility/SDK retries each need a fresh admission and cannot change parameters [257.54ms]
+(pass) target request cannot receive expected, rubric, sibling or holdout data [282.66ms]
+(pass) connection identity pins effective temperature and redacts unsafe endpoints [263.76ms]
+(pass) Anthropic cache counters are included in normalized input exactly once [280.38ms]
+(pass) wire gate rejects images, tools and request-model changes before upstream [269.23ms]
+(pass) missing response model invalidates pairing while retaining known token usage [333.00ms]
+(pass) Anthropic unsupported top_p fails local preflight [268.48ms]
+(pass) real OpenAI SDK internal retry has a distinct durable admission for every HTTP [1709.20ms]
+(pass) isolated Engine SSE requires terminal authoritative usage and keeps partial streams unknown [2760.47ms]
+
+packages/coding/src/tools/apply-patch/backup-targets.test.ts:
+(pass) coding patchBackupTargets > update + delete hunks → their resolved paths [1.26ms]
+(pass) coding patchBackupTargets > add hunks are excluded (no prior content) [0.11ms]
+(pass) coding patchBackupTargets > resolves relative paths against the given cwd [0.06ms]
+(pass) coding patchBackupTargets > unparseable patch → empty (tool will reject it anyway) [0.07ms]
+
+packages/coding/src/tools/apply-patch/cache-invalidate.test.ts:
+(pass) coding applyPatch invalidates the file cache by absolute path > a relative-path patch invalidates the absolute-keyed cache entry [73.87ms]
+
+packages/coding/src/tools/apply-patch/path-escape.test.ts:
+(pass) coding applyPatch path containment > rejects ../ traversal that escapes cwd (add) [23.54ms]
+(pass) coding applyPatch path containment > rejects an absolute path outside cwd (add) [18.15ms]
+(pass) coding applyPatch path containment > rejects writing through a symlink that points outside cwd [29.82ms]
+(pass) coding applyPatch path containment > still allows a normal write inside cwd [100.38ms]
+(pass) coding applyPatch path containment > rejects a rename whose destination escapes cwd [72.01ms]
+
+packages/coding/src/tools/apply-patch/atomicity.test.ts:
+(pass) coding applyPatch atomicity (all-or-nothing) > plan-phase failure on a later hunk leaves ALL files untouched [217.10ms]
+(pass) coding applyPatch atomicity (all-or-nothing) > commit-phase write failure rolls back an already-written file [309.20ms]
+(pass) coding applyPatch atomicity (all-or-nothing) > rollback removes a newly-added file when a later write fails [187.72ms]
+(pass) coding applyPatch atomicity (all-or-nothing) > allowPartialOnCommit leaves partial work on disk (codex parity) [208.44ms]
+
+packages/coding/src/git/worktree/query.test.ts:
+(pass) coding listWorktreesFast > returns empty list for a non-git directory [3094.47ms]
+(pass) coding listWorktreesFast > propagates an AbortSignal to root and list git queries [3514.29ms]
+Preparing worktree (new branch 'external/feature')
+(pass) coding listWorktreesFast > returns ownership and managed metadata without diff summaries [5850.62ms]
+
+packages/coding/src/git/worktree/diff.test.ts:
+(pass) coding getWorktreeDiff > summarizes committed and uncommitted changes for one worktree [2225.72ms]
+
+packages/coding/src/git/worktree/slug.test.ts:
+(pass) coding worktree slug and branch prefix helpers > validateWorktreeSlug rejects empty or whitespace slugs [0.09ms]
+(pass) coding worktree slug and branch prefix helpers > applyPrefix uses the default prefix and short session id [0.03ms]
+(pass) coding worktree slug and branch prefix helpers > applyPrefix normalizes custom prefixes to a trailing slash [0.02ms]
+(pass) coding worktree slug and branch prefix helpers > normalizeWorktreeBranchPrefix rejects unsafe git branch namespaces [0.04ms]
+(pass) coding worktree slug and branch prefix helpers > managed branch detection accepts configured and historical prefixes [0.03ms]
+
+packages/coding/src/git/worktree/crud.test.ts:
+(pass) coding worktree CRUD > errors clearly before git tries to check out a branch already used by a worktree [1079.77ms]
+(pass) coding worktree CRUD > a failed create never deletes a pre-existing directory at the worktree path [834.51ms]
+(pass) coding worktree CRUD > symlinks root node_modules and workspace package node_modules into the worktree [1646.68ms]
+(pass) coding worktree CRUD > removeBranch=true deletes managed branches with the default prefix [1408.48ms]
+(pass) coding worktree CRUD > removeBranch=true allows configured prefixes and historical worktree prefixes [1281.18ms]
+Preparing worktree (new branch 'external/feature')
+(pass) coding worktree CRUD > removeBranch=true refuses external branches [737.53ms]
+(pass) coding worktree CRUD > creates from an explicit base ref and records its immutable base commit [757.29ms]
+(pass) coding worktree CRUD > copies gitignored files selected by .worktreeinclude and explicit include patterns [889.13ms]
+fatal: cannot remove a locked working tree, lock reason: test owner
+use 'remove -f -f' to override or unlock first
+(pass) coding worktree CRUD > worktree locks block cleanup until the DriveAgent owner unlocks [846.81ms]
+
+18 tests failed:
+
+ 113 pass
+ 18 fail
+ 18 errors
+ 238 expect() calls
+Ran 131 tests across 42 files. [37.50s]
+Bun test process failed (1)

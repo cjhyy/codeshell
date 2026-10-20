@@ -1,0 +1,172 @@
+{
+  "createdUTC": "2026-10-17T15:23:25.829747+00:00",
+  "sourceChecks": [
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx",
+      "sha256": "4a8597d1e9f055fc855f9b4a601da7e0289df3102a8309ab598e12ccb716f3ea",
+      "endingSha256": "4a8597d1e9f055fc855f9b4a601da7e0289df3102a8309ab598e12ccb716f3ea",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/index.tsx",
+      "sha256": "cab980926182770a7160afefcd4ad993136c0771ff68fe7b1eb7db306b0faf52",
+      "endingSha256": "cab980926182770a7160afefcd4ad993136c0771ff68fe7b1eb7db306b0faf52",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/GenericToolCard.tsx",
+      "sha256": "4df0ba5b484540c6340e53d4f7fae03f7d52612f479291865bb13b86e4623655",
+      "endingSha256": "4df0ba5b484540c6340e53d4f7fae03f7d52612f479291865bb13b86e4623655",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "endingSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/ToolGroupCard.tsx",
+      "sha256": "c4e30acf0be148683b65cabf4fd570a2c309696a2b7528a9269db0cca1e2b987",
+      "endingSha256": "c4e30acf0be148683b65cabf4fd570a2c309696a2b7528a9269db0cca1e2b987",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "345b05e12819f499643fd628ebcc02541e50386fede974856f4a8333a8928984",
+      "endingSha256": "345b05e12819f499643fd628ebcc02541e50386fede974856f4a8333a8928984",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "sha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "endingSha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/StatusDot.tsx",
+      "sha256": "363fbdd51a9f07839f1e87e21c5afa08aba185e22a9cfed47ce3540b00b85ff9",
+      "endingSha256": "363fbdd51a9f07839f1e87e21c5afa08aba185e22a9cfed47ce3540b00b85ff9",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+      "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "endingSha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "unchanged": true,
+      "coverage": "hash-only"
+    }
+  ],
+  "sourceAllSame": true,
+  "historyEnding": {
+    "count": 4088,
+    "sameScopeAsInitial": true,
+    "added": [],
+    "removed": [],
+    "changed": [
+      {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "initialBytes": 212262,
+        "initialSha256": "f654cd5e3acdacf39eb2156514322d048d5ea1d548daad46fd9504060d7f470e",
+        "endingBytes": 219241,
+        "endingSha256": "1ae146ac477f14887a403e670128521c15ee47b23e7f97ab1148c7fcca0a05f3"
+      }
+    ]
+  },
+  "historyActualReading": {
+    "pathWindows": {
+      "toolcard": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "paneltab": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    "shaWindows": {
+      "toolcard": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "paneltab": "not separately read"
+    },
+    "explicitCoverageRows": 16,
+    "firstTruncatedDisplayRecoveredFromSavedJSONToolcardIndices": [
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "focusedContextsRead": {
+      "shell-epoch": [
+        1,
+        2,
+        4,
+        9,
+        15,
+        18
+      ],
+      "shell-summary": [
+        3,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28
+      ],
+      "activity-latch": []
+    },
+    "notSemanticExhaustiveness": true
+  },
+  "runtime": {
+    "productImport": 0,
+    "helperFunctions": 0,
+    "tools": 0,
+    "fixtures": 0,
+    "testsSemanticRead": 0,
+    "testsExecuted": 0,
+    "reactDOMUI": 0,
+    "networkNativeProcesses": 0,
+    "git": 0
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "baselineProvidedByRoot": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "branchProvidedByRoot": "codex/audit/data-frontier-round28-20261017",
+  "initialUtc": "2026-10-17T11:19:15.009851+00:00",
+  "gitCommands": 0,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "firstFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "readStartSemanticContent": false,
+      "coverage": "inventory pin before this task source read",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "firstFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "readStartSemanticContent": false,
+      "coverage": "inventory pin before this task source read",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "bytes": 2385,
+      "lineCount": 78,
+      "firstFilesystemSha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "readStartSemanticContent": false,
+      "coverage": "inventory pin before this task source read",
+      "gitBlobCompared": false
+    }
+  ]
+}

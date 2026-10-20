@@ -1,0 +1,35 @@
+{
+  "baselineProvidedByRoot": "b3488ec155ecf0c3bb39f5e4d3cd21a783077ad0",
+  "capturedUtc": "2026-10-17T11:38:31.868050+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round14/web.md",
+      "bytes": 5851,
+      "lineCount": 36,
+      "firstFilesystemSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "captureTiming": "Before full prior report semantic read; prior dedup excerpts were navigation only",
+      "initialSemanticReadSha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/mappers.md",
+      "bytes": 7050,
+      "lineCount": 43,
+      "firstFilesystemSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "captureTiming": "Before full prior report semantic read; prior dedup excerpts were navigation only",
+      "initialSemanticReadSha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf",
+      "gitBlobCompared": false
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "bytes": 28526,
+      "lineCount": 800,
+      "firstFilesystemSha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "initialSemanticReadSha256": null,
+      "captureTiming": "First durable filesystem hash captured AFTER selected reducer read; initial SHA is deliberately null, not retroactively inferred.",
+      "gitBlobCompared": false
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

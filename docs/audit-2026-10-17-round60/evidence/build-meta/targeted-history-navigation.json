@@ -1,0 +1,189 @@
+{
+  "atUTC": "2026-10-17T19:54:17.498639+00:00",
+  "argv": [
+    "rg",
+    "-l",
+    "--hidden",
+    "--no-ignore",
+    "-F",
+    "-e",
+    "scripts/build-meta.ts",
+    "-e",
+    "f585e8544219ea5e9c4a2f01b51d65ae5d279a71b77c96f39d788a53d40e5849",
+    "docs",
+    "bugs",
+    "-g",
+    "*.md",
+    "-g",
+    "*.json",
+    "-g",
+    "!**/node_modules/**",
+    "-g",
+    "!**/.git/**"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "bytes": 159179,
+      "sha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+    },
+    {
+      "path": "docs/architecture/00-overview.md",
+      "bytes": 19244,
+      "sha256": "a98267555c18d7f8b1c905a3b9625a4baba43e72d46dd372dbd21910e252a45a"
+    },
+    {
+      "path": "docs/archive/windows-compat-audit-2026-06-10.md",
+      "bytes": 9246,
+      "sha256": "62f5e16ecd83b4a032b03091168dcf4d20617d951409c26486627b2e1d17e97b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+      "bytes": 73317,
+      "sha256": "053339b741e90cc6331e6e4b67dca9b29cf5fda2b989bb47ec202a49b9bf62b1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-prep/source-manifest.json",
+      "bytes": 10096,
+      "sha256": "05364da766fb5bf218a11d16e2bd47db16c4564a6a1e9bac62c914af40a64626"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/evidence/entry-source-manifest.json",
+      "bytes": 14803,
+      "sha256": "d4fc68369370f5cc536f247838406c883a629134acdfbd48434b3dd78bd4e644"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "bytes": 1941044,
+      "sha256": "2e1693238ea4140dcb6f1bc8a4416fe356e1b559d901a7bf2c5bc492192c4c08"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+      "bytes": 1723612,
+      "sha256": "5f02cde507ce90bc9db4746b693feee572eba1e951b9c8dd65612e4425a614a6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "bytes": 1941121,
+      "sha256": "5adcd53bfca820e03282db45815c370bcc529c3606aa4c8f860126d14e646ee2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/frozen45-provenance.json",
+      "bytes": 451831,
+      "sha256": "9b41fe068cee2d2204ce303eb07145cd2754ab7b76c67a4c585ba93624a815d4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round31/source-manifest.json",
+      "bytes": 22715,
+      "sha256": "5a6c88281581e7c27e132209e5f1feff8f2ebd90a2eb5ab6761798442d6054af"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/root-package.md",
+      "bytes": 2847,
+      "sha256": "6133ea2d1da96928a496ccb96dfb115da3b9df32abf37f95b9dca2d684b7cf62"
+    },
+    {
+      "path": "docs/archive/repo-map-and-decoupling-review-2026-05-23.md",
+      "bytes": 14875,
+      "sha256": "77837d04db46c2437967cb6c46fcc0fd0a74e4ff25c64c7803480a2a4caa7fb7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/cross-review-skills.md",
+      "bytes": 6176,
+      "sha256": "bdd76b7e2828fb0b892a10c2ec7ed99aadcd591f3707c34d953b3c834710e110"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/cross-review-desktop.md",
+      "bytes": 7689,
+      "sha256": "87a63705b8430dcc7dfc0eff2d14ef3bcdf8dd177d551875f07793f2743d6059"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/source-manifest.json",
+      "bytes": 27024,
+      "sha256": "2af5c9ac2f6c5b2df48c92f1aeb730a45a6c163f90310626ab8cc4fa2619e7bf"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-build-ui.raw.md",
+      "bytes": 5714,
+      "sha256": "9d736094df6dc3c7b46d137aa7b2eb631c60d0949aa46e9bce6e6bc9c75939e8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/jsonoutput-dedup.json",
+      "bytes": 640338,
+      "sha256": "5dc4c600193ece5b49b5ebe4f3bd0858dbb3f94d1e1f60764c1404e80ed6538b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/source-manifest.json",
+      "bytes": 150215,
+      "sha256": "805e7a30f7bcbe5f713dc0f6d171ad7f2f42c05a965199231689ffed69c6fb56"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-prep-current.json",
+      "bytes": 38798,
+      "sha256": "05cac3927bd8b1ebbdcd7a063d97cc815de8e084fc311e2b03f3b0d044d44c71"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/independent-stage-checks.json",
+      "bytes": 162987,
+      "sha256": "72b12b8318b1da3cf1dc17d3bf633e88f453777aa86c2660c41744d5d33f1d0e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-review/baseline-set-checks.json",
+      "bytes": 51183,
+      "sha256": "dc460bac4737723c2d55fdabe21ba21342fb35838b867f9d962ace48b3c70182"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/inventory.json",
+      "bytes": 27574,
+      "sha256": "f46c47265d8ac8dda06459c94d119f936845559f6bdb9d6e3f8912c66aff44aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/selected-history.json",
+      "bytes": 8556,
+      "sha256": "fc53daa4febca616539d857110fa9d22d06541b8ef463bab57130bdf4f41b926"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/history.json",
+      "bytes": 520281,
+      "sha256": "6f4513a2b7ed9ad6edbb6cb2e42ebeda0ee358e561914d12cbdf5e3842426196"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/package-summary.json",
+      "bytes": 15695,
+      "sha256": "89fdf5f5001defd71cb4e20866240873835d1aefbb4bee3f8f8a0d34c65459dd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round24/evidence/root-package-prep/source-manifest.json",
+      "bytes": 55598,
+      "sha256": "ce815200130b58605bcab247b8feeab84df2f2ccd20260a9590963b34f789533"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "bytes": 280965,
+      "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+    }
+  ],
+  "note": "Filename/raw path-SHA navigation only; not canonical semantic gate or all-history recursive values scan."
+}

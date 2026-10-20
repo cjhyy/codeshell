@@ -1,0 +1,11 @@
+{
+  "sourcePaths": 4643,
+  "currentFilteredPaths": 4644,
+  "changedPaths": [],
+  "addedPaths": [
+    "docs/audit-2026-10-17-round57/evidence/static-path.test.ts"
+  ],
+  "removedPaths": [],
+  "sourceSemanticReads": 0,
+  "scope": "Hash binding of old45 semantic coverage only; no46–59 semantic coverage union or exact remaining count."
+}

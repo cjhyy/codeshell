@@ -1,0 +1,81 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/929",
+    "value": {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/coding/src/external-runtimes/shared/session-context-store.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/124"
+        },
+        {
+          "historyRow": 1184,
+          "jsonPointer": "/paths/102"
+        }
+      ],
+      "claimId": "C000930"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "pointer": "/claims/930",
+    "value": {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+      "sourceHashFields": {
+        "sha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/coding/src/external-runtimes/shared/session-context-store.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/186"
+        }
+      ],
+      "claimId": "C000931"
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "pointer": "/files/495",
+    "value": {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+      "bytes": 6343,
+      "sha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3",
+      "lines": 153,
+      "status": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitFullClaimIds": [],
+      "currentExplicitSelectedClaimIds": [],
+      "currentSelectedUnionLines": 0,
+      "claimIds": [
+        "C000930",
+        "C000931"
+      ],
+      "claimKindCounts": {
+        "incidental-path-or-pin-object": 2
+      }
+    }
+  }
+]

@@ -35,7 +35,7 @@ export interface WorkbenchController {
   uncertain: boolean;
   running: boolean;
   localDrafts: Array<{ sessionId: string; draft: ComposerDraft }>;
-  approvals: Array<{ id: string; sessionId?: string }>;
+  approvals: Array<{ id: string; sessionId?: string; asynchronous?: boolean }>;
   approvalCount: (sessionId: string) => number;
   approvalContent: React.ReactNode;
   workerNote?: string | null;
@@ -47,7 +47,7 @@ export interface WorkbenchController {
   selectSession: (id: string) => void | Promise<void>;
   newSession: () => void;
   /** True only after the current draft has been accepted by the local sender. */
-  send: () => boolean;
+  send: (options?: { modelTraceSource?: string }) => boolean;
   stop: () => void;
   addFiles: (files: FileList | null) => void | Promise<void>;
   refreshSessions: () => void | Promise<void>;

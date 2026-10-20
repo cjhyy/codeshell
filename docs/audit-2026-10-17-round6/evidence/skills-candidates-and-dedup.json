@@ -1,0 +1,90 @@
+{
+  "corpus": "skills-dedup-corpus.json",
+  "corpusFileCount": 850,
+  "jsonFilesParsed": 338,
+  "jsonStringLeaves": 78387,
+  "markdownFilesRead": 512,
+  "jsonParseErrors": [],
+  "candidateDirectedQueries": [
+    {
+      "candidate": "skill-embedded-delimiter",
+      "regex": "frontmatter.{0,100}(delimiter|triple|hyphen|premature|embedded|截断)|(?:triple.?dash|embedded.{0,40}---|premature.{0,40}frontmatter)",
+      "matchCount": 0,
+      "matches": []
+    },
+    {
+      "candidate": "agent-crlf",
+      "regex": "(?:agent|role|agent-definition|角色|代理).{0,100}(?:CRLF|Windows.*newline|line.ending|换行)|(?:CRLF|line.ending|换行).{0,100}(?:agent|role|角色|代理)",
+      "matchCount": 0,
+      "matches": []
+    },
+    {
+      "candidate": "explicit-excluded-prior-role-resume",
+      "regex": "(?:冷续接丢掉原角色|cold child continuation loses|role.s extra constraints|cold.*role)",
+      "matchCount": 10,
+      "matches": [
+        {
+          "path": "docs/review-remaining-2026-10-12/README.md",
+          "line": 21,
+          "text": "| N09 | P2 | **子代理冷续接丢掉原角色的额外限制**。进程registry消失后原角色不在Session持久状态，续接落回general-purpose。父级基础限制仍在；registry-reset seam证据。 | [agent.ts:1425](/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent.ts:1425) | [C3](core.md) |"
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/core.md",
+          "line": 41,
+          "text": "### C3 — P2 candidate: cold child continuation loses the role's extra constraints"
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/core.md",
+          "line": 43,
+          "text": "Location: `packages/core/src/tool-system/builtin/agent.ts:1425–1442`. The cold path calls resolveAgentTypeOverrides(entry?.agentType, currentDefinitions); when the process-local entry is gone, undefined resolves to the default role. Agent type and tool/skill/MCP/model/sandbox overrides are not persisted in SessionState. The direct-parent check at 1400–1413 correctly reads persisted parent identity and does not recover role scope."
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/core.md",
+          "line": 45,
+          "text": "Trigger/control: spawn reviewer with tools [Read], skills [], mcp [], seatbelt and safe-model; warm AgentSendInput keeps them. Reset only the process-local registry while retaining the fake persisted-session identity/parent; cold AgentSendInput resumes the same child session with general-purpose and no role overrides. The captured three spawner requests are in the original log."
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/core.md",
+          "line": 77,
+          "text": "| agent | 2/4 | Both definition parser/registry read; cold role recovery statically traced through consumers, seam tested. Native reload not executed. |"
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/findings.json",
+          "jsonPath": "$.issues[8].title",
+          "text": "子代理冷续接丢掉原角色的额外限制"
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+          "line": 41,
+          "text": "### C3 — P2 candidate: cold child continuation loses the role's extra constraints"
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+          "line": 43,
+          "text": "Location: `packages/core/src/tool-system/builtin/agent.ts:1425–1442`. The cold path calls resolveAgentTypeOverrides(entry?.agentType, currentDefinitions); when the process-local entry is gone, undefined resolves to the default role. Agent type and tool/skill/MCP/model/sandbox overrides are not persisted in SessionState. The direct-parent check at 1400–1413 correctly reads persisted parent identity and does not recover role scope."
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+          "line": 45,
+          "text": "Trigger/control: spawn reviewer with tools [Read], skills [], mcp [], seatbelt and safe-model; warm AgentSendInput keeps them. Reset only the process-local registry while retaining the fake persisted-session identity/parent; cold AgentSendInput resumes the same child session with general-purpose and no role overrides. The captured three spawner requests are in the original log."
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+          "line": 77,
+          "text": "| agent | 2/4 | Both definition parser/registry read; cold role recovery statically traced through consumers, seam tested. Native reload not executed. |"
+        }
+      ]
+    }
+  ],
+  "manualConclusion": "No matching historical root cause found for either metadata candidate. N09 / C3 is explicitly excluded and not reproduced. Search absence is not proof of novelty; candidates remain unvalidated after first dependency failure.",
+  "supplementedPaths": [
+    "docs/refactor/_archive/goal-blocker-fix-review-codex.md",
+    "docs/refactor/_archive/goal-fix-review-codex.md",
+    "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md",
+    "docs/refactor/_archive/goal-mechanism-review-codex.md",
+    "docs/refactor/_archive/goal-persistence-redesign-codex.md",
+    "docs/refactor/_archive/goal-stale-activegoal-root-cause-codex.md",
+    "docs/refactor/_archive/view-image-vs-codex-review.md",
+    "docs/review-2026-07-10-goal-judge-v1.md"
+  ]
+}

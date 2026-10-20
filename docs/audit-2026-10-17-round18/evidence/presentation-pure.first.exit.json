@@ -1,0 +1,17 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/web/src/components/model-trace-presentation.test.ts",
+    "docs/audit-2026-10-17-round18/evidence/presentation-focused.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "exitCode": 0,
+  "elapsedSeconds": 0.23,
+  "rawLog": "evidence/presentation-pure.first.raw.log",
+  "firstExecution": true,
+  "savedBeforeInspection": true,
+  "reruns": 0
+}

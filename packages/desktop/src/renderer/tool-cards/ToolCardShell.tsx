@@ -3,6 +3,7 @@ import type { ToolMessage } from "../types";
 import { ChevronRight, ChevronDown } from "../ui/icons";
 import { StatusDot, type Status } from "../ui/StatusDot";
 import { formatDuration } from "./utils";
+import { useAnchoredLayoutChange } from "../chat/TranscriptScrollContext";
 
 interface Props {
   message: ToolMessage;
@@ -37,7 +38,9 @@ export function ToolCardShell({
   turnEpoch,
 }: Props) {
   const [open, setOpen] = React.useState(false);
+  const anchoredChange = useAnchoredLayoutChange();
   const detailsId = React.useId();
+  const hasDetails = Boolean(details || message.summary);
   const previousEpochRef = React.useRef(turnEpoch);
   const ranInEpochRef = React.useRef(false);
   const running = message.status === "running";
@@ -64,46 +67,65 @@ export function ToolCardShell({
   const duration = formatDuration(message.durationMs);
   return (
     <div
+      data-tool-card=""
+      data-selected={selected || undefined}
       className={
-        "rounded-lg border text-sm " +
-        (selected ? "border-primary/40 bg-accent/40" : "border-border")
+        "min-w-0 rounded-md border text-xs [overflow-wrap:anywhere] " +
+        (selected
+          ? "border-primary/40 bg-accent/40"
+          : open
+            ? "border-border/50 bg-card"
+            : "border-transparent bg-card hover:border-border/40")
       }
       onClick={() => onSelect?.(message)}
     >
-      <div className="flex items-center">
+      <div className="flex min-w-0 items-center">
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          data-tool-heading=""
+          className="flex min-h-8 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 rounded-md px-2 py-1.5 text-left leading-5 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/60 [&>svg]:shrink-0"
           onClick={(e) => {
             e.stopPropagation();
-            setOpen((o) => !o);
+            if (hasDetails) anchoredChange(e.currentTarget, () => setOpen((o) => !o));
           }}
-          aria-expanded={open}
-          aria-controls={details ? detailsId : undefined}
+          aria-expanded={hasDetails ? open : undefined}
+          aria-controls={hasDetails ? detailsId : undefined}
         >
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           <StatusDot status={status} title={message.status} />
-          <span className="font-medium">{message.toolName}</span>
-          <span className="min-w-0 flex-1 truncate text-muted-foreground">{summary}</span>
-          {headerBadge}
-          {duration && <span className="shrink-0 text-xs text-muted-foreground">{duration}</span>}
-          {message.status === "failed" && (
-            <span className="shrink-0 rounded border border-status-err/40 px-1.5 text-xs text-status-err">
-              error
+          <span className="flex min-w-0 flex-[1_1_5rem] items-center gap-2">
+            <span className="max-w-[42%] shrink-0 truncate font-medium" title={message.toolName}>
+              {message.toolName}
             </span>
-          )}
+            <span className="min-w-0 flex-1 truncate text-muted-foreground [&_code]:text-muted-foreground">
+              {summary}
+            </span>
+          </span>
+          <span className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1.5 text-[10px] leading-4">
+            {headerBadge}
+            {duration && (
+              <span className="shrink-0 tabular-nums text-muted-foreground">{duration}</span>
+            )}
+            {message.status === "failed" && (
+              <span className="shrink-0 rounded bg-status-err/10 px-1 text-status-err">error</span>
+            )}
+          </span>
         </button>
-        {headerAction && <div className="shrink-0 pr-3">{headerAction}</div>}
+        {headerAction && <div className="shrink-0 pr-1">{headerAction}</div>}
       </div>
-      {preview && <div className="border-t border-border px-3 py-2">{preview}</div>}
-      {details && (
-        <div id={detailsId} hidden={!open} className="border-t border-border px-3 py-2">
-          {open ? details : null}
-        </div>
-      )}
-      {message.summary && (
-        <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
-          {message.summary}
+      {preview && <div className="border-t border-border/40 px-2 py-1.5">{preview}</div>}
+      {hasDetails && (
+        <div id={detailsId} hidden={!open} className="border-t border-border/40 px-2 py-2">
+          {open && (
+            <div className="flex min-w-0 flex-col gap-2">
+              {message.summary && (
+                <div data-tool-result-summary="" className="text-xs text-muted-foreground">
+                  {message.summary}
+                </div>
+              )}
+              {details}
+            </div>
+          )}
         </div>
       )}
     </div>

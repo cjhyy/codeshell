@@ -1,0 +1,794 @@
+{
+  "checks": [
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/schemas.ts",
+      "bytes": 6630,
+      "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/types.ts",
+      "bytes": 3237,
+      "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 5601,
+      "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "bytes": 6280,
+      "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "bytes": 3079,
+      "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "bytes": 2011,
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+      "bytes": 26214,
+      "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "coverage": "hash-only"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+      "bytes": 20113,
+      "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/cli/commands/builtin/plugin-commands-registration.ts",
+      "bytes": 1289,
+      "sha256": "04a2532a74dbec89d006ed3707fcc300d8fc8a106d2f7f3e7f98a400da7cd31b",
+      "coverage": "hash-only"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installer/uninstall.ts",
+      "bytes": 907,
+      "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "bytes": 9314,
+      "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "bytes": 20235,
+      "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 5601,
+      "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/pluginCatalog.test.ts",
+      "bytes": 5530,
+      "sha256": "ba7383c30272aca56cf9090d375f1c5ec2d17f997dcebfd56bcaeb934e4c321d",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "bytes": 9314,
+      "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installer/types.ts",
+      "bytes": 5106,
+      "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "bytes": 2011,
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/types.ts",
+      "bytes": 3237,
+      "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "bytes": 3010,
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installer/uninstall.ts",
+      "bytes": 907,
+      "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "bytes": 6280,
+      "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/schemas.ts",
+      "bytes": 6630,
+      "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "historicalReportReads",
+      "path": "docs/audit-2026-10-17-round5/profile.md",
+      "bytes": 10402,
+      "sha256": "05f479af313df97df33f391d86d393ad3d851ba1f23615366482ef8d07fe59d4",
+      "coverage": "full-historical-report"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "instructionsCarryForward",
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "instruction-carry-forward"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "collection": "instructionsCarryForward",
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "instruction-carry-forward"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "bytes": 6280,
+      "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 5601,
+      "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installer/uninstall.ts",
+      "bytes": 907,
+      "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+      "coverage": "full"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "coverage": "selected"
+    },
+    {
+      "manifest": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "bytes": 9314,
+      "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "coverage": "selected"
+    }
+  ],
+  "artifactChecks": [
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/adjacent-pins.json",
+      "bytes": 1623,
+      "sha256": "4763f422751d983f07314e36d1b0b1e45258676d49db1659bf28c486b3229d10"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/bridge-pins.json",
+      "bytes": 1217,
+      "sha256": "76636eb3710fbe2422a69503f79246acb10393df4442ffaf29a1e6e9abf7f071"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/decisions.json",
+      "bytes": 3611,
+      "sha256": "b27b0472878b590fd4ec7d787869ee60dd83d60c1da7ddd7862f5c14186185ec"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/finish-checks.json",
+      "bytes": 806839,
+      "sha256": "19ca3626ba16af133e40b3e8b333bae17f39a4b2773590d5a9d74db45eb06a83"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-contexts.json",
+      "bytes": 256585,
+      "sha256": "6e3a54ed850341dd0fe71bbb80a6894bbc444085eec710e59443ab3f346dff68"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-initial-pins.json",
+      "bytes": 708024,
+      "sha256": "85f89fedaa4b1bb10564f1daab7021bf6dc21ddc315fe7bb44b3f495f4e303ea"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-scan.py",
+      "bytes": 5713,
+      "sha256": "9311ed8176058852c2189a3795f5f80d7e07d96a3f5b3a69574989a22a08a0b9"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-selection.json",
+      "bytes": 12945,
+      "sha256": "880e6ba6dcbf65c3d88394d819c8f5d298eb9464a8af28462180baed648da64f"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected.json",
+      "bytes": 2807,
+      "sha256": "71c8fda1b2eeb6c8cfb649753536eb2c26e14672e8139bfccf90c4db5eb23615"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/author-receipt.json",
+      "bytes": 2218,
+      "sha256": "1a16808467fd91f28dcad362af53e43bf1236a025fa7e9b0ed187ce99c60fa0e"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/contexts.json",
+      "bytes": 120837,
+      "sha256": "9c70ddc181da2a32abda5e9d35b37d2f3700cf92edce2188c8565ed6c8e57d22"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/finish-check.first.stderr.txt",
+      "bytes": 138,
+      "sha256": "3382fe5e2ab5ccd334864f1b32dcc6ef5158277809a1cd440c4b5e29da7c353f"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/finish-checks.json",
+      "bytes": 1141439,
+      "sha256": "9b6dabece36b3eceae66fee8a606fd7b6f302272e4c458d730d6560ce32fa53f"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/history.json",
+      "bytes": 814642,
+      "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/initial-pins.json",
+      "bytes": 816583,
+      "sha256": "e25e32e0ab2662a9a7de52b1b16a81174ddfc7bb7994f3386b1eeff55fef0637"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/inventory.raw.txt",
+      "bytes": 203999,
+      "sha256": "95a5abe5da4489d5dbf1dfe7238f8f958debf1efb66b51fc7e2ee5e573112a26"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/metadata-notes.json",
+      "bytes": 2288,
+      "sha256": "015b2a16f19f26200edf4be756a1b7531fcd35d43b75b25c9fd7e017fed8571e"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+      "bytes": 2662,
+      "sha256": "04d4dee31a4edfe4754e831ad1721f8ec9f892780213702fa05a567156bc8ed0"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/scan-history.py",
+      "bytes": 4835,
+      "sha256": "a364b18be227b175125d47ff258051fc5b7b971cebfebcb382248f17a5958c5b"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/selected-contexts.first.stderr.txt",
+      "bytes": 89,
+      "sha256": "d8be94676158da5a77c6c57dfd3bc1368758ffea8a6d5a1dc5f4e5ba0c11fe0d"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/selected-contexts.json",
+      "bytes": 15167,
+      "sha256": "e73769e4920b0f0f7e6f32076754fe66b8962552182c10ad218fc50b31e718d8"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/supplement.json",
+      "bytes": 153184,
+      "sha256": "fb3c809e67c913c20ff04599c275760d4dc3266934d8ac8bfbf4a588c237e4fa"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/validation.json",
+      "bytes": 498,
+      "sha256": "357bf8e19f7b63da5772a0268907b21a248f41292b193ff7131a9ac467e8fd7e"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history.json",
+      "bytes": 5395,
+      "sha256": "8536fc80fbf484978b29d19d6b0fe0e1c2a5e0fef085eb56525fccca09702c6a"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/initial-pins.json",
+      "bytes": 4345,
+      "sha256": "935d493ea3c81ce2266f5f039874b0ad6507b95a29b5a578992cc37bbcac8325"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/locator-first.stderr.txt",
+      "bytes": 105,
+      "sha256": "f304d43b628c7606541ff82fd17cc7983ae089534168747f064574f986719e5b"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/market-list-pin.json",
+      "bytes": 444,
+      "sha256": "7e9e8db8972ba6266fb798350eda96ba0f01221138ec90429f414214541540ca"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/metadata-notes.json",
+      "bytes": 2342,
+      "sha256": "1b795dec5322cab936e789ac356dae95db3fb3f5f97c6d384d783a81cf17d99d"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/packaging-first.stderr.txt",
+      "bytes": 88,
+      "sha256": "2ced987dad4029cab6df102c7a5a71733968fec1c359f021f083bd28c6bbfd02"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "bytes": 4560,
+      "sha256": "7bb614ac0a8b623b976027e287a4dce1487ccf97cc9d2f5b3e72e0ed121c79cf"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "bytes": 23256,
+      "sha256": "26e0bc26af6c24c52b29f515877e6e69357b73bce2d64e3dd88e1397f81d6d2d"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/validation.json",
+      "bytes": 1307,
+      "sha256": "d69703c382d38a5148010a142efc3735ec2f15c4e28356fc17a76bce7d917620"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/admission-path-initial-pins.json",
+      "bytes": 815,
+      "sha256": "305bad9af241472ac00c2f29d3b70e706211a78a65bf0612b7aa2adc2f590ec8"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/classification.json",
+      "bytes": 931,
+      "sha256": "6e71676ba3c13ac74b533579a0eff723fdcc35410f4de4bd169f05fd9e451fb1"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/dispatch-initial-pins.json",
+      "bytes": 706,
+      "sha256": "d4b03f43654289db563d13a333ff60f24aecf4c7797f5f5b16384f7ca1e48467"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/focused-history.json",
+      "bytes": 6910,
+      "sha256": "8bc2021a68a6c82075089c79eb543c22fa04658a4b67be5e626d2196e7bd80fc"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history-decisions.json",
+      "bytes": 2576,
+      "sha256": "e022604e3e8dc638231a00e6520598a837e4f20bfed7294ed0b755bbe684e7d6"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history-delta.json",
+      "bytes": 16332,
+      "sha256": "38b7378452be64c8ece8b656a254589cc56275c5b71af532170dfdacbac54594"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history-method.py",
+      "bytes": 3437,
+      "sha256": "bca3797375d9a548c90422fed8660abba8755d850c79b36282c0fd211763c870"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history.json",
+      "bytes": 717288,
+      "sha256": "8576d62f35c680f16bc9a3ac5f25f4480e28bc85d964e5e0d2d57de67bf20fb2"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/initial-pins.json",
+      "bytes": 3697,
+      "sha256": "b27e808e8ac914ab34f6e820a1c6d97d53c6e4e0a091a23c2ef4ef2ccdb8ce44"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/links-check.json",
+      "bytes": 2557,
+      "sha256": "81a3d17b9ee9049ba6904ea6a5be6aaa1c8186eb9a2006d32533f4435edca69a"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/old-collision-history-late-pin.json",
+      "bytes": 448,
+      "sha256": "2cda7502c0b60e3fc1e58ad6a73fc10f3aa91fcf759f2dcc7a89c170253866cc"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/prior-source-claims.json",
+      "bytes": 191013,
+      "sha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/registry-admission-initial-pins.json",
+      "bytes": 718,
+      "sha256": "4cb60a6e801782d4d29d969b57b9026c61019b2dff7cb51f93f2e624742a83ee"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "bytes": 8075,
+      "sha256": "72e547ef28ed078220f036c67a0a12f046e2cf2babd4f58a7c34190165c14eee"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/scope.json",
+      "bytes": 872,
+      "sha256": "1c3e250f8eb7291cd56925eb7b5b72ea1a7710d85ffe10c8b8e8144b99f9b5c7"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "bytes": 31633,
+      "sha256": "8137cda5638a5581625641f15b1acd10136023df5871c74a6f7814de74f66f67"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/validation.json",
+      "bytes": 1185,
+      "sha256": "0f7f6b4c39846ed564e1d4e134e08877a265dcec216bf3b073d818e4db8d465b"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/writer-type-initial-pins.json",
+      "bytes": 1134,
+      "sha256": "d8c3681850e03df93b02064634eeeb9823a27a28069b3b00f360c50568acdf97"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-root-frontier/decisions.json",
+      "bytes": 2248,
+      "sha256": "c25843bd68330cba304a05db15723750d91f38d057d39222317fe575d3d9cc31"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-root-frontier/initial-pins.json",
+      "bytes": 3258,
+      "sha256": "c7751b25b9dd1dbd77ba631ee86130c7f2099b870d0ce19816d5a8dafe5050bf"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-root-frontier/installed-key-pin.json",
+      "bytes": 403,
+      "sha256": "2f2b13b20a740bce85f3e2529d7fc0ab606355d75d238d6a91579242b0c6cd59"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-root-frontier/metadata-notes.json",
+      "bytes": 329,
+      "sha256": "f43e8f7336084a6662e28971cd4cc460f55dad2445aee3aec0d1d080a49f4576"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-root-frontier/proposal.md",
+      "bytes": 2587,
+      "sha256": "f24005f172238773d7fd28386621a303d3a1beb4894ee4d7e4f190aca7c8a244"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-root-frontier/read-ranges.json",
+      "bytes": 1646,
+      "sha256": "5b190156c837d53ab5d884b9162ef867cd19877f831b790fdd33aad42bab0557"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "bytes": 5647,
+      "sha256": "8f647580230aa2133b52863b9dd94c6c906c2e9f0e4e82265979d61adaca1ba1"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-root-frontier/source-reader.first.exit.json",
+      "bytes": 574,
+      "sha256": "944b3c501288d909d41e0b91918eba92eb4768b888aaf41cd7be76179ece11bb"
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "path": "/tmp/codeshell-audit-round37-root-frontier/validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    }
+  ],
+  "productRuns": 0,
+  "rootAdditionalProductRead": "Own8source694 in separately frozen root-frontier; metadata review adds no further product semantic reading."
+}

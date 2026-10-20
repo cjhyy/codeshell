@@ -1,0 +1,16 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round15/documents.md",
+    "bytes": 4961,
+    "sha256": "5651ef7737a98944ae24e7acff5c7197175f962cbbc6556d155a7157f1e3112f",
+    "pinnedAtUTC": "2026-10-17T20:36:58.464873+00:00",
+    "timing": "before own bounded old MD scope read"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round20/coverage.md",
+    "bytes": 3081,
+    "sha256": "2ec024330f12f4d9afcdb2c6ed33feee65e4ce958206861fb54ddb6b471acfd5",
+    "pinnedAtUTC": "2026-10-17T20:36:58.465741+00:00",
+    "timing": "before own bounded old MD scope read"
+  }
+]

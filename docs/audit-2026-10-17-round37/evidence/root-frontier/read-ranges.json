@@ -1,0 +1,97 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "selectedLineRanges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "lines": 39
+    },
+    {
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "selectedLineRanges": [
+        [
+          1,
+          161
+        ]
+      ],
+      "lines": 161
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "selectedLineRanges": [
+        [
+          1,
+          45
+        ],
+        [
+          93,
+          156
+        ]
+      ],
+      "lines": 109
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "selectedLineRanges": [
+        [
+          1,
+          157
+        ]
+      ],
+      "lines": 157
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "selectedLineRanges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "lines": 30
+    },
+    {
+      "path": "packages/core/src/plugins/installer/uninstall.ts",
+      "selectedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "lines": 19
+    },
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "selectedLineRanges": [
+        [
+          44,
+          65
+        ],
+        [
+          250,
+          275
+        ],
+        [
+          334,
+          448
+        ]
+      ],
+      "lines": 163
+    },
+    {
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "selectedLineRanges": [
+        [
+          250,
+          265
+        ]
+      ],
+      "lines": 16
+    }
+  ],
+  "productRuns": 0
+}

@@ -1,0 +1,29 @@
+{
+  "capturedUTC": "2026-10-17T13:45:09.516831+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "rootContextSupplied": "Root39 in progress, frozen38 included in history; exclude mutable39/future40/41. No Git observation.",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinBeforeThisReviewBodyRead": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinBeforeThisReviewBodyRead": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+      "bytes": 3885,
+      "lineCount": 101,
+      "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "pinBeforeThisReviewBodyRead": true
+    }
+  ]
+}

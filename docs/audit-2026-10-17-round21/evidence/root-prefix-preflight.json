@@ -1,0 +1,18 @@
+{
+  "baseline": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "files": [
+    {
+      "path": "packages/coding/src/git/worktree/slug.ts",
+      "bytes": 2358,
+      "sha256": "83e7df4c69bf669d427fa6c1ec3d7b1e01b50d6df0f2865f1bf215fc012f701b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/root-prefix.test.ts",
+      "bytes": 2119,
+      "sha256": "a0c461f3a6cb64582c7acbe63692a506cc50fbfefeb62273c9c5037340a5dcb0"
+    }
+  ],
+  "zeroRuntimeImports": true,
+  "metadataOnly": true,
+  "scope": "Actual normalize/list functions with ordinary valid string inputs only; no gate/invalid-input/native operations; no dependency resolver guesses."
+}

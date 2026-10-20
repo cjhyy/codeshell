@@ -1,0 +1,32 @@
+{
+  "capturedUTC": "2026-10-17T16:47:54.194354+00:00",
+  "decision": "No explicit canonical current-SHA full claim found. Continue selected ordinary query logic only; not a first-ever-read or unread assertion.",
+  "canonicalSelected": [
+    {
+      "document": "docs/audit-2026-10-17-round18/evidence/presentation-source-manifest.json",
+      "pointer": "/files/11",
+      "scope": "static read 446-460 only; no storage execution",
+      "sha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f"
+    }
+  ],
+  "historicalMD": [
+    "R3 root.md explicitly selective summary/search/classification/sort/paging/retention static reading; no complete claim",
+    "R18 traceapi ordinary query transport reading, not Store implementation",
+    "R49 trace-history explicitly leaves Store sorting/trimming/files unread; filename navigation only"
+  ],
+  "derivedInventory": "R28/R44 unknown/hash inventory is search/navigation metadata, not evidence of no prior reading.",
+  "scopeAliasesChecked": [
+    "coverage",
+    "scope",
+    "readScope",
+    "reviewMode",
+    "inspectionScope",
+    "review",
+    "role",
+    "purpose"
+  ],
+  "machineRowsInspected": 23,
+  "oldCauseContextsActualRead": 10,
+  "allQueriesCap": 100,
+  "noFullDoesNotMeanUnread": true
+}

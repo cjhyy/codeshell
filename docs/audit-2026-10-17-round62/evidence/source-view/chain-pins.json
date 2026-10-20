@@ -1,0 +1,18 @@
+[
+  {
+    "path": "packages/core/src/sources/catalog.ts",
+    "bytes": 9080,
+    "lineCount": 233,
+    "sha256": "7257cd54f1a1fd1ef9c1972429b0dfda284ebc560b022018a43cbc532d2c8142",
+    "pinnedAtUTC": "2026-10-17T20:38:07.868342+00:00",
+    "timing": "before own body/nav; filename-only consumer inventory confirmed"
+  },
+  {
+    "path": "packages/core/src/sources/collection-local.ts",
+    "bytes": 6114,
+    "lineCount": 171,
+    "sha256": "a7168998bd1a689b712fa63139a37ad22eae53bb3419dd7efcdee6ad3a73fb54",
+    "pinnedAtUTC": "2026-10-17T20:38:07.869207+00:00",
+    "timing": "before own body/nav; filename-only consumer inventory confirmed"
+  }
+]

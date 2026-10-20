@@ -1,0 +1,51 @@
+{
+  "role": "Static actual mechanism reader, not runtime verifier",
+  "executions": {
+    "product": 0,
+    "helpers": 0,
+    "imports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "actualTool": 0,
+    "process": 0,
+    "native": 0,
+    "accounts": 0,
+    "models": 0,
+    "network": 0,
+    "UI": 0,
+    "timers": 0,
+    "Git": 0,
+    "realUserData": 0
+  },
+  "scopeTotals": {
+    "semanticFiles": 7,
+    "full": 0,
+    "selected": 7,
+    "productSemanticLines": 1265,
+    "testDeclarationSemanticLines": 61,
+    "semanticLines": 1326,
+    "uniqueDisplayedLinesKnownLowerBound": 1856,
+    "sourceAndInstructionPins": 9,
+    "partialExistingTestDeclarationsRead": 3,
+    "boundedFinalTestTitlesNavigationOnly": 24,
+    "testsExecuted": 0
+  },
+  "history": "Own14 exact hit bytepins + original old cause MD only; Root5676 batch projection tool-jobs29/storage27 allsaved cap100, not own scalar rerun.",
+  "testStatus": "Three existing declarations intent only; fake deferred/throw source not new production counterexample.24final bounded titles navigation, zero tests executed.",
+  "sourceDisplayChunks": [
+    "36b9ef (locator truncated)",
+    "dc6b29",
+    "672b09",
+    "941385 (locator truncated)",
+    "f5d696",
+    "0c36b6",
+    "699490 (combined truncated)",
+    "c8deec",
+    "fb9456",
+    "b4b879",
+    "d32a7d",
+    "825dcb",
+    "2fd616"
+  ],
+  "permissionBoundary": "Actual composition/close mechanisms inspected where needed, but no whole permission/identity/native enforcement certification and no tests or experiments."
+}

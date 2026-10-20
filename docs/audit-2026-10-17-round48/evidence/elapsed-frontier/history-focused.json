@@ -1,0 +1,613 @@
+{
+  "dateUTC": "2026-10-17T15:53:08.156534+00:00",
+  "method": "Same pinned history members, recursive string values and MD text; simple literal/AND, cap30; bounded saved windows only; no product source read. Full hit counts are locator counts, not semantic review.",
+  "queries": {
+    "runstart": {
+      "hits": 1,
+      "cap": 30,
+      "retained": 1
+    },
+    "status-elapsed": {
+      "hits": 3,
+      "cap": 30,
+      "retained": 3
+    },
+    "background-elapsed": {
+      "hits": 31,
+      "cap": 30,
+      "retained": 30
+    },
+    "cost-model": {
+      "hits": 50,
+      "cap": 30,
+      "retained": 30
+    }
+  },
+  "driftDuringFocusedRead": [],
+  "contexts": {
+    "runstart": [
+      {
+        "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+        "locator": "markdown-text",
+        "valueChars": 41393,
+        "contextStart": 28570,
+        "contextEnd": 29920,
+        "text": "\"tool_running\")\n            .map((e) =>\n              e.type === \"assistant_text\" && e.streaming ? { ...e, streaming: false } : e,\n            ),\n        );\n\n        setSessionId(result.sessionId);\n        setTotalTokens(costTracker.getTotalTokens().total);\n        setTotalCost(costTracker.getEstimatedCost());\n\n        const elapsed = Date.now() - runStartRef.current;\n        const turnCost = result.usage\n          ? costTracker.estimateForTokens(\n              model,\n              result.usage.promptTokens,\n              result.usage.completionTokens,\n            )\n          : 0;\n        const parts: string[] = [formatDuration(elapsed)];\n        if (result.usage && result.usage.totalTokens > 0) {\n          parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);\n          if (result.usage.cacheReadTokens) {\n            parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);\n          }\n        }\n        if (turnCost > 0) parts.push(`$${turnCost.toFixed(4)}`);\n        chatStore.update((prev) => [\n          ...prev,\n          entry({ type: \"system\", subtype: \"turn_duration\", text: parts.join(\" · \") }),\n        ]);\n\n        if (result.reason !== \"completed\") {\n          chatStore.update((prev) => [\n            ...prev,\n            entry({ type: \"status\", reason: friendlyReason(result.reason) }),\n          ]);\n  ",
+        "wholeValueIncluded": false
+      }
+    ],
+    "status-elapsed": [
+      {
+        "path": "docs/architecture/11-feature-inventory.md",
+        "locator": "markdown-text",
+        "valueChars": 41296,
+        "contextStart": 37308,
+        "contextEnd": 38658,
+        "text": "`/fullscreen` 或配置启用 |\n| **虚拟滚动消息列表** | 大 transcript 下虚拟化渲染消息 | `packages/tui/src/ui/components/VirtualMessageList.tsx:76`，`packages/tui/src/ui/hooks/useVirtualScroll.ts:142` | 长会话自动使用 |\n| **AgentDock** | 展示正在运行的子代理，限制可见数量并格式化耗时 | `packages/tui/src/ui/components/AgentDock.tsx:34`，`packages/tui/src/ui/components/AgentDock.tsx:200` | 子代理运行时自动出现 |\n| **StatusLine** | 底部状态行展示模型、权限、session、token 等 | `packages/tui/src/ui/components/StatusLine.tsx:36` | REPL 底部自动显示 |\n| **ContextUsageBar** | 上下文 token 使用进度条 | `packages/tui/src/ui/components/ContextUsageBar.tsx:13` | token 接近上限时查看 |\n| **SpinnerWithVerb / Spinner** | 运行中动词化 spinner、耗时和 token 提示 | `packages/tui/src/ui/components/SpinnerWithVerb.tsx:237`，`packages/tui/src/ui/components/Spinner.tsx:20` | agent 思考或工具运行时显示 |\n| **Banner / UpdateBanner / WelcomeTips** | 顶部启动信息、更新提示和欢迎提示 | `packages/tui/src/ui/components/Banner.tsx:42`，`packages/tui/src/ui/components/UpdateBanner.tsx:25`，`packages/tui/src/ui/components/WelcomeTips.tsx:36` | REPL 启动或更新可用时显示 |\n| **消息内容渲染** | Markdown、代码块、错误、限流、上下文限制、thinking 等消息视图 | `packages/tui/src/ui/components/MessageContent.tsx:425`，`packages/tui/src/ui/components/CodeBlock.tsx:16` | transcript 自动渲染 |\n| **工具调用视图** | 展示工具 start/running/result 和嵌套前缀 | `packages/tui/src/ui/components/ToolCall.tsx:42`，`packages/tui/src/ui/components/ToolCall.tsx:98`，`packages/tui/sr",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-18-subagent-dock-revisions.md",
+        "locator": "markdown-text",
+        "valueChars": 36068,
+        "contextStart": 31405,
+        "contextEnd": 32755,
+        "text": " is at `App.tsx:1321-1324`:\n\n```tsx\nconst bottomContent = (\n  <Box flexDirection=\"column\" marginTop={0}>\n    <AgentDock viewMode={viewMode} />\n    <Text dim>{separator}</Text>\n    ...rest of bottom content...\n  </Box>\n);\n```\n\n- [ ] **Step 2: Move `<AgentDock>` to the end and pass `focusedIndex`**\n\nModify the JSX so the dock comes *last*, after the StatusLine `<Box>` (which is the current bottom of the stack — `App.tsx:1570-1586`):\n\n```tsx\nconst bottomContent = (\n  <Box flexDirection=\"column\" marginTop={0}>\n    <Text dim>{separator}</Text>\n\n    {screen === \"transcript\" ? (\n      // ...existing transcript-mode footer/onboarding/...\n    ) : (\n      // ...existing CommandInput etc...\n    )}\n\n    <Text dim>{separator}</Text>\n\n    <Box wrap=\"truncate\">\n      <ModeIndicator mode={permMode} />\n      {screen === \"transcript\" && <Text color=\"ansi:magenta\">{\" TRANSCRIPT \"}</Text>}\n      <Box flexGrow={1} />\n      <StatusLine .../>\n    </Box>\n\n    {/* Dock at the very bottom — below StatusLine. Renders null when\n        no running or recently-finished agents. */}\n    <AgentDock viewMode={viewMode} focusedIndex={dockFocusIdx} />\n  </Box>\n);\n```\n\nConcretely the edit is two-part:\n\n1. Delete the existing `<AgentDock viewMode={viewMode} />` near the top of `bottomContent` (it was the first child, before the separator).\n2. Add `<AgentDock viewMod",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md",
+        "locator": "markdown-text",
+        "valueChars": 17949,
+        "contextStart": 1538,
+        "contextEnd": 2888,
+        "text": "(`CODESHELL_FULLSCREEN=0`, content streams into terminal scrollback) — must work. This is an explicit user requirement and constrains pulse animation choices below.\n\n## 2. Goals (for this revision only)\n\n1. Dock is vertical, one row per running-or-recently-finished sub-agent.\n2. Dock sits at the **bottom of the UI** — below the InputBox, below the StatusLine. Last thing on the screen.\n3. Row format: `[cursor]● [name]   …pad…   [elapsed]`. No tool name, no extra metadata.\n4. Elapsed renders compactly: `23s`, `4m 23s`, `1h 4m 23s`.\n5. Keyboard:\n   - InputBox empty + dock has rows → `↓` moves focus into dock (row 0).\n   - Dock focused → `↑/↓` cycle rows; pressing `↑` on row 0 returns focus to input.\n   - Dock focused → `Enter` opens that agent's transcript (`viewMode = { kind: 'agent', agentId }`).\n   - Dock focused → `Esc` returns focus to input (does not cancel a running query).\n   - `viewMode.kind === 'agent'` → `Esc` returns to main.\n6. Remove `Ctrl-0..5` shortcuts. `↑/↓ + Enter` is the only way to switch.\n7. Finished / failed / cancelled agents linger in the dock for 30 s, then fade out.\n8. Works in both `fullscreen` and `flow` modes without per-mode forks beyond the existing `FullscreenLayout` split.\n\n## 3. Non-Goals (for this revision)\n\n- The full `AgentCallRow` main-thread summary row (parent spec `§6.1`) — out of scope her",
+        "wholeValueIncluded": false
+      }
+    ],
+    "background-elapsed": [
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+        "locator": "/hits/rect_clip_terms/93/context",
+        "valueChars": 1052,
+        "contextStart": 321,
+        "contextEnd": 1052,
+        "text": "/越权指令时仍不能\n导致未完成目标判 `met`。仅靠长度裁剪不能缓解这个问题。\n\n### Nit 1 — 真实 TurnLoop 中缓存键每轮必变，现有 cache-hit 测试没有覆盖生产路径\n\n位置：`packages/core/src/hooks/goal-stop-hook.ts:361-380`、`:518-521`；对应生产输入来自\n`packages/core/src/engine/turn-loop.ts:1023-1030`。\n\n新 key 确实覆盖了渲染后的工具证据、progress、上一轮 gaps、后台任务和分钟桶，不会因这些\n证据改变而误命中。但生产中的下一次 judge 必然至少改变 `turnCount`、`stopRound`、\n`tokensUsed`、`elapsedMs`，而第一次裁决后 `previousVerdict/gaps` 也会改变；因此 stalled\nagent 的连续自然停止几乎不可能命中缓存。切主模型后，这会把原先的省费机制降为测试专用\n行为。\n\n`goal-stop-hook.test.ts:359-367` 的 cache-hit 测试没有提供 runtime context，所以绕开了\n这些必变字段。建议定义哪些 progress 变化会实质改变裁决并做分桶/稳定投影，或明确删除缓存，\n并用完整 TurnLoop 两轮测试锁定期望。\n\n### Nit 2 — 实际图片结果通常绕过“非文本/二进制已省略”标记\n\n位置：`packages/core/src/hooks/goal-stop-hook.ts:171-196`（尤其 `:195`）。\n\n取值顺序是 `error ?? ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+        "locator": "/hits/rect_clip_terms/127/context",
+        "valueChars": 1052,
+        "contextStart": 640,
+        "contextEnd": 1052,
+        "text": "错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务。其他 transport 保持既有协议。\n\n日志提供 server、transport、attempt、stage、elapsedMs、timeoutMs 及受控错误类别；不新增 args/env/URL/stderr 原文。阶段至少区分 ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/history-contexts.json",
+        "locator": "/hits/rename_fields/8/context",
+        "valueChars": 1066,
+        "contextStart": 425,
+        "contextEnd": 1066,
+        "text": "错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务。其他 transport 保持既有协议。\n\n日志提供 server、transport、attempt、stage、elapsedMs、timeoutMs 及受控错误类别；不新增 args/env/URL/stderr 原文。阶段至少区分 spawn、首响应、握手结束，无法得知的子阶段如 npm 内部联网不推断。\n\nconnectRunMcp 返回当次失败快照并写入 ToolContext。engine 将摘要注入该 run 的模型上下文；Skill/工具发现也读取同 scope 的健康状态。每次 run 重建快照，恢复即清空，不跨 workspace 泄露状态。技能说明仍可读，但必须标明关联服务离线，避免教程与运行能力混淆。\n\n部署建议：通过插件自身发行配置固定依赖版本，预安装并使用稳定",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/history-contexts.json",
+        "locator": "/hits/rename_fields/10/context",
+        "valueChars": 1064,
+        "contextStart": 389,
+        "contextEnd": 1064,
+        "text": "错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务。其他 transport 保持既有协议。\n\n日志提供 server、transport、attempt、stage、elapsedMs、timeoutMs 及受控错误类别；不新增 args/env/URL/stderr 原文。阶段至少区分 spawn、首响应、握手结束，无法得知的子阶段如 npm 内部联网不推断。\n\nconnectRunMcp 返回当次失败快照并写入 ToolContext。engine 将摘要注入该 run 的模型上下文；Skill/工具发现也读取同 scope 的健康状态。每次 run 重建快照，恢复即清空，不跨 workspace 泄露状态。技能说明仍可读，但必须标明关联服务离线，避免教程与运行能力混淆。\n\n部署建议：通过插件自身发行配置固定依赖版本，预安装并使用稳定入口；`npx @latest` 存在联网、版本漂移和 cwd 扫描",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/root-history.json",
+        "locator": "/hits/fields/2/context",
+        "valueChars": 647,
+        "contextStart": 235,
+        "contextEnd": 647,
+        "text": "错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务。其他 transport 保持既有协议。\n\n日志提供 server、transport、attempt、stage、elapsedMs、timeoutMs 及受控错误类别；不新增 args/env/URL/stderr 原文。阶段至少区分 ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/root-history.json",
+        "locator": "/hits/fields/3/context",
+        "valueChars": 611,
+        "contextStart": 199,
+        "contextEnd": 611,
+        "text": "错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务。其他 transport 保持既有协议。\n\n日志提供 server、transport、attempt、stage、elapsedMs、timeoutMs 及受控错误类别；不新增 args/env/URL/stderr 原文。阶段至少区分 ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/root-history.json",
+        "locator": "/hits/fields/22/context",
+        "valueChars": 736,
+        "contextStart": 235,
+        "contextEnd": 736,
+        "text": "错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务。其他 transport 保持既有协议。\n\n日志提供 server、transport、attempt、stage、elapsedMs、timeoutMs 及受控错误类别；不新增 args/env/URL/stderr 原文。阶段至少区分 spawn、首响应、握手结束，无法得知的子阶段如 npm 内部联网不推断。\n\nconnectRunMcp 返回当次失败快照并写入 ToolContext。engine 将摘要注入",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/root-history.json",
+        "locator": "/hits/fields/23/context",
+        "valueChars": 734,
+        "contextStart": 199,
+        "contextEnd": 734,
+        "text": "错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务。其他 transport 保持既有协议。\n\n日志提供 server、transport、attempt、stage、elapsedMs、timeoutMs 及受控错误类别；不新增 args/env/URL/stderr 原文。阶段至少区分 spawn、首响应、握手结束，无法得知的子阶段如 npm 内部联网不推断。\n\nconnectRunMcp 返回当次失败快照并写入 ToolContext。engine 将摘要注入该 run 的模型上下文；Skill/工具发现也读取同 scope ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-contexts.json",
+        "locator": "/hits/transcript_contract/100/context",
+        "valueChars": 1066,
+        "contextStart": 0,
+        "contextEnd": 1059,
+        "text": "tween the transcript and the input box, showing the agent. Elapsed time updates every second.\n\n- [ ] **Step 10: Commit**\n\n```bash\ngit add src/ui/components/AgentDock.tsx tests/ui/agent-dock.test.tsx src/ui/App.tsx\ngit commit -m \"feat(ui): AgentDock surfaces background sub-agents with elapsed timer\"\n```\n\n**Phase 4 complete.**\n\n---\n\n## Phase 5 — Per-Agent Transcript + Ctrl-Digit View Switching (P3 part 2, 1.5 day)\n\n### Task 5.1: Add `transcript` field to AsyncAgentEntry\n\n**Files:**\n- Modify: `src/tool-system/builtin/agent-registry.ts`\n- Test: extend `tests/tool-system/agent-registry-subscribe.test.ts` (existing file)\n\n- [ ] **Step 1: Write the failing test**\n\nAppend to `tests/tool-system/agent-registry-subscribe.test.ts`:\n\n```ts\ntest(\"appendToTranscript stores entries on the agent and notifies\", () => {\n  asyncAgentRegistry.reset();\n  asyncAgentRegistry.register({\n    agentId: \"a1\",\n    description: \"x\",\n    status: \"running\",\n    startedAt: Date.now(),\n    abort: () => {},\n  });\n  const cb = mock(() => {});\n  asyncAgentRegistry.subscribe(cb);\n ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-contexts.json",
+        "locator": "/hits/transcript_contract/111/context",
+        "valueChars": 1066,
+        "contextStart": 0,
+        "contextEnd": 1066,
+        "text": "adeAt-past: row disappears.\n\n`tests/ui/agent-call-row.test.tsx`:\n\n10. Running row shows `name · latestTool · elapsed`.\n11. Completed row default `expanded=false` shows summary; `Enter` toggles expanded.\n12. Failed row shows error on expand.\n\n`tests/ui/view-mode.test.tsx`:\n\n13. `viewMode='agent'` switches the `VirtualMessageList` data source to the agent transcript.\n14. `Esc` returns to `viewMode='main'`.\n15. Auto-fallback to main when fadeAt passes while viewing.\n\nManual P3 integration check:\n\n16. Spawn one sync + one background agent. Both appear in dock. Main thread shows an `AgentCallRow` only for the **sync** one (background sub-agents are dock-only; the parent retrieves their result via tools, not the main store — see §5). `↑/↓ Enter` enters either agent's transcript; `Esc` returns. `Ctrl+T` toggles dock.\n\n## 11. Migration / Rollout\n\nSingle PR or feature-flag-gated:\n\n- All existing nested `AgentBlock` rendering inside `VirtualMessageList` is gated off. Existing `AgentBlock*` components remain in place for use *inside* the agent transcript view.\n",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-selected-contexts.json",
+        "locator": "/rows/32/context",
+        "valueChars": 1066,
+        "contextStart": 0,
+        "contextEnd": 1059,
+        "text": "tween the transcript and the input box, showing the agent. Elapsed time updates every second.\n\n- [ ] **Step 10: Commit**\n\n```bash\ngit add src/ui/components/AgentDock.tsx tests/ui/agent-dock.test.tsx src/ui/App.tsx\ngit commit -m \"feat(ui): AgentDock surfaces background sub-agents with elapsed timer\"\n```\n\n**Phase 4 complete.**\n\n---\n\n## Phase 5 — Per-Agent Transcript + Ctrl-Digit View Switching (P3 part 2, 1.5 day)\n\n### Task 5.1: Add `transcript` field to AsyncAgentEntry\n\n**Files:**\n- Modify: `src/tool-system/builtin/agent-registry.ts`\n- Test: extend `tests/tool-system/agent-registry-subscribe.test.ts` (existing file)\n\n- [ ] **Step 1: Write the failing test**\n\nAppend to `tests/tool-system/agent-registry-subscribe.test.ts`:\n\n```ts\ntest(\"appendToTranscript stores entries on the agent and notifies\", () => {\n  asyncAgentRegistry.reset();\n  asyncAgentRegistry.register({\n    agentId: \"a1\",\n    description: \"x\",\n    status: \"running\",\n    startedAt: Date.now(),\n    abort: () => {},\n  });\n  const cb = mock(() => {});\n  asyncAgentRegistry.subscribe(cb);\n ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round42/evidence/transcript-review/history-selected-contexts.json",
+        "locator": "/rows/43/context",
+        "valueChars": 1066,
+        "contextStart": 0,
+        "contextEnd": 1066,
+        "text": "adeAt-past: row disappears.\n\n`tests/ui/agent-call-row.test.tsx`:\n\n10. Running row shows `name · latestTool · elapsed`.\n11. Completed row default `expanded=false` shows summary; `Enter` toggles expanded.\n12. Failed row shows error on expand.\n\n`tests/ui/view-mode.test.tsx`:\n\n13. `viewMode='agent'` switches the `VirtualMessageList` data source to the agent transcript.\n14. `Esc` returns to `viewMode='main'`.\n15. Auto-fallback to main when fadeAt passes while viewing.\n\nManual P3 integration check:\n\n16. Spawn one sync + one background agent. Both appear in dock. Main thread shows an `AgentCallRow` only for the **sync** one (background sub-agents are dock-only; the parent retrieves their result via tools, not the main store — see §5). `↑/↓ Enter` enters either agent's transcript; `Esc` returns. `Ctrl+T` toggles dock.\n\n## 11. Migration / Rollout\n\nSingle PR or feature-flag-gated:\n\n- All existing nested `AgentBlock` rendering inside `VirtualMessageList` is gated off. Existing `AgentBlock*` components remain in place for use *inside* the agent transcript view.\n",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md",
+        "locator": "markdown-text",
+        "valueChars": 18953,
+        "contextStart": 11918,
+        "contextEnd": 13268,
+        "text": "里循环 25 次**（约等于 3 倍的模型调用）——别把 goal 模式宽松的上限泄漏到普通交互会话上。\n\n要分清主次：**无人值守 goal 的真正安全网是 token / 时间预算**（`GoalBudgetTracker`，run 级追踪，在执行工具前查）；`maxStopBlocks` 只在裁判一直挡、且两次挡之间毫无进展时才咬——一个合法地在推进的 goal，每被接受一轮就把这个计数清零。\n\nrun 中途还能扩预算：`applyGoalExtension` 允许加 turns / token / time。这里有个修过的 bug（B1）值得一提：给一个**之前未设上限**的 goal 扩 time 预算时，新上限要从**当前已用量**播种再往上加（`timeBudgetMs ?? elapsedMs`），而不是从 0 播种——否则一个跑了很久的无界 goal，一扩预算就拿到一个低于已用时间的上限，立刻被强制停。这是\"给无限制的东西加限制\"时反复出现的边界陷阱。\n\n---\n\n## 八、Steering：为什么是步间、不打断\n\n![Goal、Steering、预算三套控制流](assets/v2/v2-02-goal-steering-stop-hooks.png)\n\n用户在 agent 干活途中想补一句话，有两种语义，CodeShell 都做了，但要分清：\n\n- **打断重发**（UI 里的\"steer\"按钮的一种用法）：abort 当前轮，开一个新轮。这是真的中断。\n- **步间引导**（本节主角）：**不打断**当前轮，在下一个步边界把消息插进去。\n\n`steer-queue.ts` 是一组对\"每会话一个 `{id, text}` 列表\"的**纯函数**——纯到可以脱离 Engine/TurnLoop 单测。host 在 run 进行中调 `Engine.enqueueSteer(sessionId, text, id)`，循环在每个步边界调 `consumeSteerItems` 把队列里的消息当**普通 user 轮**拼进去——`consumeSteerItems` 一次性把整个列表 drain 出来并清空。\n\n几个细节：\n\n- 每条带一个稳定 `id`，目的有二：一是让随后的 `steer_injected` 事件能和 UI 里显示过的草稿气泡对上（按 `id`），二是让还没被消费的条目能被 `removeSteerItem` **撤回**。\n- `removeSteerItem` 返回 `removed: false` 表示这条**已经被消费了**——已经拼进 run 里了，拿不回来。\n\n为什么是步间而不是真流内插入？因为真正在模型流式输出的中途插一条 user 消息，会破坏正在构造的消息序列（尤其当这一轮有 tool_use 块正在边到边入队时）。步边界是唯一安全的注入点——这也呼应了第六节的不变量。\n\n---\n\n## 九、Streaming Tool Queue：并发跑安全的、串行跑不安全的\n\n`streaming-tool-queue.ts` 解决一个很实际的问题：模型一轮可能调好几个工具，这些工具能不能并发？答案是\"看工具",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/refactor/goal-judge-context-redesign.md",
+        "locator": "markdown-text",
+        "valueChars": 39580,
+        "contextStart": 5164,
+        "contextEnd": 6514,
+        "text": "packages/core/src/engine/turn-loop.ts:1006-1010`；prompt 构造没有使用：`packages/core/src/hooks/goal-stop-hook.ts:254-265` |\n| tokenBudget/timeBudget/maxTurns/maxStopBlocks | **没有** | `GoalConfig` 定义这些字段：`packages/core/src/engine/goal.ts:14-49`；hook 只读取 objective/setAt，prompt 未序列化预算：`packages/core/src/hooks/goal-stop-hook.ts:183-190,223-265` |\n| 已用 tokens、elapsed、剩余额度 | **没有** | tracker 在 TurnLoop 内：`packages/core/src/engine/turn-loop.ts:610-617,934-980`；没有传给 hook |\n| 已完成后台任务的 final result | **没有** | judge listing 只选 running work：`packages/core/src/tool-system/builtin/background-work.ts:36-63`；UI 的 richer listing 才有 finished/status/result：`:66-112` |\n| sessionId | **不进 prompt；只用于运行时查询** | 用于 live goal 和 background lookup：`packages/core/src/hooks/goal-stop-hook.ts:191-218` |\n| abort signal | **不作证据；会透传给 LLM** | 读取并传入：`packages/core/src/hooks/goal-stop-hook.ts:248,285-286` |\n\n因此，memory 中“only finalText”的精确修正是：**judge 输入不是只有 finalText，但除 objective/time/background 外，能证明工作完成的历史和执行证据几乎都缺失。**\n\n另有一个放大问题：`finalText` 只有在当前 response text 为 truthy 时才更新（`packages/core/src/engine/turn-loop.ts:948-951`）。如果最后一次自然停止返回空文本，它可能沿用更早轮次的文本，并仍被 push 后送给 judge（`packages/core/src/engine/turn-loop.ts:983-1009`）。当前 prompt 不标记 `current/empty/stale` provenance，裁判会把旧文本当作最新证据。\n\n### 2.3 judge 实际使用哪个模型\n\n结论：**配置了有效且与主模型身份不同的 `defaults.auxText` 时用独立 aux；否则用主模型 client。**所以",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/refactor/goal-judge-v1-final-review-codex.md",
+        "locator": "markdown-text",
+        "valueChars": 7436,
+        "contextStart": 3647,
+        "contextEnd": 4997,
+        "text": "met:false`。测试最终断言 `continueSession:true`、structured verdict `met:false`、`onMet` 调用 0 次（`goal-stop-hook.test.ts:219-272`）。这会在改回手拼字符串、移除 trust/quotedText 或弱化 system 防护时失败。\n\n结论：Blocker 2 的结构逃逸和同级 verdict 伪造路径已封闭；语义层也有明确的 system trust policy 与对抗回归。\n\n### 3. Nit 1：缓存 — **原 nit 已修；有一个新的 key 编码 nit**\n\n- 新 key 排除了每轮必变的 `turnCount`、`stopRound`、`tokensUsed`、`elapsedMs` 以及各 budget/limit 展示字段；它们仍进入真实 judge prompt，但 system 明确“接近上限不等于完成”。分钟桶保留 deadline 的定期重判。\n- key 保留了真正改变裁决输入的 objective、finalText、后台任务、渲染后工具证据、上一轮 verdict/gaps 和分钟桶（`goal-stop-hook.ts:427-440`）。工具状态、turn、文本、非文本占位均包含在渲染证据中。\n- 完整 TurnLoop 两次自然停止测试证明 turn/token/stopRound 都增长而 final/evidence 不变时，第二轮命中缓存，judge 总调用数严格为 1（`turn-loop-goal-lifecycle.test.ts:300-345`）。\n- 反向测试证明相同 finalText 下工具文本从失败变为全绿会调用 judge 2 次并看到新证据（`goal-stop-hook.test.ts:155-181`）。生产中新增工具结果还带 turn/status，因此正常证据变化不会误命中。\n- 但固定分隔符 join 不是无碰撞编码，见 Finding Nit 1。该边界不推翻原缓存 nit 的修复，但值得后续收口。\n\n### 4. Nit 2：图片/非文本省略标记 — **已修**\n\n- projection 独立扫描 `contentBlocks`；只要任一块不是可保留的文本，就设置 `omittedNonText:true`，不再受 `result` 文本镜像的优先级影响（`goal-stop-hook.ts:216-250`）。渲染时该布尔值总追加 `[非文本/二进制内容已省略]`（`:254-261`）。\n- 三类测试齐全且通过：图片带 result 镜像（`goal-stop-hook.test.ts:275-287`）、纯非文本（`:289-300`）、text+image 混合（`:302-316`）。\n\n### 5. Nit 3：UTF-16 边界 — **已修**\n\n- `codePointLength` 和 `codeUnitIndexAtCodePoint` 负责所有 1600/8000 head/tail 预算与切分（`goal-stop-hook.ts",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/refactor/goal-judge-v1-review-codex.md",
+        "locator": "markdown-text",
+        "valueChars": 6740,
+        "contextStart": 0,
+        "contextEnd": 1243,
+        "text": "# Goal Judge 重构 V1 独立代码审查\n\n审查日期：2026-07-10  \n审查基线：`c3e9020b`  \n审查对象：分支 `feat/goal-judge-context` 中指定 5 个文件的未提交差异  \n结论：**NEEDS-WORK**  \n问题计数：**2 blockers / 3 nits**\n\n## 总结\n\nV1 的主数据流已经接通：TurnLoop 会在自然停止前，把本次 run 最近的工具结果与\nround/turn/token/budget/elapsed 快照通过私有闭包交给内置 judge；prompt 也包含上一轮\ngaps。judge 已从 `auxSummaryClient` 切到 primary `llmClient`，且仍以\n`recordUsage:false` 排除于用户可见 usage/requestCount/cost 统计。新增测试证明“91% 工具\n结果未在 finalText 复述”时，该证据确实会出现在 judge prompt 中。\n\n但当前实现不应直接发布：收集器保存的是完整原始 `ToolResult`，会让敏感明文越过“只供\n当前模型 round 使用”的既有生命周期；同时，新引入的原始工具输出没有作为不可信数据隔离，\n能够对完成裁判做 prompt injection，最终触发 `met:true` 并清除持久 goal。另有缓存实际\n失效、非文本省略标记不可靠及 UTF-16 截断问题。\n\n## Findings\n\n### Blocker 1 — 私有快照保留敏感原文，破坏“只供当前模型 round 使用”的生命周期\n\n位置：`packages/core/src/engine/turn-loop.ts:1164`（尤其 `:1165-1168`）；快照继续被保存于\n`packages/core/src/engine/engine.ts:1941`、`:2056-2058`。\n\n`goalToolResults` 浅拷贝并保留完整 `result`、`contentBlocks`、`displayResult`、\n`transcriptResult`。`sensitive:true` 的原始 `result` 在被主模型消费后，本来会从工作消息中\n红掉，Transcript 也只接收 redacted `transcriptResult`；现在原文仍留在\n`goalToolResults`，并在自然停止时再进入 Engine 的 `goalJudgeContext`。prompt 渲染确实\n隐藏了它，但敏感值可能跨多个 turn 一直驻留到 run 结束，不再符合 `ToolResult` 已有的\n“model-facing value for the current model round only”约束。\n\n字符限制 `12 × 1600 / 总 8000` ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/browser-stop-core-gates-round22.md",
+        "locator": "markdown-text",
+        "valueChars": 8101,
+        "contextStart": 690,
+        "contextEnd": 2040,
+        "text": "通 parent Browser loopback 未将每请求取消传给 Main；这只是需要进一步验证的边界，尚无证据证明正常用户 Stop 后 Main 仍发起了本应阻止的新副作用。不能依据任意 fakeHost await 将其定为 race。\n\n## 正式 Core 路径\n\n1. `packages/core/src/protocol/server.ts:1358` 的 `Methods.Cancel` 进入 `handleCancel()`（`:2433`），委托 `server-run-controls.ts:45` 的 `handleCancelRequest()`。\n2. 未提供 expectedClientMessageId 的普通 session Stop：先 cancelRunStarts（`server-run-controls.ts:92`），再取 managed ChatSession；有效会话在 `:108` 调 `s.cancel()`，`:115` drain pending approvals，`:116` 回 `{ok:true}`。它没有 await ChatSession.settled，也不把此 ACK 定义成 Main 所有动作已终止的 barrier。\n3. 提供 expectedClientMessageId 的 scoped Stop 在 `:75` 只取消当前真正匹配 turn；只在 stopped=true 时 drain pending approvals。`:77` 明确迟到 Stop 不得影响 successor/start reservation/queued closure。不能把 stale Stop 的 stopped=false 当取消失效。\n4. ChatSession.cancel（`chat-session.ts:277`）增 cancellationGeneration、标 cancelledActive、置 cancelledSinceLastTurn、abort 当前 controller、reject queue。`cancelActiveTurn()`（`:302`）同样推进 epoch/abort，但保留无关 queued turns。\n5. Engine.run 的正式 signal 来自 `chat-session.ts:519`；pump 对用户 abort 的异常转换为 aborted_streaming（`:552`），finally 在 `:566` settle，再 `:568` 清 active/controller。**cancel() 本身不会同步清 active；busy 直到实际 pump finally 仍可为 true**（`:311`），不能凭收到 Stop ACK 断言 Engine 已完全 idle。\n6. cancelledSinceLastTurn/cancellationEpoch 的定义在 `:254`、`:264`；新真实 turn 在 `:178` 清 sticky flag。会话可由新用户输入继续、browser pr",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/search-routing-round11.md",
+        "locator": "markdown-text",
+        "valueChars": 18966,
+        "contextStart": 12424,
+        "contextEnd": 13774,
+        "text": "内容” and no incompleteness warning. Narrowing the query or pressing retry does not expand the hard-coded candidate band. The user may conclude a known older conversation lacks the text. Nothing is deleted and unrelated recent search still works.\n- **What truncated already means:** it is not merely “more than 20 matching rows.” The worker sets it on elapsed **time budget** or match cap (`search.ts:94–95`) and on skipped **oversized transcript candidates** (:110–112). Its UI wording is generic incomplete results. The missing candidate-cutoff signal is therefore inconsistent with existing time/coverage semantics, not a request for unbounded scanning or a new feature.\n- **Counterexamples/recovery:** same old transcript is found normally in a two-session catalog, with truncated:false. The test's deterministic expired-deadline control (`budgetMs:-1`, test-only) returns truncated:true and the actual modal displays the existing incomplete-results message. Updating only the older target's mtime moves it into the selected candidate band, and the same unmodified query/content is then found. That filesystem control demonstrates the candidate cutoff cause; it is **not** recommended that users edit transcript files to recover. Practical current workaround is title search or manual opening of known older history; content retry alone cannot find",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/browser-stop-core-gates-round22.md",
+        "locator": "markdown-text",
+        "valueChars": 7987,
+        "contextStart": 576,
+        "contextEnd": 1926,
+        "text": "通 parent Browser loopback 未将每请求取消传给 Main；这只是需要进一步验证的边界，尚无证据证明正常用户 Stop 后 Main 仍发起了本应阻止的新副作用。不能依据任意 fakeHost await 将其定为 race。\n\n## 正式 Core 路径\n\n1. `packages/core/src/protocol/server.ts:1358` 的 `Methods.Cancel` 进入 `handleCancel()`（`:2433`），委托 `server-run-controls.ts:45` 的 `handleCancelRequest()`。\n2. 未提供 expectedClientMessageId 的普通 session Stop：先 cancelRunStarts（`server-run-controls.ts:92`），再取 managed ChatSession；有效会话在 `:108` 调 `s.cancel()`，`:115` drain pending approvals，`:116` 回 `{ok:true}`。它没有 await ChatSession.settled，也不把此 ACK 定义成 Main 所有动作已终止的 barrier。\n3. 提供 expectedClientMessageId 的 scoped Stop 在 `:75` 只取消当前真正匹配 turn；只在 stopped=true 时 drain pending approvals。`:77` 明确迟到 Stop 不得影响 successor/start reservation/queued closure。不能把 stale Stop 的 stopped=false 当取消失效。\n4. ChatSession.cancel（`chat-session.ts:277`）增 cancellationGeneration、标 cancelledActive、置 cancelledSinceLastTurn、abort 当前 controller、reject queue。`cancelActiveTurn()`（`:302`）同样推进 epoch/abort，但保留无关 queued turns。\n5. Engine.run 的正式 signal 来自 `chat-session.ts:519`；pump 对用户 abort 的异常转换为 aborted_streaming（`:552`），finally 在 `:566` settle，再 `:568` 清 active/controller。**cancel() 本身不会同步清 active；busy 直到实际 pump finally 仍可为 true**（`:311`），不能凭收到 Stop ACK 断言 Engine 已完全 idle。\n6. cancelledSinceLastTurn/cancellationEpoch 的定义在 `:254`、`:264`；新真实 turn 在 `:178` 清 sticky flag。会话可由新用户输入继续、browser pr",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/core.md",
+        "locator": "markdown-text",
+        "valueChars": 22084,
+        "contextStart": 14229,
+        "contextEnd": 15579,
+        "text": " token-first, real OpenAI client sends Bearer token-first. Rotate the resolver cache through its public seam to token-fresh; the same SDK client still sends token-first, while a new SDK client sends token-fresh. Captured headers are `[token-first, token-first, token-fresh]`; zero command processes. This tests cache-rotation equivalence, not a real elapsed minute or real token expiry.\n\nImpact: a long running tool loop retaining its model client can begin failing authentication once the externally minted token expires; subsequent requests/retries keep the old key. A new Engine/client can recover. The post-gate accounting fixture now also captures Anthropic x-api-key headers `[token-first, token-first, token-fresh]` under the same cache-rotation control. Thus both SDK clients are dynamically evidenced with injected auth resolution; neither real time expiry nor an external identity provider was exercised. Per-run reuse and creation should be included when explaining the trigger, rather than claiming all future sessions fail.\n\n## Directory ledger (this subagent only)\n\nInventory: `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/docs/review-remaining-2026-10-12/validation/core/core-inventory.json`, enumerating every production `.ts` file by Core source directory. Counts below are production TS / test TS, not s",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-core-report.md",
+        "locator": "markdown-text",
+        "valueChars": 21291,
+        "contextStart": 13522,
+        "contextEnd": 14872,
+        "text": " token-first, real OpenAI client sends Bearer token-first. Rotate the resolver cache through its public seam to token-fresh; the same SDK client still sends token-first, while a new SDK client sends token-fresh. Captured headers are `[token-first, token-first, token-fresh]`; zero command processes. This tests cache-rotation equivalence, not a real elapsed minute or real token expiry.\n\nImpact: a long running tool loop retaining its model client can begin failing authentication once the externally minted token expires; subsequent requests/retries keep the old key. A new Engine/client can recover. The post-gate accounting fixture now also captures Anthropic x-api-key headers `[token-first, token-first, token-fresh]` under the same cache-rotation control. Thus both SDK clients are dynamically evidenced with injected auth resolution; neither real time expiry nor an external identity provider was exercised. Per-run reuse and creation should be included when explaining the trigger, rather than claiming all future sessions fail.\n\n## Directory ledger (this subagent only)\n\nInventory: `/tmp/codeshell-remaining-core-review/core-inventory.json`, enumerating every production `.ts` file by Core source directory. Counts below are production TS / test TS, not statement or branch coverage. “Read” means only the listed entry/lifecycle evidence; it",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md",
+        "locator": "markdown-text",
+        "valueChars": 67183,
+        "contextStart": 49491,
+        "contextEnd": 50841,
+        "text": "ry } from \"../../tool-system/builtin/agent-registry.js\";\n\nconst MAX_VISIBLE = 5;\n\nexport function AgentDock(): React.ReactElement | null {\n  const agents = useSyncExternalStore(\n    asyncAgentRegistry.subscribe,\n    asyncAgentRegistry.getSnapshot,\n  );\n  const running = agents.filter((a) => a.status === \"running\");\n\n  // 1 Hz local tick to refresh elapsed-time text. Only runs while there are\n  // running agents — keeps idle frame writes at zero. forceUpdate via useState\n  // is scoped to AgentDock's reconciler subtree; the rest of the app does not\n  // re-render.\n  const [, tick] = useState(0);\n  useEffect(() => {\n    if (running.length === 0) return;\n    const id = setInterval(() => tick((n) => n + 1), 1000);\n    return () => clearInterval(id);\n  }, [running.length === 0]);\n\n  if (running.length === 0) return null;\n\n  const visible = running.slice(0, MAX_VISIBLE);\n  const overflow = running.length - visible.length;\n  const now = Date.now();\n\n  return (\n    <Box flexDirection=\"row\" gap={1} paddingX={1}>\n      <Text dim>agents:</Text>\n      {visible.map((a, i) => {\n        const elapsedSec = Math.floor((now - a.startedAt) / 1000);\n        return (\n          <Text key={a.agentId} color=\"ansi:cyan\">\n            [{i + 1}] {a.description} {elapsedSec}s\n          </Text>\n        );\n      })}\n      {overflow > 0 && <Text dim>+{overflow",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-18-subagent-dock-followups.md",
+        "locator": "markdown-text",
+        "valueChars": 40585,
+        "contextStart": 10654,
+        "contextEnd": 12004,
+        "text": "d}>\n        {focused ? \">\" : \" \"}\n      </Text>\n      <Text color=\"ansi:magenta\">{\" ◆ \"}</Text>\n      <Text\n        color={focused ? \"ansi:cyanBright\" : active ? \"ansi:magenta\" : undefined}\n        bold={focused}\n      >\n        main\n      </Text>\n    </Box>\n  );\n}\n```\n\nThis row has no `marginTop` (it sits directly under the `agents` label) and no elapsed time.\n\n- [ ] **Step 4: Render `MainDockRow` inside `AgentDock`**\n\nIn the `AgentDock` component's return, find the existing structure:\n\n```tsx\nreturn (\n  <Box flexDirection=\"column\" paddingX={1}>\n    <Text dim>agents</Text>\n    {rows.map((a, i) => (\n      <AgentDockRow ... />\n    ))}\n    {overflow > 0 && <Text dim>{`... +${overflow} more`}</Text>}\n  </Box>\n);\n```\n\nInsert `<MainDockRow>` between the `<Text dim>agents</Text>` label and the agent rows. Keep the agent-row mapping unchanged for now (the keyboard rebase happens in Task 5):\n\n```tsx\nreturn (\n  <Box flexDirection=\"column\" paddingX={1}>\n    <Text dim>agents</Text>\n    <MainDockRow\n      focused={false}\n      active={viewMode.kind === \"main\"}\n    />\n    {rows.map((a, i) => (\n      <AgentDockRow\n        key={a.agentId}\n        entry={a}\n        focused={focusedIndex === i}\n        active={viewMode.kind === \"agent\" && viewMode.agentId === a.agentId}\n        now={now}\n      />\n    ))}\n    {overflow > 0 && <Text dim>{`... +${o",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-18-subagent-dock-revisions.md",
+        "locator": "markdown-text",
+        "valueChars": 36068,
+        "contextStart": 5379,
+        "contextEnd": 6729,
+        "text": "agent-dock.test.tsx` (replace existing cases)\n\n- [ ] **Step 1: Replace `tests/ui/agent-dock.test.tsx` with the new shape's tests**\n\nWrite the file (overwrites the current 75 lines):\n\n```tsx\nimport { test, expect } from \"bun:test\";\nimport React from \"react\";\nimport { mount, plainText, flush } from \"../render-fixtures\";\nimport {\n  AgentDock,\n  formatElapsed,\n  getVisibleAgents,\n} from \"../../src/ui/components/AgentDock.js\";\nimport { asyncAgentRegistry } from \"../../src/tool-system/builtin/agent-registry.js\";\n\nfunction reset() {\n  asyncAgentRegistry.reset();\n}\n\nconst VIEW_MAIN = { kind: \"main\" as const };\n\ntest(\"no agents → dock renders nothing\", async () => {\n  reset();\n  const h = mount(\n    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),\n  );\n  await flush();\n  const out = plainText(h);\n  expect(out).not.toContain(\"agents\");\n  h.unmount();\n});\n\ntest(\"one running agent → row shows name and elapsed, no tool name\", async () => {\n  reset();\n  asyncAgentRegistry.register({\n    agentId: \"abc\",\n    description: \"review module\",\n    status: \"running\",\n    startedAt: Date.now() - 5_000,\n    abort: () => {},\n  });\n  const h = mount(\n    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),\n    { columns: 80 },\n  );\n  await flush();\n  const out = plainText(h);\n  expect(out).toContain(\"rev",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+        "locator": "markdown-text",
+        "valueChars": 41393,
+        "contextStart": 28547,
+        "contextEnd": 29897,
+        "text": "hinking\" && e.type !== \"tool_running\")\n            .map((e) =>\n              e.type === \"assistant_text\" && e.streaming ? { ...e, streaming: false } : e,\n            ),\n        );\n\n        setSessionId(result.sessionId);\n        setTotalTokens(costTracker.getTotalTokens().total);\n        setTotalCost(costTracker.getEstimatedCost());\n\n        const elapsed = Date.now() - runStartRef.current;\n        const turnCost = result.usage\n          ? costTracker.estimateForTokens(\n              model,\n              result.usage.promptTokens,\n              result.usage.completionTokens,\n            )\n          : 0;\n        const parts: string[] = [formatDuration(elapsed)];\n        if (result.usage && result.usage.totalTokens > 0) {\n          parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);\n          if (result.usage.cacheReadTokens) {\n            parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);\n          }\n        }\n        if (turnCost > 0) parts.push(`$${turnCost.toFixed(4)}`);\n        chatStore.update((prev) => [\n          ...prev,\n          entry({ type: \"system\", subtype: \"turn_duration\", text: parts.join(\" · \") }),\n        ]);\n\n        if (result.reason !== \"completed\") {\n          chatStore.update((prev) => [\n            ...prev,\n            entry({ type: \"status\", reason: friendlyReason(result.reaso",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-28-desktop-subagent-isolation.md",
+        "locator": "markdown-text",
+        "valueChars": 36574,
+        "contextStart": 26080,
+        "contextEnd": 27430,
+        "text": "essageView.tsx`**\n\nReplace the entire file `packages/desktop/src/renderer/messages/AgentMessageView.tsx`:\n\n```tsx\nimport React, { useState, memo } from \"react\";\nimport type { AgentMessage } from \"../types\";\nimport { StatusDot } from \"../ui/StatusDot\";\nimport { ToolCard } from \"../tool-cards\";\nimport { Markdown } from \"../Markdown\";\n\nfunction formatElapsed(startedAt: number, endedAt?: number): string {\n  const ms = (endedAt ?? Date.now()) - startedAt;\n  if (ms < 1000) return `${ms}ms`;\n  const s = Math.floor(ms / 1000);\n  if (s < 60) return `${s}s`;\n  const m = Math.floor(s / 60);\n  const rem = s % 60;\n  return rem === 0 ? `${m}m` : `${m}m${rem}s`;\n}\n\nfunction AgentMessageViewImpl({ message }: { message: AgentMessage }) {\n  const [expanded, setExpanded] = useState(false);\n  const status = message.error ? \"err\" : message.done ? \"ok\" : \"running\";\n  const elapsed = formatElapsed(message.startedAt, message.endedAt);\n  const hasBody = message.toolCalls.length > 0 || !!message.text || !!message.error;\n\n  return (\n    <div className=\"msg-row msg-agent\">\n      <div className={`msg-agent-card ${expanded ? \"expanded\" : \"folded\"}`}>\n        <button\n          type=\"button\"\n          className=\"msg-agent-head\"\n          onClick={() => hasBody && setExpanded((v) => !v)}\n          aria-expanded={expanded}\n          disabled={!hasBody}\n        >",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-llm-ui-decoupling-design.md",
+        "locator": "markdown-text",
+        "valueChars": 26154,
+        "contextStart": 19418,
+        "contextEnd": 20768,
+        "text": "  <Text key={a.agentId} color=\"ansi:cyan\">\n          [{i + 1}] {a.description} {Math.floor((Date.now() - a.startedAt) / 1000)}s\n        </Text>\n      ))}\n      {running.length > 5 && <Text dim>... +{running.length - 5} more</Text>}\n    </Box>\n  );\n}\n```\n\nMounted in `FullscreenLayout`'s `bottom` slot, above the input box.\n\n### 9.4 1 Hz Local Timer\n\nElapsed text doesn't auto-refresh. A 1 Hz `setInterval` triggers a **local** `forceUpdate`, scoped to the dock only — does not re-render the app tree:\n\n```tsx\nconst [, tick] = useState(0);\nuseEffect(() => {\n  if (running.length === 0) return;\n  const id = setInterval(() => tick((n) => n + 1), 1000);\n  return () => clearInterval(id);\n}, [running.length > 0]);\n```\n\n### 9.5 Ctrl-Digit View Switching\n\n`Ctrl+1..Ctrl+5` switches the main scroll area between:\n\n- `viewMode = \"main\"` — chatStore main transcript\n- `viewMode = { kind: \"agent\", id: <agentId> }` — agent's own transcript\n\nThis **requires** each background agent to maintain its own transcript. `AsyncAgentEntry` gains:\n\n```ts\ninterface AsyncAgentEntry {\n  // existing fields ...\n  transcript: ChatEntry[]; // append-only, written by subAgentSpawner stream callback\n}\n```\n\n`subAgentSpawner.spawn(...)` writes a copy of its stream events into `entry.transcript` in parallel with the existing final-string return. Existing `AgentBlock` renderi",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-17-subagent-dock-design.md",
+        "locator": "markdown-text",
+        "valueChars": 15893,
+        "contextStart": 7373,
+        "contextEnd": 8723,
+        "text": "e no longer mounted as children of the main `VirtualMessageList` for sub-agent content.\n\n## 6. UI Components\n\n### 6.1 `AgentCallRow` (new, rendered in main `VirtualMessageList`)\n\nOne row per `agent_call` ChatEntry.\n\n```\nRunning:\n  ⏺ general-purpose · Read /foo.ts · 14m\n    │              │   │              │\n    │              │   │              └ elapsed (1 Hz)\n    │              │   └ latestToolName (truncated to fit)\n    │              └ entry.name\n    └ ● cyan pulsing (1 Hz opacity)\n\nCompleted (expanded=false, default):\n  ⏺ general-purpose · ✓ completed · 14m 23s\n                                          ▶ press Enter to expand result\n\nCompleted (expanded=true):\n  ⏺ general-purpose · ✓ completed · 14m 23s\n  ┌─ result ────────────────────────────────┐\n  │ <result text wrapped to viewport width> │\n  └─────────────────────────────────────────┘\n\nFailed (expanded=false):\n  ⏺ general-purpose · ✗ error · 02m 11s     ▶ expand\nFailed (expanded=true):\n  ⏺ general-purpose · ✗ error · 02m 11s\n  ┌─ error ─────────────────────────────────┐\n  │ <error text>                            │\n  └─────────────────────────────────────────┘\n```\n\n`Enter` while a main-store `agent_call` row is the keyboard cursor target toggles `expanded`. (The keyboard cursor target is the existing message-row selection driven by `selectedEntryId`.)\n\n`⏺` is `●` when ",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md",
+        "locator": "markdown-text",
+        "valueChars": 17949,
+        "contextStart": 734,
+        "contextEnd": 2084,
+        "text": "escribes.\n2. Arrow keys are never routed to the dock. `CommandInput.tsx:88-100` unconditionally claims `↑/↓` for input history, so the user has no way to focus the dock with the keyboard.\n3. The dock is placed above the input (parent spec `§6.2`) — the user wants it at the very bottom of the UI instead.\n4. Each row currently shows `[n] description elapsed` on one line. The user does not want the `latestToolName` field from `§6.1`. The row should be `name … elapsed` only.\n5. `Ctrl-0..5` was implemented as the switching mechanism even though parent spec `§3` removed it. The revision drops it for real.\n6. The 30 s linger of completed agents (parent spec `§2.7`) was never implemented; the dock disappears the instant `status !== 'running'`.\n\nBoth render modes — `fullscreen` (alt-screen) and `flow` (`CODESHELL_FULLSCREEN=0`, content streams into terminal scrollback) — must work. This is an explicit user requirement and constrains pulse animation choices below.\n\n## 2. Goals (for this revision only)\n\n1. Dock is vertical, one row per running-or-recently-finished sub-agent.\n2. Dock sits at the **bottom of the UI** — below the InputBox, below the StatusLine. Last thing on the screen.\n3. Row format: `[cursor]● [name]   …pad…   [elapsed]`. No tool name, no extra metadata.\n4. Elapsed renders compactly: `23s`, `4m 23s`, `1h 4m 23s`.\n5. Keyboar",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/todo/pet-work-reliability-design-2026-09-20.md",
+        "locator": "markdown-text",
+        "valueChars": 4246,
+        "contextStart": 1222,
+        "contextEnd": 2572,
+        "text": "错误、权限错误和协议错误立即失败，工具调用尤其写操作不自动重试。每次尝试使用新 client/transport，前次关闭完成后再启动。一个截止时间覆盖握手和 tools/list，发现全部成功后才发布连接/工具，避免部分初始化泄露。取消、scope generation 更替和断连终止重试。共享同 scope 的初始化仅在最后一个使用者取消/释放后终止，首使用者结束不能误杀仍在等待的其他使用者。\n\nstdio 启动必须具备进程树清理能力后才能默认重试，复用项目已有进程组终止机制；协议编码复用 MCP SDK。测试包含 wrapper 派生子进程的退出，防止超时后遗留后台服务。其他 transport 保持既有协议。\n\n日志提供 server、transport、attempt、stage、elapsedMs、timeoutMs 及受控错误类别；不新增 args/env/URL/stderr 原文。阶段至少区分 spawn、首响应、握手结束，无法得知的子阶段如 npm 内部联网不推断。\n\nconnectRunMcp 返回当次失败快照并写入 ToolContext。engine 将摘要注入该 run 的模型上下文；Skill/工具发现也读取同 scope 的健康状态。每次 run 重建快照，恢复即清空，不跨 workspace 泄露状态。技能说明仍可读，但必须标明关联服务离线，避免教程与运行能力混淆。\n\n部署建议：通过插件自身发行配置固定依赖版本，预安装并使用稳定入口；`npx @latest` 存在联网、版本漂移和 cwd 扫描开销。此次只记录建议，不修改用户全局文件。\n\n## 4. 预算耗尽的终态\n\n最后一轮由预算控制强制文本收尾时，即使模型 stop，也返回已有 max_turns 停止原因。正常在预算前完成仍为 completed。检查 Pet/Host 终态投影是否保留 max_turns，而不是把任何 final 文本都当作已达目标。复用已有协议字段，避免增加无必要的终态枚举。\n\n## 5. 图像证据的有界保留\n\n新图像不会在首次请求后立即全部清除。使用独立、确定性的近期图像窗口，同时限制保留请求次数、图像数量和字节数；新图至少有首次呈现机会，旧图按先进先出淘汰。实现默认保留 6 次成功模型响应，历史上限 4 个图像出现位置、8 MiB 编码数据；同一 block 被重复引用也按实际发送次数计入容量。新输入首次请求允许超过历史上限，随后淘汰超额内容。窗口是 run-local，新的用户 run 不自动恢复旧像素。淘汰只影响模型请求上下文，原始 transcript 仍可通过现有 view_image 回读。\n\n占位文案改为“像素已省略，需要时重新加载”，不声称“已处理”；保留历史占位识别兼容。上下文压缩仍可更早淘汰图像，不能把窗口承诺成绝对保存。避免无界多图累计造成请求膨胀。\n\n浏览器通用提示要求：精确 URL、行号、账户或对象标识优先使用结构化/文本证据；截图内容应先转成带来源的记录，核验对象后才写操作。解析/网络错误与业务 HTTP 状态分开；不从记忆补缺失链接，不因查询错误目标的 404 宣布源数据失效。Pet 收尾区分执行者自述与已核",
+        "wholeValueIncluded": false
+      }
+    ],
+    "cost-model": [
+      {
+        "path": "docs/architecture/03-llm-and-model-layer.md",
+        "locator": "markdown-text",
+        "valueChars": 22482,
+        "contextStart": 19039,
+        "contextEnd": 20389,
+        "text": "sage into the process counters and persists reasoning-content blocks before text/tool calls so future turns can echo them (`engine/model-facade.ts:207`, `engine/model-facade.ts:230`). `CostTracker` prices by OpenRouter snapshot, then `MODEL_PRICING`, then `DEFAULT_PRICING`, and subtracts cache read/write tokens from uncached input before billing (`cost-tracker.ts:37`, `cost-tracker.ts:129`).\n\n## 7. Model metadata and sync\n\n`provider-kinds.ts` is the provider-family metadata table: kind name, default base URL, model-list path, protocol, auth header/query, and chat-only filter (`llm/provider-kinds.ts:10`, `llm/provider-kinds.ts:64`). The current families are `openai`, `anthropic`, `deepseek`, `zai`, `xai`, `mistral`, `groq`, `google`, `openrouter`, `ollama`, and `custom` (`llm/provider-kinds.ts:10`). Gemini's model listing intentionally uses a native absolute `/v1beta/models` URL while chat still uses the OpenAI-compatible base URL (`llm/provider-kinds.ts:124`).\n\n`model-fetcher.ts` fetches `/models`, normalizes OpenAI/Ollama/Anthropic/Gemini response shapes, filters non-chat IDs with the provider's `chatFilter`, sorts newest-first, enriches from static per-provider JSON, then fills missing context/output metadata from the bundled OpenRouter snapshot (`llm/model-fetcher.ts:76`, `llm/model-fetcher.ts:117`, `llm/model-fetcher.ts:131`",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/architecture/07-llm-model-layer.md",
+        "locator": "markdown-text",
+        "valueChars": 4978,
+        "contextStart": 3978,
+        "contextEnd": 4978,
+        "text": "\nModel-pool entries are preferred because they carry their own provider credentials. This avoids accidentally running an Arena participant through the active session endpoint when that endpoint cannot serve the participant model.\n\n## Cost and Usage\n\nCost tracking is installed globally in [`src/cli/main.ts`](../../src/cli/main.ts) through [`src/cli/cost-tracker.ts`](../../src/cli/cost-tracker.ts). Engine can persist cost state through the optional `CostStateStore`.\n\nUsage is also used by:\n\n- context bar updates in UI;\n- context manager hybrid token estimation;\n- final session state.\n\n## Extension Notes\n\nWhen adding provider support:\n\n1. Prefer `providerKind` + capability rules if the endpoint is OpenAI-compatible.\n2. Use a new client only if the wire protocol is fundamentally different.\n3. Add schema support in `settings/schema.ts`.\n4. Add provider-kind/capability tests.\n5. Ensure model-pool resolution carries base URL, API key, max output tokens, context tokens, and thinking defaults.\n",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "locator": "markdown-text",
+        "valueChars": 69750,
+        "contextStart": 10616,
+        "contextEnd": 11966,
+        "text": "选**:#1 `context-tools.executeReadFile` 负 limit→`slice` 丢尾 ✅**已修**(`f64e376a`,limit 缺失/NaN→默认 200、≤0→空,+3 测);#2/#3 MCP `listResources`/`readResource` 不转发 abort signal ✅**已修**(`7e36048b`,加 signal 参数转发 SDK client + 工具读 `__signal`,Stop 可提前取消;subagent「永久挂起」夸大——SDK 默认超时本兜底,实为与 callTool 一致性 gap;tsc 验 SDK 签名正确,33 MCP 测回归绿)。范围其余(openai/anthropic JSON.parse·cost-tracker·model-pool·extract-memories·hooks emit)均已妥善守卫。\n> - **bug-scan 第一批(新代码:credentials/model-catalog/cdp/新工具)4 候选三筛**:#1 secretHint ✅修;#2 cdp scroll 负 amount 翻向→**判低价值不修**(自纠正、非安全);#3/#4 **path-traversal 真 gap ✅已修**(`78bf8b9c`+`436a1498`)——`generate-image.referenceImages` + `generate-video.images/image` 读本地文件**未走 pathPolicy**,`../../etc/passwd` 绕过工作区 \"ask\" 门。两部分修:① executor `resolvePathPolicyTargets` 扩支持 **string[] arg**(相对路径按 ctx.cwd 解析、跳 http(s) URL)② 给 GenerateImage/Video 声明 pathPolicy。TDD +2 测,19 回归绿,tsc/build 0。关联记忆 `path_containment_realpath`/`path_permission_system`。\n>\n> **续(G)打包 CLI 运行时冒烟(实跑 tui dist,非单测)**:`code-shell --version`→`0.5.0-rc.2`·`--help`/`run --help` 子命令(run/repl/sessions/arena/runs)全注册与 README 一致·**`run \"say hi\"` 完成一轮真 LLM 对话**(默认 gpt-5.5,cost summary,干净退出,无崩——确认打包 CLI 端到端引擎链路正常 + dist 含本会话 core 改动无回归)·`sessions` 列真实磁盘会话(transcript-reader/FileRunStore.list 对真实语料健壮,顺验了我改的两处)。**B 节 headless 已实测;剩 A 节交互真机 + push 待你。**\n>\n> ---\n>\n> **(以下为前半段 A/B/C,做到第 6 commit",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "locator": "markdown-text",
+        "valueChars": 96025,
+        "contextStart": 22386,
+        "contextEnd": 23736,
+        "text": " / stop reason\n\n- `stream-watchdog.ts`：stream idle timeout watchdog，默认配置可通过 env 启用。\n- `retry.ts`：判断错误是否 retryable。\n- `stop-reason.ts`：stop reason 标准化。\n- `clamp-max-tokens.ts`：根据模型 cap clamp max tokens。\n- `strip-vision.ts`：非 vision 模型历史 image block 处理。\n\n### 8.9 usage/cost 链路\n\nProvider 拿到 usage 后：\n\n1. 调 `recordUsage()`。\n2. `LLMClientBase.onUsage` 被 `cost-tracker.ts` 安装后，会把 usage 送到 `CostTracker.record()`。\n3. `ModelFacade` 同时会更新 `state.ts` 中的全局 token counters：\n   - total input/output\n   - per-model usage\n   - cache read/write\n   - API duration\n\n风险：\n\n- `CostTracker.reset()` 不重置 `_hasUnknownModel`，遇到 unknown model 后 reset 仍可能显示 unknown warning。\n- `state.resetCostState()` 不清 `_modelUsage`，可能导致 total 已归零但 per-model usage 仍有旧数据。\n- `state.setCostStateForRestore()` 只恢复 total input/output，不恢复 per-model/cache/requestCount。\n\n## 9. Tool System 模块：Registry、Executor、Permission、MCP、Guards\n\n`src/tool-system/**` 是工具系统。它把 LLM 发出的 tool call 转成真实执行，并在执行前后插入 schema 校验、hook、guard、权限审批、sandbox、日志等。\n\n### 9.1 ToolRegistry\n\n`registry.ts` 管工具定义和 executor。\n\n构造时：\n\n- 根据 preset/config 选择 builtin tools。\n- 调 `registerBuiltins()` 注册内置工具。\n- 后续可注册 custom tools。\n- MCPManager 也会把 MCP tools 注册进同一个 registry。\n\n`executeTool()` 负责：\n\n- 查找工具。\n- 创建/级联 AbortController。\n- 处理 timeout。\n- 注入 ToolContext。\n- 调用工具实际 executor。\n\n### 9.2 内置工具\n\n`tool-system/builtin/index.ts` 定义 `BUILTIN_",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/core-modules/data.md",
+        "locator": "markdown-text",
+        "valueChars": 6729,
+        "contextStart": 3919,
+        "contextEnd": 5269,
+        "text": "Length > 0 ? m.contextLength : stat.contextLength,\n      maxOutputTokens: m.maxOutputTokens > 0 ? m.maxOutputTokens : stat.maxOutputTokens,\n    };\n  });\n}\n\n// Native providers return bare ids; the OpenRouter snapshot keys on \"<vendor>/<id>\".\nconst hit = findOpenRouterModel(`anthropic/${someBareId}`);\n```\n\nPricing lookup against the snapshot (from `cost-tracker.ts`):\n\n```ts\nimport { findOpenRouterModel } from \"./data/openrouter-models.js\";\n\nconst hit = findOpenRouterModel(model)                  // \"vendor/model\" form\n  ?? findOpenRouterModel(`deepseek/${model}`)           // or probe by bare name\n  ?? findOpenRouterModel(`anthropic/${model}`);\nif (hit && (hit.inputPricePerMillion > 0 || hit.outputPricePerMillion > 0)) {\n  // use hit.inputPricePerMillion / hit.outputPricePerMillion\n}\n```\n\nRefreshing the catalog at runtime (the `/sync-models` slash command):\n\n```ts\nimport { syncOpenRouterCatalog } from \"@codeshell/core\"; // re-exported from index\nconst result = await syncOpenRouterCatalog();\nif (!result.ok) console.error(result.error);\n```\n\n## 注意 / Gotchas\n\n- **JSON is loaded via `createRequire(import.meta.url)`, not `import`.** This module is ESM but reads `.json` through a CJS-style `requireJson`. The `.json` files must sit beside the compiled output in `dist/data/` — `package.json` build / asset copying must include them, other",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/archive/core-risk-signal-index.md",
+        "locator": "markdown-text",
+        "valueChars": 13440,
+        "contextStart": 2230,
+        "contextEnd": 3580,
+        "text": "vice.ts` | `throw new Error`×2 |\n| `cli/agent-server-stdio.ts` | `spawn`×2, `exec`×1, `permissionMode`×2, `TODO`×2, `timeout`×1 |\n| `cli/agent-server-tcp.ts` | `permissionMode`×3 |\n| `cli/graceful-shutdown.ts` | `catch {`×1 |\n| `context/compaction.ts` | `join(`×4 |\n| `context/tool-result-storage.ts` | `catch {`×2, `writeFileSync`×2, `join(`×2 |\n| `cost-tracker.ts` | `join(`×1 |\n| `data/openrouter-sync.ts` | `timeout`×3 |\n| `engine/engine.ts` | `catch {`×8, `writeFileSync`×3, `renameSync`×2, `join(`×7, `spawn`×10, `exec`×9, `bypassPermissions`×4, `acceptEdits`×8, `permissionMode`×24, `TODO`×1, `fire-and-forget`×1, `timeout`×4 |\n| `engine/image-compression.ts` | `catch {`×2 |\n| `engine/image-policy.ts` | `join(`×1 |\n| `engine/parse-task.ts` | `exec`×2 |\n| `engine/patch-orphaned-tools.ts` | `exec`×3 |\n| `engine/session-title.ts` | `catch {`×1 |\n| `engine/streaming-tool-queue.ts` | `exec`×16, `throw new Error`×1 |\n| `engine/tool-summary.ts` | `join(`×1, `exec`×2, `fire-and-forget`×1 |\n| `engine/turn-loop.ts` | `catch {`×2, `join(`×2, `spawn`×1, `exec`×7 |\n| `exceptions.ts` | `exec`×1, `timeout`×3 |\n| `git/utils.ts` | `catch {`×3, `exec`×8, `timeout`×10, `throw new Error`×2 |\n| `git/worktree.ts` | `catch {`×5, `join(`×2, `exec`×9, `timeout`×8, `throw new Error`×3 |\n| `hooks/events.ts` | `spawn`×1, `exec`×6 |\n| `hooks/goal-stop-hook.t",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "locator": "/hits/history_identity/12/context",
+        "valueChars": 424,
+        "contextStart": 0,
+        "contextEnd": 424,
+        "text": "y.ts`：判断错误是否 retryable。\n- `stop-reason.ts`：stop reason 标准化。\n- `clamp-max-tokens.ts`：根据模型 cap clamp max tokens。\n- `strip-vision.ts`：非 vision 模型历史 image block 处理。\n\n### 8.9 usage/cost 链路\n\nProvider 拿到 usage 后：\n\n1. 调 `recordUsage()`。\n2. `LLMClientBase.onUsage` 被 `cost-tracker.ts` 安装后，会把 usage 送到 `CostTracker.record()`。\n3. `ModelFacade` 同时会更新 `state.ts` 中的全局 token counters：\n   - total input/output\n   - per-model usage\n   - cac",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "locator": "/hits/history_identity/48/context",
+        "valueChars": 295,
+        "contextStart": 0,
+        "contextEnd": 295,
+        "text": "`：非 vision 模型历史 image block 处理。\n\n### 8.9 usage/cost 链路\n\nProvider 拿到 usage 后：\n\n1. 调 `recordUsage()`。\n2. `LLMClientBase.onUsage` 被 `cost-tracker.ts` 安装后，会把 usage 送到 `CostTracker.record()`。\n3. `ModelFacade` 同时会更新 `state.ts` 中的全局 token counters：\n   - total input/output\n   - per-model usage\n   - cac",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/149/excerpt",
+        "valueChars": 220729,
+        "contextStart": 24266,
+        "contextEnd": 25616,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/153/excerpt",
+        "valueChars": 220729,
+        "contextStart": 24266,
+        "contextEnd": 25616,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "locator": "/matches/user-display/157/excerpt",
+        "valueChars": 220729,
+        "contextStart": 24266,
+        "contextEnd": 25616,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "locator": "/hits/targets/49/excerpt",
+        "valueChars": 116543,
+        "contextStart": 6333,
+        "contextEnd": 7683,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "locator": "/hits/targets/56/excerpt",
+        "valueChars": 116543,
+        "contextStart": 6333,
+        "contextEnd": 7683,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "locator": "/hits/targets/63/excerpt",
+        "valueChars": 116543,
+        "contextStart": 6333,
+        "contextEnd": 7683,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "locator": "/hits/targets/95/excerpt",
+        "valueChars": 116543,
+        "contextStart": 6333,
+        "contextEnd": 7683,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/17/object/excerpt",
+        "valueChars": 220729,
+        "contextStart": 24266,
+        "contextEnd": 25616,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/21/object/excerpt",
+        "valueChars": 220729,
+        "contextStart": 24266,
+        "contextEnd": 25616,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/25/object/excerpt",
+        "valueChars": 220729,
+        "contextStart": 24266,
+        "contextEnd": 25616,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/50/object/text",
+        "valueChars": 222261,
+        "contextStart": 24551,
+        "contextEnd": 25901,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/54/object/text",
+        "valueChars": 222261,
+        "contextStart": 24551,
+        "contextEnd": 25901,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "locator": "/objects/58/object/text",
+        "valueChars": 222261,
+        "contextStart": 24551,
+        "contextEnd": 25901,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/logs/3/text",
+        "valueChars": 222261,
+        "contextStart": 24551,
+        "contextEnd": 25901,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/settings-navigation/3/text",
+        "valueChars": 222261,
+        "contextStart": 24551,
+        "contextEnd": 25901,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "/hits/sidebar-projection/11/text",
+        "valueChars": 222261,
+        "contextStart": 24551,
+        "contextEnd": 25901,
+        "text": "f well-typed variable (manageAsync)\", \"detail\": \"Lines 322-323 in the manageAsync method have the same issue as lines 223-224 in the manage method. They unnecessarily cast `clearedInfo` which is already properly typed after the null check at line 316.\", \"fix\": \"Remove the type casts and access the properties directly\"}, {\"file\": \"packages/core/src/cost-tracker.ts\", \"line\": \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Race condition in async setInterval callback with overlapping executions\", \"detail\": \"The async callback in setInterval (line 100) can overlap if onExecute",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/providers-targeted-dedup.json",
+        "locator": "/6/match",
+        "valueChars": 460,
+        "contextStart": 51,
+        "contextEnd": 460,
+        "text": "选**:#1 `context-tools.executeReadFile` 负 limit→`slice` 丢尾 ✅**已修**(`f64e376a`,limit 缺失/NaN→默认 200、≤0→空,+3 测);#2/#3 MCP `listResources`/`readResource` 不转发 abort signal ✅**已修**(`7e36048b`,加 signal 参数转发 SDK client + 工具读 `__signal`,Stop 可提前取消;subagent「永久挂起」夸大——SDK 默认超时本兜底,实为与 callTool 一致性 gap;tsc 验 SDK 签名正确,33 MCP 测回归绿)。范围其余(openai/anthropic JSON.parse·cost-tracker·model-pool·extract-memories·hooks emit)均已妥善守卫。",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/cross-review-usage.md",
+        "locator": "markdown-text",
+        "valueChars": 2440,
+        "contextStart": 0,
+        "contextEnd": 1215,
+        "text": "# 用量审查交叉复核\n\n结论：**支持 COST-R9-01 作为 P3 确认项，保持独立、未绑定 CostTracker 公共 API 的限定**。两处来源行号已经由 root 纠正并再次核对；没有剩余阻断问题。本复核仅阅读源码、fixture、首次日志、退出码和结构化记录，没有运行测试、修改产品或执行 Git 写操作。\n\n## 合同、正常输入与因果链\n\n公共 `index.ts:759` 仍导出 CostTracker。`cost-tracker.ts:36–46` 明确写出完整 OpenRouter ID 优先查 snapshot；`model-metadata.ts:103–105` 区分 direct IDs 与完整 OpenRouter IDs。既有 `cost-tracker.test.ts:51–59` 也支持 standalone record 后累计 token/cost 的 API。完整 ID 的支持不是从外部服务或潜在 TODO 推断出来的。\n\n实际实现先用完整 ID 检查 known，再在 `cost-tracker.ts:115` 仅保存 canonical 名称；`:148` 累计时重新按保存的名称定价。冻结 snapshot 的 `google/gemini-4-argon` input/output 正是 2/10；direct metadata 没有 `gemini-4-argon`，短名称补全只尝试 deepseek/openai/anthropic，没有 google，最终命中默认 3/15。因此 fixture 中同样 1M/1M token 的 12→18 差异与源码一致。输入是 API 接受的非负有限整数；1M 用于单位价格算术，不是实际 provider 请求、模型长度验收或外部账单。\n\n新增 fixture 没有替换生产定价函数、改 snapshot、mock 价格或调用 snapshot override。它实际检查 estimate、record、累计 tokens、serialize 的存储模型名、formatCompact、formatSummary 和 restore。首次日志证明 3 个 cost characterization/control tests 与 2 个 token-budget tests 都完成。错误金额被断言为当前行为，所以 pass 不意味着产品修复；报告已明确说明。\n\n## SDK 范围与运行时控制\n\ndirect metadata 的 devstral-medium 对照累计和 estimate 均为 2。真实内存 UsageLedger 对照在绑定后忽略 tracker 自有 records 的累计，再 begin/settle/finish 一个完整 ID receipt，返回 12 和 1 r",
+        "wholeValueIncluded": false
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "locator": "/hits/cost_tracker/0/snippet",
+        "valueChars": 391,
+        "contextStart": 0,
+        "contextEnd": 391,
+        "text": "ontent blocks before text/tool calls so future turns can echo them (`engine/model-facade.ts:207`, `engine/model-facade.ts:230`). `CostTracker` prices by OpenRouter snapshot, then `MODEL_PRICING`, then `DEFAULT_PRICING`, and subtracts cache read/write tokens from uncached input before billing (`cost-tracker.ts:37`, `cost-tracker.ts:129`).\n\n## 7. Model metadata and sync\n\n`provider-kinds.ts`",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "locator": "/hits/cost_tracker/1/snippet",
+        "valueChars": 395,
+        "contextStart": 0,
+        "contextEnd": 395,
+        "text": "napshot, then `MODEL_PRICING`, then `DEFAULT_PRICING`, and subtracts cache read/write tokens from uncached input before billing (`cost-tracker.ts:37`, `cost-tracker.ts:129`).\n\n## 7. Model metadata and sync\n\n`provider-kinds.ts` is the provider-family metadata table: kind name, default base URL, model-list path, protocol, auth header/query, and chat-only filter (`llm/provider-kinds.ts:10`, `llm",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "locator": "/hits/cost_tracker/2/snippet",
+        "valueChars": 395,
+        "contextStart": 0,
+        "contextEnd": 395,
+        "text": "RICING`, then `DEFAULT_PRICING`, and subtracts cache read/write tokens from uncached input before billing (`cost-tracker.ts:37`, `cost-tracker.ts:129`).\n\n## 7. Model metadata and sync\n\n`provider-kinds.ts` is the provider-family metadata table: kind name, default base URL, model-list path, protocol, auth header/query, and chat-only filter (`llm/provider-kinds.ts:10`, `llm/provider-kinds.ts:64`",
+        "wholeValueIncluded": true
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/root-dedup.json",
+        "locator": "/hits/cost_tracker/3/snippet",
+        "valueChars": 395,
+        "contextStart": 0,
+        "contextEnd": 395,
+        "text": "nt model.\n\n## Cost and Usage\n\nCost tracking is installed globally in [`src/cli/main.ts`](../../src/cli/main.ts) through [`src/cli/cost-tracker.ts`](../../src/cli/cost-tracker.ts). Engine can persist cost state through the optional `CostStateStore`.\n\nUsage is also used by:\n\n- context bar updates in UI;\n- context manager hybrid token estimation;\n- final session state.\n\n## Extension Notes\n\nWhen ",
+        "wholeValueIncluded": true
+      }
+    ]
+  }
+}

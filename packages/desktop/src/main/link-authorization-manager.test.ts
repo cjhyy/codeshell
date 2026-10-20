@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CredentialStore, PlaintextCipher } from "@cjhyy/code-shell-core";
 import { createLinkService } from "@cjhyy/code-shell-server/links";
+import type { HostLinkOAuthAdapter } from "@cjhyy/code-shell-server/links";
 import { createNativeLinkAuthorizationManager } from "./link-authorization-manager.js";
 import type {
   NativeLinkAuthorizationInput,
@@ -29,6 +30,7 @@ function fixture(
     ) => NativeLinkAuthorizationWindow | Promise<NativeLinkAuthorizationWindow>;
     now?: () => number;
     onConnected?: () => void | Promise<void>;
+    hostOAuthAdapters?: readonly HostLinkOAuthAdapter[];
   } = {},
 ) {
   const directory = mkdtempSync(join(tmpdir(), "native-link-steps-"));
@@ -36,6 +38,7 @@ function fixture(
   const service = createLinkService({
     store,
     now: options.now,
+    hostOAuthAdapters: options.hostOAuthAdapters,
     remoteLink: () => ({
       issuer: "https://link.example",
       clientId: "client",
@@ -109,6 +112,75 @@ test("native authorization returns pending immediately and status is authoritati
   expect((await f.manager.get(f.context, job.id)).state).toBe("cancelled");
   expect(f.closes).toBe(1);
   expect(f.store.list()).toEqual([]);
+});
+
+test("Host-owned OAuth opens and reopens without binding a second callback listener", async () => {
+  let opened = 0;
+  let signal: AbortSignal | undefined;
+  let credentialId: string | undefined;
+  let complete!: (value: import("@cjhyy/code-shell-core").Credential) => void;
+  const candidate = new Promise<import("@cjhyy/code-shell-core").Credential>((resolve) => {
+    complete = resolve;
+  });
+  const adapter: HostLinkOAuthAdapter = {
+    providerId: "figma",
+    methodId: "mcp",
+    authModeId: "mcp-oauth",
+    label: "Connect MCP",
+    async authorize(request) {
+      credentialId = request.id;
+      signal = request.signal;
+      await request.onAuthorizationUrl(
+        "https://www.figma.com/oauth/mcp?state=fixture",
+        new Date(Date.now() + 600_000).toISOString(),
+      );
+      return candidate;
+    },
+    async openAuthorizationUrl() {
+      opened++;
+    },
+  };
+  const f = fixture({
+    hostOAuthAdapters: [adapter],
+    onConnected: () => {
+      throw new Error("Focus failed");
+    },
+  });
+  const job = await f.manager.start(
+    f.context,
+    randomUUID(),
+    { providerId: "figma", methodId: "mcp", label: "Figma MCP", expectedRevision: null },
+    "mcp-oauth",
+  );
+  expect(opened).toBe(1);
+  expect(f.opened).toBeUndefined();
+  expect(await f.manager.open(f.context, job.id)).toBe(true);
+  expect(opened).toBe(2);
+  complete({
+    id: credentialId!,
+    type: "oauth",
+    label: "Figma MCP",
+    secret: JSON.stringify({
+      accessToken: "fixture-token",
+      tokenType: "Bearer",
+      expiresAt: "2099-01-01T00:00:00Z",
+    }),
+    meta: {
+      linkProvider: "figma",
+      linkConnectionMethod: "mcp",
+      linkExecutionRuntime: "local",
+      linkExecutionBackend: "mcp",
+      linkAuthSource: "mcp-oauth",
+      agentExposable: false,
+      linkCapabilityIds: ["figma.get_metadata"],
+    },
+  });
+  let connected = false;
+  for (let i = 0; i < 100 && !connected; i++)
+    connected = (await f.manager.get(f.context, job.id)).state === "connected";
+  expect(connected).toBe(true);
+  expect(signal?.aborted).toBe(false);
+  expect(await f.manager.open(f.context, job.id)).toBe(false);
 });
 
 const deferred = <T>() => {

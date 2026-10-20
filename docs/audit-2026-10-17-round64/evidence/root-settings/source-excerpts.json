@@ -1,0 +1,970 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/settings/hook-provenance.ts",
+      "bytes": 8082,
+      "sha256": "8dc3451a7f23c3ffbca707adc373746a8289d24bcac9eb68201afbbe14f2cd66",
+      "totalLines": 238,
+      "ranges": [
+        [
+          1,
+          238
+        ]
+      ],
+      "lines": [
+        {
+          "line": 1,
+          "text": "/**"
+        },
+        {
+          "line": 2,
+          "text": " * Host-only custody for opt-in executable Hook origins. These values contain"
+        },
+        {
+          "line": 3,
+          "text": " * file identity, not Settings contents or a review's permission callback."
+        },
+        {
+          "line": 4,
+          "text": " */"
+        },
+        {
+          "line": 5,
+          "text": "import { createHash } from \"node:crypto\";"
+        },
+        {
+          "line": 6,
+          "text": "import {"
+        },
+        {
+          "line": 7,
+          "text": "  closeSync,"
+        },
+        {
+          "line": 8,
+          "text": "  constants,"
+        },
+        {
+          "line": 9,
+          "text": "  fstatSync,"
+        },
+        {
+          "line": 10,
+          "text": "  lstatSync,"
+        },
+        {
+          "line": 11,
+          "text": "  openSync,"
+        },
+        {
+          "line": 12,
+          "text": "  readSync,"
+        },
+        {
+          "line": 13,
+          "text": "  realpathSync,"
+        },
+        {
+          "line": 14,
+          "text": "  type BigIntStats,"
+        },
+        {
+          "line": 15,
+          "text": "} from \"node:fs\";"
+        },
+        {
+          "line": 16,
+          "text": "import { dirname, resolve } from \"node:path\";"
+        },
+        {
+          "line": 17,
+          "text": ""
+        },
+        {
+          "line": 18,
+          "text": "const MAX_SETTINGS_FILE_BYTES = 4 * 1024 * 1024;"
+        },
+        {
+          "line": 19,
+          "text": ""
+        },
+        {
+          "line": 20,
+          "text": "export interface SettingsHookFileIdentity {"
+        },
+        {
+          "line": 21,
+          "text": "  readonly dev: string;"
+        },
+        {
+          "line": 22,
+          "text": "  readonly ino: string;"
+        },
+        {
+          "line": 23,
+          "text": "  readonly mode: string;"
+        },
+        {
+          "line": 24,
+          "text": "  readonly size: string;"
+        },
+        {
+          "line": 25,
+          "text": "  readonly mtimeNs: string;"
+        },
+        {
+          "line": 26,
+          "text": "  readonly ctimeNs: string;"
+        },
+        {
+          "line": 27,
+          "text": "  readonly nlink: string;"
+        },
+        {
+          "line": 28,
+          "text": "}"
+        },
+        {
+          "line": 29,
+          "text": ""
+        },
+        {
+          "line": 30,
+          "text": "export interface SettingsHookParentIdentity {"
+        },
+        {
+          "line": 31,
+          "text": "  readonly path: string;"
+        },
+        {
+          "line": 32,
+          "text": "  readonly dev: string;"
+        },
+        {
+          "line": 33,
+          "text": "  readonly ino: string;"
+        },
+        {
+          "line": 34,
+          "text": "  readonly mode: string;"
+        },
+        {
+          "line": 35,
+          "text": "}"
+        },
+        {
+          "line": 36,
+          "text": ""
+        },
+        {
+          "line": 37,
+          "text": "export interface SettingsHookSourceSnapshot {"
+        },
+        {
+          "line": 38,
+          "text": "  readonly path: string;"
+        },
+        {
+          "line": 39,
+          "text": "  readonly rawSha256: string;"
+        },
+        {
+          "line": 40,
+          "text": "  readonly custody: {"
+        },
+        {
+          "line": 41,
+          "text": "    readonly jsonPath: string;"
+        },
+        {
+          "line": 42,
+          "text": "    readonly file: SettingsHookFileIdentity;"
+        },
+        {
+          "line": 43,
+          "text": "    readonly parents: readonly SettingsHookParentIdentity[];"
+        },
+        {
+          "line": 44,
+          "text": "    readonly precedingCandidates: readonly string[];"
+        },
+        {
+          "line": 45,
+          "text": "  };"
+        },
+        {
+          "line": 46,
+          "text": "}"
+        },
+        {
+          "line": 47,
+          "text": ""
+        },
+        {
+          "line": 48,
+          "text": "export interface SettingsHookOrigin extends SettingsHookSourceSnapshot {"
+        },
+        {
+          "line": 49,
+          "text": "  readonly kind: \"settings\";"
+        },
+        {
+          "line": 50,
+          "text": "  readonly layer: \"managed\" | \"user\" | \"project\" | \"local\";"
+        },
+        {
+          "line": 51,
+          "text": "  readonly sourceLayerIndex: number;"
+        },
+        {
+          "line": 52,
+          "text": "  readonly definitionSha256: string;"
+        },
+        {
+          "line": 53,
+          "text": "}"
+        },
+        {
+          "line": 54,
+          "text": ""
+        },
+        {
+          "line": 55,
+          "text": "function identity(info: BigIntStats): SettingsHookFileIdentity {"
+        },
+        {
+          "line": 56,
+          "text": "  return Object.freeze({"
+        },
+        {
+          "line": 57,
+          "text": "    dev: String(info.dev),"
+        },
+        {
+          "line": 58,
+          "text": "    ino: String(info.ino),"
+        },
+        {
+          "line": 59,
+          "text": "    mode: String(info.mode),"
+        },
+        {
+          "line": 60,
+          "text": "    size: String(info.size),"
+        },
+        {
+          "line": 61,
+          "text": "    mtimeNs: String(info.mtimeNs),"
+        },
+        {
+          "line": 62,
+          "text": "    ctimeNs: String(info.ctimeNs),"
+        },
+        {
+          "line": 63,
+          "text": "    nlink: String(info.nlink),"
+        },
+        {
+          "line": 64,
+          "text": "  });"
+        },
+        {
+          "line": 65,
+          "text": "}"
+        },
+        {
+          "line": 66,
+          "text": ""
+        },
+        {
+          "line": 67,
+          "text": "function equal(a: unknown, b: unknown): boolean {"
+        },
+        {
+          "line": 68,
+          "text": "  return JSON.stringify(a) === JSON.stringify(b);"
+        },
+        {
+          "line": 69,
+          "text": "}"
+        },
+        {
+          "line": 70,
+          "text": ""
+        },
+        {
+          "line": 71,
+          "text": "function parents(path: string): readonly SettingsHookParentIdentity[] {"
+        },
+        {
+          "line": 72,
+          "text": "  const paths: string[] = [];"
+        },
+        {
+          "line": 73,
+          "text": "  for (let current = dirname(path); ; current = dirname(current)) {"
+        },
+        {
+          "line": 74,
+          "text": "    paths.unshift(current);"
+        },
+        {
+          "line": 75,
+          "text": "    if (dirname(current) === current) break;"
+        },
+        {
+          "line": 76,
+          "text": "  }"
+        },
+        {
+          "line": 77,
+          "text": "  return Object.freeze("
+        },
+        {
+          "line": 78,
+          "text": "    paths.map((path) => {"
+        },
+        {
+          "line": 79,
+          "text": "      const info = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 80,
+          "text": "      if (!info.isDirectory() || info.isSymbolicLink()) {"
+        },
+        {
+          "line": 81,
+          "text": "        throw new Error(\"Settings Hook origin traversal is unsafe\");"
+        },
+        {
+          "line": 82,
+          "text": "      }"
+        },
+        {
+          "line": 83,
+          "text": "      return Object.freeze({"
+        },
+        {
+          "line": 84,
+          "text": "        path,"
+        },
+        {
+          "line": 85,
+          "text": "        dev: String(info.dev),"
+        },
+        {
+          "line": 86,
+          "text": "        ino: String(info.ino),"
+        },
+        {
+          "line": 87,
+          "text": "        mode: String(info.mode),"
+        },
+        {
+          "line": 88,
+          "text": "      });"
+        },
+        {
+          "line": 89,
+          "text": "    }),"
+        },
+        {
+          "line": 90,
+          "text": "  );"
+        },
+        {
+          "line": 91,
+          "text": "}"
+        },
+        {
+          "line": 92,
+          "text": ""
+        },
+        {
+          "line": 93,
+          "text": "function absent(path: string): boolean {"
+        },
+        {
+          "line": 94,
+          "text": "  try {"
+        },
+        {
+          "line": 95,
+          "text": "    lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 96,
+          "text": "    return false;"
+        },
+        {
+          "line": 97,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 98,
+          "text": "    if ((error as NodeJS.ErrnoException).code === \"ENOENT\") return true;"
+        },
+        {
+          "line": 99,
+          "text": "    throw error;"
+        },
+        {
+          "line": 100,
+          "text": "  }"
+        },
+        {
+          "line": 101,
+          "text": "}"
+        },
+        {
+          "line": 102,
+          "text": ""
+        },
+        {
+          "line": 103,
+          "text": "function assertRegular(info: BigIntStats): void {"
+        },
+        {
+          "line": 104,
+          "text": "  if ("
+        },
+        {
+          "line": 105,
+          "text": "    !info.isFile() ||"
+        },
+        {
+          "line": 106,
+          "text": "    info.isSymbolicLink() ||"
+        },
+        {
+          "line": 107,
+          "text": "    info.nlink !== 1n ||"
+        },
+        {
+          "line": 108,
+          "text": "    info.size < 0n ||"
+        },
+        {
+          "line": 109,
+          "text": "    info.size > BigInt(MAX_SETTINGS_FILE_BYTES)"
+        },
+        {
+          "line": 110,
+          "text": "  ) {"
+        },
+        {
+          "line": 111,
+          "text": "    throw new Error(\"Settings Hook origin is not a bounded single-link regular file\");"
+        },
+        {
+          "line": 112,
+          "text": "  }"
+        },
+        {
+          "line": 113,
+          "text": "}"
+        },
+        {
+          "line": 114,
+          "text": ""
+        },
+        {
+          "line": 115,
+          "text": "/**"
+        },
+        {
+          "line": 116,
+          "text": " * Hash and fatal UTF-8 decode the same bounded descriptor Buffer. Ancestor"
+        },
+        {
+          "line": 117,
+          "text": " * checks are metadata custody checks, not an atomic directory-fd walk or an"
+        },
+        {
+          "line": 118,
+          "text": " * assertion that transient hostile ancestor ABA changes are impossible."
+        },
+        {
+          "line": 119,
+          "text": " */"
+        },
+        {
+          "line": 120,
+          "text": "export function readSettingsHookSnapshot(jsonPath: string): {"
+        },
+        {
+          "line": 121,
+          "text": "  readonly content: string;"
+        },
+        {
+          "line": 122,
+          "text": "  readonly source: SettingsHookSourceSnapshot;"
+        },
+        {
+          "line": 123,
+          "text": "} {"
+        },
+        {
+          "line": 124,
+          "text": "  const canonicalJsonPath = resolve(jsonPath);"
+        },
+        {
+          "line": 125,
+          "text": "  const parentPins = parents(canonicalJsonPath);"
+        },
+        {
+          "line": 126,
+          "text": "  const base = canonicalJsonPath.replace(/\\.json$/, \"\");"
+        },
+        {
+          "line": 127,
+          "text": "  const precedingCandidates: string[] = [];"
+        },
+        {
+          "line": 128,
+          "text": "  let selected: string | undefined;"
+        },
+        {
+          "line": 129,
+          "text": "  for (const candidate of [canonicalJsonPath, `${base}.yaml`, `${base}.yml`]) {"
+        },
+        {
+          "line": 130,
+          "text": "    if (absent(candidate)) precedingCandidates.push(candidate);"
+        },
+        {
+          "line": 131,
+          "text": "    else {"
+        },
+        {
+          "line": 132,
+          "text": "      selected = candidate;"
+        },
+        {
+          "line": 133,
+          "text": "      break;"
+        },
+        {
+          "line": 134,
+          "text": "    }"
+        },
+        {
+          "line": 135,
+          "text": "  }"
+        },
+        {
+          "line": 136,
+          "text": "  if (!selected) throw new Error(\"Settings Hook origin is absent\");"
+        },
+        {
+          "line": 137,
+          "text": "  const path = selected;"
+        },
+        {
+          "line": 138,
+          "text": "  const opening = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 139,
+          "text": "  assertRegular(opening);"
+        },
+        {
+          "line": 140,
+          "text": "  if (realpathSync(path) !== path) throw new Error(\"Settings Hook origin is not canonical\");"
+        },
+        {
+          "line": 141,
+          "text": "  let fd: number | undefined;"
+        },
+        {
+          "line": 142,
+          "text": "  try {"
+        },
+        {
+          "line": 143,
+          "text": "    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);"
+        },
+        {
+          "line": 144,
+          "text": "    const descriptor = fstatSync(fd, { bigint: true });"
+        },
+        {
+          "line": 145,
+          "text": "    assertRegular(descriptor);"
+        },
+        {
+          "line": 146,
+          "text": "    const file = identity(opening);"
+        },
+        {
+          "line": 147,
+          "text": "    if (!equal(file, identity(descriptor))) throw new Error(\"Settings Hook origin changed at open\");"
+        },
+        {
+          "line": 148,
+          "text": "    // One extra byte proves growth beyond the opening length while retaining"
+        },
+        {
+          "line": 149,
+          "text": "    // the global hard bound; tiny settings do not allocate 4 MiB per recheck."
+        },
+        {
+          "line": 150,
+          "text": "    const buffer = Buffer.allocUnsafe(Number(opening.size) + 1);"
+        },
+        {
+          "line": 151,
+          "text": "    let length = 0;"
+        },
+        {
+          "line": 152,
+          "text": "    while (length < buffer.length) {"
+        },
+        {
+          "line": 153,
+          "text": "      const count = readSync(fd, buffer, length, buffer.length - length, null);"
+        },
+        {
+          "line": 154,
+          "text": "      if (count === 0) break;"
+        },
+        {
+          "line": 155,
+          "text": "      length += count;"
+        },
+        {
+          "line": 156,
+          "text": "    }"
+        },
+        {
+          "line": 157,
+          "text": "    const finalDescriptor = fstatSync(fd, { bigint: true });"
+        },
+        {
+          "line": 158,
+          "text": "    const finalPath = lstatSync(path, { bigint: true });"
+        },
+        {
+          "line": 159,
+          "text": "    assertRegular(finalDescriptor);"
+        },
+        {
+          "line": 160,
+          "text": "    assertRegular(finalPath);"
+        },
+        {
+          "line": 161,
+          "text": "    if ("
+        },
+        {
+          "line": 162,
+          "text": "      length > MAX_SETTINGS_FILE_BYTES ||"
+        },
+        {
+          "line": 163,
+          "text": "      BigInt(length) !== opening.size ||"
+        },
+        {
+          "line": 164,
+          "text": "      !equal(file, identity(finalDescriptor)) ||"
+        },
+        {
+          "line": 165,
+          "text": "      !equal(file, identity(finalPath)) ||"
+        },
+        {
+          "line": 166,
+          "text": "      !equal(parentPins, parents(path)) ||"
+        },
+        {
+          "line": 167,
+          "text": "      precedingCandidates.some((candidate) => !absent(candidate)) ||"
+        },
+        {
+          "line": 168,
+          "text": "      realpathSync(path) !== path"
+        },
+        {
+          "line": 169,
+          "text": "    ) {"
+        },
+        {
+          "line": 170,
+          "text": "      throw new Error(\"Settings Hook origin changed during capture\");"
+        },
+        {
+          "line": 171,
+          "text": "    }"
+        },
+        {
+          "line": 172,
+          "text": "    const bytes = buffer.subarray(0, length);"
+        },
+        {
+          "line": 173,
+          "text": "    const rawSha256 = createHash(\"sha256\").update(bytes).digest(\"hex\");"
+        },
+        {
+          "line": 174,
+          "text": "    // Do not label a replacement-decoded UTF-8 string as the raw byte hash."
+        },
+        {
+          "line": 175,
+          "text": "    // Preserve U+FEFF exactly as readFileSync(..., \"utf8\"): JSON.parse must"
+        },
+        {
+          "line": 176,
+          "text": "    // continue rejecting BOM-prefixed JSON; YAML keeps its existing parser."
+        },
+        {
+          "line": 177,
+          "text": "    const content = new TextDecoder(\"utf-8\", { fatal: true, ignoreBOM: true }).decode(bytes);"
+        },
+        {
+          "line": 178,
+          "text": "    const source: SettingsHookSourceSnapshot = Object.freeze({"
+        },
+        {
+          "line": 179,
+          "text": "      path,"
+        },
+        {
+          "line": 180,
+          "text": "      rawSha256,"
+        },
+        {
+          "line": 181,
+          "text": "      custody: Object.freeze({"
+        },
+        {
+          "line": 182,
+          "text": "        jsonPath: canonicalJsonPath,"
+        },
+        {
+          "line": 183,
+          "text": "        file,"
+        },
+        {
+          "line": 184,
+          "text": "        parents: parentPins,"
+        },
+        {
+          "line": 185,
+          "text": "        precedingCandidates: Object.freeze(precedingCandidates),"
+        },
+        {
+          "line": 186,
+          "text": "      }),"
+        },
+        {
+          "line": 187,
+          "text": "    });"
+        },
+        {
+          "line": 188,
+          "text": "    return Object.freeze({ content, source });"
+        },
+        {
+          "line": 189,
+          "text": "  } finally {"
+        },
+        {
+          "line": 190,
+          "text": "    if (fd !== undefined) closeSync(fd);"
+        },
+        {
+          "line": 191,
+          "text": "  }"
+        },
+        {
+          "line": 192,
+          "text": "}"
+        },
+        {
+          "line": 193,
+          "text": ""
+        },
+        {
+          "line": 194,
+          "text": "/** No manager, owner, grant, AbortSignal or resource resolver is retained. */"
+        },
+        {
+          "line": 195,
+          "text": "export function assertSettingsHookOriginCurrent(origin: SettingsHookOrigin): void {"
+        },
+        {
+          "line": 196,
+          "text": "  const current = readSettingsHookSnapshot(origin.custody.jsonPath).source;"
+        },
+        {
+          "line": 197,
+          "text": "  if ("
+        },
+        {
+          "line": 198,
+          "text": "    current.path !== origin.path ||"
+        },
+        {
+          "line": 199,
+          "text": "    current.rawSha256 !== origin.rawSha256 ||"
+        },
+        {
+          "line": 200,
+          "text": "    !equal(current.custody, origin.custody)"
+        },
+        {
+          "line": 201,
+          "text": "  ) {"
+        },
+        {
+          "line": 202,
+          "text": "    throw new Error(\"Settings Hook origin custody changed\");"
+        },
+        {
+          "line": 203,
+          "text": "  }"
+        },
+        {
+          "line": 204,
+          "text": "}"
+        },
+        {
+          "line": 205,
+          "text": ""
+        },
+        {
+          "line": 206,
+          "text": "/**"
+        },
+        {
+          "line": 207,
+          "text": " * A previously byte-verified immutable source keeps its full file identity."
+        },
+        {
+          "line": 208,
+          "text": " * Recheck all custody facts without rehashing the same Settings for every"
+        },
+        {
+          "line": 209,
+          "text": " * mapped resource. Current-review policy loads still read/hash fresh RAW bytes."
+        },
+        {
+          "line": 210,
+          "text": " */"
+        },
+        {
+          "line": 211,
+          "text": "export function assertSettingsHookOriginMetadataCurrent(origin: SettingsHookOrigin): void {"
+        },
+        {
+          "line": 212,
+          "text": "  const current = lstatSync(origin.path, { bigint: true });"
+        },
+        {
+          "line": 213,
+          "text": "  assertRegular(current);"
+        },
+        {
+          "line": 214,
+          "text": "  if ("
+        },
+        {
+          "line": 215,
+          "text": "    !equal(identity(current), origin.custody.file) ||"
+        },
+        {
+          "line": 216,
+          "text": "    !equal(parents(origin.path), origin.custody.parents) ||"
+        },
+        {
+          "line": 217,
+          "text": "    origin.custody.precedingCandidates.some((candidate) => !absent(candidate)) ||"
+        },
+        {
+          "line": 218,
+          "text": "    realpathSync(origin.path) !== origin.path"
+        },
+        {
+          "line": 219,
+          "text": "  )"
+        },
+        {
+          "line": 220,
+          "text": "    throw new Error(\"Settings Hook origin custody changed\");"
+        },
+        {
+          "line": 221,
+          "text": "}"
+        },
+        {
+          "line": 222,
+          "text": ""
+        },
+        {
+          "line": 223,
+          "text": "/** Stable digest of a validated Hook definition, independent of JSON key order. */"
+        },
+        {
+          "line": 224,
+          "text": "export function settingsHookDefinitionSha256(hook: unknown): string {"
+        },
+        {
+          "line": 225,
+          "text": "  function ordered(value: unknown): unknown {"
+        },
+        {
+          "line": 226,
+          "text": "    if (Array.isArray(value)) return value.map(ordered);"
+        },
+        {
+          "line": 227,
+          "text": "    if (!value || typeof value !== \"object\") return value;"
+        },
+        {
+          "line": 228,
+          "text": "    return Object.fromEntries("
+        },
+        {
+          "line": 229,
+          "text": "      Object.entries(value as Record<string, unknown>)"
+        },
+        {
+          "line": 230,
+          "text": "        .filter(([, child]) => child !== undefined)"
+        },
+        {
+          "line": 231,
+          "text": "        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))"
+        },
+        {
+          "line": 232,
+          "text": "        .map(([key, child]) => [key, ordered(child)]),"
+        },
+        {
+          "line": 233,
+          "text": "    );"
+        },
+        {
+          "line": 234,
+          "text": "  }"
+        },
+        {
+          "line": 235,
+          "text": "  return createHash(\"sha256\")"
+        },
+        {
+          "line": 236,
+          "text": "    .update(JSON.stringify(ordered(hook)))"
+        },
+        {
+          "line": 237,
+          "text": "    .digest(\"hex\");"
+        },
+        {
+          "line": 238,
+          "text": "}"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "atUTC": "2026-10-17T17:53:46.040588+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "displayedLineRanges": [
+        [
+          19,
+          60
+        ],
+        [
+          82,
+          160
+        ],
+        [
+          178,
+          263
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 19,
+          "end": 60,
+          "text": "19: import { Box, Text } from \"../../render/index.js\";\n20: import {\n21:   TOOL_DOT_COLORS,\n22:   formatToolArgs,\n23:   singleLine,\n24:   formatBytes,\n25:   MAX_LINE_WIDTH,\n26:   classifyBashLines,\n27: } from \"@cjhyy/code-shell-core/internal\";\n28: import { truncate } from \"../truncate.js\";\n29: import { DiffLine, classifyDiffLine } from \"./DiffLine.js\";\n30: \n31: /** Max visible output lines in collapsed mode (matches CC's MAX_LINES_TO_SHOW). */\n32: const COLLAPSED_LINES = 3;\n33: \n34: // ─── ToolCallStart ──────────────────────────────────────────────────\n35: \n36: interface ToolCallStartProps {\n37:   toolName: string;\n38:   args: Record<string, unknown>;\n39:   nested?: boolean;\n40: }\n41: \n42: export function ToolCallStart({ toolName, args, nested }: ToolCallStartProps) {\n43:   const argsStr = formatToolArgs(toolName, args);\n44:   const dotColor = TOOL_DOT_COLORS[toolName] ?? \"ansi:cyan\";\n45:   const ml = nested ? 3 : 0;\n46: \n47:   // Top-level tool blocks get a blank line above them so back-to-back tool\n48:   // calls don't visually fuse into one wall (matches Claude Code's spacing).\n49:   // Nested (under Agent) stays tight because the agent block already groups.\n50:   return (\n51:     <Box marginLeft={ml} marginTop={nested ? 0 : 1}>\n52:       <Text color={dotColor}>{\"  ●\"}</Text>\n53:       <Text bold> {toolName}</Text>\n54:       <Text dim>\n55:         {\"  \"}\n56:         {argsStr}\n57:       </Text>\n58:     </Box>\n59:   );\n60: }"
+        },
+        {
+          "start": 82,
+          "end": 160,
+          "text": "82: interface ToolCallResultProps {\n83:   toolName: string;\n84:   result?: string;\n85:   error?: string;\n86:   nested?: boolean;\n87:   /** When true, show full output instead of collapsed preview. */\n88:   expanded?: boolean;\n89:   /**\n90:    * When true, render as a single dim line — used for transient\n91:    * \"this attempt failed and was retried\" cases (e.g. a tool's\n92:    * fail-fast parameter check) so the feed isn't swamped with scary\n93:    * red error cards for what was just a parameter fix-up.\n94:    */\n95:   compact?: boolean;\n96: }\n97: \n98: export function ToolCallResult({\n99:   toolName,\n100:   result,\n101:   error,\n102:   nested,\n103:   expanded: forceExpand,\n104:   compact,\n105: }: ToolCallResultProps) {\n106:   const [localExpanded, setLocalExpanded] = useState(false);\n107:   const expanded = forceExpand || localExpanded;\n108:   const ml = nested ? 3 : 0;\n109: \n110:   if (compact) {\n111:     const summary = singleLine(result ?? error ?? \"\");\n112:     return (\n113:       <Box marginLeft={ml}>\n114:         <Text dim>\n115:           {\"  · \"}\n116:           {toolName}\n117:           {\" retried — \"}\n118:           {truncate(summary, 90)}\n119:         </Text>\n120:       </Box>\n121:     );\n122:   }\n123: \n124:   if (error) {\n125:     return (\n126:       <Box marginLeft={ml}>\n127:         <Text color=\"ansi:red\">{\"  ✗ \"}</Text>\n128:         <Text dim>{toolName} </Text>\n129:         <Text color=\"ansi:red\">{truncate(singleLine(error), 72)}</Text>\n130:       </Box>\n131:     );\n132:   }\n133: \n134:   const content = result ?? \"\";\n135:   if (!content) {\n136:     return (\n137:       <Box marginLeft={ml}>\n138:         <Text color=\"ansi:green\">{\"  ✓ \"}</Text>\n139:         <Text dim>{toolName}</Text>\n140:       </Box>\n141:     );\n142:   }\n143: \n144:   // Tool-specific rendering\n145:   const rendered = renderToolOutput(toolName, content, expanded);\n146: \n147:   return (\n148:     <Box flexDirection=\"column\" marginLeft={ml}>\n149:       <Box>\n150:         <Text color=\"ansi:green\">{\"  ✓ \"}</Text>\n151:         <Text dim>{toolName}</Text>\n152:         {rendered.summary ? <Text dim> {rendered.summary}</Text> : null}\n153:       </Box>\n154:       {rendered.lines.length > 0 && (\n155:         <Box flexDirection=\"column\">\n156:           {rendered.lines.map((line, i) => (\n157:             <DiffOrPlainRow key={i} line={clampLine(line)} isError={rendered.errorLines?.[i]} />\n158:           ))}\n159:           {rendered.hiddenCount > 0 && (\n160:             <Box>"
+        },
+        {
+          "start": 178,
+          "end": 263,
+          "text": "178: interface RenderedOutput {\n179:   summary: string;\n180:   lines: string[];\n181:   hiddenCount: number;\n182:   /**\n183:    * Optional per-line error flag, index-aligned with `lines`. Set only by the\n184:    * Bash branch (A1): the `STDERR:` section and `Exit code:` / `Killed by\n185:    * signal:` status lines render in the error color without altering the text.\n186:    */\n187:   errorLines?: boolean[];\n188: }\n189: \n190: /**\n191:  * Strip <system-reminder>…</system-reminder> blocks from tool output before\n192:  * rendering. The InvestigationGuard prepends these to nudge the LLM mid-loop;\n193:  * they're context for the model, not status for the user.\n194:  */\n195: function stripSystemReminders(content: string): string {\n196:   return content.replace(/<system-reminder>[\\s\\S]*?<\\/system-reminder>\\s*/g, \"\");\n197: }\n198: \n199: function renderToolOutput(toolName: string, content: string, expanded: boolean): RenderedOutput {\n200:   content = stripSystemReminders(content);\n201:   const rawLines = content.split(\"\\n\");\n202:   const totalLines = rawLines.length;\n203: \n204:   switch (toolName) {\n205:     case \"Read\": {\n206:       // Read: show summary only (no preview lines)\n207:       return {\n208:         summary: `${totalLines} lines, ${formatBytes(content.length)}`,\n209:         lines: [],\n210:         hiddenCount: 0,\n211:       };\n212:     }\n213: \n214:     case \"Write\": {\n215:       // Write returns the raw file content. Show only the first-line summary\n216:       // when collapsed; the rest of the body isn't useful inline — the user\n217:       // can re-read the file if they need it.\n218:       const summary = singleLine(rawLines[0] ?? \"\").slice(0, 80);\n219:       return { summary, lines: [], hiddenCount: 0 };\n220:     }\n221: \n222:     case \"Edit\": {\n223:       // Edit tool returns \"Successfully edited <file>\\n<diff>\" where the\n224:       // diff is a `  - …` / `  + …` block (see edit.ts generateCompactDiff).\n225:       // Show the summary collapsed; expose the full diff in expanded /\n226:       // transcript mode so additions/removals get DiffColoredLine treatment.\n227:       const [summaryLine, ...rest] = rawLines;\n228:       const summary = singleLine(summaryLine ?? \"\").slice(0, 80);\n229:       const diffLines = rest.filter((l) => l.length > 0);\n230:       if (expanded) {\n231:         return { summary, lines: diffLines, hiddenCount: 0 };\n232:       }\n233:       if (diffLines.length === 0) {\n234:         return { summary, lines: [], hiddenCount: 0 };\n235:       }\n236:       const previewCount = Math.min(diffLines.length, COLLAPSED_LINES);\n237:       return {\n238:         summary,\n239:         lines: diffLines.slice(0, previewCount),\n240:         hiddenCount: Math.max(0, diffLines.length - previewCount),\n241:       };\n242:     }\n243: \n244:     case \"Glob\": {\n245:       // Strip the \"N files matched:\" header glob.ts emits so the count is accurate.\n246:       const files = rawLines\n247:         .filter((l) => l.trim())\n248:         .filter((l) => !/^\\d+\\s+files?\\s+matched/i.test(l));\n249:       const count = files.length;\n250:       if (expanded) {\n251:         return { summary: `${count} files`, lines: files, hiddenCount: 0 };\n252:       }\n253:       // Few results: show them inline — making the user ctrl+o for a 2-file\n254:       // match was a regression. Many results: summary + first N + \"+M lines\".\n255:       if (count <= COLLAPSED_LINES) {\n256:         return { summary: `${count} files`, lines: files, hiddenCount: 0 };\n257:       }\n258:       return {\n259:         summary: `${count} files`,\n260:         lines: files.slice(0, COLLAPSED_LINES),\n261:         hiddenCount: count - COLLAPSED_LINES,\n262:       };\n263:     }"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.ts",
+      "displayedLineRanges": [
+        [
+          1,
+          37
+        ],
+        [
+          82,
+          120
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1,
+          "end": 37,
+          "text": "1: /**\n2:  * Built-in Glob file search tool.\n3:  */\n4: \n5: import { Glob } from \"glob\";\n6: import { stat } from \"node:fs/promises\";\n7: import * as path from \"node:path\";\n8: import type { ToolDefinition } from \"../../types.js\";\n9: import type { ToolContext } from \"../context.js\";\n10: import { classifyPath } from \"../path-policy.js\";\n11: import type { ToolFailure } from \"./index.js\";\n12: \n13: export const globToolDef: ToolDefinition = {\n14:   name: \"Glob\",\n15:   description:\n16:     \"Fast file pattern matching. Returns matching file paths sorted by modification time. \" +\n17:     'Supports patterns like \"**/*.ts\" or \"src/**/*.tsx\". ' +\n18:     \"Use this to discover project structure before reading specific files.\",\n19:   inputSchema: {\n20:     type: \"object\",\n21:     properties: {\n22:       pattern: { type: \"string\", description: \"Glob pattern to match files against\" },\n23:       path: { type: \"string\", description: \"Directory to search in (default: cwd)\" },\n24:     },\n25:     required: [\"pattern\"],\n26:   },\n27: };\n28: \n29: export async function globTool(\n30:   args: Record<string, unknown>,\n31:   ctx?: ToolContext,\n32: ): Promise<string | ToolFailure> {\n33:   const pattern = args.pattern as string;\n34:   if (!pattern) return \"Error: pattern is required\";\n35: \n36:   // A4: resolve search root against ctx.cwd. Relative args.path is\n37:   // resolved against ctx.cwd; absolute args.path is used as-is."
+        },
+        {
+          "start": 82,
+          "end": 120,
+          "text": "82:     });\n83: \n84:     if (matches.length === 0) {\n85:       return \"No files matched the pattern.\";\n86:     }\n87: \n88:     // Get file stats for sorting and display\n89:     const withStats = await Promise.all(\n90:       matches.slice(0, 200).map(async (filePath) => {\n91:         try {\n92:           const s = await stat(filePath);\n93:           return { path: filePath, size: s.size, mtime: s.mtimeMs };\n94:         } catch {\n95:           return { path: filePath, size: 0, mtime: 0 };\n96:         }\n97:       }),\n98:     );\n99: \n100:     // Sort by modification time (newest first)\n101:     withStats.sort((a, b) => b.mtime - a.mtime);\n102: \n103:     // Format with relative paths and sizes\n104:     const cwdPrefix = cwd.endsWith(\"/\") ? cwd : cwd + \"/\";\n105:     const lines = withStats.map((f) => {\n106:       const rel = f.path.startsWith(cwdPrefix) ? f.path.slice(cwdPrefix.length) : f.path;\n107:       const sizeStr = f.size < 1024 ? `${f.size}B` : `${Math.round(f.size / 1024)}KB`;\n108:       return `${rel}  (${sizeStr})`;\n109:     });\n110: \n111:     let result = lines.join(\"\\n\");\n112:     if (matches.length > 200) {\n113:       result += `\\n\\n... and ${matches.length - 200} more files (${matches.length} total)`;\n114:     } else {\n115:       result = `${matches.length} files matched:\\n${result}`;\n116:     }\n117:     return result;\n118:   } catch (err) {\n119:     return { ok: false, error: `Error in glob: ${(err as Error).message}` };\n120:   }"
+        }
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "displayedLineRanges": [
+        [
+          1,
+          38
+        ],
+        [
+          54,
+          74
+        ],
+        [
+          138,
+          163
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1,
+          "end": 38,
+          "text": "1: /**\n2:  * Output renderers for different formats.\n3:  */\n4: \n5: import chalk from \"chalk\";\n6: import type { StreamEvent, TerminalReason } from \"@cjhyy/code-shell-core\";\n7: import {\n8:   formatToolArgs,\n9:   singleLine,\n10:   formatBytes,\n11: } from \"@cjhyy/code-shell-core/internal\";\n12: import { truncate } from \"../../ui/truncate.js\";\n13: \n14: export type OutputFormat = \"text\" | \"json\" | \"jsonl\" | \"stream-json\";\n15: \n16: export interface OutputRenderer {\n17:   onEvent(event: StreamEvent): void;\n18:   onComplete(text: string, reason: TerminalReason, meta: Record<string, unknown>): void;\n19: }\n20: \n21: export class TextRenderer implements OutputRenderer {\n22:   private activeAgents = new Set<string>();\n23: \n24:   onEvent(event: StreamEvent): void {\n25:     const agentId = (event as any).agentId as string | undefined;\n26:     const indent = agentId ? \"    \" : \"\";\n27:     const prefix = agentId ? chalk.dim(\"│ \") : \"\";\n28: \n29:     switch (event.type) {\n30:       case \"text_delta\":\n31:         // Only show main agent text in headless mode\n32:         if (!agentId) {\n33:           process.stdout.write(event.text);\n34:         }\n35:         break;\n36: \n37:       case \"agent_start\": {\n38:         const ev = event as any;"
+        },
+        {
+          "start": 54,
+          "end": 74,
+          "text": "54:         break;\n55:       }\n56: \n57:       case \"tool_use_start\": {\n58:         const tc = event.toolCall;\n59:         const argsStr = formatToolArgs(tc.toolName, tc.args);\n60:         process.stderr.write(`${indent}${prefix}${chalk.cyan(\"●\")} ${chalk.bold(tc.toolName)} ${chalk.dim(argsStr)}\\n`);\n61:         break;\n62:       }\n63: \n64:       case \"tool_result\": {\n65:         const r = event.result;\n66:         if (r.error) {\n67:           process.stderr.write(`${indent}${prefix}${chalk.red(\"✗\")} ${chalk.bold(r.toolName)} ${chalk.red(truncate(singleLine(r.error), 80))}\\n`);\n68:         } else {\n69:           const content = r.result ?? \"\";\n70:           const summary = compactSummary(r.toolName, content);\n71:           process.stderr.write(`${indent}${prefix}${chalk.green(\"✓\")} ${chalk.bold(r.toolName)} ${chalk.dim(summary)}\\n`);\n72:         }\n73:         break;\n74:       }"
+        },
+        {
+          "start": 138,
+          "end": 163,
+          "text": "138: function compactSummary(toolName: string, content: string): string {\n139:   const lines = content.split(\"\\n\");\n140:   const total = lines.length;\n141: \n142:   switch (toolName) {\n143:     case \"Read\":\n144:       return `${total} lines, ${formatBytes(content.length)}`;\n145:     case \"Glob\":\n146:       return `${lines.filter((l) => l.trim()).length} files`;\n147:     case \"Grep\":\n148:       return `${lines.filter((l) => l.trim()).length} matches`;\n149:     case \"Write\":\n150:     case \"Edit\":\n151:       return truncate(singleLine(content), 60);\n152:     case \"Bash\": {\n153:       if (total <= 1) return truncate(singleLine(content), 80);\n154:       const preview = truncate(lines[0], 60);\n155:       return `${preview} (+${total - 1} lines)`;\n156:     }\n157:     case \"view_image\":\n158:       return extractViewImagePath(content) ?? truncate(content, 80);\n159:     default:\n160:       if (total <= 1) return truncate(content, 80);\n161:       return `${truncate(lines[0], 60)} (+${total - 1} lines)`;\n162:   }\n163: }"
+        }
+      ]
+    }
+  ],
+  "captureAfterActualDisplay": true,
+  "metadataCaptureCorrection": "renderer end163 matches initial pin and actual sed output, first failure retained."
+}

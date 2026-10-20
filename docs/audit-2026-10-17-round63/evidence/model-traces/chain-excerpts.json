@@ -1,0 +1,62 @@
+[
+  {
+    "path": "packages/core/src/model-traces/context.ts",
+    "range": [
+      199,
+      240
+    ],
+    "text": "function persist(call: TraceCall, immediate = false): void {\n  const write = () => {\n    call.timer = undefined;\n    try {\n      estimateRecord(call.record);\n      const settings = call.store.getConfig();\n      if (\n        settings.enabled &&\n        (!call.context.ephemeral || ephemeralAllowed(call.initialConfig, settings))\n      )\n        call.store.write(call.record);\n    } catch {\n      /* Trace IO must never fail, retry, delay, or authorize a model call. */\n    }\n  };\n  if (immediate) {\n    clearTimeout(call.timer);\n    write();\n  } else if (!call.timer) {\n    call.timer = setTimeout(write, 200);\n    call.timer.unref?.();\n  }\n}\nfunction capture<T>(\n  call: TraceCall,\n  value: T,\n  allowed = canCapture(call),\n): { value?: T; state: ModelTraceRecord[\"inputState\"] } {\n  if (!allowed) return { state: \"not-recorded\" };\n  try {\n    const safe = sanitizeTraceValue(value, call.redactions);\n    return { value: safe.value, state: safe.state };\n  } catch {\n    return { state: \"not-recorded\" };\n  }\n}\nfunction settleOutput(\n  target: Pick<ModelTraceRecord, \"output\" | \"outputState\">,\n  captured: { value?: ModelTraceOutput; state: ModelTraceRecord[\"outputState\"] },\n): void {\n  if (captured.value !== undefined) {\n    target.output = captured.value;\n",
+    "bytes": 1259,
+    "sha256": "966ac24cee6af981adf7824022af22d07e72713b24fcff10bbe762dde17aa47b"
+  },
+  {
+    "path": "packages/core/src/model-traces/context.ts",
+    "range": [
+      740,
+      775
+    ],
+    "text": "      id,\n      traceId,\n      runId,\n      sessionId: input.sessionId ?? attributed.sessionId,\n      workspacePath: input.workspacePath ?? context.workspacePath,\n      inputState: \"not-recorded\",\n      outputState: \"not-recorded\",\n    };\n    if (!event.parentId && event.kind === \"tool\") {\n      const toolCallId = (input.input as { toolCallId?: unknown } | undefined)?.toolCallId;\n      if (typeof toolCallId === \"string\") {\n        const parent = toolParents.get(\n          toolParentKey(target.store, traceId, event.sessionId, toolCallId),\n        );\n        if (parent && Date.now() - parent.at < 86_400_000) event.parentId = parent.parentId;\n      }\n    }\n    delete event.input;\n    delete event.output;\n    if (allowed) {\n      if (input.input !== undefined && input.inputState !== \"not-recorded\") {\n        const safe = sanitizeTraceValue(input.input);\n        event.input = safe.value;\n        event.inputState = input.inputState ?? safe.state;\n      }\n      if (input.output !== undefined && input.outputState !== \"not-recorded\") {\n        const safe = sanitizeTraceValue(input.output);\n        event.output = safe.value;\n        event.outputState = input.outputState ?? safe.state;\n      }\n      if (event.error) event.error = String(sanitizeTraceValue(event.error).value).slice(0, 4096);\n    } else {\n      if (sameScope) {\n        event.input = previous.input;\n        event.inputState =\n          input.input !== undefined && previous.input !== undefined\n",
+    "bytes": 1470,
+    "sha256": "d8f254275d1617486e41fa0279760ba73e23b80ef76da3172c1ec500a4e165fe"
+  },
+  {
+    "path": "packages/core/src/model-traces/native-process.ts",
+    "range": [
+      1,
+      80
+    ],
+    "text": "import { StringDecoder } from \"node:string_decoder\";\nimport { createNativeModelTraceFrameDecoder } from \"./native-frames.js\";\nimport type { TokenUsage } from \"../types.js\";\nimport type { ExternalModelTraceInput, ModelTraceContext, ModelTraceRecord } from \"./types.js\";\n\nfunction validUsage(value: TokenUsage | undefined): value is TokenUsage {\n  return (\n    !!value &&\n    [\n      value.promptTokens,\n      value.completionTokens,\n      value.totalTokens,\n      value.cacheReadTokens ?? 0,\n      value.cacheCreationTokens ?? 0,\n    ].every((count) => Number.isSafeInteger(count) && count >= 0)\n  );\n}\n\n/** Bounded, write-only inference observations; the launcher supplies every scope field. */\nexport function createNativeModelTraceChannel(options: {\n  context: ModelTraceContext;\n  source: string;\n  record(input: ExternalModelTraceInput): ModelTraceRecord | null;\n}) {\n  const context = options.context;\n  const active = new Map<string, ExternalModelTraceInput | null>();\n  const seen = new Set<string>();\n  const decoder = new StringDecoder(\"utf8\");\n  const frames = createNativeModelTraceFrameDecoder();\n  let pending = \"\",\n    bytes = 0,\n    closed = false;\n  const settle = (key: string, message: Record<string, any>) => {\n    const initial = active.get(key);\n    if (!active.has(key)) return;\n    active.delete(key);\n    if (!initial) return;\n    const raw = message.output;\n    const output =\n      raw && typeof raw === \"object\" && !Array.isArray(raw)\n        ? {\n            ...(typeof raw.text === \"string\" ? { text: raw.text } : {}),\n            ...(typeof raw.thinking === \"string\" ? { thinking: raw.thinking } : {}),\n            ...(typeof raw.stopReason === \"string\" ? { stopReason: raw.stopReason } : {}),\n            ...(Array.isArray(raw.toolCalls) ? { toolCalls: raw.toolCalls } : {}),\n            ...(Object.hasOwn(raw, \"data\") ? { data: raw.data } : {}),\n          }\n        : undefined;\n    options.record({\n      ...initial,\n      endedAt: Date.now(),\n      status: message.status,\n      output,\n      outputState: message.outputState,\n      error: typeof message.error === \"string\" ? message.error : undefined,\n      usage: validUsage(message.usage) ? message.usage : undefined,\n    });\n  };\n  const accept = (message: any) => {\n    if (\n      !message ||\n      message.version !== 1 ||\n      message.type !== \"model_trace\" ||\n      typeof message.callId !== \"string\" ||\n      !/^[A-Za-z0-9_-]{1,128}$/.test(message.callId)\n    )\n      return;\n    const allowed =\n      message.phase === \"start\"\n        ? [\n            \"version\",\n            \"type\",\n            \"phase\",\n            \"callId\",\n            \"provider\",\n            \"model\",\n            \"purpose\",\n            \"input\",\n            \"inputState\",\n            \"stream\",\n",
+    "bytes": 2756,
+    "sha256": "a090c4e7694bb34a989fa94fc5565ccea59539e5f65e21c8d2f1727059f82732"
+  },
+  {
+    "path": "packages/core/src/model-traces/native-process.ts",
+    "range": [
+      140,
+      163
+    ],
+    "text": "          tools: input.tools ?? [],\n          parameters: input.parameters ?? {},\n        },\n        inputState: message.inputState === \"truncated\" ? \"truncated\" : undefined,\n      };\n      const record = options.record(initial);\n      active.set(message.callId, record ? { ...initial, id: record.id, input: undefined } : null);\n    } else if (\n      message.phase === \"finish\" &&\n      [\"completed\", \"failed\", \"cancelled\"].includes(message.status)\n    ) {\n      if (message.outputState !== undefined && message.outputState !== \"truncated\") return;\n      settle(message.callId, message);\n    }\n  };\n  const finish = (status: \"completed\" | \"failed\" | \"cancelled\" = \"cancelled\") => {\n    if (closed) return;\n    closed = true;\n    for (const key of active.keys())\n      settle(key, { status, error: \"Native model process ended before reporting a result\" });\n    pending = \"\";\n    frames.clear();\n  };\n  return {\n",
+    "bytes": 910,
+    "sha256": "14ff16ce23cb50c6690a5df92d018edecd5ce20a9efff45bdecfee5cb2c57720"
+  },
+  {
+    "path": "packages/core/src/model-traces/types.ts",
+    "range": [
+      1,
+      5
+    ],
+    "text": "import type { TokenUsage } from \"../types.js\";\nimport type { UsageReceipt } from \"../cost-ledger/types.js\";\n\nexport type ModelTraceContentState = \"recorded\" | \"not-recorded\" | \"truncated\" | \"redacted\";\nexport type ModelTraceStatus = \"running\" | \"completed\" | \"failed\" | \"cancelled\";\n",
+    "bytes": 283,
+    "sha256": "83716fa3d3d10865e75e211700cb6cf56cb66c642cc9240fbd89f1855a07cf1c"
+  },
+  {
+    "path": "packages/core/src/model-traces/native-frames.test.ts",
+    "range": [
+      1,
+      60
+    ],
+    "text": "import { expect, test } from \"bun:test\";\nimport { randomUUID } from \"node:crypto\";\nimport { createNativeModelTraceFrameDecoder } from \"./native-frames.js\";\n\nfunction fragments(message: unknown, messageId = randomUUID()) {\n  const bytes = Buffer.from(JSON.stringify(message));\n  const lines: string[] = [];\n  for (let offset = 0, part = 0; offset < bytes.length; offset += 192, part++)\n    lines.push(\n      JSON.stringify({\n        version: 1,\n        type: \"model_trace_chunk\",\n        messageId,\n        part,\n        data: bytes.subarray(offset, offset + 192).toString(\"base64\"),\n        final: offset + 192 >= bytes.length,\n      }),\n    );\n  return lines;\n}\nconst message = (index: number) => ({\n  version: 1,\n  type: \"model_trace\",\n  phase: \"start\",\n  callId: `call-${index}`,\n  provider: \"fixture\",\n  model: \"fixture\",\n  input: { messages: [{ role: \"user\", content: `${index}实际输入` + \"长\".repeat(30_000) }] },\n});\n\ntest(\"legacy frames pass unchanged and concurrent UTF8 fragments preserve every message identity\", () => {\n  const decoder = createNativeModelTraceFrameDecoder();\n  const direct = JSON.stringify({ version: 1, type: \"model_trace\", phase: \"finish\" });\n  expect(decoder.read(direct)).toBe(direct);\n  const original = Array.from({ length: 16 }, (_, index) => message(index));\n  const all = original.map((value) => fragments(value));\n  const result: unknown[] = [];\n  for (let part = 0; part < Math.max(...all.map((lines) => lines.length)); part++)\n    for (const lines of all) {\n      if (!lines[part]) continue;\n      expect(Buffer.byteLength(lines[part]!) + 1).toBeLessThanOrEqual(512);\n      const decoded = decoder.read(lines[part]!);\n      if (decoded !== undefined) result.push(JSON.parse(decoded));\n    }\n  expect(result).toEqual(original);\n});\n\ntest(\"malformed, reordered, repeated, noncanonical and oversized physical chunks are rejected\", () => {\n  const first = JSON.parse(fragments(message(1))[0]!);\n  for (const update of [\n    { version: 2 },\n    { messageId: \"untrusted\" },\n    { part: -1 },\n    { part: 0.5 },\n    { part: 1 },\n    { data: \"YQ\" },\n    { data: \"YR==\" },\n    { data: \"YQ==$\" },\n    { data: \"\" },\n    { data: Buffer.alloc(193).toString(\"base64\") },\n",
+    "bytes": 2204,
+    "sha256": "3760d8c6e69de366f030e8f417df25edb31d5bc12cee26d649d5a5c1e786fc7b"
+  }
+]

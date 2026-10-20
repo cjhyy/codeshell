@@ -1,0 +1,35 @@
+{
+  "observed": [
+    {
+      "tool": "82ff37",
+      "exitCode": 0,
+      "kind": "metadata display truncation, no scanner failure",
+      "rawDiagnostic": "Warning: truncated output (original token count: 7712)",
+      "facts": [
+        "Requested output budget6500; history/coverage JSON files complete",
+        "No source body read yet; missing middle contexts will be read from saved JSON, not rescanned",
+        "Do not claim full initial print or whole historical document reading"
+      ]
+    },
+    {
+      "tool": "809d12",
+      "aggregateExitCode": 0,
+      "kind": "navigation filename miss",
+      "rawDiagnostic": "rg: packages/desktop/src/renderer/streamReducer.ts: No such file or directory (os error 2)",
+      "facts": [
+        "Actual reducer resides in renderer/types.ts per same navigation output",
+        "No product attempt; no single rg exit separately captured because pipeline head75 returned0",
+        "head75 bounds that navigation output; not complete references"
+      ]
+    },
+    {
+      "tool": "807e30",
+      "kind": "unneeded selected navigation display",
+      "facts": [
+        "types68–76 and476–492 were displayed while locating ToolStatus/toolDurationMs; actual locations18 and529–533 read afterward",
+        "Unneeded helper/image declarations excluded from semantic ranges; snapshots preserve displayed ranges without broadening review"
+      ]
+    }
+  ],
+  "productFailures": 0
+}
